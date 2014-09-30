@@ -268,20 +268,11 @@ int main(int argc, char *argv[])
     app->setOrganizationName("Mudlet");
     app->setApplicationName("Mudlet");
     app->setApplicationVersion(APP_VERSION);
-    int splashScreenTextAnimationInterval = 100; // mSeconds
+
+    bool show_splash = !(startupAction & 4); // Not --quiet.
 
     QImage splashImage(":/Mudlet_splashscreen_main.png");
-    if( startupAction & 4 )
-    { // Start quietly - no splash screen - "quiet" action
-        splashScreenTextAnimationInterval = 0;
-    }
-    else
-    {
-      // We now have to generate some suitable text to paint onto splash screen
-      // as we have removed the static text of Heiko's copyright (because it has
-      // a date that changes each year) and the version number (which changes as
-      // well!)  The upside of this means no messing around with GIMP every
-      // year/version. 8-)
+    if (show_splash) {
         QPainter painter( &splashImage );
         unsigned fontSize = 16;
         QString sourceVersionText = QString( "Version: " APP_VERSION APP_BUILD );
@@ -338,56 +329,22 @@ int main(int argc, char *argv[])
     }
     QPixmap pixmap = QPixmap::fromImage(splashImage);
     QSplashScreen splash(pixmap);
-    if( splashScreenTextAnimationInterval )
+    if (show_splash) {
         splash.show();
-
-    // Do some animation on the other (plain) text to show - designed to put up
-    // the text in a useful way and then clear it to display Thorsten's work in
-    // all its glory.
-    const int startupMessageSize = splash.height() / splash.fontMetrics().lineSpacing();
-    QStringList startupMessage;
-    QTime t;
-    if( splashScreenTextAnimationInterval )
-    {
-//    qDebug("main(): Splashscreen is %i high and the font has a linespacing of %i giving space for %i lines.",
-//           splash.height(), splash.fontMetrics().lineSpacing(), startupMessageSize);
-        // This should adjust to the number of lines to fill the splashscreen
-        // graphic - hope there is not too variation in the font size between
-        // difference systems...
-        startupMessage.reserve(startupMessageSize);
-        for( int i = 0; i < startupMessageSize; i++ )
-            startupMessage << " ";
-
-        // GUI actions splash-screen messages partly as suggested by GNU coding standards,
-        // Following is suggested by end of GPL 3 document: https://www.gnu.org/licenses/gpl-3.0.html#howto
-        // Odd structuring of message is to make it quick to add/modify each line from top downward
-        // and then be able to scroll it (up) to clear.
-        startupMessage[startupMessageSize-7] = QString("select the 'About' item for details.");
-        startupMessage[startupMessageSize-8] = QString("redistribute it under certain conditions;");
-        startupMessage[startupMessageSize-9] = QString("This is free software, and you are welcome to");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        int interval = 2 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        startupMessage[startupMessageSize-11] = QString("ABSOLUTELY NO WARRANTY!");
-        startupMessage[startupMessageSize-12] = QString("Mudlet comes with");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        startupMessage[1] = QString("Locating profiles... ");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
     }
+    app->processEvents();
 
-    //qt_ntfs_permission_lookup++; // turn permission checking on on NTFS file systems
+    QString splash_message;
+    if (show_splash) {
+        splash_message.append("Mudlet comes with\n"
+                              "ABSOLUTELY NO WARRANTY!\n"
+                              "This is free software, and you are welcome to\n"
+                              "redistribute it under certain conditions;\n"
+                              "select the 'About' item for details.\n\n");
+        splash_message.append("Locating profiles... ");
+        splash.showMessage(splash_message, Qt::AlignCenter);
+        app->processEvents();
+    }
 
     QString directory = QDir::homePath()+"/.config/mudlet";
     QDir dir;
@@ -396,89 +353,63 @@ int main(int argc, char *argv[])
         dir.mkpath( directory );
     }
 
-    if( splashScreenTextAnimationInterval )
-    {
-        startupMessage[1].append(QString("Done."));
-        startupMessage[2] = QString("Loading font files... ");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
+    if (show_splash) {
+        splash_message.append("Done.\n\nLoading font files... ");
+        splash.showMessage(splash_message, Qt::AlignCenter);
         app->processEvents();
-        t.restart();
-        int interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
     }
 
-    QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
-    file_f1.copy( directory+"/COPYRIGHT.TXT" );
+    if (!QFile::exists(directory+"/COPYRIGHT.TXT")) {
+        QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
+        file_f1.copy( directory+"/COPYRIGHT.TXT" );
+    }
 
-    QFile file_f2(":/fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT");
-    file_f2.copy( directory+"/RELEASENOTES.TXT" );
+    if (!QFile::exists(directory+"/RELEASENOTES.TXT")) {
+        QFile file_f2(":/fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT");
+        file_f2.copy( directory+"/RELEASENOTES.TXT" );
+    }
 
-    QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
-    file_f3.copy( directory+"/VeraMoIt.ttf" );
+    if (!QFile::exists(directory+"/VeraMoIt.ttf")) {
+        QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
+        file_f3.copy( directory+"/VeraMoIt.ttf" );
+    }
 
-    QFile file_f4(":/fonts/ttf-bitstream-vera-1.10/local.conf");
-    file_f4.copy( directory+"/local.conf" );
+    if (!QFile::exists(directory+"/local.conf")) {
+        QFile file_f4(":/fonts/ttf-bitstream-vera-1.10/local.conf");
+        file_f4.copy( directory+"/local.conf" );
+    }
 
-    QFile file_f5(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
-    file_f5.copy( directory+"/VeraMoBd.ttf" );
+    if (!QFile::exists(directory+"/VeraMoBd.ttf")) {
+        QFile file_f5(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
+        file_f5.copy( directory+"/VeraMoBd.ttf" );
+    }
 
-    QFile file_f6(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
-    file_f6.copy( directory+"/VeraMoBd.ttf" );
+    if (!QFile::exists(directory+"/VeraMoBd.ttf")) {
+        QFile file_f6(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
+        file_f6.copy( directory+"/VeraMoBd.ttf" );
+    }
 
-    QFile file_f7(":/fonts/ttf-bitstream-vera-1.10/README.TXT");
-    file_f7.copy( directory+"/README.TXT" );
+    if (!QFile::exists(directory+"/README.TXT")) {
+        QFile file_f7(":/fonts/ttf-bitstream-vera-1.10/README.TXT");
+        file_f7.copy( directory+"/README.TXT" );
+    }
 
-    QFile file_f8(":/fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf");
-    file_f8.copy( directory+"/VeraMoBI.ttf" );
+    if (!QFile::exists(directory+"/VeraMoBI.ttf")) {
+        QFile file_f8(":/fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf");
+        file_f8.copy( directory+"/VeraMoBI.ttf" );
+    }
 
-    QFile file_f9(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf");
-    file_f9.copy( directory+"/VeraMono.ttf" );
+    if (!QFile::exists(directory+"/VeraMono.ttf")) {
+        QFile file_f9(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf");
+        file_f9.copy( directory+"/VeraMono.ttf" );
+    }
 
-    if( splashScreenTextAnimationInterval )
-    {
-        startupMessage[2].append(QString("Done."));
-        startupMessage[3] = QString("All data has been loaded successfully.");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
+    if (show_splash) {
+        splash_message.append("Done.\n\n"
+                              "All data has been loaded successfully.\n\n"
+                              "Starting... Have fun!\n\n");
+        splash.showMessage(splash_message, Qt::AlignCenter);
         app->processEvents();
-        t.restart();
-        int interval = 1 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        startupMessage[4] = QString("Starting...                             " % QChar::Nbsp );
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        interval = 1 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        startupMessage[4] = QString("Starting...                     Have fun!");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-        t.restart();
-        interval = 5 * splashScreenTextAnimationInterval;
-        while( t.elapsed() < interval ) {}
-
-        interval = 1 * splashScreenTextAnimationInterval;
-        for( int i = startupMessageSize - 1; i > 0 ; i-- )
-        {
-            QString temp = " ";
-            startupMessage[0].swap(temp);
-            for( int j = 1; j <= i ; j++ )
-            {
-                startupMessage[j-1].swap(startupMessage[j]);
-            }
-            splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-            app->processEvents();
-            t.restart();
-
-            while( t.elapsed() < interval ) {}
-        }
-        startupMessage[0] = QString(" ");
-        splash.showMessage(startupMessage.join("\n"), Qt::AlignHCenter|Qt::AlignBottom);
-        app->processEvents();
-
-        mudlet::start();
-        splash.finish( mudlet::self() );
     }
 
     mudlet::debugMode = false;
@@ -487,12 +418,16 @@ int main(int argc, char *argv[])
     QString home = QDir::homePath()+"/.config/mudlet";
     QString homeLink = QDir::homePath()+"/mudlet-data";
     QFile::link(home, homeLink);
+    mudlet::start();
     mudlet::self()->show();
+    if (show_splash) {
+        splash.finish(mudlet::self());
+    }
     app->restoreOverrideCursor();
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck
     // with some OS's choice of wait cursor - you might wish to temparily disable
-    // the earlier setOverrideCursor() line and this one.  8-( !
-    app->exec();
+    // the earlier setOverrideCursor() line and this one.
+    return app->exec();
 }
