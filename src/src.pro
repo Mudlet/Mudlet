@@ -32,9 +32,7 @@ VERSION = 3.0.1
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
 
 # enable C++11 for builds.
-!msvc:QMAKE_CXXFLAGS += -std=c++0x
-macx:QMAKE_CXXFLAGS += -stdlib=libc++
-macx:QMAKE_LFLAGS += -stdlib=libc++
+CONFIG += c++11
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
