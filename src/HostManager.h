@@ -22,7 +22,7 @@
  ***************************************************************************/
 
 
-#include "HostPool.h"
+#include "Host.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -39,18 +39,20 @@ public:
 
                        HostManager() : mpActiveHost() {}
     Host *             getHost( QString hostname );
-    QStringList        getHostList() { return mHostPool.getHostList(); }
-    QList<QString>     getHostNameList() { return mHostPool.getHostNameList(); }
-    Host *             getFirstHost(){ return mHostPool.getFirstHost(); }
+    QStringList        getHostList();
+    QList<QString>     getHostNameList();
+    Host *             getFirstHost();
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
     bool               renameHost( QString );
-    Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
+    Host *             getHostFromHostID( int id );
     void               postIrcMessage(QString, QString, QString );
 
 private:
+    int createNewHostID();
 
-    HostPool            mHostPool;
+    QMutex              mPoolLock;
+    QMap<QString, QSharedPointer<Host> > mHostPool;
     Host *              mpActiveHost;
 
 };

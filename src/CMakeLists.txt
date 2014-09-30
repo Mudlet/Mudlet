@@ -58,7 +58,6 @@ SET(mudlet_SRCS
     glwidget.cpp
     Host.cpp
     HostManager.cpp
-    HostPool.cpp
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
@@ -184,7 +183,6 @@ SET(mudlet_HDRS
     FontManager.h
     Host.h
     HostManager.h
-    HostPool.h
     KeyUnit.h
     LuaInterface.h
     pre_guard.h

@@ -24,32 +24,145 @@
 
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QDebug>
+#include "post_guard.h"
 
-Host * HostManager::getHost( QString hostname )
+
+bool HostManager::deleteHost( QString hostname )
 {
-    return mHostPool.getHost( hostname );
+    QMutexLocker locker(& mPoolLock);
+
+    qDebug() << "---> trying to delete host <"<<hostname.toLatin1().data()<<"> from host pool.";
+    // make sure this is really a new host
+    if( ! mHostPool.contains( hostname ) )
+    {
+        qDebug() << "[CRITICAL ERROR]: cannot delete host:"<<hostname.toLatin1().data()<<" it is not a member of host pool.";
+        return false;
+    }
+    else
+    {
+        qDebug() << "[OK] Host deleted removing pool entry ...";
+        int ret = mHostPool.remove( hostname );
+        qDebug() << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret;
+
+    }
+    return true;
+}
+
+bool HostManager::renameHost( QString hostname )
+{
+    QMutexLocker locker(& mPoolLock);
+
+    // make sure this is really a new host
+    if( mHostPool.find( hostname ) == mHostPool.end() )
+    {
+        return false;
+    }
+    else
+    {
+        //Host * pNewHost = getHost( hostname ); // see why it doesn't work
+        QSharedPointer<Host> pNewHost = mHostPool[hostname];
+        mHostPool.remove( hostname );
+        mHostPool.insert(pNewHost->getName(), pNewHost);
+    }
+
+    return true;
+
+}
+
+bool HostManager::addHost( QString hostname, QString port, QString login, QString pass )
+{
+    QMutexLocker locker(&mPoolLock);
+
+    // make sure this is really a new host
+    if( mHostPool.find( hostname ) != mHostPool.end() )
+    {
+        return false;
+    }
+    if( hostname.size() < 1 )
+        return false;
+
+    int portnumber = 23;
+    if( port.size() >= 1 )
+    {
+        portnumber = port.toInt();
+    }
+
+    int id = createNewHostID();
+    QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass, id ) );
+
+    mHostPool.insert( hostname, pNewHost );
+    mpActiveHost = getFirstHost();
+    return true;
+}
+
+int HostManager::createNewHostID()
+{
+    return (mHostPool.size() + 1);
+}
+
+QStringList HostManager::getHostList()
+{
+    QMutexLocker locker(& mPoolLock);
+
+    QStringList strlist;
+    QList<QString> hostList = mHostPool.keys();
+    if( hostList.size() > 0 )
+        strlist << hostList;
+    return strlist;
+}
+
+QList<QString> HostManager::getHostNameList()
+{
+    QMutexLocker locker(& mPoolLock);
+
+    return mHostPool.keys();
 }
 
 void HostManager::postIrcMessage( QString a, QString b, QString c )
 {
-    mHostPool.postIrcMessage( a, b, c );
+    QMutexLocker locker(& mPoolLock);
+
+    QList<QSharedPointer<Host> > hostList = mHostPool.values();
+    for( int i=0; i<hostList.size(); i++ )
+    {
+        hostList[i]->postIrcMessage( a, b, c );
+    }
 }
 
-bool HostManager::addHost( QString url, QString port, QString login, QString pass )
+Host * HostManager::getHost( QString hostname )
 {
-    bool ret = mHostPool.addNewHost( url, port, login, pass );
-    // FIXME nur provisorisch bis ich multi host support fertig habe
-    mpActiveHost = getFirstHost();
-    return ret;
+    QMutexLocker locker(& mPoolLock);
+    if( mHostPool.find( hostname ) != mHostPool.end() )
+    {
+        // host exists
+        return mHostPool[hostname].data();
+    }
+    else
+    {
+        return 0;
+    }
 }
 
-
-bool HostManager::deleteHost( QString url )
+Host * HostManager::getHostFromHostID( int id )
 {
-    return mHostPool.deleteHost( url );
+    QMutexLocker locker( & mPoolLock );
+    QMapIterator<QString, QSharedPointer<Host> > it(mHostPool);
+    while( it.hasNext() )
+    {
+        it.next();
+        if( it.value()->getHostID() == id )
+        {
+            return it.value().data();
+        }
+    }
+    qDebug()<<"ERROR: didnt find requested id in hostpool";
+    return 0;
 }
 
-bool HostManager::renameHost( QString url )
+Host * HostManager::getFirstHost()
 {
-    return mHostPool.renameHost( url );
+    QMutexLocker locker(& mPoolLock);
+    return mHostPool.begin().value().data();
 }
