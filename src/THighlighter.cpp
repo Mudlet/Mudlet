@@ -25,7 +25,6 @@
 THighlighter::THighlighter( QTextDocument *parent )
 : QSyntaxHighlighter( parent )
 {
-    //isString = false;
     HighlightingRule rule;
 
     keywordFormat.setForeground( Qt::darkBlue );
@@ -82,7 +81,6 @@ THighlighter::THighlighter( QTextDocument *parent )
 
     commentStartExpression = QRegExp( "\\[\\[" );
     commentEndExpression = QRegExp( "\\]\\]" );
-    //highlightingRules.append( rule );
 
 
     searchFormat.setForeground( QColor(0,0,0) );
@@ -149,12 +147,11 @@ void THighlighter::highlightBlock( const QString & text )
 
 
     QRegExp expression( highlightingRules.last().pattern );
-    int index = text.indexOf( mSearchPattern, 0, Qt::CaseInsensitive );//expression );
+    int index = text.indexOf( mSearchPattern, 0, Qt::CaseInsensitive );
     while( index >= 0 )
     {
-        int length = mSearchPattern.length();//expression.matchedLength();
+        int length = mSearchPattern.length();
         setFormat( index, length, highlightingRules.last().format );
-        //index = text.indexOf( expression, index + length );
         index = text.indexOf( mSearchPattern, index + length, Qt::CaseInsensitive );
     }
 }

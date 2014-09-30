@@ -123,7 +123,6 @@ mudlet::mudlet()
     setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_16px.png" ) ) );
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
-    //restoreBar = menuBar()->addMenu( "" );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
     QWidget * frame = new QWidget( this );
@@ -144,9 +143,6 @@ mudlet::mudlet()
     layoutTopLevel->addWidget( mpTabBar );
     mainPane = new QWidget( frame );
     QPalette mainPalette;
-    //mainPalette.setColor( QPalette::Text, QColor(100,255,100) );
-    //mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
-    //mainPalette.setColor( QPalette::Window, QColor(250,150,0,50) );
     mainPane->setPalette( mainPalette );
     mainPane->setAutoFillBackground(true);
     mainPane->setFocusPolicy( Qt::NoFocus );
@@ -154,7 +150,6 @@ mudlet::mudlet()
     QHBoxLayout * layout = new QHBoxLayout( mainPane );
     layout->setContentsMargins(0,0,0,0);
     layout->setContentsMargins(0,0,0,0);
-    //layout->addWidget(mainPane);
 
     mainPane->setContentsMargins(0,0,0,0);
     mainPane->setSizePolicy( sizePolicy );
@@ -180,7 +175,6 @@ mudlet::mudlet()
         mpMainToolBar->setIconSize(QSize(32,32));
         mpMainToolBar->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );
     }
-    //restoreBar = new QMenu( this );
     QAction * actionConnect = new QAction( QIcon( QStringLiteral( ":/icons/preferences-web-browser-cache.png" ) ), tr("Connect"), this);
     actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction( actionConnect );
@@ -262,13 +256,6 @@ mudlet::mudlet()
 
     QAction * actionStopAllTriggers = new QAction( QIcon( QStringLiteral( ":/icons/edit-bomb.png" ) ), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
-    //mpMainToolBar->addAction( actionStopAllTriggers );
-
-
-    /* QAction * actionProfileBackup = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Backup Profile"), this);
-    actionProfileBackup->setStatusTip(tr("Backup Profile"));
-    mpMainToolBar->addAction( actionProfileBackup );*/
-
 
     QAction * actionAbout = new QAction( QIcon( QStringLiteral( ":/icons/mudlet_information.png" ) ), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
@@ -389,17 +376,7 @@ mudlet::mudlet()
 
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
-   /* QMenu * menu;
-    menuBar()->addAction(mactionConnect);
-    menuBar()->addAction(mactionTriggers);
-    menuBar()->addAction(mactionTimers);
-    menuBar()->addAction(mactionAlias);
-    menuBar()->addAction(mactionScripts);
-    menuBar()->addAction(mactionKeys);
-    menuBar()->addAction(mactionButtons);
-    menuBar()->addAction(mactionOptions);
-    menuBar()->addAction(mactionAbout);
-    menuBar()->addAction(mactionHelp);*/
+
     readSettings();
 
     QTimer * timerAutologin = new QTimer( this );
@@ -407,11 +384,6 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
 
-    //LuaInterface * li = new LuaInterface(getActiveHost());
-    //li->getVars();
-
-
-    //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
     mpMusicBox1 = new QMediaPlayer;
     mpMusicBox2 = new QMediaPlayer;
     mpMusicBox3 = new QMediaPlayer;
@@ -475,19 +447,11 @@ void mudlet::layoutModules(){
             else
                 masterModule->setCheckState(Qt::Unchecked);//Qt::Checked);
             masterModule->setToolTip(QString("Checking this box will cause the module to be saved & resync'd across all open sessions."));
-//            if (moduleInfo[0].endsWith(".zip") || moduleInfo[0].endsWith(".mpackage")){
-//                masterModule->setCheckState(Qt::Unchecked);
-//                masterModule->setFlags(Qt::NoItemFlags);
-//                masterModule->setText("don't sync");
-//                moduleInfo[1] = "0";
-//                masterModule->setToolTip(QString("mpackage and zip packages are currently unabled to be synced across packages."));
-//            }
+
             QString moduleName = pModules[i];
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
-            //itemPriority->setText(QString::number(pH->mModulePriorities[moduleName]));
-            //moduleTable->setItem(row, 0, masterModule);
             itemLocation->setToolTip(moduleInfo[0]); // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable|Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, pH->mModulePriorities[moduleName]);
@@ -498,7 +462,6 @@ void mudlet::layoutModules(){
         }
     }
     moduleTable->resizeColumnsToContents();
-    //moduleTable->sortItems(1, Qt::AscendingOrder);
 }
 
 void mudlet::slot_module_manager(){
@@ -579,12 +542,6 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem){
         moduleHelpButton->setDisabled((!pH->moduleHelp[entry->text()].contains("helpURL") || pH->moduleHelp[entry->text()]["helpURL"].isEmpty()));
     else
         moduleHelpButton->setDisabled(true);
-//    if (itemPath->text().endsWith(".zip") || itemPath->text().endsWith(".mpackage")){
-//        checkStatus->setCheckState(Qt::Unchecked);
-//        checkStatus->setFlags(Qt::NoItemFlags);
-//        checkStatus->setText("don't sync");
-//    }
-
 }
 
 void mudlet::slot_module_changed(QTableWidgetItem* pItem){
@@ -629,7 +586,6 @@ void mudlet::slot_install_module()
     Host * pH = getActiveHost();
     if( ! pH ) return;
     pH->installPackage( fileName, 1);
-    //moduleTable->clearContents();
     for (int i=moduleTable->rowCount()-1; i >= 0; --i)
         moduleTable->removeRow(i);
     layoutModules();
@@ -915,7 +871,6 @@ void mudlet::slot_timer_fires()
 
 void mudlet::unregisterTimer( QTimer * pQT )
 {
-    //qDebug()<<"removing QTIMER"<<pQT<<" size="<<mTimerMap.size();
     if( mTimerMap.contains( pQT ) )
     {
         mTimerMap.remove( pQT );
@@ -924,7 +879,6 @@ void mudlet::unregisterTimer( QTimer * pQT )
     {
         qDebug()<<"MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
     }
-    //qDebug()<<"---> AFTER size="<<mTimerMap.size();
 }
 
 void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
@@ -1682,7 +1636,6 @@ void mudlet::closeEvent(QCloseEvent *event)
             }
             if( pC->mpHost->mpNotePad )
             {
-                //qDebug()<<"saving notepad";
                 pC->mpHost->mpNotePad->save();
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
@@ -1982,7 +1935,6 @@ void mudlet::slot_notes()
 
 void mudlet::slot_irc()
 {
-//#ifdef Q_CC_GNU
     if( ! mpIRC )
     {
         mpIRC = new dlgIRC();
@@ -1992,7 +1944,6 @@ void mudlet::slot_irc()
 
     mpIRC->raise();
     mpIRC->show();
-//#endif
 }
 
 void mudlet::slot_reconnect()
@@ -2077,17 +2028,6 @@ void mudlet::startAutoLogin()
     }
 
 }
-/*
-QString mudlet::readProfileData( QString profile, QString item )
-{
-    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
-    file.open( QIODevice::ReadOnly );
-    QDataStream ifs( & file );
-    QString ret;
-    ifs >> ret;
-    file.close();
-    return ret;
-}*/
 
 void mudlet::doAutoLogin( QString & profile_name )
 {
@@ -2110,10 +2050,6 @@ void mudlet::doAutoLogin( QString & profile_name )
     QDir dir( folder );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    //for( int i=0;i<entries.size(); i++ )
-    //    qDebug()<<i<<"#"<<entries[i];
-//    LuaInterface * lI = pHost->getLuaInterface();
-//    lI->getVars( true );
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);
@@ -2132,39 +2068,6 @@ void mudlet::doAutoLogin( QString & profile_name )
     slot_connection_dlg_finnished( profile_name, 0 );
     enableToolbarButtons();
 }
-/*
-    QList<QString> hostList = HostManager::self()->getHostList();
-    for( int i=0; i<hostList.size(); i++ )
-    {
-        Host * pH = HostManager::self()->getHost( hostList[i] );
-        QString profile = pH->getName();
-        if( profile.size() < 1 )
-        {
-            HostManager::self()->deleteHost( profile );
-            continue;
-        }
-
-        QString item = "autologin";
-        QString val = readProfileData( profile, item );
-        if( val.toInt() == Qt::Checked )
-        {
-            qDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
-            addConsoleForNewHost( pH );
-            pH->connectToServer();
-        }
-        else
-        {
-            // remove Hosts that don't have autologin defined from HostPool
-            qDebug() << "----> [ EXPIRED ] " << profile.toLatin1().data() << " Host ist no longer an autoloader. Due to user decision.";
-            HostManager::self()->deleteHost( profile );
-        }
-    }
-    if( hostList.size() < 1 )
-        qDebug() << "----> [ OK ] nothing to be done (no autologin profiles defined)";
-    else
-        qDebug() << "----> [ OK ] autologin finished";
-    qDebug()<<"[ AUTOLOGIN END ] currently loaded hosts after removal of non-autoloaders:"<<HostManager::self()->getHostList();
-}*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // these two callbacks are called from cTelnet::handleConnectedToServer()
@@ -2215,7 +2118,6 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     pHost->mIsProfileLoadingSequence = false;
 
     //do modules here
-    //QMapIterator<QString, QStringList > it (pHost->mInstalledModules);
     QMapIterator<QString, int> it (pHost->mModulePriorities);
     QMap<int, QStringList> moduleOrder;
     while( it.hasNext() ){
@@ -2223,11 +2125,6 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
         QStringList moduleEntry = moduleOrder[it.value()];
         moduleEntry << it.key();
         moduleOrder[it.value()] = moduleEntry;
-        /*QStringList entry = it.value();
-        pHost->installPackage(entry[0],1);
-        //we repeat this step here b/c we use the same installPackage method for initial loading,
-        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-        pHost->mInstalledModules[it.key()] = entry;*/
     }
     QMapIterator<int, QStringList> it2 (moduleOrder);
     while (it2.hasNext()){
@@ -2276,11 +2173,6 @@ void mudlet::slot_multi_view()
 
 void mudlet::slot_stopAllTriggers()
 {
-    /*
-    foreach( TConsole * pC, mConsoleMap )
-    {
-        pC->mpHost->stopAllTriggers();
-    }*/
 }
 
 mudlet::~mudlet()

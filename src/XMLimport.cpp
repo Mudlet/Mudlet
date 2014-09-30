@@ -45,7 +45,6 @@
 int maxRooms;
 int maxAreas;
 QMap<int,int> areaMap;
-//int module = 0;
 
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
@@ -143,7 +142,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
 
         if( isStartElement() )
         {
-            if( name() == "MudletPackage" )// && attributes().value("version") == "1.0")
+            if( name() == "MudletPackage" )
             {
                 readPackage();
             }
@@ -357,10 +356,6 @@ void XMLimport::readEnvColors()
         {
             readEnvColor();
         }
-        /*else
-        {
-            readUnknownMapElement();
-        }*/
     }
 }
 
@@ -914,7 +909,6 @@ void XMLimport::readHostPackage( Host * pT )
                     pT->mModulePriorities[it.key()] = entryList[2].toInt();
 
                 }
-                //readMapList( pT->mInstalledModules );
                 continue;
             }
             else if( name() == "mInstalledPackages")
@@ -1096,8 +1090,6 @@ void XMLimport::readHostPackage( Host * pT )
             {
                 pT->mDisplayFont.fromString( readElementText() );
                 pT->mDisplayFont.setFixedPitch( true );
-//                pT->mDisplayFont.setWordSpacing( 0 );
-//                pT->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
                 continue;
             }
             else if( name() == "mCommandLineFont")
@@ -1249,7 +1241,6 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     while( ! atEnd() )
     {
         readNext();
-        //qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();
         if( isEndElement() ) break;
 
         if( isStartElement() )
@@ -1410,9 +1401,6 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     mpHost->getTimerUnit()->registerTimer( pT );
     pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
 
-// N/U:     bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
-
-
     if (module)
         pT->mModuleMember = true;
 
@@ -1471,31 +1459,13 @@ void XMLimport::readTimerGroup( TTimer * pParent )
 
     mudlet::self()->registerTimer( pT, pT->mpTimer );
 
-    //if( ( ! isOffsetTimer ) && ( ! pT->isFolder() ) && ( pT->shouldBeActive() ) )
     if( ! pT->mpParent && pT->shouldBeActive() )
     {
         pT->setIsActive( true );
         pT->enableTimer( pT->getID() );
-//        if( pT->canBeUnlocked( 0 ) )
-//        {
-//            if( pT->activate() )
-//            {
-//                pT->mpTimer->start();
-//            }
-//            else
-//            {
-//                pT->deactivate();
-//                pT->mpTimer->stop();
-//            }
-//        }
     }
     else
     {
-//        qDebug()<<"NOT enabling Timer name:"<<pT->getName();
-        //pT->disableTimer( pT->getID() );
-        //pT->deactivate();
-        //pT->mpTimer->stop();
-        //pT->setIsActive( pT->shouldBeActive() );
     }
 
 }

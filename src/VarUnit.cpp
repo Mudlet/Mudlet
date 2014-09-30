@@ -203,10 +203,6 @@ bool VarUnit::isSaved( TVar * var ){
 }
 
 void VarUnit::removeVariable(TVar * var){
-    // TVar * parent = var->getParent();
-    // parent->removeChild(var);
-    // if (var->getValueType() == 5)
-    //     pointers.remove(var->pointer);
     varList.remove(varName(var).join("."));
 }
 

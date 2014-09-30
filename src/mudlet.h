@@ -145,7 +145,6 @@ public:
    bool                          resetFormat( Host *, QString & name );
    bool                          moduleTableVisible();
    bool                          mWindowMinimized;
-   //QString                       readProfileData( QString profile, QString item );
    void                          doAutoLogin( QString & );
    void                          deselect( Host * pHost, QString & name );
    void                          stopSounds();
@@ -232,7 +231,6 @@ private:
 
    void                          goingDown() { mIsGoingDown = true; }
    QMap<QString, TConsole *>         mTabMap;
-   //QTabBar *                     mpTabBar;
    QWidget *                     mainPane;
 
    QPointer<Host>                mpDefaultHost;
@@ -241,8 +239,6 @@ private:
    QQueue<Host *>                tempHostQueue;
    static                        QPointer<mudlet> _self;
    QMap<QString, QDockWidget *>  dockWindowMap;
-   //QMap<QString, TConsole *>     dockWindowConsoleMap;
-   //QMap<QString, TLabel *>>       mLabelMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap;
 
 

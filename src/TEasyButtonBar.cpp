@@ -82,7 +82,6 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
             size.transpose();
             pB->setMaximumSize( size );
         }
-        //pB->setMinimumSize( size );
     }
     else
     {
@@ -148,8 +147,6 @@ void TEasyButtonBar::finalize()
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding );
     fillerWidget->setSizePolicy( sizePolicy );
-    //fillerWidget->setMinimumHeight(1);
-    //fillerWidget->setMinimumWidth(1);
     int columns = mpTAction->getButtonColumns();
     if( columns <= 0 )
         columns = 1;
@@ -158,7 +155,6 @@ void TEasyButtonBar::finalize()
     if( mpLayout )
     {
         mpLayout->addWidget( fillerWidget, row, column );
-//        mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
     }
 }
 

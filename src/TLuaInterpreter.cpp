@@ -690,7 +690,6 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
         int begin = *iti;
         std::string & s = *its;
         int length = s.size();
-        //cout << "selectSection("<<begin<<", "<<length<<")"<<endl;
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"selectCaptureGroup("<<begin<<", "<<length<<")\n">>0;}
         int pos = pHost->mpConsole->selectSection( begin, length );
         lua_pushnumber( L, pos );
@@ -744,42 +743,6 @@ int TLuaInterpreter::getLines( lua_State * L )
 // luaTable result[line_number, content] = getLines( from_cursorPos, to_cursorPos )
 int TLuaInterpreter::getBufferTable( lua_State * L )
 {
-/*
-    int luaFrom;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getBufferTable: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaFrom = lua_tointeger( L, 1 );
-    }
-
-    int luaTo;
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "getBufferTable: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaTo=lua_tointeger( L, 2 );
-    }
- Above part does not achieve anything whilst following stuff is commented out! */
-    /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QStringList strList = pHost->getBufferTable( luaFrom, luaTo );
-    if( mudlet::debugMode ) qDebug()<<"TLuaInterpreter::getBufferTable() strList="<<strList;
-    lua_newtable(L);
-    for( int i=0; i<strList.size(); i++ )
-    {
-        lua_pushnumber( L, i+1 );
-        lua_pushstring( L, strList[i].toLatin1().data() );
-        lua_settable(L, -3);
-    } */
-//    return 0;
     lua_pushstring( L, "getBufferTable: Currently commented out in source code" );
     lua_error( L );
     return 1;
@@ -1609,24 +1572,6 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
 
 int TLuaInterpreter::getBufferLine( lua_State * L )
 {
-/*
-    int luaLine;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getBufferLine: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaLine = lua_tointeger( L, 1 );
-    }
- Above part does not achieve anything whilst following stuff is commented out! */
-    /*Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString line = pHost->getBufferLine( luaLine );
-    if( mudlet::debugMode ) qDebug()<<"TLuaInterpreter::getBufferLine() line="<<line;
-    lua_pushstring( L, line.toLatin1().data() );*/
-//    return 0;
     lua_pushstring( L, "getBufferLine: Currently commented out in source code" );
     lua_error( L );
     return 1;
@@ -1845,9 +1790,6 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
         }
         Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
         lua_pushboolean(L, pHost->mpMap->setExit( roomId, toRoom, dirType ) );
-        //pHost->mpMap->rooms[roomId]->setExitStub(dirType, false);
-        //setExit( toRoom, roomId, pHost->mpMap->reverseDirections[dirType]);
-        //pHost->mpMap->rooms[toRoom]->setExitStub(pHost->mpMap->reverseDirections[dirType], false);
     }
     else
     {
@@ -2242,7 +2184,6 @@ int TLuaInterpreter::killTimer( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    //pHost->disableTimer( text );
     lua_pushboolean( L, pHost->killTimer( text ) );
     return 1;
 }
@@ -2568,9 +2509,6 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
         pHost->mpConsole->buffer.clear();
         pHost->mpConsole->console->forceUpdate();
         return 0;
-//        lua_pushstring( L, "clearUserWindow: wrong argument type" );
-//        lua_error( L );
-//        return 1;
     }
     else
     {
@@ -2618,7 +2556,6 @@ int TLuaInterpreter::hideUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    //mudlet::self()->hideWindow( pHost, text );
     pHost->mpConsole->hideWindow( text );
 
     return 0;
@@ -2830,7 +2767,6 @@ int TLuaInterpreter::setMainWindowSize( lua_State *L )
     {
         y1 = lua_tonumber( L, 2 );
     }
-// N/U:     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
 
     mudlet::self()->resize( x1, y1 );
 
@@ -3744,7 +3680,6 @@ int TLuaInterpreter::lockSpecialExit( lua_State *L )
 
 int TLuaInterpreter::hasSpecialExitLock( lua_State *L )
 {
-// N/U:     bool b = true;
     int id, to;
     std::string dir;
     if( ! lua_isnumber( L, 1 ) )
@@ -4343,7 +4278,6 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     return 0;
 }
 
-//qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
 int TLuaInterpreter::setAppStyleSheet( lua_State *L )
 {
     if( lua_isstring( L, 1 ) )
@@ -4388,7 +4322,6 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
         luaSendText = lua_tostring( L, 1 );
     }
     QString sound = luaSendText.c_str();
-    //QSound::play( QString( luaSendText.c_str() ) );
     if( QDir::homePath().contains('\\') )
     {
         sound.replace('/', "\\");
@@ -4537,17 +4470,6 @@ int TLuaInterpreter::setLink( lua_State * L )
             s++;
         }
     }
-    /*if( ! lua_isstring( L, s ) )
-    {
-        lua_pushstring( L, "setLink: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        linkText = lua_tostring( L, s );
-        s++;
-    }*/
 
     if( ! lua_isstring( L, s ) )
     {
@@ -4593,7 +4515,6 @@ int TLuaInterpreter::setPopup( lua_State *L )
     string a2;
     QStringList _hintList;
     QStringList _commandList;
-// N/U:     bool customFormat = false;
     int s = 1;
     int n = lua_gettop( L );
     // console name is an optional first argument

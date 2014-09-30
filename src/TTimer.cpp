@@ -69,7 +69,6 @@ TTimer::~TTimer()
     mpHost->getTimerUnit()->unregisterTimer( this );
     mudlet::self()->unregisterTimer( mpTimer );
     mpTimer->deleteLater();
-    //qDebug()<<"DELETING TIMER:"<<this;
 }
 
 bool TTimer::registerTimer()
@@ -80,7 +79,6 @@ bool TTimer::registerTimer()
     }
     setTime( mTime );
     mudlet::self()->registerTimer( this, mpTimer );
-    //mpTimer->connect(mpTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
     return mpHost->getTimerUnit()->registerTimer( this );
 }
 
@@ -310,7 +308,6 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
     }
     else
     {
-        //DumpFamily();
         return false;
     }
 
@@ -400,7 +397,6 @@ void TTimer::disableTimer()
 {
     deactivate();
     mpTimer->stop();
-    //qDebug()<<"timer "<<mName<<" has been stopped stopping children...\n";
     for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TTimer * pChild = *it;

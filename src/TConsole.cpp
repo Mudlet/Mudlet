@@ -102,8 +102,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mCurrentSearchResult( 0 )
 , mSearchQuery("")
 {
-    //mDisplayFont.setWordSpacing( 0 );
-//    mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
     QShortcut * ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);

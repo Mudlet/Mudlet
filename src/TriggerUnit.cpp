@@ -147,8 +147,6 @@ void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID
     {
         pNewParent->addChild( pChild, parentPosition, childPosition );
         if( pChild ) pChild->setParent( pNewParent );
-        //cout << "dumping family of newParent:"<<endl;
-        //pNewParent->Dump();
     }
     else
     {
@@ -293,9 +291,6 @@ void TriggerUnit::processDataStream( QString & data, int line )
         for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++)
         {
             TTrigger * pChild = *it;
-            //QFuture<bool> future = QtConcurrent::run( pChild, &TTrigger::match, subject, data, line, 0 );
-            //future.waitForFinished();
-
             pChild->match( subject, data, line );
         }
         free( subject );
@@ -450,15 +445,6 @@ QString TriggerUnit::assembleReport()
         << "trigger patterns total: " << QString::number(statsPatterns) << "\n"
         << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
         << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
-        /*<< "active triggers max this session: " << QString::number(statsActiveTriggersMax) << "\n"
-        << "active triggers min this session: " << QString::number(statsActiveTriggersMin) << "\n"
-        << "active triggers average this session: " << QString::number(statsActiveTriggersAverage) << "\n"*/
-        //<< "tempTriggers created this session: " << QString::number(statsTempTriggersCreated) << "\n"
-        //<< "tempTriggers killed this session: " << QString::number(statsTempTriggersKilled) << "\n"
-        //<< "current total regex triggers: " << QString::number(statsRegexTriggers) << "\n"
-        //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
-        //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
-        //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
     return msg.join("");
 
 }

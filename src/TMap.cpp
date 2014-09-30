@@ -89,9 +89,6 @@ TMap::TMap( Host * pH )
     m2DPanMode = false;
     mLeftDown = false;
     mRightDown = false;
-// N/U:     float m2DPanXStart=0;
-// N/U:     float m2DPanYStart=0;
-// N/U:     int mViewArea = 0;
 }
 
 TMap::~TMap() {
@@ -335,7 +332,6 @@ void TMap::init( Host * pH )
     while( it.hasNext() )
     {
         it.next();
-// N/U:         TArea * pA = it.value();
         int areaID = it.key();
         if( mapLabels.contains(areaID) )
         {
@@ -469,7 +465,6 @@ void TMap::initGraph()
             continue;
         }
         roomCount++;
-// N/u:        int roomExits = edgeCount;
         location l;
         l.x = pR->x;
         l.y = pR->y;
@@ -509,7 +504,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_NORTH ) )
             {
-                //edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -525,7 +519,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_SOUTH ) )
             {
-                //edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -541,7 +534,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_NORTHEAST ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -573,10 +565,8 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_WEST ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
-//                bool exit = false;
                 std::tie(e, inserted) = add_edge( roomIndex,
                                                   roomidToIndex[pR->getWest()],
                                                   g );
@@ -590,7 +580,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_SOUTHWEST ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -606,7 +595,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_SOUTHEAST ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -622,7 +610,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_NORTHWEST ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -638,7 +625,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_UP ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -654,7 +640,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_DOWN ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -670,7 +655,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_IN ) )
             {
-//                edgeCount++;
                 edge_descriptor e;
                 bool inserted;
                 std::tie(e, inserted) = add_edge( roomIndex,
@@ -686,7 +670,6 @@ void TMap::initGraph()
         {
             if( !pR->hasExitLock( DIR_OUT ) )
             {
-//                 edgeCount++;
                  edge_descriptor e;
                  bool inserted;
                  std::tie(e, inserted) = add_edge( roomIndex,
@@ -712,7 +695,6 @@ void TMap::initGraph()
                     continue;
                 else
                 {
-//                    edgeCount++;
                     edge_descriptor e;
                     bool inserted;
                     std::tie(e, inserted) = add_edge( roomIndex,
@@ -730,7 +712,6 @@ void TMap::initGraph()
                 }
             }
         }
-//        if( roomExits == edgeCount ) locations.pop_back();
     }
 
     mMapGraphNeedsUpdate = false;
@@ -744,8 +725,6 @@ bool TMap::findPath( int from, int to )
         initGraph();
      }
 
-     //vertex start = from;//mRoomId;
-     //vertex goal = to;//mTargetID;
      TRoom * pFrom = mpRoomDB->getRoom( from );
      TRoom * pTo = mpRoomDB->getRoom( to );
 
@@ -819,7 +798,6 @@ bool TMap::findPath( int from, int to )
          list<vertex> shortest_path;
          for(vertex v = goal; ; v = p[v])
          {
-             //cout << "assembling path: v="<<v<<endl;
              int nextRoom = indexToRoomid[v];
              if( ! mpRoomDB->getRoom( nextRoom ) )
              {
@@ -926,7 +904,6 @@ bool TMap::findPath( int from, int to )
                  }
              }
 
-             //qDebug()<<"added to DirList:"<<mDirList.back();
              curRoom = *spi;
          }
         qDebug()<<"time elapsed building path"<<t.elapsed();
@@ -996,7 +973,6 @@ bool TMap::serialize( QDataStream & ofs )
         while( itL2.hasNext() )
         {
             itL2.next();
-// N/U:             int ii = itL2.key();
             ofs << itL2.key();//label ID
             TMapLabel label = itL2.value();
             ofs << label.pos;
@@ -1015,7 +991,6 @@ bool TMap::serialize( QDataStream & ofs )
     {
 
         it.next();
-// N/U:         int i = it.key();
         TRoom * pR = it.value();
         ofs <<  pR->getId();
         ofs << pR->getArea();
@@ -1036,10 +1011,6 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->getOut();
         ofs << pR->environment;
         ofs << pR->getWeight();
-//        ofs << rooms[i]->xRot;
-//        ofs << rooms[i]->yRot;
-//        ofs << rooms[i]->zRot;
-//        ofs << rooms[i]->zoom;
         ofs << pR->name;
         ofs << pR->isLocked;
         ofs << pR->getOtherMap();

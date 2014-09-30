@@ -240,18 +240,6 @@ QList<int> TRoomDB::getRoomIDList()
     return rooms.keys();
 }
 
-// NOTE: This is MIS-NAMED and redundent as it returns the int ID of a given TArea
-// pointer and there is the method getAreaID(TArea *) here as well that does it!
-//int TRoomDB::getArea( TArea * pA )
-//{
-//    if( pA && areas.values().contains(pA) )
-//    {
-//        return areas.key(pA);
-//    }
-//    else
-//        return -1;
-//}
-
 TArea * TRoomDB::getArea( int id )
 {
     //area id of -1 is a room in the "void", 0 is a failure
