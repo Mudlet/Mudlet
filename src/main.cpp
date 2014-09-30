@@ -480,6 +480,8 @@ int main(int argc, char *argv[])
         mudlet::start();
         splash.finish( mudlet::self() );
     }
+    else
+        mudlet::start();
 
     mudlet::debugMode = false;
     FontManager fm;
