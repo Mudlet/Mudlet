@@ -26,7 +26,7 @@
 
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, const QStringList & strings, int type )
-: QTreeWidgetItem( (QTreeWidgetItem*)parent, strings, type )
+: QTreeWidgetItem( parent, strings, type )
 {
 }
 
@@ -41,27 +41,27 @@ TTreeWidgetItem::TTreeWidgetItem( const QStringList & strings, int type )
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidget * parent, int type )
-: QTreeWidgetItem( (QTreeWidgetItem*)parent, type )
+: QTreeWidgetItem( parent, type )
 {
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidget * parent, const QStringList & strings, int type )
-: QTreeWidgetItem( (QTreeWidgetItem*)parent, strings, type )
+: QTreeWidgetItem( parent, strings, type )
 {
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidget * parent, TTreeWidgetItem * preceding, int type )
-: QTreeWidgetItem( (QTreeWidgetItem*)parent, (QTreeWidgetItem*)preceding, type )
+: QTreeWidgetItem( parent, preceding, type )
 {
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, int type )
-: QTreeWidgetItem( (QTreeWidgetItem*)parent, type )
+: QTreeWidgetItem( parent, type )
 {
 }
 
 TTreeWidgetItem::TTreeWidgetItem( TTreeWidgetItem * parent, TTreeWidgetItem * preceding, int type )
-: QTreeWidgetItem( (QTreeWidgetItem*)parent, (QTreeWidgetItem*)preceding, type )
+: QTreeWidgetItem( parent, preceding, type )
 {
 }
 
