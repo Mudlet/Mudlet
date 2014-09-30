@@ -151,7 +151,7 @@ public:
    void                          playSound( QString s );
    bool                          isReplayInProgress();
    QTime                         mReplayTime;
-   QTimer *                      mpReplayTimer;
+   QPointer<QTimer>              mpReplayTimer;
    int                           mReplayTimeOffset; // How many milliSeconds into this chunk of replay are we?
    int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
    int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
@@ -250,13 +250,13 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
 
-   QAction *                     mpActionReplaySpeedDown;
-   QAction *                     mpActionReplaySpeedUp;
-   QAction *                     mpActionSpeedDisplay;
-   QAction *                     mpActionReplayTime;
-   QLabel *                      mpReplaySpeedDisplay;
-   QLabel *                      mpReplayTimeDisplay;
-   QToolBar *                    mpReplayToolBar;
+   QPointer<QAction>             mpActionReplaySpeedDown;
+   QPointer<QAction>             mpActionReplaySpeedUp;
+   QPointer<QAction>             mpActionSpeedDisplay;
+   QPointer<QAction>             mpActionReplayTime;
+   QPointer<QLabel>              mpReplaySpeedDisplay;
+   QPointer<QLabel>              mpReplayTimeDisplay;
+   QPointer<QToolBar>            mpReplayToolBar;
 
    QAction *                     actionReconnect;
 

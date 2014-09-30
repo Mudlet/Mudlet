@@ -2292,18 +2292,32 @@ void mudlet::replayOver(Host * pHost, bool isEndOfReplay)
         mpReplayTimer->stop();
         disconnect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
         disconnect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
-        mpReplayToolBar->removeAction( mpActionReplaySpeedUp );
-        mpReplayToolBar->removeAction( mpActionReplaySpeedDown );
-        mpReplayToolBar->removeAction( mpActionSpeedDisplay );
         disconnect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
-        delete( mpReplayTimer );
-        mpReplayTimer = 0;
+        delete mpReplayTimer.data();
+
         removeToolBar( mpReplayToolBar );
-        mpActionReplaySpeedUp = 0;
-        mpActionReplaySpeedDown = 0;
-        mpActionSpeedDisplay = 0;
-        mpActionReplayTime = 0;
-        mpReplayToolBar = 0;
+        mpReplayToolBar->clear();
+        // It is a little unclear whether the items that were on the tool bar
+        // get deleted when QToolBar::clear() is used...
+        delete mpReplayToolBar.data();
+
+        if( mpActionReplaySpeedUp )
+            delete mpActionReplaySpeedUp.data();
+
+        if( mpActionReplaySpeedDown )
+            delete mpActionReplaySpeedDown.data();
+
+        if( mpActionSpeedDisplay )
+            delete mpActionSpeedDisplay.data();
+
+        if( mpActionReplayTime )
+            delete mpActionReplayTime.data();
+
+        if( mpReplaySpeedDisplay )
+            delete mpReplaySpeedDisplay;
+
+        if( mpReplayTimeDisplay )
+            delete mpReplayTimeDisplay;
     }
 
     TEvent myReplayOverEvent, otherReplayOverEvent;
