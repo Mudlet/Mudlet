@@ -220,6 +220,8 @@ SET(mudlet_HDRS
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zc:inline") # improve link times
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zc:rvalueCast") # improve conformance
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4305") # '=' : truncation from 'double' to 'float'
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4309") # 'initializing' : truncation of constant value
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4996") # deprecation
