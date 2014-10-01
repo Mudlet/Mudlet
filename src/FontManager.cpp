@@ -51,7 +51,7 @@ void FontManager::addFonts()
 }
 
 // loads all of the fonts in the given folder
-void FontManager::loadFonts(QString folder)
+void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
     QStringList filters;

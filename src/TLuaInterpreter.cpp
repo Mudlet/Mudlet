@@ -9705,7 +9705,7 @@ int TLuaInterpreter::sendIrc( lua_State * L )
 }
 
 
-bool TLuaInterpreter::compileAndExecuteScript( QString & code )
+bool TLuaInterpreter::compileAndExecuteScript(const QString & code )
 {
     if( code.size() < 1 ) return false;
     lua_State * L = pGlobalLua;
@@ -9737,7 +9737,7 @@ bool TLuaInterpreter::compileAndExecuteScript( QString & code )
     else return false;
 }
 
-bool TLuaInterpreter::compileScript( QString & code )
+bool TLuaInterpreter::compileScript(const QString & code )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -9779,7 +9779,7 @@ bool TLuaInterpreter::compileScript( QString & code )
     else return false;
 }
 
-bool TLuaInterpreter::compile( QString & code )
+bool TLuaInterpreter::compile(const QString & code )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -9810,7 +9810,7 @@ bool TLuaInterpreter::compile( QString & code )
     else return false;
 }
 
-bool TLuaInterpreter::compile( QString & code, QString & errorMsg )
+bool TLuaInterpreter::compile(const QString & code, QString & errorMsg )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -9912,7 +9912,7 @@ void TLuaInterpreter::adjustCaptureGroups( int x, int a )
     }
 }
 
-void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
+void TLuaInterpreter::setAtcpTable(const QString & var, const QString & arg )
 {
     lua_State * L = pGlobalLua;
     lua_getglobal( L, "atcp" ); //defined in LuaGlobal.lua
@@ -9931,7 +9931,7 @@ void TLuaInterpreter::setAtcpTable( QString & var, QString & arg )
 }
 
 
-void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
+void TLuaInterpreter::setGMCPTable(QString & key, const QString & string_data)
 {
     lua_State * L = pGlobalLua;
     lua_getglobal(L, "gmcp");   //defined in Lua init
@@ -9948,7 +9948,7 @@ void TLuaInterpreter::setGMCPTable(QString & key, QString & string_data)
     }
     parseJSON(key, string_data, "gmcp");
 }
-void TLuaInterpreter::setMSDPTable(QString & key, QString & string_data)
+void TLuaInterpreter::setMSDPTable(QString & key, const QString & string_data)
 {
     lua_State * L = pGlobalLua;
     lua_getglobal(L, "msdp");
@@ -9967,7 +9967,7 @@ void TLuaInterpreter::setMSDPTable(QString & key, QString & string_data)
     parseJSON(key, string_data, "msdp");
 }
 
-void TLuaInterpreter::parseJSON( QString & key, QString & string_data, QString protocol )
+void TLuaInterpreter::parseJSON( QString & key, const QString & string_data, const QString& protocol )
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     lua_State * L = pGlobalLua;
@@ -10310,7 +10310,7 @@ bool TLuaInterpreter::call_luafunction( void * pT )
 }
 
 
-bool TLuaInterpreter::call( QString & function, QString & mName )
+bool TLuaInterpreter::call(const QString & function, const QString & mName )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -10362,7 +10362,7 @@ bool TLuaInterpreter::call( QString & function, QString & mName )
     else return false;
 }
 
-void TLuaInterpreter::logError( std::string & e, QString & name, QString & function )
+void TLuaInterpreter::logError( std::string & e, const QString & name, const QString & function )
 {
     //QDateTime time = QDateTime::currentDateTime();
     // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
@@ -10383,7 +10383,7 @@ void TLuaInterpreter::logError( std::string & e, QString & name, QString & funct
 
 }
 
-bool TLuaInterpreter::callConditionFunction( std::string & function, QString & mName )
+bool TLuaInterpreter::callConditionFunction( std::string & function, const QString & mName )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -10433,7 +10433,7 @@ bool TLuaInterpreter::callConditionFunction( std::string & function, QString & m
     }
 }
 
-bool TLuaInterpreter::callMulti( QString & function, QString & mName )
+bool TLuaInterpreter::callMulti(const QString & function, const QString & mName )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -10492,7 +10492,7 @@ bool TLuaInterpreter::callMulti( QString & function, QString & mName )
 }
 
 
-bool TLuaInterpreter::callEventHandler( QString & function, const TEvent & pE )
+bool TLuaInterpreter::callEventHandler(const QString & function, const TEvent & pE )
 {
     if( function.isEmpty() )
         return false;
@@ -10541,7 +10541,7 @@ bool TLuaInterpreter::callEventHandler( QString & function, const TEvent & pE )
 }
 
 
-void TLuaInterpreter::set_lua_table( QString & tableName, QStringList & variableList )
+void TLuaInterpreter::set_lua_table(const QString & tableName, QStringList & variableList )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -10560,7 +10560,7 @@ void TLuaInterpreter::set_lua_table( QString & tableName, QStringList & variable
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
 }
 
-void TLuaInterpreter::set_lua_string( const QString & varName, QString & varValue )
+void TLuaInterpreter::set_lua_string( const QString & varName, const QString & varValue )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -10578,7 +10578,7 @@ void TLuaInterpreter::set_lua_string( const QString & varName, QString & varValu
 //lua_settable( L, LUA_GLOBALSINDEX );
 }
 
-QString TLuaInterpreter::get_lua_string( QString & stringName )
+QString TLuaInterpreter::get_lua_string(const QString & stringName )
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -11158,48 +11158,48 @@ void TLuaInterpreter::loadGlobal()
 
 }
 
-void TLuaInterpreter::slotEchoMessage(int hostID, QString msg)
+void TLuaInterpreter::slotEchoMessage(int hostID, const QString& msg)
 {
     Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     mudlet::self()->print( pHost, msg );
 }
 
 
-void TLuaInterpreter::slotNewCommand(int hostID, QString cmd)
+void TLuaInterpreter::slotNewCommand(int hostID, const QString& cmd)
 {
     Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     pHost->send( cmd );
 }
 
-void TLuaInterpreter::slotOpenUserWindow(int hostID, QString windowName )
+void TLuaInterpreter::slotOpenUserWindow(int hostID, const QString& windowName )
 {
 }
 
-void TLuaInterpreter::slotClearUserWindow(int hostID, QString windowName )
+void TLuaInterpreter::slotClearUserWindow(int hostID, const QString& windowName )
 {
 }
 
-void TLuaInterpreter::slotEnableTimer(int hostID, QString windowName )
+void TLuaInterpreter::slotEnableTimer(int hostID, const QString& windowName )
 {
     Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     pHost->enableTimer( windowName );
 }
 
-void TLuaInterpreter::slotDisableTimer(int hostID, QString windowName )
+void TLuaInterpreter::slotDisableTimer(int hostID, const QString& windowName )
 {
     Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     pHost->disableTimer( windowName );
 }
 
-void TLuaInterpreter::slotReplace(int hostID, QString text)
+void TLuaInterpreter::slotReplace(int hostID, const QString& text)
 {
 }
 
-void TLuaInterpreter::slotEchoUserWindow(int hostID, QString windowName, QString text )
+void TLuaInterpreter::slotEchoUserWindow(int hostID, const QString& windowName, const QString& text )
 {
 }
 
-void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString function, QString timerName )
+void TLuaInterpreter::slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName )
 {
     Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
     QTime time(0,0,0,0);
@@ -11217,7 +11217,7 @@ void TLuaInterpreter::slotTempTimer( int hostID, double timeout, QString functio
     pT->registerTimer();
 }
 
-int TLuaInterpreter::startPermTimer( QString & name, QString & parent, double timeout, QString & function )
+int TLuaInterpreter::startPermTimer(const QString & name, const QString & parent, double timeout, const QString & function )
 {
     QTime time( 0, 0, 0, 0 );
     int msec = static_cast<int>(timeout * 1000);
@@ -11249,7 +11249,7 @@ int TLuaInterpreter::startPermTimer( QString & name, QString & parent, double ti
     return id;
 }
 
-int TLuaInterpreter::startTempTimer( double timeout, QString & function )
+int TLuaInterpreter::startTempTimer( double timeout, const QString & function )
 {
     QTime time( 0, 0, 0, 0 );
     int msec = static_cast<int>(timeout * 1000);
@@ -11268,7 +11268,7 @@ int TLuaInterpreter::startTempTimer( double timeout, QString & function )
     return id;
 }
 
-int TLuaInterpreter::startPermAlias( QString & name, QString & parent, QString & regex, QString & function )
+int TLuaInterpreter::startPermAlias(const QString & name, const QString & parent, const QString & regex, const QString & function )
 {
     TAlias * pT;
 
@@ -11297,7 +11297,7 @@ int TLuaInterpreter::startPermAlias( QString & name, QString & parent, QString &
     return id;
 }
 
-int TLuaInterpreter::startTempAlias( QString & regex, QString & function )
+int TLuaInterpreter::startTempAlias(const QString & regex, const QString & function )
 {
     TAlias * pT;
     pT = new TAlias("a", mpHost );
@@ -11312,7 +11312,7 @@ int TLuaInterpreter::startTempAlias( QString & regex, QString & function )
     return id;
 }
 
-int TLuaInterpreter::startTempExactMatchTrigger( QString & regex, QString & function )
+int TLuaInterpreter::startTempExactMatchTrigger(const QString & regex, const QString & function )
 {
     TTrigger * pT;
     QStringList sList;
@@ -11330,7 +11330,7 @@ int TLuaInterpreter::startTempExactMatchTrigger( QString & regex, QString & func
     return id;
 }
 
-int TLuaInterpreter::startTempBeginOfLineTrigger( QString & regex, QString & function )
+int TLuaInterpreter::startTempBeginOfLineTrigger(const QString & regex, const QString & function )
 {
     TTrigger * pT;
     QStringList sList;
@@ -11349,7 +11349,7 @@ int TLuaInterpreter::startTempBeginOfLineTrigger( QString & regex, QString & fun
 }
 
 
-int TLuaInterpreter::startTempTrigger( QString & regex, QString & function )
+int TLuaInterpreter::startTempTrigger(const QString & regex, const QString & function )
 {
     TTrigger * pT;
     QStringList sList;
@@ -11367,7 +11367,7 @@ int TLuaInterpreter::startTempTrigger( QString & regex, QString & function )
     return id;
 }
 
-int TLuaInterpreter::startTempLineTrigger( int from, int howmany, QString & function )
+int TLuaInterpreter::startTempLineTrigger( int from, int howmany, const QString & function )
 {
     TTrigger * pT;
 //    QStringList sList;
@@ -11388,7 +11388,7 @@ int TLuaInterpreter::startTempLineTrigger( int from, int howmany, QString & func
     return id;
 }
 
-int TLuaInterpreter::startTempColorTrigger( int fg, int bg, QString & function )
+int TLuaInterpreter::startTempColorTrigger( int fg, int bg, const QString & function )
 {
     TTrigger * pT;
 //    QStringList sList;
@@ -11408,7 +11408,7 @@ int TLuaInterpreter::startTempColorTrigger( int fg, int bg, QString & function )
     return id;
 }
 
-int TLuaInterpreter::startTempRegexTrigger( QString & regex, QString & function )
+int TLuaInterpreter::startTempRegexTrigger(const QString & regex, const QString & function )
 {
     TTrigger * pT;
     QStringList sList;
@@ -11427,7 +11427,7 @@ int TLuaInterpreter::startTempRegexTrigger( QString & regex, QString & function 
     return id;
 }
 
-int TLuaInterpreter::startPermRegexTrigger( QString & name, QString & parent, QStringList & regexList, QString & function )
+int TLuaInterpreter::startPermRegexTrigger(const QString & name, const QString & parent, QStringList & regexList, const QString & function )
 {
     TTrigger * pT;
     QList<int> propertyList;
@@ -11463,7 +11463,7 @@ int TLuaInterpreter::startPermRegexTrigger( QString & name, QString & parent, QS
 
 }
 
-int TLuaInterpreter::startPermBeginOfLineStringTrigger( QString & name, QString & parent, QStringList & regexList, QString & function )
+int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString & name, const QString & parent, QStringList & regexList, const QString & function )
 {
     TTrigger * pT;
     QList<int> propertyList;
@@ -11498,7 +11498,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger( QString & name, QString 
 
 }
 
-int TLuaInterpreter::startPermSubstringTrigger( QString & name, QString & parent, QStringList & regexList, QString & function )
+int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QString & parent, const QStringList & regexList, const QString & function )
 {
     TTrigger * pT;
     QList<int> propertyList;

@@ -97,8 +97,8 @@ public:
     void              disconnect();
     bool              sendData( QString & data );
     void              setCommandEcho( bool cmdEcho );
-    void              setATCPVariables( QString & _msg );
-    void              setGMCPVariables( QString & _msg );
+    void              setATCPVariables(const QString & _msg );
+    void              setGMCPVariables(const QString & _msg );
     void              atcpComposerCancel();
     void              atcpComposerSave( QString );
     void              setLPMudStyle( bool lpmustyle );
@@ -111,7 +111,7 @@ public:
     void              loadReplay( QString & );
     void              _loadReplay();
     bool              isReplaying() { return loadingReplay; }
-    void              setChannel102Variables( QString & );
+    void              setChannel102Variables(const QString & );
 
 
 

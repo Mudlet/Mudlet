@@ -72,12 +72,12 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual          ~TTrigger();
                      TTrigger( TTrigger * parent, Host * pHost );
-                     TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
+                     TTrigger( const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
     QString          getCommand()                    { return mCommand; }
     void             compileAll();
-    void             setCommand( QString b )         { mCommand = b; }
+    void             setCommand( const QString& b )         { mCommand = b; }
     QString          getName()                       { return mName; }
-    void             setName( QString name );
+    void             setName(const QString& name );
     QStringList &    getRegexCodeList()              { return mRegexCodeList; }
     QList<int>       getRegexCodePropertyList()      { return mRegexCodePropertyList; }
     QColor           getFgColor()                    { return mFgColor; }
@@ -91,9 +91,9 @@ public:
     bool             isFilterChain();
     bool             setRegexCodeList( QStringList regex, QList<int> regexPorpertyList );
     QString          getScript()                     { return mScript; }
-    bool             setScript( QString & script );
+    bool             setScript(const QString & script );
     bool             compileScript();
-    bool             match( char *, QString &, int line, int posOffset = 0 );
+    bool             match( char *, const QString &, int line, int posOffset = 0 );
 
     bool             isFolder()                      { return mIsFolder; }
     bool             isMultiline()                   { return mIsMultiline; }
@@ -107,21 +107,21 @@ public:
     void             setIsTempTrigger( bool b )      { mIsTempTrigger = b; }
     void             setIsMultiline( bool b )        { mIsMultiline = b; }
     void             setIsFolder( bool b )           { mIsFolder = b; }
-    void             enableTrigger( QString & );
-    void             disableTrigger( QString & );
-    TTrigger *       killTrigger( QString & );
-    bool             match_substring( QString &, QString &, int, int posOffset = 0 );
-    bool             match_perl( char *, QString &, int, int posOffset = 0 );
-    bool             match_wildcard( QString &, int );
-    bool             match_exact_match( QString &, QString &, int, int posOffset = 0 );
-    bool             match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset = 0 );
+    void             enableTrigger(const QString & );
+    void             disableTrigger(const QString & );
+    TTrigger *       killTrigger(const QString & );
+    bool             match_substring(const QString &, const QString &, int, int posOffset = 0 );
+    bool             match_perl( char *, const QString &, int, int posOffset = 0 );
+    bool             match_wildcard(const QString &, int );
+    bool             match_exact_match(const QString &, const QString &, int, int posOffset = 0 );
+    bool             match_begin_of_line_substring(const QString & toMatch, const QString & regex, int regexNumber, int posOffset = 0 );
     bool             match_lua_code( int );
     bool             match_line_spacer( int regexNumber );
     bool             match_color_pattern( int, int );
     void             setConditionLineDelta( int delta )  { mConditionLineDelta = delta; }
     int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();
-    void             setSound( QString file ){ mSoundFile = file; }
+    void             setSound(const QString& file ){ mSoundFile = file; }
     bool             setupColorTrigger( int, int );
     bool             setupTmpColorTrigger( int ansiFg, int ansiBg );
     TColorTable*     createColorPattern(int, int);

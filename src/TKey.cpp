@@ -94,7 +94,7 @@ bool TKey::registerKey()
 }
 
 
-void TKey::enableKey( QString & name )
+void TKey::enableKey(const QString & name )
 {
     if( mName == name )
     {
@@ -107,7 +107,7 @@ void TKey::enableKey( QString & name )
     }
 }
 
-void TKey::disableKey( QString & name )
+void TKey::disableKey(const QString & name )
 {
     if( mName == name )
     {

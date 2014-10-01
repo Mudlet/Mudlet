@@ -1207,7 +1207,7 @@ QString TConsole::assemble_html_font_specs()
     return s;
 }
 
-void TConsole::logger_set_text_properties( QString tags )
+void TConsole::logger_set_text_properties(const QString& tags )
 {
     switch( tags.toInt() )
     {
@@ -1484,7 +1484,7 @@ void TConsole::reset()
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
 }
 
-void TConsole::insertLink( QString text, QStringList & func, QStringList & hint, QPoint P, bool customFormat )
+void TConsole::insertLink(const QString& text, QStringList & func, QStringList & hint, QPoint P, bool customFormat )
 {
     int x = P.x();
     int y = P.y();
@@ -1603,7 +1603,7 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
     }
 }
 
-void TConsole::insertText( QString text, QPoint P )
+void TConsole::insertText(const QString& text, QPoint P )
 {
     int x = P.x();
     int y = P.y();
@@ -1678,7 +1678,7 @@ void TConsole::insertText( QString text, QPoint P )
 }
 
 
-void TConsole::replace( QString text )
+void TConsole::replace(const QString& text )
 {
     int x = P_begin.x();
     int o = P_end.x() - P_begin.x();
@@ -1716,7 +1716,7 @@ void TConsole::skipLine()
     }
 }
 
-bool TConsole::saveMap(QString location)
+bool TConsole::saveMap(const QString& location)
 {
     QDir dir_map;
     QString filename_map;
@@ -1743,7 +1743,7 @@ bool TConsole::saveMap(QString location)
     return true;
 }
 
-bool TConsole::loadMap(QString location)
+bool TConsole::loadMap(const QString& location)
 {
     if( !mpHost ) return false;
     if( !mpHost->mpMap || !mpHost->mpMap->mpMapper )
@@ -1783,17 +1783,17 @@ bool TConsole::hasSelection()
         return false;
 }
 
-void TConsole::insertText( QString msg )
+void TConsole::insertText(const QString& msg )
 {
     insertText( msg, mUserCursor );
 }
 
-void TConsole::insertLink( QString text, QStringList & func, QStringList & hint, bool customFormat )
+void TConsole::insertLink(const QString& text, QStringList & func, QStringList & hint, bool customFormat )
 {
     insertLink( text, func, hint, mUserCursor, customFormat );
 }
 
-void TConsole::insertHTML( QString text )
+void TConsole::insertHTML(const QString& text )
 {
     insertText( text );
 }
@@ -2046,7 +2046,7 @@ void TConsole::setUserWindow()
     mUserConsole = true;
 }
 
-int TConsole::select( QString text, int numOfMatch )
+int TConsole::select(const QString& text, int numOfMatch )
 {
     if( mUserCursor.y()<0 ) return -1;
     if( mUserCursor.y()>=buffer.size() ) return -1;
@@ -2108,7 +2108,7 @@ bool TConsole::selectSection( int from, int to )
     return true;
 }
 
-void TConsole::setLink( QString & linkText, QStringList & linkFunction, QStringList & linkHint )
+void TConsole::setLink(const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
 {
     buffer.applyLink( P_begin, P_end, linkText, linkFunction, linkHint );
 }
@@ -2219,7 +2219,7 @@ void TConsole::printCommand( QString & msg )
     }
 }
 
-void TConsole::echoLink( QString & text, QStringList & func, QStringList & hint, bool customFormat )
+void TConsole::echoLink(const QString & text, QStringList & func, QStringList & hint, bool customFormat )
 {
     if( customFormat )
         buffer.addLink( mTriggerEngineMode, text, func, hint, mFormatCurrent );
@@ -2238,7 +2238,7 @@ void TConsole::echoLink( QString & text, QStringList & func, QStringList & hint,
     }
 }
 
-void TConsole::echo( QString & msg )
+void TConsole::echo(const QString & msg )
 {
     if( mTriggerEngineMode )
     {
@@ -2280,7 +2280,7 @@ void TConsole::print( const char * txt )
     console2->showNewLines();
 }
 
-void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
+void TConsole::printDebug( QColor & c, QColor & d, const QString & msg )
 {
     buffer.append( msg,
                    0,
@@ -2299,7 +2299,7 @@ void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
     console2->showNewLines();
 }
 
-TConsole * TConsole::createBuffer( QString & name )
+TConsole * TConsole::createBuffer(const QString & name )
 {
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
@@ -2344,7 +2344,7 @@ void TConsole::resetMainConsole()
     mLabelMap.clear();
 }
 
-TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width, int height )
+TConsole * TConsole::createMiniConsole(const QString & name, int x, int y, int width, int height )
 {
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) == mSubConsoleMap.end() )
@@ -2376,7 +2376,7 @@ TConsole * TConsole::createMiniConsole( QString & name, int x, int y, int width,
     }
 }
 
-TLabel * TConsole::createLabel( QString & name, int x, int y, int width, int height, bool fillBackground )
+TLabel * TConsole::createLabel(const QString & name, int x, int y, int width, int height, bool fillBackground )
 {
     std::string key = name.toLatin1().data();
     if( mLabelMap.find( key ) == mLabelMap.end() )
@@ -2421,7 +2421,7 @@ void TConsole::createMapper( int x, int y, int width, int height )
     mpMapper->show();
 }
 
-bool TConsole::createButton( QString & name, int x, int y, int width, int height, bool fillBackground )
+bool TConsole::createButton(const QString & name, int x, int y, int width, int height, bool fillBackground )
 {
     std::string key = name.toLatin1().data();
     if( mLabelMap.find( key ) == mLabelMap.end() )
@@ -2440,7 +2440,7 @@ bool TConsole::createButton( QString & name, int x, int y, int width, int height
         return false;
 }
 
-bool TConsole::setBackgroundImage( QString & name, QString & path )
+bool TConsole::setBackgroundImage(const QString & name, const QString & path )
 {
     std::string key = name.toLatin1().data();
     if( mLabelMap.find( key ) != mLabelMap.end() )
@@ -2453,7 +2453,7 @@ bool TConsole::setBackgroundImage( QString & name, QString & path )
         return false;
 }
 
-bool TConsole::setBackgroundColor( QString & name, int r, int g, int b, int alpha )
+bool TConsole::setBackgroundColor(const QString & name, int r, int g, int b, int alpha )
 {
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
@@ -2477,7 +2477,7 @@ bool TConsole::setBackgroundColor( QString & name, int r, int g, int b, int alph
 
 }
 
-bool TConsole::showWindow( QString & name )
+bool TConsole::showWindow(const QString & name )
 {
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
@@ -2500,7 +2500,7 @@ bool TConsole::showWindow( QString & name )
         return false;
 }
 
-bool TConsole::hideWindow( QString & name )
+bool TConsole::hideWindow(const QString & name )
 {
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
@@ -2518,7 +2518,7 @@ bool TConsole::hideWindow( QString & name )
         return false;
 }
 
-bool TConsole::printWindow( QString & name, QString & text )
+bool TConsole::printWindow(const QString & name, const QString & text )
 {
     std::string key = name.toLatin1().data();
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
@@ -2535,7 +2535,7 @@ bool TConsole::printWindow( QString & name, QString & text )
         return false;
 }
 
-void TConsole::print( QString & msg )
+void TConsole::print(const QString & msg )
 {
     buffer.append(  msg,
                     0,
@@ -2553,7 +2553,7 @@ void TConsole::print( QString & msg )
     console2->showNewLines();
 }
 
-void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB )
+void TConsole::print(const QString & msg, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB )
 {
     buffer.append(  msg,
                     0,
@@ -2572,7 +2572,7 @@ void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, i
 }
 
 
-void TConsole::printSystemMessage( QString & msg )
+void TConsole::printSystemMessage(const QString & msg )
 {
     assert( mpHost );
 
@@ -2607,7 +2607,7 @@ void TConsole::printSystemMessage( QString & msg )
     console2->showNewLines();
 }
 
-void TConsole::echoUserWindow( QString & msg )
+void TConsole::echoUserWindow(const QString & msg )
 {
     print( msg );
 }

@@ -61,24 +61,24 @@ public:
     bool hasExit( int direction );
     void setWeight( int );
     void setExitLock( int, bool );
-    void setSpecialExitLock( int to, QString cmd, bool doLock );
-    bool setSpecialExitLock( QString cmd, bool doLock );
+    void setSpecialExitLock( int to, const QString& cmd, bool doLock );
+    bool setSpecialExitLock(const QString& cmd, bool doLock );
     bool hasExitLock( int to );
-    bool hasSpecialExitLock( int, QString );
+    bool hasSpecialExitLock( int, const QString& );
     void removeAllSpecialExitsToRoom(int _id );
-    void setSpecialExit( int to, QString cmd );
+    void setSpecialExit( int to, const QString& cmd );
     void clearSpecialExits() { other.clear(); }
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
     const QMap<QString, int> & getExitWeights() const { return exitWeights; }
-    void setExitWeight( QString cmd, int w );
-    bool hasExitWeight( QString cmd );
-    void setDoor( QString cmd, int doorStatus );//0=no door, 1=open door, 2=closed, 3=locked
-    int getDoor( QString cmd );
+    void setExitWeight(const QString& cmd, int w );
+    bool hasExitWeight(const QString& cmd );
+    void setDoor(const QString& cmd, int doorStatus );//0=no door, 1=open door, 2=closed, 3=locked
+    int getDoor(const QString& cmd );
     bool hasExitStub( int direction );
     void setExitStub( int direction, bool status );
     void calcRoomDimensions();
     void setArea( int _areaID );
-    int getExitWeight( QString cmd );
+    int getExitWeight(const QString& cmd );
 
     int getWeight() { return weight; }
     int getNorth() { return north; }

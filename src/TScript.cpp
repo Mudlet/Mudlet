@@ -39,7 +39,7 @@ TScript::TScript( TScript * parent, Host * pHost )
 {
 }
 
-TScript::TScript( QString name, Host * pHost )
+TScript::TScript(const QString& name, Host * pHost )
 : Tree<TScript>(0)
 , exportItem(true)
 , mModuleMasterFolder(false)
@@ -126,7 +126,7 @@ void TScript::compile()
     }
 }
 
-bool TScript::setScript( QString & script )
+bool TScript::setScript(const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;

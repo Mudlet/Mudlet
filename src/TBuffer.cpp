@@ -306,7 +306,7 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QStringList & hint, TChar format )
+void TBuffer::addLink( bool trigMode, const QString & text, QStringList & command, QStringList & hint, TChar format )
 {
     mLinkID++;
     if( mLinkID > 1000 )
@@ -651,7 +651,7 @@ const QChar cESC = '\033';
 const QString cDigit = "0123456789";
 
 
-inline int TBuffer::lookupColor( QString & s, int pos )
+inline int TBuffer::lookupColor(const QString & s, int pos )
 {
     int ret = 0;
     QString code;
@@ -1791,7 +1791,7 @@ void TBuffer::translateToPlainText( std::string & s )
     }
 }
 
-void TBuffer::append( QString & text,
+void TBuffer::append(const QString & text,
                       int sub_start,
                       int sub_end,
                       int fgColorR,
@@ -1897,7 +1897,7 @@ void TBuffer::append( QString & text,
     }
 }
 
-void TBuffer::appendLine( QString & text,
+void TBuffer::appendLine(const QString & text,
                         int sub_start,
                         int sub_end,
                         int fgColorR,
@@ -1950,7 +1950,7 @@ void TBuffer::appendLine( QString & text,
     }
 }
 
-QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline )
+QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline )
 {
     QPoint P(-1, -1);
 
@@ -1992,7 +1992,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
 }
 
 
-bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
+bool TBuffer::insertInLine( QPoint & P, const QString & text, TChar & format )
 {
     if( text.size() < 1 ) return false;
     int x = P.x();
@@ -2538,7 +2538,7 @@ QString & TBuffer::line( int n )
 }
 
 
-int TBuffer::find( int line, QString what, int pos=0 )
+int TBuffer::find( int line, const QString& what, int pos=0 )
 {
     if( lineBuffer[line].size() >= pos ) return -1;
     if( pos < 0 ) return -1;
@@ -2547,7 +2547,7 @@ int TBuffer::find( int line, QString what, int pos=0 )
 }
 
 
-QStringList TBuffer::split( int line, QString splitter )
+QStringList TBuffer::split( int line, const QString& splitter )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
     return lineBuffer[line].split( splitter );
@@ -2573,7 +2573,7 @@ void TBuffer::expandLine( int y, int count, TChar & pC )
 
 bool TBuffer::replaceInLine( QPoint & P_begin,
                              QPoint & P_end,
-                             QString & with,
+                             const QString & with,
                              TChar & format )
 {
     int x1 = P_begin.x();
@@ -2633,7 +2633,7 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
 }
 
 
-bool TBuffer::replace( int line, QString what, QString with )
+bool TBuffer::replace( int line, const QString& what, const QString& with )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) )
         return false;
@@ -2771,7 +2771,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
         return false;
 }
 
-bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, QString linkText, QStringList & linkFunction, QStringList & linkHint )
+bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();

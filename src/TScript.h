@@ -43,16 +43,16 @@ public:
 
     virtual          ~TScript();
                      TScript( TScript * parent, Host * pHost );
-                     TScript( QString name, Host * pHost );
+                     TScript(const QString& name, Host * pHost );
 
     QString          getName()                                         { return mName; }
-    void             setName( QString name )                           { mName = name; }
+    void             setName(const QString& name )                           { mName = name; }
     void             compile();
     void             compileAll();
     bool             compileScript();
     void             execute();
     QString          getScript()                                       { return mScript; }
-    bool             setScript( QString & script );
+    bool             setScript(const QString & script );
     bool             isFolder()                                        { return mIsFolder; }
     void             setIsFolder( bool b )                             { mIsFolder = b; }
     bool             registerScript();

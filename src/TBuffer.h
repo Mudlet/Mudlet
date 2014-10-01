@@ -81,43 +81,43 @@ class TBuffer
 public:
 
     TBuffer( Host * pH );
-    QPoint insert( QPoint &, QString text, int,int,int, int, int, int, bool bold, bool italics, bool underline );
-    bool insertInLine( QPoint & cursor, QString & what, TChar & format );
+    QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline );
+    bool insertInLine( QPoint & cursor, const QString & what, TChar & format );
     void expandLine( int y, int count, TChar & );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
     void log( int, int );
     int skipSpacesAtBeginOfLine( int i, int i2 );
-    void addLink( bool, QString & text, QStringList & command, QStringList & hint, TChar format );
+    void addLink( bool, const QString & text, QStringList & command, QStringList & hint, TChar format );
     QString bufferToHtml( QPoint P1, QPoint P2 );
     int size(){ return static_cast<int>(buffer.size()); }
     QString & line( int n );
-    int find( int line, QString what, int pos );
+    int find( int line, const QString& what, int pos );
     int wrap( int );
-    QStringList split( int line, QString splitter );
+    QStringList split( int line, const QString& splitter );
     QStringList split( int line, QRegExp splitter );
-    bool replace( int line, QString what, QString with );
-    bool replaceInLine( QPoint & start, QPoint & end, QString & with, TChar & format );
+    bool replace( int line, const QString& what, const QString& with );
+    bool replaceInLine( QPoint & start, QPoint & end, const QString & with, TChar & format );
     bool deleteLine( int );
     bool deleteLines( int from, int to );
     bool applyFormat( QPoint &, QPoint &, TChar & format );
     bool applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold );
     bool applyBold( QPoint & P_begin, QPoint & P_end, bool bold );
-    bool applyLink( QPoint & P_begin, QPoint & P_end, QString linkText, QStringList &, QStringList & );
+    bool applyLink( QPoint & P_begin, QPoint & P_end, const QString& linkText, QStringList &, QStringList & );
     bool applyItalics( QPoint & P_begin, QPoint & P_end, bool bold );
     bool applyFgColor( QPoint &, QPoint &, int, int, int );
     bool applyBgColor( QPoint &, QPoint &, int, int, int );
     void appendBuffer( TBuffer chunk );
     bool moveCursor( QPoint & where );
-    QPoint & insertText( QString & what, QPoint & where );
+    QPoint & insertText(const QString & what, QPoint & where );
     int getLastLineNumber();
     QStringList getEndLines( int );
     void clear();
     void resetFontSpecs();
     QPoint getEndPos();
     void translateToPlainText( std::string & s );
-    void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
-    void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
-    int lookupColor( QString & s, int pos );
+    void append(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
+    void appendLine(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
+    int lookupColor(const QString & s, int pos );
     void set_text_properties(int tag);
     void setWrapAt( int i ){ mWrapAt = i; }
     void setWrapIndent( int i ){ mWrapIndent = i; }

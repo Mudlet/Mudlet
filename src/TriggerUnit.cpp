@@ -61,7 +61,7 @@ void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
 }
 
 
-void TriggerUnit::uninstall( QString packageName )
+void TriggerUnit::uninstall(const QString& packageName )
 {
     for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
     {
@@ -281,7 +281,7 @@ qint64 TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
-void TriggerUnit::processDataStream( QString & data, int line )
+void TriggerUnit::processDataStream(const QString & data, int line )
 {
     if( data.size() > 0 )
     {
@@ -335,7 +335,7 @@ void TriggerUnit::reenableAllTriggers()
     }
 }
 
-TTrigger * TriggerUnit::findTrigger( QString & name )
+TTrigger * TriggerUnit::findTrigger(const QString & name )
 {
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
@@ -346,7 +346,7 @@ TTrigger * TriggerUnit::findTrigger( QString & name )
     return 0;
 }
 
-bool TriggerUnit::enableTrigger( QString & name )
+bool TriggerUnit::enableTrigger(const QString & name )
 {
     bool found = false;
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
@@ -360,7 +360,7 @@ bool TriggerUnit::enableTrigger( QString & name )
     return found;
 }
 
-bool TriggerUnit::disableTrigger( QString & name )
+bool TriggerUnit::disableTrigger(const QString & name )
 {
     bool found = false;
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
@@ -374,7 +374,7 @@ bool TriggerUnit::disableTrigger( QString & name )
     return found;
 }
 
-void TriggerUnit::setTriggerStayOpen( QString name, int lines )
+void TriggerUnit::setTriggerStayOpen(const QString& name, int lines )
 {
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
@@ -385,7 +385,7 @@ void TriggerUnit::setTriggerStayOpen( QString name, int lines )
     }
 }
 
-bool TriggerUnit::killTrigger( QString & name )
+bool TriggerUnit::killTrigger(const QString & name )
 {
     QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )

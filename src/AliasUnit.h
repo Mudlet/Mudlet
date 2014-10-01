@@ -45,16 +45,16 @@ public:
     std::list<TAlias *>             getAliasRootNodeList()   { return mAliasRootNodeList; }
     TAlias *                        getAlias( int id );
     void                            compileAll();
-    TAlias *                        findAlias( QString & name );
-    bool                            enableAlias( QString & );
-    bool                            disableAlias( QString & );
-    bool                            killAlias( QString & name );
+    TAlias *                        findAlias(const QString & name );
+    bool                            enableAlias(const QString & );
+    bool                            disableAlias(const QString & );
+    bool                            killAlias(const QString & name );
     bool                            registerAlias( TAlias * pT );
     void                            unregisterAlias( TAlias * pT );
     void                            uninstall( QString );
     void                            _uninstall( TAlias * pChild, QString packageName );
     void                            reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    bool                            processDataStream( QString & );
+    bool                            processDataStream(const QString & );
     void                            setAliasStayOpen( QString, int );
     void                            stopAllTriggers();
     void                            reenableAllTriggers();

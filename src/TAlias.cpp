@@ -40,7 +40,7 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 {
 }
 
-TAlias::TAlias( QString name, Host * pHost )
+TAlias::TAlias(const QString& name, Host * pHost )
 : Tree<TAlias>(0)
 , mName( name )
 , mpHost( pHost )
@@ -61,7 +61,7 @@ TAlias::~TAlias()
     mpHost->getAliasUnit()->unregisterAlias(this);
 }
 
-void TAlias::setName( QString name )
+void TAlias::setName(const QString& name )
 {
     if( ! mIsTempAlias )
     {
@@ -71,7 +71,7 @@ void TAlias::setName( QString name )
     mpHost->getAliasUnit()->mLookupTable.insertMulti( name, this );
 }
 
-bool TAlias::match( QString & toMatch )
+bool TAlias::match(const QString & toMatch )
 {
     if( ! isActive() )
     {
@@ -261,7 +261,7 @@ static void pcre_deleter(pcre* pointer)
     pcre_free(pointer);
 }
 
-void TAlias::setRegexCode( QString code )
+void TAlias::setRegexCode(const QString& code )
 {
     mRegexCode = code;
     const char *error;
@@ -324,7 +324,7 @@ void TAlias::compile()
     }
 }
 
-bool TAlias::setScript( QString & script )
+bool TAlias::setScript(const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;

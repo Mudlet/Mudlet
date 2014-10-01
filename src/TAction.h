@@ -50,10 +50,10 @@ public:
 
     virtual          ~TAction();
                      TAction( TAction * parent, Host * pHost );
-                     TAction( QString name, Host * pHost );
+                     TAction(const QString& name, Host * pHost );
     void             compileAll();
     QString          getName()                                 { return mName; }
-    void             setName( QString name )                   { mName = name; }
+    void             setName(const QString& name )            { mName = name; }
     void             setButtonColor( QColor c )                { mButtonColor = c; }
     QColor           getButtonColor()                          { return mButtonColor; }
     void             setButtonRotation( int r )                { mButtonRotation = r; }
@@ -74,12 +74,12 @@ public:
     void             execute(QStringList &);
     void             _execute(QStringList &);
     QString          getIcon()                                 { return mIcon; }
-    void             setIcon( QString & icon )                 { mIcon = icon; }
+    void             setIcon(const QString & icon )           { mIcon = icon; }
     QString          getScript()                               { return mScript; }
-    bool             setScript( QString & script );
+    bool             setScript(const QString & script );
     QString          getCommandButtonUp()                      { return mCommandButtonUp; }
-    void             setCommandButtonUp( QString cmd )         { mCommandButtonUp = cmd; }
-    void             setCommandButtonDown( QString command )   { mCommandButtonDown = command; }
+    void             setCommandButtonUp(const QString& cmd )  { mCommandButtonUp = cmd; }
+    void             setCommandButtonDown(const QString& command ) { mCommandButtonDown = command; }
     QString          getCommandButtonDown()                    { return mCommandButtonDown; }
     bool             isFolder()                                { return mIsFolder; }
     bool             isPushDownButton()                        { return mIsPushDownButton; }

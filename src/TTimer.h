@@ -46,10 +46,10 @@ public:
 
                     ~TTimer();
                      TTimer( TTimer * parent, Host * pHost );
-                     TTimer( QString name, QTime time, Host * pHost );
+                     TTimer(const QString& name, QTime time, Host * pHost );
     void             compileAll();
     QString &        getName()                       { return mName; }
-    void             setName( QString name );
+    void             setName(const QString& name );
     QTime &          getTime()                       { return mTime; }
     void             compile();
     bool             checkRestart();
@@ -57,9 +57,9 @@ public:
     void             execute();
     void             setTime( QTime time );
     QString          getCommand()                    { return mCommand; }
-    void             setCommand( QString & cmd )     { mCommand = cmd; }
+    void             setCommand(const QString & cmd ) { mCommand = cmd; }
     QString          getScript()                     { return mScript; }
-    bool             setScript( QString & script );
+    bool             setScript(const QString & script );
     bool             canBeUnlocked( TTimer * );
     bool             isFolder()                      { return mIsFolder; }
     void             setIsTempTimer( bool b )        { mIsTempTimer = b; }
@@ -71,8 +71,8 @@ public:
     void             start();
     void             enableTimer();
     void             disableTimer();
-    void             enableTimer( QString & );
-    void             disableTimer( QString & );
+    void             enableTimer(const QString & );
+    void             disableTimer(const QString & );
     void             enableTimer( qint64 );
     void             disableTimer( qint64 );
     void             killTimer();

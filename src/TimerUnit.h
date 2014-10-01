@@ -45,11 +45,11 @@ public:
     void                  removeAllTempTimers();
     std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );
-    TTimer *              findTimer( QString & name );
+    TTimer *              findTimer(const QString & name );
     void                  compileAll();
-    bool                  enableTimer( QString & );
-    bool                  disableTimer( QString & );
-    bool                  killTimer( QString & name );
+    bool                  enableTimer(const QString & );
+    bool                  disableTimer(const QString & );
+    bool                  killTimer(const QString & name );
     bool                  registerTimer( TTimer * pT );
     void                  unregisterTimer( TTimer * pT );
     void                  reParentTimer( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );

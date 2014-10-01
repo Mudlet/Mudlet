@@ -36,7 +36,7 @@ KeyUnit::KeyUnit( Host * pHost )
 }
 
 
-void KeyUnit::_uninstall( TKey * pChild, QString packageName )
+void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
 {
     list<TKey*> * childrenList = pChild->mpMyChildrenList;
     for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
@@ -48,7 +48,7 @@ void KeyUnit::_uninstall( TKey * pChild, QString packageName )
 }
 
 
-void KeyUnit::uninstall( QString packageName )
+void KeyUnit::uninstall(const QString& packageName )
 {
     for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
     {
@@ -90,7 +90,7 @@ void KeyUnit::compileAll()
     }
 }
 
-bool KeyUnit::enableKey( QString & name )
+bool KeyUnit::enableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
@@ -103,7 +103,7 @@ bool KeyUnit::enableKey( QString & name )
     return found;
 }
 
-bool KeyUnit::disableKey( QString & name )
+bool KeyUnit::disableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);

@@ -43,7 +43,7 @@ TTimer::TTimer( TTimer * parent, Host * pHost )
     mpTimer->stop();
 }
 
-TTimer::TTimer( QString name, QTime time, Host * pHost )
+TTimer::TTimer(const QString& name, QTime time, Host * pHost )
 : Tree<TTimer>(0)
 , mRegisteredAnonymousLuaFunction( false )
 , exportItem(true)
@@ -82,7 +82,7 @@ bool TTimer::registerTimer()
     return mpHost->getTimerUnit()->registerTimer( this );
 }
 
-void TTimer::setName( QString name )
+void TTimer::setName(const QString& name )
 {
     // temp timers do not need to check for names referring to multiple
     // timer objects as names=ID -> much faster tempTimer creation
@@ -188,7 +188,7 @@ void TTimer::compileAll()
     }
 }
 
-bool TTimer::setScript( QString & script )
+bool TTimer::setScript(const QString & script )
 {
     mScript = script;
     if( script == "" )
@@ -406,7 +406,7 @@ void TTimer::disableTimer()
 
 
 
-void TTimer::enableTimer( QString & name )
+void TTimer::enableTimer(const QString & name )
 {
     if( mName == name )
     {
@@ -434,7 +434,7 @@ void TTimer::enableTimer( QString & name )
     }
 }
 
-void TTimer::disableTimer( QString & name )
+void TTimer::disableTimer(const QString & name )
 {
     if( mName == name )
     {

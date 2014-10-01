@@ -277,7 +277,7 @@ void TimerUnit::_removeTimer( TTimer * pT )
 }
 
 
-bool TimerUnit::enableTimer( QString & name )
+bool TimerUnit::enableTimer(const QString & name )
 {
     bool found = false;
     QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
@@ -326,7 +326,7 @@ bool TimerUnit::enableTimer( QString & name )
     return found;
 }
 
-bool TimerUnit::disableTimer( QString & name )
+bool TimerUnit::disableTimer(const QString & name )
 {
     bool found = false;
     QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
@@ -345,7 +345,7 @@ bool TimerUnit::disableTimer( QString & name )
     return found;
 }
 
-TTimer * TimerUnit::findTimer( QString & name )
+TTimer * TimerUnit::findTimer(const QString & name )
 {
     QMap<QString, TTimer *>::const_iterator it = mLookupTable.find( name );
     while( it != mLookupTable.end() && it.key() == name )
@@ -357,7 +357,7 @@ TTimer * TimerUnit::findTimer( QString & name )
 }
 
 
-bool TimerUnit::killTimer( QString & name )
+bool TimerUnit::killTimer(const QString & name )
 {
     for(auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++)
     {
