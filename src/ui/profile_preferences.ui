@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>592</height>
+    <height>596</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -166,7 +166,7 @@
           <item>
            <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
-             <string>Allow server to install scrpt packages</string>
+             <string>Allow server to install script packages</string>
             </property>
            </widget>
           </item>
@@ -248,7 +248,7 @@
           <item>
            <widget class="QLabel" name="label_58">
             <property name="text">
-             <string>Nick name in mudlet IRC channel:</string>
+             <string>Nickname in Mudlet IRC channel:</string>
             </property>
            </widget>
           </item>
