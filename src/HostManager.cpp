@@ -93,7 +93,7 @@ bool HostManager::addHost( QString hostname, QString port, QString login, QStrin
     QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass, id ) );
 
     mHostPool.insert( hostname, pNewHost );
-    mpActiveHost = getFirstHost();
+    mpActiveHost = mHostPool.begin().value().data();
     return true;
 }
 
