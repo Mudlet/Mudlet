@@ -42,6 +42,7 @@ public:
     QStringList        getHostList();
     QList<QString>     getHostNameList();
     Host *             getFirstHost();
+    Host *             getNextHost( QString LastHost ); //get next host key by providing a LastHost
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
     bool               renameHost( QString );
