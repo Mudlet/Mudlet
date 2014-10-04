@@ -6327,7 +6327,7 @@ void dlgTriggerEditor::slot_show_aliases()
     treeWidget_alias->show();
 }
 
-void dlgTriggerEditor::showError( QString error )
+void dlgTriggerEditor::showError(const QString& error )
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
@@ -6336,7 +6336,7 @@ void dlgTriggerEditor::showError( QString error )
     mpSystemMessageArea->show();
 }
 
-void dlgTriggerEditor::showInfo( QString error )
+void dlgTriggerEditor::showInfo(const QString& error )
 {
     mpSystemMessageArea->notificationAreaIconLabelError->hide();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
@@ -6345,7 +6345,7 @@ void dlgTriggerEditor::showInfo( QString error )
     mpSystemMessageArea->show();
 }
 
-void dlgTriggerEditor::showWarning( QString error )
+void dlgTriggerEditor::showWarning(const QString& error )
 {
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->hide();

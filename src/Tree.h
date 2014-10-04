@@ -63,8 +63,8 @@ public:
     void               setError( QString );
     bool               state();
     QString            getPackageName() { return mPackageName; }
-    void               setPackageName( QString n ){ mPackageName = n; }
-    void               setModuleName( QString n ){ mModuleName = n;}
+    void               setPackageName(const QString& n ){ mPackageName = n; }
+    void               setModuleName(const QString& n ){ mModuleName = n;}
     QString            getModuleName() {return mModuleName;}
     QString            mPackageName;
     QString            mModuleName;

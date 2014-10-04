@@ -105,7 +105,7 @@ void TRoom::setExitStub(int direction, bool status)
         exitStubs.removeAll(direction);
 }
 
-int TRoom::getExitWeight( QString cmd )
+int TRoom::getExitWeight(const QString& cmd )
 {
     if( exitWeights.contains( cmd ) )
     {
@@ -117,7 +117,7 @@ int TRoom::getExitWeight( QString cmd )
 
 // NOTE: needed so dialogRoomExit code can tell if an exit weight has been set
 // now that they are private!
-bool TRoom::hasExitWeight( QString cmd )
+bool TRoom::hasExitWeight(const QString& cmd )
 {
     if( exitWeights.contains( cmd ) )
     {
@@ -138,7 +138,7 @@ void TRoom::setWeight( int w )
 
 // Previous implimentations did not allow for REMOVAL of an exit weight (by
 // setting it to zero)
-void TRoom::setExitWeight( QString cmd, int w )
+void TRoom::setExitWeight(const QString& cmd, int w )
 {
     if( w > 0 )
     {
@@ -159,7 +159,7 @@ void TRoom::setExitWeight( QString cmd, int w )
 //
 // also: up, down, in, out or any unprefixed special exit command
 // all of which can be stored but aren't (yet?) showable on the 2D mapper
-void TRoom::setDoor( QString cmd, int doorStatus)
+void TRoom::setDoor(const QString& cmd, int doorStatus)
 {
     if( doorStatus > 0 && doorStatus <=3 )
         doors[cmd] = doorStatus;
@@ -167,7 +167,7 @@ void TRoom::setDoor( QString cmd, int doorStatus)
         doors.remove( cmd );
 }
 
-int TRoom::getDoor( QString cmd )
+int TRoom::getDoor(const QString& cmd )
 {
     return doors.value( cmd, 0 );
     // Second argument is the result if cmd is not in the doors QMap
@@ -326,7 +326,7 @@ void TRoom::setExitLock( int exit, bool state )
 }
 
 // The need for "to" seems superflous here, cmd is the decisive factor
-void TRoom::setSpecialExitLock(int to, QString cmd, bool doLock)
+void TRoom::setSpecialExitLock(int to, const QString& cmd, bool doLock)
 {
     QMapIterator<int, QString> it( other );
     while( it.hasNext() )
@@ -359,7 +359,7 @@ void TRoom::setSpecialExitLock(int to, QString cmd, bool doLock)
     }
 }
 
-bool TRoom::setSpecialExitLock(QString cmd, bool doLock)
+bool TRoom::setSpecialExitLock(const QString& cmd, bool doLock)
 {
     QMutableMapIterator<int, QString> it( other );
     while( it.hasNext() )
@@ -406,7 +406,7 @@ bool TRoom::hasExitLock( int exit )
 }
 
 // 0=offen 1=zu
-bool TRoom::hasSpecialExitLock( int to, QString cmd )
+bool TRoom::hasSpecialExitLock( int to, const QString& cmd )
 {
     if( other.contains( to ) )
     {
@@ -432,7 +432,7 @@ bool TRoom::hasSpecialExitLock( int to, QString cmd )
 // a poorer choice than the "command" which is currently the value item...
 // FIXME: swap key/value items in (TRoom *)->other<int, QString> map?
 // Changing to setSpecialExit(), "to" values less than 1 remove exit...
-void TRoom::setSpecialExit( int to, QString cmd )
+void TRoom::setSpecialExit( int to, const QString& cmd )
 {
     QString _strippedCmd;
     QString _prefix= "";

@@ -47,24 +47,24 @@ public:
                           ActionUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
     std::list<TAction *>  getActionRootNodeList()   { QMutexLocker locker(& mActionUnitLock); return mActionRootNodeList; }
     TAction *             getAction( int id );
-    TAction *            findAction( QString & );
+    TAction *            findAction(const QString & );
     void                  compileAll();
     bool                  registerAction( TAction * pT );
     void                  unregisterAction( TAction * pT );
     void                  reParentAction( int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1 );
     qint64                getNewID();
-    void                  uninstall( QString );
-    void                  _uninstall( TAction * pChild, QString packageName );
+    void                  uninstall(const QString& );
+    void                  _uninstall( TAction * pChild, const QString& packageName );
     void                  updateToolbar();
     std::list<TToolBar *> getToolBarList();
     std::list<TEasyButtonBar *> getEasyButtonBarList();
     TAction *             getHeadAction( TToolBar * );
     TAction *             getHeadAction( TEasyButtonBar * );
-    void                  processDataStream( QString & );
+    void                  processDataStream(const QString & );
     void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
     void                  constructToolbar( TAction *, mudlet * pMainWindow, TEasyButtonBar * pTB );
-    void                  showToolBar( QString & );
-    void                  hideToolBar( QString & );
+    void                  showToolBar(const QString & );
+    void                  hideToolBar(const QString & );
 
     QMutex                mActionUnitLock;
     QList<TAction*>       uninstallList;

@@ -46,16 +46,16 @@ public:
     std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
     TKey *                getKey( int id );
     void                  compileAll();
-    bool                  enableKey( QString & name );
-    bool                  disableKey( QString & name );
+    bool                  enableKey(const QString & name );
+    bool                  disableKey(const QString & name );
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
     void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     qint64                getNewID();
     QString               getKeyName( int keyCode, int modifier );
     void                  setupKeyNames();
-    void                  uninstall( QString );
-    void                  _uninstall( TKey * pChild, QString packageName );
+    void                  uninstall(const QString& );
+    void                  _uninstall( TKey * pChild, const QString& packageName );
     bool                  processDataStream( int, int );
     QMutex                mKeyUnitLock;
     QList<TKey*>        uninstallList;

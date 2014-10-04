@@ -45,7 +45,7 @@
 #include <errno.h>
 
 
-Host::Host( int port, QString hostname, QString login, QString pass, int id )
+Host::Host( int port, const QString& hostname, const QString& login, const QString& pass, int id )
 : mTelnet( this )
 , mpConsole( 0 )
 , mLuaInterpreter    ( this, id )
@@ -298,7 +298,7 @@ void Host::saveModules(int sync)
     }
 }
 
-void Host::reloadModule(QString moduleName)
+void Host::reloadModule(const QString& moduleName)
 {
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> it(installedModules);
@@ -416,7 +416,7 @@ void Host::adjustNAWS()
     mTelnet.setDisplayDimensions();
 }
 
-void Host::setReplacementCommand( QString s )
+void Host::setReplacementCommand(const QString& s )
 {
     mReplacementCommand = s;
 }
@@ -576,7 +576,7 @@ void Host::callEventHandlers()
 
 }
 
-void Host::incomingStreamProcessor( QString & data, int line )
+void Host::incomingStreamProcessor(const QString & data, int line )
 {
     mTriggerUnit.processDataStream( data, line );
 
@@ -587,7 +587,7 @@ void Host::incomingStreamProcessor( QString & data, int line )
     }
 }
 
-void Host::registerEventHandler( QString name, TScript * pScript )
+void Host::registerEventHandler(const QString& name, TScript * pScript )
 {
     if( mEventHandlerMap.contains( name ) )
     {
@@ -603,7 +603,7 @@ void Host::registerEventHandler( QString name, TScript * pScript )
         mEventHandlerMap.insert( name, scriptList );
     }
 }
-void Host::registerAnonymousEventHandler( QString name, QString fun )
+void Host::registerAnonymousEventHandler(const QString& name, const QString& fun )
 {
 
     if( mAnonymousEventHandlerFunctions.contains( name ) )
@@ -621,7 +621,7 @@ void Host::registerAnonymousEventHandler( QString name, QString fun )
     }
 }
 
-void Host::unregisterEventHandler( QString name, TScript * pScript )
+void Host::unregisterEventHandler(const QString & name, TScript * pScript )
 {
     if( mEventHandlerMap.contains( name ) )
     {
@@ -650,7 +650,7 @@ void Host::raiseEvent( const TEvent & pE )
     }
 }
 
-void Host::postIrcMessage( QString a, QString b, QString c )
+void Host::postIrcMessage(const QString& a, const QString& b, const QString& c )
 {
     TEvent pE;
     pE.mArgumentList << "sysIrcMessage";
@@ -659,43 +659,43 @@ void Host::postIrcMessage( QString a, QString b, QString c )
     raiseEvent( pE );
 }
 
-void Host::enableTimer( QString & name )
+void Host::enableTimer(const QString & name )
 {
     mTimerUnit.enableTimer( name );
 }
 
-void Host::disableTimer( QString & name )
+void Host::disableTimer(const QString & name )
 {
     mTimerUnit.disableTimer( name );
 }
 
-bool Host::killTimer( QString & name )
+bool Host::killTimer(const QString & name )
 {
     return mTimerUnit.killTimer( name );
 }
 
-void Host::enableKey( QString & name )
+void Host::enableKey(const QString & name )
 {
     mKeyUnit.enableKey( name );
 }
 
-void Host::disableKey( QString & name )
+void Host::disableKey(const QString & name )
 {
     mKeyUnit.disableKey( name );
 }
 
 
-void Host::enableTrigger( QString & name )
+void Host::enableTrigger(const QString & name )
 {
     mTriggerUnit.enableTrigger( name );
 }
 
-void Host::disableTrigger( QString & name )
+void Host::disableTrigger(const QString & name )
 {
     mTriggerUnit.disableTrigger( name );
 }
 
-bool Host::killTrigger( QString & name )
+bool Host::killTrigger(const QString & name )
 {
     return mTriggerUnit.killTrigger( name );
 }
@@ -780,7 +780,7 @@ void Host::showUnpackingProgress( QString  txt )
     QApplication::sendPostedEvents();
 }
 
-bool Host::installPackage( QString fileName, int module )
+bool Host::installPackage(const QString& fileName, int module )
 {
 
 //     Module notes:
@@ -1051,7 +1051,7 @@ bool Host::installPackage( QString fileName, int module )
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool Host::removeDir( const QString dirName, QString originalPath )
+bool Host::removeDir( const QString& dirName, const QString& originalPath )
 {
     bool result = true;
     QDir dir(dirName);
@@ -1080,7 +1080,7 @@ bool Host::removeDir( const QString dirName, QString originalPath )
     return result;
 }
 
-bool Host::uninstallPackage( QString packageName, int module)
+bool Host::uninstallPackage(const QString& packageName, int module)
 {
 
 //     As with the installPackage, the module codes are:
@@ -1173,7 +1173,7 @@ bool Host::uninstallPackage( QString packageName, int module)
     return true;
 }
 
-void Host::readPackageConfig( QString luaConfig, QString & packageName )
+void Host::readPackageConfig(const QString& luaConfig, QString & packageName )
 {
 
     QFile configFile(luaConfig);

@@ -33,7 +33,7 @@
 
 using namespace std;
 
-void ActionUnit::_uninstall( TAction * pChild, QString packageName )
+void ActionUnit::_uninstall( TAction * pChild, const QString& packageName )
 {
     list<TAction*> * childrenList = pChild->mpMyChildrenList;
     for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
@@ -45,7 +45,7 @@ void ActionUnit::_uninstall( TAction * pChild, QString packageName )
 }
 
 
-void ActionUnit::uninstall( QString packageName )
+void ActionUnit::uninstall(const QString& packageName )
 {
     for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
     {
@@ -76,7 +76,7 @@ void ActionUnit::compileAll()
     }
 }
 
-TAction * ActionUnit::findAction( QString & name )
+TAction * ActionUnit::findAction(const QString & name )
 {
     //QMap<int, TAction *>  mActionMap;
 
@@ -440,7 +440,7 @@ TAction * ActionUnit::getHeadAction( TToolBar * pT )
     return 0;
 }
 
-void ActionUnit::showToolBar( QString & name )
+void ActionUnit::showToolBar(const QString & name )
 {
     for(auto it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
     {
@@ -454,7 +454,7 @@ void ActionUnit::showToolBar( QString & name )
     mpHost->mpConsole->mpCommandLine->setFocus();
 }
 
-void ActionUnit::hideToolBar( QString & name )
+void ActionUnit::hideToolBar(const QString & name )
 {
     for(auto it = mEasyButtonBarList.begin(); it!=mEasyButtonBarList.end(); it++ )
     {

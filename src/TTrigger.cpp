@@ -72,7 +72,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 {
 }
 
-TTrigger::TTrigger( QString name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host * pHost )
+TTrigger::TTrigger( const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host * pHost )
 : Tree<TTrigger>(0)
 , mTriggerContainsPerlRegex( false )
 , mPerlSlashGOption( false )
@@ -115,7 +115,7 @@ TTrigger::~TTrigger()
     mpHost->getTriggerUnit()->unregisterTrigger( this );
 }
 
-void TTrigger::setName( QString name )
+void TTrigger::setName(const QString& name )
 {
     if( ! mIsTempTrigger )
     {
@@ -246,7 +246,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
     return state;
 }
 
-bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, int posOffset )
+bool TTrigger::match_perl( char * subject, const QString & toMatch, int regexNumber, int posOffset )
 {
     assert( mRegexMap.contains(regexNumber ) );
 
@@ -466,7 +466,7 @@ END:
     return true;
 }
 
-bool TTrigger::match_begin_of_line_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset )
+bool TTrigger::match_begin_of_line_substring( const QString & toMatch, const QString & regex, int regexNumber, int posOffset )
 {
     if( toMatch.startsWith( regex ) )
     {
@@ -579,7 +579,7 @@ inline void TTrigger::filter( std::string & capture, int & posOffset )
     free( filterSubject );
 }
 
-bool TTrigger::match_substring( QString & toMatch, QString & regex, int regexNumber, int posOffset )
+bool TTrigger::match_substring( const QString & toMatch, const QString & regex, int regexNumber, int posOffset )
 {
     int where = toMatch.indexOf( regex );
     if( where != -1 )
@@ -811,7 +811,7 @@ bool TTrigger::match_lua_code( int regexNumber )
     return false;
 }
 
-bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNumber, int posOffset )
+bool TTrigger::match_exact_match( const QString & toMatch, const QString & line, int regexNumber, int posOffset )
 {
     QString text = toMatch;
     if( text.endsWith(QChar('\n')) ) text.chop(1); //TODO: speed optimization
@@ -869,7 +869,7 @@ bool TTrigger::match_exact_match( QString & toMatch, QString & line, int regexNu
     return false;
 }
 
-bool TTrigger::match( char * subject, QString & toMatch, int line, int posOffset )
+bool TTrigger::match( char * subject, const QString & toMatch, int line, int posOffset )
 {
     bool ret = false;
     if( isActive() )
@@ -1312,7 +1312,7 @@ void TTrigger::compile()
     }
 }
 
-bool TTrigger::setScript( QString & script )
+bool TTrigger::setScript( const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;
@@ -1366,7 +1366,7 @@ void TTrigger::execute()
     }
 }
 
-void TTrigger::enableTrigger( QString & name )
+void TTrigger::enableTrigger( const QString & name )
 {
     if( mName == name )
     {
@@ -1379,7 +1379,7 @@ void TTrigger::enableTrigger( QString & name )
     }
 }
 
-void TTrigger::disableTrigger( QString & name )
+void TTrigger::disableTrigger( const QString & name )
 {
     if( mName == name )
     {
@@ -1392,7 +1392,7 @@ void TTrigger::disableTrigger( QString & name )
     }
 }
 
-TTrigger * TTrigger::killTrigger( QString & name )
+TTrigger * TTrigger::killTrigger( const QString & name )
 {
     if( mName == name )
     {

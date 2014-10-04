@@ -44,22 +44,22 @@ public:
 
     virtual          ~TAlias();
                      TAlias( TAlias * parent, Host * pHost );
-                     TAlias( QString name, Host * pHost );
+                     TAlias(const QString& name, Host * pHost );
     void             compileAll();
     QString          getName()                       { return mName; }
-    void             setName( QString name );
+    void             setName(const QString& name );
     void             compile();
     bool             compileScript();
     void             execute();
     QString          getScript()                     { return mScript; }
-    bool             setScript( QString & script );
+    bool             setScript(const QString & script );
     QString          getRegexCode()                  { return mRegexCode; }
-    void             setRegexCode( QString );
-    void             setCommand( QString command )   { mCommand = command; }
+    void             setRegexCode(const QString& );
+    void             setCommand(const QString& command ) { mCommand = command; }
     QString          getCommand()                    { return mCommand; }
     bool             isFolder()                      { return mIsFolder; }
     void             setIsFolder( bool b )           { mIsFolder = b; }
-    bool             match( QString & toMatch );
+    bool             match(const QString & toMatch );
     bool             registerAlias();
     bool             isTempAlias()                   { return mIsTempAlias; }
     void             setIsTempAlias( bool b )        { mIsTempAlias = b; }

@@ -83,9 +83,9 @@ public:
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
     void                        closeEvent(QCloseEvent *event);
-    void                        showError( QString );
-    void                        showWarning( QString );
-    void                        showInfo( QString );
+    void                        showError(const QString& );
+    void                        showWarning(const QString& );
+    void                        showInfo(const QString& );
     void                        focusInEvent( QFocusEvent * );
     void                        focusOutEvent( QFocusEvent * );
     void                        enterEvent( QEvent * pE );
@@ -110,7 +110,7 @@ public:
 
 signals:
 
-    void                        signal_establish_connection( QString profile_name );
+    void                        signal_establish_connection( const QString& profile_name );
     void                        accept();
     void                        update();
 

@@ -61,22 +61,22 @@ class Host  : public QObject
 
 public:
 
-                       Host( int port, QString mHostName, QString login, QString pass, int host_id );
+                       Host( int port, const QString& mHostName, const QString& login, const QString& pass, int host_id );
 
                        ~Host();
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
-    void               setName( QString s )             { QMutexLocker locker(& mLock); mHostName = s; }
+    void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
-    void               setUrl( QString s )              { QMutexLocker locker(& mLock); mUrl = s; }
+    void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
     QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
-    void               setUserDefinedName( QString s )  { QMutexLocker locker(& mLock); mUserDefinedName = s; }
+    void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
     QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
-    void               setLogin( QString s )            { QMutexLocker locker(& mLock); mLogin = s; }
+    void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
-    void               setPass( QString s )             { QMutexLocker locker(& mLock); mPass = s; }
+    void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
     int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
     void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
@@ -97,16 +97,16 @@ public:
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
     LuaInterface *     getLuaInterface() { return mLuaInterface; }
-    void               incomingStreamProcessor( QString & paragraph, int line );
-    void               postIrcMessage( QString, QString, QString );
-    void               enableTimer( QString & );
-    void               disableTimer( QString & );
-    void               enableTrigger( QString & );
-    void               disableTrigger( QString & );
-    void               enableKey( QString & );
-    void               disableKey( QString & );
-    bool               killTimer( QString & );
-    bool               killTrigger( QString & );
+    void               incomingStreamProcessor(const QString & paragraph, int line );
+    void               postIrcMessage(const QString&, const QString&, const QString& );
+    void               enableTimer(const QString & );
+    void               disableTimer(const QString & );
+    void               enableTrigger(const QString & );
+    void               disableTrigger(const QString & );
+    void               enableKey(const QString & );
+    void               disableKey(const QString & );
+    bool               killTimer(const QString & );
+    bool               killTrigger(const QString & );
     double             stopStopWatch( int );
     bool               resetStopWatch( int );
     bool               startStopWatch( int );
@@ -117,15 +117,15 @@ public:
     //QString            getBufferLine( int );
     bool               serialize();
     void               saveModules(int);
-    void               reloadModule(QString moduleName);
+    void               reloadModule(const QString& moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }
 
     void               setIsAutologin( bool b ){ mIsAutologin = b; }
     bool               isAutologin(){ return mIsAutologin; }
-    void               setReplacementCommand( QString );
-    void               registerEventHandler( QString, TScript * );
-    void               registerAnonymousEventHandler( QString name, QString fun );
-    void               unregisterEventHandler( QString, TScript * );
+    void               setReplacementCommand(const QString& );
+    void               registerEventHandler(const QString&, TScript * );
+    void               registerAnonymousEventHandler(const QString& name, const QString& fun );
+    void               unregisterEventHandler(const QString&, TScript * );
     void               raiseEvent( const TEvent & event );
     void               resetProfile();
     void               callEventHandlers();
@@ -137,10 +137,10 @@ public:
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
 
-    bool               installPackage( QString, int module);
-    bool               uninstallPackage( QString, int module);
-    bool               removeDir( const QString dirName, QString originalPath);
-    void               readPackageConfig( QString, QString & );
+    bool               installPackage(const QString&, int module);
+    bool               uninstallPackage(const QString&, int module);
+    bool               removeDir( const QString& dirName, const QString& originalPath);
+    void               readPackageConfig(const QString&, QString & );
 
     cTelnet            mTelnet;
     QPointer<TConsole> mpConsole;

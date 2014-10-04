@@ -1009,7 +1009,7 @@ void cTelnet::processTelnetCommand( const string & command )
   }
 }
 
-void cTelnet::setATCPVariables( QString & msg )
+void cTelnet::setATCPVariables(const QString & msg )
 {
     QString var;
     QString arg;
@@ -1075,7 +1075,7 @@ void cTelnet::setATCPVariables( QString & msg )
     }
 }
 
-void cTelnet::setGMCPVariables( QString & msg )
+void cTelnet::setGMCPVariables(const QString & msg )
 {
     QString var;
     QString arg;
@@ -1149,7 +1149,7 @@ void cTelnet::setGMCPVariables( QString & msg )
     mpHost->mLuaInterpreter.setGMCPTable( var, arg );
 }
 
-void cTelnet::setChannel102Variables( QString & msg )
+void cTelnet::setChannel102Variables(const QString & msg )
 {
     // messages consist of 2 bytes only
     if( msg.size() < 2 )

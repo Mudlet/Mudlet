@@ -33,7 +33,7 @@
 #include "post_guard.h"
 
 
-TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
+TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
 : QDockWidget( pW )
 , mpTAction( pA )
 , mVerticalOrientation( false )

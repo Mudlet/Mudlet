@@ -53,7 +53,7 @@ TAction::TAction( TAction * parent, Host * pHost )
 {
 }
 
-TAction::TAction( QString name, Host * pHost )
+TAction::TAction(const QString& name, Host * pHost )
 : Tree<TAction>(0)
 , mpToolBar( 0 )
 , mpEasyButtonBar( 0 )
@@ -125,7 +125,7 @@ void TAction::compile()
     }
 }
 
-bool TAction::setScript( QString & script )
+bool TAction::setScript(const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;

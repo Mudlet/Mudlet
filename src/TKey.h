@@ -50,8 +50,8 @@ public:
     void             setKeyCode( int code )             { mKeyCode = code; }
     int              getKeyModifiers()                  { return mKeyModifier; }
     void             setKeyModifiers( int code )        { mKeyModifier = code; }
-    void             enableKey( QString & name );
-    void             disableKey( QString & name );
+    void             enableKey(const QString & name );
+    void             disableKey(const QString & name );
     void             compile();
     bool             compileScript();
     void             execute();

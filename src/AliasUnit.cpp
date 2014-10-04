@@ -259,7 +259,7 @@ qint64 AliasUnit::getNewID()
     return ++mMaxID;
 }
 
-bool AliasUnit::processDataStream( QString & data )
+bool AliasUnit::processDataStream( const QString & data )
 {
     TLuaInterpreter * Lua = mpHost->getLuaInterpreter();
     QString lua_command_string = "command";
@@ -303,7 +303,7 @@ void AliasUnit::reenableAllTriggers()
     }
 }
 
-TAlias * AliasUnit::findAlias( QString & name )
+TAlias * AliasUnit::findAlias(const QString & name )
 {
     //TAlias * pT = 0;
     QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
@@ -315,7 +315,7 @@ TAlias * AliasUnit::findAlias( QString & name )
     return 0;
 }
 
-bool AliasUnit::enableAlias( QString & name )
+bool AliasUnit::enableAlias(const QString & name )
 {
     bool found = false;
     QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
@@ -329,7 +329,7 @@ bool AliasUnit::enableAlias( QString & name )
     return found;
 }
 
-bool AliasUnit::disableAlias( QString & name )
+bool AliasUnit::disableAlias(const QString & name )
 {
     bool found = false;
     QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
@@ -344,7 +344,7 @@ bool AliasUnit::disableAlias( QString & name )
 }
 
 
-bool AliasUnit::killAlias( QString & name )
+bool AliasUnit::killAlias(const QString & name )
 {
     for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
     {
