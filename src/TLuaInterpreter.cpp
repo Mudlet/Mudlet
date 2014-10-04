@@ -4885,7 +4885,7 @@ int TLuaInterpreter::sendGMCP( lua_State *L )
 #define    SE 240
 int TLuaInterpreter::sendMSDP( lua_State *L )
 {
-    string msg;
+    string variable;
     if( ! lua_isstring( L, 1 ) )
     {
         lua_pushstring( L, "sendMSDP: what do you want to send?" );
@@ -4894,25 +4894,23 @@ int TLuaInterpreter::sendMSDP( lua_State *L )
     }
     else
     {
-        msg = lua_tostring( L, 1 );
+        variable = lua_tostring( L, 1 );
     }
 
-    string what;
-    if( lua_isstring( L, 2 ) )
-    {
-        what = lua_tostring( L, 2 );
-    }
     string _h;
     _h += TN_IAC;
     _h += TN_SB;
     _h += MSDP;
     _h += MSDP_VAR;
-    _h += msg;
-    if( what != "" )
+    _h += variable;
+
+    int n = lua_gettop( L );
+    for( int i=2; i<=n; i++)
     {
         _h += MSDP_VAL;
-        _h += what;
+        _h += lua_tostring( L, i );
     }
+
     _h += TN_IAC;
     _h += TN_SE;
 
