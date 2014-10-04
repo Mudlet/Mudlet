@@ -112,12 +112,10 @@ public:
     QString           loadReplay( QString &, bool );
     void              _loadReplay();
     bool              isReplaying() { return mIsReplaying; }
+    void              abortReplay();
     void              setChannel102Variables(const QString & );
-
-
-
-
     bool              socketOutRaw(std::string & data);
+
 
     QMap<int, bool>   supportedTelnetOptions;
     bool              mResponseProcessed;

@@ -138,8 +138,8 @@ public:
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
    void                          replayStart( Host * );
+   void                          replayOver( Host *, bool );
    bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
-   void                          replayOver( Host * );
    void                          showEvent( QShowEvent * event );
    void                          hideEvent( QHideEvent * event );
    bool                          resetFormat( Host *, QString & name );
