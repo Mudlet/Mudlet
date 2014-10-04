@@ -52,18 +52,12 @@
 #include <stdio.h>
 #include <time.h>
 
-
-#ifdef DEBUG
-    #undef DEBUG
-#endif
-
-//#ifdef QT_DEBUG
-//    #define DEBUG
-//#endif
-
-
-
-#define DEBUG
+// Uncomment this for various qDebug() entries - some are quite spammy.
+// #define DEBUG_TELNET 0x7
+// To control what is enabled change the power of 2 values (bitfield):
+// 0x1  - show Telnet option negotiation
+// 0x2  - show Replay chunk data and timer details for next chunk
+// 0x4  - show Data
 
 using namespace std;
 
@@ -417,7 +411,7 @@ void cTelnet::setDisplayDimensions()
 
 void cTelnet::sendTelnetOption( char type, char option )
 {
-#ifdef DEBUG_TELNET
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
     QString _type;
     switch ((quint8)type)
     {
@@ -469,7 +463,7 @@ void cTelnet::setDownloadProgress( qint64 got, qint64 tot )
 void cTelnet::processTelnetCommand( const string & command )
 {
   char ch = command[1];
-#ifdef DEBUG_TELNET
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
   QString _type;
   switch ((quint8)ch)
   {
@@ -684,9 +678,9 @@ void cTelnet::processTelnetCommand( const string & command )
       {
 
           //server refuses to enable some option...
-          #ifdef DEBUG
-              qDebug() << "cTelnet::processTelnetCommand() TN_WONT command="<<(quint8)command[2];
-          #endif
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
+          qDebug() << "cTelnet::processTelnetCommand() TN_WONT command="<<(quint8)command[2];
+#endif
           option = command[2];
           int idxOption = static_cast<int>(option);
           if( triedToEnable[idxOption] )
@@ -697,9 +691,9 @@ void cTelnet::processTelnetCommand( const string & command )
           }
           else
           {
-              #ifdef DEBUG
-                  qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
-              #endif
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
+              qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
+#endif
               //send DONT if needed (see RFC 854 for details)
               if( hisOptionState[idxOption] || ( heAnnouncedState[idxOption] ) )
               {
@@ -726,8 +720,8 @@ void cTelnet::processTelnetCommand( const string & command )
 
       case TN_DO:
       {
-#ifdef DEBUG
-      qDebug() << "telnet: server wants us to enable option:"<< (quint8)command[2];
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
+          qDebug() << "telnet: server wants us to enable option:"<< (quint8)command[2];
 #endif
           //server wants us to enable some option
           option = command[2];
@@ -766,7 +760,7 @@ void cTelnet::processTelnetCommand( const string & command )
             sendTelnetOption( TN_WILL, 102 );
             break;
           }
-#ifdef DEBUG
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
           qDebug() << "server wants us to enable telnet option " << (quint8)option << "(TN_DO + "<< (quint8)option<<")";
 #endif
           if(option == OPT_TIMING_MARK)
@@ -809,7 +803,7 @@ void cTelnet::processTelnetCommand( const string & command )
       case TN_DONT:
       {
           //only respond if value changed or if this option has not been announced yet
-#ifdef DEBUG
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
               qDebug() << "cTelnet::processTelnetCommand() TN_DONT command="<<(quint8)command[2];
 #endif
           option = command[2];
@@ -1853,11 +1847,12 @@ void cTelnet::_loadReplay(quint8 version=0)
 
         // If the next four lines are commented out, please leave for debugging
         // future replay development - Slysven
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x2 )
         if( mudlet::self()->mReplaySpeed < 1 )
             qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f Seconds. )", mLoadedBytes, amount, offset/1000.0 , - mudlet::self()->mReplaySpeed * offset/1000.0 );
         else
             qDebug( "_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f Seconds. )", mLoadedBytes, amount, offset/1000.0 , offset/(1000.0 * mudlet::self()->mReplaySpeed) );
-
+#endif
 
         mudlet::self()->mReplayChunkTime = offset;
         mudlet::self()->mReplayTimeOffset = 0;
@@ -1935,15 +1930,17 @@ void cTelnet::slot_readPipe()
     recvdGA = false;
     // If the next line is commented out please leave for future replay
     // development/debugging work - Slysven
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x2 )
     qDebug("Replay data: \"%s\"", mLoadBuffer.constData());
+#endif
     for( int i = 0; i < datalen; i++ )
     {
         char ch = mLoadBuffer.at(i);
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            #ifdef DEBUG
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
                 qDebug() <<" SERVER sends telnet command "<<(quint8)ch;
-            #endif
+#endif
             if (! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
@@ -2083,9 +2080,9 @@ void cTelnet::handle_socket_signal_readyRead()
         buffer = out_buffer;
     }
     buffer[datalen] = '\0';
-    #ifdef DEBUG
-        //qDebug()<<"got<"<<pBuffer<<">";
-    #endif
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x4 )
+    qDebug()<<"got<"<<pBuffer<<">";
+#endif
     if( mpHost->mpConsole->mIsRecording ) {
         qint64 interval = mRecordLastDateTimeOffset.msecsTo( QDateTime::currentDateTime() );
         // now use a qint64 for same reason given as for amount above
@@ -2115,9 +2112,9 @@ void cTelnet::handle_socket_signal_readyRead()
 
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            #ifdef DEBUG
-                //qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
-            #endif
+#if defined( DEBUG_TELNET ) && ( DEBUG_TELNET & 0x1 )
+            qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
+#endif
             if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
