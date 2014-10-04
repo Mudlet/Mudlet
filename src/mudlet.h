@@ -245,14 +245,14 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
-   QAction *                     actionSpeedDisplay;
-   QAction *                     actionReplayTime;
-   QLabel *                      replaySpeedDisplay;
-   QLabel *                      replayTime;
-   QTimer *                      replayTimer;
-   QToolBar *                    replayToolBar;
+   QAction *                     mpActionReplaySpeedDown;
+   QAction *                     mpActionReplaySpeedUp;
+   QAction *                     mpActionSpeedDisplay;
+   QAction *                     mpActionReplayTime;
+   QLabel *                      mpReplaySpeedDisplay;
+   QLabel *                      mpReplayTimeDisplay;
+   QTimer *                      mpReplayTimer;
+   QToolBar *                    mpReplayToolBar;
 
    QAction *                     actionReconnect;
 

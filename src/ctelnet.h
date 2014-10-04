@@ -24,13 +24,14 @@
 
 
 #include "pre_guard.h"
+#include <QFile>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
-#include <QStringList>
 
 #include <zlib.h>
 
@@ -110,7 +111,7 @@ public:
     void              recordReplay();
     void              loadReplay( QString & );
     void              _loadReplay();
-    bool              isReplaying() { return loadingReplay; }
+    bool              isReplaying() { return mIsReplaying; }
     void              setChannel102Variables(const QString & );
 
 
@@ -211,7 +212,11 @@ private:
     bool              enableGMCP;
     bool              enableChannel102;
     QStringList       messageStack;
-    bool              loadingReplay;
+    bool              mIsReplaying;
+    char              mLoadBuffer[100001];
+    int               mLoadedBytes;
+    QDataStream       mReplayStream;
+    QFile             mReplayFile;
 };
 
 #endif // MUDLET_CTELNET_H

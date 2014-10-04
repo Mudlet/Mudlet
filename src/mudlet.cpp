@@ -104,14 +104,14 @@ mudlet::mudlet()
 , version( QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD) )
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )
-, actionReplaySpeedDown( 0 )
-, actionReplaySpeedUp( 0 )
-, actionSpeedDisplay( 0 )
-, actionReplayTime( 0 )
-, replaySpeedDisplay( 0 )
-, replayTime( 0 )
-, replayTimer( 0 )
-, replayToolBar( 0 )
+, mpActionReplaySpeedDown( 0 )
+, mpActionReplaySpeedUp( 0 )
+, mpActionSpeedDisplay( 0 )
+, mpActionReplayTime( 0 )
+, mpReplaySpeedDisplay( 0 )
+, mpReplayTimeDisplay( 0 )
+, mpReplayTimer( 0 )
+, mpReplayToolBar( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -2190,45 +2190,47 @@ void mudlet::toggleFullScreenView()
 
 void mudlet::replayStart()
 {
-    if( ! mpMainToolBar ) return;
-    replayToolBar = new QToolBar( this );
+    if( ! mpMainToolBar )
+        return;
+
+    mpReplayToolBar = new QToolBar( this );
     mReplaySpeed = 1;
-    replayTime = new QLabel( this );
-    actionReplayTime = replayToolBar->addWidget( replayTime );
+    mpReplayTimeDisplay = new QLabel( this );
+    mpActionReplayTime = mpReplayToolBar->addWidget( mpReplayTimeDisplay );
 
-    actionReplaySpeedUp = new QAction( QIcon( QStringLiteral( ":/icons/export.png" ) ), tr("Faster"), this);
-    actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
-    replayToolBar->addAction( actionReplaySpeedUp );
+    mpActionReplaySpeedUp = new QAction( QIcon( QStringLiteral( ":/icons/export.png" ) ), tr("Faster"), this);
+    mpActionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
+    mpReplayToolBar->addAction( mpActionReplaySpeedUp );
 
-    actionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Slower"), this);
-    actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
-    replayToolBar->addAction( actionReplaySpeedDown );
-    replaySpeedDisplay = new QLabel( this );
-    actionSpeedDisplay = replayToolBar->addWidget( replaySpeedDisplay );
+    mpActionReplaySpeedDown = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Slower"), this);
+    mpActionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
+    mpReplayToolBar->addAction( mpActionReplaySpeedDown );
+    mpReplaySpeedDisplay = new QLabel( this );
+    mpActionSpeedDisplay = mpReplayToolBar->addWidget( mpReplaySpeedDisplay );
 
-    connect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-    connect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+    connect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+    connect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
 
     QString txt = "<font size=25><b>speed:";
     txt.append( QString::number( mReplaySpeed ) );
     txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
+    mpReplaySpeedDisplay->setText(txt);
 
-    replayTimer = new QTimer(this);
-    replayTimer->setInterval(1000);
-    replayTimer->setSingleShot(false);
-    connect(replayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
+    mpReplayTimer = new QTimer(this);
+    mpReplayTimer->setInterval(1000);
+    mpReplayTimer->setSingleShot(false);
+    connect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
 
     QString txt2 = "<font size=25><b>Time:";
     txt2.append( mReplayTime.toString( timeFormat ) );
     txt2.append("</b></font>");
-    replayTime->setText( txt2 );
+    mpReplayTimeDisplay->setText( txt2 );
 
-    replaySpeedDisplay->show();
-    replayTime->show();
-    insertToolBar( mpMainToolBar, replayToolBar );
-    replayToolBar->show();
-    replayTimer->start();
+    mpReplaySpeedDisplay->show();
+    mpReplayTimeDisplay->show();
+    insertToolBar( mpMainToolBar, mpReplayToolBar );
+    mpReplayToolBar->show();
+    mpReplayTimer->start();
 }
 
 void mudlet::slot_replayTimeChanged()
@@ -2236,27 +2238,30 @@ void mudlet::slot_replayTimeChanged()
     QString txt2 = "<font size=25><b>Time:";
     txt2.append( mReplayTime.toString( timeFormat ) );
     txt2.append("</b></font>");
-    replayTime->setText( txt2 );
+    mpReplayTimeDisplay->setText( txt2 );
 }
 
 void mudlet::replayOver()
 {
-    if( ! mpMainToolBar ) return;
-    if( ! replayToolBar ) return;
+    if( ! mpMainToolBar )
+        return;
+    if( ! mpReplayToolBar )
+        return;
 
-    if( actionReplaySpeedUp )
+    if( mpActionReplaySpeedUp )
     {
-        disconnect(actionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
-        disconnect(actionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
-        replayToolBar->removeAction( actionReplaySpeedUp );
-        replayToolBar->removeAction( actionReplaySpeedDown );
-        replayToolBar->removeAction( actionSpeedDisplay );
-        removeToolBar( replayToolBar );
-        actionReplaySpeedUp = 0;
-        actionReplaySpeedDown = 0;
-        actionSpeedDisplay = 0;
-        actionReplayTime = 0;
-        replayToolBar = 0;
+        disconnect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
+        disconnect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
+        mpReplayToolBar->removeAction( mpActionReplaySpeedUp );
+        mpReplayToolBar->removeAction( mpActionReplaySpeedDown );
+        mpReplayToolBar->removeAction( mpActionSpeedDisplay );
+
+        removeToolBar( mpReplayToolBar );
+        mpActionReplaySpeedUp = 0;
+        mpActionReplaySpeedDown = 0;
+        mpActionSpeedDisplay = 0;
+        mpActionReplayTime = 0;
+        mpReplayToolBar = 0;
     }
 }
 
@@ -2266,8 +2271,8 @@ void mudlet::slot_replaySpeedUp()
     QString txt = "<font size=25><b>speed:";
     txt.append( QString::number( mReplaySpeed ) );
     txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
-    replaySpeedDisplay->show();
+    mpReplaySpeedDisplay->setText(txt);
+    mpReplaySpeedDisplay->show();
 }
 
 void mudlet::slot_replaySpeedDown()
@@ -2277,8 +2282,8 @@ void mudlet::slot_replaySpeedDown()
     QString txt = "<font size=25><b>speed:";
     txt.append( QString::number( mReplaySpeed ) );
     txt.append("X</b></font>");
-    replaySpeedDisplay->setText(txt);
-    replaySpeedDisplay->show();
+    mpReplaySpeedDisplay->setText(txt);
+    mpReplaySpeedDisplay->show();
 }
 
 void mudlet::stopSounds()
