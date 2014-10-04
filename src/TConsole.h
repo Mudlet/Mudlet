@@ -25,6 +25,7 @@
 #include "TBuffer.h"
 
 #include "pre_guard.h"
+#include <QByteArray>
 #include <QFile>
 #include <QTextStream>
 #include <QDataStream>
@@ -96,14 +97,13 @@ public:
       void              resetMainConsole();
       void              echoUserWindow(const QString & );
       Host *            getHost();
-      TCommandLine *    mpCommandLine;
-      void              replace(const QString& );
-      void              insertHTML(const QString& );
-      void              insertText(const QString& );
-      void              insertText(const QString&, QPoint );
-      void              insertLink(const QString&, QStringList &, QStringList &, QPoint, bool customFormat=false );
-      void              insertLink(const QString&, QStringList &, QStringList &, bool customFormat=false );
-      void              echoLink(const QString & text, QStringList & func, QStringList & hint, bool customFormat=false );
+      void              replace(const QString &);
+      void              insertHTML(const QString &);
+      void              insertText(const QString &);
+      void              insertText(const QString &, QPoint );
+      void              insertLink(const QString &, QStringList &, QStringList &, QPoint, bool customFormat=false );
+      void              insertLink(const QString &, QStringList &, QStringList &, bool customFormat=false );
+      void              echoLink(const QString &, QStringList &, QStringList &, bool customFormat=false );
       void              setLabelStyleSheet( std::string & buf, std::string & sh );
       void              copy();
       void              cut();
@@ -122,7 +122,6 @@ public:
       std::list<int>    getFgColor( std::string & buf );
       std::list<int>    getBgColor( std::string & buf );
       void              luaWrapLine( std::string & buf, int line );
-
       int               getColumnNumber();
       void              createMapper( int, int, int, int );
       void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
@@ -184,7 +183,10 @@ public:
       void              logger_set_text_properties(const QString& );
       QString           assemble_html_font_specs();
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
+      void              abortRecording();
 
+
+      TCommandLine *    mpCommandLine;
       QPointer<Host>    mpHost;
 
       TBuffer           buffer;
@@ -254,9 +256,9 @@ public:
 
 
       QTime             mProcessingTime;
-      bool              mRecordReplay;
-      QFile             mReplayFile;
-      QDataStream       mReplayStream;
+      bool              mIsRecording;
+      QFile             mRecordFile;
+      QDataStream       mRecordStream;
       TChar             mStandardFormat;
       QList<TConsole *> mSubConsoleList;
       std::map<std::string, TConsole *> mSubConsoleMap;
@@ -284,6 +286,9 @@ public:
       int               mCurrentSearchResult;
       QList<int>        mSearchResults;
       QString           mSearchQuery;
+      const QByteArray  mReplayMagic;
+      const quint8      mReplayVersion;
+
 
 signals:
 
@@ -296,6 +301,11 @@ public slots:
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();
 
+private:
+      QDateTime         mRecordStartTime;
+      qint64            mReplayDurationOffset;
+                        // The offset in the replay file to the duration item
+                        // (which has to be overwritten at the end of recording).
 };
 
 #endif // MUDLET_TCONSOLE_H

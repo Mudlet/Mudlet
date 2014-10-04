@@ -150,8 +150,12 @@ public:
    void                          stopSounds();
    void                          playSound( QString s );
    bool                          isReplayInProgress();
+   void                          updateReplaySpeedDisplay();
+
+
    QTime                         mReplayTime;
-   QPointer<QTimer>              mpReplayTimer;
+   QPointer<QTimer>              mpReplayDisplayTimer;
+   QPointer<QTimer>              mpReplayChunkTimer;
    int                           mReplayTimeOffset; // How many milliSeconds into this chunk of replay are we?
    int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
    int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
