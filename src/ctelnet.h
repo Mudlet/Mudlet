@@ -24,13 +24,14 @@
 
 
 #include "pre_guard.h"
+#include <QFile>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
-#include <QStringList>
 
 #include <zlib.h>
 
@@ -108,15 +109,14 @@ public:
     void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
     void              set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
     void              recordReplay();
-    void              loadReplay( QString & );
-    void              _loadReplay();
-    bool              isReplaying() { return loadingReplay; }
+    QString           loadReplay( QString &, bool );
+    void              _loadReplay( quint8 );
+    bool              isReplaying() { return mIsReplaying; }
+    void              abortReplaying();
     void              setChannel102Variables(const QString & );
-
-
-
-
     bool              socketOutRaw(std::string & data);
+    void              postMessage(const QString);
+
 
     QMap<int, bool>   supportedTelnetOptions;
     bool              mResponseProcessed;
@@ -129,12 +129,22 @@ public:
     QNetworkAccessManager * mpDownloader;
     QProgressDialog * mpProgressDialog;
     QString           mServerPackage;
-    void              postMessage( QString msg );
+    QDateTime           mRecordLastDateTimeOffset;
+    QFile               mReplayFile;
+    quint8              mReplayFileVersion;
+    QDateTime           mReplayStartDateTime;
+    QDateTime           mReplayPlaybackStartDateTime;
+    quint16             mReplayHours;
+    quint8              mReplayMins;
+    quint8              mReplaySecs;
+    quint16             mReplayMSecs;
+    QString             mReplayProfileName;
+
 
 public slots:
     void              setDownloadProgress( qint64, qint64 );
     void              replyFinished( QNetworkReply * );
-    void              readPipe();
+    void              slot_readPipe();
     void              handle_socket_signal_hostFound(QHostInfo);
     void              handle_socket_signal_connected();
     void              handle_socket_signal_disconnected();
@@ -148,7 +158,7 @@ public slots:
 private:
                       cTelnet(){}
     void              initStreamDecompressor();
-    int               decompressBuffer( char *& in_buffer, int& length, char* out_buffer );
+    int               decompressBuffer( char *& in_buffer, qint64 & length, char * out_buffer );
     void              reset();
     void              connectionFailed();
 
@@ -204,14 +214,16 @@ private:
     bool              mIsTimerPosting;
     QTimer *          mTimerLogin;
     QTimer *          mTimerPass;
-    QTime             timeOffset;
     QTime             mConnectionTime;
-    int               lastTimeOffset;
     bool              enableATCP;
     bool              enableGMCP;
     bool              enableChannel102;
     QStringList       messageStack;
-    bool              loadingReplay;
+    bool              mIsReplaying;
+    bool              mIsReportingReplayStatus;
+    QByteArray        mLoadBuffer;
+    int               mLoadedBytes;
+    QDataStream       mReplayStream;
 };
 
 #endif // MUDLET_CTELNET_H

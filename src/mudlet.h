@@ -137,9 +137,9 @@ public:
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
-   void                          replayStart();
+   void                          replayStart( Host * );
+   void                          replayOver( Host *, bool );
    bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
-   void                          replayOver();
    void                          showEvent( QShowEvent * event );
    void                          hideEvent( QHideEvent * event );
    bool                          resetFormat( Host *, QString & name );
@@ -149,8 +149,17 @@ public:
    void                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
+   bool                          isReplayInProgress();
+   void                          updateReplaySpeedDisplay();
+
+
    QTime                         mReplayTime;
-   int                           mReplaySpeed;
+   QPointer<QTimer>              mpReplayDisplayTimer;
+   QPointer<QTimer>              mpReplayChunkTimer;
+   int                           mReplayTimeOffset; // How many milliSeconds into this chunk of replay are we?
+   int                           mReplayChunkTime; // How long does this piece of replay file take in real milliseconds
+   int                           mReplaySpeed; // Now uses a NEGATIVE value to represent a FRACTIONAL value
+   int                           mPreviousReplaySpeed;
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
    dlgIRC *                      mpIRC;
@@ -245,14 +254,13 @@ private:
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
-   QAction *                     actionSpeedDisplay;
-   QAction *                     actionReplayTime;
-   QLabel *                      replaySpeedDisplay;
-   QLabel *                      replayTime;
-   QTimer *                      replayTimer;
-   QToolBar *                    replayToolBar;
+   QPointer<QAction>             mpActionReplaySpeedDown;
+   QPointer<QAction>             mpActionReplaySpeedUp;
+   QPointer<QAction>             mpActionSpeedDisplay;
+   QPointer<QAction>             mpActionReplayTime;
+   QPointer<QLabel>              mpReplaySpeedDisplay;
+   QPointer<QLabel>              mpReplayTimeDisplay;
+   QPointer<QToolBar>            mpReplayToolBar;
 
    QAction *                     actionReconnect;
 
