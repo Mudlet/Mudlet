@@ -104,8 +104,8 @@ public:
       void              appendBuffer();
       void              appendBuffer( TBuffer );
       int               getButtonState();
-      void              closeEvent( QCloseEvent *event );
-      void              resizeEvent( QResizeEvent * event );
+      void              closeEvent( QCloseEvent *event ) override;
+      void              resizeEvent( QResizeEvent * event ) override;
       void              pasteWindow( TBuffer );
       void              setUserWindow();
       QStringList       getLines( int from, int to );
@@ -162,8 +162,8 @@ public:
       void              finalize();
       void              runTriggers( int );
       void              showStatistics();
-      void              showEvent( QShowEvent * event );
-      void              hideEvent( QHideEvent * event );
+      void              showEvent( QShowEvent * event ) override;
+      void              hideEvent( QHideEvent * event ) override;
       void              echoConsole( QString & msg );
       void              setConsoleBgColor( int, int, int );
       void              setConsoleFgColor( int, int, int );

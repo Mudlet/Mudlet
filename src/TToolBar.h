@@ -39,7 +39,7 @@ Q_OBJECT
 public:
                      TToolBar( TAction *, const QString&, QWidget * pW = 0 );
     void             addButton( TFlipButton * pW );
-    void             moveEvent( QMoveEvent * e );
+    void             moveEvent( QMoveEvent * e ) override;
     void             setVerticalOrientation(){ mVerticalOrientation = true; }
     void             setHorizontalOrientation(){ mVerticalOrientation = false; }
     void             clear();

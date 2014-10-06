@@ -45,9 +45,9 @@ public:
 void              setScript( Host * pHost, const QString & func, const TEvent & args );
 void              setEnter( Host * pHost, const QString & func, const TEvent & args );
 void              setLeave( Host * pHost, const QString & func, const TEvent & args );
-void              mousePressEvent( QMouseEvent *  );
-void              leaveEvent(QEvent *);
-void              enterEvent(QEvent *);
+void              mousePressEvent( QMouseEvent *  ) override;
+void              leaveEvent(QEvent *) override;
+void              enterEvent(QEvent *) override;
 
 QPointer<Host>    mpHost;
 QString           mScript;

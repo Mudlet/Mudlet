@@ -40,7 +40,7 @@ class THighlighter : public QSyntaxHighlighter
 
 
  protected:
-     void                      highlightBlock(const QString &text);
+     void                      highlightBlock(const QString &text) override;
 
  private:
      struct HighlightingRule

@@ -82,13 +82,13 @@ public:
 
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
-    void                        closeEvent(QCloseEvent *event);
+    void                        closeEvent(QCloseEvent *event) override;
     void                        showError(const QString& );
     void                        showWarning(const QString& );
     void                        showInfo(const QString& );
-    void                        focusInEvent( QFocusEvent * );
-    void                        focusOutEvent( QFocusEvent * );
-    void                        enterEvent( QEvent * pE );
+    void                        focusInEvent( QFocusEvent * ) override;
+    void                        focusOutEvent( QFocusEvent * ) override;
+    void                        enterEvent( QEvent * pE ) override;
     void                        children_icon_triggers( QTreeWidgetItem * pWidgetItemParent );
     void                        children_icon_alias( QTreeWidgetItem * pWidgetItemParent );
     void                        children_icon_key( QTreeWidgetItem * pWidgetItemParent );
@@ -199,7 +199,7 @@ public slots:
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
     void                        slot_grab_key();
-    bool                        event( QEvent * event );
+    bool                        event( QEvent * event ) override;
     void                        grab_key_callback( int key, int modifier );
     void                        slot_profileSaveAction();
     void                        slot_profileSaveAsAction();

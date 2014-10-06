@@ -37,7 +37,7 @@ public:
     TSplitter(Qt::Orientation orientation, QWidget* parent = 0);
 
 protected:
-    QSplitterHandle* createHandle();
+    QSplitterHandle* createHandle() override;
 
     TSplitterHandle* mpSplitterHandle;
 };

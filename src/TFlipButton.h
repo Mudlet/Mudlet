@@ -46,11 +46,11 @@ public:
     bool mirrored() const;
     void setMirrored( bool mirrored );
 
-    QSize sizeHint() const;
-    QSize minimumSizeHint() const;
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
 
 protected:
-    void paintEvent( QPaintEvent * event );
+    void paintEvent( QPaintEvent * event ) override;
 
 public:
     QStyleOptionButton getStyleOption() const;

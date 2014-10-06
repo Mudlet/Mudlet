@@ -47,8 +47,8 @@ public:
                       TCommandLine( Host *, TConsole *, QWidget * );
                       ~TCommandLine();
 //    void              keyPressEvent(QKeyEvent *event);
-    void              focusInEvent ( QFocusEvent * );
-    void              focusOutEvent ( QFocusEvent * );
+    void              focusInEvent ( QFocusEvent * ) override;
+    void              focusOutEvent ( QFocusEvent * ) override;
     QPalette          mRegularPalette;
 
 private:
@@ -58,10 +58,10 @@ private:
     void              handleTabCompletion( bool direction );
     void              historyUp(QKeyEvent *event);
     void              historyDown(QKeyEvent *event);
-    bool              event(QEvent *event);
+    bool              event(QEvent *event) override;
     void              enterCommand(QKeyEvent *event);
     void              adjustHeight();
-    void              mousePressEvent( QMouseEvent * event );
+    void              mousePressEvent( QMouseEvent * event ) override;
 
     int               mHistoryBuffer;
     QStringList       mHistoryList;
