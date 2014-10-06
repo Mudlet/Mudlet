@@ -3143,7 +3143,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                                      + QString::number(bgB) + ");";
             s += " font-weight: " + fontWeight +
                  "; font-style: " + fontStyle +
-                 "; text-decoration: " + textDecoraton + "\">";
+                 "; text-decoration: " + textDecoration + "\">";
         }
         if( lineBuffer[y][x] == '<' )
             s.append("&lt;");
