@@ -53,16 +53,9 @@ class TFontSpecsLogger
 {
 public:
     TFontSpecsLogger(){ reset(); }
-    QString getFontWeight()
-    {
-        if(bold)
-        {
-            return QString("bold");
-        }
-        else return QString("normal");
-    }
-    QString getFontStyle(){ return (italics) ? QString("italics") : QString("normal");}
-    QString getFontDecoration(){ return (underline) ? QString("underline") : QString("normal");}
+    QString getFontWeight() { return (bold) ? QString("bold") : QString("normal"); }
+    QString getFontStyle() { return (italics) ? QString("italic") : QString("normal"); }
+    QString getTextDecoration() { return (underline) ? QString("underline") : QString("normal"); }
     void reset()
     {
         bold = false;
