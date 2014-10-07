@@ -1202,7 +1202,7 @@ QString TConsole::assemble_html_font_specs()
     }
     s += " font-weight: " + m_LoggerfontSpecs.getFontWeight() +
         "; font-style: " + m_LoggerfontSpecs.getFontStyle() +
-        "; font-decoration: " + m_LoggerfontSpecs.getFontDecoration() +
+        "; text-decoration: " + m_LoggerfontSpecs.getTextDecoration() +
         "\">";
     return s;
 }
