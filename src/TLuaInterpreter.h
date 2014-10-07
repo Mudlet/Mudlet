@@ -468,7 +468,7 @@ class TLuaMainThread : public QThread
 public:
 
   TLuaMainThread( TLuaInterpreter * pL ){ pLuaInterpreter = pL;  }
-  void run()
+  void run() override
   {
      std::cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<std::endl;
       //pLuaInterpreter->initLuaGlobals();

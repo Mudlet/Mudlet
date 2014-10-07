@@ -37,7 +37,7 @@ public:
     void writeProfileData( QString, QString, QString );
     QString readProfileData( QString, QString );
     QStringList readProfileHistory( QString, QString );
-    void accept();
+    void accept() override;
 
 signals:
 

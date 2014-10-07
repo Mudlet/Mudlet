@@ -140,8 +140,8 @@ public:
    void                          replayStart();
    bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
    void                          replayOver();
-   void                          showEvent( QShowEvent * event );
-   void                          hideEvent( QHideEvent * event );
+   void                          showEvent( QShowEvent * event ) override;
+   void                          hideEvent( QHideEvent * event ) override;
    bool                          resetFormat( Host *, QString & name );
    bool                          moduleTableVisible();
    bool                          mWindowMinimized;
@@ -210,7 +210,7 @@ public slots:
 
 protected:
 
-   void                          closeEvent(QCloseEvent *event);
+   void                          closeEvent(QCloseEvent *event) override;
 
 private slots:
 
@@ -278,7 +278,7 @@ public:
     TConsoleMonitor(QObject* parent) : QObject(parent) {}
 
  protected:
-     bool eventFilter(QObject *obj, QEvent *event);
+     bool eventFilter(QObject *obj, QEvent *event) override;
  };
 
 #endif // MUDLET_MUDLET_H

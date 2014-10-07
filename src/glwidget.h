@@ -39,12 +39,12 @@ public:
     GLWidget(QWidget *parent = 0);
     GLWidget(TMap * pM, QWidget *parent = 0);
     ~GLWidget();
-    void wheelEvent( QWheelEvent * e );
+    void wheelEvent( QWheelEvent * e ) override;
 
     bool is2DView;
 
-    QSize minimumSizeHint() const;
-    QSize sizeHint() const;
+    QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
 
     int mRID;
     int mAID;
@@ -92,12 +92,12 @@ signals:
     void zDistChanged(int angle);
 
 protected:
-    void initializeGL();
-    void paintGL();
-    void resizeGL(int width, int height);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
+    void initializeGL() override;
+    void paintGL() override;
+    void resizeGL(int width, int height) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 public:
     float xRot;

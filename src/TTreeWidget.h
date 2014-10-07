@@ -36,16 +36,16 @@ class TTreeWidget : public QTreeWidget
 
 public:
     TTreeWidget( QWidget * pW );
-    Qt::DropActions supportedDropActions() const;
-    void dragEnterEvent( QDragEnterEvent * event );
-    void dragMoveEvent( QDragMoveEvent * event );
-    void dropEvent( QDropEvent * event );
-    void startDrag( Qt::DropActions supportedActions );
-    bool dropMimeData( QTreeWidgetItem * parent, int index, const QMimeData * data, Qt::DropAction action );
-    void rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end );
-    void rowsInserted( const QModelIndex & parent, int start, int end );
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
+    Qt::DropActions supportedDropActions() const override;
+    void dragEnterEvent( QDragEnterEvent * event ) override;
+    void dragMoveEvent( QDragMoveEvent * event ) override;
+    void dropEvent( QDropEvent * event ) override;
+    void startDrag( Qt::DropActions supportedActions ) override;
+    bool dropMimeData( QTreeWidgetItem * parent, int index, const QMimeData * data, Qt::DropAction action ) override;
+    void rowsAboutToBeRemoved( const QModelIndex & parent, int start, int end ) override;
+    void rowsInserted( const QModelIndex & parent, int start, int end ) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void setHost( Host * pH );
     void setIsScriptTree();
     void setIsTimerTree();

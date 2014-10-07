@@ -52,8 +52,8 @@ public:
                                  bool isDebugConsole,
                                  bool isSplitScreen );
 
-    void              paintEvent( QPaintEvent* );
-    void              contextMenuEvent ( QContextMenuEvent * event );
+    void              paintEvent( QPaintEvent* ) override;
+    void              contextMenuEvent ( QContextMenuEvent * event ) override;
     void              drawForeground(QPainter &, const QRect & );
     void              drawFrame(QPainter &, const QRect & );
     void              drawBackground( QPainter &, const QRect &, const QColor & );
@@ -73,17 +73,17 @@ public:
     void              scrollTo( int );
     void              scrollUp( int lines );
     void              scrollDown( int lines );
-    void              wheelEvent( QWheelEvent * e );
-    void              resizeEvent( QResizeEvent * event );
-    void              mousePressEvent( QMouseEvent *  );
-    void              mouseReleaseEvent( QMouseEvent * );
-    void              mouseMoveEvent( QMouseEvent * );
-    void              showEvent ( QShowEvent * event );
+    void              wheelEvent( QWheelEvent * e ) override;
+    void              resizeEvent( QResizeEvent * event ) override;
+    void              mousePressEvent( QMouseEvent *  ) override;
+    void              mouseReleaseEvent( QMouseEvent * ) override;
+    void              mouseMoveEvent( QMouseEvent * ) override;
+    void              showEvent ( QShowEvent * event ) override;
     void              updateScreenView();
     void              highlight();
     void              unHighlight( QRegion & );
     void              swap( QPoint & p1, QPoint & p2 );
-    void              focusInEvent( QFocusEvent * event );
+    void              focusInEvent( QFocusEvent * event ) override;
     int               imageTopLine();
     int               bufferScrollUp( int lines );
     int               bufferScrollDown( int lines );
