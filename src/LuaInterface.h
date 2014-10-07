@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QSet>
+#include <QScopedPointer>
 #include "post_guard.h"
 
 #ifndef LUA_CPP
@@ -49,6 +50,7 @@ class LuaInterface
 {
 public:
     LuaInterface( Host * );
+    ~LuaInterface();
     void iterateTable(lua_State *, int, TVar *, bool );
     void getVars( bool );
     QStringList varName(TVar * var);
@@ -77,7 +79,7 @@ private:
     TLuaInterpreter *interpreter;
     lua_State *L;
     QSet<TVar> hiddenVars;
-    VarUnit * varUnit;
+    QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;
 };
 

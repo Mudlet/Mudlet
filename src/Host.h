@@ -96,7 +96,7 @@ public:
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
-    LuaInterface *     getLuaInterface() { return mLuaInterface; }
+    LuaInterface *     getLuaInterface() { return mLuaInterface.data(); }
     void               incomingStreamProcessor(const QString & paragraph, int line );
     void               postIrcMessage(const QString&, const QString&, const QString& );
     void               enableTimer(const QString & );
@@ -145,7 +145,7 @@ public:
     cTelnet            mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter    mLuaInterpreter;
-    LuaInterface *     mLuaInterface;
+    QScopedPointer<LuaInterface> mLuaInterface;
     TriggerUnit        mTriggerUnit;
     TimerUnit          mTimerUnit;
     ScriptUnit         mScriptUnit;

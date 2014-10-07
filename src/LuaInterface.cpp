@@ -39,10 +39,12 @@ LuaInterface::LuaInterface(Host * pH)
 {
     interpreter = mpHost->getLuaInterpreter();
     mHostID = mpHost->getHostID();
-    varUnit = new VarUnit();
+    varUnit.reset(new VarUnit());
     //set our panic function
     lua_atpanic( interpreter->pGlobalLua, &onPanic );
 }
+
+LuaInterface::~LuaInterface() {}
 
 int LuaInterface::onPanic( lua_State * L )
 {
@@ -58,7 +60,7 @@ int LuaInterface::onPanic( lua_State * L )
 }
 
 VarUnit * LuaInterface::getVarUnit(){
-    return varUnit;
+    return varUnit.data();
 }
 
 QStringList LuaInterface::varName(TVar * var){

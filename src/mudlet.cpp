@@ -384,10 +384,10 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
 
-    mpMusicBox1 = new QMediaPlayer;
-    mpMusicBox2 = new QMediaPlayer;
-    mpMusicBox3 = new QMediaPlayer;
-    mpMusicBox4 = new QMediaPlayer;
+    mpMusicBox1 = new QMediaPlayer(this);
+    mpMusicBox2 = new QMediaPlayer(this);
+    mpMusicBox3 = new QMediaPlayer(this);
+    mpMusicBox4 = new QMediaPlayer(this);
 
 }
 
