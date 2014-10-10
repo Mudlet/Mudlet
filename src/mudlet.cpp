@@ -2216,9 +2216,9 @@ void mudlet::replayStart()
     connect(mpActionReplaySpeedUp, SIGNAL(triggered()), this, SLOT(slot_replaySpeedUp()));
     connect(mpActionReplaySpeedDown, SIGNAL(triggered()), this, SLOT(slot_replaySpeedDown()));
 
-    QString txt = "<font size=25><b>speed:";
-    txt.append( QString::number( mReplaySpeed ) );
-    txt.append("X</b></font>");
+    QString txt = tr( "<font size=25><b> Speed: %1%2</b></font>", "Don't try to translate the HTML tags!")
+                  .arg( QChar(215) ) // N.B. The first argument is U+00D7 "multiplication sign"
+                  .arg( QString::number( mReplaySpeed ) );
     mpReplaySpeedDisplay->setText(txt);
 
     mReplayTime = QTime( 0, 0, 0, 1);
@@ -2234,9 +2234,8 @@ void mudlet::replayStart()
     mpReplayTimer->setSingleShot(false);
     connect(mpReplayTimer, SIGNAL(timeout()), this, SLOT(slot_replayTimeChanged()));
 
-    QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.toString() );
-    txt2.append("</b></font>");
+    QString txt2 = tr( "<font size=25><b>Time: %1 </b></font>", "Don't try to translate the HTML tags!")
+                   .arg( mReplayTime.toString() );
     mpReplayTimeDisplay->setText( txt2 );
 
     mpReplaySpeedDisplay->show();
@@ -2248,9 +2247,9 @@ void mudlet::replayStart()
 
 void mudlet::slot_replayTimeChanged()
 {
-    QString txt2 = "<font size=25><b>Time:";
-    txt2.append( mReplayTime.addMSecs( mReplayTimeOffset - mReplayChunkTime ).toString() );
-    txt2.append("</b></font>");
+    QString txt2 = tr( "<font size=25><b>Time: %1 </b></font>", "Don't try to translate the HTML tags!")
+              .arg( mReplayTime.addMSecs( mReplayTimeOffset - mReplayChunkTime ).toString() );
+
     mReplayTimeOffset += 100;
     mpReplayTimeDisplay->setText( txt2 );
     mpReplayTimeDisplay->show();
@@ -2285,10 +2284,34 @@ void mudlet::replayOver()
 
 void mudlet::slot_replaySpeedUp()
 {
-    mReplaySpeed = mReplaySpeed * 2;
-    QString txt = "<font size=25><b>speed:";
-    txt.append( QString::number( mReplaySpeed ) );
-    txt.append("X</b></font>");
+    switch( mReplaySpeed )
+    {
+        case -2:
+            mReplaySpeed = 1;
+            break;
+        case -4:
+            mReplaySpeed = -2;
+            break;
+        case -8:
+            mReplaySpeed = -4;
+            break;
+        case 128:
+            mReplaySpeed = 128;
+            break;
+        default:
+            mReplaySpeed *= 2;
+    }
+
+    QString txt;
+    if( mReplaySpeed < 1 )
+        txt = tr( "<font size=25><b> Speed: %1<sup>1</sup>/<sub>%2<sub></b></font>", "Don't try to translate the HTML tags!")
+              .arg( QChar(215) )
+              .arg( QString::number( -mReplaySpeed ) );
+    else
+        txt = tr( "<font size=25><b> Speed: %1%2</b></font>", "Don't try to translate the HTML tags!")
+              .arg( QChar(215) )
+              .arg( QString::number( mReplaySpeed ) );
+
     mpReplaySpeedDisplay->setText(txt);
     mpReplaySpeedDisplay->show();
     mpReplayToolBar->update(); // If the speed values gains a character it won't fit unless the toolbar is redrawn
@@ -2296,11 +2319,33 @@ void mudlet::slot_replaySpeedUp()
 
 void mudlet::slot_replaySpeedDown()
 {
-    mReplaySpeed = mReplaySpeed / 2;
-    if( mReplaySpeed < 1 ) mReplaySpeed = 1;
-    QString txt = "<font size=25><b>speed:";
-    txt.append( QString::number( mReplaySpeed ) );
-    txt.append("X</b></font>");
+    switch( mReplaySpeed )
+    {
+        case 1:
+            mReplaySpeed = -2;
+            break;
+        case -2:
+            mReplaySpeed = -4;
+            break;
+        case -4:
+            mReplaySpeed = -8;
+            break;
+        case -8:
+            mReplaySpeed = -8;
+            break;
+        default:
+            mReplaySpeed /= 2;
+    }
+
+    QString txt;
+    if( mReplaySpeed < 1 )
+        txt = tr( "<font size=25><b> Speed: %1<sup>1</sup>/<sub>%2<sub></b></font>", "Don't try to translate the HTML tags!")
+              .arg( QChar(215) )
+              .arg( QString::number( -mReplaySpeed ) );
+    else
+        txt = tr( "<font size=25><b> Speed: %1%2</b></font>", "Don't try to translate the HTML tags!")
+              .arg( QChar(215) )
+              .arg( QString::number( mReplaySpeed ) );
     mpReplaySpeedDisplay->setText(txt);
     mpReplaySpeedDisplay->show();
     mpReplayToolBar->update(); // If the speed values gains a character it won't fit unless the toolbar is redrawn
