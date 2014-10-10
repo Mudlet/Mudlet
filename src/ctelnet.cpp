@@ -1631,6 +1631,19 @@ QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole 
     return msg;
 }
 
+void cTelnet::abortReplay()
+{
+    mudlet::self()->mpReplayTimer->stop();
+    mReplayFile.close();
+    if( mIsReportingReplayStatus ) {
+        QString msg = tr( "[  OK  ]  - The replay has been aborted.\n", "Do not translate [  OK  ] it is used to color code the message." );
+        postMessage( msg );
+        mIsReportingReplayStatus = false;
+    }
+    mudlet::self()->replayOver(mpHost, false);
+    mIsReplaying = false;
+}
+
 void cTelnet::_loadReplay()
 {
     if( ! mReplayStream.atEnd() ) {
@@ -1699,7 +1712,7 @@ void cTelnet::_loadReplay()
             postMessage( msg );
             mIsReportingReplayStatus = false;
         }
-        mudlet::self()->replayOver(mpHost);
+        mudlet::self()->replayOver(mpHost, true);
     }
 }
 
