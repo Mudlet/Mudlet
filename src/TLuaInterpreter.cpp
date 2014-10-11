@@ -73,6 +73,13 @@ int luaopen_yajl(lua_State*);
 }
 #endif
 
+// I would like the lua utilities that take absolute paths from the user to
+// permit the usage of an inital '~/' (apparently a "BASHism") of a path to
+// be treated as the absolute path to the user's home directory.
+// will be left #ifdef'ed out in main codebase until put into place in relevant
+// parts of this code and agreement made to allow it.  SlySven
+//#define TILDE_EXPANSION
+
 using namespace std;
 
 map<lua_State*, Host*> TLuaInterpreter::luaInterpreterMap;
@@ -750,21 +757,58 @@ int TLuaInterpreter::getBufferTable( lua_State * L )
 
 int TLuaInterpreter::loadRawFile( lua_State * L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "loadRawFile: wrong argument type" );
+    QString fileName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "loadRawFile: bad argument #1 (replay file, optionally with a path, as string expected, got %1)" )
+                           .arg( luaL_typename(L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
+        fileName = QDir::fromNativeSeparators( QString::fromUtf8( lua_tostring( L, 1 ) ) );
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->loadRawFile( luaSendText );
-    return 0;
+#if defined( TILDE_EXPANSION )
+    if( fileName.startsWith( QStringLiteral( "~/" ) ) ) {
+        fileName = fileName.replace( 0, 1, QDir::homePath() );
+    }
+#endif
+    QFileInfo checkFileInfo(  QStringLiteral( "%1/.config/mudlet/profiles/%2/log/" )
+                              .arg( QDir::homePath() )
+                              .arg( pHost->getName() ),
+                              fileName );
+
+    QString pathFileName;
+    if( ! checkFileInfo.canonicalFilePath().isEmpty() )
+        pathFileName = checkFileInfo.canonicalFilePath();
+    else
+        pathFileName = checkFileInfo.filePath(); // Probably file doesn't exist!
+
+    QString result = pHost->mTelnet.loadReplay( pathFileName, false );
+    bool ok = false;
+    int retCode = result.left(1).toUInt( & ok );
+    if( ! ok )
+        retCode = -1;
+    switch( retCode ) {
+        case 0: // OK, remainder is canonical pathFile of replay file
+            lua_pushboolean( L, true );
+            lua_pushstring( L, result.mid(1).toUtf8().constData() );
+            lua_pushnumber( L, result.left(1).toInt() );
+            break;
+        case 1: // Replay active in this profile
+        case 2: // Replay active in other profile
+        case 3: // File does not exist
+        case 4: // File is not readable
+            lua_pushnil( L );
+            lua_pushstring( L, result.mid(1).toUtf8().constData() );
+            lua_pushnumber( L, result.left(1).toInt() );
+            break;
+        default:
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8().constData() );
+            lua_pushnumber( L, result.left(1).toInt() );
+    }
+    return 3;
 }
 
 int TLuaInterpreter::getCurrentLine( lua_State * L )
