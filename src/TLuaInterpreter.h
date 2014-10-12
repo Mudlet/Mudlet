@@ -185,6 +185,7 @@ public:
     static int getRoomUserData( lua_State * );
     static int searchRoomUserData( lua_State * );
     static int clearRoomUserData( lua_State * );
+    static int clearRoomUserDataItem( lua_State * );
     static int addSpecialExit( lua_State * );
     static int removeSpecialExit( lua_State * );
     static int getSpecialExits( lua_State * );
@@ -381,6 +382,9 @@ public:
     static int getMapMenus(lua_State * L);
     static int getMudletVersion( lua_State * L );
     static int openWebPage( lua_State * L );
+    static int getRoomUserDataKeys( lua_State * L );
+    static int getAllRoomUserData( lua_State * L );
+
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
