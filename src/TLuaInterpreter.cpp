@@ -9835,7 +9835,7 @@ bool TLuaInterpreter::compile(const QString & code, QString & errorMsg )
     }
     else
     {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"\nLUA: code compiled without errors. OK\n" >> 0;}
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"\nLUA: code compiled without errors. OK\n" >> 0;}
     }
     lua_pop( L, lua_gettop( L ) );
 
