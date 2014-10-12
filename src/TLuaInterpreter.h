@@ -316,6 +316,9 @@ public:
     static int showToolBar( lua_State * );
     static int hideToolBar( lua_State * );
     static int loadRawFile( lua_State * );
+    static int abortReplay( lua_State * );
+    static int setReplaySpeed( lua_State * );
+    static int getReplayStatus( lua_State * );
     static int setBold( lua_State * );
     static int setItalics( lua_State * );
     static int setUnderline( lua_State * );
