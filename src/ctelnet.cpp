@@ -1623,7 +1623,7 @@ QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole 
 
                 mReplayStream.setDevice( &mReplayFile );
                 mIsReplaying = true;
-                mudlet::self()->replayStart();
+                mudlet::self()->replayStart( mpHost );
                 _loadReplay();
             }
         }
@@ -1653,6 +1653,35 @@ void cTelnet::_loadReplay()
         mudlet::self()->mReplayChunkTime = offset;
         mudlet::self()->mReplayTimeOffset = 0;
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
+
+        if( mudlet::self()->mReplaySpeed != mudlet::self()->mPreviousReplaySpeed ) {
+            float reportedSpeed;
+            switch( mudlet::self()->mReplaySpeed ) {
+                case -2:    reportedSpeed = 0.500;  break;
+                case -4:    reportedSpeed = 0.250;  break;
+                case -8:    reportedSpeed = 0.125;  break;
+                default:    reportedSpeed = static_cast<float>(mudlet::self()->mReplaySpeed);
+            }
+            float previousReportedSpeed;
+            switch( mudlet::self()->mPreviousReplaySpeed ) {
+                case -2:    previousReportedSpeed = 0.500;  break;
+                case -4:    previousReportedSpeed = 0.250;  break;
+                case -8:    previousReportedSpeed = 0.125;  break;
+                default:    previousReportedSpeed = static_cast<float>(mudlet::self()->mPreviousReplaySpeed);
+            }
+            mudlet::self()->mPreviousReplaySpeed = mudlet::self()-> mReplaySpeed;
+            TEvent replaySpeedChangeEvent;
+            replaySpeedChangeEvent.mArgumentList.append( QStringLiteral( "sysReplayEvent" ) );
+            replaySpeedChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            replaySpeedChangeEvent.mArgumentList.append( QStringLiteral( "replaySpeedChange" ) );
+            replaySpeedChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            replaySpeedChangeEvent.mArgumentList.append( QString::number( reportedSpeed ) );
+            replaySpeedChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            replaySpeedChangeEvent.mArgumentList.append( QString::number( previousReportedSpeed ) );
+            replaySpeedChangeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mpHost->raiseEvent( replaySpeedChangeEvent );
+        }
+
         if( mudlet::self()->mReplaySpeed < 1 ) {
             mudlet::self()->mpReplayTimer->start( -100 * mudlet::self()->mReplaySpeed );
             QTimer::singleShot( - offset * mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
@@ -1670,7 +1699,7 @@ void cTelnet::_loadReplay()
             postMessage( msg );
             mIsReportingReplayStatus = false;
         }
-        mudlet::self()->replayOver();
+        mudlet::self()->replayOver(mpHost);
     }
 }
 
@@ -1805,7 +1834,7 @@ void cTelnet::handle_socket_signal_readyRead()
     char* in_buffer = in_bufferx;
     char out_buffer[100010];
 
-    int amount = socket.read( in_buffer, 100000 );
+    int amount = socket.read( in_buffer, 100000 ); // CHECK: Should be using qint64 ???
     in_buffer[amount+1] = '\0';
     if( amount == -1 ) return;
     if( amount == 0 ) return;
