@@ -550,7 +550,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString &text)
 
     if ( exitToRoom != 0 ) {
         // Valid exit roomID in place
-        nw->setStyleSheet("color:blue");
+        nw->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_nw->setChecked(false);
         stub_nw->setEnabled(false);
         noroute_nw->setEnabled(true);
@@ -566,7 +566,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString &text)
     } else if ( text.size() > 0 ) {
         // Something is entered but it does not yield a valid exit roomID
         // Enable stub exit control
-        nw->setStyleSheet("color:red");
+        nw->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         nw->setToolTip("Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.");
         stub_nw->setEnabled(true);
         noroute_nw->setEnabled(false);
@@ -595,7 +595,7 @@ void dlgRoomExits::slot_n_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        n->setStyleSheet("color:blue");;
+        n->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );;
         stub_n->setChecked(false);
         stub_n->setEnabled(false);
         noroute_n->setEnabled(true);
@@ -609,7 +609,7 @@ void dlgRoomExits::slot_n_textEdited(const QString &text)
         else
             n->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        n->setStyleSheet("color:red");
+        n->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         n->setToolTip("Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.");
         stub_n->setEnabled(true);
         noroute_n->setEnabled(false);
@@ -637,7 +637,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        ne->setStyleSheet("color:blue");
+        ne->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_ne->setChecked(false);
         stub_ne->setEnabled(false);
         noroute_ne->setEnabled(true);
@@ -651,7 +651,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString &text)
         else
             ne->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        ne->setStyleSheet("color:red");
+        ne->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         ne->setToolTip("Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.");
         stub_ne->setEnabled(true);
         noroute_ne->setEnabled(false);
@@ -679,7 +679,7 @@ void dlgRoomExits::slot_up_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        up->setStyleSheet("color:blue");
+        up->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_up->setChecked(false);
         stub_up->setEnabled(false);
         noroute_up->setEnabled(true);
@@ -693,7 +693,7 @@ void dlgRoomExits::slot_up_textEdited(const QString &text)
         else
             up->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        up->setStyleSheet("color:red");
+        up->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         up->setToolTip("Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.");
         stub_up->setEnabled(true);
         noroute_up->setEnabled(false);
@@ -721,7 +721,7 @@ void dlgRoomExits::slot_w_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        w->setStyleSheet("color:blue");
+        w->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_w->setChecked(false);
         stub_w->setEnabled(false);
         noroute_w->setEnabled(true);
@@ -735,7 +735,7 @@ void dlgRoomExits::slot_w_textEdited(const QString &text)
         else
             w->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        w->setStyleSheet("color:red");
+        w->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         w->setToolTip("Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.");
         stub_w->setEnabled(true);
         noroute_w->setEnabled(false);
@@ -763,7 +763,7 @@ void dlgRoomExits::slot_e_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        e->setStyleSheet("color:blue");
+        e->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_e->setChecked(false);
         stub_e->setEnabled(false);
         noroute_e->setEnabled(true);
@@ -777,7 +777,7 @@ void dlgRoomExits::slot_e_textEdited(const QString &text)
         else
             e->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        e->setStyleSheet("color:red");
+        e->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         e->setToolTip("Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.");
         stub_e->setEnabled(true);
         noroute_e->setEnabled(false);
@@ -805,7 +805,7 @@ void dlgRoomExits::slot_down_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        down->setStyleSheet("color:blue");
+        down->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_down->setChecked(false);
         stub_down->setEnabled(false);
         noroute_down->setEnabled(true);
@@ -819,7 +819,7 @@ void dlgRoomExits::slot_down_textEdited(const QString &text)
         else
             down->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        down->setStyleSheet("color:red");
+        down->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         down->setToolTip("Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.");
         stub_down->setEnabled(true);
         noroute_down->setEnabled(false);
@@ -847,7 +847,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        sw->setStyleSheet("color:blue");
+        sw->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_sw->setChecked(false);
         stub_sw->setEnabled(false);
         noroute_sw->setEnabled(true);
@@ -861,7 +861,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString &text)
         else
             sw->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        sw->setStyleSheet("color:red");
+        sw->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         sw->setToolTip("Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.");
         stub_sw->setEnabled(true);
         noroute_sw->setEnabled(false);
@@ -889,7 +889,7 @@ void dlgRoomExits::slot_s_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        s->setStyleSheet("color:blue");
+        s->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_s->setChecked(false);
         stub_s->setEnabled(false);
         noroute_s->setEnabled(true);
@@ -903,7 +903,7 @@ void dlgRoomExits::slot_s_textEdited(const QString &text)
         else
             s->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        s->setStyleSheet("color:red");
+        s->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         s->setToolTip("Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.");
         stub_s->setEnabled(true);
         noroute_s->setEnabled(false);
@@ -931,7 +931,7 @@ void dlgRoomExits::slot_se_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        se->setStyleSheet("color:blue");
+        se->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_se->setChecked(false);
         stub_se->setEnabled(false);
         noroute_se->setEnabled(true);
@@ -945,7 +945,7 @@ void dlgRoomExits::slot_se_textEdited(const QString &text)
         else
             se->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        se->setStyleSheet("color:red");
+        se->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         se->setToolTip("Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.");
         stub_se->setEnabled(true);
         noroute_se->setEnabled(false);
@@ -973,7 +973,7 @@ void dlgRoomExits::slot_in_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        in->setStyleSheet("color:blue");
+        in->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_in->setChecked(false);
         stub_in->setEnabled(false);
         noroute_in->setEnabled(true);
@@ -987,7 +987,7 @@ void dlgRoomExits::slot_in_textEdited(const QString &text)
         else
             in->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        in->setStyleSheet("color:red");
+        in->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         in->setToolTip("Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.");
         stub_in->setEnabled(true);
         noroute_in->setEnabled(false);
@@ -1015,7 +1015,7 @@ void dlgRoomExits::slot_out_textEdited(const QString &text)
     TRoom * exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
     if ( exitToRoom != 0 ) {
-        out->setStyleSheet("color:blue");
+        out->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         stub_out->setChecked(false);
         stub_out->setEnabled(false);
         noroute_out->setEnabled(true);
@@ -1029,7 +1029,7 @@ void dlgRoomExits::slot_out_textEdited(const QString &text)
         else
             out->setToolTip(QString("Exit to unnamed room is valid"));
     } else if ( text.size() > 0) {
-        out->setStyleSheet("color:red");
+        out->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
         out->setToolTip("Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.");
         stub_out->setEnabled(true);
         noroute_out->setEnabled(false);
@@ -1467,7 +1467,7 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
     if ( exitId > 0 ) { //Does this exit point anywhere
         exitLineEdit->setText(QString::number( exitId ));  //Put in the value
         exitLineEdit->setEnabled(true);     //Enable it for editing
-        exitLineEdit->setStyleSheet("color:blue");
+        exitLineEdit->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
         if( mpHost->mpMap->mpRoomDB->getRoom( exitId )->name.trimmed().length() )
             exitLineEdit->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exitId )->name % "\""));
         else
