@@ -4073,11 +4073,10 @@ int TLuaInterpreter::getRooms( lua_State *L )
 
 int TLuaInterpreter::getAreaExits( lua_State *L )
 {
-    qDebug()<<"getAreaExits() enter";
     int area;
     if( ! lua_isnumber( L, 1 ) )
     {
-        lua_pushstring( L, "getAreaExits: wrong argument type" );
+        lua_pushfstring( L, "getAreaExits: bad argument #1 (area ID as number expected, got %s)", luaL_typename(L, 1) );
         lua_error( L );
         return 1;
     }
@@ -4088,17 +4087,14 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
 
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
-    qDebug()<<"pA="<<pA;
     if( !pA )
     {
-        qDebug()<<"no area found";
         lua_pushnil(L);
         return 1;
     }
     QList<int> areaExits = pA->getAreaExits();
-    qDebug()<<"areaExits="<<areaExits;
     lua_newtable(L);
-    for( int i=0; i<areaExits.size(); i++ )
+    for( int i=1; i<areaExits.size(); i++ )
     {
         lua_pushnumber( L, i );
         lua_pushnumber( L, areaExits[i] );
