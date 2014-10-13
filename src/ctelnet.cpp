@@ -1568,55 +1568,57 @@ int cTelnet::decompressBuffer( char *& in_buffer, qint64 & length, char * out_bu
 //         for unversioned files}
 // For the former usage a message in a format suitable with this class's
 // postMessage() method is returned with the same sort of information.
-QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole )
+QPair<int, QString> cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole )
 {
-    QString msg;
+    QPair<int, QString> retValue;
+
     if( mIsReplaying ) {
         // Prevent trying to start a SECOND replay in THIS profile
+        retValue.first = 1;
         if( isStatusToBeReportedInConsole )
-            msg = tr( "[ ALERT ] - A replay is already in progress for this profile!",
-                      "Do not translate [ ALERT ] it is used to key the color coding of the message" );
+            retValue.second = tr( "[ ALERT ] - A replay is already in progress for this profile!",
+                                  "Do not translate [ ALERT ] it is used to key the color coding of the message" );
         else
-            msg = tr( "1error: a Replay is already in progress in this profile.",
-                      "Do not change the initial digit '1' it is used to return status information to the caller." );
+            retValue.second = tr( "error: a Replay is already in progress in this profile." );
 
     }
     else if( mudlet::self()->isReplayInProgress() ) {
         // Prevent trying to start a SECOND replay (in ANY profile as it happens) if one is in progress
+        retValue.first = 2;
         if( isStatusToBeReportedInConsole )
-            msg = tr( "[ ALERT ] - A replay is already in progress in another profile,\n"
-                      "please let that one finish before trying to load another!",
-                      "Do not translate [ ALERT ] it is used to key the color coding of the message" );
+            retValue.second = tr( "[ ALERT ] - A replay is already in progress in another profile,\n"
+                                              "please let that one finish before trying to load another!",
+                                  "Do not translate [ ALERT ] it is used to key the color coding of the message" );
         else
-            msg = tr( "2error: a Replay is already in progress in another profile.",
-                      "Do not change the initial digit '2' it is used to return status information to the caller." );
+            retValue.second = tr( "error: a Replay is already in progress in another profile." );
 
     }
     else { // OK - no replays are already taking place
         QFileInfo replayFileInfo( name );
         mReplayFile.setFileName( replayFileInfo.canonicalFilePath() );
         if( ! replayFileInfo.exists() ) { // Oh dear, the file doesn't exist!
+            retValue.first = 3;
             if( isStatusToBeReportedInConsole )
-                msg = tr( "[ ALERT ] - Replay file does not exist:\""
-                                      "%1 .",
-                          "Do not translate [ ALERT ] it is used to key the color coding of the message" )
-                              .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+                retValue.second = tr( "[ ALERT ] - Replay file does not exist:\""
+                                                  "%1 .",
+                                      "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                                  .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
             else
-                msg = tr( "3error: the file \"%1\" does not exist.",
-                          "Do not change the initial digit '3' it is used to return status information to the caller." )
-                      .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+                retValue.second = tr( "error: the file \"%1\" does not exist." )
+                                  .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
 
         }
         else { // OK - there IS a file
             if( ! mReplayFile.open( QIODevice::ReadOnly ) ) { // Oh dear can't open it
+                retValue.first = 4;
                 if( isStatusToBeReportedInConsole )
-                    msg = tr( "[ ALERT ] - Unable to read replay file:\n"
-                                          "%1 .",
-                              "Do not translate [ ALERT ] it is used to key the color coding of the message" )
-                          .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+                    retValue.second = tr( "[ ALERT ] - Unable to read replay file:\n"
+                                                      "%1 .",
+                                          "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                                      .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
                 else
-                    msg = tr( "4error: unable to read existing file \"%1\".", "Do not change the initial digit '4' it is used to return status information to the caller." )
-                          .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
+                    retValue.second = tr( "error: unable to read existing file \"%1\"." )
+                                      .arg( QDir::toNativeSeparators( replayFileInfo.absoluteFilePath() ) );
 
             }
             else { // OK - can open it for reading
@@ -1657,20 +1659,19 @@ QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole 
                                                                  version1FileNameRegExp.cap(6).toUInt() ),
                                                           Qt::LocalTime );
                         mReplayProfileName = tr( "Unknown" );
-
+                        retValue.first = 0;
                         if( isStatusToBeReportedInConsole ) {
                             mIsReportingReplayStatus = true;
-                            msg = tr( "[ INFO ]  - Loading replay file:\n"
-                                                  "%1\n"
-                                                  "recorded: %2.\n",
-                                      "Do not translate [ INFO ] it is used to key the color coding of the message" )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) )
-                                  .arg( mReplayStartDateTime.toString( "hh:mm dd/MM/yyyy" ) );
+                            retValue.second = tr( "[ INFO ]  - Loading replay file:\n"
+                                                              "%1\n"
+                                                              "recorded: %2.\n",
+                                                  "Do not translate [ INFO ] it is used to key the color coding of the message" )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) )
+                                              .arg( mReplayStartDateTime.toString( "hh:mm dd/MM/yyyy" ) );
                         }
                         else {
-                            msg = tr( "0Replay file \"%1\" loaded.",
-                                      "Do not change the initial digit '0' it is used to return status information to the caller." )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
+                            retValue.second = tr( "Replay file \"%1\" loaded." )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
                         }
 
                         mudlet::self()->replayStart(mpHost);
@@ -1698,27 +1699,26 @@ QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole 
                         }
                         else
                             mReplayProfileName = tr( "Unknown" );
-
+                        retValue.first = 0;
                         if( isStatusToBeReportedInConsole ) {
                             mIsReportingReplayStatus = true;
-                            msg = tr( "[ INFO ]  - Loading replay file:\n"
-                                                  "%1\n"
-                                                  "recorded: %2,\n"
-                                                  "from profile: \"%3\",\n"
-                                                  "it is %4:%5:%6.%7 long.",
-                                      "Do not translate [ INFO ] it is used to key the color coding of the message" )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) )
-                                  .arg( mReplayStartDateTime.toString( "hh:mm dd/MM/yyyy" ) )
-                                  .arg( mReplayProfileName )
-                                  .arg( static_cast<ushort>(mReplayHours), 1, 10, QLatin1Char('0') )
-                                  .arg( static_cast<ushort>(mReplayMins), 2, 10, QLatin1Char('0') )
-                                  .arg( static_cast<ushort>(mReplaySecs), 2, 10, QLatin1Char('0') )
-                                  .arg( static_cast<ushort>(mReplayMSecs), 3, 10, QLatin1Char('0') );
+                            retValue.second = tr( "[ INFO ]  - Loading replay file:\n"
+                                                              "%1\n"
+                                                              "recorded: %2,\n"
+                                                              "from profile: \"%3\",\n"
+                                                              "it is %4:%5:%6.%7 long.",
+                                                  "Do not translate [ INFO ] it is used to key the color coding of the message" )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) )
+                                              .arg( mReplayStartDateTime.toString( "hh:mm dd/MM/yyyy" ) )
+                                              .arg( mReplayProfileName )
+                                              .arg( static_cast<ushort>(mReplayHours), 1, 10, QLatin1Char('0') )
+                                              .arg( static_cast<ushort>(mReplayMins), 2, 10, QLatin1Char('0') )
+                                              .arg( static_cast<ushort>(mReplaySecs), 2, 10, QLatin1Char('0') )
+                                              .arg( static_cast<ushort>(mReplayMSecs), 3, 10, QLatin1Char('0') );
                         }
                         else {
-                            msg = tr( "0Replay file \"%1\" loaded.",
-                                      "Do not change the initial digit '0' it is used to return status information to the caller." )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
+                            retValue.second = tr( "Replay file \"%1\" loaded." )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
                         }
 
                         mudlet::self()->replayStart(mpHost);
@@ -1727,37 +1727,38 @@ QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole 
                         break;
 
                     case 0:
+                        retValue.first = 6;
                         if( isStatusToBeReportedInConsole ) {
                             mIsReportingReplayStatus = true;
-                            msg = tr( "[ ALERT ] - Not willing to replay file:\n"
-                                                  "%1\n"
-                                                  "it could be from an old version of Mudlet\n"
-                                                  "but the name does not match the form that was used then.",
-                                      "Do not translate [ ALERT ] it is used to key the color coding of the message" )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
+                            retValue.second = tr( "[ ALERT ] - Not willing to replay file:\n"
+                                                              "%1\n"
+                                                              "it could be from an old version of Mudlet\n"
+                                                              "but the name does not match the form that was used then.",
+                                                  "Do not translate [ ALERT ] it is used to key the color coding of the message" )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
                         }
                         else {
-                            msg = tr( "6error: file \"%1\" may be from an earlier Mudlet,\n"
-                                      "but the name does not match the form that was used then.",
-                                      "Do not change the initial digit '6' it is used to return status information to the caller." )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
+                            retValue.second = tr( "error: file \"%1\" may be from an earlier Mudlet,\n"
+                                                  "but the name does not match the form that was used then." )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
                         }
 
                         mIsReplaying = false; // We are not loading one after all....
                         break;
 
                     default:
+                        retValue.first = 5;
                         if( isStatusToBeReportedInConsole ) {
                             mIsReportingReplayStatus = true;
-                            msg = tr( "[ ALERT ] - Unable to replay file:\n"
-                                                  "%1\n"
-                                                  "it appears to be from a later version of Mudlet.",
-                                      "Do not translate [ INFO ] it is used to key the color coding of the message" )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
+                            retValue.second = tr( "[ ALERT ] - Unable to replay file:\n"
+                                                              "%1\n"
+                                                              "it appears to be from a later version of Mudlet.",
+                                                  "Do not translate [ INFO ] it is used to key the color coding of the message" )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
                         }
                         else {
-                            msg = tr( "5error: file \"%1\" from later Mudlet, not playable.", "Do not change the initial digit '0' it is used to return status information to the caller." )
-                                  .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
+                            retValue.second = tr( "error: file \"%1\" from later Mudlet, not playable." )
+                                              .arg( QDir::toNativeSeparators( mReplayFile.fileName() ) );
                         }
 
                         mIsReplaying = false; // We are not loading one after all..
@@ -1765,7 +1766,7 @@ QString cTelnet::loadReplay( QString & name, bool isStatusToBeReportedInConsole 
             } // End of ELSE: file can be opened it for reading
         } // End of ELSE: file does exist
     } // End of ELSE: no replays in progress already
-    return msg;
+    return retValue;
 }
 
 void cTelnet::abortReplaying()

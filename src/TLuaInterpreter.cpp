@@ -784,31 +784,23 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
     else
         pathFileName = checkFileInfo.filePath(); // Probably file doesn't exist!
 
-    QString result = pHost->mTelnet.loadReplay( pathFileName, false );
-    bool ok = false;
-    int retCode = result.left(1).toUInt( & ok );
-    if( ! ok )
-        retCode = -1;
-    switch( retCode ) {
-        case 0: // OK, remainder includes canonical pathFile of replay file
-            lua_pushboolean( L, true );
-            lua_pushstring( L, result.mid(1).toUtf8().constData() );
-            lua_pushnumber( L, result.left(1).toInt() );
-            break;
-        case 1: // Replay active in this profile
-        case 2: // Replay active in other profile
-        case 3: // File does not exist
-        case 4: // File is not readable
-        case 5: // Replay file version is too high, newer than we understand...
-        case 6: // Replay file might be version 1 (original) but the name does not fit the pattern
-            lua_pushnil( L );
-            lua_pushstring( L, result.mid(1).toUtf8().constData() );
-            lua_pushnumber( L, result.left(1).toInt() );
-            break;
-        default:
-            lua_pushnil( L );
-            lua_pushstring( L, tr( "loadRawFile: unexpected internal error code: \"%1\"!" ).arg( result.left(1) ).toUtf8().constData() );
-            lua_pushnumber( L, result.left(1).toInt() );
+    QPair<int, QString> result = pHost->mTelnet.loadReplay( pathFileName, false );
+    if( result.first ) {
+        // 1 = Replay active in this profile
+        // 2 = Replay active in other profile
+        // 3 = File does not exist
+        // 4 = File is not readable
+        // 5 = Replay file version is too high, newer than we understand...
+        // 6 = Replay file might be version 1 (original) but the name does not fit the pattern
+        lua_pushnil( L );
+        lua_pushstring( L, result.second.toUtf8().constData() );
+        lua_pushnumber( L, result.first );
+    }
+    else {
+        // 0 = OK, message includes canonical pathFile of replay file
+        lua_pushboolean( L, true );
+        lua_pushstring( L, result.second.toUtf8().constData() );
+        lua_pushnumber( L, result.first );
     }
     return 3;
 }

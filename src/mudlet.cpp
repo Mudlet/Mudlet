@@ -1989,8 +1989,8 @@ void mudlet::slot_replay()
     // This call to cTelnet class is where the replay code becomes common with
     // the lua loadRawFile() ...
     // Second argument is to enable display of messages in console
-    QString msg = pHost->mTelnet.loadReplay( replayFileName, true );
-    pHost->mTelnet.postMessage( msg );
+    QPair<int, QString> result = pHost->mTelnet.loadReplay( replayFileName, true );
+    pHost->mTelnet.postMessage( result.second );
 }
 
 void mudlet::printSystemMessage( Host * pH, const QString & s )

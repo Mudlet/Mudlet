@@ -109,7 +109,7 @@ public:
     void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
     void              set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
     void              recordReplay();
-    QString           loadReplay( QString &, bool );
+    QPair<int, QString> loadReplay( QString &, bool );
     void              _loadReplay( quint8 );
     bool              isReplaying() { return mIsReplaying; }
     void              abortReplaying();
