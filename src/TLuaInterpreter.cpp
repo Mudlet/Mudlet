@@ -3956,9 +3956,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
 
             }
         }
-        // Return a SORTED list...!
         if( ! roomIdsFound.isEmpty() ) {
-            std::sort(roomIdsFound.begin(), roomIdsFound.end());
             for( int i=0; i<roomIdsFound.size();i++ ) {
                 TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomIdsFound.at(i) );
                 QString name = pR->name;
