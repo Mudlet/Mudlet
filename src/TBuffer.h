@@ -149,6 +149,8 @@ public:
 
     int               mCursorY;
     bool              mMXP;
+    bool              mMXPExpiresWithTag;
+    bool              mPriorMXP;
 
     bool              mAssemblingToken;
     std::string       currentToken;

@@ -120,6 +120,8 @@ TBuffer::TBuffer( Host * pH )
 , mWrapIndent        ( 0 )
 , mCursorY           ( 0 )
 , mMXP               ( false )
+, mMXPExpiresWithTag ( false )
+, mPriorMXP          ( false )
 , mAssemblingToken   ( false )
 , currentToken       ( "" )
 , openT              ( 0 )
@@ -750,8 +752,15 @@ void TBuffer::translateToPlainText( std::string & s )
 
                     // locked mode
                     if( code == "7" || code == "2" ) mMXP = false;
+                    // secure mode for current tag only
+                    if( code == "4" )
+                    {
+						mMXPExpiresWithTag = true;
+						mPriorMXP = mMXP;
+						mMXP = true;
+					}
                     // secure mode
-                    if( code == "1" || code == "6" || code == "4" ) mMXP = true;
+                    if( code == "1" || code == "6" ) mMXP = true;
                     // reset
                     if( code == "3" )
                     {
@@ -1594,6 +1603,13 @@ void TBuffer::translateToPlainText( std::string & s )
                     currentToken.clear();
                 }
                 msPos++;
+				
+				if( mMXPExpiresWithTag )
+				{
+					mMXP = mPriorMXP;
+					mMXPExpiresWithTag = false;
+				}
+				
                 continue;
             }
 
