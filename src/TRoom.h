@@ -44,6 +44,7 @@
 #define DIR_DOWN 10
 #define DIR_IN 11
 #define DIR_OUT 12
+#define DIR_OTHER 13
 
 class XMLimport;
 class XMLexport;

@@ -4165,8 +4165,8 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     lua_newtable(L);
     for( int i=0; i<areaExits.size(); i++ )
     {
-        lua_pushnumber( L, i );
-        lua_pushnumber( L, areaExits[i] );
+        lua_pushnumber( L, i+1 ); // Lua lists/arrays begin at 1 not 0!
+        lua_pushnumber( L, areaExits.at(i) );
         lua_settable(L, -3);
     }
     return 1;
