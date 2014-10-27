@@ -108,7 +108,7 @@ public:
     bool     mShiftMode;
     bool     mShowInfo;
     QComboBox * arealist_combobox;
-    QDialog * mpCustomLinesDialog;
+    QPointer<QDialog> mpCustomLinesDialog;
     int  mCustomLinesRoomFrom;
     int  mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
@@ -177,6 +177,10 @@ public slots:
     void slot_customLineProperties();
     void slot_customLineAddPoint();
     void slot_customLineRemovePoint();
+    void slot_cancelCustomLineDialog();
+
+private:
+    bool    mDialogLock;
 };
 
 #endif // MUDLET_T2DMAP_H
