@@ -11155,8 +11155,7 @@ void TLuaInterpreter::initLuaGlobals()
     QString n;
     int error;
 
-    // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
-    luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
+    luaL_dostring (pGlobalLua, "package.cpath = package.cpath . ';?.dylib'");
 
     error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
     if( error != 0 )
