@@ -1156,3 +1156,89 @@ do
 		end
 	end
 end
+
+
+local colours = {
+  ["30"] = {"0,0,0", "fg"}, -- black
+  ["31"] = {"0,128,0", "fg"}, -- red
+  ["32"] = {"0,179,0", "fg"}, -- green
+  ["33"] = {"128,128,0", "fg"}, -- yellow
+  ["34"] = {"0,0,128", "fg"}, --blue
+  ["35"] = {"128,0,128", "fg"}, -- magenta
+  ["36"] = {"0,128,128", "fg"}, -- cyan
+  ["37"] = {"255,255,255", "fg"} -- white
+}
+
+-- setup background colours with the same colours as foreground
+for i = 40, 47 do
+  colours[tostring(i)] = {colours[tostring(i-10)][1], "bg"}
+end
+
+-- function for converting raw ANSI string into something decho can process
+-- bold, italics, underline not currently supported since decho doesn't support them
+function ansi2decho(text)
+  local result = string.gsub(text, ".%[(.-)m", function(s)
+    local output = {} -- assemble the output into this table
+
+    local t = string.split(s, ";")
+
+    local function convertindex(tag)
+      local floor = math.floor
+      -- code from Mudlets own decoding
+      tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
+
+      local r = floor(tag / 36)
+      local g = floor((tag-(r*36)) / 6)
+      local b = floor((tag-(r*36))-(g*6))
+      r,g,b = r*42, g*42, b*42
+
+      return string.format("%d,%d,%d",r,g,b)
+    end
+
+    local fg,bg
+    for i = 1, #t do
+      local code = t[i]
+
+      if code == '0' then -- reset attributes
+        output[#output+1] = "<r>"
+        fg,bg = nil,nil
+      elseif code == '38' and t[i+1] == '5' then -- foreground xterm256, colour indexed
+        fg = convertindex(tonumber(t[i+2]))
+
+      elseif code == '48' and t[i+1] == '5' then -- background xterm256, colour indexed
+        bg = convertindex(tonumber(t[i+2]))
+
+      elseif code == '38' and t[i+1] == '2' then -- foreground xterm256, rgb
+        fg = string.format("%d,%d,%d", t[i+2], t[i+3], t[i+4])
+
+      elseif code == '48' and t[i+1] == '2' then -- background xterm256, rgb
+        bg = string.format("%d,%d,%d", t[i+2], t[i+3], t[i+4])
+
+      else -- usual ANSI colour index
+        local colours_match = colours[code]
+
+        if colours_match and colours_match[2] == "fg" then
+          fg = colours_match[1]
+        elseif colours_match then
+          bg = colours_match[1]
+        end
+      end
+    end
+
+    if fg or bg then
+      output[#output+1] = '<'
+      if fg then
+        output[#output+1] = fg
+      end
+        output[#output+1] = ':'
+      if bg then
+        output[#output+1] = bg
+      end
+      output[#output+1] = '>'
+    end
+
+    return table.concat(output)
+  end)
+
+  return result
+end
