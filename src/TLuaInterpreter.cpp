@@ -8997,7 +8997,7 @@ int TLuaInterpreter::EchoAnsi( lua_State *L )
     {
         if( ! lua_isstring( L, s ) )
         {
-            lua_pushstring( L, "Echo: wrong argument type" );
+            lua_pushstring( L, "EchoAnsi: wrong argument type" );
             lua_error( L );
             return 1;
         }
@@ -10942,6 +10942,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "wait", TLuaInterpreter::Wait );
     lua_register( pGlobalLua, "expandAlias", TLuaInterpreter::Send );
     lua_register( pGlobalLua, "echo", TLuaInterpreter::Echo );
+    lua_register( pGlobalLua, "echoAnsi", TLuaInterpreter::EchoAnsi );
     lua_register( pGlobalLua, "selectString", TLuaInterpreter::select );
     lua_register( pGlobalLua, "selectSection", TLuaInterpreter::selectSection );
     lua_register( pGlobalLua, "replace", TLuaInterpreter::replace );
