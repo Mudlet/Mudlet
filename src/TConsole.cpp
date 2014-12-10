@@ -1154,6 +1154,27 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     }
 }
 
+void TConsole::printAsci( std::string & incomingSocketData )
+{
+    mProcessingTime.restart();
+    mTriggerEngineMode = true;
+    buffer.mEchoText = true;
+    buffer.translateToPlainText( incomingSocketData );
+    buffer.mEchoText = false;
+    mTriggerEngineMode = false;
+    double processT = mProcessingTime.elapsed();
+    if( mpHost->mTelnet.mGA_Driver )
+    {
+        networkLatency->setText( QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
+                                                         .arg(processT/1000,0,'f',3));
+    }
+    else
+    {
+        networkLatency->setText( QString("<no GA> S:%1").arg(processT/1000,0,'f',3));
+    }
+    finalize();
+}
+
 void TConsole::runTriggers( int line )
 {
     mDeletedLines = 0;
