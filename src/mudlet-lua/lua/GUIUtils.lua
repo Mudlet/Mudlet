@@ -1177,24 +1177,37 @@ end
 -- function for converting raw ANSI string into something decho can process
 -- bold, italics, underline not currently supported since decho doesn't support them
 function ansi2decho(text)
+  -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
+  -- this works since both ansi colours and echo don't need closing tags and map to each other
   local result = string.gsub(text, ".%[(.-)m", function(s)
     local output = {} -- assemble the output into this table
 
-    local t = string.split(s, ";")
+    local t = string.split(s, ";") -- split the codes into an indexed table
 
+    -- given an xterm256 index, returns an rgb string for decho use
     local function convertindex(tag)
       local floor = math.floor
-      -- code from Mudlets own decoding
-      tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
+      -- code from Mudlets own decoding in TBuffer::translateToPlainText
 
-      local r = floor(tag / 36)
-      local g = floor((tag-(r*36)) / 6)
-      local b = floor((tag-(r*36))-(g*6))
-      r,g,b = r*42, g*42, b*42
+      local r,g,b
+      if tag < 232 then
+        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
+
+        r = floor(tag / 36)
+        g = floor((tag-(r*36)) / 6)
+        b = floor((tag-(r*36))-(g*6))
+        r,g,b = r*42, g*42, b*42
+      else
+        -- black + 23 tone grayscale from dark to light gray
+        tag = tag - 232
+        r,g,b = tag*10, tag*10, tag*10
+      end
 
       return string.format("%d,%d,%d",r,g,b)
     end
 
+    -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
+    -- the data first, then assemble it in the order we need at the end
     local fg,bg
     for i = 1, #t do
       local code = t[i]
@@ -1225,12 +1238,13 @@ function ansi2decho(text)
       end
     end
 
+    -- assemble and return the data
     if fg or bg then
       output[#output+1] = '<'
       if fg then
         output[#output+1] = fg
       end
-        output[#output+1] = ':'
+      output[#output+1] = ':'
       if bg then
         output[#output+1] = bg
       end
