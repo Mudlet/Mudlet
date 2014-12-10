@@ -1523,6 +1523,18 @@ bool mudlet::echoWindow( Host * pHost, const QString & name, const QString & tex
         return false;
 }
 
+bool mudlet::echoWindowAnsi( Host * pHost, const QString & name, const QString & text )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QString t = text;
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        string t_str = t.toStdString();
+        dockWindowConsoleMap[name]->printAsci( t_str );
+        return true;
+    }
+}
+
 bool mudlet::echoLink( Host * pHost, const QString & name, const QString & text, QStringList & func, QStringList & hint, bool customFormat )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
