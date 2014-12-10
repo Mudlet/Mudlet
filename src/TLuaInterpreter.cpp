@@ -8974,6 +8974,61 @@ int TLuaInterpreter::Echo( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::EchoAnsi( lua_State *L )
+{
+    string a1;
+    string a2;
+    // string txt;
+    int s = 1;
+    int n = lua_gettop( L );
+
+    if( ! lua_isstring( L, s ) )
+    {
+        lua_pushstring( L, "EchoAnsi: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        a1 = lua_tostring( L, s );
+        s++;
+    }
+    if( n > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+            lua_pushstring( L, "EchoAnsi: wrong argument type" );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            a2 = lua_tostring( L, s );
+        }
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString name;
+    QString txt;
+    string txt_str;
+    if( n == 1 )
+    {
+        txt = a1.c_str();
+        txt = txt.replace("&esc;", "\u001b");
+        txt_str = txt.toStdString();
+        pHost->mpConsole->printAsci( txt_str );
+    }
+    else
+    {
+        name = a1.c_str();
+        txt = a2.c_str();
+        txt = txt.replace("&esc;", "\u001b");
+        mudlet::self()->echoWindowAnsi( pHost, name, txt );
+    }
+
+    return 0;
+}
+
+
 int TLuaInterpreter::echoPopup( lua_State *L )
 {
     string a1 = "";
@@ -10891,6 +10946,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "wait", TLuaInterpreter::Wait );
     lua_register( pGlobalLua, "expandAlias", TLuaInterpreter::Send );
     lua_register( pGlobalLua, "echo", TLuaInterpreter::Echo );
+    lua_register( pGlobalLua, "echoAnsi", TLuaInterpreter::EchoAnsi );
     lua_register( pGlobalLua, "selectString", TLuaInterpreter::select );
     lua_register( pGlobalLua, "selectSection", TLuaInterpreter::selectSection );
     lua_register( pGlobalLua, "replace", TLuaInterpreter::replace );

@@ -232,6 +232,7 @@ public:
     static int Send( lua_State * L );
     static int sendRaw( lua_State * L );
     static int Echo( lua_State * L );
+    static int EchoAnsi( lua_State * L );
     static int select( lua_State * L );
     static int getMainConsoleWidth( lua_State * L );
     static int selectSection( lua_State * L );

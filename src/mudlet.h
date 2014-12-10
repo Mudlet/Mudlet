@@ -82,6 +82,7 @@ public:
    bool                          createMiniConsole( Host *, const QString &, int, int, int, int );
    bool                          createLabel( Host *, const QString &, int, int, int, int, bool );
    bool                          echoWindow( Host *, const QString &, const QString & );
+   bool                          echoWindowAnsi( Host *, const QString &, const QString & );
    bool                          echoLink( Host * pHost, const QString & name, const QString & text, QStringList &, QStringList &, bool customFormat=false );
    void                          insertLink( Host *, const QString &, const QString&, QStringList &, QStringList &, bool customFormat=false );
    bool                          appendBuffer( Host *, const QString & );
