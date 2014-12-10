@@ -9009,15 +9009,19 @@ int TLuaInterpreter::EchoAnsi( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString name;
     QString txt;
-    txt = a1.c_str();
+    string txt_str;
     if( n == 1 )
     {
-        pHost->mpConsole->printAsci( a1 );
+        txt = a1.c_str();
+        txt = txt.replace("&esc;", "\u001b");
+        txt_str = txt.toStdString();
+        pHost->mpConsole->printAsci( txt_str );
     }
     else
     {
         name = a1.c_str();
         txt = a2.c_str();
+        txt = txt.replace("&esc;", "\u001b");
         mudlet::self()->echoWindowAnsi( pHost, name, txt );
     }
 
