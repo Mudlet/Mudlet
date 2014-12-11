@@ -1222,10 +1222,10 @@ function ansi2decho(text)
         bg = convertindex(tonumber(t[i+2]))
 
       elseif code == '38' and t[i+1] == '2' then -- foreground xterm256, rgb
-        fg = string.format("%d,%d,%d", t[i+2], t[i+3], t[i+4])
+        fg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
 
       elseif code == '48' and t[i+1] == '2' then -- background xterm256, rgb
-        bg = string.format("%d,%d,%d", t[i+2], t[i+3], t[i+4])
+        bg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
 
       else -- usual ANSI colour index
         local colours_match = colours[code]
