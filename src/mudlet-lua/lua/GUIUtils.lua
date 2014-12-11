@@ -1209,7 +1209,8 @@ function ansi2decho(text)
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
     local fg,bg
-    for i = 1, #t do
+    local i = 1
+    while i < #t do
       local code = t[i]
 
       if code == '0' then -- reset attributes
@@ -1217,15 +1218,19 @@ function ansi2decho(text)
         fg,bg = nil,nil
       elseif code == '38' and t[i+1] == '5' then -- foreground xterm256, colour indexed
         fg = convertindex(tonumber(t[i+2]))
+        i = i + 2
 
       elseif code == '48' and t[i+1] == '5' then -- background xterm256, colour indexed
         bg = convertindex(tonumber(t[i+2]))
+        i = i + 2
 
       elseif code == '38' and t[i+1] == '2' then -- foreground xterm256, rgb
         fg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
+        i = i + 4
 
       elseif code == '48' and t[i+1] == '2' then -- background xterm256, rgb
         bg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
+        i = i + 4
 
       else -- usual ANSI colour index
         local colours_match = colours[code]
@@ -1236,6 +1241,8 @@ function ansi2decho(text)
           bg = colours_match[1]
         end
       end
+
+      i = i + 1
     end
 
     -- assemble and return the data
