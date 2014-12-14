@@ -64,6 +64,7 @@ public:
                                       bool isBold,
                                       bool isUnderline,
                                       bool isItalics,
+                                      bool isStrikeOut,
                                       QColor & fgColor,
                                       QColor & bgColor );
     std::string       getCurrentTime();

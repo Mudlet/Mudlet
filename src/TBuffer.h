@@ -40,6 +40,7 @@
 #define TCHAR_UNDERLINE 4
 #define TCHAR_INVERSE 8
 #define TCHAR_ECHO 16
+#define TCHAR_STRIKEOUT 32
 
 class Host;
 
@@ -48,7 +49,7 @@ class TChar
 {
 public:
            TChar();
-           TChar( int, int, int, int, int, int, bool, bool, bool, int _link = 0 );
+           TChar( int, int, int, int, int, int, bool, bool, bool, bool, int _link = 0 );
            TChar( Host * );
            TChar( const TChar & copy );
     bool   operator==( const TChar & c );
@@ -81,7 +82,7 @@ class TBuffer
 public:
 
     TBuffer( Host * pH );
-    QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline );
+    QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
     bool insertInLine( QPoint & cursor, const QString & what, TChar & format );
     void expandLine( int y, int count, TChar & );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
@@ -104,6 +105,7 @@ public:
     bool applyBold( QPoint & P_begin, QPoint & P_end, bool bold );
     bool applyLink( QPoint & P_begin, QPoint & P_end, const QString& linkText, QStringList &, QStringList & );
     bool applyItalics( QPoint & P_begin, QPoint & P_end, bool bold );
+    bool applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout );
     bool applyFgColor( QPoint &, QPoint &, int, int, int );
     bool applyBgColor( QPoint &, QPoint &, int, int, int );
     void appendBuffer( TBuffer chunk );
@@ -115,8 +117,8 @@ public:
     void resetFontSpecs();
     QPoint getEndPos();
     void translateToPlainText( std::string & s );
-    void append(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
-    void appendLine(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
+    void append(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
+    void appendLine(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
     int lookupColor(const QString & s, int pos );
     void set_text_properties(int tag);
     void setWrapAt( int i ){ mWrapAt = i; }
@@ -270,6 +272,7 @@ private:
     bool              mBold;
     bool              mItalics;
     bool              mUnderline;
+    bool              mStrikeOut;
     bool              mFgColorCode;
     bool              mBgColorCode;
     int               mFgColorR;
