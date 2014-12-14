@@ -1159,20 +1159,15 @@ end
 
 
 local colours = {
-  ["30"] = {"0,0,0", "fg"}, -- black
-  ["31"] = {"0,128,0", "fg"}, -- red
-  ["32"] = {"0,179,0", "fg"}, -- green
-  ["33"] = {"128,128,0", "fg"}, -- yellow
-  ["34"] = {"0,0,128", "fg"}, --blue
-  ["35"] = {"128,0,128", "fg"}, -- magenta
-  ["36"] = {"0,128,128", "fg"}, -- cyan
-  ["37"] = {"255,255,255", "fg"} -- white
+  0 = "0,0,0", -- black
+  1 = "0,128,0", -- red
+  2 = "0,179,0", -- green
+  3 = "128,128,0", -- yellow
+  4 = "0,0,128", --blue
+  5 = "128,0,128", -- magenta
+  6 = "0,128,128", -- cyan
+  7 = "255,255,255" -- white
 }
-
--- setup background colours with the same colours as foreground
-for i = 40, 47 do
-  colours[tostring(i)] = {colours[tostring(i-10)][1], "bg"}
-end
 
 -- function for converting raw ANSI string into something decho can process
 -- bold, italics, underline not currently supported since decho doesn't support them
@@ -1190,6 +1185,8 @@ function ansi2decho(text)
       -- code from Mudlets own decoding in TBuffer::translateToPlainText
 
       local r,g,b
+      if tag < 16 then
+        r,g,b = string.split(colours[tag], ",")
       if tag < 232 then
         tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
 
@@ -1210,39 +1207,38 @@ function ansi2decho(text)
     -- the data first, then assemble it in the order we need at the end
     local fg,bg
     local i = 1
+    local floor = math.floor
     while i < #t do
       local code = t[i]
 
       if code == '0' then -- reset attributes
         output[#output+1] = "<r>"
         fg,bg = nil,nil
-      elseif code == '38' and t[i+1] == '5' then -- foreground xterm256, colour indexed
-        fg = convertindex(tonumber(t[i+2]))
-        i = i + 2
+      else
+        local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
+                                            --                      4 is back
+        local cmd = code - (layerCode * 10) -- extract the actual "command"
+                                            -- 0-7 is a colour, 8 is xterm256
+        local colour = nil
+        if cmd == 8 and t[i+1] == '5' then -- xterm256, colour indexed
+          colour = convertindex(tonumber(t[i+2]))
+          i = i + 2
 
-      elseif code == '48' and t[i+1] == '5' then -- background xterm256, colour indexed
-        bg = convertindex(tonumber(t[i+2]))
-        i = i + 2
+        elseif cmd == 8 and t[i+1] == '2' then -- xterm256, rgb
+          colour = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
+          i = i + 4
 
-      elseif code == '38' and t[i+1] == '2' then -- foreground xterm256, rgb
-        fg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
-        i = i + 4
+         else -- usual ANSI colour index
+            colour = colours[cmd]
+         end
 
-      elseif code == '48' and t[i+1] == '2' then -- background xterm256, rgb
-        bg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
-        i = i + 4
+         if layerCode == 3 then
+           fg = colour
+         elseif layerCode == 4 then
+           bg = colour
+         end
 
-      else -- usual ANSI colour index
-        local colours_match = colours[code]
-
-        if colours_match and colours_match[2] == "fg" then
-          fg = colours_match[1]
-        elseif colours_match then
-          bg = colours_match[1]
-        end
-      end
-
-      i = i + 1
+         i = i + 1
     end
 
     -- assemble and return the data
