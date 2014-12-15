@@ -521,6 +521,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_scripts, SIGNAL( itemSelectionChanged()), this, SLOT( slot_scripts_selection_changed()) );
     connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
@@ -4800,6 +4801,13 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         }
         if( ! pT->state() ) showError( pT->getError() );
     }
+}
+
+void dlgTriggerEditor::slot_scripts_selection_changed()
+{
+    QList<QTreeWidgetItem *> items = treeWidget_scripts->selectedItems();
+    if (items.length())
+        slot_scripts_selected(items.first());
 }
 
 
