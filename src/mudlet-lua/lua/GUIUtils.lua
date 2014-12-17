@@ -1159,22 +1159,34 @@ end
 
 
 local colours = {
-  0 = "0,0,0", -- black
-  1 = "0,128,0", -- red
-  2 = "0,179,0", -- green
-  3 = "128,128,0", -- yellow
-  4 = "0,0,128", --blue
-  5 = "128,0,128", -- magenta
-  6 = "0,128,128", -- cyan
-  7 = "255,255,255" -- white
+  [0] = "0,0,0", -- black
+  [1] = "128,0,0", -- red
+  [2] = "0,179,0", -- green
+  [3] = "128,128,0", -- yellow
+  [4] = "0,0,128", --blue
+  [5] = "128,0,128", -- magenta
+  [6] = "0,128,128", -- cyan
+  [7] = "255,255,255" -- white
 }
 
+local lightColours = {
+  [0] = "128,128,128", -- black
+  [1] = "255,0,0", -- red
+  [2] = "0,255,0", -- green
+  [3] = "255,255,0", -- yellow
+  [4] = "0,0,255", --blue
+  [5] = "255,0,255", -- magenta
+  [6] = "0,255,255", -- cyan
+  [7] = "255,255,255" -- white
+}
+
+local ansiPattern = rex.new("\\e\\[(.+?)m")
 -- function for converting raw ANSI string into something decho can process
 -- bold, italics, underline not currently supported since decho doesn't support them
 function ansi2decho(text)
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = string.gsub(text, ".%[(.-)m", function(s)
+  local result = rex.gsub(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
     local t = string.split(s, ";") -- split the codes into an indexed table
@@ -1185,9 +1197,11 @@ function ansi2decho(text)
       -- code from Mudlets own decoding in TBuffer::translateToPlainText
 
       local r,g,b
-      if tag < 16 then
-        r,g,b = string.split(colours[tag], ",")
-      if tag < 232 then
+      if tag < 8 then
+        r,g,b = unpack(string.split(colours[tag], ","))
+      elseif tag < 16 then
+        r,g,b = unpack(string.split(lightColours[tag-8] ","))
+      elseif tag < 232 then
         tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
 
         r = floor(tag / 36)
@@ -1208,12 +1222,18 @@ function ansi2decho(text)
     local fg,bg
     local i = 1
     local floor = math.floor
+    local coloursToUse = colours
     while i < #t do
       local code = t[i]
 
       if code == '0' then -- reset attributes
         output[#output+1] = "<r>"
         fg,bg = nil,nil
+        coloursToUse = colours
+      elseif code == "1" then -- light or bold
+        coloursToUse = lightColours
+      elseif code == "22" then -- not light or bold
+        coloursToUse = colours
       else
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
                                             --                      4 is back
@@ -1228,17 +1248,20 @@ function ansi2decho(text)
           colour = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
           i = i + 4
 
-         else -- usual ANSI colour index
-            colour = colours[cmd]
-         end
+        elseif layerCode == 9 or layerCode == 10 then --light colours
+            colour = lightColours[cmd]
+        else -- usual ANSI colour index
+            colour = coloursToUse[cmd]
+        end
 
-         if layerCode == 3 then
+        if layerCode == 3 or layerCode == 9 then
            fg = colour
-         elseif layerCode == 4 then
+        elseif layerCode == 4 or layerCode == 10 then
            bg = colour
-         end
+        end
 
-         i = i + 1
+      end
+      i = i + 1
     end
 
     -- assemble and return the data
