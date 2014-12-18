@@ -374,6 +374,27 @@ void TArea::addRoom( int id )
     }
 }
 
+QMap<int, QPair<int, int> > TArea::getAreaExits()
+{
+    QMapIterator<int, QPair<int, int> > it(exits);
+    QMap<int, QPair<int, int> > exitList;
+    while(it.hasNext()){
+        it.next();
+        int fromRoom = it.key();
+        int toRoom = it.value().first;
+        TRoom * from = mpRoomDB->getRoom(fromRoom);
+        if (!from)
+            continue;
+        TRoom * to = mpRoomDB->getRoom(toRoom);
+        if (!to)
+            continue;
+        if(from->getArea() != to->getArea()){
+            exitList.insertMulti(fromRoom, it.value());
+        }
+    }
+    return exitList;
+}
+
 void TArea::calcSpan()
 {
     xminEbene.clear();

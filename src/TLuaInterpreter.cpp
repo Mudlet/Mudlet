@@ -4172,14 +4172,22 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
         lua_pushnil(L);
         return 1;
     }
-    QList<int> areaExits = pA->getAreaExits();
-    qDebug()<<"areaExits="<<areaExits;
+    QMap<int, QPair<int, int>> areaExits = pA->getAreaExits();
     lua_newtable(L);
-    for( int i=0; i<areaExits.size(); i++ )
-    {
-        lua_pushnumber( L, i );
-        lua_pushnumber( L, areaExits[i] );
-        lua_settable(L, -3);
+    if(areaExits.size()){
+        QMapIterator<int, QPair<int, int> > it(areaExits);
+        while(it.hasNext()){
+            it.next();
+            lua_pushnumber( L, it.key() );
+            lua_newtable(L);
+            lua_pushnumber( L, 1);
+            lua_pushnumber( L, it.value().first);
+            lua_settable(L, -3);
+            lua_pushnumber( L, 2);
+            lua_pushnumber( L, it.value().second );
+            lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
     }
     return 1;
 }
