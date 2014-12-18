@@ -159,6 +159,7 @@ public:
       void              setLink(const QString & linkText, QStringList & linkFunction, QStringList & linkHint );
       void              setItalics( bool );
       void              setUnderline( bool );
+      void              setStrikeOut( bool );
       void              finalize();
       void              runTriggers( int );
       void              showStatistics();

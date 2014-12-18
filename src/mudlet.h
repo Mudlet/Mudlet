@@ -95,7 +95,7 @@ public:
    bool                          pasteWindow( Host * pHost, const QString & name );
    bool                          setBackgroundColor( Host *, const QString & name, int r, int g, int b, int alpha );
    bool                          setBackgroundImage( Host *, const QString & name, QString & path );
-   bool                          setTextFormat( Host *, const QString & name, int, int, int, int, int, int, bool, bool, bool );
+   bool                          setTextFormat( Host *, const QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, const QString &, const QString &, const TEvent & );
    bool                          setLabelOnEnter( Host *, const QString &, const QString &, const TEvent & );
    bool                          setLabelOnLeave( Host *, const QString &, const QString &, const TEvent & );
@@ -109,6 +109,7 @@ public:
    void                          setLink( Host * pHost, const QString & name, const QString & linkText, QStringList & linkFunction, QStringList & );
    void                          setItalics( Host *, const QString & name, bool );
    void                          setUnderline( Host *, const QString & name, bool );
+   void                          setStrikeOut( Host *, const QString & name, bool );
    void                          setFgColor( Host *, const QString & name, int, int, int );
    void                          setBgColor( Host *, const QString & name, int, int, int );
    bool                          userWindowLineWrap( Host * pHost, const QString & name, bool on );

@@ -3075,6 +3075,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 
 int TLuaInterpreter::setTextFormat( lua_State *L )
 {
+    int n = lua_gettop( L );
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
@@ -3185,6 +3186,21 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
     {
         italics = lua_tonumber( L, 10 );
     }
+    double strikeout;
+    if(n > 10)
+    {
+      if( ! lua_isnumber( L, 11 ) )
+      {
+        lua_pushfstring( L, "setTextFormat: bad argument #11 (strikeout as boolean expected, got %s)", luaL_typename(L, 11) );
+        lua_error( L );
+        return 1;
+      }
+      else
+      {
+        strikeout = lua_tonumber( L, 11 );
+      }
+    }
+    
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
     if( text == "main" )
@@ -3208,11 +3224,15 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
             pC->mFormatCurrent.flags |= TCHAR_ITALICS;
         else
             pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
+        if( strikeout )
+            pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+        else
+            pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
         return true;
     }
     else
     {
-        mudlet::self()->setTextFormat( pHost, text, static_cast<int>(r1), static_cast<int>(g1), static_cast<int>(b1), static_cast<int>(r2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+        mudlet::self()->setTextFormat( pHost, text, static_cast<int>(r1), static_cast<int>(g1), static_cast<int>(b1), static_cast<int>(r2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics), static_cast<bool>(strikeout) );
     }
 
     return 0;
@@ -4751,6 +4771,7 @@ int TLuaInterpreter::setItalics( lua_State *L )
         pHost->mpConsole->setItalics( b );
     return 0;
 }
+
 int TLuaInterpreter::setUnderline( lua_State *L )
 {
     string luaWindowName;
@@ -4787,6 +4808,45 @@ int TLuaInterpreter::setUnderline( lua_State *L )
         mudlet::self()->setUnderline( pHost, windowName, b );
     else
         pHost->mpConsole->setUnderline( b );
+    return 0;
+}
+
+int TLuaInterpreter::setStrikeOut( lua_State *L )
+{
+    string luaWindowName;
+    bool b;
+    int s = 1;
+    if( lua_gettop( L ) > 1 )
+    {
+        if( ! lua_isstring( L, s ) )
+        {
+            lua_pushfstring( L, "setStrikeOut: bad argument #1 (windowName as string expected, got %s)", luaL_typename(L, 1) );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaWindowName = lua_tostring( L, s );
+            s++;
+        }
+    }
+    if( ! lua_isboolean( L, s ) )
+    {
+        lua_pushfstring( L,  "setStrikeOut: bad argument #%d (boolean expected, got %s)", s, luaL_typename(L, s) );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        b = lua_toboolean( L, s );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString windowName(luaWindowName.c_str());
+    if( windowName.size() > 0 )
+        mudlet::self()->setStrikeOut( pHost, windowName, b );
+    else
+        pHost->mpConsole->setStrikeOut( b );
     return 0;
 }
 
@@ -10970,6 +11030,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBold", TLuaInterpreter::setBold );
     lua_register( pGlobalLua, "setItalics", TLuaInterpreter::setItalics );
     lua_register( pGlobalLua, "setUnderline", TLuaInterpreter::setUnderline );
+    lua_register( pGlobalLua, "setStrikeOut", TLuaInterpreter::setStrikeOut );
     lua_register( pGlobalLua, "disconnect", TLuaInterpreter::disconnect );
     lua_register( pGlobalLua, "tempButtonToolbar", TLuaInterpreter::tempButtonToolbar );
     lua_register( pGlobalLua, "tempButton", TLuaInterpreter::tempButton );
@@ -11697,3 +11758,4 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
     return id;
 
 }
+
