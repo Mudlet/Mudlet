@@ -375,7 +375,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     timeStampButton->setMaximumSize(QSize(30,30));
     timeStampButton->setSizePolicy( sizePolicy5 );
     timeStampButton->setFocusPolicy( Qt::NoFocus );
-    timeStampButton->setToolTip("Show Time Stamps");
+    timeStampButton->setToolTip(tr("<html><head/><body><p>Show Time Stamps.</p></body></html>"));
     timeStampButton->setIcon( QIcon( QStringLiteral( ":/icons/dialog-information.png" ) ) );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
 
@@ -385,7 +385,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     replayButton->setMaximumSize(QSize(30,30));
     replayButton->setSizePolicy( sizePolicy5 );
     replayButton->setFocusPolicy( Qt::NoFocus );
-    replayButton->setToolTip("record a replay");
+    replayButton->setToolTip(tr("<html><head/><body><p>Record a replay.</p></body></html>"));
     replayButton->setIcon( QIcon( QStringLiteral( ":/icons/media-tape.png" ) ) );
     connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
 
@@ -395,14 +395,17 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     logButton->setCheckable( true );
     logButton->setSizePolicy( sizePolicy5 );
     logButton->setFocusPolicy( Qt::NoFocus );
-    logButton->setToolTip( tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>") );
-    logButton->setIcon( QIcon( QStringLiteral( ":/icons/folder-downloads.png" ) ) );
+    logButton->setToolTip(tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>"));
+    QIcon logIcon;
+    logIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-downloads.png" ) ), QIcon::Normal, QIcon::Off );
+    logIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-downloads-red-cross.png" ) ), QIcon::Normal, QIcon::On );
+    logButton->setIcon( logIcon );
     connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
     networkLatency->setReadOnly( true );
     networkLatency->setSizePolicy( sizePolicy4 );
     networkLatency->setFocusPolicy( Qt::NoFocus );
-    networkLatency->setToolTip("<i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your triggers took to process the last line(s)");
+    networkLatency->setToolTip(tr("<html><head/><body><p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your triggers took to process the last line(s).</p></body></html>"));
     networkLatency->setMaximumSize( 120, 30 );
     networkLatency->setMinimumSize( 120, 30 );
     networkLatency->setAutoFillBackground( true );
@@ -445,7 +448,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     emergencyStop->setSizePolicy( sizePolicy4 );
     emergencyStop->setFocusPolicy( Qt::NoFocus );
     emergencyStop->setCheckable( true );
-    emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
+    emergencyStop->setToolTip(tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
     connect( emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers( bool )));
 
     mpBufferSearchBox->setMinimumSize(QSize(100,30));
@@ -461,7 +464,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette( __pal );
-    mpBufferSearchBox->setToolTip("Search buffer");
+    mpBufferSearchBox->setToolTip(tr("<html><head/><body><p>Search buffer.</p></body></html>"));
     connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
 
 
@@ -470,8 +473,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setMinimumSize(QSize(30,30));
     mpBufferSearchUp->setMaximumSize(QSize(30,30));
     mpBufferSearchUp->setSizePolicy( sizePolicy5 );
-    mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchUp->setToolTip("next result");
+    mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier result.</p></body></html>"));
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/export.png" ) ) );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
@@ -481,9 +483,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setMaximumSize(QSize(30,30));
     mpBufferSearchDown->setSizePolicy( sizePolicy5 );
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchDown->setToolTip("next result");
-    mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-
+    mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later result.</p></body></html>"));
     mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/import.png" ) ) );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
@@ -541,8 +541,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBaseHFrame->layout()->setMargin(0);
     mpBaseHFrame->layout()->setSpacing(0);
 
-
-    setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
 
     buttonLayerSpacer->setMinimumHeight(0);
     buttonLayerSpacer->setMinimumWidth(100);
@@ -854,7 +852,7 @@ int TConsole::getButtonState()
     return mButtonState;
 }
 
-void TConsole::slot_toggleLogging()
+void TConsole::toggleLogging( bool isMessageEnabled )
 {
     if( mIsDebugConsole || mIsSubConsole ) {
         return;
@@ -886,16 +884,24 @@ void TConsole::slot_toggleLogging()
         mLogFile.setFileName( mLogFileName );
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
-        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
-        // This puts text onto console that WOULD IMMEDIATELY BE POSTED into log
-        // file so must be done BEFORE logging starts - or actually mLogToLogFile gets set!
+        if( isMessageEnabled ) {
+            QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
+            printSystemMessage( message );
+            // This puts text onto console that is IMMEDIATELY POSTED into log file so
+            // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
+        }
         mLogToLogFile = true;
     }
     else {
         QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
         file.remove();
         mLogToLogFile = false;
+        if( isMessageEnabled ) {
+            QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
+            printSystemMessage( message );
+            // This puts text onto console that is IMMEDIATELY POSTED into log file so
+            // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
+        }
     }
 
     if( mLogToLogFile ) {
@@ -943,10 +949,23 @@ void TConsole::slot_toggleLogging()
         }
         mLogFile.flush();
         mLogFile.close();
-        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
         logButton->setToolTip( tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>") );
     }
+}
+
+// Converted into a wrapper around a separate toggleLogging() method so that
+// calls to turn logging on/off via the toolbar button - which go via this
+// wrapper - generate messages on the console.  Requests to control logging from
+// the Lua interpreter call the wrapped method directly and messages are
+// generated for Lua user control by the Lua subsystem.
+void TConsole::slot_toggleLogging()
+{
+    if( mIsDebugConsole || mIsSubConsole ) {
+        return;
+        // We don't support logging anything other than main console (at present?)
+    }
+
+    toggleLogging( true );
 }
 
 void TConsole::slot_toggleReplayRecording()
