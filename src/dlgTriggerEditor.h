@@ -151,6 +151,7 @@ public slots:
     void                        slot_trigger_selected( QTreeWidgetItem *pItem );
     void                        slot_timer_selected( QTreeWidgetItem *pItem );
     void                        slot_scripts_selected( QTreeWidgetItem *pItem );
+    void                        slot_scripts_selection_changed();
     void                        slot_alias_selected( QTreeWidgetItem *pItem );
     void                        slot_action_selected( QTreeWidgetItem * pItem );
     void                        slot_key_selected( QTreeWidgetItem *pItem );
