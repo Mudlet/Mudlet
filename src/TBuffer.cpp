@@ -631,7 +631,7 @@ NORMAL_ANSI_COLOR_TAG:
       23 italics off
       24 underline off
       27 inverse off
-      28 strikethrough off
+      29 strikethrough off
       30 fg black
       31 fg red
       32 fg green
@@ -1126,11 +1126,9 @@ void TBuffer::translateToPlainText( std::string & s )
                             break;
                         case 27:
                             break; //inverse off
-                        case 28:
-                            mStrikeOut = false;
-                            break; //strikethrough
                         case 29:
-                            break; //not crossed out text
+                            mStrikeOut = false;
+                            break; //not crossed out text (strikethrough)
                         case 30:
                             fgColorR = mBlackR;
                             fgColorG = mBlackG;
@@ -3182,7 +3180,10 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics 
             || bool( buffer[y][x].flags & TCHAR_STRIKEOUT ) != strikeout ) 
         {
-            needChange = false;
+            if( needChange )
+                needChange = false; // The first span won't need to close the previous one
+            else
+                s += "</span>";
             fgR = buffer[y][x].fgR;
             fgG = buffer[y][x].fgG;
             fgB = buffer[y][x].fgB;
@@ -3210,7 +3211,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                 textDecoration = "line-through";
             else
                 textDecoration = "normal";
-            s += "</span><span style=\"";
+            s += "<span style=\"";
             s += "color: rgb(" + QString::number(fgR) + ","
                                + QString::number(fgG) + ","
                                + QString::number(fgB) + ");";
@@ -3229,6 +3230,24 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             s.append(lineBuffer[y][x]);
     }
     if( s.size() > 0 )
-        s.append("<br />");
+        s.append("</span>");
+        // Needed to balance the very first open <span>, but only if we have
+        // included anything. the previously appearing <br /> is an XML tag, NOT
+        // a (strict) HTML 4 one
+
+    s.append( QStringLiteral( "<br>\n" ) );
+    // Needed to reproduce empty lines in capture, as this method is called for
+    // EACH line, even the empty ones, the spans are styled as "pre" so literal
+    // linefeeds would be treated as such THERE but we deleberately place the
+    // line-feeds OUTSIDE so they come under the <body>s no wrap and as such
+    // line-feeds can be used to break the HTML over lots of lines (which is
+    // easier to hand edit and examine afterwards) without impacting the
+    // formatting. To get the line feeds at the end of displayed HTML lines the
+    // <br> is used.  This slightly weird way of doing things is so that some
+    // on-line tools preserve the formatting when the HTML-lised selection is
+    // pasted to them and AND retain the ability to paste the HTML from the
+    // clipboard into a plain text editor and not have everything on one line in
+    // that editor!
+
     return s;
 }
