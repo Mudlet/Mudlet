@@ -94,7 +94,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mWindowIsHidden( false )
 , mWrapAt( 100 )
 , networkLatency( new QLineEdit )
-, mLastBufferLogLine( 0 )
 , mUserAgreedToCloseConsole( false )
 , mpBufferSearchBox( new QLineEdit )
 , mpBufferSearchUp( new QToolButton )
@@ -396,7 +395,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     logButton->setCheckable( true );
     logButton->setSizePolicy( sizePolicy5 );
     logButton->setFocusPolicy( Qt::NoFocus );
-    logButton->setToolTip( tr("start logging MUD output to log file") );
+    logButton->setToolTip( tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>") );
     logButton->setIcon( QIcon( QStringLiteral( ":/icons/folder-downloads.png" ) ) );
     connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
@@ -857,47 +856,49 @@ int TConsole::getButtonState()
 
 void TConsole::slot_toggleLogging()
 {
-    if( mIsDebugConsole || mIsSubConsole )
+    if( mIsDebugConsole || mIsSubConsole ) {
         return;
         // We don't support logging anything other than main console (at present?)
+    }
 
-    mLogToLogFile = ! mLogToLogFile;
-    //mpHost->mLogStatus = mLogToLogFile;
-    if( mLogToLogFile )
-    {
+    if( ! mLogToLogFile ) {
         QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
         file.open( QIODevice::WriteOnly | QIODevice::Text );
         QTextStream out(&file);
         file.close();
-    }
-    else
-    {
-       QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
-       file.remove();
-    }
-    if( mLogToLogFile )
-    {
-        mLastBufferLogLine = buffer.size();
+
         QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
         mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("yyyy-MM-dd#hh-mm-ss");
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;
-        if( ! dirLogFile.exists( directoryLogFile ) )
+        if( ! dirLogFile.exists( directoryLogFile ) ) {
             dirLogFile.mkpath( directoryLogFile );
+        }
 
-        if( mpHost->mRawStreamDump )
+        if( mpHost->mRawStreamDump ) {
             mLogFileName.append(".html");
-        else
+        }
+        else {
             mLogFileName.append(".txt");
-
+        }
         mLogFile.setFileName( mLogFileName );
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
         QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
-        if( mpHost->mRawStreamDump )
-        {
+        // This puts text onto console that WOULD IMMEDIATELY BE POSTED into log
+        // file so must be done BEFORE logging starts - or actually mLogToLogFile gets set!
+        mLogToLogFile = true;
+    }
+    else {
+        QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
+        file.remove();
+        mLogToLogFile = false;
+    }
+
+    if( mLogToLogFile ) {
+        if( mpHost->mRawStreamDump ) {
             QStringList fontsList; // List of fonts to become the font-family entry for
                                    // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
@@ -932,12 +933,10 @@ void TConsole::slot_toggleLogging()
             // strict HTML 4 as we do not use <p></p>s or anything else
             mLogFile.flush();
         }
-        logButton->setToolTip( tr("stop logging MUD output to log file") );
+        logButton->setToolTip( tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>") );
     }
-    else
-    {
-        if( mpHost->mRawStreamDump )
-        {
+    else {
+        if( mpHost->mRawStreamDump ) {
             mLogStream << "</div></body>\n";
             mLogStream << "</html>\n";
         }
@@ -945,7 +944,7 @@ void TConsole::slot_toggleLogging()
         mLogFile.close();
         QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
-        logButton->setToolTip( tr("start logging MUD output to log file") );
+        logButton->setToolTip( tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>") );
     }
 }
 
@@ -1150,44 +1149,7 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
-//    if( mLogToLogFile )
-//    {
-//        if( ! mIsDebugConsole )
-//        {
-//            if( buffer.size() < mLastBufferLogLine )
-//            {
-//                mLastBufferLogLine -= buffer.mBatchDeleteSize;
-//                qDebug()<<"---> RESETTING mLastBufferLogLine";
-//                if( mLastBufferLogLine < 0 )
-//                {
-//                    mLastBufferLogLine = 0;
-//                }
-//            }
-//            if( buffer.size() > mLastBufferLogLine + 1 )
-//            {
-//                for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
-//                {
-//                    QString toLog;
-//                    if( mpHost->mRawStreamDump )
-//                    {
-//                        QPoint P1 = QPoint(0,i);
-//                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
-//                        toLog = buffer.bufferToHtml(P1, P2);
-//                    }
-//                    else
-//                    {
-//                        toLog = buffer.lineBuffer[i];
-//                        toLog.append("\n");
-//                    }
-//                    mLogStream << toLog;
-//                    qDebug()<<"LOG:"<<i<<" lastLogLine="<<mLastBufferLogLine<<" size="<<buffer.size()<<" toLog<"<<toLog<<">";
-//                    mLastBufferLogLine++;
-//                }
-//                mLastBufferLogLine--;
-//            }
-//            mLogStream.flush();
-//        }
-//    }
+
     double processT = mProcessingTime.elapsed();
     if( mpHost->mTelnet.mGA_Driver )
     {

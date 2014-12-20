@@ -1362,12 +1362,10 @@ void TTextEdit::copySelectionToClipboard()
 
 void TTextEdit::copySelectionToClipboardHTML()
 {
-    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
-    {
+    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) ) {
         swap( mPA, mPB );
     }
-    if( mPA.y() > mPB.y() )
-    {
+    if( mPA.y() > mPB.y() ) {
         swap( mPA, mPB );
     }
 
@@ -1440,15 +1438,14 @@ void TTextEdit::copySelectionToClipboardHTML()
     // <div></div> tags required around outside of the body <span></spans> for
     // strict HTML 4 as we do not use <p></p>s or anything else
 
-    for( int y=mPA.y(); y<=mPB.y(); y++ )
-    {
-        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
+    for( int y=mPA.y(); y<=mPB.y(); y++ ) {
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) {
+            return;
+        }
         int x = 0;
-        if( y == mPA.y() ) // First line of selection
-        {
+        if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
-            if( x )
-            {
+            if( x ) {
                 text.append( "<span>" );
                 text.append( QString( x, QLatin1Char(' ') ) );
                 text.append( "</span>" );
@@ -1457,13 +1454,13 @@ void TTextEdit::copySelectionToClipboardHTML()
 
             text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
         }
-        else if ( y == mPB.y() ) // Last line of selection
-        {
+        else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
         }
-        else // inside lines of selection
+        else { // inside lines of selection
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+        }
     }
     text.append( QStringLiteral( " </div></body>\n"
                                  "</html>" ) );

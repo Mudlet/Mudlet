@@ -489,11 +489,9 @@ NORMAL_ANSI_COLOR_TAG:
         break;
     case 27:
         break; //FIXME inverse off
-    case 28:
-        mStrikeOut = false;
-        break; 
     case 29:
-        break; //FIXME
+        mStrikeOut = false;
+        break;
     case 30:
         fgColorR = mBlackR;
         fgColorG = mBlackG;
@@ -1820,40 +1818,42 @@ void TBuffer::append(const QString & text,
                       bool strikeout,
                       int linkID )
 {
-    if( static_cast<int>(buffer.size()) > mLinesLimit )
-    {
+    const QString lineBreaks = QStringLiteral( ",.- " );
+
+    if( static_cast<int>(buffer.size()) > mLinesLimit ) {
         shrinkBuffer();
     }
     int last = buffer.size()-1;
-    if( last < 0 )
-    {
+    if( last < 0 ) {
         std::deque<TChar> newLine;
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
-        if( mEchoText )
+        if( mEchoText ) {
             c.flags |= TCHAR_ECHO;
+        }
         newLine.push_back( c );
         buffer.push_back( newLine );
         lineBuffer.push_back(QString());
-        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
         promptBuffer << false;
         dirty << true;
         last = 0;
     }
     bool firstChar = (lineBuffer.back().size() == 0);
     int length = text.size();
-    if( length < 1 ) return;
-    if( sub_end >= length ) sub_end = text.size()-1;
+    if( length < 1 ) {
+        return;
+    }
+    if( sub_end >= length ) {
+        sub_end = text.size()-1;
+    }
 
-    for( int i=sub_start; i<length; i++ )//FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
-    {
-        if( text.at(i) == '\n' )
-        {
+    for( int i=sub_start; i<length; i++ ) {//FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        if( text.at(i) == '\n' ) {
             log(size()-1, size()-1);
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
-            QString time = "-----";
-            timeBuffer << time;
+            timeBuffer << QStringLiteral( "-----" );
             promptBuffer << false;
             dirty << true;
             mLastLine++;
@@ -1861,24 +1861,17 @@ void TBuffer::append(const QString & text,
             firstChar = true;
             continue;
         }
-        if( lineBuffer.back().size() >= mWrapAt )
-        {
-            const QString lineBreaks = ",.- ";
-            const QString nothing = "";
-            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
-            {
-                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
-                {
+        if( lineBuffer.back().size() >= mWrapAt ) {
+            for( int i=lineBuffer.back().size()-1; i>=0; i-- ) {
+                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 ) {
                     QString tmp = lineBuffer.back().mid(0,i+1);
                     QString lineRest = lineBuffer.back().mid(i+1);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
                     int k = lineRest.size();
-                    if( k > 0 )
-                    {
-                        while( k > 0 )
-                        {
+                    if( k > 0 ) {
+                        while( k > 0 ) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
                             k--;
@@ -1886,28 +1879,33 @@ void TBuffer::append(const QString & text,
                     }
 
                     buffer.push_back( newLine );
-                    if( lineRest.size() > 0 )
+                    if( lineRest.size() > 0 ) {
                         lineBuffer.append( lineRest );
-                    else
-                        lineBuffer.append( nothing );
-                    QString time = "-----";
-                    timeBuffer << time;
+                    }
+                    else {
+                        lineBuffer.append( QString() );
+                    }
+                    timeBuffer << QStringLiteral( "-----" );
                     promptBuffer << false;
                     dirty << true;
                     mLastLine++;
                     newLines++;
+                    log(size()-2, size()-2);
+                    // Was absent causing loss of all but last line of wrapped
+                    // long lines of user input and some other console displayed
+                    // test from log file.
                     break;
                 }
             }
         }
         lineBuffer.back().append( text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout,linkID);
-        if( mEchoText )
+        if( mEchoText ) {
             c.flags |= TCHAR_ECHO;
+        }
         buffer.back().push_back( c );
-        if( firstChar )
-        {
-            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        if( firstChar ) {
+            timeBuffer.back() = QTime::currentTime().toString( QStringLiteral( "hh:mm:ss.zzz   " ) );
         }
     }
 }
@@ -3134,24 +3132,25 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     int y = P1.y();
     int x = P1.x();
     QString s;
-    if( y < 0 || y >= static_cast<int>(buffer.size()) )
+    if( y < 0 || y >= static_cast<int>(buffer.size()) ) {
         return s;
+    }
 
     if( ( x < 0 )
         || ( x >= static_cast<int>(buffer[y].size()) )
-        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) )
-    {
+        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) ) {
         x=0;
     }
-    if( P2.x() < 0 )
-    {
+    if( P2.x() < 0 ) {
         P2.setX(buffer[y].size());
     }
 
     bool bold = false;
     bool italics = false;
     bool underline = false;
+    bool overline = false;
     bool strikeout = false;
+    bool inverse = false;
     int fgR=0;
     int fgG=0;
     int fgB=0;
@@ -3163,12 +3162,12 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontWeight;
     QString fontStyle;
     QString textDecoration;
-    bool needChange = true;
-    for( ; x<P2.x(); x++ )
-    {
-        if( x >= static_cast<int>(buffer[y].size()) )
+    bool firstSpan = true;
+    for( ; x<P2.x(); x++ ) {
+        if( x >= static_cast<int>(buffer[y].size()) ) {
             break;
-        if( needChange
+        }
+        if( firstSpan
             || buffer[y][x].fgR != fgR
             || buffer[y][x].fgG != fgG
             || buffer[y][x].fgB != fgB
@@ -3177,13 +3176,17 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             || buffer[y][x].bgB != bgB
             || bool( buffer[y][x].flags & TCHAR_BOLD ) != bold
             || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
-            || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics 
-            || bool( buffer[y][x].flags & TCHAR_STRIKEOUT ) != strikeout ) 
-        {
-            if( needChange )
-                needChange = false; // The first span won't need to close the previous one
-            else
+            || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics
+            || bool( buffer[y][x].flags & TCHAR_STRIKEOUT ) != strikeout
+//            || bool( buffer[y][x].flags & TCHAR_OVERLINE ) != overline
+//            || bool( buffer[y][x].flags & TCHAR_INVERSE ) != inverse
+            ) { // Can leave this on a separate line until line above uncommented.
+            if( firstSpan ) {
+                firstSpan = false; // The first span won't need to close the previous one
+            }
+            else {
                 s += "</span>";
+            }
             fgR = buffer[y][x].fgR;
             fgG = buffer[y][x].fgG;
             fgB = buffer[y][x].fgB;
@@ -3194,46 +3197,63 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             italics = buffer[y][x].flags & TCHAR_ITALICS;
             underline = buffer[y][x].flags & TCHAR_UNDERLINE;
             strikeout = buffer[y][x].flags & TCHAR_STRIKEOUT;
-            if( bold )
+//            overline = buffer[y][x].flags & TCHAR_OVERLINE;
+//            inverse = buffer[y][x].flags & TCHAR_INVERSE;
+            if( bold ) {
                 fontWeight = "bold";
-            else
+            }
+            else {
                 fontWeight = "normal";
-            if( italics )
+            }
+            if( italics ) {
                 fontStyle = "italic";
-            else
+            }
+            else {
                 fontStyle = "normal";
-            //In CSS the underline and line-through are mutually exclusive.
-            //Workarounds exist but are clumsy and will be avoided. We will
-            //give underline priority.
-            if( underline )
-                textDecoration = "underline";
-            else if ( strikeout )
-                textDecoration = "line-through";
-            else
+            }
+            if( ! (underline || strikeout || overline) ) {
                 textDecoration = "normal";
+            }
+            else {
+                textDecoration = "";
+                if( underline ) {
+                    textDecoration += "underline ";
+                }
+                if( strikeout ) {
+                    textDecoration += "line-through ";
+                }
+                if( overline ) {
+                    textDecoration += "overline ";
+                }
+                textDecoration = textDecoration.trimmed();
+            }
             s += "<span style=\"";
-            s += "color: rgb(" + QString::number(fgR) + ","
-                               + QString::number(fgG) + ","
-                               + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR) + ","
-                                     + QString::number(bgG) + ","
-                                     + QString::number(bgB) + ");";
+            s += "color: rgb(" + QString::number(inverse ? bgR : fgR) + ","
+                               + QString::number(inverse ? bgG : fgG) + ","
+                               + QString::number(inverse ? bgB : fgB) + ");";
+            s += " background: rgb(" + QString::number(inverse ? fgR : bgR) + ","
+                                     + QString::number(inverse ? fgG : bgG) + ","
+                                     + QString::number(inverse ? fgB : bgB) + ");";
             s += " font-weight: " + fontWeight +
                  "; font-style: " + fontStyle +
                  "; text-decoration: " + textDecoration + "\">";
         }
-        if( lineBuffer[y][x] == '<' )
+        if( lineBuffer[y][x] == '<' ) {
             s.append("&lt;");
-        else if( lineBuffer[y][x] == '>' )
+        }
+        else if( lineBuffer[y][x] == '>' ) {
             s.append("&gt;");
-        else
+        }
+        else {
             s.append(lineBuffer[y][x]);
+        }
     }
-    if( s.size() > 0 )
+    if( s.size() > 0 ) {
         s.append("</span>");
         // Needed to balance the very first open <span>, but only if we have
         // included anything. the previously appearing <br /> is an XML tag, NOT
         // a (strict) HTML 4 one
+    }
 
     s.append( QStringLiteral( "<br>\n" ) );
     // Needed to reproduce empty lines in capture, as this method is called for
@@ -3245,7 +3265,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     // formatting. To get the line feeds at the end of displayed HTML lines the
     // <br> is used.  This slightly weird way of doing things is so that some
     // on-line tools preserve the formatting when the HTML-lised selection is
-    // pasted to them and AND retain the ability to paste the HTML from the
+    // pasted to them AND retain the ability to paste the HTML from the
     // clipboard into a plain text editor and not have everything on one line in
     // that editor!
 
