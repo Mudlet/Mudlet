@@ -1223,7 +1223,7 @@ function ansi2decho(text)
     local i = 1
     local floor = math.floor
     local coloursToUse = colours
-    while i < #t do
+    while i <= #t do
       local code = t[i]
 
       if code == '0' then -- reset attributes
