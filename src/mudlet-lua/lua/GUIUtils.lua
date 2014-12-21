@@ -1250,6 +1250,8 @@ function ansi2decho(text)
 
         elseif layerCode == 9 or layerCode == 10 then --light colours
             colour = lightColours[cmd]
+        elseif layerCode == 4 then -- background colours know no "bright" for
+            colour = colours[cmd]  -- mudlet
         else -- usual ANSI colour index
             colour = coloursToUse[cmd]
         end
