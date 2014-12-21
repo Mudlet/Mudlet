@@ -1180,7 +1180,7 @@ local lightColours = {
   [7] = "255,255,255" -- white
 }
 
-local ansiPattern = rex.new("\\e\\[(.+?)m")
+local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
 -- function for converting raw ANSI string into something decho can process
 -- bold, italics, underline not currently supported since decho doesn't support them
 function ansi2decho(text)
