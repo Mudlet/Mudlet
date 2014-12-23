@@ -13,7 +13,7 @@ script:
  - "cd tests"
  - "busted -l lua DB.lua"
  - "busted -l lua Other.lua"
- - "busted -l lua GUIUtil.lua"
+ - "busted -l lua GUIUtils.lua"
 
 notifications:
   email:
