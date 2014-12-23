@@ -473,7 +473,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setMinimumSize(QSize(30,30));
     mpBufferSearchUp->setMaximumSize(QSize(30,30));
     mpBufferSearchUp->setSizePolicy( sizePolicy5 );
-    mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier result.</p></body></html>"));
+    mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier search result.</p></body></html>"));
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/export.png" ) ) );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
@@ -483,7 +483,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setMaximumSize(QSize(30,30));
     mpBufferSearchDown->setSizePolicy( sizePolicy5 );
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later result.</p></body></html>"));
+    mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later search result.</p></body></html>"));
     mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/import.png" ) ) );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
