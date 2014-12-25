@@ -1166,7 +1166,7 @@ local colours = {
   [4] = {0,0,128}, --blue
   [5] = {128,0,128}, -- magenta
   [6] = {0,128,128}, -- cyan
-  [7] = {255,255,255}, -- white
+  [7] = {192,192,192}, -- white
 }
 
 local lightColours = {
