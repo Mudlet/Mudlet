@@ -25,11 +25,46 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.truthy(ansi2decho)
     end)
 
-    it("Should convert the ANSI reset sequence correctly", function()
-      local sequence = "\27[0m"
-      local expectedResult = "<r>"
-      local actualResult = ansi2decho(sequence)
-      assert.are.same(expectedResult, actualResult)
+    it("Should convert simple single ANSI sequences correctly", function()
+      local sequences = {
+        {"\27[0m", "<r>"},
+        {"\27[30m", "<0,0,0:>"},
+        {"\27[31m", "<128,0,0:>"},
+        {"\27[32m", "<0,179,0:>"},
+        {"\27[33m", "<128,128,0:>"},
+        {"\27[34m", "<0,0,128:>"},
+        {"\27[35m", "<128,0,128:>"},
+        {"\27[36m", "<0,128,128:>"},
+        {"\27[37m", "<192,192,192:>"},
+        {"\27[40m", "<:0,0,0>"},
+        {"\27[41m", "<:128,0,0>"},
+        {"\27[42m", "<:0,179,0>"},
+        {"\27[43m", "<:128,128,0>"},
+        {"\27[44m", "<:0,0,128>"},
+        {"\27[45m", "<:128,0,128>"},
+        {"\27[46m", "<:0,128,128>"},
+        {"\27[47m", "<:192,192,192>"},
+        {"\27[90m", "<128,128,128:>"},
+        {"\27[91m", "<255,0,0:>"},
+        {"\27[92m", "<0,255,0:>"},
+        {"\27[93m", "<255,255,0:>"},
+        {"\27[94m", "<0,0,255:>"},
+        {"\27[95m", "<255,0,255:>"},
+        {"\27[96m", "<0,255,255:>"},
+        {"\27[97m", "<255,255,255:>"},
+        {"\27[100m", "<:128,128,128>"},
+        {"\27[101m", "<:255,0,0>"},
+        {"\27[102m", "<:0,255,0>"},
+        {"\27[103m", "<:255,255,0>"},
+        {"\27[104m", "<:0,0,255>"},
+        {"\27[105m", "<:255,0,255>"},
+        {"\27[106m", "<:0,255,255>"},
+        {"\27[107m", "<:255,255,255>"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
     end)
 
   end)
