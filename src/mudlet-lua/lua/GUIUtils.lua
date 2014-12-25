@@ -1159,25 +1159,25 @@ end
 
 
 local colours = {
-  [0] = "0,0,0", -- black
-  [1] = "128,0,0", -- red
-  [2] = "0,179,0", -- green
-  [3] = "128,128,0", -- yellow
-  [4] = "0,0,128", --blue
-  [5] = "128,0,128", -- magenta
-  [6] = "0,128,128", -- cyan
-  [7] = "255,255,255" -- white
+  [0] = {0,0,0}, -- black
+  [1] = {128,0,0}, -- red
+  [2] = {0,179,0}, -- green
+  [3] = {128,128,0}, -- yellow
+  [4] = {0,0,128}, --blue
+  [5] = {128,0,128}, -- magenta
+  [6] = {0,128,128}, -- cyan
+  [7] = {255,255,255}, -- white
 }
 
 local lightColours = {
-  [0] = "128,128,128", -- black
-  [1] = "255,0,0", -- red
-  [2] = "0,255,0", -- green
-  [3] = "255,255,0", -- yellow
-  [4] = "0,0,255", --blue
-  [5] = "255,0,255", -- magenta
-  [6] = "0,255,255", -- cyan
-  [7] = "255,255,255" -- white
+  [0] = {128,128,128}, -- black
+  [1] = {255,0,0}, -- red
+  [2] = {0,255,0}, -- green
+  [3] = {255,255,0}, -- yellow
+  [4] = {0,0,255}, --blue
+  [5] = {255,0,255}, -- magenta
+  [6] = {0,255,255}, -- cyan
+  [7] = {255,255,255}, -- white
 }
 
 local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
@@ -1196,25 +1196,25 @@ function ansi2decho(text)
       local floor = math.floor
       -- code from Mudlets own decoding in TBuffer::translateToPlainText
 
-      local r,g,b
+      local rgb
       if tag < 8 then
-        r,g,b = unpack(string.split(colours[tag], ","))
+        rgb = colours[tag]
       elseif tag < 16 then
-        r,g,b = unpack(string.split(lightColours[tag-8] ","))
+        rgb = lightColours[tag-8]
       elseif tag < 232 then
         tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
 
         r = floor(tag / 36)
         g = floor((tag-(r*36)) / 6)
         b = floor((tag-(r*36))-(g*6))
-        r,g,b = r*42, g*42, b*42
+        rgb = {r*42, g*42, b*42}
       else
         -- black + 23 tone grayscale from dark to light gray
         tag = tag - 232
-        r,g,b = tag*10, tag*10, tag*10
+        rgb = {tag*10, tag*10, tag*10}
       end
 
-      return string.format("%d,%d,%d",r,g,b)
+      return rgb
     end
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
@@ -1245,7 +1245,7 @@ function ansi2decho(text)
           i = i + 2
 
         elseif cmd == 8 and t[i+1] == '2' then -- xterm256, rgb
-          colour = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
+          colour = {t[i+2] or '', t[i+3] or '', t[i+4] or ''}
           i = i + 4
 
         elseif layerCode == 9 or layerCode == 10 then --light colours
@@ -1265,16 +1265,15 @@ function ansi2decho(text)
       end
       i = i + 1
     end
-
     -- assemble and return the data
     if fg or bg then
       output[#output+1] = '<'
       if fg then
-        output[#output+1] = fg
+        output[#output+1] = table.concat(fg, ",")
       end
       output[#output+1] = ':'
       if bg then
-        output[#output+1] = bg
+        output[#output+1] = table.concat(bg, ",")
       end
       output[#output+1] = '>'
     end
