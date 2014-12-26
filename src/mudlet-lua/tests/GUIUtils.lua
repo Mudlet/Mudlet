@@ -67,6 +67,33 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should combine tags correctly", function()
+      local sequences = {
+        {"\27[0;30m", "<r><0,0,0:>"},
+        {"\27[1;30m", "<128,128,128:>"},
+        {"\27[1;40m", "<:0,0,0>"},
+        {"\27[31;42m", "<128,0,0:0,179,0>"},
+        {"\27[30;0m", "<r>"},
+        {"\27[0;1;30;40m", "<r><128,128,128:0,0,0>"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
+    end)
+
+    it("Should leave normal text and other escape sequences alone", function()
+      local sequences = {
+        {"Hello World", "Hello World"},
+        {"[Something in braces]", "[Something in braces]"},
+        {"\27[4z<PROMPT>4876h, 3539m, 22200e, 21648w cexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT>4876h, 3539m, 22200e, 21648w cexkdb-\27[4z</PROMPT>"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
+    end)
+
   end)
 
 end)
