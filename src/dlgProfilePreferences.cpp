@@ -928,6 +928,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
     QString lIgnore = doubleclick_ignore_lineedit->text();
+    mpHost->mDoubleClickIgnore.clear();
     for(int i=0;i<lIgnore.size();i++){
         mpHost->mDoubleClickIgnore.insert(lIgnore.at(i));
     }
