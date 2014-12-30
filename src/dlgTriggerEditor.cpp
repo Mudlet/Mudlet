@@ -518,13 +518,20 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( comboBox_search_triggers, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_keys, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_timers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_scripts, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_alias, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_alias, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_actions, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_vars, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
+    connect( treeWidget_vars, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
@@ -4811,6 +4818,29 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
             mpActionsMainArea->groupBox_appearance->show();
         }
         if( ! pT->state() ) showError( pT->getError() );
+    }
+}
+
+void dlgTriggerEditor::slot_tree_selection_changed()
+{
+    TTreeWidget * sender = qobject_cast<TTreeWidget *>(QObject::sender());
+    QList<QTreeWidgetItem *> items = sender->selectedItems();
+    if(items.length()){
+        QTreeWidgetItem * item = items.first();
+        if(sender == treeWidget_scripts)
+            slot_scripts_selected(item);
+        else if(sender == treeWidget_keys)
+            slot_key_selected(item);
+        else if(sender == treeWidget_timers)
+            slot_timer_selected(item);
+        else if(sender == treeWidget_alias)
+            slot_alias_selected(item);
+        else if(sender == treeWidget_actions)
+            slot_action_selected(item);
+        else if(sender == treeWidget_vars)
+            slot_var_selected(item);
+        else if(sender == treeWidget)
+            slot_trigger_selected(item);
     }
 }
 
