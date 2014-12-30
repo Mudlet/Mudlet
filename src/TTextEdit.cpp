@@ -1311,7 +1311,9 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     break;
                 xind++;
             }
-            if ( mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)) )
+            // For ignoring user specified characters, we first stop at space boundaries, then we
+            // proceed to search within these spaces for ignored characters and chop off any we find.
+            while(xind>0 && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)))
                 xind--;
             mPB.setX ( xind-1 );
             mPB.setY ( yind );
@@ -1321,8 +1323,10 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                 if (c == ' ')
                     break;
             }
-            if ( xind > 0 ||
-                 mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at( xind ) ) )
+            int lsize = mpBuffer->lineBuffer[yind].size();
+            while(xind+1 < lsize && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind+1)))
+                xind++;
+            if ( xind > 0 )
                 mPA.setX ( xind+1 );
             else
                 mPA.setX ( xind );
