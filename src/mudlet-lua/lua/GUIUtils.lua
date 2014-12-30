@@ -1159,27 +1159,34 @@ end
 
 
 local colours = {
-  ["30"] = {"0,0,0", "fg"}, -- black
-  ["31"] = {"0,128,0", "fg"}, -- red
-  ["32"] = {"0,179,0", "fg"}, -- green
-  ["33"] = {"128,128,0", "fg"}, -- yellow
-  ["34"] = {"0,0,128", "fg"}, --blue
-  ["35"] = {"128,0,128", "fg"}, -- magenta
-  ["36"] = {"0,128,128", "fg"}, -- cyan
-  ["37"] = {"255,255,255", "fg"} -- white
+  [0] = {0,0,0}, -- black
+  [1] = {128,0,0}, -- red
+  [2] = {0,179,0}, -- green
+  [3] = {128,128,0}, -- yellow
+  [4] = {0,0,128}, --blue
+  [5] = {128,0,128}, -- magenta
+  [6] = {0,128,128}, -- cyan
+  [7] = {192,192,192}, -- white
 }
 
--- setup background colours with the same colours as foreground
-for i = 40, 47 do
-  colours[tostring(i)] = {colours[tostring(i-10)][1], "bg"}
-end
+local lightColours = {
+  [0] = {128,128,128}, -- black
+  [1] = {255,0,0}, -- red
+  [2] = {0,255,0}, -- green
+  [3] = {255,255,0}, -- yellow
+  [4] = {0,0,255}, --blue
+  [5] = {255,0,255}, -- magenta
+  [6] = {0,255,255}, -- cyan
+  [7] = {255,255,255}, -- white
+}
 
+local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
 -- function for converting raw ANSI string into something decho can process
 -- bold, italics, underline not currently supported since decho doesn't support them
 function ansi2decho(text)
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = string.gsub(text, ".%[(.-)m", function(s)
+  local result = rex.gsub(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
     local t = string.split(s, ";") -- split the codes into an indexed table
@@ -1189,71 +1196,84 @@ function ansi2decho(text)
       local floor = math.floor
       -- code from Mudlets own decoding in TBuffer::translateToPlainText
 
-      local r,g,b
-      if tag < 232 then
+      local rgb
+      if tag < 8 then
+        rgb = colours[tag]
+      elseif tag < 16 then
+        rgb = lightColours[tag-8]
+      elseif tag < 232 then
         tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
 
         r = floor(tag / 36)
         g = floor((tag-(r*36)) / 6)
         b = floor((tag-(r*36))-(g*6))
-        r,g,b = r*42, g*42, b*42
+        rgb = {r*42, g*42, b*42}
       else
         -- black + 23 tone grayscale from dark to light gray
         tag = tag - 232
-        r,g,b = tag*10, tag*10, tag*10
+        rgb = {tag*10, tag*10, tag*10}
       end
 
-      return string.format("%d,%d,%d",r,g,b)
+      return rgb
     end
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
     local fg,bg
     local i = 1
-    while i < #t do
+    local floor = math.floor
+    local coloursToUse = colours
+    while i <= #t do
       local code = t[i]
 
       if code == '0' then -- reset attributes
         output[#output+1] = "<r>"
         fg,bg = nil,nil
-      elseif code == '38' and t[i+1] == '5' then -- foreground xterm256, colour indexed
-        fg = convertindex(tonumber(t[i+2]))
-        i = i + 2
+        coloursToUse = colours
+      elseif code == "1" then -- light or bold
+        coloursToUse = lightColours
+      elseif code == "22" then -- not light or bold
+        coloursToUse = colours
+      else
+        local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
+                                            --                      4 is back
+        local cmd = code - (layerCode * 10) -- extract the actual "command"
+                                            -- 0-7 is a colour, 8 is xterm256
+        local colour = nil
+        if cmd == 8 and t[i+1] == '5' then -- xterm256, colour indexed
+          colour = convertindex(tonumber(t[i+2]))
+          i = i + 2
 
-      elseif code == '48' and t[i+1] == '5' then -- background xterm256, colour indexed
-        bg = convertindex(tonumber(t[i+2]))
-        i = i + 2
+        elseif cmd == 8 and t[i+1] == '2' then -- xterm256, rgb
+          colour = {t[i+2] or '', t[i+3] or '', t[i+4] or ''}
+          i = i + 4
 
-      elseif code == '38' and t[i+1] == '2' then -- foreground xterm256, rgb
-        fg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
-        i = i + 4
-
-      elseif code == '48' and t[i+1] == '2' then -- background xterm256, rgb
-        bg = string.format("%s,%s,%s", t[i+2] or '', t[i+3] or '', t[i+4] or '')
-        i = i + 4
-
-      else -- usual ANSI colour index
-        local colours_match = colours[code]
-
-        if colours_match and colours_match[2] == "fg" then
-          fg = colours_match[1]
-        elseif colours_match then
-          bg = colours_match[1]
+        elseif layerCode == 9 or layerCode == 10 then --light colours
+            colour = lightColours[cmd]
+        elseif layerCode == 4 then -- background colours know no "bright" for
+            colour = colours[cmd]  -- mudlet
+        else -- usual ANSI colour index
+            colour = coloursToUse[cmd]
         end
-      end
 
+        if layerCode == 3 or layerCode == 9 then
+           fg = colour
+        elseif layerCode == 4 or layerCode == 10 then
+           bg = colour
+        end
+
+      end
       i = i + 1
     end
-
     -- assemble and return the data
     if fg or bg then
       output[#output+1] = '<'
       if fg then
-        output[#output+1] = fg
+        output[#output+1] = table.concat(fg, ",")
       end
       output[#output+1] = ':'
       if bg then
-        output[#output+1] = bg
+        output[#output+1] = table.concat(bg, ",")
       end
       output[#output+1] = '>'
     end
