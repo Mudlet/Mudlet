@@ -3,6 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014 by Florian Scheel - keneanung@googlemail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -532,6 +533,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   _h += TN_SE;
                   socketOutRaw( _h );
                   qDebug() << "TELNET IAC DO MSDP";
+                  raiseNegotiationFinishedEvent( "MSDP" );
                   break;
               }
           }
@@ -552,6 +554,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_IAC;
               _h += TN_SE;
               socketOutRaw( _h );
+              raiseNegotiationFinishedEvent( "ATCP" );
               break;
           }
 
@@ -581,6 +584,8 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_SE;
 
               socketOutRaw( _h );
+
+              raiseNegotiationFinishedEvent( "GMCP" );
               break;
           }
 
@@ -590,6 +595,8 @@ void cTelnet::processTelnetCommand( const string & command )
               {
                 sendTelnetOption( TN_DO, 91 );
                 //mpHost->mpConsole->print("\n<MXP enabled>\n");
+
+                raiseNegotiationFinishedEvent( "MXP" );
                 break;
               }
               //else
@@ -602,6 +609,7 @@ void cTelnet::processTelnetCommand( const string & command )
               qDebug() << "Aardwulf channel 102 support enabled";
               enableChannel102 = true;
               sendTelnetOption( TN_DO, 102 );
+              raiseNegotiationFinishedEvent( "channel102" );
               break;
           }
 
@@ -732,6 +740,7 @@ void cTelnet::processTelnetCommand( const string & command )
             qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption( TN_WILL, 69 );
 
+            raiseNegotiationFinishedEvent( "MSDP" );
             break;
           }
           if( option == static_cast<char>(200) && !mpHost->mEnableGMCP ) // ATCP support, enable only if GMCP is off as GMCP is better
@@ -739,19 +748,22 @@ void cTelnet::processTelnetCommand( const string & command )
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
             sendTelnetOption( TN_WILL, 200 );
+            raiseNegotiationFinishedEvent( "ATCP" );
             break;
           }
-          if( option == static_cast<char>(201) ) // GMCP support
+          if( option == static_cast<char>(201) && mpHost->mEnableGMCP ) // GMCP support
           {
             qDebug() << "TELNET IAC DO GMCP";
-            enableATCP = true;
+            enableGMCP = true;
             sendTelnetOption( TN_WILL, 201 );
+            raiseNegotiationFinishedEvent( "GMCP" );
             break;
           }
           if( option == MXP ) // MXP support
           {
             sendTelnetOption( TN_WILL, 91 );
             mpHost->mpConsole->print("\n<MXP support enabled>\n");
+            raiseNegotiationFinishedEvent( "MXP" );
             break;
           }
           if( option == static_cast<char>(102) ) // channel 102 support
@@ -759,6 +771,7 @@ void cTelnet::processTelnetCommand( const string & command )
             qDebug() << "TELNET IAC DO CHANNEL 102";
             enableChannel102 = true;
             sendTelnetOption( TN_WILL, 102 );
+            raiseNegotiationFinishedEvent( "channel102" );
             break;
           }
 #ifdef DEBUG
@@ -1934,4 +1947,14 @@ MAIN_LOOP_END: ;
     }
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
+}
+
+void cTelnet::raiseNegotiationFinishedEvent( const QString & protocol )
+{
+    TEvent me;
+    me.mArgumentList.append( "sysNegotiationFinished" );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    me.mArgumentList.append( protocol );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( me );
 }
