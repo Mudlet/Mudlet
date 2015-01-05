@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -243,12 +244,10 @@ QList<int> TRoomDB::getRoomIDList()
 TArea * TRoomDB::getArea( int id )
 {
     //area id of -1 is a room in the "void", 0 is a failure
-    if( areas.contains( id ) && ( id > 0 || id == -1 ) )
-    {
-        return areas[id];
+    if( id > 0 || id == -1 ) {
+        return areas.value( id, 0 );
     }
-    else
-    {
+    else {
         return 0;
     }
 }
@@ -361,7 +360,7 @@ void TRoomDB::initAreasForOldMaps()
     {
         it2.next();
         TArea * pA = it2.value();
-        pA->ausgaengeBestimmen();
+        pA->determineAreaExits();
         pA->calcSpan();
     }
 }
