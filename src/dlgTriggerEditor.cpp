@@ -2679,8 +2679,8 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
 
-    treeWidget->setCurrentItem( pNewItem );
     mCurrentTrigger = pNewItem;
+    treeWidget->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTrigger );
     slot_trigger_selected( treeWidget->currentItem() );
 }
@@ -2773,8 +2773,8 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
     mpSourceEditorArea->editor->clear();
-    treeWidget_timers->setCurrentItem( pNewItem );
     mCurrentTimer = pNewItem;
+    treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
     slot_timer_selected( treeWidget_timers->currentItem() );
 }
@@ -2846,8 +2846,8 @@ void dlgTriggerEditor::addVar( bool isFolder )
     newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled ));
     if (newItem)
     {
-        treeWidget_vars->setCurrentItem( newItem );
         mCurrentVar = (QTreeWidgetItem*)newItem;
+        treeWidget_vars->setCurrentItem( newItem );
         showInfo( msgInfoAddVar );
         slot_var_selected( (QTreeWidgetItem*)treeWidget_vars->currentItem() );
     }
@@ -2937,8 +2937,8 @@ void dlgTriggerEditor::addKey( bool isFolder )
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
     mpSourceEditorArea->editor->clear();
-    treeWidget_keys->setCurrentItem( pNewItem );
     mCurrentKey = pNewItem;
+    treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
     slot_key_selected( treeWidget_keys->currentItem() );
 }
@@ -3036,8 +3036,8 @@ ROOT_ALIAS:
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
-    treeWidget_alias->setCurrentItem( pNewItem );
     mCurrentAlias = pNewItem;
+    treeWidget_alias->setCurrentItem( pNewItem );
     showInfo(msgInfoAddAlias);
     slot_alias_selected( treeWidget_alias->currentItem() );
 }
@@ -3138,10 +3138,9 @@ void dlgTriggerEditor::addAction( bool isFolder )
     mpSourceEditorArea->editor->clear();
 
     mpHost->getActionUnit()->updateToolbar();
-
-    treeWidget_actions->setCurrentItem( pNewItem );
     mpCurrentActionItem = pNewItem;
     mCurrentAction = pNewItem;
+    treeWidget_actions->setCurrentItem( pNewItem );
     showInfo( msgInfoAddButton );
     slot_action_selected( treeWidget_actions->currentItem() );
 }
