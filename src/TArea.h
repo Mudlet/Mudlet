@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,6 +23,8 @@
  ***************************************************************************/
 
 
+#include "TMap.h"
+
 #include "pre_guard.h"
 #include <QList>
 #include <QMap>
@@ -29,28 +32,33 @@
 #include <QVector3D>
 #include "post_guard.h"
 
-class TMap;
 class TRoomDB;
 
 
 class TArea
 {
+    friend bool TMap::serialize( QDataStream & );
+    friend bool TMap::restore( QString );
+
 public:
     TArea(TMap*, TRoomDB*);
     ~TArea();
     int getAreaID();
     void addRoom(int id);
     const QList<int>& getAreaRooms() const { return rooms; }
-    const QList<int> getAreaExits() const { return exits.uniqueKeys(); }
+    const QList<int> getAreaExitRoomIds() const { return exits.uniqueKeys(); }
+    const QMultiMap<int, QPair<QString, int> > getAreaExitRoomData() const ;
     void calcSpan();
     void fast_calcSpan(int);
-    void fast_ausgaengeBestimmen(int);
+    void determineAreaExits();
+    void determineAreaExitsOfRoom(int);
     void removeRoom(int);
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int> > > koordinatenSystem();
-    void ausgaengeBestimmen();
-    QMultiMap<int, QPair<int, int> > exits; // rooms that border on this area: key=in_area room id, pair.first=out_of_area room id pair.second=direction
+    bool mIsDirty;
+
+
     QList<int> rooms;                       // rooms of this area
     QVector3D pos;                          // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
@@ -75,6 +83,12 @@ public:
 private:
     TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
     // QMap<int, TMapLabel> labelMap;
+
+
+    QMultiMap<int, QPair<int, int> > exits;
+    // rooms that border on this area:
+    // key=in_area room id, pair.first=out_of_area room id pair.second=direction
+    // Made private as we may change implimentation detail
 };
 
 // - gezeichnet werden erstmal die areas

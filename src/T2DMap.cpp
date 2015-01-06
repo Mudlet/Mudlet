@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -3261,27 +3261,48 @@ void T2DMap::slot_setArea()
     file.open(QFile::ReadOnly);
     QDialog *set_room_area_dialog = dynamic_cast<QDialog *>(loader.load(&file, this));
     file.close();
-    if( ! set_room_area_dialog ) return;
+    if( ! set_room_area_dialog ) {
+        return;
+    }
     arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
-    if( !arealist_combobox ) return;
+    if( !arealist_combobox ) {
+        return;
+    }
 
     QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
-    while( it.hasNext() )
-    {
+    while( it.hasNext() ) {
         it.next();
         int areaID = it.key();
-        if( areaID > 0 )
-        {
-            arealist_combobox->addItem(QString(it.value() + " ("+QString::number(areaID)+")"), QVariant(areaID));
+        if( areaID > 0 ) {
+            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value() ).arg( areaID ), QVariant(areaID) );
         }
     }
-    if( set_room_area_dialog->exec() == QDialog::Rejected ) return;
+    if( set_room_area_dialog->exec() == QDialog::Rejected ) {
+        return;
+    }
 
-    int w = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
+    int newAreaId = arealist_combobox->itemData( arealist_combobox->currentIndex() ).toInt();
     mMultiRect = QRect(0,0,0,0);
-    for( int j=0; j<mMultiSelectionList.size(); j++ )
-    {
-        mpMap->setRoomArea( mMultiSelectionList[j], w );
+    uint maxRoomIndex = mMultiSelectionList.size() - 1;
+    for( int j = 0; j <= maxRoomIndex; j++ ) {
+        if( j < maxRoomIndex ) {
+            mpMap->setRoomArea( mMultiSelectionList.at(j), newAreaId, true );
+        }
+        else {
+            if( ! ( mpMap->setRoomArea( mMultiSelectionList.at(j), newAreaId, false ) ) ) {
+                // Failed on the last of multiple room area move so do the missed
+                // out recalculations for the dirtied areas
+                QSetIterator<TArea *> itpArea = mpMap->mpRoomDB->getAreaPtrList().toSet();
+                while( itpArea.hasNext() ) {
+                    TArea * pArea = itpArea.next();
+                    if( pArea->mIsDirty ) {
+                        pArea->determineAreaExits();
+                        pArea->calcSpan();
+                        pArea->mIsDirty =  false;
+                    }
+                }
+            }
+        }
     }
     repaint();
 }
