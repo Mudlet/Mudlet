@@ -4150,7 +4150,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     int n = lua_gettop( L );
     bool isFullDataRequired = false;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr("getAreaExits: Bad argument #1 (area ID, as number expected, got %1).").arg( luaL_typename(L, 1)).toUtf8().constData());
+        lua_pushstring( L, tr("getAreaExits: bad argument #1 type (area Id, as number expected, got %1).").arg( luaL_typename(L, 1)).toUtf8().constData());
         lua_error( L );
     }
     else {
@@ -4159,7 +4159,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
 
     if( n > 1 ) {
         if( ! lua_isboolean( L, 2 ) ) {
-            lua_pushstring( L, tr("getAreaExits: Bad argument #2 (full data wanted, as boolean, optional, got %1).").arg( luaL_typename(L, 2)).toUtf8().constData());
+            lua_pushstring( L, tr("getAreaExits: bad argument #2 type (full data wanted, as boolean, optional, got %1).").arg( luaL_typename(L, 2)).toUtf8().constData());
             lua_error( L );
             return 1;
         }
@@ -4172,7 +4172,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
     if( !pA ) {
         lua_pushnil(L);
-        lua_pushstring( L, tr("getAreaExits: Bad value #1 (number %1 is not a valid area ID).").arg(area).toUtf8().constData());
+        lua_pushstring( L, tr("getAreaExits: bad argument #1 value (number %1 is not a valid area Id).").arg(area).toUtf8().constData());
         return 2;
     }
 
@@ -8302,12 +8302,12 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
     }
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: No map present or loaded!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomArea: no map present or loaded!" ).toUtf8().constData() );
         return 2;
     }
     else if( area <= 0 ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id must be > 0.  To remove a room's area, use resetRoomArea(roomID) )." ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id must be > 0.  To remove a room's area, use resetRoomArea(roomId) )." ).toUtf8().constData() );
         return 2;
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
@@ -8331,7 +8331,7 @@ int TLuaInterpreter::resetRoomArea( lua_State * L )
     //will reset the room area to our void area
     int id;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "resetRoomArea: bad argument #1 (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "resetRoomArea: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8347,12 +8347,12 @@ int TLuaInterpreter::resetRoomArea( lua_State * L )
     }
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "resetRoomArea: No map present or loaded!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "resetRoomArea: no map present or loaded!" ).toUtf8().constData() );
         return 2;
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "resetRoomArea: bad argumnet #1 value (room Id must exist)." ).toUtf8().constData() );
+        lua_pushstring( L, tr( "resetRoomArea: bad argument #1 value (room Id must exist)." ).toUtf8().constData() );
         return 2;
     }
     else if ( pHost ) {
