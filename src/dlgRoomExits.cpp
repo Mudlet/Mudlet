@@ -537,7 +537,7 @@ void dlgRoomExits::save()
 
     TArea * pA = mpHost->mpMap->mpRoomDB->getArea( pR->getArea() );
     if( pA )
-        pA->fast_ausgaengeBestimmen( pR->getId() );
+        pA->determineAreaExitsOfRoom( pR->getId() );
 
     close();
 }

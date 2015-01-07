@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -72,8 +73,8 @@ public:
     int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop=true, bool noScaling=true, qreal zoom=15.0, int fontSize=15 );
     void deleteMapLabel( int area, int labelID );
     bool addRoom( int id=0 );
-    void setRoomArea( int id, int area );
-    //void deleteRoom( int id );
+    bool setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations = false );
+    // void deleteRoom( int id );
     void deleteArea( int id );
     int  createNewRoomID();
     void logError(QString &msg);

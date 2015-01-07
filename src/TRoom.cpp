@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +27,7 @@
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QDataStream>
 #include <QDebug>
 #include <QStringBuilder>
@@ -179,34 +181,65 @@ void TRoom::setId( int _id )
     id = _id;
 }
 
-void TRoom::setArea( int _areaID )
+// The second optional argument delays area related recaluclations when true
+// until called with false (the default) - it records the "dirty" areas so that
+// the affected areas can be identified.
+// The caller, should set the argument true for all but the last when working
+// through a list of rooms.
+// There IS a theoretical risk that if the last called room "doesn't exist" then
+// the area related recalculations won't get done - so had better provide an
+// alternative means to do them as a fault recovery
+bool TRoom::setArea( int areaID, bool isToDeferAreaRelatedRecalculations )
 {
-    TArea * pA = mpRoomDB->getArea( _areaID );
-    if( !pA )
-    {
-        mpRoomDB->addArea( _areaID );
-        pA = mpRoomDB->getArea( _areaID );
-        if( !pA )
-        {
-            QString error = QString( "TRoom::setArea(): No area created!  Requested area ID=%1. Note: Area IDs must be > 0" ).arg( _areaID );
+    static QSet<TArea *> dirtyAreas;
+    TArea * pA = mpRoomDB->getArea( areaID );
+    if( ! pA ) { // There is no TArea instance with that _areaID
+        mpRoomDB->addArea( areaID ); // So try and make it
+        pA = mpRoomDB->getArea( areaID );
+        if( ! pA ) { // Oh, dear THAT didn't work
+            QString error = qApp->translate( "TRoom", "No area created!  Requested area ID=%1. Note: Area IDs must be > 0" ).arg( areaID );
             mpRoomDB->mpMap->logError(error);
-            return;
+            return false;
         }
     }
 
     //remove from the old area
     TArea * pA2 = mpRoomDB->getArea( area );
-    if ( pA2 )
+    if( pA2 ) {
         pA2->removeRoom( id );
-    else
-    {
-        QString error = QString( "TRoom::setArea(): Warning: Room (Id: %1) had no current area!").arg( id );
-        mpRoomDB->mpMap->logError(error);
+        // Ah, all rooms in the OLD area that led to the room now become area
+        // exits for that OLD area {so must run determineAreaExits() for the
+        // old area after the room has moved to the new area see other
+        // "if( pA2 )" below} - other exits that led to the room from other
+        // areas are still "out of area exits" UNLESS the room moves to the SAME
+        // area that the other exits are in.
+        dirtyAreas.insert( pA2 ); // Add to local store of dirty areas
+        pA2->mIsDirty = true; // Flag the area itself in case soemthing goes
+                              // wrong on last room in a series
     }
-    area = _areaID;
+    else {
+        QString error = qApp->translate( "TRoom", "Warning: When setting the Area for Room (Id: %1) it did not have a current area!").arg( id );
+        mpRoomDB->mpMap->logError( error );
+    }
+
+    area = areaID;
     pA->addRoom( id );
-    pA->fast_ausgaengeBestimmen(id);
-    pA->fast_calcSpan(id);
+
+    dirtyAreas.insert( pA );
+    pA->mIsDirty;
+
+    if( ! isToDeferAreaRelatedRecalculations ) {
+        QSetIterator<TArea *> itpArea = dirtyAreas;
+        while( itpArea.hasNext() ) {
+            TArea * pArea = itpArea.next();
+            pArea->calcSpan();
+            pArea->determineAreaExits();
+            pArea->mIsDirty = false;
+        }
+        dirtyAreas.clear();
+    }
+
+    return true;
 }
 
 bool TRoom::setExit( int to, int direction )
@@ -548,7 +581,7 @@ void TRoom::setSpecialExit( int to, QString cmd )
     TArea * pA = mpRoomDB->getArea( area );
     if( pA )
     {
-        pA->fast_ausgaengeBestimmen( id );
+        pA->determineAreaExitsOfRoom( id );
         // This updates the (TArea *)->exits map even for exit REMOVALS
     }
 
@@ -569,7 +602,7 @@ void TRoom::removeAllSpecialExitsToRoom( int _id )
     TArea * pA = mpRoomDB->getArea( area );
     if( pA )
     {
-        pA->fast_ausgaengeBestimmen( id );
+        pA->determineAreaExitsOfRoom( id );
     }
 }
 

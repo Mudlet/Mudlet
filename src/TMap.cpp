@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -130,21 +131,21 @@ void TMap::importMapFromDatabase()
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 }
 
-void TMap::setRoomArea( int id, int area )
+bool TMap::setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations )
 {
     TRoom * pR = mpRoomDB->getRoom( id );
 
-    if( !pR )
-    {
-        QString msg = QString("roomID=%1 does not exist, can't set area=%2 of nonexisting room").arg(id).arg(area);
+    if( !pR ) {
+        QString msg = qApp->translate( "TMap", "RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!" ).arg(id).arg(area);
         logError(msg);
-        return;
+        return false;
     }
 
-    pR->setArea( area );
-
-
-    mMapGraphNeedsUpdate = true;
+    bool result = pR->setArea( area, isToDeferAreaRelatedRecalculations );
+    if( result ) {
+        mMapGraphNeedsUpdate = true;
+    }
+    return result;
 }
 
 bool TMap::addRoom( int id )
@@ -259,15 +260,20 @@ bool TMap::setExit( int from, int to, int dir )
     TRoom * pR = mpRoomDB->getRoom( from );
     TRoom * pR_to = mpRoomDB->getRoom( to );
 
-    if( !pR ) return false;
-    if( !pR_to && to > 0 ) return false;
-    if( to < 1 ) to = -1;
+    if( !pR ) {
+        return false;
+    }
+    if( !pR_to && to > 0 ) {
+        return false;
+    }
+    if( to < 1 ) {
+        to = -1;
+    }
 
     mPlausaOptOut = 0;
     bool ret = true;
 
-    switch( dir )
-    {
+    switch( dir ) {
         case DIR_NORTH:
             pR->setNorth(to);
             break;
@@ -310,58 +316,73 @@ bool TMap::setExit( int from, int to, int dir )
     pR->setExitStub(dir, false);
     mMapGraphNeedsUpdate = true;
     TArea * pA = mpRoomDB->getArea( pR->getArea() );
-    if ( ! pA )
+    if( ! pA ) {
         return false;
-    pA->fast_ausgaengeBestimmen(pR->getId());
+    }
+    pA->determineAreaExitsOfRoom(pR->getId());
     return ret;
 }
 
 void TMap::init( Host * pH )
 {
     // init areas
-    QTime _time; _time.start();
-    if( version < 14 )
-    {
+    QTime _time;
+    _time.start();
+
+    if( version < 14 ) {
         mpRoomDB->initAreasForOldMaps();
     }
-    qDebug()<<" TMap::init() initialize area rooms: run time:"<<_time.elapsed();
+    else if( version < 17 ) {
+        // The second half of mpRoomDB->initAreasForOldMaps() - needed to fixup
+        // all the (TArea *)->areaExits() that were built wrongly previously,
+        // calcSpan() may not be required to be done here and now but it is in my
+        // sights as a target for revision in the future. Slysven
+        QMapIterator<int, TArea *> itArea( mpRoomDB->getAreaMap() );
+        while( itArea.hasNext() ) {
+            itArea.next();
+            itArea.value()->determineAreaExits();
+            itArea.value()->calcSpan();
+        }
+    }
     mpRoomDB->auditRooms();
-    // convert old style labels
-    QMapIterator<int, TArea *> it( mpRoomDB->getAreaMap() );
-    while( it.hasNext() )
-    {
-        it.next();
-// N/U:         TArea * pA = it.value();
-        int areaID = it.key();
-        if( mapLabels.contains(areaID) )
-        {
-            QList<int> labelIDList = mapLabels[areaID].keys();
-            for( int i=0; i<labelIDList.size(); i++ )
-            {
-                TMapLabel l = mapLabels[areaID][labelIDList[i]];
-                if( l.pix.isNull() )
-                {
-                    int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
-                    if( newID > -1 )
-                    {
-                        cout << "CONVERTING: old style label areaID:"<<areaID<<" labelID:"<< labelIDList[i]<<endl;
-                        mapLabels[areaID][labelIDList[i]] = mapLabels[areaID][newID];
-                        deleteMapLabel( areaID, newID );
+
+    if( version <16 ) {
+        // convert old style labels, wasn't made version conditional in past but
+        // not likely to be an issue in recent map file format versions (say 16+)
+        QMapIterator<int, TArea *> itArea( mpRoomDB->getAreaMap() );
+        while( itArea.hasNext() ) {
+            itArea.next();
+            int areaID = itArea.key();
+            if( mapLabels.contains(areaID) ) {
+                QList<int> labelIDList = mapLabels.value(areaID).keys();
+                for( int i=0; i<labelIDList.size(); i++ ) {
+                    TMapLabel l = mapLabels.value(areaID).value(labelIDList.at(i));
+                    if( l.pix.isNull() ) {
+                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
+                        if( newID > -1 ) {
+                            QString msg = qApp->translate("TMap","[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(labelIDList.at(i));
+                            mpHost->mTelnet.postMessage(msg);
+                            mapLabels[areaID][labelIDList.at(i)] = mapLabels[areaID][newID];
+                            deleteMapLabel( areaID, newID );
+                        }
+                        else {
+                            QString msg = qApp->translate("TMap","[ WARN ] - CONVERTING: cannot convert old style label, areaID:%1 labelID:%2.").arg(areaID).arg(labelIDList.at(i));
+                            mpHost->mTelnet.postMessage(msg);
+                        }
                     }
-                    else
-                        cout << "ERROR: cannot convert old style label areaID:"<<areaID<<" labelID:"<< labelIDList[i]<<endl;
-                }
-                if ( ( l.size.width() > std::numeric_limits<qreal>::max() ) || ( l.size.width() < -std::numeric_limits<qreal>::max() ) )
-                {
-                    mapLabels[areaID][labelIDList[i]].size.setWidth(l.pix.width());
-                }
-                if ( ( l.size.height() > std::numeric_limits<qreal>::max() ) || ( l.size.height() < -std::numeric_limits<qreal>::max() ) )
-                {
-                    mapLabels[areaID][labelIDList[i]].size.setHeight(l.pix.height());
+                    if (    ( l.size.width() >  std::numeric_limits<qreal>::max() )
+                         || ( l.size.width() < -std::numeric_limits<qreal>::max() ) ) {
+                        mapLabels[areaID][labelIDList[i]].size.setWidth(l.pix.width());
+                    }
+                    if (    ( l.size.height() >  std::numeric_limits<qreal>::max() )
+                         || ( l.size.height() < -std::numeric_limits<qreal>::max() ) ) {
+                        mapLabels[areaID][labelIDList[i]].size.setHeight(l.pix.height());
+                    }
                 }
             }
         }
     }
+    qDebug("TMap::init() Initialize run time:%i milli-seconds.", _time.elapsed() );
 }
 
 

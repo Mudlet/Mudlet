@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -4136,38 +4136,72 @@ int TLuaInterpreter::getRooms( lua_State *L )
     return 1;
 }
 
+// Revised to take an optional second argument of a boolean to indicate whether
+// to return just the list of rooms in the area which have exits out of the area
+// (false) or nested tables of details (true). The latter case uses the "from"
+// room numbers as keys for the outer table, the value is an inner table with
+// the exit direction as key in the form of a text entry of either the text of
+// the special exit or (translatable) standard names for normal exits, the value
+// is the "to" room number.  In the event of an isolated area an empty table is
+// returned.
 int TLuaInterpreter::getAreaExits( lua_State *L )
 {
-    qDebug()<<"getAreaExits() enter";
     int area;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getAreaExits: wrong argument type" );
+    int n = lua_gettop( L );
+    bool isFullDataRequired = false;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr("getAreaExits: Bad argument #1 (area ID, as number expected, got %1).").arg( luaL_typename(L, 1)).toUtf8().constData());
         lua_error( L );
-        return 1;
     }
-    else
-    {
+    else {
         area = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
 
+    if( n > 1 ) {
+        if( ! lua_isboolean( L, 2 ) ) {
+            lua_pushstring( L, tr("getAreaExits: Bad argument #2 (full data wanted, as boolean, optional, got %1).").arg( luaL_typename(L, 2)).toUtf8().constData());
+            lua_error( L );
+            return 1;
+        }
+        else {
+            isFullDataRequired = lua_toboolean( L, 2 );
+        }
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
-    qDebug()<<"pA="<<pA;
-    if( !pA )
-    {
-        qDebug()<<"no area found";
+    if( !pA ) {
         lua_pushnil(L);
         return 1;
     }
-    QList<int> areaExits = pA->getAreaExits();
-    qDebug()<<"areaExits="<<areaExits;
+
     lua_newtable(L);
-    for( int i=0; i<areaExits.size(); i++ )
-    {
-        lua_pushnumber( L, i+1 ); // Lua lists/arrays begin at 1 not 0!
-        lua_pushnumber( L, areaExits.at(i) );
-        lua_settable(L, -3);
+    if( n < 2 || (n > 1 && ! isFullDataRequired ) ) {
+        // Replicate original implimentation
+        QList<int> areaExits = pA->getAreaExitRoomIds();
+        if( areaExits.size() > 1 ) {
+            std::sort(areaExits.begin(),areaExits.end());
+        }
+        for( int i=0; i<areaExits.size(); i++ ) {
+            lua_pushnumber( L, i+1 ); // Lua lists/arrays begin at 1 not 0!
+            lua_pushnumber( L, areaExits.at(i) );
+            lua_settable(L, -3);
+        }
+    }
+    else {
+        QMultiMap<int, QPair<QString, int> > areaExits = pA->getAreaExitRoomData();
+        QList<int> fromRooms = areaExits.uniqueKeys();
+        for( int i=0; i<fromRooms.size(); i++ ) {
+            lua_pushnumber( L, fromRooms.at(i) );
+            lua_newtable(L);
+            QList<QPair<QString, int> > toRoomsData = areaExits.values(fromRooms.at(i));
+            for( int j=0; j<toRoomsData.size(); j++ ) {
+                lua_pushstring( L, toRoomsData.at(j).first.toUtf8().constData() );
+                lua_pushnumber( L, toRoomsData.at(j).second );
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
     }
     return 1;
 }
@@ -6784,23 +6818,22 @@ int TLuaInterpreter::roomExists( lua_State * L )
 int TLuaInterpreter::addRoom( lua_State * L )
 {
     int id;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getRoomArea: wrong argument type" );
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "addRoom: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
+    else {
         id = lua_tointeger( L, 1 );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     bool added = pHost->mpMap->addRoom( id );
     lua_pushboolean( L, added );
-    if ( added )
-        pHost->mpMap->setRoomArea( id, -1 );
-    pHost->mpMap->mMapGraphNeedsUpdate = true;
+    if( added ) {
+        pHost->mpMap->setRoomArea( id, -1, false );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
+    }
 
     return 1;
 }
@@ -8242,53 +8275,53 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 int TLuaInterpreter::setRoomArea( lua_State * L )
 {
     int id, area;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "setRoomArea: wrong argument type" );
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setRoomArea: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
+    else {
         id = lua_tointeger( L, 1 );
     }
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "setRoomArea: wrong argument type" );
+
+    if( ! lua_isnumber( L, 2 ) ) {
+        lua_pushstring( L, tr( "setRoomArea: bad argument #2 type (area Id, as number expected, got %1)." ).arg( luaL_typename( L, 2 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
+    else {
         area = lua_tointeger( L, 2 );
     }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if ( area <= 0 )
-    {
-        lua_pushstring( L, "setRoomArea: Area ID must be > 0. To remove a room's area, use resetRoomArea(roomID)" );
+    if ( area <= 0 ) {
+        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id must be > 0.  To remove a room's area, use resetRoomArea(roomID) )." ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    pHost->mpMap->setRoomArea( id, area );
-    return 0;
+
+    lua_pushboolean( L, pHost->mpMap->setRoomArea( id, area, false ) );
+    return 1;
 }
 
 int TLuaInterpreter::resetRoomArea( lua_State * L )
 {
     //will reset the room area to our void area
     int id;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "resetRoomArea: wrong argument type" );
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "resetRoomArea: bad argument #1 (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
+    else {
         id = lua_tointeger( L, 1 );
+    }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if ( pHost )
-        pHost->mpMap->setRoomArea( id, -1 );
+    if( pHost ) {
+        lua_pushboolean( L, pHost->mpMap->setRoomArea( id, -1, false ) );
+        return 1;
+    }
     return 0;
 }
 

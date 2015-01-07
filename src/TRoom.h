@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -78,8 +79,8 @@ public:
     bool hasExitStub( int direction );
     void setExitStub( int direction, bool status );
     void calcRoomDimensions();
-    void setArea( int _areaID );
     int getExitWeight( QString cmd );
+    bool setArea( int , bool isToDeferAreaRelatedRecalculations = false );
 
     int getWeight() { return weight; }
     int getNorth() { return north; }
