@@ -906,10 +906,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     //pHost->mMXPMode = mMXPMode->currentIndex();
     //pHost->mEncoding = encoding->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
-    mudlet::self()->mMainIconSize = MainIconSize->value();
-    mudlet::self()->mTEFolderIconSize = TEFolderIconSize->value();
-    mudlet::self()->setIcoSize(MainIconSize->value());
-    pHost->mpEditorDialog->setTBIconSize( 0 );
+    mudlet::self()->setToolbarIconSize( MainIconSize->value() );
+    mudlet::self()->setTreeWidgetIconSize( TEFolderIconSize->value() );
     mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
     if( showMenuBar->isChecked() )
         mudlet::self()->menuBar()->show();

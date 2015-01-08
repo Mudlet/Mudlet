@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0" >
  <class>NotesEditor</class>
  <widget class="QMainWindow" name="NotesEditor" >
@@ -11,6 +12,10 @@
   </property>
   <property name="windowTitle" >
    <string>Note Pad</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../mudlet_alpha.qrc">
+    <normaloff>:/icons/mudlet_notepad.png</normaloff>:/icons/mudlet_notepad.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget" >
    <property name="geometry" >
@@ -54,6 +59,8 @@
    </property>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections/>
 </ui>

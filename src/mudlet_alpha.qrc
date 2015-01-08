@@ -145,5 +145,25 @@
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
         <file>vyzor.mpackage</file>
+        <file>icons/go-up-search.png</file>
+        <file>icons/view-fullscreen.png</file>
+        <file>icons/view-restore.png</file>
+        <file>icons/go-down-search.png</file>
+        <file>icons/document-export.png</file>
+        <file>icons/document-import.png</file>
+        <file>icons/timestamped_lines.png</file>
+        <file>icons/document-toggle-active.png</file>
+        <file>icons/document-execute-grey.png</file>
+        <file>icons/document-execute.png</file>
+        <file>icons/document-uninsertable-code.png</file>
+        <file>icons/document-insert-code.png</file>
+        <file>icons/document-stop.png</file>
+        <file>icons/document-stop-grey.png</file>
+        <file>icons/document-delete.png</file>
+        <file>icons/document-bug.png</file>
+        <file>icons/document-important.png</file>
+        <file>icons/mudlet_configure.png</file>
+        <file>icons/document-save.png</file>
+        <file>icons/mudlet_debug.png</file>
     </qresource>
 </RCC>

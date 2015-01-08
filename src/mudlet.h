@@ -137,7 +137,8 @@ public:
    bool                          isGoingDown() { return mIsGoingDown; }
    int                           mMainIconSize;
    int                           mTEFolderIconSize;
-   void                          setIcoSize( int s );
+   void                          setToolbarIconSize( int s );
+   void                          setTreeWidgetIconSize( int s );
    void                          replayStart();
    bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
    void                          replayOver();
@@ -167,9 +168,12 @@ public:
    QStringList                   packagesToInstallList;
 
 
+signals:
+   void                         signal_resizeToolbarIcons( int );
+   void                         signal_resizeTreeIcons( int );
+
 
 public slots:
-
    void                          processEventLoopHack_timerRun();
    void                          slot_mapper();
    void                          slot_replayTimeChanged();

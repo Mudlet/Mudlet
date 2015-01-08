@@ -203,7 +203,8 @@ public slots:
     void                        grab_key_callback( int key, int modifier );
     void                        slot_profileSaveAction();
     void                        slot_profileSaveAsAction();
-    void                        setTBIconSize( int );
+    void                        slot_setToolbarIconSize( int );
+    void                        slot_setTreeWidgetIconSize( int );
     void                        slot_color_trigger_fg();
     void                        slot_color_trigger_bg();
 
