@@ -6561,15 +6561,58 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 int TLuaInterpreter::setAreaName( lua_State *L )
 {
     int id;
-    QString name;
-    if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "setAreaName: bad argument #1 type (area Id, as number expected, got %1)." )
+    QString existingName;
+    QString newName;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setAreaName: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setAreaName: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    if( lua_isnumber( L, 1 ) ) {
+        id = lua_tonumber( L, 1 );
+        if( id < 1 ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area Id expected > 0, got %1)." )
+                            .arg( id ).toUtf8().constData() );
+            return 2;
+        }
+        else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area Id=%1 does not exist)." )
+                            .arg( id ).toUtf8().constData() );
+            return 2;
+        }
+    }
+    else if( lua_isstring( L, 1 ) ) {
+        existingName = QString::fromUtf8( lua_tostring( L, 1 ) );
+        id = pHost->mpMap->mpRoomDB->getAreaNamesMap().key( existingName, 0 );
+        if( existingName.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area name cannot be empty)." )
+                            .toUtf8().constData() );
+            return 2;
+        }
+        else if( ! pHost->mpMap->mpRoomDB->getAreaNamesMap().values().contains( existingName ) ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area name \"%1\" does not exist)." )
+                            .arg( existingName ).toUtf8().constData() );
+            return 2;
+        }
+    }
+    else {
+        lua_pushstring( L, tr( "setAreaName: bad argument #1 type (area Id as number or area name as string expected, got %1)." )
                         .arg( luaL_typename( L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
-    }
-    else {
-        id = lua_tointeger( L, 1 );
     }
 
     if( ! lua_isstring( L, 2 ) ) {
@@ -6579,43 +6622,32 @@ int TLuaInterpreter::setAreaName( lua_State *L )
         return 1;
     }
     else {
-        name = QString( lua_tostring( L, 2 ) );
+        newName = QString( lua_tostring( L, 2 ) );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "setAreaName: NULL Host pointer - something is wrong!" )
-                        .toUtf8().constData() );
-        return 2;
-    }
-    else if( ( ! pHost->mpMap ) || ( ! pHost->mpMap->mpRoomDB ) ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "setAreaName: error, no map seems to be loaded!" ).toUtf8().constData() );
-        return 2;
-    }
-    else if( name.isEmpty() ) {
+    if( newName.isEmpty() ) {
         // Empty name not allowed (any more)
         lua_pushnil( L );
         lua_pushstring( L, tr( "setAreaName: bad argument #2 value (area names may not be empty strings)." ).toUtf8().constData() );
         return 2;
     }
-    else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().values().count( name ) > 0 ) {
+    else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().values().count( newName ) > 0 ) {
         // That name is already IN the areaNamesMap, and since we now enforce
         // uniqueness there can be only one of it - so we can check if this is a
         // problem or just pointless quite easily...!
-        lua_pushnil( L );
-        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) != name ) {
+        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) != newName ) {
+            lua_pushnil( L );
             // And it isn't the trivial case, where the given areaID already IS that name
             lua_pushstring( L, tr( "setAreaName: bad argument #2 value (area names may not be duplicated and area Id=%1 already has the name \"%2\")." )
-                            .arg( pHost->mpMap->mpRoomDB->getAreaNamesMap().key( name ) )
-                            .arg( name ).toUtf8().constData() );
+                            .arg( pHost->mpMap->mpRoomDB->getAreaNamesMap().key( newName ) )
+                            .arg( newName ).toUtf8().constData() );
+            return 2;
         }
         else {
-            lua_pushstring( L, tr( "setAreaName: suspect argument #2 value (area with Id=%1 is already called \"%2\")." )
-                            .arg( id ).arg( name ).toUtf8().constData() );
+            // Renaming an area to the same name is pointlessly successful!
+            lua_pushboolean( L, true );
+            return 1;
         }
-        return 2;
     }
 
     bool isCurrentAreaRenamed = false;
@@ -6624,13 +6656,13 @@ int TLuaInterpreter::setAreaName( lua_State *L )
             isCurrentAreaRenamed = true;
         }
     }
-    bool result = pHost->mpMap->mpRoomDB->setAreaName( id, name );
+    bool result = pHost->mpMap->mpRoomDB->setAreaName( id, newName );
     if( result ) {
         // Update mapper Area names widget, using method designed for it...!
         if( pHost->mpMap->mpMapper ) {
             pHost->mpMap->mpMapper->updateAreaComboBox();
             if( isCurrentAreaRenamed ) {
-                pHost->mpMap->mpMapper->showArea->setCurrentText( name );
+                pHost->mpMap->mpMapper->showArea->setCurrentText( newName );
             }
         }
     }
