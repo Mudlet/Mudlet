@@ -120,7 +120,7 @@ mudlet::mudlet()
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
-    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_16px.png" ) ) );
+    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_48px.png" ) ) );
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
@@ -287,7 +287,7 @@ mudlet::mudlet()
     {
         mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
         showFullScreen();
-        QAction * actionFullScreeniew = new QAction( QIcon( QStringLiteral( ":/icons/dialog-cancel.png" ) ), tr("Toggle Full Screen View"), this);
+        QAction * actionFullScreeniew = new QAction( QIcon( QStringLiteral( ":/icons/view-fullscreen.png" ) ), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction( actionFullScreeniew );
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));

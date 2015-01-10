@@ -377,7 +377,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     timeStampButton->setSizePolicy( sizePolicy5 );
     timeStampButton->setFocusPolicy( Qt::NoFocus );
     timeStampButton->setToolTip("Show Time Stamps");
-    timeStampButton->setIcon( QIcon( QStringLiteral( ":/icons/dialog-information.png" ) ) );
+    timeStampButton->setIcon( QIcon( QStringLiteral( ":/icons/timestamped_lines.png" ) ) );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
 
     QToolButton * replayButton = new QToolButton;
@@ -474,7 +474,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setToolTip("next result");
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/export.png" ) ) );
+    mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/go-up-search.png" ) ) );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
 
 
@@ -485,7 +485,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setToolTip("next result");
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
 
-    mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/import.png" ) ) );
+    mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/go-down-search.png" ) ) );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
     layoutLayer2->addWidget( mpCommandLine );
