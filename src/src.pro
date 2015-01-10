@@ -426,6 +426,7 @@ macx: {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -445,3 +446,13 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
+
+DISTFILES += \
+    CMakeLists.txt \
+    irc/CMakeLists.txt \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh
