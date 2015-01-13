@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -335,7 +336,7 @@ void dlgColorTrigger::setColorCyan()
     {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 14;
-        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mCyan;
+        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mCyan;
     }
     else
     {
@@ -427,7 +428,7 @@ void dlgColorTrigger::setColorLightWhite()
     {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 15;
-        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightWhite;
+        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightWhite;
     }
     else
     {
