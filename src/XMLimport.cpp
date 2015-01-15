@@ -878,6 +878,10 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
     pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
     pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
+
+    //code options
+    pT->mLogErrorOnConsole = ( attributes().value("mLogErrorOnConsole") == "yes" );
+
     QStringRef ignore = attributes().value("mDoubleClickIgnore");
     for(int i=0;i<ignore.size();i++)
         pT->mDoubleClickIgnore.insert( ignore.at( i ) );

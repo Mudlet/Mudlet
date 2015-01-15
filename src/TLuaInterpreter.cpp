@@ -10656,9 +10656,6 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
 
 void TLuaInterpreter::logError( std::string & e, const QString & name, const QString & function )
 {
-    //QDateTime time = QDateTime::currentDateTime();
-    // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
-    //mpHost->mErrorLogStream << entry << endl;
     QColor blue = QColor(0,0,255);
     QColor green = QColor(0,255,0);
     QColor red = QColor(255,0,0);
@@ -10666,6 +10663,7 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
+
     if( mpHost->mpEditorDialog )
     {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1 );
@@ -10673,6 +10671,12 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3 );
     }
 
+    QString consoleError = QString("[%1] %2 :: %3\n").arg(name).arg(function).arg(e.c_str());
+
+    if( mpHost->mLogErrorOnConsole )
+    {
+        mpHost->mpConsole->printDebug(red, black, consoleError );
+    }
 }
 
 bool TLuaInterpreter::callConditionFunction( std::string & function, const QString & mName )

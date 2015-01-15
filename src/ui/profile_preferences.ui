@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>596</height>
+    <height>608</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>7</number>
      </property>
      <widget class="QWidget" name="General">
       <property name="sizePolicy">
@@ -1889,6 +1889,40 @@ or some other computer model that has a small screen.</string>
         </widget>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="code_tab">
+      <property name="whatsThis">
+       <string/>
+      </property>
+      <attribute name="title">
+       <string>Code</string>
+      </attribute>
+      <widget class="QGroupBox" name="groupBox_17">
+       <property name="geometry">
+        <rect>
+         <x>9</x>
+         <y>9</y>
+         <width>701</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Debugging</string>
+       </property>
+       <widget class="QCheckBox" name="mLogErrorOnConsole">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>680</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Print errors on console</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </widget>
    </item>

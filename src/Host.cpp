@@ -154,6 +154,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mCommandLineBgColor(Qt::black)
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
+, mLogErrorOnConsole( false )
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
