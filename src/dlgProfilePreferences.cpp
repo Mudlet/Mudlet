@@ -415,7 +415,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
             showToolbar->setChecked( true );
         else
             showToolbar->setChecked( mudlet::self()->mShowToolbar );
-        mRawStreamDump->setChecked( pHost->mRawStreamDump );
+        mIsToLogInHtml->setChecked( pHost->mIsNextLogFileInHtmlFormat );
         commandLineMinimumHeight->setValue( pHost->commandLineMinimumHeight );
         mNoAntiAlias->setChecked( ! pHost->mNoAntiAlias );
         mFORCE_MCCP_OFF->setChecked( pHost->mFORCE_NO_COMPRESSION );
@@ -1536,7 +1536,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         mudlet::self()->mpMainToolBar->show();
     else
         mudlet::self()->mpMainToolBar->hide();
-    pHost->mRawStreamDump = mRawStreamDump->isChecked();
+    pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
     if( mudlet::self()->mConsoleMap.contains( pHost ) )
