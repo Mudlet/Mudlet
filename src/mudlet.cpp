@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -139,7 +139,6 @@ mudlet::mudlet()
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
-    layoutTopLevel->setContentsMargins(0,0,0,0);
     layoutTopLevel->addWidget( mpTabBar );
     mainPane = new QWidget( frame );
     QPalette mainPalette;
@@ -148,7 +147,6 @@ mudlet::mudlet()
     mainPane->setFocusPolicy( Qt::NoFocus );
     layoutTopLevel->addWidget( mainPane );
     QHBoxLayout * layout = new QHBoxLayout( mainPane );
-    layout->setContentsMargins(0,0,0,0);
     layout->setContentsMargins(0,0,0,0);
 
     mainPane->setContentsMargins(0,0,0,0);
@@ -185,7 +183,6 @@ mudlet::mudlet()
 
     QAction * actionAlias = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
     actionAlias->setToolTip(tr("Show and edit aliases"));
-    actionAlias->setEnabled( true );
     mpMainToolBar->addAction( actionAlias );
 
     QAction * actionTimers = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
@@ -197,18 +194,15 @@ mudlet::mudlet()
     mpMainToolBar->addAction( actionButtons );
 
     QAction * actionScripts = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    actionScripts->setEnabled( true );
     actionScripts->setToolTip(tr("Show and edit scripts"));
     mpMainToolBar->addAction( actionScripts );
 
     QAction * actionKeys = new QAction( QIcon( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), tr("Keys"), this);
     actionKeys->setToolTip(tr("Show and edit keys"));
-    actionKeys->setEnabled( true );
     mpMainToolBar->addAction( actionKeys );
 
     QAction * actionVars = new QAction( QIcon( QStringLiteral( ":/icons/variables.png" ) ), tr("Variables"), this);
     actionVars->setToolTip(tr("Show and edit lua variables"));
-    actionVars->setEnabled( true );
     mpMainToolBar->addAction( actionVars );
 
     QAction * actionIRC = new QAction( QIcon( QStringLiteral( ":/icons/internet-telephony.png" ) ), tr("Help Chat"), this);

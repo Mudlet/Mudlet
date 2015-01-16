@@ -26,12 +26,6 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
-#include "dlgOptionsAreaAction.h"
-#include "dlgOptionsAreaAlias.h"
-#include "dlgOptionsAreaScripts.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaTriggers.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgSearchArea.h"
 #include "dlgTriggerPatternEdit.h"
@@ -204,29 +198,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pHB2->addWidget( mpErrorConsole );
     mpErrorConsole->show();
 
-
-    mpOptionsAreaTriggers = new dlgOptionsAreaTriggers( popupArea );
-    mpOptionsAreaTriggers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTriggers );
-
-    mpOptionsAreaAlias = new dlgOptionsAreaAlias( popupArea );
-    mpOptionsAreaAlias->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaAlias );
-
-    mpOptionsAreaActions = new dlgOptionsAreaAction( popupArea );
-    mpOptionsAreaActions->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaActions );
-
-    mpOptionsAreaScripts = new dlgOptionsAreaScripts( popupArea );
-    mpOptionsAreaScripts->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaScripts );
-
-    mpOptionsAreaTimers = new dlgOptionsAreaTimers( popupArea );
-    mpOptionsAreaTimers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTimers );
-
-
-
     mpSearchArea = tree_widget_search_results_main;
     connect( messageAreaCloseButton, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
 
@@ -240,12 +211,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget->header()->hide();
     connect( treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
     tree_widget_search_results_main->hide(); // hide search results
-
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
 
     treeWidget_alias->hide();
     treeWidget_alias->setHost( mpHost );
@@ -541,11 +506,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->hide();
 
     mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaActions->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
 
     treeWidget->show();
     treeWidget_alias->hide();
@@ -6107,13 +6067,6 @@ void dlgTriggerEditor::changeView( int view )
     toggleHiddenVarsButton->hide();
 
     mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-
     treeWidget->hide();
     treeWidget_alias->hide();
     treeWidget_timers->hide();
