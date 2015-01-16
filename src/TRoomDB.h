@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,7 +52,7 @@ public:
     bool addArea(int id);
     int addArea( QString name );
     bool addArea( int id, QString name );
-    void setAreaName( int areaID, QString name );
+    bool setAreaName( int areaID, QString name );
     const QList<TRoom *> getRoomPtrList();
     const QList<TArea *> getAreaPtrList();
     const QHash<int, TRoom *> & getRoomMap() const { return rooms; }
@@ -84,6 +85,7 @@ private:
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;
+    QString mUnnamedAreaName;
 
     friend class TRoom;//friend TRoom::~TRoom();
     //friend class TMap;//bool TMap::restore(QString location);

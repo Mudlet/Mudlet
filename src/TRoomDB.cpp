@@ -27,13 +27,17 @@
 #include "TRoom.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QDebug>
+#include <QIcon>
+#include <QMessageBox>
 #include <QTime>
 #include "post_guard.h"
 
 
 TRoomDB::TRoomDB( TMap * pMap )
 : mpMap( pMap )
+, mUnnamedAreaName( qApp->translate( "TRoomDB", "Unnamed Area" ) )
 {
 }
 
@@ -148,8 +152,13 @@ bool TRoomDB::__removeRoom( int id )
 
 bool TRoomDB::removeRoom( int id )
 {
-    if( rooms.contains(id ) && id > 0 )
-    {
+    if( rooms.contains( id ) && id > 0 ) {
+        if( mpMap->mRoomId == id ) {
+            mpMap->mRoomId = 0;
+        }
+        if( mpMap->mTargetID == id ) {
+            mpMap->mTargetID = 0;
+        }
         TRoom * pR = getRoom( id );
         delete pR;
         return true;
@@ -159,19 +168,16 @@ bool TRoomDB::removeRoom( int id )
 
 bool TRoomDB::removeArea( int id )
 {
-    areaNamesMap.remove( id );
-    if( areas.contains( id ) )
-    {
-        TArea * pA = areas[id];
+    if( areas.contains( id ) ) {
+        TArea * pA = areas.value(id);
         QList<int> rl;
-        for( int i=0; i< pA->rooms.size(); i++ )
-        {
-            rl.push_back( pA->rooms[i] );
+        for( int i=0; i< pA->rooms.size(); i++ ) {
+            rl.push_back( pA->rooms.at(i) );
         }
-        for( int i=0; i<rl.size(); i++ )
-        {
-            removeRoom( rl[i] );
+        for( int i=rl.size()-1; i >= 0; i-- ) {
+            removeRoom( rl.at(i) );
         }
+        areaNamesMap.remove( id );
         areas.remove( id );
 
         mpMap->mMapGraphNeedsUpdate = true;
@@ -252,21 +258,51 @@ TArea * TRoomDB::getArea( int id )
     }
 }
 
-void TRoomDB::setAreaName( int areaID, QString name )
+bool TRoomDB::setAreaName( int areaID, QString name )
 {
+    if( areaID < 1 ) {
+        qWarning( "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Suspect areaID: %n supplied.", areaID );
+        return false;
+    }
+    if( name.isEmpty() ) {
+        qWarning( "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Empty name supplied." );
+        return false;
+    }
+    else if( areaNamesMap.values().count(name) > 0 ) {
+        // That name is already IN the areaNamesMap
+        if( areaNamesMap.value( areaID ) == name ) {
+            // The trivial case, the given areaID already IS that name
+            return true;
+        }
+        else {
+            qWarning( "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Duplicate name supplied \"%s\"- that is not a good idea!", name.toUtf8().constData() );
+            return false;
+        }
+    }
     areaNamesMap[areaID] = name;
+    return true;
 }
 
 bool TRoomDB::addArea( int id )
 {
-    if( !areas.contains( id ) )
-    {
+    if( ! areas.contains( id ) ) {
         areas[id] = new TArea( mpMap, this );
+        if( ! areaNamesMap.contains( id ) ) {
+            // Must provide a name for this new area
+            QString newAreaName = mUnnamedAreaName;
+            if( areaNamesMap.values().contains( newAreaName ) ) {
+                // We already have an "unnamed area"
+                uint deduplicateSuffix = 0;
+                do {
+                    newAreaName = QStringLiteral( "%1_%2" ).arg( mUnnamedAreaName ).arg( ++deduplicateSuffix, 3, 10, QLatin1Char('0') );
+                } while ( areaNamesMap.values().contains( newAreaName ) );
+            }
+            areaNamesMap.insert( id, newAreaName );
+        }
         return true;
     }
-    else
-    {
-        QString error = QString("Area with ID=%1 already exists!").arg(id);
+    else {
+        QString error = qApp->translate( "TRoomDB", "Area with ID=%1 already exists!" ).arg(id);
         mpMap->logError(error);
         return false;
     }
@@ -274,47 +310,60 @@ bool TRoomDB::addArea( int id )
 
 int TRoomDB::createNewAreaID()
 {
-    int _id = 1;
-    for( ; ; _id++ )
-    {
-        if( !areas.contains(_id) )
-        {
-            return _id;
-        }
+    int id = 1;
+    while( areas.contains( id ) ) {
+        id++;
     }
-    return 0;
+    return id;
 }
 
 int TRoomDB::addArea( QString name )
 {
-    // area name already exists
-    if( areaNamesMap.values().contains( name ) ) return 0;
+    // reject it if area name already exists or is empty
+    if( name.isEmpty() ) {
+        QString error = qApp->translate( "TRoomDB", "An Unnamed Area is (no longer) permitted!" );
+        mpMap->logError(error);
+        return 0;
+    }
+    else if( areaNamesMap.values().contains( name ) ) {
+        QString error = qApp->translate( "TRoomDB", "An area called %1 already exists!" ).arg(name);
+        mpMap->logError(error);
+        return 0;
+    }
 
     int areaID = createNewAreaID();
-    if( addArea( areaID ) )
-    {
+    if( addArea( areaID ) ) {
         areaNamesMap[areaID] = name;
+        // This will overwrite the "Unnamed Area_###" that addArea( areaID )
+        // will generate - but that is fine.
         return areaID;
     }
-    else
+    else {
         return 0; //fail
+    }
 }
 
 // this func is called by the xml map importer
 // NOTE: we no longer accept duplicate IDs or duplicate area names
 //       duplicate definitions are ignored
+//       Unless the area name is empty, in which case we provide one!
 bool TRoomDB::addArea( int id, QString name )
 {
-    if( areaNamesMap.values().contains(name) ) return false;
-    if( areaNamesMap.keys().contains(id) ) return false;
-    bool ret = addArea( id );
-    if( ret ) // Wrong check for error (==0 was being made)
-    {
-        areaNamesMap[id] = name;
+    if(   ( ( ! name.isEmpty() ) && areaNamesMap.values().contains( name ) )
+       || areaNamesMap.keys().contains( id ) ) {
+        return false;
+    }
+    else if( addArea( id ) ) {
+        // This will generate an "Unnamed Area_###" area name which we should
+        // overwrite only if we have a name!
+        if( ! name.isEmpty() ) {
+            areaNamesMap[id] = name;
+        }
         return true;
     }
-    return false;
-
+    else {
+        return false;
+    }
 }
 
 const QList<TArea *> TRoomDB::getAreaPtrList()
@@ -387,10 +436,165 @@ void TRoomDB::clearMapDB()
 
 }
 
-
+// In the "wall of text" explainations used here for "text" and "informative"
+// parts of the QMessageBox they are made from rich {HTML like} (translatable)
+// QStrings.   As such the line feeds used in the source code here are ignored
+// and are here so the text fits more easily on the IDE page!  <p></p> paragraph
+// tags are use to break up the text but the actual word wrapping inside them is
+// down to the Qt layout system - Slysven
 void TRoomDB::restoreAreaMap( QDataStream & ifs )
 {
-    ifs >> areaNamesMap;
+    QMap<int, QString> areaNamesMapWithPossibleEmptyOrDuplicateItems;
+    ifs >> areaNamesMapWithPossibleEmptyOrDuplicateItems;
+
+    // Validate names: name nameless areas and rename duplicates
+    QMultiMap<QString, QString> renamedMap; // For warning message, holds renamed area map
+    QMapIterator<int, QString> itArea = areaNamesMapWithPossibleEmptyOrDuplicateItems;
+    bool isMatchingSuffixAlreadyPresent = false;
+    bool isEmptyAreaNamePresent = false;
+    while( itArea.hasNext() ) {
+        itArea.next();
+        QString nonEmptyAreaName;
+        if( itArea.value().isEmpty() ) {
+            isEmptyAreaNamePresent = true;
+            nonEmptyAreaName = mUnnamedAreaName;
+            // Will trip following if more than one
+        }
+        else {
+            nonEmptyAreaName = itArea.value();
+        }
+        if( areaNamesMap.values().contains( nonEmptyAreaName ) ) {
+            // Oh dear, we have a duplicate
+            if( nonEmptyAreaName.contains( QRegExp( "_\d\d\d$" ) ) ) {
+                // the areaName already is of form "something_###" where # is a
+                // digit, have to strip that off and remember so warning message
+                // can include advice on this change
+                isMatchingSuffixAlreadyPresent = true;
+                nonEmptyAreaName.chop(4); // Take off existing suffix
+            }
+            uint deduplicateSuffix = 0;
+            QString replacementName;
+            do {
+                replacementName = QStringLiteral( "%1_%2" ).arg(nonEmptyAreaName).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0') );
+            } while ( areaNamesMap.values().contains( replacementName ) );
+            if( ( ! itArea.value().isEmpty() ) && ( ! renamedMap.contains( itArea.value() ) ) ) {
+                // if the renamedMap does not contain the first, unaltered value
+                // that a subsequent match has been found for, then include it
+                // in the data so the user can see the UNCHANGED one as well
+                // Only have to do this once for each duplicate area name, hence
+                // the test conditions above
+                renamedMap.insert( itArea.value(), itArea.value() );
+            }
+            renamedMap.insert( itArea.value(), replacementName );
+            areaNamesMap.insert( itArea.key(), replacementName );
+        }
+        else {
+            if( itArea.value().isEmpty() ) {
+                renamedMap.insert( itArea.value(), nonEmptyAreaName );
+            }
+            areaNamesMap.insert( itArea.key(), nonEmptyAreaName );
+        }
+    }
+    if( renamedMap.size() || isEmptyAreaNamePresent ) {
+        // CHECK: May have change this to build a dialog to display message
+        // because the standard QMessageBoxes appears to be Application Modal
+        // and we don't really want to halt other profiles' windows! - Slysven
+        QMessageBox msgBox;
+        msgBox.setWindowModality( Qt::WindowModal ); // Don't know if this will work...!
+        msgBox.setWindowTitle( qApp->translate( "TRoomDB", "Warning - Area name issues") );
+        msgBox.setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_warning.png" ) ) );
+        msgBox.setIconPixmap( QPixmap( QStringLiteral( ":/icons/mudlet_warning.png" ) ) );
+        msgBox.setStandardButtons( QMessageBox::Ok );
+        QString extraTextForMatchingSuffixAlreadyUsed;
+        QString informativeText;
+        if( isMatchingSuffixAlreadyPresent ) {
+            extraTextForMatchingSuffixAlreadyUsed = qApp->translate( "TRoomDB", "<p>It has been detected that \"_###\" form suffixes have already been used, for "
+                                                                                "simplicity in the renaming algorithm these will have been removed and possibly "
+                                                                                "changed as Mudlet sorts this matter out, if a number assigned in this way "
+                                                                                "<b>is</b> important to you, you can change it back, provided you rename the area "
+                                                                                "that has been allocated the suffix that was wanted first...!</p>" );
+        }
+        if( renamedMap.size() ) {
+            QString detailText = qApp->translate( "TRoomDB", "(ID) \"old name\" ==> \"new name\"\n" );
+            QMapIterator<QString, QString> itRemappedNames = renamedMap;
+            itRemappedNames.toBack();
+            // Seems to look better if we iterate through backwards!
+            while( itRemappedNames.hasPrevious() ) {
+                itRemappedNames.previous();
+                detailText.append( QStringLiteral( "(%1) \"%2\" ==> \"%3\"\n" )
+                                   .arg( areaNamesMap.key( itRemappedNames.value() ) )
+                                   .arg( itRemappedNames.key().isEmpty() ? qApp->translate( "TRoomDB", "<nothing>" ) : itRemappedNames.key() )
+                                   .arg( itRemappedNames.value() ) );
+            }
+            detailText.chop(1);
+            msgBox.setDetailedText( detailText ); // Trim last "\n" off
+        }
+        if( renamedMap.size() && isEmptyAreaNamePresent ) {
+            // At least one unnamed area and at least one duplicate area name
+            // - may be the same items
+            msgBox.setText( qApp->translate( "TRoomDB", "<html><head/><body><p><b>Empty and duplicate area names detected in Map file!"
+                                                        "</b></p></body></html>") );
+            informativeText = qApp->translate( "TRoomDB", "<html><head/><body><p>Due to some situations not being checked in the past, "
+                                                          "Mudlet had allowed the map to have more than one area with the same or no "
+                                                          "name.  These make some things confusing and are now disallowed.</p>"
+                                                          "<p>To resolve these cases, an area without a name here (or created in the "
+                                                          "future) will automatically be assigned the name \"%1\".</p>"
+                                                          "<p>Duplicated area names will cause all but the first encountered one to "
+                                                          "gain a \"_###\" style suffix where each \"###\" is an increasing number; you "
+                                                          "may wish to change these, perhaps by replacing them with a \"(sub-area "
+                                                          "name)\" but it is entirely up to you how you do this, other then you will not "
+                                                          "be able to set one area's name to that of another <i>that exists at the "
+                                                          "time</i>.</p>"
+                                                          "<p>If there were more than one area without a name then all but the first "
+                                                          "will also gain a suffix in this manner.</p>"
+                                                          "%2"
+                                                          "<p>Click on the \"Show Details...\" button if you wish to see what modified "
+                                                          "names are now to be used, the displayed pre-modified name data will not be "
+                                                          "saved after this point so if their being changed is important to you, you "
+                                                          "should note them down before selecting \"Ok\".</p></body></html>")
+                              .arg( mUnnamedAreaName )
+                              .arg( extraTextForMatchingSuffixAlreadyUsed );
+        }
+        else if( renamedMap.size() ) {
+            // Duplicates but no unnnamed area
+            msgBox.setText( qApp->translate( "TRoomDB", "<html><head/><body><p><b>Duplicate area names detected in the Map file!</b>"
+                                                        "</p></body></html>") );
+            informativeText = qApp->translate( "TRoomDB", "<html><head/><body><p>Due to some situations not being checked in the past, "
+                                                          "Mudlet had allowed the user to have more than one area with the same name. "
+                                                          "These make some things confusing and are now disallowed.</p>"
+                                                          "<p>Duplicated area names will cause all but the first encountered one to "
+                                                          "gain a \"_###\" style suffix where each \"###\" is an increasing number; "
+                                                          "you may wish to change these, perhaps by replacing them with a \"(sub-"
+                                                          "area name)\" but it is entirely up to you how you do this, other then you "
+                                                          "will not be able to set one area's name to that of another <i>that exists "
+                                                          "at the time</i>.</p>"
+                                                          "%1"
+                                                          "<p>Click on the more details button if you wish to see what modified "
+                                                          "names are now to be used, the displayed pre-modified name data will not be "
+                                                          "saved after this point so if it is important to you, you should note it "
+                                                          "down before selecting OK.</p></body></html>")
+                              .arg( extraTextForMatchingSuffixAlreadyUsed );
+        }
+        else {
+            // A single unnamed area found
+            msgBox.setText( qApp->translate( "TRoomDB", "<html><head/><body><p><b>An empty area name was detected in the Map file!</b>"
+                                                        "</p></body></html>") );
+            informativeText = qApp->translate( "TRoomDB", "<html><head/><body><p>Due to some situations not being checked in the past, "
+                                                          "Mudlet had allowed the map to have an area with no name. This can make some "
+                                                          "things confusing and is now disallowed.</p>"
+                                                          "<p>To resolve this case, the area without a name here (or one created in the "
+                                                          "future) will automatically be assigned the name \"%1\".</p>"
+                                                          "<p>If this happens more then once the duplication of area names will cause "
+                                                          "all but the first encountered one to gain a \"_###\" style suffix where each "
+                                                          "\"###\" is an increasing number; you may wish to change these, perhaps by "
+                                                          "adding more meaningful area names but it is entirely up to you what is used, "
+                                                          "other then you will not be able to set one area's name to that of another <i>"
+                                                          "that exists at the time</i>.</p></body></html>")
+                              .arg( mUnnamedAreaName );
+        }
+        msgBox.setInformativeText( informativeText );
+        msgBox.exec();
+    }
 }
 
 void TRoomDB::restoreSingleArea(QDataStream & ifs, int areaID, TArea * pA )
