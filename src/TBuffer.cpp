@@ -2384,7 +2384,7 @@ void TBuffer::log( int from, int to )
             {
 
                 QString toLog;
-                if( mpHost->mRawStreamDump )
+                if( mpHost->mIsCurrentLogFileInHtmlFormat )
                 {
                     QPoint P1 = QPoint(0,i);
                     QPoint P2 = QPoint( buffer[i].size(), i);

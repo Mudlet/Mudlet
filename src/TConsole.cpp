@@ -876,7 +876,8 @@ void TConsole::slot_toggleLogging()
             dirLogFile.mkpath( directoryLogFile );
         }
 
-        if( mpHost->mRawStreamDump ) {
+        mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
             mLogFileName.append(".html");
         }
         else {
@@ -898,7 +899,7 @@ void TConsole::slot_toggleLogging()
     }
 
     if( mLogToLogFile ) {
-        if( mpHost->mRawStreamDump ) {
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
             QStringList fontsList; // List of fonts to become the font-family entry for
                                    // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
@@ -936,7 +937,7 @@ void TConsole::slot_toggleLogging()
         logButton->setToolTip( tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>") );
     }
     else {
-        if( mpHost->mRawStreamDump ) {
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
             mLogStream << "</div></body>\n";
             mLogStream << "</html>\n";
         }
