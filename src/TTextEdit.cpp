@@ -1329,7 +1329,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
             if ( xind > 0 )
                 mPA.setX ( xind+1 );
             else
-                mPA.setX ( xind );
+                mPA.setX ( 0 );
             mPA.setY ( yind );
             highlight();
             event->accept();
