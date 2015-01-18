@@ -708,6 +708,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     if ( !pItem )
         return;
 
+    // For changing views from one type to another (e.g. script->triggers), we have to show
+    // the new view first before changing the TreeWidgetItem. Because we save changes to
+    // the current item when it is left, if we change the TreeWidgetItem and then swap
+    // views the contents of the previous item will be overwritten.
     if( pItem->text(0) == QString("Trigger") )
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
@@ -719,10 +723,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget->setCurrentItem( pI, 0 );
-                treeWidget->scrollToItem( pI );
                 slot_show_triggers();
                 slot_trigger_selected( pI );
+                treeWidget->setCurrentItem( pI, 0 );
+                treeWidget->scrollToItem( pI );
                 return;
             }
         }
@@ -738,10 +742,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_alias->setCurrentItem( pI, 0 );
-                treeWidget_alias->scrollToItem( pI );
                 slot_show_aliases();
                 slot_alias_selected( pI );
+                treeWidget_alias->setCurrentItem( pI, 0 );
+                treeWidget_alias->scrollToItem( pI );
                 return;
             }
         }
@@ -757,10 +761,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_scripts->setCurrentItem( pI, 0 );
-                treeWidget_scripts->scrollToItem( pI );
                 slot_show_scripts();
                 slot_scripts_selected( pI );
+                treeWidget_scripts->setCurrentItem( pI, 0 );
+                treeWidget_scripts->scrollToItem( pI );
                 return;
             }
         }
@@ -778,10 +782,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_actions->setCurrentItem( pI, 0 );
-                treeWidget_actions->scrollToItem( pI );
                 slot_show_actions();
                 slot_action_selected( pI );
+                treeWidget_actions->setCurrentItem( pI, 0 );
+                treeWidget_actions->scrollToItem( pI );
                 return;
             }
         }
@@ -799,10 +803,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_timers->setCurrentItem( pI, 0 );
-                treeWidget_timers->scrollToItem( pI );
                 slot_show_timers();
                 slot_timer_selected( pI );
+                treeWidget_timers->setCurrentItem( pI, 0 );
+                treeWidget_timers->scrollToItem( pI );
                 return;
             }
         }
@@ -820,10 +824,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_keys->setCurrentItem( pI, 0 );
-                treeWidget_keys->scrollToItem( pI );
                 slot_show_keys();
                 slot_key_selected( pI );
+                treeWidget_keys->setCurrentItem( pI, 0 );
+                treeWidget_keys->scrollToItem( pI );
                 return;
             }
         }
@@ -844,9 +848,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             TVar * var = vu->getWVar( pI );
             if ( vu->shortVarName( var ) == varShort )
             {
+                show_vars();
                 treeWidget_vars->setCurrentItem( pI, 0 );
                 treeWidget_vars->scrollToItem( pI );
-                show_vars();
                 return;
             }
         }
@@ -4823,23 +4827,25 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 void dlgTriggerEditor::slot_tree_selection_changed()
 {
     TTreeWidget * sender = qobject_cast<TTreeWidget *>(QObject::sender());
-    QList<QTreeWidgetItem *> items = sender->selectedItems();
-    if(items.length()){
-        QTreeWidgetItem * item = items.first();
-        if(sender == treeWidget_scripts)
-            slot_scripts_selected(item);
-        else if(sender == treeWidget_keys)
-            slot_key_selected(item);
-        else if(sender == treeWidget_timers)
-            slot_timer_selected(item);
-        else if(sender == treeWidget_alias)
-            slot_alias_selected(item);
-        else if(sender == treeWidget_actions)
-            slot_action_selected(item);
-        else if(sender == treeWidget_vars)
-            slot_var_selected(item);
-        else if(sender == treeWidget)
-            slot_trigger_selected(item);
+    if(sender){
+        QList<QTreeWidgetItem *> items = sender->selectedItems();
+        if(items.length()){
+            QTreeWidgetItem * item = items.first();
+            if(sender == treeWidget_scripts)
+                slot_scripts_selected(item);
+            else if(sender == treeWidget_keys)
+                slot_key_selected(item);
+            else if(sender == treeWidget_timers)
+                slot_timer_selected(item);
+            else if(sender == treeWidget_alias)
+                slot_alias_selected(item);
+            else if(sender == treeWidget_actions)
+                slot_action_selected(item);
+            else if(sender == treeWidget_vars)
+                slot_var_selected(item);
+            else if(sender == treeWidget)
+                slot_trigger_selected(item);
+        }
     }
 }
 
