@@ -439,6 +439,8 @@ void TRoomDB::restoreAreaMap( QDataStream & ifs )
 {
     QMap<int, QString> areaNamesMapWithPossibleEmptyOrDuplicateItems;
     ifs >> areaNamesMapWithPossibleEmptyOrDuplicateItems;
+    areaNamesMap.clear(); // Following code assumes areaNamesMap is empty but
+                          // under some situations this has not been the case...
 
     // Validate names: name nameless areas and rename duplicates
     QMultiMap<QString, QString> renamedMap; // For warning message, holds renamed area map
