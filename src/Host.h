@@ -221,6 +221,7 @@ public:
 
     QString            mUrl;
 
+    bool               mLogErrorOnConsole;
     bool               mUSE_FORCE_LF_AFTER_PROMPT;
     bool               mUSE_IRE_DRIVER_BUGFIX;
     bool               mUSE_UNIX_EOL;

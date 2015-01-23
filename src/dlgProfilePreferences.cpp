@@ -50,6 +50,10 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     // init generated dialog
     setupUi(this);
 
+    //code options
+    mLogErrorOnConsole->setChecked(mpHost->mLogErrorOnConsole);
+
+
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
@@ -875,6 +879,11 @@ void dlgProfilePreferences::slot_save_and_exit()
     if( ! pHost ) return;
     if( dictList->currentItem() )
         pHost->mSpellDic = dictList->currentItem()->text();
+
+    // code tab options
+    pHost->mLogErrorOnConsole = mLogErrorOnConsole->isChecked();
+
+
     pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
