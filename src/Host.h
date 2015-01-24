@@ -30,6 +30,7 @@
 #include "TimerUnit.h"
 #include "TLuaInterpreter.h"
 #include "TriggerUnit.h"
+#include "Java.h"
 
 #include "pre_guard.h"
 #include <QColor>
@@ -307,6 +308,8 @@ public:
     bool               mFORCE_MXP_NEGOTIATION_OFF;
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
+
+    Java                java;
 };
 
 #endif // MUDLET_HOST_H

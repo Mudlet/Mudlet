@@ -34,6 +34,8 @@ VERSION = 3.0.1
 # enable C++11 for builds.
 CONFIG += c++11
 
+CONFIG += debug_and_release
+
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
@@ -192,15 +194,6 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
-    irc/src/irc.cpp \
-    irc/src/irccodecplugin.cpp \
-    irc/src/irccommand.cpp \
-    irc/src/ircdecoder.cpp \
-    irc/src/ircmessage.cpp \
-    irc/src/ircparser.cpp \
-    irc/src/ircsender.cpp \
-    irc/src/ircsession.cpp \
-    irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -238,7 +231,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    Java.cpp
 
 !msvc:SOURCES += lua_yajl.c
 msvc:SOURCES += lua_yajl.cpp
@@ -280,12 +274,6 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
-    irc/include/irc.h \
-    irc/include/irccodecplugin.h \
-    irc/include/irccommand.h \
-    irc/include/ircmessage.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -326,7 +314,8 @@ HEADERS += \
     TTreeWidgetItem.h \
     TTrigger.h \
     TVar.h \
-    VarUnit.h
+    VarUnit.h \
+    Java.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -452,3 +441,12 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
+
+win32:CONFIG(release, debug|release): LIBS += -L/usr/local/jdk8/jre/lib/amd64/server/release/ -ljvm
+else:win32:CONFIG(debug, debug|release): LIBS += -L/usr/local/jdk8/jre/lib/amd64/server/debug/ -ljvm
+else:unix: LIBS += -L/usr/local/jdk8/jre/lib/amd64/server/ -ljvm
+
+INCLUDEPATH += /usr/local/jdk8/include
+INCLUDEPATH += /usr/local/jdk8/include/linux
+DEPENDPATH += /usr/local/jdk8/include
+DEPENDPATH += /usr/local/jdk8/include/linux

@@ -155,6 +155,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
 , mLogErrorOnConsole( false )
+, java(this,hostname)
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -176,6 +177,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+
 }
 
 Host::~Host()
@@ -579,9 +581,8 @@ void Host::callEventHandlers()
 
 void Host::incomingStreamProcessor(const QString & data, int line )
 {
-    mTriggerUnit.processDataStream( data, line );
+    java.handleLine(data,line);
 
-    mTimerUnit.doCleanup();
     if( mResetProfile )
     {
         resetProfile();
