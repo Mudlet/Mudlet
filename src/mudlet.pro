@@ -158,194 +158,67 @@ macx:LIBS += \
 INCLUDEPATH += irc/include
 
 SOURCES += \
-    ActionUnit.cpp \
-    AliasUnit.cpp \
     ctelnet.cpp \
     dlgAboutDialog.cpp \
-    dlgActionMainArea.cpp \
-    dlgAliasMainArea.cpp \
-    dlgColorTrigger.cpp \
-    dlgComposer.cpp \
     dlgConnectionProfiles.cpp \
     dlgKeysMainArea.cpp \
-    dlgMapper.cpp \
-    dlgNotepad.cpp \
-    dlgOptionsAreaAction.cpp \
-    dlgOptionsAreaAlias.cpp \
-    dlgOptionsAreaScripts.cpp \
-    dlgOptionsAreaTimers.cpp \
-    dlgOptionsAreaTriggers.cpp \
-    dlgPackageExporter.cpp \
-    dlgProfilePreferences.cpp \
-    dlgRoomExits.cpp \
-    dlgScriptsMainArea.cpp \
-    dlgSearchArea.cpp \
-    dlgSourceEditorArea.cpp \
-    dlgSystemMessageArea.cpp \
-    dlgTimersMainArea.cpp \
-    dlgTriggerEditor.cpp \
-    dlgTriggerPatternEdit.cpp \
-    dlgTriggersMainArea.cpp \
-    dlgVarsMainArea.cpp \
-    EAction.cpp \
-    exitstreewidget.cpp \
     FontManager.cpp \
-    glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
     KeyUnit.cpp \
-    LuaInterface.cpp \
     main.cpp \
     mudlet.cpp \
-    ScriptUnit.cpp \
-    T2DMap.cpp \
-    TAction.cpp \
-    TAlias.cpp \
-    TArea.cpp \
     TBuffer.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
-    TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     THighlighter.cpp \
-    TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
-    TLuaInterpreter.cpp \
-    TMap.cpp \
-    TriggerUnit.cpp \
-    TRoom.cpp \
-    TRoomDB.cpp \
-    TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
-    TTextEdit.cpp \
-    TTimer.cpp \
     TToolBar.cpp \
-    TTreeWidget.cpp \
-    TTreeWidgetItem.cpp \
-    TTrigger.cpp \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp \
-    Java.cpp
+    Java.cpp \
+    dlgVarsMainArea.cpp
 
-!msvc:SOURCES += lua_yajl.c
-msvc:SOURCES += lua_yajl.cpp
+!msvc:SOURCES +=
+msvc:SOURCES +=
 
 
 HEADERS += \
-    ActionUnit.h \
-    AliasUnit.h \
     ctelnet.h \
-    dlgAboutDialog.h \
-    dlgActionMainArea.h \
-    dlgAliasMainArea.h \
-    dlgColorTrigger.h \
-    dlgComposer.h \
     dlgConnectionProfiles.h \
-    dlgKeysMainArea.h \
-    dlgMapper.h \
-    dlgNotepad.h \
-    dlgOptionsAreaAction.h \
-    dlgOptionsAreaAlias.h \
-    dlgOptionsAreaScripts.h \
-    dlgOptionsAreaTimers.h \
-    dlgOptionsAreaTriggers.h \
-    dlgPackageExporter.h \
-    dlgProfilePreferences.h \
-    dlgRoomExits.h \
-    dlgScriptsMainArea.h \
-    dlgSearchArea.h \
-    dlgSourceEditorArea.h \
-    dlgSystemMessageArea.h \
-    dlgTimersMainArea.h \
-    dlgTriggerEditor.h \
-    dlgTriggerPatternEdit.h \
-    dlgTriggersMainArea.h \
-    dlgVarsMainArea.h \
-    EAction.h \
-    exitstreewidget.h \
-    glwidget.h \
     Host.h \
     HostManager.h \
     KeyUnit.h \
-    LuaInterface.h \
     mudlet.h \
     pre_guard.h \
     post_guard.h \
-    ScriptUnit.h \
-    T2DMap.h \
-    TAction.h \
-    TAlias.h \
-    TArea.h \
     TAStar.h \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
-    TEasyButtonBar.h \
     TEvent.h \
-    TFlipButton.h \
     TForkedProcess.h \
     THighlighter.h \
-    TimerUnit.h \
     TKey.h \
-    TLabel.h \
-    TLuaInterpreter.h \
-    TMap.h \
     TMatchState.h \
-    Tree.h \
-    TriggerUnit.h \
-    TRoom.h \
-    TRoomDB.h \
-    TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
-    TTextEdit.h \
-    TTimer.h \
-    TToolBar.h \
-    TTreeWidget.h \
-    TTreeWidgetItem.h \
-    TTrigger.h \
-    TVar.h \
-    VarUnit.h \
     Java.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
-    ui/about_dialog.ui \
-    ui/actions_main_area.ui \
-    ui/aliases_main_area.ui \
-    ui/color_trigger.ui \
-    ui/composer.ui \
     ui/connection_profiles.ui \
-    ui/dlgPackageExporter.ui \
-    ui/extended_search_area.ui \
-    ui/irc.ui \
-    ui/keybindings_main_area.ui \
-    ui/main_window.ui \
-    ui/mapper.ui \
-    ui/notes_editor.ui \
-    ui/options_area_actions.ui \
-    ui/options_area_aliases.ui \
-    ui/options_area_scripts.ui \
-    ui/options_area_timers.ui \
-    ui/options_area_triggers.ui \
-    ui/profile_preferences.ui \
-    ui/room_exits.ui \
-    ui/scripts_main_area.ui \
-    ui/source_editor_area.ui \
-    ui/system_message_area.ui \
-    ui/timers_main_area.ui \
-    ui/triggers_main_area.ui \
-    ui/trigger_editor.ui \
-    ui/trigger_pattern_edit.ui \
-    ui/vars_main_area.ui
+    ui/main_window.ui
 
 
 RESOURCES = mudlet_alpha.qrc

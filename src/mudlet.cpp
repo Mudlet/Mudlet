@@ -27,14 +27,9 @@
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
-#include "dlgNotepad.h"
-#include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
-#include "dlgTriggerEditor.h"
-#include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
-#include "LuaInterface.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -642,37 +637,6 @@ void mudlet::slot_install_package()
     packageList->addItems( pH->mInstalledPackages );
 }
 
-void mudlet::showUnzipProgress(const QString& txt )
-{
-    Host * pH = getActiveHost();
-    if( ! pH ) return;
-    pH->showUnpackingProgress( txt );
-}
-
-void mudlet::slot_uninstall_package()
-{
-    Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QListWidgetItem * pI = packageList->currentItem();
-    if( pI )
-        pH->uninstallPackage( pI->text(), 0);
-    packageList->clear();
-    packageList->addItems( pH->mInstalledPackages );
-}
-
-void mudlet::slot_package_exporter(){
-    Host * pH = getActiveHost();
-    if( ! pH ) return;
-    dlgPackageExporter *d = new dlgPackageExporter(this, pH);
-    // don't show the dialog if the user cancelled the wizard
-    if (d->filePath.isEmpty()) {
-        return;
-    }
-
-    d->show();
-}
-
-
 void mudlet::slot_close_profile_requested( int tab )
 {
     QString name = mpTabBar->tabText( tab );
@@ -683,8 +647,6 @@ void mudlet::slot_close_profile_requested( int tab )
         return;
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
-    pH->stopAllTriggers();
-    pH->mpEditorDialog->close();
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
     {
@@ -712,7 +674,6 @@ void mudlet::slot_close_profile()
         {
             QString name = mpCurrentActiveHost->getName();
             Host * pH = mpCurrentActiveHost;
-            mpCurrentActiveHost->mpEditorDialog->close();
             mConsoleMap[mpCurrentActiveHost]->close();
             if( mTabMap.contains( pH->getName() ) )
             {
@@ -817,11 +778,6 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
-    dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
-    pH->mpEditorDialog = pEditor;
-    pEditor->fillout_form();
-
-    pH->getActionUnit()->updateToolbar();
     QMap<QString, TConsole *> miniConsoleMap;
     mHostConsoleMap[mpCurrentActiveHost] = miniConsoleMap;
     QMap<QString, TLabel *> labelMap;
@@ -838,81 +794,6 @@ void mudlet::addConsoleForNewHost( Host * pH )
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
     QApplication::sendEvent( mpCurrentActiveHost->mpConsole, &event);
-}
-
-
-void mudlet::slot_timer_fires()
-{
-    QTimer * pQT = (QTimer*)sender();
-    if( ! pQT ) return;
-    if( mTimerMap.contains( pQT ) )
-    {
-        TTimer * pTT = mTimerMap[pQT];
-        pTT->execute();
-        if( pTT->checkRestart()  )
-        {
-            pTT->start();
-        }
-    }
-    else
-    {
-        qDebug()<<"MUDLET CRITICAL ERROR: Timer not registered!";
-    }
-}
-
-void mudlet::unregisterTimer( QTimer * pQT )
-{
-    if( mTimerMap.contains( pQT ) )
-    {
-        mTimerMap.remove( pQT );
-    }
-    else
-    {
-        qDebug()<<"MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
-    }
-}
-
-void mudlet::registerTimer( TTimer * pTT, QTimer * pQT )
-{
-    if( ! mTimerMap.contains( pQT ) )
-    {
-        mTimerMap[pQT] = pTT;
-        connect(pQT, SIGNAL(timeout()), this,SLOT(slot_timer_fires()));
-    }
-}
-
-void mudlet::disableToolbarButtons()
-{
-    mpMainToolBar->actions()[1]->setEnabled( false );
-    mpMainToolBar->actions()[2]->setEnabled( false );
-    mpMainToolBar->actions()[3]->setEnabled( false );
-    mpMainToolBar->actions()[4]->setEnabled( false );
-    mpMainToolBar->actions()[5]->setEnabled( false );
-    mpMainToolBar->actions()[6]->setEnabled( false );
-    mpMainToolBar->actions()[7]->setEnabled( false );
-    mpMainToolBar->actions()[9]->setEnabled( false );
-    mpMainToolBar->actions()[10]->setEnabled( false );
-    mpMainToolBar->actions()[11]->setEnabled( false );
-    mpMainToolBar->actions()[12]->setEnabled( false );
-    mpMainToolBar->actions()[13]->setEnabled( false );
-    mpMainToolBar->actions()[14]->setEnabled( false );
-}
-
-void mudlet::enableToolbarButtons()
-{
-    mpMainToolBar->actions()[1]->setEnabled( true );
-    mpMainToolBar->actions()[2]->setEnabled( true );
-    mpMainToolBar->actions()[3]->setEnabled( true );
-    mpMainToolBar->actions()[4]->setEnabled( true );
-    mpMainToolBar->actions()[5]->setEnabled( true );
-    mpMainToolBar->actions()[6]->setEnabled( true );
-    mpMainToolBar->actions()[7]->setEnabled( true );
-    mpMainToolBar->actions()[9]->setEnabled( true );
-    mpMainToolBar->actions()[10]->setEnabled( true );
-    mpMainToolBar->actions()[11]->setEnabled( true );
-    mpMainToolBar->actions()[12]->setEnabled( true );
-    mpMainToolBar->actions()[13]->setEnabled( true );
-    mpMainToolBar->actions()[14]->setEnabled( true );
 }
 
 bool mudlet::openWindow( Host * pHost, const QString & name )
@@ -1633,21 +1514,6 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
-            // close script-editor
-            if( pC->mpHost->mpEditorDialog )
-            {
-                pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-                pC->mpHost->mpEditorDialog->close();
-            }
-            if( pC->mpHost->mpNotePad )
-            {
-                pC->mpHost->mpNotePad->save();
-                pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
-                pC->mpHost->mpNotePad->close();
-            }
-
-
-            // close console
             pC->close();
         }
     }
@@ -1727,113 +1593,6 @@ void mudlet::connectToServer()
     enableToolbarButtons();
 }
 
-void mudlet::show_trigger_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_triggers();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_alias_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_aliases();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_timer_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_timers();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_script_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_scripts();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_key_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_keys();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_variable_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_vars();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_action_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgTriggerEditor * pEditor = pHost->mpEditorDialog;
-    if( ! pEditor ) return;
-    pEditor->slot_show_actions();
-    pEditor->raise();
-    pEditor->show();
-}
-
-void mudlet::show_options_dialog()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgProfilePreferences * pDlg = new dlgProfilePreferences( this, pHost );
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    if( ! pDlg ) return;
-    pDlg->show();
-}
-
-
-void mudlet::show_help_dialog()
-{
-    QDesktopServices::openUrl(QUrl("http://wiki.mudlet.org/w/Manual:Contents"));
-}
-
-void mudlet::slot_show_help_dialog_video()
-{
-    QDesktopServices::openUrl(QUrl("http://www.mudlet.org/media/"));
-}
-
-void mudlet::slot_show_help_dialog_forum()
-{
-    QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/"));
-}
-
-
 void mudlet::slot_mapper()
 {
     Host * pHost = getActiveHost();
@@ -1900,38 +1659,6 @@ void mudlet::check_for_mappingscript()
 void mudlet::slot_open_mappingscripts_page()
 {
     QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
-}
-
-void mudlet::slot_show_help_dialog_download()
-{
-    QDesktopServices::openUrl(QUrl("http://sourceforge.net/projects/mudlet/files/"));
-}
-
-void mudlet::slot_show_about_dialog()
-{
-    dlgAboutDialog * pDlg = new dlgAboutDialog( this );
-    pDlg->raise();
-    pDlg->show();
-}
-
-void mudlet::slot_notes()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    dlgNotepad * pNotes = pHost->mpNotePad;
-    if( ! pNotes )
-    {
-        pHost->mpNotePad = new dlgNotepad( pHost );
-        pNotes = pHost->mpNotePad;
-
-        QTextCharFormat format;
-        format.setFont( pHost->mDisplayFont );
-        pNotes->notesEdit->setCurrentCharFormat( format );
-        pNotes->restore();
-        pNotes->setWindowTitle( pHost->getName()+" notes" );
-    }
-    pNotes->raise();
-    pNotes->show();
 }
 
 void mudlet::slot_reconnect()
@@ -2099,10 +1826,6 @@ void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyV
     pHost->mIsProfileLoadingSequence = true;
     addConsoleForNewHost( pHost );
     pHost->mBlockScriptCompile = false;
-    pHost->mLuaInterpreter.loadGlobal();
-    LuaInterface * lI = pHost->getLuaInterface();
-    lI->getVars( true );
-    pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 
     //do modules here

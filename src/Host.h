@@ -27,9 +27,7 @@
 #include "ctelnet.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
-#include "TimerUnit.h"
-#include "TLuaInterpreter.h"
-#include "TriggerUnit.h"
+
 #include "Java.h"
 
 #include "pre_guard.h"
@@ -85,34 +83,16 @@ public:
     bool               closingDown();
     void               assemblePath();
     int                check_for_mappingscript();
-    TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
-    TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
-    AliasUnit *        getAliasUnit()                   { return & mAliasUnit; }
-    ActionUnit *       getActionUnit()                  { return & mActionUnit; }
     KeyUnit *          getKeyUnit()                     { return & mKeyUnit; }
-    ScriptUnit *       getScriptUnit()                  { return & mScriptUnit; }
     void               connectToServer();
     void               send( QString cmd, bool wantPrint = true, bool dontExpandAliases = false );
     void               sendRaw( QString s );
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
-    TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
-    LuaInterface *     getLuaInterface() { return mLuaInterface.data(); }
     void               incomingStreamProcessor(const QString & paragraph, int line );
     void               postIrcMessage(const QString&, const QString&, const QString& );
-    void               enableTimer(const QString & );
-    void               disableTimer(const QString & );
-    void               enableTrigger(const QString & );
-    void               disableTrigger(const QString & );
     void               enableKey(const QString & );
     void               disableKey(const QString & );
-    bool               killTimer(const QString & );
-    bool               killTrigger(const QString & );
-    double             stopStopWatch( int );
-    bool               resetStopWatch( int );
-    bool               startStopWatch( int );
-    double             getStopWatchTime( int );
-    int                createStopWatch();
     void               startSpeedWalk();
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
@@ -145,13 +125,6 @@ public:
 
     cTelnet            mTelnet;
     QPointer<TConsole> mpConsole;
-    TLuaInterpreter    mLuaInterpreter;
-    QScopedPointer<LuaInterface> mLuaInterface;
-    TriggerUnit        mTriggerUnit;
-    TimerUnit          mTimerUnit;
-    ScriptUnit         mScriptUnit;
-    AliasUnit          mAliasUnit;
-    ActionUnit         mActionUnit;
     KeyUnit            mKeyUnit;
 
     int                commandLineMinimumHeight;

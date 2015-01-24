@@ -239,7 +239,6 @@ void cTelnet::handle_socket_signal_connected()
     postMessage( msg );
     QString func = "onConnect";
     QString nothing = "";
-    mpHost->mLuaInterpreter.call(func, nothing );
     mConnectionTime.start();
     if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
         mTimerLogin->start(2000);
@@ -827,7 +826,6 @@ void cTelnet::processTelnetCommand( const string & command )
               QString _m = command.c_str();
               if( command.size() < 6 ) return;
               _m = _m.mid( 3, command.size()-5 );
-              mpHost->mLuaInterpreter.msdp2Lua( _m.toLocal8Bit().data(), _m.length() );
               return;
           }
           // ATCP
@@ -1060,7 +1058,6 @@ void cTelnet::setATCPVariables(const QString & msg )
         arg = arg.prepend( var.section( " ", 1 ) );
         var = var.section( " ", 0, 0 );
     }
-    mpHost->mLuaInterpreter.setAtcpTable( var, arg );
     if( var.startsWith("RoomNum") )
     {
         if( mpHost->mpMap )
@@ -1146,7 +1143,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
     arg.remove( '\n' );
     // remove \r's from the data, as yajl doesn't like it
     arg.remove(QChar('\r'));
-    mpHost->mLuaInterpreter.setGMCPTable( var, arg );
 }
 
 void cTelnet::setChannel102Variables(const QString & msg )
@@ -1161,7 +1157,6 @@ void cTelnet::setChannel102Variables(const QString & msg )
     {
         int _m = msg.at(0).toLatin1();
         int _a = msg.at(1).toLatin1();
-        mpHost->mLuaInterpreter.setChannel102Table( _m, _a );
     }
 }
 

@@ -1193,8 +1193,6 @@ void dlgConnectionProfiles::slot_connectToServer()
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     bool needsGenericPackagesInstall = false;
-    LuaInterface * lI = pHost->getLuaInterface();
-    lI->getVars( true );
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+profile_history->itemData(profile_history->currentIndex()).toString());   //entries[0]);
