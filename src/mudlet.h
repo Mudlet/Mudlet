@@ -125,17 +125,11 @@ public:
    void                          showUnzipProgress( const QString& txt );
    bool                          openWebPage(const QString& path);
    void                          processEventLoopHack();
-   static QPointer<TConsole>     mpDebugConsole;
-   static QMainWindow*           mpDebugArea;
-   static bool                   debugMode;
    QMap<Host *, TConsole *>     mConsoleMap;
    QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
    QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
    QIcon *                       testicon;
-   bool                          mShowMenuBar;
-   bool                          mShowToolbar;
    bool                          isGoingDown() { return mIsGoingDown; }
-   int                           mMainIconSize;
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
    void                          replayStart();
@@ -150,10 +144,6 @@ public:
    void                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
-   QTime                         mReplayTime;
-   int                           mReplaySpeed;
-   QToolBar *                    mpMainToolBar;
-   QMap<QTimer *, TTimer *>      mTimerMap;
    QString                       version;
    QPointer<Host>                mpCurrentActiveHost;
    bool                          mAutolog;
@@ -162,28 +152,20 @@ public:
    QMediaPlayer *                mpMusicBox3;
    QMediaPlayer *                mpMusicBox4;
    QTabBar *                     mpTabBar;
-   QStringList                   packagesToInstallList;
 
 
 
 public slots:
 
    void                          processEventLoopHack_timerRun();
-   void                          slot_mapper();
    void                          slot_replayTimeChanged();
    void                          slot_replaySpeedUp();
    void                          slot_replaySpeedDown();
    void                          toggleFullScreenView();
    void                          slot_userToolBar_orientation_changed(Qt::Orientation);
-   void                          slot_show_about_dialog();
-   void                          slot_show_help_dialog_video();
-   void                          slot_show_help_dialog_forum();
-   void                          slot_show_help_dialog_download();
-   void                          slot_open_mappingscripts_page();
    void                          slot_module_clicked(QTableWidgetItem*);
    void                          slot_module_changed(QTableWidgetItem*);
    void                          slot_multi_view();
-   void                          slot_stopAllTriggers();
    void                          slot_userToolBar_hovered( QAction* pA );
    void                          slot_connection_dlg_finnished( const QString& profile, int historyVersion );
    void                          slot_timer_fires();
@@ -195,15 +177,6 @@ public slots:
    void                          slot_reconnect();
    void                          slot_close_profile_requested(int);
    void                          startAutoLogin();
-   void                          slot_uninstall_package();
-   void                          slot_install_package();
-   void                          slot_package_manager();
-   void                          slot_package_exporter();
-   void                          slot_uninstall_module();
-   void                          slot_install_module();
-   void                          slot_module_manager();
-   void                          layoutModules();
-   void                          slot_help_module();
 
 protected:
 
@@ -241,23 +214,6 @@ private:
 
    QMenu *                       restoreBar;
    bool                          mIsGoingDown;
-
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
-   QAction *                     actionSpeedDisplay;
-   QAction *                     actionReplayTime;
-   QLabel *                      replaySpeedDisplay;
-   QLabel *                      replayTime;
-   QTimer *                      replayTimer;
-   QToolBar *                    replayToolBar;
-
-   QAction *                     actionReconnect;
-
-   void                          check_for_mappingscript();
-
-   QListWidget *                 packageList;
-   QPushButton *                 uninstallButton;
-   QPushButton *                 installButton;
 
    QTableWidget *                 moduleTable;
    QPushButton *                 moduleUninstallButton;

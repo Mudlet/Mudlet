@@ -210,24 +210,7 @@ void Host::saveModules(int sync)
         {
             savePath.rename(filename_xml,dirName+moduleName+time);//move the old file, use the key (module name) as the file
         }
-        QFile file_xml( filename_xml );
-        if ( file_xml.open( QIODevice::WriteOnly ) )
-        {
-            XMLexport writer(this);
-            writer.writeModuleXML( & file_xml, it.key() );
-            file_xml.close();
 
-            if (entry[1].toInt())
-                modulesToSync << it.key();
-        }
-        else
-        {
-            file_xml.close();
-            //FIXME: Should have an error reported to user
-            //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
-            mModuleSaveBlock = true;
-            return;
-        }
         if( !zipName.isEmpty() )
         {
             struct zip_source *s = zip_source_file( zipFile, filename_xml.toStdString().c_str(), 0, 0 );
@@ -293,8 +276,8 @@ void Host::reloadModule(const QString& moduleName)
         it.next();
         QStringList entry = it.value();
         if (it.key() == moduleName){
-            uninstallPackage(it.key(),2);
-            installPackage(entry[0],2);
+            //uninstallPackage(it.key(),2);
+            //installPackage(entry[0],2);
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.

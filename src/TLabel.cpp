@@ -28,6 +28,8 @@
 #include <QtEvents>
 #include "post_guard.h"
 
+//TODO probably delete this whole class, yes?
+
 
 TLabel::TLabel( QWidget * pW )
 : QLabel( pW )
@@ -65,7 +67,6 @@ void TLabel::mousePressEvent( QMouseEvent * event )
     {
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mScript, mpParameters );
         }
         event->accept();
         return;
@@ -79,7 +80,6 @@ void TLabel::leaveEvent( QEvent * event )
     if (mLeave != ""){
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mLeave, mLeaveParams );
         }
         event->accept();
         return;
@@ -92,7 +92,6 @@ void TLabel::enterEvent( QEvent * event )
     if (mEnter != ""){
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mEnter, mEnterParams );
         }
         event->accept();
         return;

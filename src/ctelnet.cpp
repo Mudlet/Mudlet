@@ -445,7 +445,6 @@ void cTelnet::replyFinished( QNetworkReply * reply )
     file.write( reply->readAll() );
     file.flush();
     file.close();
-    mpHost->installPackage( mServerPackage, 0);
     QString packageName = mServerPackage.section("/",-1 );
     packageName.replace( ".zip" , "" );
     packageName.replace( "trigger", "" );
@@ -866,7 +865,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
                       mpHost->mpConsole->print(_smsg.toLatin1().data());
-                      mpHost->uninstallPackage( mpHost->mServerGUI_Package_name, 0);
                       mpHost->mServerGUI_Package_version = newVersion;
                   }
                   QString url = _m.section( '\n', 1 );
@@ -1095,7 +1093,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
         {
             QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
             mpHost->mpConsole->print(_smsg.toLatin1().data());
-            mpHost->uninstallPackage( mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
         }
         QString url = msg.section( '\n', 1 );
@@ -1507,60 +1504,8 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
     return outSize;
 }
 
-
-void cTelnet::recordReplay()
-{
-    lastTimeOffset = 0;
-    timeOffset.start();
-}
-
 char loadBuffer[100001];
 int loadedBytes;
-QDataStream replayStream;
-QFile replayFile;
-
-void cTelnet::loadReplay( QString & name )
-{
-    replayFile.setFileName( name );
-    QString msg = "loading replay " + name;
-    postMessage( msg );
-    replayFile.open( QIODevice::ReadOnly );
-    replayStream.setDevice( &replayFile );
-    loadingReplay = true;
-    mudlet::self()->replayStart();
-    _loadReplay();
-}
-
-void cTelnet::_loadReplay()
-{
-    if( ! replayStream.atEnd() )
-    {
-        int offset;
-        int amount;
-        replayStream >> offset;
-        replayStream >> amount;
-
-        char * pB = &loadBuffer[0];
-        loadedBytes = replayStream.readRawData ( pB, amount );
-        qDebug("_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f seconds.)",
-               loadedBytes,
-               amount,
-               offset / 1000.0,
-               offset / (1000.0 * mudlet::self()->mReplaySpeed));
-        loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
-        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
-    }
-    else
-    {
-        loadingReplay = false;
-        replayFile.close();
-        QString msg = "The replay has ended.\n";
-        postMessage( msg );
-        mudlet::self()->replayOver();
-    }
-}
-
 
 void cTelnet::readPipe()
 {
@@ -1674,7 +1619,7 @@ void cTelnet::readPipe()
     }
 
     mpHost->mpConsole->finalize();
-    if( loadingReplay ) _loadReplay();
+
 }
 
 void cTelnet::handle_socket_signal_readyRead()

@@ -1196,9 +1196,6 @@ void dlgConnectionProfiles::slot_connectToServer()
     {
         QFile file(folder+"/"+profile_history->itemData(profile_history->currentIndex()).toString());   //entries[0]);
         file.open(QFile::ReadOnly | QFile::Text);
-        XMLimport importer( pHost );
-        qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
-        importer.importPackage( & file, 0);
     }
     else
     {
@@ -1229,29 +1226,6 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->setLogin( login_entry->text().trimmed() );
         else
             slot_update_login( pHost->getLogin() );
-    }
-
-    if( needsGenericPackagesInstall )
-    {
-        //install generic mapper script
-        if( pHost->getUrl().toLower().contains( "aetolia.com" ) ||
-            pHost->getUrl().toLower().contains( "achaea.com" ) ||
-            pHost->getUrl().toLower().contains( "lusternia.com" ) ||
-            pHost->getUrl().toLower().contains( "midkemiaonline.com" ) ||
-            pHost->getUrl().toLower().contains( "imperian.com" ) )
-        {
-           mudlet::self()->packagesToInstallList.append(":/mudlet-mapper.xml");
-        }
-        else if( pHost->getUrl().toLower().contains("3scapes.org") ||
-                 pHost->getUrl().toLower().contains("3k.org"))
-        {
-            mudlet::self()->packagesToInstallList.append(":/3k-mapper.xml");
-        }
-
-        mudlet::self()->packagesToInstallList.append(":/deleteOldProfiles.xml");
-        mudlet::self()->packagesToInstallList.append(":/echo.xml");
-        mudlet::self()->packagesToInstallList.append(":/run-lua-code-v4.xml");
-
     }
 
     emit signal_establish_connection( profile_name, 0 );
@@ -1285,8 +1259,7 @@ void dlgConnectionProfiles::slot_chose_history()
     mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
     Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
     if( ! pHost ) return;
-    XMLimport importer( pHost );
-    importer.importPackage( & file );
+
 
     emit signal_establish_connection( profile_name, -1 );
     QDialog::accept();

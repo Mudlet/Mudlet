@@ -1768,7 +1768,6 @@ void TBuffer::translateToPlainText( std::string & s )
             mMudLine.clear();
             mMudBuffer.clear();
             int line = lineBuffer.size()-1;
-            mpHost->mpConsole->runTriggers( line );
             wrap( lineBuffer.size()-1 );
             msPos++;
             std::deque<TChar> newLine;

@@ -1116,7 +1116,7 @@ void TTextEdit::slot_popupMenu()
     {
         cmd = mPopupCommands[pA->text()];
     }
-    mpHost->mLuaInterpreter.compileAndExecuteScript( cmd );
+
 }
 
 void TTextEdit::mousePressEvent( QMouseEvent * event )
@@ -1146,7 +1146,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        // TODO maybe add event
     }
     if( event->button() == Qt::LeftButton )
     {
@@ -1169,7 +1169,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     if( command.size() > 0 )
                     {
                         func = command.at(0);
-                        mpHost->mLuaInterpreter.compileAndExecuteScript( func );
+
                         return;
                     }
                 }
@@ -1433,7 +1433,7 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        // TODO maybe add event
     }
 }
 

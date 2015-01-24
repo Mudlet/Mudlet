@@ -125,7 +125,6 @@ void TKey::compileAll()
     mNeedsToBeCompiled = true;
     if( ! compileScript() )
     {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
     for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -141,7 +140,6 @@ void TKey::compile()
     {
         if( ! compileScript() )
         {
-            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;}
             mOK_code = false;
         }
     }
@@ -163,20 +161,9 @@ bool TKey::setScript( QString & script )
 bool TKey::compileScript()
 {
     mFuncName = QString("Key")+QString::number( mID );
-    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
-    QString error;
-    if( mpHost->mLuaInterpreter.compile( code, error ) )
-    {
-        mNeedsToBeCompiled = false;
-        mOK_code = true;
-        return true;
-    }
-    else
-    {
-        mOK_code = false;
-        setError( error );
-        return false;
-    }
+
+    //TODO probably delete whole TKey class
+    return false;
 }
 
 void TKey::execute()
@@ -192,6 +179,6 @@ void TKey::execute()
             return;
         }
     }
-    mpHost->mLuaInterpreter.call( mFuncName, mName );
+
 }
 

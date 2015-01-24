@@ -20,18 +20,17 @@
  ***************************************************************************/
 
 
+#include <QPainter>
+
 #include "TConsole.h"
 
 
-#include "dlgMapper.h"
 #include "Host.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TLabel.h"
-#include "TMap.h"
-#include "TRoomDB.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "XMLexport.h"
@@ -636,12 +635,9 @@ void TConsole::resizeEvent( QResizeEvent * event )
 
     if( ! mIsDebugConsole && ! mIsSubConsole )
     {
-        TLuaInterpreter * pLua = mpHost->getLuaInterpreter();
-        QString func = "handleWindowResizeEvent";
-        QString n = "WindowResizeEvent";
-        pLua->call( func, n );
 
-        TEvent me;
+        // TODO add event
+        /*TEvent me;
         me.mArgumentList.append( "sysWindowResizeEvent" );
         me.mArgumentList.append( QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth) );
         me.mArgumentList.append( QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()) );
@@ -650,7 +646,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        mpHost->raiseEvent( me );
+        mpHost->raiseEvent( me ); */
     }
 }
 
@@ -696,8 +692,6 @@ void TConsole::closeEvent( QCloseEvent *event )
         if( ! mudlet::self()->isGoingDown() )
         {
             hide();
-            mudlet::mpDebugArea->setVisible(false);
-            mudlet::debugMode = false;
             event->ignore();
             return;
         }
@@ -727,125 +721,9 @@ void TConsole::closeEvent( QCloseEvent *event )
         TEvent conCloseEvent;
         conCloseEvent.mArgumentList.append( "sysExitEvent" );
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent( conCloseEvent );
-
-        if( mpHost->mFORCE_SAVE_ON_EXIT )
-        {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-            QDir dir_xml;
-            if( ! dir_xml.exists( directory_xml ) )
-            {
-                dir_xml.mkpath( directory_xml );
-            }
-            QFile file_xml( filename_xml );
-            if( file_xml.open( QIODevice::WriteOnly ) )
-            {
-                mpHost->modulesToWrite.clear();
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-                mpHost->saveModules(0);
-
-            }
-            if( mpHost->mpMap->mpRoomDB->size() > 0 )
-            {
-                QDir dir_map;
-                QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
-                QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-                if( ! dir_map.exists( directory_map ) )
-                {
-                    dir_map.mkpath( directory_map );
-                }
-                QFile file_map( filename_map );
-                if ( file_map.open( QIODevice::WriteOnly ) )
-                {
-                    QDataStream out( & file_map );
-                    mpHost->mpMap->serialize( out );
-                    file_map.close();
-                }
-            }
-            event->accept();
-            return;
-        }
+        // TODO add event
     }
 
-    if( profile_name != "default_host" && ! mUserAgreedToCloseConsole )
-    {
-        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
-        if( choice == QMessageBox::Cancel )
-        {
-            event->setAccepted(false);
-            event->ignore();
-            return;
-        }
-        if( choice == QMessageBox::Yes )
-        {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-            QDir dir_xml;
-            if( ! dir_xml.exists( directory_xml ) )
-            {
-                dir_xml.mkpath( directory_xml );
-            }
-            QFile file_xml( filename_xml );
-            if( file_xml.open( QIODevice::WriteOnly ) )
-            {
-                /*XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();*/
-                mpHost->modulesToWrite.clear();
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-                mpHost->saveModules(0);
-                if( mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0 )
-                {
-                    QDir dir_map;
-                    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
-                    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-                    if( ! dir_map.exists( directory_map ) )
-                    {
-                        dir_map.mkpath( directory_map );
-                    }
-                    QFile file_map( filename_map );
-                    if ( file_map.open( QIODevice::WriteOnly ) )
-                    {
-                        QDataStream out( & file_map );
-                        mpHost->mpMap->serialize( out );
-                        file_map.close();
-                    }
-                }
-                event->accept();
-                return;
-            }
-            else
-            {
-                QMessageBox::critical( this, "ERROR: Not closing profile.", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-                goto ASK;
-            }
-
-        }
-        else if( choice == QMessageBox::No )
-        {
-            event->accept();
-            return;
-        }
-        else
-        {
-            if( ! mudlet::self()->isGoingDown() )
-            {
-                QMessageBox::warning( this, "Aborting exit","Session exit aborted on user request." );
-                event->ignore();
-                return;
-            }
-            else
-            {
-                event->accept();
-                return;
-            }
-        }
-    }
 }
 
 
@@ -901,35 +779,6 @@ void TConsole::slot_toggleLogging()
         if( mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
         mLogFile.close();
         QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
-    }
-}
-
-void TConsole::slot_toggleReplayRecording()
-{
-    if( mIsDebugConsole ) return;
-    mRecordReplay = ! mRecordReplay;
-    if( mRecordReplay )
-    {
-        QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        mLogFileName.append(".dat");
-        QDir dirLogFile;
-        if( ! dirLogFile.exists( directoryLogFile ) )
-        {
-            dirLogFile.mkpath( directoryLogFile );
-        }
-        mReplayFile.setFileName( mLogFileName );
-        mReplayFile.open( QIODevice::WriteOnly );
-        mReplayStream.setDevice( &mReplayFile );
-        mpHost->mTelnet.recordReplay();
-        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName() + "\n";
-        printSystemMessage( message );
-    }
-    else
-    {
-        mReplayFile.close();
-        QString message = QString("Replay recording has been stopped. File: ") + mLogFile.fileName() + "\n";
         printSystemMessage( message );
     }
 }
@@ -1072,78 +921,16 @@ void TConsole::setConsoleFgColor( int r, int g, int b )
     changeColors();
 }
 
-/*std::string TConsole::getCurrentTime()
-{
-    time_t t;
-    time(&t);
-    tm lt;
-    ostringstream s;
-    s.str("");
-    struct timeval tv;
-    struct timezone tz;
-    gettimeofday(&tv, &tz);
-    localtime_r( &t, &lt );
-    s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
-    string time = s.str();
-    return time;
-} */
-
-
-
-void TConsole::loadRawFile( std::string n )
-{
-    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    QString fileName = directoryLogFile + "/"+QString(n.c_str());
-    mpHost->mTelnet.loadReplay( fileName );
-}
 
 void TConsole::printOnDisplay( std::string & incomingSocketData )
 {
-    //buffer.messen();
     QString prompt ="";//FIXME
 
     mProcessingTime.restart();
     mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
-//    if( mLogToLogFile )
-//    {
-//        if( ! mIsDebugConsole )
-//        {
-//            if( buffer.size() < mLastBufferLogLine )
-//            {
-//                mLastBufferLogLine -= buffer.mBatchDeleteSize;
-//                qDebug()<<"---> RESETTING mLastBufferLogLine";
-//                if( mLastBufferLogLine < 0 )
-//                {
-//                    mLastBufferLogLine = 0;
-//                }
-//            }
-//            if( buffer.size() > mLastBufferLogLine + 1 )
-//            {
-//                for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
-//                {
-//                    QString toLog;
-//                    if( mpHost->mRawStreamDump )
-//                    {
-//                        QPoint P1 = QPoint(0,i);
-//                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
-//                        toLog = buffer.bufferToHtml(P1, P2);
-//                    }
-//                    else
-//                    {
-//                        toLog = buffer.lineBuffer[i];
-//                        toLog.append("\n");
-//                    }
-//                    mLogStream << toLog;
-//                    qDebug()<<"LOG:"<<i<<" lastLogLine="<<mLastBufferLogLine<<" size="<<buffer.size()<<" toLog<"<<toLog<<">";
-//                    mLastBufferLogLine++;
-//                }
-//                mLastBufferLogLine--;
-//            }
-//            mLogStream.flush();
-//        }
-//    }
+
     double processT = mProcessingTime.elapsed();
     if( mpHost->mTelnet.mGA_Driver )
     {
@@ -1156,27 +943,6 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     }
 }
 
-void TConsole::runTriggers( int line )
-{
-    mDeletedLines = 0;
-    mUserCursor.setY( line );
-    mIsPromptLine = buffer.promptBuffer.at( line );
-    mEngineCursor = line;
-    mUserCursor.setX( 0 );
-    mCurrentLine = buffer.line( line );
-    mpHost->getLuaInterpreter()->set_lua_string( cmLuaLineVariable, mCurrentLine );
-    mCurrentLine.append('\n');
-
-    if( mudlet::debugMode )
-    {
-        TDebug(QColor(Qt::darkGreen),QColor(Qt::black)) << "new line arrived:">>0; TDebug(QColor(Qt::lightGray),QColor(Qt::black)) << mCurrentLine<<"\n">>0;
-    }
-    mpHost->incomingStreamProcessor( mCurrentLine, line );
-    mIsPromptLine = false;
-
-    //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
-    //       ansonsten einfach löschen
-}
 
 void TConsole::finalize()
 {
@@ -1503,18 +1269,13 @@ void TConsole::insertLink(const QString& text, QStringList & func, QStringList &
             if( r < o )
             {
                 int a = -1*(o-r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
             }
             if( r > o )
             {
                 int a = r-o;
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
             }
         }
-        else
-        {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );
-        }
+
         if( y < mEngineCursor )
         {
             if( customFormat )
@@ -1614,23 +1375,6 @@ void TConsole::insertText(const QString& text, QPoint P )
     int r = text.size();
     if( mTriggerEngineMode )
     {
-        if( hasSelection() )
-        {
-            if( r < o )
-            {
-                int a = -1*(o-r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
-            }
-            if( r > o )
-            {
-                int a = r-o;
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
-            }
-        }
-        else
-        {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );
-        }
         if( y < mEngineCursor )
         {
             buffer.insertInLine( P, text, mFormatCurrent );
@@ -1688,27 +1432,6 @@ void TConsole::replace(const QString& text )
     int o = P_end.x() - P_begin.x();
     int r = text.size();
 
-    if( mTriggerEngineMode )
-    {
-        if( hasSelection() )
-        {
-            if( r < o )
-            {
-                int a = -1*(o-r);
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
-            }
-            if( r > o )
-            {
-                int a = r-o;
-                mpHost->getLuaInterpreter()->adjustCaptureGroups( x, a );
-            }
-        }
-        else
-        {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups( x, r );
-        }
-    }
-
     buffer.replaceInLine( P_begin, P_end, text, mFormatCurrent );
 }
 
@@ -1718,60 +1441,6 @@ void TConsole::skipLine()
     {
         mDeletedLines++;
     }
-}
-
-bool TConsole::saveMap(const QString& location)
-{
-    QDir dir_map;
-    QString filename_map;
-    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
-
-    if (location == "")
-        filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-    else
-        filename_map = location;
-
-    if( ! dir_map.exists( directory_map ) )
-    {
-        dir_map.mkpath( directory_map );
-    }
-    QFile file_map( filename_map );
-    if ( file_map.open( QIODevice::WriteOnly ) )
-    {
-        QDataStream out( & file_map );
-        mpHost->mpMap->serialize( out );
-        file_map.close();
-    } else
-        return false;
-
-    return true;
-}
-
-bool TConsole::loadMap(const QString& location)
-{
-    if( !mpHost ) return false;
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper )
-    {
-        mudlet::self()->slot_mapper();
-    }
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
-
-    mpHost->mpMap->mapClear();
-
-    if ( mpHost->mpMap->restore(location) )
-    {
-        mpHost->mpMap->init( mpHost );
-        mpHost->mpMap->mpMapper->mp2dMap->init();
-        mpHost->mpMap->mpMapper->show();
-        if( mpHost->mpMap )
-            if( mpHost->mpMap->mpMapper )
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-        // previous selections stay, so we need to clear it
-        //mpHost->mpMap->mpMapper->mp2dMap->deselect();
-        return true;
-    }
-
-    return false;
 }
 
 bool TConsole::deleteLine( int y )
@@ -2055,8 +1724,6 @@ int TConsole::select(const QString& text, int numOfMatch )
     if( mUserCursor.y()<0 ) return -1;
     if( mUserCursor.y()>=buffer.size() ) return -1;
 
-    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: ">>0; TDebug(QColor(Qt::red),QColor(Qt::black))<<mUserCursor.y()<<"#:">>0; TDebug(QColor(Qt::gray),QColor(Qt::black)) << buffer.line( mUserCursor.y() ) << "\n" >> 0;}
-
     int begin = -1;
     for( int i=0;i<numOfMatch; i++ )
     {
@@ -2080,16 +1747,11 @@ int TConsole::select(const QString& text, int numOfMatch )
     P_end.setX( end );
     P_end.setY( mUserCursor.y() );
 
-    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkRed),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;}
     return begin;
 }
 
 bool TConsole::selectSection( int from, int to )
 {
-    if( mudlet::debugMode )
-    {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::darkMagenta),QColor(Qt::black)) <<"\nselectSection("<<from<<","<<to<<"): line under current user cursor: " << buffer.line( mUserCursor.y() ) << "\n" >> 0;}
-    }
     if( from < 0 )
     {
         return false;
@@ -2108,7 +1770,6 @@ bool TConsole::selectSection( int from, int to )
     P_end.setX( from + to );
     P_end.setY( mUserCursor.y() );
 
-    if( mudlet::debugMode ){ TDebug(QColor(Qt::darkMagenta),QColor(Qt::black))<<"P_begin("<<P_begin.x()<<"/"<<P_begin.y()<<"), P_end("<<P_end.x()<<"/"<<P_end.y()<<") selectedText = " << buffer.line( mUserCursor.y() ).mid(P_begin.x(), P_end.x()-P_begin.x() ) <<"\n" >> 0;}
     return true;
 }
 
@@ -2414,30 +2075,6 @@ TLabel * TConsole::createLabel(const QString & name, int x, int y, int width, in
     }
 }
 
-void TConsole::createMapper( int x, int y, int width, int height )
-{
-    if( ! mpMapper )
-    {
-        mpMapper = new dlgMapper( mpMainFrame, mpHost, mpHost->mpMap.data() );
-        mpHost->mpMap->mpM = mpMapper->glWidget;
-        mpHost->mpMap->mpHost = mpHost;
-        mpHost->mpMap->mpMapper = mpMapper;
-        mpMapper->mpHost = mpHost;
-        mpHost->mpMap->restore("");
-        mpHost->mpMap->init( mpHost );
-
-        TEvent mapOpenEvent;
-        mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent( mapOpenEvent );
-    }
-    mpMapper->resize( width, height );
-    mpMapper->move( x, y );
-    //mpMapper->mp2dMap->init();
-    mpMapper->mp2dMap->gridMapSizeChange = true; //mapper size has changed, but only init grid map when necessary
-    mpMapper->show();
-}
-
 bool TConsole::createButton(const QString & name, int x, int y, int width, int height, bool fillBackground )
 {
     std::string key = name.toLatin1().data();
@@ -2676,60 +2313,6 @@ void TConsole::appendBuffer( TBuffer bufferSlice )
     buffer.appendBuffer( bufferSlice );
     console->showNewLines();
     console2->showNewLines();
-}
-
-
-void TConsole::slot_stop_all_triggers( bool b )
-{
-    if( b )
-    {
-        mpHost->stopAllTriggers();
-        emergencyStop->setIcon( QIcon( QStringLiteral( ":/icons/red-bomb.png" ) ) );
-    }
-    else
-    {
-        mpHost->reenableAllTriggers();
-        emergencyStop->setIcon( QIcon( QStringLiteral( ":/icons/edit-bomb.png" ) ) );
-    }
-}
-
-void TConsole::showStatistics()
-{
-    QStringList header;
-    header << "\n"
-           << "+--------------------------------------------------------------+\n"
-           << "|               system statistics                              |\n"
-           << "+--------------------------------------------------------------+\n";
-
-    QString h = header.join("");
-    QString msg = h;
-    print( msg, 150, 120, 0, 0, 0, 0 );
-
-    QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nATCP events:\n]]);setUnderline(false);setFgColor(150,120,0); display( atcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nchannel102 events:\n]]);setUnderline(false);setFgColor(150,120,0);display( channel102 );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-
-
-    script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-
-    QString r1 = mpHost->getTriggerUnit()->assembleReport();
-    msg = r1;
-    print( msg, 150, 120, 0, 0, 0, 0 );
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-    QString r2 = mpHost->getTimerUnit()->assembleReport();
-    QString footer = QString("\n+--------------------------------------------------------------+\n" );
-    msg = r2;
-    print( msg, 150, 120, 0, 0, 0, 0 );
-    mpHost->mpConsole->print( footer, 150, 120, 0, 0, 0, 0 );
-    script = "resetFormat();";
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-
-    mpHost->mpConsole->raise();
 }
 
 void TConsole::slot_searchBufferUp()

@@ -90,10 +90,8 @@ unix:!macx {
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
     LIBS += -lpcre \
-        -llua5.1 \
         -lhunspell \
         -L/usr/local/lib/ \
-        -lyajl \
         -lGLU \
         -lzip \
         -lz
@@ -102,20 +100,15 @@ unix:!macx {
 } else:win32: {
     LIBS += -L"C:\\mudlet5_package" \
         -L"C:\\mingw32\\lib" \
-        -llua51 \
         -lpcre \
         -lhunspell \
         -llibzip \
         -lzlib \
-        -llibzip \
-        -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
-        -lyajl
-    INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
-        "C:\\mingw32\\include" \
+        -llibzip
+    INCLUDEPATH += "C:\\mingw32\\include" \
         "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
         "C:\\mudlet5_package\\boost_1_54_0" \
         "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
-        "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
         "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
         "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
@@ -128,17 +121,6 @@ unix:!macx {
     message("$${TARGET} will be installed to "$${target.path}"...")
 #     DOCS.path = $${DOCS_DIR}
 #     message("Documentation will be installed to "$${DOCS.path}"...")
-    !isEmpty( LUA_DEFAULT_DIR ) {
-# if a directory has been set for the lua files move the detail into the
-# installation details for the unix case:
-        LUA.path = $${LUA_DEFAULT_DIR}
-        LUA_GEYSER.path = $${LUA.path}/geyser
-# and define a preprocessor symbol LUA_DEFAULT_PATH with the value:
-        DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
-# and say what will happen:
-        message("Lua files will be installed to "$${LUA.path}"...")
-        message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
-    }
 }
 # use pkg-config whenever possible for linking on a mac
 # the same should be done on the Linux platform as well
@@ -146,7 +128,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip
+    PKGCONFIG += hunspell libpcre libzip
     INCLUDEPATH += /usr/local/include
 }
 
@@ -169,19 +151,11 @@ SOURCES += \
     TBuffer.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
-    TDebug.cpp \
-    TFlipButton.cpp \
-    TForkedProcess.cpp \
     THighlighter.cpp \
     TKey.cpp \
     TLabel.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
-    TToolBar.cpp \
-    TVar.cpp \
-    VarUnit.cpp \
-    XMLexport.cpp \
-    XMLimport.cpp \
     Java.cpp \
     TTextEdit.cpp
 
@@ -202,9 +176,7 @@ HEADERS += \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
-    TDebug.h \
     TEvent.h \
-    TForkedProcess.h \
     THighlighter.h \
     TKey.h \
     TMatchState.h \
@@ -248,41 +220,10 @@ TEMPLATE = app
 # specified system directories to which a normal user (you?) does not have write
 # access normally.
 
-# Main lua files:
-LUA.files = \
-    $${PWD}/mudlet-lua/lua/DB.lua \
-    $${PWD}/mudlet-lua/lua/DebugTools.lua \
-    $${PWD}/mudlet-lua/lua/GMCP.lua \
-    $${PWD}/mudlet-lua/lua/GUIUtils.lua \
-    $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
-    $${PWD}/mudlet-lua/lua/Other.lua \
-    $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua
-LUA.depends = mudlet
-
-# Geyser lua files:
-LUA_GEYSER.files = \
-    $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserHBox.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserLabel.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
-LUA_GEYSER.depends = mudlet
 
 macx: {
-    # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
-    APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
+    APP_MUDLET_LUA_FILES.files = en_US.aff en_US.dic
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
@@ -292,8 +233,6 @@ macx: {
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
-    ${LUA.files} \
-    ${LUA_GEYSER.files} \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -309,9 +248,7 @@ OTHER_FILES += \
 unix:!macx: {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
     INSTALLS += \
-        target \
-        LUA \
-        LUA_GEYSER
+        target
 }
 
 win32:CONFIG(release, debug|release): LIBS += -L/usr/local/jdk8/jre/lib/amd64/server/release/ -ljvm

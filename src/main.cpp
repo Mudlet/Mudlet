@@ -267,94 +267,14 @@ int main(int argc, char *argv[])
     app->setApplicationName("Mudlet");
     app->setApplicationVersion(APP_VERSION);
 
-    bool show_splash = !(startupAction & 4); // Not --quiet.
 
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
-    if (show_splash) {
-        QPainter painter( &splashImage );
-        unsigned fontSize = 16;
-        QString sourceVersionText = QString( "Version: " APP_VERSION APP_BUILD );
-
-        bool isWithinSpace = false;
-        while( ! isWithinSpace )
-        {
-            QFont font( "DejaVu Serif", fontSize, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
-            QTextLayout versionTextLayout( sourceVersionText, font, painter.device() );
-            versionTextLayout.beginLayout();
-            // Start work in this text item
-            QTextLine versionTextline = versionTextLayout.createLine();
-            // First draw (one line from) the text we have put in on the layout to
-            // see how wide it is..., assuming accutally that it will only take one
-            // line of text
-            versionTextline.setLineWidth( 280 );
-            //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
-            versionTextline.setPosition( QPointF( 0, 0 ) );
-            // Only pretend, so we can see how much space it will take
-            QTextLine dummy = versionTextLayout.createLine();
-            if( ! dummy.isValid() )
-            { // No second line so have got all text in first so can do it
-                isWithinSpace = true;
-                qreal versionTextWidth = versionTextline.naturalTextWidth();
-                // This is the ACTUAL width of the created text
-                versionTextline.setPosition( QPointF( (320 - versionTextWidth) / 2.0 , 270 ) );
-                // And now we can place it centred horizontally
-                versionTextLayout.endLayout();
-                // end the layout process and paint it out
-                painter.setPen( QColor( 176, 64, 0, 255 ) ); // #b04000
-                versionTextLayout.draw( &painter, QPointF( 0, 0 ) );
-            }
-            else
-            { // Too big - text has spilled over onto a second line - so try again
-                fontSize--;
-                versionTextLayout.clearLayout();
-                versionTextLayout.endLayout();
-            }
-        }
-
-        // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar( 169 ) % QString( " Heiko K" ) % QChar( 246 ) % QString( "hn 2008-" ) % QString(__DATE__).mid(7);
-        QFont font( "DejaVu Serif", 16, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
-        QTextLayout copyrightTextLayout( sourceCopyrightText, font, painter.device() );
-        copyrightTextLayout.beginLayout();
-        QTextLine copyrightTextline = copyrightTextLayout.createLine();
-        copyrightTextline.setLineWidth( 280 );
-        copyrightTextline.setPosition( QPointF( 1, 1 ) );
-        qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
-        copyrightTextline.setPosition( QPointF( (320 - copyrightTextWidth) / 2.0 , 340 ) );
-        copyrightTextLayout.endLayout();
-        painter.setPen( QColor( 112, 16, 0, 255 ) ); // #701000
-        copyrightTextLayout.draw( &painter, QPointF( 0, 0 ) );
-    }
-    QPixmap pixmap = QPixmap::fromImage(splashImage);
-    QSplashScreen splash(pixmap);
-    if (show_splash) {
-        splash.show();
-    }
     app->processEvents();
-
-    QString splash_message;
-    if (show_splash) {
-        splash_message.append("Mudlet comes with\n"
-                              "ABSOLUTELY NO WARRANTY!\n"
-                              "This is free software, and you are welcome to\n"
-                              "redistribute it under certain conditions;\n"
-                              "select the 'About' item for details.\n\n");
-        splash_message.append("Locating profiles... ");
-        splash.showMessage(splash_message, Qt::AlignCenter);
-        app->processEvents();
-    }
 
     QString directory = QDir::homePath()+"/.config/mudlet";
     QDir dir;
     if( ! dir.exists( directory ) )
     {
         dir.mkpath( directory );
-    }
-
-    if (show_splash) {
-        splash_message.append("Done.\n\nLoading font files... ");
-        splash.showMessage(splash_message, Qt::AlignCenter);
-        app->processEvents();
     }
 
     if (!QFile::exists(directory+"/COPYRIGHT.TXT")) {
@@ -402,15 +322,6 @@ int main(int argc, char *argv[])
         file_f9.copy( directory+"/VeraMono.ttf" );
     }
 
-    if (show_splash) {
-        splash_message.append("Done.\n\n"
-                              "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!\n\n");
-        splash.showMessage(splash_message, Qt::AlignCenter);
-        app->processEvents();
-    }
-
-    mudlet::debugMode = false;
     FontManager fm;
     fm.addFonts();
     QString home = QDir::homePath()+"/.config/mudlet";
@@ -418,9 +329,7 @@ int main(int argc, char *argv[])
     QFile::link(home, homeLink);
     mudlet::start();
     mudlet::self()->show();
-    if (show_splash) {
-        splash.finish(mudlet::self());
-    }
+
     app->restoreOverrideCursor();
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
