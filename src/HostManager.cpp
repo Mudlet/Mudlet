@@ -120,17 +120,6 @@ QList<QString> HostManager::getHostNameList()
     return mHostPool.keys();
 }
 
-void HostManager::postIrcMessage( QString a, QString b, QString c )
-{
-    QMutexLocker locker(& mPoolLock);
-
-    QList<QSharedPointer<Host> > hostList = mHostPool.values();
-    for( int i=0; i<hostList.size(); i++ )
-    {
-        hostList[i]->postIrcMessage( a, b, c );
-    }
-}
-
 Host * HostManager::getHost( QString hostname )
 {
     QMutexLocker locker(& mPoolLock);

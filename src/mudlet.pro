@@ -159,9 +159,7 @@ INCLUDEPATH += irc/include
 
 SOURCES += \
     ctelnet.cpp \
-    dlgAboutDialog.cpp \
     dlgConnectionProfiles.cpp \
-    dlgKeysMainArea.cpp \
     FontManager.cpp \
     Host.cpp \
     HostManager.cpp \
@@ -185,7 +183,7 @@ SOURCES += \
     XMLexport.cpp \
     XMLimport.cpp \
     Java.cpp \
-    dlgVarsMainArea.cpp
+    TTextEdit.cpp
 
 !msvc:SOURCES +=
 msvc:SOURCES +=
@@ -212,7 +210,10 @@ HEADERS += \
     TMatchState.h \
     TSplitter.h \
     TSplitterHandle.h \
-    Java.h
+    Java.h \
+    Tree.h \
+    TTextEdit.h \
+    TLabel.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.

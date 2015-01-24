@@ -20,14 +20,12 @@
  ***************************************************************************/
 
 
+#include <QTimer>
 #include "mudlet.h"
 
 
 #include "ctelnet.h"
-#include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
-#include "dlgMapper.h"
-#include "dlgProfilePreferences.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "TCommandLine.h"
@@ -35,8 +33,6 @@
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TLabel.h"
-#include "TMap.h"
-#include "TRoomDB.h"
 #include "TTextEdit.h"
 #include "XMLimport.h"
 

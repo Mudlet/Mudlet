@@ -22,11 +22,8 @@
  ***************************************************************************/
 
 
-#include "ActionUnit.h"
-#include "AliasUnit.h"
 #include "ctelnet.h"
 #include "KeyUnit.h"
-#include "ScriptUnit.h"
 
 #include "Java.h"
 
@@ -42,15 +39,7 @@ class QDialog;
 class QPushButton;
 class QListWidget;
 
-class dlgTriggerEditor;
-class TEvent;
-class TArea;
-class LuaInterface;
-class TMap;
-class TRoom;
 class TConsole;
-class dlgNotepad;
-class TMap;
 
 
 class Host  : public QObject
@@ -81,8 +70,6 @@ public:
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
     bool               closingDown();
-    void               assemblePath();
-    int                check_for_mappingscript();
     KeyUnit *          getKeyUnit()                     { return & mKeyUnit; }
     void               connectToServer();
     void               send( QString cmd, bool wantPrint = true, bool dontExpandAliases = false );
@@ -90,28 +77,16 @@ public:
     int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
     void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
     void               incomingStreamProcessor(const QString & paragraph, int line );
-    void               postIrcMessage(const QString&, const QString&, const QString& );
     void               enableKey(const QString & );
     void               disableKey(const QString & );
-    void               startSpeedWalk();
-    //QStringList        getBufferTable( int, int );
-    //QString            getBufferLine( int );
     bool               serialize();
     void               saveModules(int);
     void               reloadModule(const QString& moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }
 
-    void               setIsAutologin( bool b ){ mIsAutologin = b; }
-    bool               isAutologin(){ return mIsAutologin; }
     void               setReplacementCommand(const QString& );
-    void               registerEventHandler(const QString&, TScript * );
     void               registerAnonymousEventHandler(const QString& name, const QString& fun );
-    void               unregisterEventHandler(const QString&, TScript * );
-    void               raiseEvent( const TEvent & event );
     void               resetProfile();
-    void               callEventHandlers();
-    void               stopAllTriggers();
-    void               reenableAllTriggers();
     void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }
     void               set_LF_ON_GA( bool b ){ mLF_ON_GA = b; mTelnet.set_LF_ON_GA( b ); }
     void               adjustNAWS();
@@ -148,8 +123,6 @@ public:
     int                mEncoding;
     QTextStream        mErrorLogStream;
     QFile              mErrorLogFile;
-    QMap<QString, QList<TScript *> > mEventHandlerMap;
-    QMap<QString, TEvent *> mEventMap;
     bool               mFORCE_GA_OFF;
     bool               mFORCE_NO_COMPRESSION;
     bool               mFORCE_SAVE_ON_EXIT;
@@ -171,9 +144,6 @@ public:
     bool               mNoAntiAlias;
 
     QString            mPass;
-    dlgTriggerEditor * mpEditorDialog;
-    QScopedPointer<TMap> mpMap;
-    dlgNotepad *       mpNotePad;
     QStringList        mParagraphList;
 
     int                mPort;

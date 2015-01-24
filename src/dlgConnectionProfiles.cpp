@@ -24,7 +24,6 @@
 
 #include "Host.h"
 #include "HostManager.h"
-#include "LuaInterface.h"
 #include "mudlet.h"
 #include "XMLimport.h"
 

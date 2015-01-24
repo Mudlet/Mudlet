@@ -21,18 +21,16 @@
  ***************************************************************************/
 
 
+#include <QNetworkReply>
+
 #include "ctelnet.h"
 
 
-#include "dlgComposer.h"
-#include "dlgMapper.h"
-#include "glwidget.h"
 #include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TMap.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -212,7 +210,8 @@ void cTelnet::disconnect ()
     TEvent me;
     me.mArgumentList.append( "sysDisconnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+
+    // TODO add event
 
 }
 
@@ -248,7 +247,8 @@ void cTelnet::handle_socket_signal_connected()
     TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+
+    // TODO add event
 
 }
 
@@ -258,7 +258,8 @@ void cTelnet::handle_socket_signal_disconnected()
     TEvent me;
     me.mArgumentList.append( "sysDisconnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+
+    // TODO add event
     QString msg;
     QTime timeDiff(0,0,0,0);
     msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
@@ -305,7 +306,9 @@ bool cTelnet::sendData( QString & data )
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     pE.mArgumentList.append( data );
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( pE );
+
+    // TODO add event
+
     if( mpHost->mAllowToSendCommand )
     {
         string outdata = (outgoingDataCodec->fromUnicode(data)).data();
@@ -1003,7 +1006,9 @@ void cTelnet::processTelnetCommand( const string & command )
       me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
       me.mArgumentList.append( msg );
       me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-      mpHost->raiseEvent( me );
+
+      // TODO add event
+
   }
 }
 
@@ -1038,15 +1043,11 @@ void cTelnet::setATCPVariables(const QString & msg )
         {
             return;
         }
-        mpComposer = new dlgComposer( mpHost );
         //FIXME
         if( arg.startsWith(" ") )
         {
             arg.remove(0,1);
         }
-        mpComposer->init( title, arg );
-        mpComposer->raise();
-        mpComposer->show();
         return;
     }
     var.remove( '.' );
@@ -1057,18 +1058,6 @@ void cTelnet::setATCPVariables(const QString & msg )
         arg.prepend(" ");
         arg = arg.prepend( var.section( " ", 1 ) );
         var = var.section( " ", 0, 0 );
-    }
-    if( var.startsWith("RoomNum") )
-    {
-        if( mpHost->mpMap )
-        {
-            mpHost->mpMap->mRoomId = arg.toInt();
-            if( mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap )
-            {
-                mpHost->mpMap->mpM->update();
-                mpHost->mpMap->mpMapper->mp2dMap->update();
-            }
-        }
     }
 }
 
@@ -1163,7 +1152,6 @@ void cTelnet::setChannel102Variables(const QString & msg )
 void cTelnet::atcpComposerCancel()
 {
     if( ! mpComposer ) return;
-    mpComposer->close();
     mpComposer = 0;
     string msg = "*q\nno\n";
     socketOutRaw( msg );
@@ -1208,27 +1196,7 @@ void cTelnet::atcpComposerSave( QString txt )
         _h += "*s\n";
         socketOutRaw( _h );
     }
-    if( ! mpComposer ) return;
-    mpComposer->close();
-    mpComposer = 0;
 }
-
-/*string cTelnet::getCurrentTime()
-{
-    time_t t;
-    time(&t);
-    tm lt;
-    ostringstream s;
-    s.str("");
-    struct timeval tv;
-    struct timezone tz;
-    gettimeofday(&tv, &tz);
-    localtime_r( &t, &lt );
-    s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
-    string time = s.str();
-    return time;
-} */
-
 
 // Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent
 // additional lines (ending with '\n') to last space character after "-"

@@ -25,8 +25,6 @@
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "TMap.h"
-#include "TRoomDB.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
 
@@ -75,9 +73,6 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mMainIconSize( 3 )
 , mNoAntiAlias( false )
 , mPass( pass )
-, mpEditorDialog(0)
-, mpMap( new TMap( this ) )
-, mpNotePad( 0 )
 , mPort(port)
 , mPrintCommand( true )
 , mRawStreamDump( false )
@@ -161,8 +156,6 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
     mErrorLogFile.setFileName( logFileName );
     mErrorLogFile.open( QIODevice::Append );
     mErrorLogStream.setDevice( &mErrorLogFile );
-    mpMap->restore("");
-    mpMap->init( this );
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
@@ -319,8 +312,6 @@ void Host::resetProfile()
 {
 
     mpConsole->resetMainConsole();
-    mEventHandlerMap.clear();
-    mEventMap.clear();
     mBlockScriptCompile = false;
 
     getKeyUnit()->compileAll();
@@ -329,24 +320,9 @@ void Host::resetProfile()
     TEvent event;
     event.mArgumentList.append( "sysLoadEvent" );
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent( event );
-    qDebug()<<"resetProfile() DONE";
-}
 
-void Host::assemblePath()
-{
-    QStringList list;
-    for( int i=0; i<mpMap->mPathList.size(); i++ )
-    {
-        QString n = QString::number( mpMap->mPathList[i]);
-        list.append( n );
-    }
-    QStringList list2;
-    for( int i=0; i<mpMap->mDirList.size(); i++ )
-    {
-        QString n = mpMap->mDirList[i];
-        list2.append( n );
-    }
+    // TODO add event
+    qDebug()<<"resetProfile() DONE";
 }
 
 void Host::adjustNAWS()
@@ -402,52 +378,6 @@ void Host::incomingStreamProcessor(const QString & data, int line )
     }
 }
 
-void Host::registerEventHandler(const QString& name, TScript * pScript )
-{
-    if( mEventHandlerMap.contains( name ) )
-    {
-        if( ! mEventHandlerMap[name].contains( pScript ) )
-        {
-            mEventHandlerMap[name].append( pScript );
-        }
-    }
-    else
-    {
-        QList<TScript *> scriptList;
-        scriptList.append( pScript );
-        mEventHandlerMap.insert( name, scriptList );
-    }
-}
-void Host::registerAnonymousEventHandler(const QString& name, const QString& fun )
-{
-
-    if( mAnonymousEventHandlerFunctions.contains( name ) )
-    {
-        if( ! mAnonymousEventHandlerFunctions[name].contains( fun ) )
-        {
-            mAnonymousEventHandlerFunctions[name].push_back( fun );
-        }
-    }
-    else
-    {
-        QStringList newList;
-        newList << fun;
-        mAnonymousEventHandlerFunctions[name] = newList;
-    }
-}
-
-void Host::unregisterEventHandler(const QString & name, TScript * pScript )
-{
-    if( mEventHandlerMap.contains( name ) )
-    {
-        mEventHandlerMap[name].removeAll( pScript );
-    }
-}
-
-void Host::raiseEvent( const TEvent & pE )
-{
-
-}
 
 void Host::enableKey(const QString & name )
 {
@@ -500,20 +430,6 @@ bool Host::serialize()
         QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
     }
 
-    if( mpMap->mpRoomDB->size() > 10 )
-    {
-        QFile file_map( filename_map );
-        if ( file_map.open( QIODevice::WriteOnly ) )
-        {
-            QDataStream out( & file_map );
-            mpMap->serialize( out );
-            file_map.close();
-        }
-        else
-        {
-            QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-        }
-    }
     return true;
 }
 
