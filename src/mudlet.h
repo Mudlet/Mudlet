@@ -52,7 +52,6 @@ class TConsole;
 class TEvent;
 class TLabel;
 class TTimer;
-class dlgIRC;
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow
@@ -154,11 +153,9 @@ public:
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
    QMap<QTimer *, TTimer *>      mTimerMap;
-   dlgIRC *                      mpIRC;
    QString                       version;
    QPointer<Host>                mpCurrentActiveHost;
    bool                          mAutolog;
-   QString                       mIrcNick;
    QMediaPlayer *                mpMusicBox1;
    QMediaPlayer *                mpMusicBox2;
    QMediaPlayer *                mpMusicBox3;
@@ -180,7 +177,6 @@ public slots:
    void                          slot_show_about_dialog();
    void                          slot_show_help_dialog_video();
    void                          slot_show_help_dialog_forum();
-   void                          slot_show_help_dialog_irc();
    void                          slot_show_help_dialog_download();
    void                          slot_open_mappingscripts_page();
    void                          slot_module_clicked(QTableWidgetItem*);
@@ -198,7 +194,6 @@ public slots:
    void                          slot_reconnect();
    void                          slot_close_profile_requested(int);
    void                          startAutoLogin();
-   void                          slot_irc();
    void                          slot_uninstall_package();
    void                          slot_install_package();
    void                          slot_package_manager();

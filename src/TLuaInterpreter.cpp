@@ -24,7 +24,6 @@
 
 
 #include "dlgComposer.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "glwidget.h"
@@ -9964,39 +9963,6 @@ int TLuaInterpreter::sendSocket( lua_State * L )
     return 0;
 }
 
-int TLuaInterpreter::sendIrc( lua_State * L )
-{
-    string who;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "sendSocket: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        who = lua_tostring( L, 1 );
-    }
-    string text;
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "sendSocket: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        text = lua_tostring( L, 2 );
-    }
-// N/U:     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString chan = who.c_str();
-    QString txt = text.c_str();
-    if( ! mudlet::self()->mpIRC ) return 0;
-    mudlet::self()->mpIRC->session->sendCommand( IrcCommand::createMessage( chan, txt ) );
-    return 0;
-}
-
-
 bool TLuaInterpreter::compileAndExecuteScript(const QString & code )
 {
     if( code.size() < 1 ) return false;
@@ -11225,7 +11191,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "loadMap", TLuaInterpreter::loadMap );
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
     lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
-    lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
     lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
     lua_register( pGlobalLua, "createMapLabel", TLuaInterpreter::createMapLabel );

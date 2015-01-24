@@ -26,7 +26,6 @@
 #include "ctelnet.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
@@ -100,7 +99,6 @@ mudlet::mudlet()
 , mShowToolbar( true )
 , mWindowMinimized( false )
 , mReplaySpeed( 1 )
-, mpIRC( 0 )
 , version( QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD) )
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )
@@ -211,10 +209,6 @@ mudlet::mudlet()
     actionVars->setEnabled( true );
     mpMainToolBar->addAction( actionVars );
 
-    QAction * actionIRC = new QAction( QIcon( QStringLiteral( ":/icons/internet-telephony.png" ) ), tr("Help Chat"), this);
-    actionIRC->setToolTip(tr("Join Mudlet help chat on IRC"));
-    mpMainToolBar->addAction( actionIRC );
-
     QAction * actionMapper = new QAction( QIcon( QStringLiteral( ":/icons/applications-internet.png" ) ), tr("Map"), this);
     actionMapper->setToolTip(tr("Show/hide the map"));
     mpMainToolBar->addAction( actionMapper );
@@ -318,7 +312,6 @@ mudlet::mudlet()
     connect(actionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
     connect(actionNotes, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(actionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(actionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionModuleM, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
 
@@ -350,8 +343,6 @@ mudlet::mudlet()
     connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
     connect(dactionForum, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_forum()));
-    connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
-    connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
     connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
@@ -1842,10 +1833,6 @@ void mudlet::slot_show_help_dialog_forum()
     QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/"));
 }
 
-void mudlet::slot_show_help_dialog_irc()
-{
-    QDesktopServices::openUrl(QUrl("http://webchat.freenode.net/?channels=mudlet"));
-}
 
 void mudlet::slot_mapper()
 {
@@ -1945,19 +1932,6 @@ void mudlet::slot_notes()
     }
     pNotes->raise();
     pNotes->show();
-}
-
-void mudlet::slot_irc()
-{
-    if( ! mpIRC )
-    {
-        mpIRC = new dlgIRC();
-        mpIRC->setWindowTitle( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" );
-        mpIRC->resize(660,380);
-    }
-
-    mpIRC->raise();
-    mpIRC->show();
 }
 
 void mudlet::slot_reconnect()

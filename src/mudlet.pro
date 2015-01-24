@@ -167,7 +167,6 @@ SOURCES += \
     dlgColorTrigger.cpp \
     dlgComposer.cpp \
     dlgConnectionProfiles.cpp \
-    dlgIRC.cpp \
     dlgKeysMainArea.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
@@ -248,7 +247,6 @@ HEADERS += \
     dlgColorTrigger.h \
     dlgComposer.h \
     dlgConnectionProfiles.h \
-    dlgIRC.h \
     dlgKeysMainArea.h \
     dlgMapper.h \
     dlgNotepad.h \

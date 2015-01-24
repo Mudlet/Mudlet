@@ -22,7 +22,6 @@
 #include "dlgProfilePreferences.h"
 
 
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "Host.h"
@@ -940,19 +939,6 @@ void dlgProfilePreferences::slot_save_and_exit()
     for(int i=0;i<lIgnore.size();i++){
         mpHost->mDoubleClickIgnore.insert(lIgnore.at(i));
     }
-
-    //pHost->mIRCNick = ircNick->text();
-    QString old_nick = mudlet::self()->mIrcNick;
-    QString new_nick = ircNick->text();
-    if( new_nick.isEmpty() )
-        new_nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
-    QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
-    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
-    QDataStream ofs( & file );
-    ofs << new_nick;
-    file.close();
-    if( mudlet::self()->mpIRC )
-        mudlet::self()->mpIRC->session->setNickName( new_nick );
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {
