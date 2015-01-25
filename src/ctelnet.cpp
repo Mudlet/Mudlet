@@ -29,7 +29,6 @@
 #include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
 
 #include "pre_guard.h"
@@ -75,8 +74,6 @@ cTelnet::cTelnet( Host * pH )
 , mpComposer( 0 )
 , mpHost(pH)
 , mpPostingTimer( new QTimer( this ) )
-, mUSE_IRE_DRIVER_BUGFIX( false )
-, mLF_ON_GA( false )
 , mCommands( 0 )
 , mMCCP_version_1( false )
 , mMCCP_version_2( false )
@@ -113,14 +110,6 @@ cTelnet::cTelnet( Host * pH )
 
     mpPostingTimer->setInterval( 300 );//FIXME
     connect(mpPostingTimer, SIGNAL(timeout()), this, SLOT(slot_timerPosting()));
-
-    mTimerLogin = new QTimer( this );
-    mTimerLogin->setSingleShot(true);
-    connect(mTimerLogin, SIGNAL(timeout()), this, SLOT(slot_send_login()));
-
-    mTimerPass = new QTimer( this );
-    mTimerPass->setSingleShot( true );
-    connect(mTimerPass, SIGNAL(timeout()), this, SLOT(slot_send_pass()));
 
     mpDownloader = new QNetworkAccessManager( this );
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
@@ -178,13 +167,6 @@ void cTelnet::encodingChanged(QString encoding)
 
 void cTelnet::connectIt(const QString &address, int port)
 {
-    // wird an dieser Stelle gesetzt
-    if( mpHost )
-    {
-        mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mLF_ON_GA = mpHost->mLF_ON_GA;
-        mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
-    }
 
     if( socket.state() != QAbstractSocket::UnconnectedState )
     {
@@ -221,16 +203,6 @@ void cTelnet::handle_socket_signal_error()
     postMessage( err );
 }
 
-void cTelnet::slot_send_login()
-{
-    sendData( mpHost->getLogin() );
-}
-
-void cTelnet::slot_send_pass()
-{
-    sendData( mpHost->getPass() );
-}
-
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
@@ -239,11 +211,6 @@ void cTelnet::handle_socket_signal_connected()
     QString func = "onConnect";
     QString nothing = "";
     mConnectionTime.start();
-    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
-        mTimerLogin->start(2000);
-    if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
-        mTimerPass->start(3000);
-    //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
     TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -267,7 +234,7 @@ void cTelnet::handle_socket_signal_disconnected()
     reset();
     QString err =    "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
     QString spacer = "    ";
-    if( ! mpHost->mIsGoingDown )
+    if( ! mpHost->isClosed() )
     {
         postMessage( spacer );
         postMessage( err );
@@ -309,22 +276,9 @@ bool cTelnet::sendData( QString & data )
 
     // TODO add event
 
-    if( mpHost->mAllowToSendCommand )
-    {
-        string outdata = (outgoingDataCodec->fromUnicode(data)).data();
-        if( ! mpHost->mUSE_UNIX_EOL )
-        {
-            outdata.append("\r\n");
-        }
-        else
-            outdata += "\n";
-        return socketOutRaw( outdata );
-    }
-    else
-    {
-        mpHost->mAllowToSendCommand = true;
-        return false;
-    }
+    string outdata = (outgoingDataCodec->fromUnicode(data)).data();
+    outdata += "\n";
+    return socketOutRaw( outdata );
 }
 
 
@@ -378,8 +332,8 @@ bool cTelnet::socketOutRaw(string & data)
 
 void cTelnet::setDisplayDimensions()
 {
-    int x = mpHost->mWrapAt;
-    int y = mpHost->mScreenHeight;
+    int x = 120;
+    int y = 40; // mpHost->mScreenHeight; TODO determine how to do this better
     if(myOptionState[static_cast<int>(OPT_NAWS)])
     {
         //cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
@@ -453,7 +407,6 @@ void cTelnet::replyFinished( QNetworkReply * reply )
     packageName.replace( '/' , "" );
     packageName.replace( '\\' , "" );
     packageName.replace( '.' , "" );
-    mpHost->mServerGUI_Package_name = packageName;
 }
 
 void cTelnet::setDownloadProgress( qint64 got, qint64 tot )
@@ -511,35 +464,25 @@ void cTelnet::processTelnetCommand( const string & command )
           if( option == MSDP ) //MSDP support
           {
               string _h;
-              if( !mpHost->mEnableMSDP ) {
-                  _h += TN_IAC;
-                  _h += TN_DONT;
-                  _h += MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
-                  socketOutRaw( _h );
-                  qDebug() << "TELNET IAC DONT MSDP";
-                  break;
-              } else {
-                  sendTelnetOption( TN_DO, 69 );
-                  //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-                  //NOTE: MSDP does not need quotes for string/vals
-                  _h += TN_IAC;
-                  _h += TN_SB;
-                  _h += MSDP; //MSDP
-                  _h += 1; //MSDP_VAR
-                  _h += "LIST";
-                  _h += 2; //MSDP_VAL
-                  _h += "COMMANDS";
-                  _h += TN_IAC;
-                  _h += TN_SE;
-                  socketOutRaw( _h );
-                  qDebug() << "TELNET IAC DO MSDP";
-                  break;
-              }
+
+              sendTelnetOption( TN_DO, 69 );
+              //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+              //NOTE: MSDP does not need quotes for string/vals
+              _h += TN_IAC;
+              _h += TN_SB;
+              _h += MSDP; //MSDP
+              _h += 1; //MSDP_VAR
+              _h += "LIST";
+              _h += 2; //MSDP_VAL
+              _h += "COMMANDS";
+              _h += TN_IAC;
+              _h += TN_SE;
+              socketOutRaw( _h );
+              qDebug() << "TELNET IAC DO MSDP";
+              break;
           }
           if( option == static_cast<char>(200) ) // ATCP support
           {
-              //FIXME: this is a bug, some muds offer both atcp + gmcp
-              if( mpHost->mEnableGMCP ) break;
 
               qDebug() << "ATCP enabled";
               enableATCP = true;
@@ -558,8 +501,6 @@ void cTelnet::processTelnetCommand( const string & command )
 
           if( option == GMCP )
           {
-              if( !mpHost->mEnableGMCP ) break;
-
               enableGMCP = true;
               sendTelnetOption( TN_DO, GMCP );
               qDebug() << "GMCP enabled";
@@ -587,17 +528,9 @@ void cTelnet::processTelnetCommand( const string & command )
 
           if( option == MXP )
           {
-              if( ! mpHost->mFORCE_MXP_NEGOTIATION_OFF )
-              {
                 sendTelnetOption( TN_DO, 91 );
-                //mpHost->mpConsole->print("\n<MXP enabled>\n");
-                break;
-              }
-              //else
-                  //mpHost->mpConsole->print("\n<MXP declined because of user setting: force MXP off>");
           }
 
-          //option = command[2];
           if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
           {
               qDebug() << "Aardwulf channel 102 support enabled";
@@ -632,7 +565,7 @@ void cTelnet::processTelnetCommand( const string & command )
                    else if( ( option == OPT_COMPRESS ) || ( option == OPT_COMPRESS2 ) )
                    {
                        //these are handled separately, as they're a bit special
-                       if( mpHost->mFORCE_NO_COMPRESSION || ( ( option == OPT_COMPRESS ) && ( hisOptionState[static_cast<int>(OPT_COMPRESS2)] ) ) )
+                       if( ( ( option == OPT_COMPRESS ) && ( hisOptionState[static_cast<int>(OPT_COMPRESS2)] ) ) )
                        {
                            //protocol says: reject MCCP v1 if you have previously accepted
                            //MCCP v2...
@@ -728,14 +661,14 @@ void cTelnet::processTelnetCommand( const string & command )
           //server wants us to enable some option
           option = command[2];
           int idxOption = static_cast<int>(option);
-          if( option == static_cast<char>(69) && mpHost->mEnableMSDP ) // MSDP support
+          if( option == static_cast<char>(69) ) // MSDP support
           {
             qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption( TN_WILL, 69 );
 
             break;
           }
-          if( option == static_cast<char>(200) && !mpHost->mEnableGMCP ) // ATCP support, enable only if GMCP is off as GMCP is better
+          if( option == static_cast<char>(200) ) // ATCP support, enable only if GMCP is off as GMCP is better
           {
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
@@ -849,55 +782,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   socketOutRaw( _h );
               }
 
-              if( _m.startsWith( "Client.GUI" ) )
-              {
-                  if( ! mpHost->mAcceptServerGUI ) return;
-
-                  QString version = _m.section( '\n', 0 );
-                  version.replace("Client.GUI ", "");
-                  version.replace('\n', " ");
-                  version = version.section(' ', 0, 0);
-
-                  int newVersion = version.toInt();
-                  //QString __mkp = QString("<old version:'%1' new version:'%2' name:'%3' msg:'%4'>\n").arg(mpHost->mServerGUI_Package_version).arg(newVersion).arg(mpHost->mServerGUI_Package_name).arg(version);
-                  //mpHost->mpConsole->print(__mkp);
-                  if( mpHost->mServerGUI_Package_version != newVersion )
-                  {
-                      QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
-                      mpHost->mpConsole->print(_smsg.toLatin1().data());
-                      mpHost->mServerGUI_Package_version = newVersion;
-                  }
-                  QString url = _m.section( '\n', 1 );
-                  QString packageName = url.section('/',-1);
-                  QString fileName = packageName;
-                  packageName.replace( ".zip" , "" );
-                  packageName.replace( "trigger", "" );
-                  packageName.replace( "xml", "" );
-                  packageName.replace( ".mpackage" , "" );
-                  packageName.replace( '/' , "" );
-                  packageName.replace( '\\' , "" );
-                  packageName.replace( '.' , "" );
-                  mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
-                  mpHost->mpConsole->print( url );
-                  mpHost->mpConsole->print("') (package='");
-                  mpHost->mpConsole->print(packageName);
-                  mpHost->mpConsole->print("')>\n");
-                  if( mpHost->mInstalledPackages.contains( packageName ) )
-                  {
-                      mpHost->mpConsole->print("<package is already installed>\n");
-                      return;
-                  }
-                  QString _home = QDir::homePath();
-                  _home.append( "/.config/mudlet/profiles/" );
-                  _home.append( mpHost->getName() );
-                  mServerPackage = QString( "%1/%2").arg( _home ).arg( fileName );
-
-                  QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
-                  mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );
-                  connect(reply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
-                  mpProgressDialog->show();
-
-              }
               return;
           }
 
@@ -1076,56 +960,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
         arg = msg.section( " ", 1 );
     }
 
-    //printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
-    if( msg.startsWith( "Client.GUI" ) )
-    {
-        if( ! mpHost->mAcceptServerGUI ) return;
-
-        QString version = msg.section( '\n', 0 );
-        version.replace("Client.GUI ", "");
-        version.replace('\n', " ");
-        version = version.section(' ', 0, 0);
-
-        int newVersion = version.toInt();
-        //QString __mkp = QString("<old version:'%1' new version:'%2' name:'%3' msg:'%4'>\n").arg(mpHost->mServerGUI_Package_version).arg(newVersion).arg(mpHost->mServerGUI_Package_name).arg(version);
-        //mpHost->mpConsole->print(__mkp);
-        if( mpHost->mServerGUI_Package_version != newVersion )
-        {
-            QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
-            mpHost->mpConsole->print(_smsg.toLatin1().data());
-            mpHost->mServerGUI_Package_version = newVersion;
-        }
-        QString url = msg.section( '\n', 1 );
-        QString packageName = url.section('/',-1);
-        QString fileName = packageName;
-        packageName.replace( ".zip" , "" );
-        packageName.replace( "trigger", "" );
-        packageName.replace( "xml", "" );
-        packageName.replace( ".mpackage" , "" );
-        packageName.replace( '/' , "" );
-        packageName.replace( '\\' , "" );
-        packageName.replace( '.' , "" );
-        mpHost->mpConsole->print("<Server offers downloadable GUI (url='");
-        mpHost->mpConsole->print( url );
-        mpHost->mpConsole->print("') (package='");
-        mpHost->mpConsole->print(packageName);
-        mpHost->mpConsole->print("')>\n");
-        if( mpHost->mInstalledPackages.contains( packageName ) )
-        {
-            mpHost->mpConsole->print("<package is already installed>\n");
-            return;
-        }
-        QString _home = QDir::homePath();
-        _home.append( "/.config/mudlet/profiles/" );
-        _home.append( mpHost->getName() );
-        mServerPackage = QString( "%1/%2").arg( _home ).arg( fileName );
-
-        QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
-        mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );
-        connect(reply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
-        mpProgressDialog->show();
-        return;
-    }
     arg.remove( '\n' );
     // remove \r's from the data, as yajl doesn't like it
     arg.remove(QChar('\r'));
@@ -1156,43 +990,21 @@ void cTelnet::atcpComposerCancel()
 
 void cTelnet::atcpComposerSave( QString txt )
 {
-    if( ! mpHost->mEnableGMCP )
-    {
-        //olesetbuf \n <text>
-        string _h;
-        _h += TN_IAC;
-        _h += TN_SB;
-        _h += 200;
-        _h += "olesetbuf \n ";
-        _h += txt.toLatin1().data();
-        _h += '\n';
-        _h += TN_IAC;
-        _h += TN_SE;
-        socketOutRaw( _h );
-        _h.clear();
-        _h += "*s\n";
-        socketOutRaw( _h );
-    }
-    else
-    {
-        string _h;
-        _h += TN_IAC;
-        _h += TN_SB;
-        _h += GMCP;
-        _h += "IRE.Composer.SetBuffer";
-        if( txt != "" )
-        {
-            _h += "  ";
-            _h += txt.toLatin1().data();
-            _h += " ";
-        }
-        _h += TN_IAC;
-        _h += TN_SE;
-        socketOutRaw( _h );
-        _h.clear();
-        _h += "*s\n";
-        socketOutRaw( _h );
-    }
+    //olesetbuf \n <text>
+    string _h;
+    _h += TN_IAC;
+    _h += TN_SB;
+    _h += 200;
+    _h += "olesetbuf \n ";
+    _h += txt.toLatin1().data();
+    _h += '\n';
+    _h += TN_IAC;
+    _h += TN_SE;
+    socketOutRaw( _h );
+    _h.clear();
+    _h += "*s\n";
+    socketOutRaw( _h );
+
 }
 
 // Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent
@@ -1331,45 +1143,6 @@ void cTelnet::gotPrompt( string & mud_data )
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
-
-    if( mUSE_IRE_DRIVER_BUGFIX && mGA_Driver )
-    {
-        //////////////////////////////////////////////////////////////////////
-        //
-        // Patch for servers that need GA/EOR for prompt fixups
-        //
-
-        int j = 0;
-        int s = mMudData.size();
-        while( j < s )
-        {
-            // search for leading <LF> but skip leading ANSI control sequences
-            if( mMudData[j] == 0x1B )
-            {
-                while( j < s )
-                {
-                    if( mMudData[j] == 'm' )
-                    {
-                        goto NEXT;
-                        break;
-                    }
-                    j++;
-                }
-            }
-            if( mMudData[j] == '\n' )
-            {
-                mMudData.erase( j, 1 );
-                break;
-            }
-            else
-            {
-                break;
-            }
-            NEXT: j++;
-        }
-        //
-        ////////////////////////////
-    }
 
     postData();
     mMudData = "";
@@ -1603,10 +1376,6 @@ void cTelnet::readPipe()
                 }
             }
 
-            if( mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA )
-            {
-                cleandata.push_back('\n');//part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
-            }
             recvdGA = false;
             gotPrompt( cleandata );
             cleandata = "";
@@ -1624,8 +1393,6 @@ void cTelnet::readPipe()
 
 void cTelnet::handle_socket_signal_readyRead()
 {
-    mpHost->mInsertedMissingLF = false;
-
     if( mWaitingForResponse )
     {
         double time = networkLatencyTime.elapsed();
@@ -1653,15 +1420,6 @@ void cTelnet::handle_socket_signal_readyRead()
         buffer = out_buffer;
     }
     buffer[datalen] = '\0';
-    #ifdef DEBUG
-        //qDebug()<<"got<"<<pBuffer<<">";
-    #endif
-    if( mpHost->mpConsole->mRecordReplay )
-    {
-        mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;
-        mpHost->mpConsole->mReplayStream << datalen;
-        mpHost->mpConsole->mReplayStream.writeRawData( &buffer[0], datalen );
-    }
 
     recvdGA = false;
     for( int i = 0; i < datalen; i++ )
@@ -1830,13 +1588,7 @@ MAIN_LOOP_END: ;
                 gotPrompt( cleandata );
                 cleandata = "";
             }
-            else
-            {
-                if( mLF_ON_GA ) //TODO: reenable option in preferences
-                {
-                    cleandata.push_back('\n');
-                }
-            }
+
         }
     }//for
     } while (datalen == 100000);

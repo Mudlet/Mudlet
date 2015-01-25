@@ -23,20 +23,18 @@
 #include <QTimer>
 #include <QToolButton>
 #include <QSettings>
+#include <QMenu>
 #include "mudlet.h"
 
 
 #include "ctelnet.h"
-#include "dlgConnectionProfiles.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TTextEdit.h"
-#include "XMLimport.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -126,17 +124,6 @@ mudlet::mudlet()
     mainPane->setSizePolicy( sizePolicy );
     mainPane->setFocusPolicy( Qt::NoFocus );
 
-    QFile file_autolog( QDir::homePath()+"/.config/mudlet/autolog" );
-    if( file_autolog.exists() )
-    {
-        mAutolog = true;
-    }
-    else
-    {
-        mAutolog = false;
-    }
-
-
     mHostManager.addHost("default_host", "", "","" );
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
 
@@ -151,63 +138,15 @@ mudlet::mudlet()
 
     mainPane->show();
 
-    QAction * mactionConnect = new QAction(tr("Connect"), this);
-    QAction * mactionTriggers = new QAction(tr("Triggers"), this);
-    QAction * mactionAlias = new QAction(tr("Aliases"), this);
-    QAction * mactionTimers = new QAction(tr("Timers"), this);
-    QAction * mactionButtons = new QAction(tr("Actions"), this);
-    QAction * mactionScripts = new QAction(tr("Scripts"), this);
-    QAction * mactionKeys = new QAction(tr("Keys"), this);
-    QAction * mactionMapper = new QAction(tr("Map"), this);
-    QAction * mactionHelp = new QAction(tr("Help"), this);
-    QAction * mactionOptions = new QAction(tr("Preferences"), this);
     QAction * mactionMultiView = new QAction(tr("MultiView"), this);
-    QAction * mactionAbout = new QAction(tr("About"), this);
     QAction * mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
-    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
-    connect(dactionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
-    connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
-    connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
-    connect(dactionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
-
-
-    connect(mactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
-    connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
-    connect(dactionVideo, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_video()));
-    connect(dactionForum, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_forum()));
-    connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
-    connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
-    connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
-    connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
     connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-
-    connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
-    connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
-    connect(mactionMapper, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(mactionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
-    connect(mactionAlias, SIGNAL(triggered()), this, SLOT(show_alias_dialog()));
-    connect(mactionScripts, SIGNAL(triggered()), this, SLOT(show_script_dialog()));
-    connect(mactionKeys, SIGNAL(triggered()),this,SLOT(show_key_dialog()));
-    connect(mactionButtons, SIGNAL(triggered()), this, SLOT(show_action_dialog()));
-
-    connect(mactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
-    connect(dactionOptions, SIGNAL(triggered()), this, SLOT(show_options_dialog()));
-
-    connect(mactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
-    connect(dactionAbout, SIGNAL(triggered()), this, SLOT(slot_show_about_dialog()));
 
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
     readSettings();
-
-    QTimer * timerAutologin = new QTimer( this );
-    timerAutologin->setSingleShot( true );
-    connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
-    timerAutologin->start( 1000 );
 
     mpMusicBox1 = new QMediaPlayer(this);
     mpMusicBox2 = new QMediaPlayer(this);
@@ -219,13 +158,6 @@ mudlet::mudlet()
 HostManager * mudlet::getHostManager()
 {
     return &mHostManager;
-}
-
-bool mudlet::moduleTableVisible()
-{
-    if (moduleTable)
-        return moduleTable->isVisible();
-    return false;
 }
 
 bool mudlet::openWebPage(const QString& path){
@@ -249,12 +181,12 @@ void mudlet::slot_close_profile_requested( int tab )
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     mConsoleMap[pH]->close();
-    if( mTabMap.contains( pH->getName() ) )
+    if( mTabMap.contains( pH->getId() ) )
     {
         mpTabBar->removeTab( tab );
         mConsoleMap.remove( pH );
-        mTabMap.remove( pH->getName() );
-        getHostManager()->deleteHost( pH->getName() );
+        mTabMap.remove( pH->getId() );
+        getHostManager()->deleteHost( pH->getId() );
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
@@ -273,15 +205,15 @@ void mudlet::slot_close_profile()
     {
         if( mConsoleMap.contains( mpCurrentActiveHost ) )
         {
-            QString name = mpCurrentActiveHost->getName();
+            QString name = mpCurrentActiveHost->getId();
             Host * pH = mpCurrentActiveHost;
             mConsoleMap[mpCurrentActiveHost]->close();
-            if( mTabMap.contains( pH->getName() ) )
+            if( mTabMap.contains( pH->getId() ) )
             {
                 mpTabBar->removeTab( mpTabBar->currentIndex() );
                 mConsoleMap.remove( pH );
-                getHostManager()->deleteHost( pH->getName() );
-                mTabMap.remove( pH->getName() );
+                getHostManager()->deleteHost( pH->getId() );
+                mTabMap.remove( pH->getId() );
             }
 
         }
@@ -346,21 +278,20 @@ void mudlet::slot_tab_changed( int tabID )
     }
 
     // update the window title for the currently selected profile
-    setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
+    setWindowTitle(mpCurrentActiveHost->getId() + " - " + version);
 }
 
 void mudlet::addConsoleForNewHost( Host * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
-    pH->mLogStatus = mAutolog;
     TConsole * pConsole = new TConsole( pH, false );
     if( ! pConsole ) return;
     pH->mpConsole = pConsole;
-    pConsole->setWindowTitle( pH->getName() );
-    pConsole->setObjectName( pH->getName() );
+    pConsole->setWindowTitle( pH->getId() );
+    pConsole->setObjectName( pH->getId() );
     mConsoleMap[pH] = pConsole;
-    int newTabID = mpTabBar->addTab( pH->getName() );
-    mTabMap[pH->getName()] = pConsole;
+    int newTabID = mpTabBar->addTab( pH->getId() );
+    mTabMap[pH->getId()] = pConsole;
     if( mConsoleMap.size() > 1 )
     {
         mpTabBar->show();
@@ -368,13 +299,12 @@ void mudlet::addConsoleForNewHost( Host * pH )
     else
         mpTabBar->hide();
     //update the main window title when we spawn a new tab
-    setWindowTitle(pH->getName() + " - " + version);
+    setWindowTitle(pH->getId() + " - " + version);
 
     mainPane->layout()->addWidget( pConsole );
     if( mpCurrentActiveHost )
         mpCurrentActiveHost->mpConsole->hide();
     mpCurrentActiveHost = pH;
-    if( pH->mLogStatus ) pConsole->logButton->click();
 
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
@@ -1044,23 +974,6 @@ bool mudlet::appendBuffer( Host * pHost, const QString & name )
     else return false;
 }
 
-void mudlet::slot_userToolBar_hovered( QAction* pA )
-{
-    QStringList sL;
-    if( pA->menu() )
-    {
-        pA->menu()->exec();
-    }
-
-
-}
-
-
-
-void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
-{
-}
-
 Host * mudlet::getActiveHost()
 {
     if( mConsoleMap.contains( mpCurrentActiveHost ) )
@@ -1097,7 +1010,7 @@ void mudlet::closeEvent(QCloseEvent *event)
     goingDown();
     foreach( TConsole * pC, mConsoleMap )
     {
-        if( pC->mpHost->getName() != "default_host" )
+        if( pC->mpHost->getId() != "default_host" )
         {
             pC->close();
         }
@@ -1133,28 +1046,6 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
 }
 
-void mudlet::connectToServer()
-{
-    dlgConnectionProfiles * pDlg = new dlgConnectionProfiles(this);
-    connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
-    pDlg->fillout_form();
-    pDlg->exec();
-}
-
-void mudlet::slot_reconnect()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
-}
-
-void mudlet::slot_disconnect()
-{
-    Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    pHost->mTelnet.disconnect();
-}
-
 void mudlet::printSystemMessage( Host * pH, const QString & s )
 {
     mConsoleMap[pH]->printSystemMessage( s );
@@ -1180,84 +1071,6 @@ QString mudlet::readProfileData( const QString& profile, const QString& item )
     return ret;
 }
 
-// this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin()
-{
-    QStringList hostList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
-    hostList.removeAll(".");
-    hostList.removeAll("..");
-    for( int i = 0; i< hostList.size(); i++ )
-    {
-        QString item = "autologin";
-        QString val = readProfileData( hostList[i], item );
-        if( val.toInt() == Qt::Checked )
-        {
-            doAutoLogin( hostList[i] );
-        }
-    }
-
-}
-
-void mudlet::doAutoLogin( const QString & profile_name )
-{
-    if( profile_name.size() < 1 )
-        return;
-
-    Host * pOH = getHostManager()->getHost( profile_name );
-    if( pOH )
-    {
-        pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
-        return;
-    }
-    // load an old profile if there is any
-    getHostManager()->addHost( profile_name, "", "", "" );
-    Host * pHost = getHostManager()->getHost( profile_name );
-
-    if( ! pHost ) return;
-
-    QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
-    QDir dir( folder );
-    dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    if( entries.size() > 0 )
-    {
-        QFile file(folder+"/"+entries[0]);
-        file.open(QFile::ReadOnly | QFile::Text);
-
-    }
-
-    QString login = "login";
-    QString val1 = readProfileData( profile_name, login );
-    pHost->setLogin( val1 );
-    QString pass = "password";
-    QString val2 = readProfileData( profile_name, pass );
-    pHost->setPass( val2 );
-    slot_connection_dlg_finnished( profile_name, 0 );
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// these two callbacks are called from cTelnet::handleConnectedToServer()
-void mudlet::slot_send_login()
-{
-    if( tempHostQueue.isEmpty() )
-        return;
-    Host * pHost = tempHostQueue.dequeue();
-    QString login = pHost->getLogin();
-    pHost->sendRaw( login );
-}
-
-void mudlet::slot_send_pass()
-{
-    if( tempHostQueue.isEmpty() )
-        return;
-    Host * pHost = tempHostQueue.dequeue();
-    QString pass = pHost->getPass();
-    pHost->sendRaw( pass );
-}
-//////////////////////////////////////////////////////////////////////////////
-
-
-
 void mudlet::processEventLoopHack()
 {
     QTimer::singleShot(1, this, SLOT(processEventLoopHack_timerRun()));
@@ -1268,45 +1081,6 @@ void mudlet::processEventLoopHack_timerRun()
     Host * pH = getActiveHost();
     if( !pH ) return;
     pH->mpConsole->refresh();
-}
-
-void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyVersion )
-{
-    Host * pHost = getHostManager()->getHost( profile );
-    if( ! pHost ) return;
-    pHost->mIsProfileLoadingSequence = true;
-    addConsoleForNewHost( pHost );
-    pHost->mBlockScriptCompile = false;
-    pHost->mIsProfileLoadingSequence = false;
-
-    //do modules here
-    QMapIterator<QString, int> it (pHost->mModulePriorities);
-    QMap<int, QStringList> moduleOrder;
-    while( it.hasNext() ){
-        it.next();
-        QStringList moduleEntry = moduleOrder[it.value()];
-        moduleEntry << it.key();
-        moduleOrder[it.value()] = moduleEntry;
-    }
-    QMapIterator<int, QStringList> it2 (moduleOrder);
-    while (it2.hasNext()){
-        it2.next();
-    }
-
-
-    TEvent event;
-    event.mArgumentList.append( "sysLoadEvent" );
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-
-    // TODO Add Event
-
-    //NOTE: this is a potential problem if users connect by hand quickly
-    //      and one host has a slower response time as the other one, but
-    //      the worst that can happen is that they have to login manually.
-
-    tempHostQueue.enqueue( pHost );
-    tempHostQueue.enqueue( pHost );
-    pHost->connectToServer();
 }
 
 void mudlet::slot_multi_view()

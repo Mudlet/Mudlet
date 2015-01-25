@@ -1849,7 +1849,6 @@ void TBuffer::append(const QString & text,
     {
         if( text.at(i) == '\n' )
         {
-            log(size()-1, size()-1);
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
@@ -2359,50 +2358,7 @@ inline int TBuffer::wrap( int startLine )
         dirty.push_back( true );
     }
 
-    log(startLine, startLine+tempList.size());
     return insertedLines > 0 ? insertedLines : 0;
-}
-
-void TBuffer::log( int from, int to )
-{
-
-    TBuffer * pB = &mpHost->mpConsole->buffer;
-    if( pB == this )
-    {
-        if( mpHost->mpConsole->mLogToLogFile )
-        {
-            if( from >= size() || from < 0 )
-            {
-                return;
-            }
-            if( to >= size() )
-            {
-                to = size()-1;
-            }
-            if( to < 0 )
-            {
-                return;
-            }
-            for( int i=from; i<=to; i++ )
-            {
-
-                QString toLog;
-                if( mpHost->mRawStreamDump )
-                {
-                    QPoint P1 = QPoint(0,i);
-                    QPoint P2 = QPoint( buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2);
-                }
-                else
-                {
-                    toLog = lineBuffer[i];
-                    toLog.append("\n");
-                }
-                mpHost->mpConsole->mLogStream << toLog;
-            }
-            mpHost->mpConsole->mLogStream.flush();
-        }
-    }
 }
 
 // returns how many new lines have been inserted by the wrapping action
@@ -2501,7 +2457,6 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
 
     if( lineCount < 1 )
     {
-        log( startLine, startLine );
         return 0;
     }
 
@@ -2529,7 +2484,6 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         promptBuffer.insert( startLine+i, isPrompt );
         dirty.insert( startLine+i, true );
     }
-    log( startLine, startLine+tempList.size()-1 );
     return insertedLines > 0 ? insertedLines : 0;
 }
 

@@ -28,12 +28,10 @@
 #include "Host.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
-#include "TDebug.h"
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
-#include "XMLexport.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -67,8 +65,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mIndentCount( 0 )
 , mIsDebugConsole( isDebugConsole )
-, mLogFileName(QString(""))
-, mLogToLogFile( false )
 , mMainFrameBottomHeight( 0 )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
@@ -84,8 +80,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mpMainDisplay( new QWidget( mpMainFrame ) )
 , mpMapper( 0 )
 , mpScrollBar( new QScrollBar )
-
-, mRecordReplay( false )
 , mSystemMessageBgColor( mBgColor )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
 , mTriggerEngineMode( false )
@@ -138,10 +132,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         else
         {
             mIsSubConsole = false;
-            mMainFrameTopHeight = mpHost->mBorderTopHeight;
-            mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-            mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-            mMainFrameRightWidth = mpHost->mBorderRightWidth;
+            mMainFrameTopHeight = 1;
+            mMainFrameBottomHeight = 1;
+            mMainFrameLeftWidth = 1;
+            mMainFrameRightWidth = 1;
             mCommandBgColor = mpHost->mCommandBgColor;
             mCommandFgColor = mpHost->mCommandFgColor;
         }
@@ -158,7 +152,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     }
     setContentsMargins(0,0,0,0);
     if( mpHost )
-        profile_name = mpHost->getName();
+        profile_name = mpHost->getId();
     else
         profile_name = "debug console";
     mFormatSystemMessage.bgR = mBgColor.red();
@@ -451,15 +445,15 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchBox->setMinimumSize(QSize(100,30));
     mpBufferSearchBox->setMaximumSize(QSize(150,30));
     mpBufferSearchBox->setSizePolicy( sizePolicy5 );
-    mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
+    mpBufferSearchBox->setFont(mpHost->getCmdLineFont());
     mpBufferSearchBox->setFocusPolicy( Qt::ClickFocus );
     mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette __pal;
-    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
+    __pal.setColor(QPalette::Text, mpHost->getString(Host::CMD_LINE_FG_COLOR) );//QColor(0,0,192));
     __pal.setColor(QPalette::Highlight,QColor(0,0,192));
     __pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
-    __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
+    __pal.setColor(QPalette::Base,mpHost->getString(Host::CMD_LINE_BG_COLOR));//QColor(255,255,225));
+    __pal.setColor(QPalette::Window, mpHost->getString(Host::CMD_LINE_BG_COLOR));
     mpBufferSearchBox->setPalette( __pal );
     mpBufferSearchBox->setToolTip("Search buffer");
     connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
@@ -593,10 +587,10 @@ void TConsole::resizeEvent( QResizeEvent * event )
 {
     if( ! mIsDebugConsole && ! mIsSubConsole )
     {
-        mMainFrameTopHeight = mpHost->mBorderTopHeight;
-        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+        mMainFrameTopHeight = 1;
+        mMainFrameBottomHeight = 1;
+        mMainFrameLeftWidth = 1;
+        mMainFrameRightWidth = 1;
     }
     int x = event->size().width();
     int y = event->size().height();
@@ -654,10 +648,10 @@ void TConsole::refresh()
 {
     if( ! mIsDebugConsole )
     {
-        mMainFrameTopHeight = mpHost->mBorderTopHeight;
-        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+        mMainFrameTopHeight = 1;
+        mMainFrameBottomHeight = 1;
+        mMainFrameLeftWidth = 1;
+        mMainFrameRightWidth = 1;
     }
 
     int x = width();
@@ -726,61 +720,9 @@ void TConsole::closeEvent( QCloseEvent *event )
 
 }
 
-
-
 int TConsole::getButtonState()
 {
     return mButtonState;
-}
-
-void TConsole::slot_toggleLogging()
-{
-    if( mIsDebugConsole ) return;
-    mLogToLogFile = ! mLogToLogFile;
-    //mpHost->mLogStatus = mLogToLogFile;
-    if( mLogToLogFile )
-    {
-        QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
-        file.open( QIODevice::WriteOnly | QIODevice::Text );
-        QTextStream out(&file);
-        file.close();
-    }
-    else
-    {
-       QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
-       file.remove();
-    }
-    if( mLogToLogFile )
-    {
-        mLastBufferLogLine = buffer.size();
-        QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        if( mpHost->mRawStreamDump )
-        {
-            mLogFileName.append(".html");
-        }
-        else
-            mLogFileName.append(".txt");
-
-        QDir dirLogFile;
-        if( ! dirLogFile.exists( directoryLogFile ) )
-        {
-            dirLogFile.mkpath( directoryLogFile );
-        }
-        mLogFile.setFileName( mLogFileName );
-        mLogFile.open( QIODevice::WriteOnly );
-        mLogStream.setDevice( &mLogFile );
-        if( mpHost->mRawStreamDump ) mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
-        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
-    }
-    else
-    {
-        if( mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
-        mLogFile.close();
-        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
-    }
 }
 
 void TConsole::changeColors()
@@ -816,7 +758,7 @@ void TConsole::changeColors()
         qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
         console->mLetterSpacing = letterSpacing;
         console2->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, letterSpacing );
+        //mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, letterSpacing );
         mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, console->mLetterSpacing );
 #endif
         mDisplayFont.setFixedPitch(true);
@@ -834,38 +776,23 @@ void TConsole::changeColors()
     else
     {
         QPalette pal;
-        pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
+        pal.setColor(QPalette::Text, mpHost->getString(Host::CMD_LINE_FG_COLOR) );//QColor(0,0,192));
         pal.setColor(QPalette::Highlight,QColor(0,0,192));
         pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
-        pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
+        pal.setColor(QPalette::Base,mpHost->getString(Host::CMD_LINE_BG_COLOR));//QColor(255,255,225));
         mpCommandLine->setPalette( pal );
         mpCommandLine->mRegularPalette = pal;
-        if( mpHost->mNoAntiAlias )
-            mpHost->mDisplayFont.setStyleStrategy( QFont::NoAntialias );
-        else
-            mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
-        mpHost->mDisplayFont.setFixedPitch(true);
+        //mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
+        //mpHost->mDisplayFont.setFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
-        QPixmap pixmap = QPixmap( 2000, 600 );
-        QPainter p(&pixmap);
-        QFont _font = mpHost->mDisplayFont;
-        _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-        p.setFont(_font);
-        const QRectF r = QRectF(0,0,2000, 600);
-        QRectF r2;
-        const QString t = "123";
-        p.drawText(r,1,t,&r2);
-// N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-        int mFontWidth = QFontMetrics( mpHost->mDisplayFont ).width( QChar('W') );
-        qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
-        console->mLetterSpacing = letterSpacing;
-        console2->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, letterSpacing );
-        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, console->mLetterSpacing );
+
+        QFont windowFont = mpHost->getWindowFont();
+        console->mLetterSpacing = windowFont.letterSpacing();
+        console2->mLetterSpacing = windowFont.letterSpacing();
 #endif
-        console->setFont( mpHost->mDisplayFont );
-        console2->setFont( mpHost->mDisplayFont );
+        console->setFont( mpHost->getWindowFont() );
+        console2->setFont( mpHost->getWindowFont() );
         QPalette palette;
         palette.setColor( QPalette::Text, mpHost->mFgColor );
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
@@ -876,7 +803,7 @@ void TConsole::changeColors()
         console2->setPalette( palette );
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
-        mpCommandLine->setFont(mpHost->mDisplayFont);
+        mpCommandLine->setFont(mpHost->getWindowFont());
         mFormatCurrent.bgR = mpHost->mBgColor.red();
         mFormatCurrent.bgG = mpHost->mBgColor.green();
         mFormatCurrent.bgB = mpHost->mBgColor.blue();
@@ -900,8 +827,8 @@ void TConsole::changeColors()
     buffer.updateColors();
     if( ! mIsDebugConsole && ! mIsSubConsole )
     {
-        buffer.mWrapAt = mpHost->mWrapAt;
-        buffer.mWrapIndent = mpHost->mWrapIndentCount;
+        buffer.mWrapAt = mpHost->getWindowWrap();
+        buffer.mWrapIndent = mpHost->getWindowWrapIndent();
     }
 
 
@@ -1227,10 +1154,8 @@ void TConsole::hideEvent( QHideEvent * event )
         {
             if( mudlet::self()->mWindowMinimized )
             {
-                if( mpHost->mAlertOnNewData )
-                {
-                    mpHost->mTelnet.mAlertOnNewData = true;
-                }
+
+                mpHost->mTelnet.mAlertOnNewData = true;
             }
         }
     }
@@ -1347,7 +1272,10 @@ void TConsole::insertLink(const QString& text, QStringList & func, QStringList &
             if( text.indexOf("\n") != -1 )
             {
                 int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine( mUserCursor.y(),mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent );
+                int down = buffer.wrapLine( mUserCursor.y(),
+                                            mpHost->getWindowWidth(),
+                                            mpHost->getWindowWrapIndent(),
+                                            mFormatCurrent );
                 console->needUpdate( y_tmp, y_tmp+down+1 );
                 int y_neu = y_tmp+down;
                 int x_adjust = text.lastIndexOf("\n");
@@ -1414,7 +1342,10 @@ void TConsole::insertText(const QString& text, QPoint P )
             if( text.indexOf("\n") != -1 )
             {
                 int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine( mUserCursor.y(),mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent );
+                int down = buffer.wrapLine( mUserCursor.y(),
+                                            mpHost->getWindowWidth(),
+                                            mpHost->getWindowWrapIndent(),
+                                            mFormatCurrent );
                 console->needUpdate( y_tmp, y_tmp+down+1 );
             }
             else
@@ -1879,8 +1810,8 @@ void TConsole::printCommand( QString & msg )
                 format.bgB = mCommandBgColor.blue();
                 buffer.insertInLine( P, msg, format );
                 int down = buffer.wrapLine( lineBeforeNewContent,
-                                            mpHost->mScreenWidth,
-                                            mpHost->mWrapIndentCount,
+                                            mpHost->getWindowWidth(),
+                                            mpHost->getWindowWrapIndent(),
                                             mFormatCurrent );
 
                 console->needUpdate( lineBeforeNewContent, lineBeforeNewContent+1+down );

@@ -213,10 +213,7 @@ public:
       bool              mIsHighColorMode;
       bool              mIsSubConsole;
       std::map<std::string, TLabel *> mLabelMap;
-      QFile             mLogFile;
-      QString           mLogFileName;
-      QTextStream       mLogStream;
-      bool              mLogToLogFile;
+
       int               mMainFrameBottomHeight;
       int               mMainFrameLeftWidth;
       int               mMainFrameRightWidth;
@@ -249,9 +246,6 @@ public:
 
 
       QTime             mProcessingTime;
-      bool              mRecordReplay;
-      QFile             mReplayFile;
-      QDataStream       mReplayStream;
       TChar             mStandardFormat;
       QList<TConsole *> mSubConsoleList;
       std::map<std::string, TConsole *> mSubConsoleMap;
@@ -287,9 +281,6 @@ public slots:
 
       void              slot_searchBufferUp();
       void              slot_searchBufferDown();
-      void              slot_toggleReplayRecording();
-      void              slot_stop_all_triggers( bool );
-      void              slot_toggleLogging();
 
 };
 

@@ -38,7 +38,7 @@ class HostManager
 public:
 
                        HostManager() : mpActiveHost() {}
-    Host *             getHost( QString hostname );
+    Host *             getHost( const QString & hostname );
     QStringList        getHostList();
     QList<QString>     getHostNameList();
     Host *             getFirstHost();

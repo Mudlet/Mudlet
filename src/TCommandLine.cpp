@@ -41,11 +41,13 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mpConsole( pConsole )
 , mSelectedText( "" )
 , mSelectionStart( 0 )
+, font("monospace")
 
 {
     QString path;
+    QString dict = pHost->getString("dictionary");
 #ifdef Q_OS_LINUX
-    if ( QFile::exists("/usr/share/hunspell/"+ pHost->mSpellDic + ".aff") )
+    if ( QFile::exists("/usr/share/hunspell/"+ dict + ".aff") )
         path = "/usr/share/hunspell/";
     else
         path = "./";
@@ -55,20 +57,21 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
     path = "./";
 #endif
 
-    QString spell_aff = path + pHost->mSpellDic + ".aff";
-    QString spell_dic = path + pHost->mSpellDic + ".dic";
+    QString spell_aff = path + dict + ".aff";
+    QString spell_dic = path + dict + ".dic";
     mpHunspell = Hunspell_create( spell_aff.toLatin1().data(), spell_dic.toLatin1().data() );//"en_US.aff", "en_US.dic");
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    QFont font = mpHost->mDisplayFont;
+    font.setStyleHint(QFont::Monospace);
+    font.setPixelSize(14);
     setFont(font);
 
-    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Text, QColor(200,200,200));//QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mRegularPalette.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base,QColor(0,0,0));//QColor(255,255,225));
 
     setPalette( mRegularPalette );
 
@@ -112,7 +115,7 @@ bool TCommandLine::event( QEvent * event )
                 mAutoCompletionCount = -1;
                 mTabCompletionTyped = "";
                 mAutoCompletionTyped = "";
-                if( mpHost->mAutoClearCommandLineAfterSend )
+                if( mpHost->getBool("clearCmdLine") )
                     mHistoryBuffer = -1;
                 else
                     mHistoryBuffer = 0;
@@ -160,7 +163,7 @@ bool TCommandLine::event( QEvent * event )
                 break;
 
             case Qt::Key_Backspace:
-                if( mpHost->mAutoClearCommandLineAfterSend )
+                if( mpHost->getBool("clearCmdLine") )
                     mHistoryBuffer = -1;
                 else
                     mHistoryBuffer = 0;
@@ -185,7 +188,7 @@ bool TCommandLine::event( QEvent * event )
                 return true;
 
             case Qt::Key_Delete:
-                if( mpHost->mAutoClearCommandLineAfterSend )
+                if( mpHost->getBool("clearCmdLine") )
                     mHistoryBuffer = -1;
                 else
                     mHistoryBuffer = 0;
@@ -243,7 +246,7 @@ bool TCommandLine::event( QEvent * event )
                     mUserKeptOnTyping = false;
                     mTabCompletionCount = -1;
                     mAutoCompletionCount = -1;
-                    if( mpHost->mAutoClearCommandLineAfterSend )
+                    if( mpHost->getBool("clearCmdLine"))
                     {
                         clear();
                         mHistoryBuffer = -1;
@@ -266,7 +269,7 @@ bool TCommandLine::event( QEvent * event )
                 mUserKeptOnTyping = false;
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
-                if( mpHost->mAutoClearCommandLineAfterSend )
+                if( mpHost->getBool("clearCmdLine") )
                 {
                     clear();
                     mHistoryBuffer = -1;
@@ -319,7 +322,7 @@ bool TCommandLine::event( QEvent * event )
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 setPalette( mRegularPalette );
-                if( mpHost->mAutoClearCommandLineAfterSend )
+                if( mpHost->getBool("clearCmdLine") )
                     mHistoryBuffer = -1;
                 else
                     mHistoryBuffer = 0;
@@ -328,13 +331,13 @@ bool TCommandLine::event( QEvent * event )
                 break;
 
             case Qt::Key_PageUp:
-                mpConsole->scrollUp( mpHost->mScreenHeight );
+                mpConsole->scrollUp( mpHost->getInt("height") );
                 ke->accept();
                 return true;
                 break;
 
             case Qt::Key_PageDown:
-                mpConsole->scrollDown( mpHost->mScreenHeight );
+                mpConsole->scrollDown( mpHost->getInt("height") );
                 ke->accept();
                 return true;
                 break;
@@ -363,7 +366,7 @@ bool TCommandLine::event( QEvent * event )
                     QPlainTextEdit::event( event );
                     adjustHeight();
 
-                    if( mpHost->mAutoClearCommandLineAfterSend )
+                    if( mpHost->getBool("clearCmdLine") )
                         mHistoryBuffer = -1;
                     else
                         mHistoryBuffer = 0;
@@ -414,13 +417,11 @@ void TCommandLine::focusOutEvent( QFocusEvent * event )
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
-    int fontH = QFontMetrics( mpHost->mDisplayFont ).height();
+    int fontH = QFontMetrics( font ).height();
     if( lines < 1 ) lines = 1;
     if( lines > 10 ) lines = 10;
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
-    if( _height < mpHost->commandLineMinimumHeight )
-        _height = mpHost->commandLineMinimumHeight;
     if( _height > height() || _height < height() )
     {
         mpConsole->layerCommandLine->setMinimumHeight( _height );
@@ -435,7 +436,7 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    if( ! mpHost->mEnableSpellCheck ) return;
+    if( ! mpHost->getBool("enableSpellCheck") ) return;
 
     QTextCursor oldCursor = textCursor();
     QTextCharFormat f;
@@ -529,18 +530,13 @@ void TCommandLine::enterCommand( QKeyEvent * event )
         mHistoryList.removeAll( toPlainText() );
         mHistoryList.push_front( toPlainText() );
     }
-    if( mpHost->mAutoClearCommandLineAfterSend )
+    if( mpHost->getBool(Host::CMD_LINE_CLEAR) )
         clear();
     else
     {
         selectAll();
     }
     adjustHeight();
-
-
-
-
-
 
 }
 

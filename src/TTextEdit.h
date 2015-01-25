@@ -135,7 +135,6 @@ private:
     bool              mHighlightingEnd;
     bool              mInit_OK;
     bool              mInversOn;
-    bool              mIsDebugConsole;
     bool              mIsMiniConsole;
     bool              mIsSplitScreen;
     int               mLastRenderBottom;

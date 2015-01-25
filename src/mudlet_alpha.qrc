@@ -129,7 +129,5 @@
         <file>icons/view-statistics.png</file>
         <file>icons/window-close.png</file>
         <file>icons/zombiemud.png</file>
-        <file>Mudlet_splashscreen_main.png</file>
-        <file>ui/delete_profile_confirmation.ui</file>
     </qresource>
 </RCC>

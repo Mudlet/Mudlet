@@ -138,6 +138,8 @@ QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &acti
 
 int main(int argc, char *argv[])
 {
+    setupDefaultSettings();
+
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Enable leak detection for MSVC debug builds.
     {

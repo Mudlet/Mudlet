@@ -19,14 +19,14 @@
  ***************************************************************************/
 
 
+#include <QPainter>
+
 #include "Host.h"
 
 
 #include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
-#include "XMLexport.h"
-#include "XMLimport.h"
 
 #include "pre_guard.h"
 #include <QtUiTools>
@@ -39,55 +39,44 @@
 
 #include <errno.h>
 
+QString Host::WINDOW_WRAP("window.wrap");
+QString Host::WINDOW_WRAP_INDENT("window.wrap.indent");
+QString Host::WINDOW_WIDTH("window.width");
+QString Host::WINDOW_HEIGHT("window.width");
+
+QString Host::WINDOW_FONT_FAMILY("window.font.family");
+QString Host::WINDOW_FONT_SIZE("window.font.size");
+
+QString Host::CMD_LINE_FONT_FAMILY("cmdLine.font.family");
+QString Host::CMD_LINE_FONT_SIZE("cmdLine.font.size");
+
+QString Host::CMD_LINE_CLEAR("cmdLine.autoClear");
+QString Host::CMD_LINE_FG_COLOR("cmdLine.fgColor");
+QString Host::CMD_LINE_BG_COLOR("cmdLine.bgColor");
+
+QSettings Host::DEFAULT_SETTINGS;
+
+void setupDefaultSettings() {
+    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_FONT_FAMILY,"Monospace");
+    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_FONT_SIZE,"12");
+
+    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_WIDTH,"1000");
+    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_HEIGHT,"800");
+    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_WRAP,"120");
+    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_WRAP_INDENT,"0");
+
+    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_FONT_FAMILY,"Monospace");
+    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_FONT_SIZE,"14");
+
+    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_CLEAR,false);
+    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_FG_COLOR,"#FFF");
+    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_BG_COLOR,"#000");
+}
 
 Host::Host( int port, const QString& hostname, const QString& login, const QString& pass, int id )
 : mTelnet( this )
 , mpConsole( 0 )
 , mKeyUnit           ( this )
-, commandLineMinimumHeight( 30 )
-, mAlertOnNewData( true )
-, mAllowToSendCommand( true )
-, mAutoClearCommandLineAfterSend( false )
-, mBlockScriptCompile( true )
-, mBorderBottomHeight( 0 )
-, mBorderLeftWidth( 0 )
-, mBorderRightWidth( 0 )
-, mBorderTopHeight( 0 )
-, mCodeCompletion( true )
-, mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//( QFont("Monospace", 10, QFont::Courier) )
-, mCommandSeparator  ( QString(";") )
-, mCommandSeperator  ( QString(";") )
-, mDisableAutoCompletion( false )
-, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
-, mEnableGMCP( false )
-, mEnableMSDP( false )
-, mFORCE_GA_OFF( false )
-, mFORCE_NO_COMPRESSION( false )
-, mFORCE_SAVE_ON_EXIT( false )
-, mHostID( id )
-, mHostName( hostname )
-, mInsertedMissingLF( false )
-, mIsGoingDown( false )
-, mLF_ON_GA( true )
-, mLogin( login )
-, mMainIconSize( 3 )
-, mNoAntiAlias( false )
-, mPass( pass )
-, mPort(port)
-, mPrintCommand( true )
-, mRawStreamDump( false )
-, mResetProfile( false )
-, mRetries( 5 )
-, mSaveProfileOnExit( false )
-, mScreenHeight( 25 )
-, mScreenWidth( 90 )
-, mTEFolderIconSize( 3 )
-, mTimeout( 60 )
-, mUSE_FORCE_LF_AFTER_PROMPT( false )
-, mUSE_IRE_DRIVER_BUGFIX( true )
-, mUSE_UNIX_EOL( false )
-, mWrapAt( 100 )
-, mWrapIndentCount( 0 )
 , mBlack             (Qt::black)
 , mLightBlack        (Qt::darkGray)
 , mRed               (Qt::darkRed)
@@ -126,179 +115,85 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mWhite_2             (Qt::lightGray)
 , mFgColor_2           (Qt::lightGray)
 , mBgColor_2           (Qt::black)
-, mSpellDic            ( "en_US" )
-, mLogStatus           ( false )
-, mEnableSpellCheck    ( true )
-, mModuleSaveBlock(false)
-, mpUnzipDialog        ( 0 )
-, mLineSize            ( 5.0 )
-, mRoomSize            ( 0.5 )
-, mServerGUI_Package_version( -1 )
-, mServerGUI_Package_name( "nothing" )
-, mAcceptServerGUI     ( true )
-, mCommandLineFgColor(Qt::darkGray)
-, mCommandLineBgColor(Qt::black)
-, mFORCE_MXP_NEGOTIATION_OFF( false )
-, mHaveMapperScript( false )
-, mLogErrorOnConsole( false )
-, java(this,hostname)
 {
-   // mLogStatus = mudlet::self()->mAutolog;
-    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
-    directoryLogFile.append(mHostName);
-    directoryLogFile.append("/log");
-    QString logFileName = directoryLogFile + "/errors.txt";
-    QDir dirLogFile;
-    if( ! dirLogFile.exists( directoryLogFile ) )
-    {
-        dirLogFile.mkpath( directoryLogFile );
-    }
-    mErrorLogFile.setFileName( logFileName );
-    mErrorLogFile.open( QIODevice::Append );
-    mErrorLogStream.setDevice( &mErrorLogFile );
-    mMapStrongHighlight = false;
-    mGMCP_merge_table_keys.append("Char.Status");
-    mDoubleClickIgnore.insert('"');
-    mDoubleClickIgnore.insert('\'');
+    auto keys = Host::DEFAULT_SETTINGS.allKeys();
 
+    // copy default settings
+    for(auto key : keys) {
+        auto value = Host::DEFAULT_SETTINGS.value(key).toString();
+        settings.setValue(key,value);
+    }
 }
 
 Host::~Host()
 {
-    mIsGoingDown = true;
-    mTelnet.disconnect();
-    mErrorLogStream.flush();
-    mErrorLogFile.close();
+    close();
 }
 
-void Host::saveModules(int sync)
-{
-    if (mModuleSaveBlock)
-    {
-        //FIXME: This should generate an error to the user
-        return;
-    }
-    QMapIterator<QString, QStringList> it(modulesToWrite);
-    QStringList modulesToSync;
-    QString dirName = QDir::homePath()+"/.config/mudlet/moduleBackups/";
-    QDir savePath = QDir(dirName);
-    if (!savePath.exists())
-        savePath.mkpath(dirName);
-    while(it.hasNext())
-    {
-        it.next();
-        QStringList entry = it.value();
-        QString filename_xml = entry[0];
-        QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        QString moduleName = it.key();
-        QString tempDir;
-        QString zipName;
-        zip * zipFile = 0;
-        if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
-        {
-            tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
-            filename_xml = tempDir + "/" + moduleName + ".xml";
-            int err;
-            zipFile = zip_open( entry[0].toStdString().c_str(), 0, &err);
-            zipName = filename_xml;
-            QDir packageDir = QDir(tempDir);
-            if ( !packageDir.exists() ){
-                packageDir.mkpath(tempDir);
-            }
-        }
-        else
-        {
-            savePath.rename(filename_xml,dirName+moduleName+time);//move the old file, use the key (module name) as the file
-        }
-
-        if( !zipName.isEmpty() )
-        {
-            struct zip_source *s = zip_source_file( zipFile, filename_xml.toStdString().c_str(), 0, 0 );
-            QTime t;
-            t.start();
-//            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            int err = zip_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s );
-            //FIXME: error checking
-            if( zipFile )
-            {
-                err = zip_close( zipFile );
-            }
-            //FIXME: error checking
-        }
-    }
-    modulesToWrite.clear();
-    if (sync)
-    {
-        //synchronize modules across sessions
-        QMap<Host *, TConsole *> activeSessions = mudlet::self()->mConsoleMap;
-        QMapIterator<Host *, TConsole *> it2(activeSessions);
-        while (it2.hasNext())
-        {
-            it2.next();
-            Host * host = it2.key();
-            if (host->mHostName == mHostName)
-                continue;
-            QMap<QString, QStringList> installedModules = host->mInstalledModules;
-            QMap<QString, int> modulePri = host->mModulePriorities;
-            QMapIterator<QString, int> it3(modulePri);
-            QMap<int, QStringList> moduleOrder;
-            while( it3.hasNext() )
-            {
-                it3.next();
-                //QStringList moduleEntry = moduleOrder[it3.value()];
-                //moduleEntry.append(it3.key());
-                moduleOrder[it3.value()].append(it3.key());// = moduleEntry;
-            }
-            QMapIterator<int, QStringList> it4(moduleOrder);
-            while(it4.hasNext())
-            {
-                it4.next();
-                QStringList moduleList = it4.value();
-                for(int i=0;i<moduleList.size();i++)
-                {
-                    QString moduleName = moduleList[i];
-                    if (modulesToSync.contains(moduleName))
-                    {
-                        host->reloadModule(moduleName);
-                    }
-                }
-            }
-        }
-    }
+QFont Host::getWindowFont() {
+    getFont("window");
 }
 
-void Host::reloadModule(const QString& moduleName)
-{
-    QMap<QString, QStringList> installedModules = mInstalledModules;
-    QMapIterator<QString, QStringList> it(installedModules);
-    while(it.hasNext())
-    {
-        it.next();
-        QStringList entry = it.value();
-        if (it.key() == moduleName){
-            //uninstallPackage(it.key(),2);
-            //installPackage(entry[0],2);
-        }
+int Host::getWindowHeight() {
+    return getInt(Host::WINDOW_HEIGHT);
+}
+
+int Host::getWindowWidth() {
+    return getInt(Host::WINDOW_WIDTH);
+}
+
+int Host::getWindowWrap() {
+    return getInt(Host::WINDOW_WRAP);
+}
+
+int Host::getWindowWrapIndent() {
+    return getInt(Host::WINDOW_WRAP_INDENT);
+}
+
+
+QFont Host::getFont(const char *ch) {
+    QString domain(ch);
+    QFont font(getString(domain + ".font.family"));
+
+    if(!QFontInfo(font).fixedPitch()) {
+        font.setStyleHint(QFont::Monospace);
     }
-    //iterate through mInstalledModules again and reset the entry flag to be correct.
-    //both the installedModules and mInstalled should be in the same order now as well
-    QMapIterator<QString, QStringList> it2(mInstalledModules);
-    while(it2.hasNext())
-    {
-        it2.next();
-        QStringList entry = installedModules[it2.key()];
-        mInstalledModules[it2.key()] = entry;
+
+    if(!QFontInfo(font).fixedPitch()) {
+        font.setStyleHint(QFont::TypeWriter);
     }
+
+    font.setPixelSize(getInt(domain + ".font.size"));
+
+    QPixmap pixmap = QPixmap( 2000, 600 );
+    QPainter p(&pixmap);
+    font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
+    p.setFont(font);
+    const QRectF r = QRectF(0,0,2000, 600);
+
+    QRectF r2;
+    const QString t = "123";
+    p.drawText(r,1,t,&r2);
+
+    int width = QFontMetrics( font ).width( QChar('W') );
+    qreal letterSpacing = (qreal)((qreal)width-(qreal)(r2.width()/t.size()));
+
+    windowFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+
+    return windowFont;
+}
+
+QFont Host::getCmdLineFont() {
+
+    return getFont("cmdLine");
 }
 
 void Host::resetProfile()
 {
 
     mpConsole->resetMainConsole();
-    mBlockScriptCompile = false;
 
     getKeyUnit()->compileAll();
-    mResetProfile = false;
 
     TEvent event;
     event.mArgumentList.append( "sysLoadEvent" );
@@ -313,37 +208,40 @@ void Host::adjustNAWS()
     mTelnet.setDisplayDimensions();
 }
 
-void Host::setReplacementCommand(const QString& s )
-{
-    mReplacementCommand = s;
-}
 
-void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
+void Host::send( QString cmd )
 {
-    if( wantPrint && mPrintCommand )
-    {
-        mInsertedMissingLF = true;
-        if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
-        {
-            ;
-        }
-        else
-        {
-            mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
-                                            // this is important to get the cursor position right
-        }
-        mpConsole->update();
-    }
-    QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
+        mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
+                                        // this is important to get the cursor position right
+    mpConsole->update();
+    QStringList commandList = cmd.split( QString( ";" ), QString::SkipEmptyParts );
 
     for( int i=0; i<commandList.size(); i++ )
     {
         if( commandList[i].size() < 1 ) continue;
         QString command = commandList[i];
         command.replace("\n", "");
-        mReplacementCommand = "";
         mTelnet.sendData( command );
     }
+}
+
+KeyUnit * Host::getKeyUnit() {
+    return & mKeyUnit;
+}
+
+void Host::setString(const QString &key, const QString &value) {
+    QMutexLocker locker(& lock);
+    settings.setValue(key,value);
+}
+
+void Host::setInt(const QString &key, int value) {
+    QMutexLocker locker(& lock);
+    settings.setValue(key,value);
+}
+
+void Host::setBool(const QString &key, bool value) {
+    QMutexLocker locker(& lock);
+    settings.setValue(key,value);
 }
 
 void Host::sendRaw( QString command )
@@ -353,14 +251,43 @@ void Host::sendRaw( QString command )
 
 void Host::incomingStreamProcessor(const QString & data, int line )
 {
-    java.handleLine(data,line);
+    //java.handleLine(data,line);
 
-    if( mResetProfile )
-    {
-        resetProfile();
-    }
 }
 
+QString Host::getString(const QString &setting) {
+    QMutexLocker locker(& lock);
+    return settings.value(setting).toString();
+}
+
+bool Host::getBool(const QString &setting) {
+    QMutexLocker locker(& lock);
+    return settings.value(setting).toBool();
+}
+
+
+int Host::getInt(const QString &setting) {
+    QMutexLocker locker(& lock);
+    return settings.value(setting).toInt();
+}
+
+QString Host::getId() {
+    QMutexLocker locker(& lock);
+    return id;
+}
+
+void Host::load() {
+
+}
+
+void Host::save() {
+    //QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+}
+
+void Host::setId(const QString &id) {
+    QMutexLocker locker(& lock);
+    this->id = id;
+}
 
 void Host::enableKey(const QString & name )
 {
@@ -374,56 +301,21 @@ void Host::disableKey(const QString & name )
 
 void Host::connectToServer()
 {
-    mTelnet.connectIt( mUrl, mPort );
+    auto url = settings.value("url").toString();
+    auto port = settings.value("port").toInt();
+    mTelnet.connectIt( url, port );
 }
 
-bool Host::serialize()
-{
-    return false;
-    if( ! mSaveProfileOnExit )
-    {
-        return true;
-    }
-    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-    QDir dir_xml;
-    if( ! dir_xml.exists( directory_xml ) )
-    {
-        dir_xml.mkpath( directory_xml );
-    }
-    QDir dir_map;
-    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/map";
-    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-    if( ! dir_map.exists( directory_map ) )
-    {
-        dir_map.mkpath( directory_map );
-    }
-
-    QFile file_xml( filename_xml );
-    if ( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        modulesToWrite.clear();
-        XMLexport writer( this );
-        writer.exportHost( & file_xml );
-        file_xml.close();
-        saveModules(0);
-    }
-    else
-    {
-        QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-    }
-
-    return true;
+bool Host::isClosed() {
+    QMutexLocker locker(& lock);
+    return closed;
 }
 
-
-bool Host::closingDown()
-{
-    QMutexLocker locker(& mLock);
-    bool shutdown = mIsClosingDown;
-    return shutdown;
+void Host::close() {
+    QMutexLocker locker(& lock);
+    closed = true;
+    mTelnet.disconnect();
 }
-
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
 bool Host::removeDir( const QString& dirName, const QString& originalPath )

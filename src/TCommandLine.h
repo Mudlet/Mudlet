@@ -63,6 +63,7 @@ private:
     void              adjustHeight();
     void              mousePressEvent( QMouseEvent * event ) override;
 
+    QFont               font;
     int               mHistoryBuffer;
     QStringList       mHistoryList;
     QMap<QString,int> mHistoryMap;

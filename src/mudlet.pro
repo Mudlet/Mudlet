@@ -141,7 +141,6 @@ INCLUDEPATH += irc/include
 
 SOURCES += \
     ctelnet.cpp \
-    dlgConnectionProfiles.cpp \
     FontManager.cpp \
     Host.cpp \
     HostManager.cpp \
@@ -165,7 +164,6 @@ msvc:SOURCES +=
 
 HEADERS += \
     ctelnet.h \
-    dlgConnectionProfiles.h \
     Host.h \
     HostManager.h \
     KeyUnit.h \

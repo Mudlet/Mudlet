@@ -50,21 +50,21 @@ bool HostManager::deleteHost( QString hostname )
     return true;
 }
 
-bool HostManager::renameHost( QString hostname )
+bool HostManager::renameHost( QString id )
 {
     QMutexLocker locker(& mPoolLock);
 
     // make sure this is really a new host
-    if( mHostPool.find( hostname ) == mHostPool.end() )
+    if( mHostPool.find( id ) == mHostPool.end() )
     {
         return false;
     }
     else
     {
-        //Host * pNewHost = getHost( hostname ); // see why it doesn't work
-        QSharedPointer<Host> pNewHost = mHostPool[hostname];
-        mHostPool.remove( hostname );
-        mHostPool.insert(pNewHost->getName(), pNewHost);
+        QSharedPointer<Host> host = mHostPool[id];
+        mHostPool.remove( id );
+        host->setId(id);
+        mHostPool.insert(id, host);
     }
 
     return true;
@@ -120,34 +120,17 @@ QList<QString> HostManager::getHostNameList()
     return mHostPool.keys();
 }
 
-Host * HostManager::getHost( QString hostname )
+Host * HostManager::getHost( const QString &id )
 {
     QMutexLocker locker(& mPoolLock);
-    if( mHostPool.find( hostname ) != mHostPool.end() )
+    if( mHostPool.find( id ) != mHostPool.end() )
     {
-        // host exists
-        return mHostPool[hostname].data();
+        return mHostPool[id].data();
     }
     else
     {
-        return 0;
+        return NULL;
     }
-}
-
-Host * HostManager::getHostFromHostID( int id )
-{
-    QMutexLocker locker( & mPoolLock );
-    QMapIterator<QString, QSharedPointer<Host> > it(mHostPool);
-    while( it.hasNext() )
-    {
-        it.next();
-        if( it.value()->getHostID() == id )
-        {
-            return it.value().data();
-        }
-    }
-    qDebug()<<"ERROR: didnt find requested id in hostpool";
-    return 0;
 }
 
 Host * HostManager::getFirstHost()

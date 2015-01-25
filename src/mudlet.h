@@ -52,7 +52,6 @@ class Host;
 class TConsole;
 class TEvent;
 class TLabel;
-class TTimer;
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow
@@ -76,8 +75,6 @@ public:
    void							 disableToolbarButtons();
    void							 enableToolbarButtons();
    Host *                        getActiveHost();
-   void                          registerTimer( TTimer *, QTimer * );
-   void                          unregisterTimer( QTimer * );
    bool                          openWindow( Host *, const QString & );
    bool                          createMiniConsole( Host *, const QString &, int, int, int, int );
    bool                          createLabel( Host *, const QString &, int, int, int, int, bool );
@@ -132,9 +129,7 @@ public:
    bool                          isGoingDown() { return mIsGoingDown; }
    int                           mTEFolderIconSize;
    void                          setIcoSize( int s );
-   void                          replayStart();
    bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
-   void                          replayOver();
    void                          showEvent( QShowEvent * event ) override;
    void                          hideEvent( QHideEvent * event ) override;
    bool                          resetFormat( Host *, QString & name );
@@ -158,25 +153,9 @@ public:
 public slots:
 
    void                          processEventLoopHack_timerRun();
-   void                          slot_replayTimeChanged();
-   void                          slot_replaySpeedUp();
-   void                          slot_replaySpeedDown();
    void                          toggleFullScreenView();
-   void                          slot_userToolBar_orientation_changed(Qt::Orientation);
-   void                          slot_module_clicked(QTableWidgetItem*);
-   void                          slot_module_changed(QTableWidgetItem*);
    void                          slot_multi_view();
-   void                          slot_userToolBar_hovered( QAction* pA );
-   void                          slot_connection_dlg_finnished( const QString& profile, int historyVersion );
-   void                          slot_timer_fires();
-   void                          slot_send_login();
-   void                          slot_send_pass();
-   void                          slot_replay();
-   void                          slot_disconnect();
-   void                          slot_notes();
-   void                          slot_reconnect();
    void                          slot_close_profile_requested(int);
-   void                          startAutoLogin();
 
 protected:
 
@@ -186,16 +165,6 @@ private slots:
 
    void                          slot_close_profile();
    void                          slot_tab_changed( int );
-   void                          show_help_dialog();
-   void                          connectToServer();
-   void                          show_trigger_dialog();
-   void                          show_alias_dialog();
-   void                          show_script_dialog();
-   void                          show_timer_dialog();
-   void                          show_action_dialog();
-   void                          show_key_dialog();
-   void                          show_variable_dialog();
-   void                          show_options_dialog();
 
 private:
 
