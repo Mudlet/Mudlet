@@ -1093,7 +1093,7 @@ void TextEdit::slot_popupMenu()
 
 void TextEdit::mousePressEvent( QMouseEvent * event )
 {
-    if( ! mpConsole->mIsSubConsole )
+    if( ! mpConsole->isSubConsole )
     {
         //TEvent me;
         /*me.mArgumentList.append( "sysWindowMousePressEvent" );
@@ -1377,7 +1377,7 @@ void TextEdit::mouseReleaseEvent( QMouseEvent * event )
     {
         mMouseTracking = false;
     }
-    if( ! mpConsole->mIsSubConsole )
+    if( ! mpConsole->isSubConsole )
     {
         /*TEvent me;
         me.mArgumentList.append( "sysWindowMouseReleaseEvent" );

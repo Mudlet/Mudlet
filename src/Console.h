@@ -39,13 +39,10 @@ class QLineEdit;
 class QScrollBar;
 class QToolButton;
 
-class dlgMapper;
 class Profile;
 class TextEdit;
 class CommandLine;
-class TLabel;
 class ConsoleSplitter;
-class dlgNotepad;
 
 
 class TFontSpecsLogger
@@ -60,16 +57,16 @@ public:
         bold = false;
         italics = false;
         underline = false;
-        m_bgColorHasChanged = false;
-        m_fgColorHasChanged = false;
+        bgColorHasChanged = false;
+        fgColorHasChanged = false;
     }
-    void bg_color_change(){ m_bgColorHasChanged=true; }
-    void fg_color_change(){ m_fgColorHasChanged=true; }
+    void bg_color_change(){ bgColorHasChanged=true; }
+    void fg_color_change(){ fgColorHasChanged=true; }
     QColor fgColor;
     QColor fgColorLight;
     QColor bgColor;
-    bool m_bgColorHasChanged;
-    bool m_fgColorHasChanged;
+    bool bgColorHasChanged;
+    bool fgColorHasChanged;
     bool bold;
     bool italics;
     bool underline;
@@ -119,7 +116,7 @@ public:
       void              createMapper( int, int, int, int );
       void              loadRawFile( std::string );
       void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
-      void              setIndentCount( int count ){ mIndentCount = count; buffer.setWrapIndent( count ); }
+      void              setIndentCount( int count ){ indentCount = count; buffer.setWrapIndent( count ); }
       void              echo(const QString & );
       bool              moveCursor( int x, int y );
       int               select(const QString&, int numOfMatch = 1 );
@@ -143,13 +140,10 @@ public:
       void              moveCursorEnd();
       int               getLastLineNumber();
       void              refresh();
-      TLabel *          createLabel(const QString & name, int x, int y, int width, int height, bool fillBackground );
       Console *        createMiniConsole(const QString & name, int x, int y, int width, int height );
-      bool              createButton(const QString & name, int x, int y, int width, int height, bool fillBackground );
       bool              showWindow(const QString & name );
       bool              hideWindow(const QString & name );
       bool              printWindow(const QString & name, const QString & text );
-      bool              setBackgroundImage(const QString & name, const QString & path );
       bool              setBackgroundColor(const QString & name, int r, int g, int b, int alpha );
       QString           getCurrentLine( std::string & );
       void              selectCurrentLine( std::string & );
@@ -198,19 +192,18 @@ public:
       QColor            mCommandBgColor;
       QColor            mCommandFgColor;
 
-      QString           mConsoleName;
-      QString           mCurrentLine;
-      int               mDeletedLines;
-      QFont             mDisplayFont;
-      int               mEngineCursor;
-      QColor            mFgColor;
-      TChar             mFormatBasic;
-      TChar             mFormatSystemMessage;
+      QString           name;
+      QString           currentLine;
+      int               deletedLines;
+      QFont             displayFont;
+      int               engineCursor;
+      QColor            fgColor;
+      TChar             formatBasic;
+      TChar             formatSystemMessage;
 
-      int               mIndentCount;
-      bool              mIsHighColorMode;
-      bool              mIsSubConsole;
-      std::map<std::string, TLabel *> mLabelMap;
+      int               indentCount;
+      bool              isHighColorMode;
+      bool              isSubConsole;
 
       int               mMainFrameBottomHeight;
       int               mMainFrameLeftWidth;
@@ -234,9 +227,6 @@ public:
       QWidget *         mpMainFrame;
       QWidget *         mpRightToolBar;
       QWidget *         mpMainDisplay;
-
-      dlgMapper *       mpMapper;
-      dlgNotepad *      mpNotePad;
 
       QScrollBar *      mpScrollBar;
 

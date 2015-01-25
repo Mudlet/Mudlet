@@ -56,10 +56,10 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
 , mClipboard( mpHost )
 , mCommandBgColor( QColor( 0, 0, 0 ) )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
-, mConsoleName( "main" )
-, mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
-, mFgColor( QColor( 0, 0, 0 ) )
-, mIndentCount( 0 )
+, name( "main" )
+, displayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
+, fgColor( QColor( 0, 0, 0 ) )
+, indentCount( 0 )
 , mMainFrameBottomHeight( 0 )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
@@ -73,7 +73,6 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
 , mpMainFrame( new QWidget( mpBaseHFrame ) )
 , mpRightToolBar( new QWidget( mpBaseHFrame ) )
 , mpMainDisplay( new QWidget( mpMainFrame ) )
-, mpMapper( 0 )
 , mpScrollBar( new QScrollBar )
 , mSystemMessageBgColor( mBgColor )
 , mSystemMessageFgColor( QColor( 255,0,0 ) )
@@ -97,7 +96,7 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
     setWindowTitle( tr( "Console" ) );
     if( parent )
     {
-        mIsSubConsole = true;
+        isSubConsole = true;
         mpHost->console->mSubConsoleList.append( this );
         mMainFrameTopHeight = 0;
         mMainFrameBottomHeight = 0;
@@ -106,7 +105,7 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
     }
     else
     {
-        mIsSubConsole = false;
+        isSubConsole = false;
         mMainFrameTopHeight = 1;
         mMainFrameBottomHeight = 1;
         mMainFrameLeftWidth = 1;
@@ -130,18 +129,18 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
         profile_name = mpHost->getId();
     else
         profile_name = "debug console";
-    mFormatSystemMessage.bgR = mBgColor.red();
-    mFormatSystemMessage.bgG = mBgColor.green();
-    mFormatSystemMessage.bgB = mBgColor.blue();
-    mFormatSystemMessage.fgR = 255;
-    mFormatSystemMessage.fgG = 0;
-    mFormatSystemMessage.fgB = 0;
+    formatSystemMessage.bgR = mBgColor.red();
+    formatSystemMessage.bgG = mBgColor.green();
+    formatSystemMessage.bgB = mBgColor.blue();
+    formatSystemMessage.fgR = 255;
+    formatSystemMessage.fgG = 0;
+    formatSystemMessage.fgB = 0;
     setAttribute( Qt::WA_DeleteOnClose );
     setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
     mWaitingForHighColorCode = false;
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
-    mIsHighColorMode = false;
+    isHighColorMode = false;
 
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3( QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -488,7 +487,7 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
 
     connect( mpScrollBar, SIGNAL(valueChanged(int)), console, SLOT(slot_scrollBarMoved(int)));
 
-    if( mIsSubConsole )
+    if( isSubConsole )
     {
         mpScrollBar->hide();
         console2->hide();
@@ -541,7 +540,7 @@ Profile * Console::getHost() { return mpHost; }
 
 void Console::resizeEvent( QResizeEvent * event )
 {
-    if( ! mIsSubConsole )
+    if( ! isSubConsole )
     {
         mMainFrameTopHeight = 1;
         mMainFrameBottomHeight = 1;
@@ -552,7 +551,7 @@ void Console::resizeEvent( QResizeEvent * event )
     int y = event->size().height();
 
 
-    if( ! mIsSubConsole )
+    if( ! isSubConsole )
     {
         mpMainFrame->resize(x,y);
         mpBaseVFrame->resize(x, y);
@@ -570,7 +569,7 @@ void Console::resizeEvent( QResizeEvent * event )
     }
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
 
-    if( mIsSubConsole )
+    if( isSubConsole )
     {
         layerCommandLine->hide();
         cmdLine->hide();
@@ -583,7 +582,7 @@ void Console::resizeEvent( QResizeEvent * event )
 
     QWidget::resizeEvent( event );
 
-    if( ! mIsSubConsole )
+    if( ! isSubConsole )
     {
 
         // TODO add event
@@ -668,32 +667,32 @@ int Console::getButtonState()
 
 void Console::changeColors()
 {
-    mDisplayFont.setFixedPitch(true);
-    if( mIsSubConsole )
+    displayFont.setFixedPitch(true);
+    if( isSubConsole )
     {
-        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
+        displayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( 2000, 600 );
         QPainter p(&pixmap);
-        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
-        p.setFont(mDisplayFont);
+        displayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+        p.setFont(displayFont);
         const QRectF r = QRectF(0,0,2000, 600);
         QRectF r2;
         const QString t = "123";
         p.drawText(r,1,t,&r2);
 // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
+        int mFontWidth = QFontMetrics( displayFont ).width( QChar('W') );
         qreal letterSpacing = (qreal)((qreal)mFontWidth-(qreal)(r2.width()/t.size()));
         console->mLetterSpacing = letterSpacing;
         console2->mLetterSpacing = letterSpacing;
         //mpHost->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, letterSpacing );
-        mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, console->mLetterSpacing );
+        displayFont.setLetterSpacing( QFont::AbsoluteSpacing, console->mLetterSpacing );
 #endif
-        mDisplayFont.setFixedPitch(true);
-        console->setFont( mDisplayFont );
-        console2->setFont( mDisplayFont );
+        displayFont.setFixedPitch(true);
+        console->setFont( displayFont );
+        console2->setFont( displayFont );
         QPalette palette;
-        palette.setColor( QPalette::Text, mFgColor );
+        palette.setColor( QPalette::Text, fgColor );
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
         palette.setColor( QPalette::Base, mBgColor );
         setPalette( palette );
@@ -712,7 +711,7 @@ void Console::changeColors()
         cmdLine->mRegularPalette = pal;
         //mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
         //mpHost->mDisplayFont.setFixedPitch(true);
-        mDisplayFont.setFixedPitch(true);
+        displayFont.setFixedPitch(true);
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
 
         QFont windowFont = mpHost->getWindowFont();
@@ -745,7 +744,7 @@ void Console::changeColors()
     palette.setColor( QPalette::Window, QColor(0,255,0) );
     palette.setColor( QPalette::Base, QColor(255,0,0) );
 
-    if( ! mIsSubConsole )
+    if( ! isSubConsole )
     {
         console->mWrapAt = mWrapAt;
         console2->mWrapAt = mWrapAt;
@@ -753,7 +752,7 @@ void Console::changeColors()
     }
 
     buffer.updateColors();
-    if( ! mIsSubConsole )
+    if( ! isSubConsole )
     {
         buffer.mWrapAt = mpHost->getWindowWrap();
         buffer.mWrapIndent = mpHost->getWindowWrapIndent();
@@ -771,7 +770,7 @@ void Console::setConsoleBgColor( int r, int g, int b )
 
 void Console::setConsoleFgColor( int r, int g, int b )
 {
-    mFgColor = QColor(r,g,b);
+    fgColor = QColor(r,g,b);
     console->setConsoleFgColor( r, g, b );
     changeColors();
 }
@@ -809,14 +808,14 @@ QString Console::assemble_html_font_specs()
 {
     QString s;
     s = "</span><span style=\"";
-    if( m_LoggerfontSpecs.m_fgColorHasChanged )
+    if( m_LoggerfontSpecs.fgColorHasChanged )
     {
         s+="color: rgb("+
             QString::number(m_LoggerfontSpecs.fgColor.red())+","+
             QString::number(m_LoggerfontSpecs.fgColor.green())+","+
             QString::number(m_LoggerfontSpecs.fgColor.blue()) + ");";
     }
-    if( m_LoggerfontSpecs.m_bgColorHasChanged )
+    if( m_LoggerfontSpecs.bgColorHasChanged )
     {
         s += " background: rgb("+
             QString::number(m_LoggerfontSpecs.bgColor.red())+","+
@@ -1011,8 +1010,8 @@ QString Console::logger_translate( QString & s )
             }
             for( int i=0; i<textPropertyList.size(); i++ )
             {
-                m_LoggerfontSpecs.m_fgColorHasChanged = false;
-                m_LoggerfontSpecs.m_bgColorHasChanged = false;
+                m_LoggerfontSpecs.fgColorHasChanged = false;
+                m_LoggerfontSpecs.bgColorHasChanged = false;
                 logger_set_text_properties(textPropertyList[i]);
                 //            qDebug()<<"set property:"<<textPropertyList[i];
             }
@@ -1064,7 +1063,7 @@ void Console::deselect()
 
 void Console::showEvent( QShowEvent * event )
 {
-    if( ! mIsSubConsole && mpHost )
+    if( ! isSubConsole && mpHost )
     {
         mpHost->mTelnet.mAlertOnNewData = false;
     }
@@ -1073,7 +1072,7 @@ void Console::showEvent( QShowEvent * event )
 
 void Console::hideEvent( QHideEvent * event )
 {
-    if( ! mIsSubConsole && mpHost )
+    if( ! isSubConsole && mpHost )
     {
         if( MainWindow::self()->mWindowMinimized )
         {
@@ -1123,7 +1122,7 @@ void Console::insertLink(const QString& text, QStringList & func, QStringList & 
             }
         }
 
-        if( y < mEngineCursor )
+        if( y < engineCursor )
         {
             if( customFormat )
                 buffer.insertInLine( P, text, mFormatCurrent );
@@ -1135,7 +1134,7 @@ void Console::insertLink(const QString& text, QStringList & func, QStringList & 
             buffer.applyLink( P, P2, text, func, hint );
             console->needUpdate( mUserCursor.y(), mUserCursor.y()+1 );
         }
-        else if( y >= mEngineCursor )
+        else if( y >= engineCursor )
         {
             if( customFormat )
                 buffer.insertInLine( P, text, mFormatCurrent );
@@ -1225,12 +1224,12 @@ void Console::insertText(const QString& text, QPoint P )
     int r = text.size();
     if( mTriggerEngineMode )
     {
-        if( y < mEngineCursor )
+        if( y < engineCursor )
         {
             buffer.insertInLine( P, text, mFormatCurrent );
             console->needUpdate( mUserCursor.y(), mUserCursor.y()+1 );
         }
-        else if( y >= mEngineCursor )
+        else if( y >= engineCursor )
         {
             buffer.insertInLine( P, text, mFormatCurrent );
         }
@@ -1292,7 +1291,7 @@ void Console::skipLine()
 {
     if( deleteLine( mUserCursor.y() ) )
     {
-        mDeletedLines++;
+        deletedLines++;
     }
 }
 
@@ -1490,7 +1489,7 @@ void Console::_luaWrapLine( int line )
 {
     if( !mpHost ) return;
     TChar ch(mpHost);
-    buffer.wrapLine( line, mWrapAt, mIndentCount, ch );
+    buffer.wrapLine( line, mWrapAt, indentCount, ch );
 }
 
 bool Console::setMiniConsoleFontSize( std::string & buf, int size )
@@ -1753,7 +1752,7 @@ void Console::echoLink(const QString & text, QStringList & func, QStringList & h
         buffer.addLink( mTriggerEngineMode, text, func, hint, mFormatCurrent );
     else
     {
-        if( ! mIsSubConsole )
+        if( ! isSubConsole )
         {
             TChar f = TChar(0, 0, 255, mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(), false, false, true, false);
             buffer.addLink( mTriggerEngineMode, text, func, hint, f );

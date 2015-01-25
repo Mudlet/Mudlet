@@ -359,7 +359,7 @@ bool MainWindow::createMiniConsole( Profile * pHost, const QString & name, int x
     if( ! dockWindowConsoleMap.contains( name ) )
     {
         Console * pC = pHost->console->createMiniConsole( name, x, y, width, height );
-        pC->mConsoleName = name;
+        pC->name = name;
         if( pC )
         {
             dockWindowConsoleMap[name] = pC;
@@ -386,7 +386,7 @@ bool MainWindow::createBuffer( Profile * pHost, const QString & name )
     if( ! dockWindowConsoleMap.contains( name ) )
     {
         Console * pC = pHost->console->createBuffer( name );
-        pC->mConsoleName = name;
+        pC->name = name;
         if( pC )
         {
             dockWindowConsoleMap[name] = pC;
