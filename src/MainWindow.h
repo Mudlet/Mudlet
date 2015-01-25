@@ -54,15 +54,15 @@ class TEvent;
 class TLabel;
 
 
-class mudlet : public QMainWindow, public Ui::MainWindow
+class MainWindow : public QMainWindow, public Ui::MainWindow
 {
 Q_OBJECT
 
 public:
 
-                                 mudlet();
-                                ~mudlet();
-   static                        mudlet * self();
+                                 MainWindow();
+                                ~MainWindow();
+   static                        MainWindow * self();
    // This method allows better debugging when mudlet::self() is called inappropriately.
    static                        void start();
    HostManager *                 getHostManager();
@@ -140,12 +140,12 @@ public:
    void                          stopSounds();
    void                          playSound( QString s );
    QString                       version;
-   QPointer<Host>                mpCurrentActiveHost;
+   QPointer<Host>                activeHost;
    QMediaPlayer *                mpMusicBox1;
    QMediaPlayer *                mpMusicBox2;
    QMediaPlayer *                mpMusicBox3;
    QMediaPlayer *                mpMusicBox4;
-   QTabBar *                     mpTabBar;
+   QTabBar *                     tabBar;
 
 
 
@@ -175,7 +175,7 @@ private:
    QQueue<QString>               tempLoginQueue;
    QQueue<QString>               tempPassQueue;
    QQueue<Host *>                tempHostQueue;
-   static                        QPointer<mudlet> _self;
+   static                        QPointer<MainWindow> _self;
    QMap<QString, QDockWidget *>  dockWindowMap;
    QMap<Host *, QToolBar *>      mUserToolbarMap;
 

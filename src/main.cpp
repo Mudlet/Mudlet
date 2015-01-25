@@ -329,8 +329,8 @@ int main(int argc, char *argv[])
     QString home = QDir::homePath()+"/.config/mudlet";
     QString homeLink = QDir::homePath()+"/mudlet-data";
     QFile::link(home, homeLink);
-    mudlet::start();
-    mudlet::self()->show();
+    MainWindow::start();
+    MainWindow::self()->show();
 
     app->restoreOverrideCursor();
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application

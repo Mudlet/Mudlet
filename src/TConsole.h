@@ -89,7 +89,7 @@ public:
       void              resetMainConsole();
       void              echoUserWindow(const QString & );
       Host *            getHost();
-      TCommandLine *    mpCommandLine;
+      TCommandLine *    cmdLine;
       void              replace(const QString& );
       void              insertHTML(const QString& );
       void              insertText(const QString& );

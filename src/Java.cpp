@@ -213,7 +213,7 @@ void Java::handleCommand(int cmd) {
 void Java::cmdEcho() {
     char *ch = buffer->nextString();
     QString qs(ch);
-    host->mpConsole->echo(qs);
+    host->console->echo(qs);
 }
 
 void Java::cmdSend() {

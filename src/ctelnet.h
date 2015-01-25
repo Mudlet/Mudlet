@@ -93,7 +93,7 @@ class cTelnet : public QObject
 public:
                       cTelnet( Host * pH );
                       ~cTelnet();
-    void              connectIt(const QString &address, int port);
+    void              connect(const QString &address, int port);
     void              disconnect();
     bool              sendData( QString & data );
     void              setCommandEcho( bool cmdEcho );

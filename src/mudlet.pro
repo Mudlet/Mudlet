@@ -146,7 +146,6 @@ SOURCES += \
     HostManager.cpp \
     KeyUnit.cpp \
     main.cpp \
-    mudlet.cpp \
     TBuffer.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
@@ -156,7 +155,8 @@ SOURCES += \
     TSplitter.cpp \
     TSplitterHandle.cpp \
     Java.cpp \
-    TTextEdit.cpp
+    TTextEdit.cpp \
+    MainWindow.cpp
 
 !msvc:SOURCES +=
 msvc:SOURCES +=
@@ -167,7 +167,6 @@ HEADERS += \
     Host.h \
     HostManager.h \
     KeyUnit.h \
-    mudlet.h \
     pre_guard.h \
     post_guard.h \
     TAStar.h \
@@ -183,7 +182,8 @@ HEADERS += \
     Java.h \
     Tree.h \
     TTextEdit.h \
-    TLabel.h
+    TLabel.h \
+    MainWindow.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
