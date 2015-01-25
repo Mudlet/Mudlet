@@ -22,13 +22,13 @@
 
 
 #include "Telnet.h"
-#include "HotKey.h"
 
 #include "Java.h"
 
 #include "pre_guard.h"
 #include <QColor>
 #include <QFile>
+#include <QMutex>
 #include <QFont>
 #include <QPointer>
 #include <QSettings>
@@ -38,8 +38,7 @@
 class QDialog;
 class QPushButton;
 class QListWidget;
-
-class TConsole;
+class Console;
 
 void setupDefaultSettings();
 
@@ -85,7 +84,6 @@ public:
     QString             getString(const QString &);
     int                 getInt(const QString &);
     bool                getBool(const QString &);
-    HotKey *           getKeyUnit();
 
     void                setBool(const QString &, bool);
     void                setString(const QString &, const QString &);
@@ -113,8 +111,7 @@ public:
     void                save();
 
     Telnet             mTelnet;
-    QPointer<TConsole>  console;
-    HotKey             mKeyUnit;
+    QPointer<Console>  console;
 
     QColor              mBlack;
     QColor              mLightBlack;

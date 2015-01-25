@@ -46,7 +46,7 @@
 
 using namespace std;
 
-TConsole *  spDebugConsole = 0;
+Console *  spDebugConsole = 0;
 
 extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 

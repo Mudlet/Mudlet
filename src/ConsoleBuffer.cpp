@@ -19,10 +19,10 @@
  ***************************************************************************/
 
 
-#include "TBuffer.h"
+#include "ConsoleBuffer.h"
 
-#include "Host.h"
-#include "TConsole.h"
+#include "Profile.h"
+#include "Console.h"
 
 #include <queue>
 
@@ -113,7 +113,7 @@ TChar::TChar( const TChar & copy )
 }
 
 
-TBuffer::TBuffer( Profile * pH )
+ConsoleBuffer::ConsoleBuffer( Profile * pH )
 : mLinkID            ( 0 )
 , mLinesLimit        ( 10000 )
 , mBatchDeleteSize   ( 1000 )
@@ -177,7 +177,7 @@ TBuffer::TBuffer( Profile * pH )
     mMXP_Elements["SEND"] = _element;
 }
 
-void TBuffer::setBufferSize( int s, int batch )
+void ConsoleBuffer::setBufferSize( int s, int batch )
 {
     if( s < 100 ) s = 100;
     if( batch >= s ) batch = s/10;
@@ -185,7 +185,7 @@ void TBuffer::setBufferSize( int s, int batch )
     mBatchDeleteSize = batch;
 }
 
-void TBuffer::resetFontSpecs()
+void ConsoleBuffer::resetFontSpecs()
 {
     fgColorR = mFgColorR;
     fgColorG = mFgColorG;
@@ -199,7 +199,7 @@ void TBuffer::resetFontSpecs()
     mStrikeOut = false;
 }
 
-void TBuffer::updateColors()
+void ConsoleBuffer::updateColors()
 {
     Profile * pH = mpHost;
     mBlack = pH->mBlack;
@@ -286,7 +286,7 @@ void TBuffer::updateColors()
 
 }
 
-QPoint TBuffer::getEndPos()
+QPoint ConsoleBuffer::getEndPos()
 {
     int x = 0;
     int y = 0;
@@ -298,7 +298,7 @@ QPoint TBuffer::getEndPos()
     return P_end;
 }
 
-int TBuffer::getLastLineNumber()
+int ConsoleBuffer::getLastLineNumber()
 {
     if( static_cast<int>(buffer.size()) > 0 )
     {
@@ -310,7 +310,7 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink( bool trigMode, const QString & text, QStringList & command, QStringList & hint, TChar format )
+void ConsoleBuffer::addLink( bool trigMode, const QString & text, QStringList & command, QStringList & hint, TChar format )
 {
     mLinkID++;
     if( mLinkID > 1000 )
@@ -355,7 +355,7 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
     }
 }
 
-inline void TBuffer::set_text_properties(int tag)
+inline void ConsoleBuffer::set_text_properties(int tag)
 {
     if( mWaitingForHighColorCode )
     {
@@ -661,7 +661,7 @@ const QChar cESC = '\033';
 const QString cDigit = "0123456789";
 
 
-inline int TBuffer::lookupColor(const QString & s, int pos )
+inline int ConsoleBuffer::lookupColor(const QString & s, int pos )
 {
     int ret = 0;
     QString code;
@@ -707,7 +707,7 @@ inline int TBuffer::lookupColor(const QString & s, int pos )
 }
 
 
-void TBuffer::translateToPlainText( std::string & s )
+void ConsoleBuffer::translateToPlainText( std::string & s )
 {
     //cout << "TRANSLATE<"<<s<<">"<<endl;
     speedAppend = 0;
@@ -1806,7 +1806,7 @@ void TBuffer::translateToPlainText( std::string & s )
     }
 }
 
-void TBuffer::append(const QString & text,
+void ConsoleBuffer::append(const QString & text,
                       int sub_start,
                       int sub_end,
                       int fgColorR,
@@ -1912,7 +1912,7 @@ void TBuffer::append(const QString & text,
     }
 }
 
-void TBuffer::appendLine(const QString & text,
+void ConsoleBuffer::appendLine(const QString & text,
                         int sub_start,
                         int sub_end,
                         int fgColorR,
@@ -1966,7 +1966,7 @@ void TBuffer::appendLine(const QString & text,
     }
 }
 
-QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
+QPoint ConsoleBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
 {
     QPoint P(-1, -1);
 
@@ -2008,7 +2008,7 @@ QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int f
 }
 
 
-bool TBuffer::insertInLine( QPoint & P, const QString & text, TChar & format )
+bool ConsoleBuffer::insertInLine( QPoint & P, const QString & text, TChar & format )
 {
     if( text.size() < 1 ) return false;
     int x = P.x();
@@ -2039,9 +2039,9 @@ bool TBuffer::insertInLine( QPoint & P, const QString & text, TChar & format )
     return true;
 }
 
-TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
+ConsoleBuffer ConsoleBuffer::copy( QPoint & P1, QPoint & P2 )
 {
-    TBuffer slice( mpHost );
+    ConsoleBuffer slice( mpHost );
     slice.clear();
     int y = P1.y();
     int x = P1.x();
@@ -2075,16 +2075,16 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
         return slice;
 }
 
-TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
+ConsoleBuffer ConsoleBuffer::cut( QPoint & P1, QPoint & P2 )
 {
-    TBuffer slice = copy( P1, P2 );
+    ConsoleBuffer slice = copy( P1, P2 );
     QString nothing = "";
     TChar format;
     replaceInLine( P1, P2, nothing, format );
     return slice;
 }
 
-void TBuffer::paste( QPoint & P, TBuffer chunk )
+void ConsoleBuffer::paste( QPoint & P, ConsoleBuffer chunk )
 {
     bool needAppend = false;
     bool hasAppended = false;
@@ -2150,7 +2150,7 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     }
 }
 
-void TBuffer::appendBuffer( TBuffer chunk )
+void ConsoleBuffer::appendBuffer( ConsoleBuffer chunk )
 {
     if( chunk.buffer.size() < 1 )
     {
@@ -2189,7 +2189,7 @@ void TBuffer::appendBuffer( TBuffer chunk )
                false );
 }
 
-int TBuffer::calcWrapPos( int line, int begin, int end )
+int ConsoleBuffer::calcWrapPos( int line, int begin, int end )
 {
     const QString lineBreaks = ",.- \n";
     if( lineBuffer.size() < line ) return 0;
@@ -2208,7 +2208,7 @@ int TBuffer::calcWrapPos( int line, int begin, int end )
     return 0;
 }
 
-inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
+inline int ConsoleBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
 {
     int offset = 0;
     int i_end = lineBuffer[i].size();
@@ -2226,7 +2226,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
     return offset;
 }
 
-inline int TBuffer::wrap( int startLine )
+inline int ConsoleBuffer::wrap( int startLine )
 {
     if( static_cast<int>(buffer.size()) < startLine || startLine < 0 ) return 0;
     std::queue<std::deque<TChar> > queue;
@@ -2362,7 +2362,7 @@ inline int TBuffer::wrap( int startLine )
 }
 
 // returns how many new lines have been inserted by the wrapping action
-int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
+int ConsoleBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
 {
     if( startLine < 0 ) return 0;
     if( static_cast<int>(buffer.size()) <= startLine ) return 0;
@@ -2488,7 +2488,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
 }
 
 
-bool TBuffer::moveCursor( QPoint & where )
+bool ConsoleBuffer::moveCursor( QPoint & where )
 {
     int x = where.x();
     int y = where.y();
@@ -2506,14 +2506,14 @@ bool TBuffer::moveCursor( QPoint & where )
 QString badLineError = QString("ERROR: invalid line number");
 
 
-QString & TBuffer::line( int n )
+QString & ConsoleBuffer::line( int n )
 {
     if( (n >= lineBuffer.size()) || (n<0) ) return badLineError;
     return lineBuffer[n];
 }
 
 
-int TBuffer::find( int line, const QString& what, int pos=0 )
+int ConsoleBuffer::find( int line, const QString& what, int pos=0 )
 {
     if( lineBuffer[line].size() >= pos ) return -1;
     if( pos < 0 ) return -1;
@@ -2522,21 +2522,21 @@ int TBuffer::find( int line, const QString& what, int pos=0 )
 }
 
 
-QStringList TBuffer::split( int line, const QString& splitter )
+QStringList ConsoleBuffer::split( int line, const QString& splitter )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
     return lineBuffer[line].split( splitter );
 }
 
 
-QStringList TBuffer::split( int line, QRegExp splitter )
+QStringList ConsoleBuffer::split( int line, QRegExp splitter )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
     return lineBuffer[line].split( splitter );
 }
 
 
-void TBuffer::expandLine( int y, int count, TChar & pC )
+void ConsoleBuffer::expandLine( int y, int count, TChar & pC )
 {
     int size = buffer[y].size()-1;
     for( int i=size; i<size+count; i++ )
@@ -2546,7 +2546,7 @@ void TBuffer::expandLine( int y, int count, TChar & pC )
     }
 }
 
-bool TBuffer::replaceInLine( QPoint & P_begin,
+bool ConsoleBuffer::replaceInLine( QPoint & P_begin,
                              QPoint & P_end,
                              const QString & with,
                              TChar & format )
@@ -2608,7 +2608,7 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
 }
 
 
-bool TBuffer::replace( int line, const QString& what, const QString& with )
+bool ConsoleBuffer::replace( int line, const QString& what, const QString& with )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) )
         return false;
@@ -2640,7 +2640,7 @@ bool TBuffer::replace( int line, const QString& what, const QString& with )
     return true;
 }
 
-void TBuffer::clear()
+void ConsoleBuffer::clear()
 {
     while( buffer.size() > 0 )
     {
@@ -2657,12 +2657,12 @@ void TBuffer::clear()
     dirty.push_back( true );
 }
 
-bool TBuffer::deleteLine( int y )
+bool ConsoleBuffer::deleteLine( int y )
 {
     return deleteLines( y, y );
 }
 
-void TBuffer::shrinkBuffer()
+void ConsoleBuffer::shrinkBuffer()
 {
     for( int i=0; i < mBatchDeleteSize; i++ )
     {
@@ -2675,7 +2675,7 @@ void TBuffer::shrinkBuffer()
     }
 }
 
-bool TBuffer::deleteLines( int from, int to )
+bool ConsoleBuffer::deleteLines( int from, int to )
 {
     if( ( from >= 0 )
      && ( from < static_cast<int>(buffer.size()) )
@@ -2703,7 +2703,7 @@ bool TBuffer::deleteLines( int from, int to )
 }
 
 
-bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
+bool ConsoleBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -2746,7 +2746,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
         return false;
 }
 
-bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
+bool ConsoleBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -2801,7 +2801,7 @@ bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkT
             return false;
 }
 
-bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
+bool ConsoleBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -2846,7 +2846,7 @@ bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
         return false;
 }
 
-bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
+bool ConsoleBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -2891,7 +2891,7 @@ bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
         return false;
 }
 
-bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
+bool ConsoleBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -2937,7 +2937,7 @@ bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
         return false;
 }
 
-bool TBuffer::applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout )
+bool ConsoleBuffer::applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -2983,7 +2983,7 @@ bool TBuffer::applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout )
         return false;
 }
 
-bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int fgColorG, int fgColorB )
+bool ConsoleBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int fgColorG, int fgColorB )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -3028,7 +3028,7 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int 
         return false;
 }
 
-bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int bgColorG, int bgColorB )
+bool ConsoleBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int bgColorG, int bgColorB )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -3073,7 +3073,7 @@ bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int 
     }
 }
 
-QStringList TBuffer::getEndLines( int n )
+QStringList ConsoleBuffer::getEndLines( int n )
 {
     QStringList linesList;
     for( int i=getLastLineNumber()-n; i<getLastLineNumber(); i++ )
@@ -3084,7 +3084,7 @@ QStringList TBuffer::getEndLines( int n )
 }
 
 
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+QString ConsoleBuffer::bufferToHtml( QPoint P1, QPoint P2 )
 {
     int y = P1.y();
     int x = P1.x();

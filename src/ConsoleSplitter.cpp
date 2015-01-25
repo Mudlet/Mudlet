@@ -19,21 +19,21 @@
  ***************************************************************************/
 
 
-#include "TSplitter.h"
+#include "ConsoleSplitter.h"
 
 
-#include "TSplitterHandle.h"
+#include "ConsoleSplitterHandle.h"
 
 #include "pre_guard.h"
 #include <QSplitterHandle>
 #include "post_guard.h"
 
 
-TSplitter::TSplitter(Qt::Orientation o, QWidget* p) : QSplitter(o, p)
+ConsoleSplitter::ConsoleSplitter(Qt::Orientation o, QWidget* p) : QSplitter(o, p)
 {
 }
 
-QSplitterHandle* TSplitter::createHandle()
+QSplitterHandle* ConsoleSplitter::createHandle()
 {
-    return new TSplitterHandle(orientation(), this);
+    return new ConsoleSplitterHandle(orientation(), this);
 }

@@ -48,7 +48,7 @@ class QTextEdit;
 class QTimer;
 
 class Profile;
-class TConsole;
+class Console;
 class TEvent;
 class TLabel;
 
@@ -66,7 +66,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static                        void start();
     Profiles *                 getHostManager();
-    void                          addSubWindow(TConsole* p);
+    void                          addSubWindow(Console* p);
     int                           getColumnNumber( Profile * pHost, QString & name );
     int                           getLineNumber( Profile * pHost, QString & name );
     void                          printSystemMessage( Profile * pH, const QString & s );
@@ -122,8 +122,8 @@ public:
     void                          showUnzipProgress( const QString& txt );
     bool                          openWebPage(const QString& path);
     void                          processEventLoopHack();
-    QMap<Profile *, TConsole *>     mConsoleMap;
-    QMap<Profile *, QMap<QString, TConsole * > > mHostConsoleMap;
+    QMap<Profile *, Console *>     mConsoleMap;
+    QMap<Profile *, QMap<QString, Console * > > mHostConsoleMap;
     QMap<Profile *, QMap<QString, TLabel * > > mHostLabelMap;
     QIcon *                       testicon;
     bool                          isGoingDown() { return mIsGoingDown; }
@@ -168,7 +168,7 @@ private slots:
 private:
 
     void                          goingDown() { mIsGoingDown = true; }
-    QMap<QString, TConsole *>         mTabMap;
+    QMap<QString, Console *>         mTabMap;
     QWidget *                     mainPane;
 
     QPointer<Profile>                mpDefaultHost;

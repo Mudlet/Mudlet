@@ -142,21 +142,17 @@ INCLUDEPATH += irc/include
 SOURCES += \
     FontManager.cpp \
     main.cpp \
-    TBuffer.cpp \
-    TCommandLine.cpp \
-    TConsole.cpp \
-    THighlighter.cpp \
-    TKey.cpp \
-    TLabel.cpp \
-    TSplitter.cpp \
-    TSplitterHandle.cpp \
     Java.cpp \
-    TTextEdit.cpp \
     MainWindow.cpp \
     Telnet.cpp \
-    HotKey.cpp \
     Profiles.cpp \
-    Profile.cpp
+    Profile.cpp \
+    Console.cpp \
+    ConsoleBuffer.cpp \
+    CommandLine.cpp \
+    ConsoleSplitter.cpp \
+    ConsoleSplitterHandle.cpp \
+    TextEdit.cpp
 
 !msvc:SOURCES +=
 msvc:SOURCES +=
@@ -166,23 +162,17 @@ HEADERS += \
     pre_guard.h \
     post_guard.h \
     TAStar.h \
-    TBuffer.h \
-    TCommandLine.h \
-    TConsole.h \
-    TEvent.h \
-    THighlighter.h \
-    TKey.h \
-    TSplitter.h \
-    TSplitterHandle.h \
     Java.h \
-    Tree.h \
-    TTextEdit.h \
-    TLabel.h \
     MainWindow.h \
     Telnet.h \
-    HotKey.h \
     Profile.h \
-    Profiles.h
+    Profiles.h \
+    Console.h \
+    ConsoleBuffer.h \
+    CommandLine.h \
+    ConsoleSplitter.h \
+    ConsoleSplitterHandle.h \
+    TextEdit.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.

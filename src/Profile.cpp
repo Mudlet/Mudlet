@@ -25,8 +25,7 @@
 
 
 #include "MainWindow.h"
-#include "TConsole.h"
-#include "TEvent.h"
+#include "Console.h"
 
 #include "pre_guard.h"
 #include <QtUiTools>
@@ -80,7 +79,6 @@ void setupDefaultSettings() {
 Profile::Profile( int port, const QString& hostname, const QString& login, const QString& pass )
 : mTelnet( this )
 , console( 0 )
-, mKeyUnit           ( this )
 , mBlack             (Qt::black)
 , mLightBlack        (Qt::darkGray)
 , mRed               (Qt::darkRed)
@@ -214,12 +212,6 @@ void Profile::resetProfile()
 
     console->resetMainConsole();
 
-    getKeyUnit()->compileAll();
-
-    TEvent event;
-    event.mArgumentList.append( "sysLoadEvent" );
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-
     // TODO add event
     qDebug()<<"resetProfile() DONE";
 }
@@ -244,10 +236,6 @@ void Profile::send( QString cmd )
         command.replace("\n", "");
         mTelnet.sendData( command );
     }
-}
-
-HotKey * Profile::getKeyUnit() {
-    return & mKeyUnit;
 }
 
 void Profile::setString(const QString &key, const QString &value) {
@@ -308,16 +296,6 @@ void Profile::save() {
 void Profile::setId(const QString &id) {
     QMutexLocker locker(& lock);
     this->id = id;
-}
-
-void Profile::enableKey(const QString & name )
-{
-    mKeyUnit.enableKey( name );
-}
-
-void Profile::disableKey(const QString & name )
-{
-    mKeyUnit.disableKey( name );
 }
 
 void Profile::connectToServer()

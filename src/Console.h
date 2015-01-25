@@ -21,7 +21,7 @@
  ***************************************************************************/
 
 
-#include "TBuffer.h"
+#include "ConsoleBuffer.h"
 
 #include "pre_guard.h"
 #include <QFile>
@@ -41,10 +41,10 @@ class QToolButton;
 
 class dlgMapper;
 class Profile;
-class TTextEdit;
-class TCommandLine;
+class TextEdit;
+class CommandLine;
 class TLabel;
-class TSplitter;
+class ConsoleSplitter;
 class dlgNotepad;
 
 
@@ -77,18 +77,18 @@ public:
 };
 
 
-class TConsole : public QWidget
+class Console : public QWidget
 {
 Q_OBJECT
 
 public:
 
-                        TConsole( Profile *, bool isDebugConsole, QWidget * parent=0 );
+                        Console( Profile *, bool isDebugConsole, QWidget * parent=0 );
       void              reset();
       void              resetMainConsole();
       void              echoUserWindow(const QString & );
       Profile *            getHost();
-      TCommandLine *    cmdLine;
+      CommandLine *    cmdLine;
       void              replace(const QString& );
       void              insertHTML(const QString& );
       void              insertText(const QString& );
@@ -101,11 +101,11 @@ public:
       void              cut();
       void              paste();
       void              appendBuffer();
-      void              appendBuffer( TBuffer );
+      void              appendBuffer( ConsoleBuffer );
       int               getButtonState();
       void              closeEvent( QCloseEvent *event ) override;
       void              resizeEvent( QResizeEvent * event ) override;
-      void              pasteWindow( TBuffer );
+      void              pasteWindow( ConsoleBuffer );
       void              setUserWindow();
       QStringList       getLines( int from, int to );
       int               getLineNumber();
@@ -129,7 +129,7 @@ public:
       void              setFgColor( int, int, int );
       void              setBgColor( int, int, int );
       void              changeColors();
-      TConsole *        createBuffer(const QString & name );
+      Console *        createBuffer(const QString & name );
       void              scrollDown( int lines );
       void              scrollUp( int lines );
       void              print(const QString &, int, int, int, int, int, int );
@@ -144,7 +144,7 @@ public:
       int               getLastLineNumber();
       void              refresh();
       TLabel *          createLabel(const QString & name, int x, int y, int width, int height, bool fillBackground );
-      TConsole *        createMiniConsole(const QString & name, int x, int y, int width, int height );
+      Console *        createMiniConsole(const QString & name, int x, int y, int width, int height );
       bool              createButton(const QString & name, int x, int y, int width, int height, bool fillBackground );
       bool              showWindow(const QString & name );
       bool              hideWindow(const QString & name );
@@ -181,10 +181,10 @@ public:
 
       QPointer<Profile>    mpHost;
 
-      TBuffer           buffer;
+      ConsoleBuffer           buffer;
       static const QString     cmLuaLineVariable;
-      TTextEdit *       console;
-      TTextEdit *       console2;
+      TextEdit *       console;
+      TextEdit *       console2;
       int               currentFgColorProperty;
       QToolButton *     emergencyStop;
       bool              isUserScrollBack;
@@ -194,7 +194,7 @@ public:
       TFontSpecsLogger  m_LoggerfontSpecs;
       QColor            mBgColor;
       int               mButtonState;
-      TBuffer           mClipboard;
+      ConsoleBuffer           mClipboard;
       QColor            mCommandBgColor;
       QColor            mCommandFgColor;
 
@@ -245,8 +245,8 @@ public:
 
       QTime             mProcessingTime;
       TChar             mStandardFormat;
-      QList<TConsole *> mSubConsoleList;
-      std::map<std::string, TConsole *> mSubConsoleMap;
+      QList<Console *> mSubConsoleList;
+      std::map<std::string, Console *> mSubConsoleMap;
 
       QColor            mSystemMessageBgColor;
       QColor            mSystemMessageFgColor;
@@ -260,7 +260,7 @@ public:
       QPoint            P_begin;
       QPoint            P_end;
       QString           profile_name;
-      TSplitter *       splitter;
+      ConsoleSplitter *       splitter;
       int               mLastBufferLogLine;
       bool              mIsPromptLine;
       QToolButton *     logButton;

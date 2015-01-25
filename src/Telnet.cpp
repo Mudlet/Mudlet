@@ -28,8 +28,7 @@
 
 #include "Profile.h"
 #include "MainWindow.h"
-#include "TConsole.h"
-#include "TEvent.h"
+#include "Console.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -189,9 +188,9 @@ void Telnet::connectTo(const QString &address, int port)
 void Telnet::disconnect ()
 {
     socket.disconnectFromHost();
-    TEvent me;
+    /*TEvent me;
     me.mArgumentList.append( "sysDisconnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );*/
 
     // TODO add event
 
@@ -211,9 +210,9 @@ void Telnet::handle_socket_signal_connected()
     QString func = "onConnect";
     QString nothing = "";
     mConnectionTime.start();
-    TEvent me;
+    /*TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );*/
 
     // TODO add event
 
@@ -222,9 +221,9 @@ void Telnet::handle_socket_signal_connected()
 void Telnet::handle_socket_signal_disconnected()
 {
     postData();
-    TEvent me;
+   /* TEvent me;
     me.mArgumentList.append( "sysDisconnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );*/
 
     // TODO add event
     QString msg;
@@ -268,11 +267,11 @@ bool Telnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-    TEvent pE;
+    /*TEvent pE;
     pE.mArgumentList.append( "sysDataSendRequest" );
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     pE.mArgumentList.append( data );
-    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );*/
 
     // TODO add event
 
@@ -879,7 +878,7 @@ void Telnet::processTelnetCommand( const string & command )
       unsigned char telnetOption = static_cast<unsigned char>(command[2]);
       QString msg = command.c_str();
       if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
-      TEvent me;
+      /*TEvent me;
       me.mArgumentList.append( "sysTelnetEvent" );
       me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
       me.mArgumentList.append( QString::number(type) );
@@ -887,7 +886,7 @@ void Telnet::processTelnetCommand( const string & command )
       me.mArgumentList.append( QString::number(telnetOption) );
       me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
       me.mArgumentList.append( msg );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );*/
 
       // TODO add event
 

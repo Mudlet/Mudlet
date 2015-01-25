@@ -32,22 +32,22 @@
 #include <string>
 
 class Profile;
-class TBuffer;
-class TConsole;
+class ConsoleBuffer;
+class Console;
 
 class QScrollBar;
 class QString;
 
 
-class TTextEdit : public QWidget
+class TextEdit : public QWidget
 {
 Q_OBJECT
 
 public:
 
-                      TTextEdit( TConsole *,
+                      TextEdit( Console *,
                                  QWidget *,
-                                 TBuffer * pB,
+                                 ConsoleBuffer * pB,
                                  Profile * pH,
                                  bool isDebugConsole,
                                  bool isSplitScreen );
@@ -145,8 +145,8 @@ private:
     QPoint            mPA;
     bool              mPainterInit;
     QPoint            mPB;
-    TBuffer *         mpBuffer;
-    TConsole *        mpConsole;
+    ConsoleBuffer *         mpBuffer;
+    Console *        mpConsole;
     QPointer<Profile>    mpHost;
     QScrollBar *      mpScrollBar;
     int               mScreenHeight;

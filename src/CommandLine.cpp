@@ -19,14 +19,14 @@
  ***************************************************************************/
 
 
-#include "TCommandLine.h"
+#include "CommandLine.h"
 
 
 #include "MainWindow.h"
 #include "Profile.h"
-#include "TConsole.h"
-#include "TSplitter.h"
-#include "TTextEdit.h"
+#include "Console.h"
+#include "ConsoleSplitter.h"
+#include "TextEdit.h"
 
 #include "pre_guard.h"
 #include <QAction>
@@ -35,7 +35,7 @@
 #include "post_guard.h"
 
 
-TCommandLine::TCommandLine( Profile * pHost, TConsole * pConsole, QWidget * parent )
+CommandLine::CommandLine( Profile * pHost, Console * pConsole, QWidget * parent )
 : QPlainTextEdit( parent )
 , mpHost( pHost )
 , mpConsole( pConsole )
@@ -60,12 +60,10 @@ TCommandLine::TCommandLine( Profile * pHost, TConsole * pConsole, QWidget * pare
     QString spell_aff = path + dict + ".aff";
     QString spell_dic = path + dict + ".dic";
     mpHunspell = Hunspell_create( spell_aff.toLatin1().data(), spell_dic.toLatin1().data() );//"en_US.aff", "en_US.dic");
-    mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    font.setStyleHint(QFont::Monospace);
-    font.setPixelSize(14);
+    font = mpHost->getWindowFont();
     setFont(font);
 
     mRegularPalette.setColor(QPalette::Text, QColor(200,200,200));//QColor(0,0,192));
@@ -94,16 +92,16 @@ TCommandLine::TCommandLine( Profile * pHost, TConsole * pConsole, QWidget * pare
     setContentsMargins(0,0,0,0);
 }
 
-TCommandLine::~TCommandLine()
+CommandLine::~CommandLine()
 {
     Hunspell_destroy( mpHunspell );
 }
 
-void TCommandLine::slot_textChanged( const QString & text )
+void CommandLine::slot_textChanged( const QString & text )
 {
 }
 
-bool TCommandLine::event( QEvent * event )
+bool CommandLine::event( QEvent * event )
 {
     if( event->type() == QEvent::KeyPress )
     {
@@ -356,32 +354,25 @@ bool TCommandLine::event( QEvent * event )
 
             default:
 
-                if( mpKeyUnit->processDataStream( ke->key(), (int)ke->modifiers() ) )
+                QPlainTextEdit::event( event );
+                adjustHeight();
+
+                if( mpHost->getBool("clearCmdLine") )
+                    mHistoryBuffer = -1;
+                else
+                    mHistoryBuffer = 0;
+                if( mTabCompletionOld != toPlainText() )//text() )
                 {
-                    ke->accept();
-                    return true;
+                    mUserKeptOnTyping = true;
+                    mAutoCompletionCount = -1;
                 }
                 else
                 {
-                    QPlainTextEdit::event( event );
-                    adjustHeight();
-
-                    if( mpHost->getBool("clearCmdLine") )
-                        mHistoryBuffer = -1;
-                    else
-                        mHistoryBuffer = 0;
-                    if( mTabCompletionOld != toPlainText() )//text() )
-                    {
-                        mUserKeptOnTyping = true;
-                        mAutoCompletionCount = -1;
-                    }
-                    else
-                    {
-                        mUserKeptOnTyping = false;
-                    }
-                    spellCheck();
-                    return false;
+                    mUserKeptOnTyping = false;
                 }
+                spellCheck();
+                return false;
+
         }
 
     }
@@ -389,7 +380,7 @@ bool TCommandLine::event( QEvent * event )
     return QPlainTextEdit::event( event );
 }
 
-void TCommandLine::focusInEvent( QFocusEvent * event )
+void CommandLine::focusInEvent( QFocusEvent * event )
 {
     textCursor().movePosition(QTextCursor::Start);
     textCursor().movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, mSelectedText.length() );
@@ -399,7 +390,7 @@ void TCommandLine::focusInEvent( QFocusEvent * event )
     QPlainTextEdit::focusInEvent( event );
 }
 
-void TCommandLine::focusOutEvent( QFocusEvent * event )
+void CommandLine::focusOutEvent( QFocusEvent * event )
 {
     if( textCursor().hasSelection() )
     {
@@ -414,7 +405,7 @@ void TCommandLine::focusOutEvent( QFocusEvent * event )
     QPlainTextEdit::focusOutEvent( event );
 }
 
-void TCommandLine::adjustHeight()
+void CommandLine::adjustHeight()
 {
     int lines = document()->size().height();
     int fontH = QFontMetrics( font ).height();
@@ -434,7 +425,7 @@ void TCommandLine::adjustHeight()
     }
 }
 
-void TCommandLine::spellCheck()
+void CommandLine::spellCheck()
 {
     if( ! mpHost->getBool("enableSpellCheck") ) return;
 
@@ -462,7 +453,7 @@ void TCommandLine::spellCheck()
     setTextCursor(oldCursor);
 }
 
-void TCommandLine::slot_popupMenu()
+void CommandLine::slot_popupMenu()
 {
     QAction * pA = (QAction *)sender();
     if( ! pA )
@@ -479,7 +470,7 @@ void TCommandLine::slot_popupMenu()
     Hunspell_free_list( mpHunspell, &mpHunspellSuggestionList, mHunspellSuggestionNumber );
 }
 
-void TCommandLine::mousePressEvent( QMouseEvent * event )
+void CommandLine::mousePressEvent( QMouseEvent * event )
 {
     if( event->button() == Qt::RightButton )
     {
@@ -508,7 +499,7 @@ void TCommandLine::mousePressEvent( QMouseEvent * event )
     QPlainTextEdit::mousePressEvent( event );
 }
 
-void TCommandLine::enterCommand( QKeyEvent * event )
+void CommandLine::enterCommand( QKeyEvent * event )
 {
     QString _t = toPlainText();
     mAutoCompletion = false;
@@ -540,7 +531,7 @@ void TCommandLine::enterCommand( QKeyEvent * event )
 
 }
 
-void TCommandLine::slot_sendCommand(const char * pS)
+void CommandLine::slot_sendCommand(const char * pS)
 {
     mpHost->sendRaw( QString(pS) );
 }
@@ -552,7 +543,7 @@ void TCommandLine::slot_sendCommand(const char * pS)
 // You can cycle through all possible matches of the currently typed letters
 // with by repeatedly pressing tab or shift+tab. ESC-key brings you back into regular mode
 
-void TCommandLine::handleTabCompletion( bool direction )
+void CommandLine::handleTabCompletion( bool direction )
 {
     if( ( mTabCompletionCount < 0 ) || ( mUserKeptOnTyping ) )
     {
@@ -620,7 +611,7 @@ void TCommandLine::handleTabCompletion( bool direction )
 // all possible matches. If the user keeps on typing more letters the
 // the set of possible matches is getting smaller. The ESC key brings you back to regular mode
 
-void TCommandLine::handleAutoCompletion()
+void CommandLine::handleAutoCompletion()
 {
     QString neu = toPlainText();
     neu.chop( textCursor().selectedText().size() );
@@ -655,7 +646,7 @@ void TCommandLine::handleAutoCompletion()
 
 // cursor down: cycles chronologically through the command history.
 
-void TCommandLine::historyDown(QKeyEvent *event)
+void CommandLine::historyDown(QKeyEvent *event)
 {
     if( mHistoryList.size() < 1 ) return;
     if( (textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) )
@@ -678,7 +669,7 @@ void TCommandLine::historyDown(QKeyEvent *event)
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
-void TCommandLine::historyUp(QKeyEvent *event)
+void CommandLine::historyUp(QKeyEvent *event)
 {
     if( mHistoryList.size() < 1 ) return;
     if( (textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) )

@@ -76,11 +76,11 @@ struct TMxpElement
     QString hint;
 };
 
-class TBuffer
+class ConsoleBuffer
 {
 public:
 
-    TBuffer( Profile * pH );
+    ConsoleBuffer( Profile * pH );
     QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
     bool insertInLine( QPoint & cursor, const QString & what, TChar & format );
     void expandLine( int y, int count, TChar & );
@@ -107,7 +107,7 @@ public:
     bool applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout );
     bool applyFgColor( QPoint &, QPoint &, int, int, int );
     bool applyBgColor( QPoint &, QPoint &, int, int, int );
-    void appendBuffer( TBuffer chunk );
+    void appendBuffer( ConsoleBuffer chunk );
     bool moveCursor( QPoint & where );
     QPoint & insertText(const QString & what, QPoint & where );
     int getLastLineNumber();
@@ -123,9 +123,9 @@ public:
     void setWrapAt( int i ){ mWrapAt = i; }
     void setWrapIndent( int i ){ mWrapIndent = i; }
     void updateColors();
-    TBuffer copy( QPoint &, QPoint & );
-    TBuffer cut( QPoint &, QPoint & );
-    void paste( QPoint &, TBuffer );
+    ConsoleBuffer copy( QPoint &, QPoint & );
+    ConsoleBuffer cut( QPoint &, QPoint & );
+    void paste( QPoint &, ConsoleBuffer );
     std::deque<TChar> bufferLine;
     std::deque< std::deque<TChar> > buffer;
     QStringList            timeBuffer;

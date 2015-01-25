@@ -7,8 +7,8 @@
 
 
 #include "Java.h"
-#include "Host.h"
-#include "TConsole.h"
+#include "Profile.h"
+#include "Console.h"
 
 static JavaVM *jvm = NULL;
 static JNIEnv *env = NULL;

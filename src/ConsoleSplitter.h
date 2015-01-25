@@ -1,3 +1,6 @@
+#ifndef MUDLET_TSPLITTER_H
+#define MUDLET_TSPLITTER_H
+
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
@@ -19,36 +22,24 @@
  ***************************************************************************/
 
 
-#include "TSplitterHandle.h"
-
-#include "TSplitter.h"
-
 #include "pre_guard.h"
-#include <QtEvents>
-#include <QPainter>
+#include <QSplitter>
 #include "post_guard.h"
 
+class ConsoleSplitterHandle;
 
-TSplitterHandle::TSplitterHandle( Qt::Orientation orientation, TSplitter * parent )
-: QSplitterHandle( orientation, (QSplitter*)parent )
-{
-}
 
-void TSplitterHandle::paintEvent( QPaintEvent * event )
+class ConsoleSplitter : public QSplitter
 {
-    QPainter painter( this );
-    QLinearGradient gradient(QPointF(100, 100), QPointF(200, 200));
-    gradient.setColorAt(0, Qt::black);
-    gradient.setColorAt(1, Qt::white);
-    if(orientation() == Qt::Horizontal)
-    {
-        gradient.setStart(rect().left(), rect().height()/2);
-        gradient.setFinalStop(rect().right(), rect().height()/2);
-    }
-    else
-    {
-        gradient.setStart(rect().width()/2, rect().top());
-        gradient.setFinalStop(rect().width()/2, rect().bottom());
-    }
-    painter.fillRect(event->rect(), QBrush(gradient));
-}
+    Q_OBJECT
+
+public:
+    ConsoleSplitter(Qt::Orientation orientation, QWidget* parent = 0);
+
+protected:
+    QSplitterHandle* createHandle() override;
+
+    ConsoleSplitterHandle* mpSplitterHandle;
+};
+
+#endif // MUDLET_TSPLITTER_H

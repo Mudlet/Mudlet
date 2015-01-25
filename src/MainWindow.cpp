@@ -30,11 +30,9 @@
 #include "Telnet.h"
 #include "Profile.h"
 #include "Profiles.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
-#include "TEvent.h"
-#include "TLabel.h"
-#include "TTextEdit.h"
+#include "CommandLine.h"
+#include "Console.h"
+#include "TextEdit.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -285,7 +283,7 @@ void MainWindow::slot_tab_changed( int tabID )
 void MainWindow::addConsoleForNewHost( Profile * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
-    TConsole * pConsole = new TConsole( pH, false );
+    Console * pConsole = new Console( pH, false );
     if( ! pConsole ) return;
     pH->console = pConsole;
     pConsole->setWindowTitle( pH->getId() );
@@ -310,7 +308,7 @@ void MainWindow::addConsoleForNewHost( Profile * pH )
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
-    QMap<QString, TConsole *> miniConsoleMap;
+    QMap<QString, Console *> miniConsoleMap;
     mHostConsoleMap[activeHost] = miniConsoleMap;
     QMap<QString, TLabel *> labelMap;
     mHostLabelMap[activeHost] = labelMap;
@@ -337,14 +335,14 @@ bool MainWindow::openWindow( Profile * host, const QString & name )
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        TConsole * pC = new TConsole( host, false );
+        Console * pC = new Console( host, false );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
-        QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[host];
+        QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[host];
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
         return true;
@@ -357,10 +355,10 @@ bool MainWindow::createMiniConsole( Profile * pHost, const QString & name, int x
     if( ! pHost ) return false;
     if( ! pHost->console ) return false;
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( ! dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = pHost->console->createMiniConsole( name, x, y, width, height );
+        Console * pC = pHost->console->createMiniConsole( name, x, y, width, height );
         pC->mConsoleName = name;
         if( pC )
         {
@@ -372,26 +370,9 @@ bool MainWindow::createMiniConsole( Profile * pHost, const QString & name, int x
     }
     else
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->resize( width, height );
         pC->move( x, y );
-    }
-    return false;
-}
-
-bool MainWindow::createLabel( Profile * pHost, const QString & name, int x, int y, int width, int height, bool fillBg )
-{
-    if( ! pHost ) return false;
-    if( ! pHost->console ) return false;
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( ! labelMap.contains( name ) )
-    {
-        TLabel * pL = pHost->console->createLabel( name, x, y, width, height, fillBg );
-        if( pL )
-        {
-            labelMap[name] = pL;
-            return true;
-        }
     }
     return false;
 }
@@ -401,10 +382,10 @@ bool MainWindow::createBuffer( Profile * pHost, const QString & name )
     if( ! pHost ) return false;
     if( ! pHost->console ) return false;
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( ! dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = pHost->console->createBuffer( name );
+        Console * pC = pHost->console->createBuffer( name );
         pC->mConsoleName = name;
         if( pC )
         {
@@ -417,51 +398,22 @@ bool MainWindow::createBuffer( Profile * pHost, const QString & name )
 
 bool MainWindow::setBackgroundColor( Profile * pHost, const QString & name, int r, int g, int b, int alpha )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->setConsoleBgColor(r,g,b);
         return true;
     }
-    else
-    {
-        QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-        if( labelMap.contains( name ) )
-        {
-            QPalette mainPalette;
-            mainPalette.setColor( QPalette::Window, QColor(r, g, b, alpha) );
-            labelMap[name]->setPalette( mainPalette );
-            return true;
-        }
-    }
     return false;
 }
 
-bool MainWindow::setBackgroundImage( Profile * pHost, const QString & name, QString & path )
-{
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        if( QDir::homePath().contains('\\') )
-        {
-            path.replace('/', "\\");
-        }
-        else
-            path.replace('\\', "/");
-        QPixmap bgPixmap( path );
-        labelMap[name]->setPixmap( bgPixmap );
-        return true;
-    }
-    else
-        return false;
-}
 
 bool MainWindow::setTextFormat( Profile * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->mFormatCurrent.bgR = r1;
         pC->mFormatCurrent.bgG = g1;
         pC->mFormatCurrent.bgB = b1;
@@ -504,7 +456,7 @@ void MainWindow::hideEvent( QHideEvent * event )
 
 bool MainWindow::clearWindow( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->buffer.clear();
@@ -517,15 +469,8 @@ bool MainWindow::clearWindow( Profile * pHost, const QString & name )
 
 bool MainWindow::showWindow( Profile * pHost, const QString & name )
 {
-    // check labels first as they are shown/hidden more often
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->show();
-        return true;
-    }
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->console->show();
@@ -538,7 +483,7 @@ bool MainWindow::showWindow( Profile * pHost, const QString & name )
 
 bool MainWindow::paste( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->paste();
@@ -550,15 +495,8 @@ bool MainWindow::paste( Profile * pHost, const QString & name )
 
 bool MainWindow::hideWindow( Profile * pHost, const QString & name )
 {
-    // check labels first as they are shown/hidden more often
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->hide();
-        return true;
-    }
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->console->hide();
@@ -571,14 +509,8 @@ bool MainWindow::hideWindow( Profile * pHost, const QString & name )
 
 bool MainWindow::resizeWindow( Profile * pHost, const QString & name, int x1, int y1 )
 {
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->resize( x1, y1 );
-        return true;
-    }
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->resize( x1, y1 );
@@ -596,7 +528,7 @@ bool MainWindow::setConsoleBufferSize( Profile * pHost, const QString & name, in
         return true;
     }
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
 
     if( dockWindowConsoleMap.contains( name ) )
     {
@@ -611,7 +543,7 @@ bool MainWindow::setConsoleBufferSize( Profile * pHost, const QString & name, in
 
 bool MainWindow::resetFormat( Profile * pHost, QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->reset();
@@ -623,14 +555,8 @@ bool MainWindow::resetFormat( Profile * pHost, QString & name )
 
 bool MainWindow::moveWindow( Profile * pHost, const QString & name, int x1, int y1 )
 {
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->move( x1, y1 );
-        return true;
-    }
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->move( x1, y1 );
@@ -644,7 +570,7 @@ bool MainWindow::moveWindow( Profile * pHost, const QString & name, int x1, int 
 
 bool MainWindow::closeWindow( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->console->close();
@@ -654,45 +580,9 @@ bool MainWindow::closeWindow( Profile * pHost, const QString & name )
         return false;
 }
 
-bool MainWindow::setLabelClickCallback( Profile * pHost, const QString & name, const QString & func, const TEvent & pA )
-{
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->setScript( pHost, func, pA );
-        return true;
-    }
-    else
-        return false;
-}
-
-bool MainWindow::setLabelOnEnter( Profile * pHost, const QString & name, const QString & func, const TEvent & pA )
-{
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->setEnter( pHost, func, pA );
-        return true;
-    }
-    else
-        return false;
-}
-
-bool MainWindow::setLabelOnLeave( Profile * pHost, const QString & name, const QString & func, const TEvent & pA )
-{
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->setLeave( pHost, func, pA );
-        return true;
-    }
-    else
-        return false;
-}
-
 int MainWindow::getLineNumber( Profile * pHost, QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         return dockWindowConsoleMap[name]->getLineNumber();
@@ -702,7 +592,7 @@ int MainWindow::getLineNumber( Profile * pHost, QString & name )
 
 int MainWindow::getColumnNumber( Profile * pHost, QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         return dockWindowConsoleMap[name]->getColumnNumber();
@@ -713,7 +603,7 @@ int MainWindow::getColumnNumber( Profile * pHost, QString & name )
 
 int MainWindow::getLastLineNumber( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         return dockWindowConsoleMap[name]->getLastLineNumber();
@@ -723,7 +613,7 @@ int MainWindow::getLastLineNumber( Profile * pHost, const QString & name )
 
 bool MainWindow::moveCursorEnd( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->moveCursorEnd();
@@ -735,7 +625,7 @@ bool MainWindow::moveCursorEnd( Profile * pHost, const QString & name )
 
 bool MainWindow::moveCursor( Profile * pHost, const QString & name, int x, int y )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         return dockWindowConsoleMap[name]->moveCursor( x, y );
@@ -746,7 +636,7 @@ bool MainWindow::moveCursor( Profile * pHost, const QString & name, int x, int y
 
 void MainWindow::deleteLine( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->skipLine();
@@ -755,7 +645,7 @@ void MainWindow::deleteLine( Profile * pHost, const QString & name )
 
 void MainWindow::insertText( Profile * pHost, const QString & name, const QString& text )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->insertText( text );
@@ -764,7 +654,7 @@ void MainWindow::insertText( Profile * pHost, const QString & name, const QStrin
 
 void MainWindow::insertLink( Profile * pHost, const QString & name, const QString& text, QStringList & func, QStringList & hint, bool customFormat )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->insertLink( text, func, hint, customFormat );
@@ -773,7 +663,7 @@ void MainWindow::insertLink( Profile * pHost, const QString & name, const QStrin
 
 void MainWindow::replace( Profile * pHost, const QString & name, const QString& text )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->replace( text );
@@ -782,80 +672,80 @@ void MainWindow::replace( Profile * pHost, const QString & name, const QString& 
 
 void MainWindow::setLink( Profile * pHost, const QString & name, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setLink( linkText, linkFunction, linkHint );
     }
 }
 
 void MainWindow::setBold( Profile * pHost, const QString & name, bool b )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setBold( b );
     }
 }
 
 void MainWindow::setItalics( Profile * pHost, const QString & name, bool b )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setItalics( b );
     }
 }
 
 void MainWindow::setUnderline( Profile * pHost, const QString & name, bool b )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setUnderline( b );
     }
 }
 
 void MainWindow::setStrikeOut( Profile * pHost, const QString & name, bool b )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setStrikeOut( b );
     }
 }
 
 void MainWindow::setFgColor( Profile * pHost, const QString & name, int r, int g, int b )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setFgColor( r, g, b );
     }
 }
 
 void MainWindow::setBgColor( Profile * pHost, const QString & name, int r, int g, int b )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->setBgColor( r, g, b );
     }
 }
 
 int MainWindow::selectString( Profile * pHost, const QString & name, const QString& text, int num )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         return pC->select( text, num );
     }
     else
@@ -864,10 +754,10 @@ int MainWindow::selectString( Profile * pHost, const QString & name, const QStri
 
 int MainWindow::selectSection( Profile * pHost, const QString & name, int f, int t )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         return pC->selectSection( f, t );
     }
     else
@@ -876,17 +766,17 @@ int MainWindow::selectSection( Profile * pHost, const QString & name, int f, int
 
 void MainWindow::deselect( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = dockWindowConsoleMap[name];
+        Console * pC = dockWindowConsoleMap[name];
         pC->deselect();
     }
 }
 
 bool MainWindow::setWindowWrap( Profile * pHost, const QString & name, int & wrap )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString wn = name;
     if( dockWindowConsoleMap.contains( name ) )
     {
@@ -899,7 +789,7 @@ bool MainWindow::setWindowWrap( Profile * pHost, const QString & name, int & wra
 
 bool MainWindow::setWindowWrapIndent( Profile * pHost, const QString & name, int & wrap )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString wn = name;
     if( dockWindowConsoleMap.contains( name ) )
     {
@@ -912,26 +802,19 @@ bool MainWindow::setWindowWrapIndent( Profile * pHost, const QString & name, int
 
 bool MainWindow::echoWindow( Profile * pHost, const QString & name, const QString & text )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString t = text;
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->echoUserWindow( t );
         return true;
     }
-    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
-    if( labelMap.contains( name ) )
-    {
-        labelMap[name]->setText( t );
-        return true;
-    }
-    else
-        return false;
+    return false;
 }
 
 bool MainWindow::echoLink( Profile * pHost, const QString & name, const QString & text, QStringList & func, QStringList & hint, bool customFormat )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString t = text;
     if( dockWindowConsoleMap.contains( name ) )
     {
@@ -944,7 +827,7 @@ bool MainWindow::echoLink( Profile * pHost, const QString & name, const QString 
 
 bool MainWindow::copy( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->copy();
@@ -955,7 +838,7 @@ bool MainWindow::copy( Profile * pHost, const QString & name )
 
 bool MainWindow::pasteWindow( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->mClipboard );
@@ -966,7 +849,7 @@ bool MainWindow::pasteWindow( Profile * pHost, const QString & name )
 
 bool MainWindow::appendBuffer( Profile * pHost, const QString & name )
 {
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
         dockWindowConsoleMap[name]->appendBuffer( mConsoleMap[pHost]->mClipboard );
@@ -987,7 +870,7 @@ Profile * MainWindow::getActiveHost()
 
 
 
-void MainWindow::addSubWindow( TConsole* pConsole )
+void MainWindow::addSubWindow( Console* pConsole )
 {
     mainPane->layout()->addWidget( pConsole );
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
@@ -995,7 +878,7 @@ void MainWindow::addSubWindow( TConsole* pConsole )
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    foreach( TConsole * pC, mConsoleMap )
+    foreach( Console * pC, mConsoleMap )
     {
         if( ! pC->close() )
         {
@@ -1009,7 +892,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     writeSettings();
 
     goingDown();
-    foreach( TConsole * pC, mConsoleMap )
+    foreach( Console * pC, mConsoleMap )
     {
         if( pC->mpHost->getId() != "default_host" )
         {
@@ -1086,7 +969,7 @@ void MainWindow::processEventLoopHack_timerRun()
 
 void MainWindow::slot_multi_view()
 {
-     QMapIterator<Profile *, TConsole *> it( mConsoleMap );
+     QMapIterator<Profile *, Console *> it( mConsoleMap );
      while( it.hasNext() )
      {
          it.next();

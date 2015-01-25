@@ -1,5 +1,3 @@
-#pragma once
-
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
@@ -21,44 +19,36 @@
  ***************************************************************************/
 
 
+#include "ConsoleSplitterHandle.h"
+
+#include "ConsoleSplitter.h"
+
 #include "pre_guard.h"
-#include <QSyntaxHighlighter>
-#include <QTextCharFormat>
+#include <QtEvents>
+#include <QPainter>
 #include "post_guard.h"
 
-class QTextDocument;
 
-
-class THighlighter : public QSyntaxHighlighter
+ConsoleSplitterHandle::ConsoleSplitterHandle( Qt::Orientation orientation, ConsoleSplitter * parent )
+: QSplitterHandle( orientation, (QSplitter*)parent )
 {
-     Q_OBJECT
+}
 
- public:
-                               THighlighter(QTextDocument *parent = 0);
-     void                      setSearchPattern( QString p );
-
-
- protected:
-     void                      highlightBlock(const QString &text) override;
-
- private:
-     struct HighlightingRule
-     {
-         QRegExp pattern;
-         QTextCharFormat format;
-     };
-     QString                   mSearchPattern;
-     QVector<HighlightingRule> highlightingRules;
-     QRegExp                   commentStartExpression;
-     QRegExp                   commentEndExpression;
-     QRegExp                   stringStart;
-     QRegExp                   stringEnd;
-     QTextCharFormat           keywordFormat;
-     QTextCharFormat           searchFormat;
-     QTextCharFormat           classFormat;
-     QTextCharFormat           singleLineCommentFormat;
-     QTextCharFormat           multiLineCommentFormat;
-     QTextCharFormat           quotationFormat;
-     QTextCharFormat           functionFormat;
-     //bool isString;
- };
+void ConsoleSplitterHandle::paintEvent( QPaintEvent * event )
+{
+    QPainter painter( this );
+    QLinearGradient gradient(QPointF(100, 100), QPointF(200, 200));
+    gradient.setColorAt(0, Qt::black);
+    gradient.setColorAt(1, Qt::white);
+    if(orientation() == Qt::Horizontal)
+    {
+        gradient.setStart(rect().left(), rect().height()/2);
+        gradient.setFinalStop(rect().right(), rect().height()/2);
+    }
+    else
+    {
+        gradient.setStart(rect().width()/2, rect().top());
+        gradient.setFinalStop(rect().width()/2, rect().bottom());
+    }
+    painter.fillRect(event->rect(), QBrush(gradient));
+}

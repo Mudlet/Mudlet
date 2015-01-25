@@ -31,20 +31,20 @@
 
 #include <hunspell/hunspell.h>
 
-class TConsole;
+class Console;
 class HotKey;
 class Profile;
-class TConsole;
+class Console;
 
 
-class TCommandLine : public QPlainTextEdit//QLineEdit
+class CommandLine : public QPlainTextEdit//QLineEdit
 {
     Q_OBJECT
 
 public:
 
-                      TCommandLine( Profile *, TConsole *, QWidget * );
-                      ~TCommandLine();
+                      CommandLine( Profile *, Console *, QWidget * );
+                      ~CommandLine();
 //    void              keyPressEvent(QKeyEvent *event);
     void              focusInEvent ( QFocusEvent * ) override;
     void              focusOutEvent ( QFocusEvent * ) override;
@@ -77,8 +77,7 @@ private:
 
     QPalette          mTabCompletionPalette;
     QPalette          mAutoCompletionPalette;
-    HotKey *         mpKeyUnit;
-    TConsole *        mpConsole;
+    Console *        mpConsole;
     QString           mSelectedText;
     int               mSelectionStart;
     QString           mTabCompletionOld;

@@ -1,5 +1,8 @@
+#ifndef MUDLET_TSPLITTERHANDLE_H
+#define MUDLET_TSPLITTERHANDLE_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -19,82 +22,19 @@
  ***************************************************************************/
 
 
-#include "TLabel.h"
-
-#include "Host.h"
-#include "TEvent.h"
-
 #include "pre_guard.h"
-#include <QtEvents>
+#include <QSplitterHandle>
 #include "post_guard.h"
 
-//TODO probably delete this whole class, yes?
+class ConsoleSplitter;
 
 
-TLabel::TLabel( QWidget * pW )
-: QLabel( pW )
-, mpHost( 0 )
+class ConsoleSplitterHandle : public QSplitterHandle
 {
-    setMouseTracking( true );
-}
+    // Q_OBJECT
+public:
+    ConsoleSplitterHandle(Qt::Orientation orientation, ConsoleSplitter* parent);
+    void paintEvent(QPaintEvent*) override;
+};
 
-QString nothing = "";
-
-void TLabel::setScript( Profile * pHost, const QString & func, const TEvent & args )
-{
-    mpHost = pHost;
-    mScript = func;
-    mpParameters = args;
-}
-
-void TLabel::setEnter( Profile * pHost, const QString & func, const TEvent & args )
-{
-    mpHost = pHost;
-    mEnter = func;
-    mEnterParams = args;
-}
-
-void TLabel::setLeave( Profile * pHost, const QString & func, const TEvent & args )
-{
-    mpHost = pHost;
-    mLeave = func;
-    mLeaveParams = args;
-}
-
-void TLabel::mousePressEvent( QMouseEvent * event )
-{
-    if( event->button() == Qt::LeftButton )
-    {
-        if( mpHost )
-        {
-        }
-        event->accept();
-        return;
-    }
-
-    QWidget::mousePressEvent( event );
-}
-
-void TLabel::leaveEvent( QEvent * event )
-{
-    if (mLeave != ""){
-        if( mpHost )
-        {
-        }
-        event->accept();
-        return;
-    }
-    QWidget::leaveEvent( event );
-}
-
-void TLabel::enterEvent( QEvent * event )
-{
-    if (mEnter != ""){
-        if( mpHost )
-        {
-        }
-        event->accept();
-        return;
-    }
-    QWidget::enterEvent( event );
-}
+#endif // MUDLET_TSPLITTERHANDLE_H

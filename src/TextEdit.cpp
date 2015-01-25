@@ -19,12 +19,11 @@
  ***************************************************************************/
 
 
-#include "TTextEdit.h"
+#include "TextEdit.h"
 
 
-#include "Host.h"
-#include "TConsole.h"
-#include "TEvent.h"
+#include "Profile.h"
+#include "Console.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -38,7 +37,7 @@
 #include "post_guard.h"
 
 
-TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Profile * pH, bool isDebugConsole, bool isSplitScreen )
+TextEdit::TextEdit( Console * pC, QWidget * pW, ConsoleBuffer * pB, Profile * pH, bool isDebugConsole, bool isSplitScreen )
 : QWidget( pW )
 , mCursorY( 0 )
 , mIsCommandPopup( false )
@@ -102,13 +101,13 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Profile * pH, b
     setEnabled( true ); //test fix for MAC
 }
 
-void TTextEdit::forceUpdate()
+void TextEdit::forceUpdate()
 {
     mForceUpdate = true;
     update();
 }
 
-void TTextEdit::needUpdate( int y1, int y2 )
+void TextEdit::needUpdate( int y1, int y2 )
 {
     if( ! mIsTailMode )
     {
@@ -132,21 +131,21 @@ void TTextEdit::needUpdate( int y1, int y2 )
     update( r );
 }
 
-void TTextEdit::focusInEvent ( QFocusEvent * event )
+void TextEdit::focusInEvent ( QFocusEvent * event )
 {
     update();
     QWidget::focusInEvent( event );
 }
 
 
-void TTextEdit::slot_toggleTimeStamps()
+void TextEdit::slot_toggleTimeStamps()
 {
     mShowTimeStamps = !mShowTimeStamps;
     forceUpdate();
     update();
 }
 
-void TTextEdit::slot_scrollBarMoved( int line )
+void TextEdit::slot_scrollBarMoved( int line )
 {
     if( mpConsole->mpScrollBar )
     {
@@ -160,7 +159,7 @@ void TTextEdit::slot_scrollBarMoved( int line )
     }
 }
 
-void TTextEdit::initDefaultSettings()
+void TextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192,192,192);
     mBgColor = QColor(0,0,0);
@@ -191,7 +190,7 @@ void TTextEdit::initDefaultSettings()
     mWrapIndentCount = 5;
 }
 
-void TTextEdit::updateScreenView()
+void TextEdit::updateScreenView()
 {
     if( isHidden() )
     {
@@ -299,7 +298,7 @@ void TTextEdit::updateScreenView()
     }
 }
 
-void TTextEdit::showNewLines()
+void TextEdit::showNewLines()
 {
     if( ! mIsSplitScreen )
     {
@@ -344,7 +343,7 @@ void TTextEdit::showNewLines()
     update();
 }
 
-void TTextEdit::scrollTo( int line )
+void TextEdit::scrollTo( int line )
 {
     if( (line > -1) && (line < mpBuffer->size()) )
     {
@@ -373,7 +372,7 @@ void TTextEdit::scrollTo( int line )
     }
 }
 
-void TTextEdit::scrollUp( int lines )
+void TextEdit::scrollUp( int lines )
 {
     if( mIsSplitScreen )
         return;
@@ -389,7 +388,7 @@ void TTextEdit::scrollUp( int lines )
     }
 }
 
-void TTextEdit::scrollDown( int lines )
+void TextEdit::scrollDown( int lines )
 {
     if( mIsSplitScreen )
         return;
@@ -403,7 +402,7 @@ void TTextEdit::scrollDown( int lines )
     }
 }
 
-inline void TTextEdit::drawBackground( QPainter & painter,
+inline void TextEdit::drawBackground( QPainter & painter,
                                 const QRect & rect,
                                 const QColor & bgColor )
 {
@@ -411,7 +410,7 @@ inline void TTextEdit::drawBackground( QPainter & painter,
     painter.fillRect( bR.x(), bR.y(), bR.width(), bR.height(), bgColor );
 }
 
-inline void TTextEdit::drawCharacters( QPainter & painter,
+inline void TextEdit::drawCharacters( QPainter & painter,
                                 const QRect & rect,
                                 QString & text,
                                 bool isBold,
@@ -446,7 +445,7 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
 }
 
 
-void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
+void TextEdit::drawFrame( QPainter & p, const QRect & rect )
 {
     QPoint P_topLeft  = rect.topLeft();
     QPoint P_bottomRight = rect.bottomRight();
@@ -562,7 +561,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
     mScrollVector = 0;
 }
 
-void TTextEdit::updateLastLine()
+void TextEdit::updateLastLine()
 {
     qDebug()<<"--->ACHTUNG: error: updateLastLine() called";
     QRect r( 0, (mScreenHeight-1)*mFontHeight, mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
@@ -571,7 +570,7 @@ void TTextEdit::updateLastLine()
 }
 
 
-void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
+void TextEdit::drawForeground( QPainter & painter, const QRect & r )
 {
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth, mScreenHeight*mFontHeight );
@@ -770,7 +769,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
 }
 
 
-void TTextEdit::paintEvent( QPaintEvent* e )
+void TextEdit::paintEvent( QPaintEvent* e )
 {
     const QRect & rect = e->rect();
 
@@ -795,7 +794,7 @@ void TTextEdit::paintEvent( QPaintEvent* e )
 
 
 
-void TTextEdit::highlight()
+void TextEdit::highlight()
 {
     QRegion newRegion;
     int lineDelta = abs( mPA.y() - mPB.y() ) - 1;
@@ -868,7 +867,7 @@ void TTextEdit::highlight()
     mSelectedRegion = newRegion;
 }
 
-void TTextEdit::unHighlight( QRegion & region )
+void TextEdit::unHighlight( QRegion & region )
 {
     int y1 = mPA.y();
     if( y1 < 0 )
@@ -908,14 +907,14 @@ void TTextEdit::unHighlight( QRegion & region )
     update();
 }
 
-void TTextEdit::swap( QPoint & p1, QPoint & p2 )
+void TextEdit::swap( QPoint & p1, QPoint & p2 )
 {
     QPoint tmp = p1;
     p1 = p2;
     p2 = tmp;
 }
 
-void TTextEdit::mouseMoveEvent( QMouseEvent * event )
+void TextEdit::mouseMoveEvent( QMouseEvent * event )
 {
     if( (mFontWidth == 0) | (mFontHeight == 0) ) return;
     int x = event->x() / mFontWidth;// bugfix by BenH (used to be mFontWidth-1)
@@ -1071,13 +1070,13 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 }
 
 
-void TTextEdit::contextMenuEvent ( QContextMenuEvent * event )
+void TextEdit::contextMenuEvent ( QContextMenuEvent * event )
 {
     event->accept();
     return;
 }
 
-void TTextEdit::slot_popupMenu()
+void TextEdit::slot_popupMenu()
 {
     QAction * pA = (QAction *)sender();
     if( ! pA )
@@ -1092,12 +1091,12 @@ void TTextEdit::slot_popupMenu()
 
 }
 
-void TTextEdit::mousePressEvent( QMouseEvent * event )
+void TextEdit::mousePressEvent( QMouseEvent * event )
 {
     if( ! mpConsole->mIsSubConsole )
     {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMousePressEvent" );
+        //TEvent me;
+        /*me.mArgumentList.append( "sysWindowMousePressEvent" );
         switch( event->button() )
         {
         case Qt::LeftButton:
@@ -1118,7 +1117,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );*/
         // TODO maybe add event
     }
     if( event->button() == Qt::LeftButton )
@@ -1274,18 +1273,18 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     QWidget::mousePressEvent( event );
 }
 
-void TTextEdit::slot_copySelectionToClipboard()
+void TextEdit::slot_copySelectionToClipboard()
 {
     copySelectionToClipboard();
 }
 
-void TTextEdit::slot_copySelectionToClipboardHTML()
+void TextEdit::slot_copySelectionToClipboardHTML()
 {
     copySelectionToClipboardHTML();
 }
 
 
-void TTextEdit::copySelectionToClipboard()
+void TextEdit::copySelectionToClipboard()
 {
     if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
     {
@@ -1330,7 +1329,7 @@ void TTextEdit::copySelectionToClipboard()
     }
 }
 
-void TTextEdit::copySelectionToClipboardHTML()
+void TextEdit::copySelectionToClipboardHTML()
 {
     if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
     {
@@ -1372,7 +1371,7 @@ void TTextEdit::copySelectionToClipboardHTML()
     return;
 }
 
-void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
+void TextEdit::mouseReleaseEvent( QMouseEvent * event )
 {
     if( event->button() == Qt::LeftButton )
     {
@@ -1380,7 +1379,7 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
     }
     if( ! mpConsole->mIsSubConsole )
     {
-        TEvent me;
+        /*TEvent me;
         me.mArgumentList.append( "sysWindowMouseReleaseEvent" );
         switch( event->button() )
         {
@@ -1402,12 +1401,12 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
         me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER ); */
         // TODO maybe add event
     }
 }
 
-void TTextEdit::showEvent( QShowEvent * event )
+void TextEdit::showEvent( QShowEvent * event )
 {
     updateScreenView();
     mScrollVector=0;
@@ -1415,7 +1414,7 @@ void TTextEdit::showEvent( QShowEvent * event )
     QWidget::showEvent( event );
 }
 
-void TTextEdit::resizeEvent( QResizeEvent * event )
+void TextEdit::resizeEvent( QResizeEvent * event )
 {
     updateScreenView();
     if( ! mIsSplitScreen )
@@ -1426,7 +1425,7 @@ void TTextEdit::resizeEvent( QResizeEvent * event )
     QWidget::resizeEvent( event );
 }
 
-void TTextEdit::wheelEvent ( QWheelEvent * e )
+void TextEdit::wheelEvent ( QWheelEvent * e )
 {
     int k = 3;
     if( e->delta() < 0 )
@@ -1445,7 +1444,7 @@ void TTextEdit::wheelEvent ( QWheelEvent * e )
     return;
 }
 
-int TTextEdit::imageTopLine()
+int TextEdit::imageTopLine()
 {
     if( ! mIsSplitScreen )
     {
@@ -1475,7 +1474,7 @@ int TTextEdit::imageTopLine()
     }
 }
 
-bool TTextEdit::isTailMode()
+bool TextEdit::isTailMode()
 {
     if( mIsTailMode )
     {
@@ -1488,7 +1487,7 @@ bool TTextEdit::isTailMode()
     }
 }
 
-int TTextEdit::bufferScrollUp( int lines )
+int TextEdit::bufferScrollUp( int lines )
 {
     if( (mpBuffer->mCursorY - lines) >= mScreenHeight  )
     {
@@ -1510,7 +1509,7 @@ int TTextEdit::bufferScrollUp( int lines )
     }
 }
 
-int TTextEdit::bufferScrollDown( int lines )
+int TextEdit::bufferScrollDown( int lines )
 {
     if( ( mpBuffer->mCursorY + lines ) < (int)(mpBuffer->size()-1 - mScreenHeight) )
     {
