@@ -38,7 +38,7 @@
 
 #include <errno.h>
 
-QString Profile::DICTIONARY("dictionary");
+QString Profile::CMD_LINE_DICTIONARY("dictionary");
 
 QString Profile::COMMAND_CHARACTER("commandCharacter");
 
@@ -57,10 +57,18 @@ QString Profile::CMD_LINE_CLEAR("cmdLine.autoClear");
 QString Profile::CMD_LINE_FG_COLOR("cmdLine.fgColor");
 QString Profile::CMD_LINE_BG_COLOR("cmdLine.bgColor");
 
+QString Profile::HOST_URL("host.url");
+QString Profile::HOST_PORT("host.port");
+
+
 QSettings Profile::DEFAULT_SETTINGS;
 
 void setupDefaultSettings() {
-    Profile::DEFAULT_SETTINGS.setValue(Profile::DICTIONARY,"en_US");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::HOST_URL,"");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::HOST_PORT,23);
+
+
+    Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_DICTIONARY,"en_US");
 
     Profile::DEFAULT_SETTINGS.setValue(Profile::COMMAND_CHARACTER,"#");
 
@@ -80,9 +88,10 @@ void setupDefaultSettings() {
     Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_BG_COLOR,"#000");
 }
 
-Profile::Profile( int port, const QString& hostname, const QString& login, const QString& pass )
-: mTelnet( this )
+Profile::Profile( const QString& id )
+: telnet( this )
 , console( 0 )
+, id(id)
 , mBlack             (Qt::black)
 , mLightBlack        (Qt::darkGray)
 , mRed               (Qt::darkRed)
@@ -126,7 +135,6 @@ Profile::Profile( int port, const QString& hostname, const QString& login, const
     copySettings(Profile::DEFAULT_SETTINGS,settings);
     load();
     save(); // in case new defaults were added
-
 }
 
 Profile::~Profile()
@@ -139,7 +147,7 @@ QFont Profile::getWindowFont() {
 }
 
 QString Profile::getDictionary() {
-    return getString(Profile::DICTIONARY);
+    return getString(Profile::CMD_LINE_DICTIONARY);
 }
 
 int Profile::getWindowHeight() {
@@ -156,6 +164,14 @@ int Profile::getWindowWrap() {
 
 int Profile::getWindowWrapIndent() {
     return getInt(Profile::WINDOW_WRAP_INDENT);
+}
+
+QString Profile::getUrl() {
+    return getString(Profile::HOST_URL);
+}
+
+int Profile::getPort() {
+    return getInt(Profile::HOST_PORT);
 }
 
 
@@ -209,23 +225,84 @@ void Profile::resetProfile()
 
 void Profile::adjustNAWS()
 {
-    mTelnet.setDisplayDimensions();
+    telnet.setDisplayDimensions();
 }
 
 
-void Profile::send( QString cmd )
+void Profile::send( QString msg )
 {
-        console->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
-                                        // this is important to get the cursor position right
+
+    qDebug() << "send('"<<msg<<"')";
+    if(msg.length() > 0 && msg[0] == commandChar[0]) {
+        console->printCommand(msg);
+        command(msg);
+        return;
+    }
+
+    console->printCommand( msg ); // used to print the terminal <LF> that terminates a telnet command
+                                    // this is important to get the cursor position right
     console->update();
-    QStringList commandList = cmd.split( QString( ";" ), QString::SkipEmptyParts );
+    QStringList commandList = msg.split( QString( ";" ), QString::SkipEmptyParts );
 
     for( int i=0; i<commandList.size(); i++ )
     {
         if( commandList[i].size() < 1 ) continue;
         QString command = commandList[i];
         command.replace("\n", "");
-        mTelnet.sendData( command );
+        telnet.sendData( command );
+    }
+}
+
+void Profile::command(const QString &command) {
+    QString cmd = command.right(command.length()-1);
+    QStringList list = cmd.split(" ");
+    cmd = list[0];
+
+    if(cmd=="o") {
+        if(list.size() != 2) {
+            console->echo("ERROR: only one argument allowed.\n");
+        }
+        auto profiles = MainWindow::self()->getProfiles();
+        profiles->open(list[1]);
+        return;
+    } else if(cmd == "l") {
+        listSettings();
+        return;
+    } else if(cmd == "s") {
+        if(list.size() != 3) {
+            console->echo("ERROR: two arguments required.\n");
+        }
+        setSetting(list[1],list[2]);
+        return;
+    }
+
+
+    console->echo("command not found: "+cmd+"\n");
+}
+
+void Profile::setSetting(const QString& key, const QString& value) {
+    if(!settings.contains(key)) {
+        console->echo(QString("ERROR: settings doesn't contain key '%1'\n").arg(key));
+        return;
+    }
+
+    setString(key,value);
+    save();
+    console->echo(QString("set %1: %2").arg(key).arg(value));
+}
+
+void Profile::listSettings() {
+    auto keys = settings.allKeys();
+
+    QString s("==== settings ");
+    QChar fill('=');
+    console->echo(QString("%1\n").arg(s,-50,fill));
+
+    for(auto key : keys) {
+        auto value = settings.value(key).toString();
+
+        auto line = QString("     %1: %2").arg(key, -30).arg(value);
+        console->echo(line + "\n");
     }
 }
 
@@ -246,7 +323,7 @@ void Profile::setBool(const QString &key, bool value) {
 
 void Profile::sendRaw( QString command )
 {
-    mTelnet.sendData( command );
+    telnet.sendData( command );
 }
 
 void Profile::incomingStreamProcessor(const QString & data, int line )
@@ -287,6 +364,7 @@ void Profile::load() {
 
     QSettings loadSettings(fileName, QSettings::NativeFormat);
     copySettings(loadSettings,settings);
+    commandChar = settings.value(COMMAND_CHARACTER).toString();
 }
 
 void Profile::copySettings(QSettings &orig, QSettings &dst) {
@@ -301,10 +379,9 @@ void Profile::copySettings(QSettings &orig, QSettings &dst) {
 void Profile::save() {
     QMutexLocker locker(& lock);
     QString fileName = MainWindow::CONFIG_DIR + "/" + id + ".profile";
-    QFile file(fileName);
     QSettings saveSettings(fileName, QSettings::NativeFormat);
     copySettings(settings,saveSettings);
-
+    commandChar = settings.value(COMMAND_CHARACTER).toString();
 }
 
 void Profile::setId(const QString &id) {
@@ -314,9 +391,9 @@ void Profile::setId(const QString &id) {
 
 void Profile::connectToServer()
 {
-    auto url = settings.value("url").toString();
-    auto port = settings.value("port").toInt();
-    mTelnet.connectTo( url, port );
+    auto url = getUrl();
+    auto port = getPort();
+    telnet.connectTo( url, port );
 }
 
 bool Profile::isClosed() {
@@ -327,35 +404,5 @@ bool Profile::isClosed() {
 void Profile::close() {
     QMutexLocker locker(& lock);
     closed = true;
-    mTelnet.disconnect();
-}
-
-// credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool Profile::removeDir( const QString& dirName, const QString& originalPath )
-{
-    bool result = true;
-    QDir dir(dirName);
-    if( dir.exists( dirName ) )
-    {
-        Q_FOREACH( QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
-        {
-            // prevent recursion outside of the original branch
-            if( info.isDir() && info.absoluteFilePath().startsWith( originalPath ) )
-            {
-                result = removeDir( info.absoluteFilePath(), originalPath );
-            }
-            else
-            {
-                result = QFile::remove( info.absoluteFilePath() );
-            }
-
-            if( !result )
-            {
-                return result;
-            }
-        }
-        result = dir.rmdir( dirName );
-    }
-
-    return result;
+    telnet.disconnect();
 }

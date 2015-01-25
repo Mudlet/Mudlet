@@ -135,7 +135,7 @@ public:
       void              printDebug( QColor &, QColor &, const QString & );
       void              printSystemMessage(const QString & msg );
       void              printOnDisplay( std::string & );
-      void              printCommand( QString & );
+      void              printCommand( const QString & );
       bool              hasSelection();
       void              moveCursorEnd();
       int               getLastLineNumber();

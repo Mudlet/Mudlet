@@ -29,28 +29,38 @@
 #include "post_guard.h"
 
 
-bool Profiles::deleteHost( QString hostname )
+bool Profiles::remove( const QString & id)
 {
     QMutexLocker locker(& lock);
 
-    qDebug() << "---> trying to delete host <"<<hostname.toLatin1().data()<<"> from host pool.";
+    qDebug() << "---> trying to delete host <"<<id.toLatin1().data()<<"> from host pool.";
     // make sure this is really a new host
-    if( ! pool.contains( hostname ) )
+    if( ! pool.contains( id ) )
     {
-        qDebug() << "[CRITICAL ERROR]: cannot delete host:"<<hostname.toLatin1().data()<<" it is not a member of host pool.";
+        qDebug() << "[CRITICAL ERROR]: cannot delete host:"<<id.toLatin1().data()<<" it is not a member of host pool.";
         return false;
     }
     else
     {
         qDebug() << "[OK] Host deleted removing pool entry ...";
-        int ret = pool.remove( hostname );
-        qDebug() << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret;
+        int ret = pool.remove( id );
+        qDebug() << "[OK] deleted Host:"<<id.toLatin1().data()<<" ret="<<ret;
 
     }
     return true;
 }
 
-bool Profiles::renameHost( QString id )
+void Profiles::open(const QString & id) {
+
+    add(id); // nop if exists
+
+    auto p = get(id);
+
+    MainWindow::self()->constructConsole(p);
+
+}
+
+bool Profiles::rename( const QString & id )
 {
     QMutexLocker locker(& lock);
 
@@ -71,32 +81,28 @@ bool Profiles::renameHost( QString id )
 
 }
 
-bool Profiles::addHost( QString hostname, QString port, QString login, QString pass )
+bool Profiles::add( const QString & id )
 {
     QMutexLocker locker(&lock);
 
     // make sure this is really a new host
-    if( pool.find( hostname ) != pool.end() )
+    if( pool.find( id ) != pool.end() )
     {
         return false;
     }
-    if( hostname.size() < 1 )
-        return false;
 
-    int portnumber = 23;
-    if( port.size() >= 1 )
-    {
-        portnumber = port.toInt();
+    if( id.size() < 1 ) {
+        return false;
     }
 
-    QSharedPointer<Profile> pNewHost( new Profile( portnumber, hostname, login, pass ) );
+    QSharedPointer<Profile> profile( new Profile( id ) );
 
-    pool.insert( hostname, pNewHost );
-    ativeHost = pool.begin().value().data();
+    pool.insert( id, profile );
+    active = pool.begin().value().data();
     return true;
 }
 
-QStringList Profiles::getHostList()
+QStringList Profiles::getStringList()
 {
     QMutexLocker locker(& lock);
 
@@ -107,14 +113,14 @@ QStringList Profiles::getHostList()
     return strlist;
 }
 
-QList<QString> Profiles::getHostNameList()
+QList<QString> Profiles::getList()
 {
     QMutexLocker locker(& lock);
 
     return pool.keys();
 }
 
-Profile * Profiles::getHost( const QString &id )
+Profile * Profiles::get( const QString &id )
 {
     QMutexLocker locker(& lock);
     if( pool.find( id ) != pool.end() )
@@ -127,7 +133,7 @@ Profile * Profiles::getHost( const QString &id )
     }
 }
 
-Profile * Profiles::getFirstHost()
+Profile * Profiles::getFirst()
 {
     QMutexLocker locker(& lock);
     return pool.begin().value().data();

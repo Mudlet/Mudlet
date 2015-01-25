@@ -36,19 +36,20 @@ class Profiles
 {
 public:
 
-                       Profiles() : ativeHost() {}
-    Profile *             getHost( const QString & hostname );
-    QStringList        getHostList();
-    QList<QString>     getHostNameList();
-    Profile *             getFirstHost();
-    bool               addHost( QString name, QString port, QString login, QString pass );
-    bool               deleteHost( QString );
-    bool               renameHost( QString );
+                       Profiles() : active() {}
+    Profile *          get( const QString & hostname );
+    QStringList        getStringList();
+    QList<QString>     getList();
+    Profile *          getFirst();
+    bool               add( const QString & );
+    bool               remove( const QString & );
+    bool               rename( const QString & );
+    void               open( const QString & );
 
 private:
 
     QMutex              lock;
     QMap<QString, QSharedPointer<Profile> > pool;
-    Profile *              ativeHost;
+    Profile *              active;
 
 };

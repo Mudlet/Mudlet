@@ -46,7 +46,9 @@ void setupDefaultSettings();
 class Profile  : public QObject
 {
 public:
-    static QString DICTIONARY;
+    static QString HOST_URL;
+    static QString HOST_PORT;
+
     static QString COMMAND_CHARACTER;
 
     static QString WINDOW_FONT_FAMILY;
@@ -63,13 +65,14 @@ public:
     static QString CMD_LINE_CLEAR;
     static QString CMD_LINE_FG_COLOR;
     static QString CMD_LINE_BG_COLOR;
+    static QString CMD_LINE_DICTIONARY;
 
     static QSettings DEFAULT_SETTINGS;
 
 
 public:
 
-    Profile( int port, const QString& mHostName, const QString& login, const QString& pass );
+    Profile( const QString& );
     ~Profile();
 
     QString             getDictionary();
@@ -85,6 +88,8 @@ public:
     QString             getString(const QString &);
     int                 getInt(const QString &);
     bool                getBool(const QString &);
+    QString             getUrl();
+    int                 getPort();
 
     void                setBool(const QString &, bool);
     void                setString(const QString &, const QString &);
@@ -105,13 +110,12 @@ public:
     class               Exception_NoLogin{};
     class               Exception_NoConnectionAvailable{};
 
-    bool                removeDir( const QString& dirName, const QString& originalPath);
     void                adjustNAWS();
 
     void                load();
     void                save();
 
-    Telnet             mTelnet;
+    Telnet             telnet;
     QPointer<Console>  console;
 
     QColor              mBlack;
@@ -155,7 +159,10 @@ public:
     QColor              mBgColor_2;
 
 private:
+    void                command(const QString&);
     void                copySettings(QSettings &,QSettings&);
+    void                listSettings();
+    void                setSetting(const QString&, const QString&);
 
     QFont               getFont(const char *);
 
@@ -167,5 +174,5 @@ private:
     QSettings           settings;
     QFont               windowFont;
     QFont               cmdLineFont;
-
+    QString             commandChar;
 };

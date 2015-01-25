@@ -68,13 +68,13 @@ public:
     static                        MainWindow * self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static                        void start();
-    Profiles *                 getHostManager();
+    Profiles *                 getProfiles();
     void                          addSubWindow(Console* p);
     int                           getColumnNumber( Profile * pHost, QString & name );
     int                           getLineNumber( Profile * pHost, QString & name );
     void                          printSystemMessage( Profile * pH, const QString & s );
     void                          print( Profile *, const QString & );
-    void                          addConsoleForNewHost( Profile * pH );
+    void                          constructConsole( Profile * pH );
     void							 disableToolbarButtons();
     void							 enableToolbarButtons();
     Profile *                        getActiveHost();
@@ -125,7 +125,7 @@ public:
     void                          showUnzipProgress( const QString& txt );
     bool                          openWebPage(const QString& path);
     void                          processEventLoopHack();
-    QMap<Profile *, Console *>     consoleMap;
+    QMap<Profile *, Console *>     consoles;
     QMap<Profile *, QMap<QString, Console * > > mHostConsoleMap;
     QMap<Profile *, QMap<QString, TLabel * > > mHostLabelMap;
     QIcon *                       testicon;
@@ -171,10 +171,10 @@ private slots:
 private:
 
     void                          goingDown() { mIsGoingDown = true; }
-    QMap<QString, Console *>         mTabMap;
+    QMap<QString, Console *>         tabs;
     QWidget *                     mainPane;
 
-    QPointer<Profile>                mpDefaultHost;
+    QPointer<Profile>                defaultHost;
     QQueue<QString>               tempLoginQueue;
     QQueue<QString>               tempPassQueue;
     QQueue<Profile *>                tempHostQueue;
@@ -191,7 +191,7 @@ private:
     QPushButton *                 moduleInstallButton;
     QPushButton *                 moduleHelpButton;
 
-    Profiles                   mHostManager;
+    Profiles                   profiles;
 };
 
 class TConsoleMonitor : public QObject

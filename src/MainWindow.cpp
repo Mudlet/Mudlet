@@ -133,8 +133,9 @@ MainWindow::MainWindow()
     mainPane->setSizePolicy( sizePolicy );
     mainPane->setFocusPolicy( Qt::NoFocus );
 
-    mHostManager.addHost("default_host", "", "","" );
-    mpDefaultHost = mHostManager.getHost(QString("default_host"));
+    QString  profile = QString("default_host");
+    profiles.add(profile);
+    defaultHost = profiles.get(profile);
 
 
     QFont mainFont;
@@ -160,12 +161,12 @@ MainWindow::MainWindow()
     mpMusicBox3 = new QMediaPlayer(this);
     mpMusicBox4 = new QMediaPlayer(this);
 
-    addConsoleForNewHost(mpDefaultHost);
+    constructConsole(defaultHost);
 }
 
-Profiles * MainWindow::getHostManager()
+Profiles * MainWindow::getProfiles()
 {
-    return &mHostManager;
+    return &profiles;
 }
 
 bool MainWindow::openWebPage(const QString& path){
@@ -181,24 +182,24 @@ bool MainWindow::openWebPage(const QString& path){
 void MainWindow::slot_close_profile_requested( int tab )
 {
     QString name = tabBar->tabText( tab );
-    Profile * pH = getHostManager()->getHost( name );
-    if( ! pH ) return;
+    Profile * profile = getProfiles()->get( name );
+    if( ! profile ) return;
 
-    if( ! pH->console->close() )
+    if( ! profile->console->close() )
         return;
     else
-        pH->console->mUserAgreedToCloseConsole = true;
-    mConsoleMap[pH]->close();
-    if( mTabMap.contains( pH->getId() ) )
+        profile->console->mUserAgreedToCloseConsole = true;
+    consoles[profile]->close();
+    if( tabs.contains( profile->getId() ) )
     {
         tabBar->removeTab( tab );
-        mConsoleMap.remove( pH );
-        mTabMap.remove( pH->getId() );
-        getHostManager()->deleteHost( pH->getId() );
+        consoles.remove( profile );
+        tabs.remove( profile->getId() );
+        getProfiles()->remove( profile->getId() );
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
-    if( mConsoleMap.size() > 1 )
+    if( consoles.size() > 1 )
     {
         tabBar->show();
     }
@@ -211,17 +212,17 @@ void MainWindow::slot_close_profile()
 {
     if( activeHost )
     {
-        if( mConsoleMap.contains( activeHost ) )
+        if( consoles.contains( activeHost ) )
         {
             QString name = activeHost->getId();
             Profile * pH = activeHost;
-            mConsoleMap[activeHost]->close();
-            if( mTabMap.contains( pH->getId() ) )
+            consoles[activeHost]->close();
+            if( tabs.contains( pH->getId() ) )
             {
                 tabBar->removeTab( tabBar->currentIndex() );
-                mConsoleMap.remove( pH );
-                getHostManager()->deleteHost( pH->getId() );
-                mTabMap.remove( pH->getId() );
+                consoles.remove( pH );
+                getProfiles()->remove( pH->getId() );
+                tabs.remove( pH->getId() );
             }
 
         }
@@ -230,19 +231,19 @@ void MainWindow::slot_close_profile()
 
 void MainWindow::slot_tab_changed( int tabID )
 {
-    if( ( ! mTabMap.contains( tabBar->tabText( tabID ) ) ) && ( tabID != -1 ) )
+    if( ( ! tabs.contains( tabBar->tabText( tabID ) ) ) && ( tabID != -1 ) )
     {
         activeHost = 0;
         return;
     }
 
-    if( mConsoleMap.contains( activeHost ) )
+    if( consoles.contains( activeHost ) )
     {
         activeHost->console->hide();
         QString host = tabBar->tabText( tabID );
-        if( mTabMap.contains( host ) )
+        if( tabs.contains( host ) )
         {
-            activeHost = mTabMap[host]->mpHost;
+            activeHost = tabs[host]->mpHost;
         }
         else
         {
@@ -252,9 +253,9 @@ void MainWindow::slot_tab_changed( int tabID )
     }
     else
     {
-        if( mTabMap.size() > 0 )
+        if( tabs.size() > 0 )
         {
-            activeHost = mTabMap.begin().value()->mpHost;
+            activeHost = tabs.begin().value()->mpHost;
         }
         else
         {
@@ -263,7 +264,7 @@ void MainWindow::slot_tab_changed( int tabID )
         }
     }
 
-    if( ! activeHost || mConsoleMap.contains( activeHost ) )
+    if( ! activeHost || consoles.contains( activeHost ) )
     {
         if( ! activeHost ) return;
         activeHost->console->show();
@@ -289,30 +290,31 @@ void MainWindow::slot_tab_changed( int tabID )
     setWindowTitle(activeHost->getId() + " - " + version);
 }
 
-void MainWindow::addConsoleForNewHost( Profile * pH )
+void MainWindow::constructConsole( Profile * profile )
 {
-    if( mConsoleMap.contains( pH ) ) return;
-    Console * pConsole = new Console( pH, false );
+    qDebug() << "constructConsole";
+    if( consoles.contains( profile ) ) return;
+    Console * pConsole = new Console( profile, false );
     if( ! pConsole ) return;
-    pH->console = pConsole;
-    pConsole->setWindowTitle( pH->getId() );
-    pConsole->setObjectName( pH->getId() );
-    mConsoleMap[pH] = pConsole;
-    int newTabID = tabBar->addTab( pH->getId() );
-    mTabMap[pH->getId()] = pConsole;
-    if( mConsoleMap.size() > 1 )
+    profile->console = pConsole;
+    pConsole->setWindowTitle( profile->getId() );
+    pConsole->setObjectName( profile->getId() );
+    consoles[profile] = pConsole;
+    int newTabID = tabBar->addTab( profile->getId() );
+    tabs[profile->getId()] = pConsole;
+    if( consoles.size() > 1 )
     {
         tabBar->show();
     }
     else
         tabBar->hide();
     //update the main window title when we spawn a new tab
-    setWindowTitle(pH->getId() + " - " + version);
+    setWindowTitle(profile->getId() + " - " + version);
 
     mainPane->layout()->addWidget( pConsole );
     if( activeHost )
         activeHost->console->hide();
-    activeHost = pH;
+    activeHost = profile;
 
     pConsole->show();
 
@@ -321,6 +323,7 @@ void MainWindow::addConsoleForNewHost( Profile * pH )
     QMap<QString, TLabel *> labelMap;
     mHostLabelMap[activeHost] = labelMap;
     activeHost->console->show();
+    activeHost->console->echo("profile: "+profile->getId()+"\n");
     activeHost->console->repaint();
     activeHost->console->refresh();
     activeHost->console->cmdLine->repaint();
@@ -849,7 +852,7 @@ bool MainWindow::pasteWindow( Profile * pHost, const QString & name )
     QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        dockWindowConsoleMap[name]->pasteWindow( mConsoleMap[pHost]->mClipboard );
+        dockWindowConsoleMap[name]->pasteWindow( consoles[pHost]->mClipboard );
         return true;
     }
     else return false;
@@ -860,7 +863,7 @@ bool MainWindow::appendBuffer( Profile * pHost, const QString & name )
     QMap<QString, Console *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        dockWindowConsoleMap[name]->appendBuffer( mConsoleMap[pHost]->mClipboard );
+        dockWindowConsoleMap[name]->appendBuffer( consoles[pHost]->mClipboard );
         return true;
     }
     else return false;
@@ -868,7 +871,7 @@ bool MainWindow::appendBuffer( Profile * pHost, const QString & name )
 
 Profile * MainWindow::getActiveHost()
 {
-    if( mConsoleMap.contains( activeHost ) )
+    if( consoles.contains( activeHost ) )
     {
         return activeHost;
     }
@@ -886,7 +889,7 @@ void MainWindow::addSubWindow( Console* pConsole )
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    foreach( Console * pC, mConsoleMap )
+    foreach( Console * pC, consoles )
     {
         if( ! pC->close() )
         {
@@ -900,7 +903,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     writeSettings();
 
     goingDown();
-    foreach( Console * pC, mConsoleMap )
+    foreach( Console * pC, consoles )
     {
         if( pC->mpHost->getId() != "default_host" )
         {
@@ -940,12 +943,12 @@ void MainWindow::writeSettings()
 
 void MainWindow::printSystemMessage( Profile * pH, const QString & s )
 {
-    mConsoleMap[pH]->printSystemMessage( s );
+    consoles[pH]->printSystemMessage( s );
 }
 
 void MainWindow::print( Profile * pH, const QString & s )
 {
-    mConsoleMap[pH]->print( s );
+    consoles[pH]->print( s );
 }
 
 
@@ -977,7 +980,7 @@ void MainWindow::processEventLoopHack_timerRun()
 
 void MainWindow::slot_multi_view()
 {
-     QMapIterator<Profile *, Console *> it( mConsoleMap );
+     QMapIterator<Profile *, Console *> it( consoles );
      while( it.hasNext() )
      {
          it.next();

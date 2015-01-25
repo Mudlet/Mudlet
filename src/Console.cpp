@@ -325,8 +325,6 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
     layoutButtonMainLayer->setContentsMargins(0,0,0,0);
 
     layoutButtonMainLayer->setSpacing(0);
-    /*buttonMainLayer->setMinimumHeight(31);
-    buttonMainLayer->setMaximumHeight(31);*/
     QWidget * buttonLayer = new QWidget;
     QGridLayout * layoutButtonLayer = new QGridLayout( buttonLayer );
     layoutButtonLayer->setMargin(0);
@@ -783,9 +781,9 @@ void Console::printOnDisplay( std::string & incomingSocketData )
     mTriggerEngineMode = false;
 
     double processT = mProcessingTime.elapsed();
-    if( mpHost->mTelnet.mGA_Driver )
+    if( mpHost->telnet.mGA_Driver )
     {
-        networkLatency->setText( QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency,0,'f',3)
+        networkLatency->setText( QString("N:%1 S:%2").arg(mpHost->telnet.networkLatency,0,'f',3)
                                                          .arg(processT/1000,0,'f',3));
     }
     else
@@ -1062,7 +1060,7 @@ void Console::showEvent( QShowEvent * event )
 {
     if( ! isSubConsole && mpHost )
     {
-        mpHost->mTelnet.mAlertOnNewData = false;
+        mpHost->telnet.mAlertOnNewData = false;
     }
     QWidget::showEvent( event );//FIXME-refac: might cause problems
 }
@@ -1074,7 +1072,7 @@ void Console::hideEvent( QHideEvent * event )
         if( MainWindow::self()->mWindowMinimized )
         {
 
-            mpHost->mTelnet.mAlertOnNewData = true;
+            mpHost->telnet.mAlertOnNewData = true;
         }
     }
     QWidget::hideEvent( event );//FIXME-refac: might cause problems
@@ -1679,8 +1677,9 @@ void Console::setBgColor( int r, int g, int b )
     buffer.applyBgColor( P_begin, P_end, r,g,b );
 }
 
-void Console::printCommand( QString & msg )
+void Console::printCommand( const QString & message )
 {
+    QString msg = message;
     if( mTriggerEngineMode )
     {
         msg.append("\n");
