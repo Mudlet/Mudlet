@@ -58,6 +58,9 @@ class MainWindow : public QMainWindow, public Ui::MainWindow
 Q_OBJECT
 
 public:
+    static QString                  CONFIG_DIR;
+
+public:
 
      MainWindow();
     ~MainWindow();
@@ -122,7 +125,7 @@ public:
     void                          showUnzipProgress( const QString& txt );
     bool                          openWebPage(const QString& path);
     void                          processEventLoopHack();
-    QMap<Profile *, Console *>     mConsoleMap;
+    QMap<Profile *, Console *>     consoleMap;
     QMap<Profile *, QMap<QString, Console * > > mHostConsoleMap;
     QMap<Profile *, QMap<QString, TLabel * > > mHostLabelMap;
     QIcon *                       testicon;

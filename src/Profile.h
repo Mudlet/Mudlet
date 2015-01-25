@@ -47,6 +47,7 @@ class Profile  : public QObject
 {
 public:
     static QString DICTIONARY;
+    static QString COMMAND_CHARACTER;
 
     static QString WINDOW_FONT_FAMILY;
     static QString WINDOW_FONT_SIZE;
@@ -154,6 +155,8 @@ public:
     QColor              mBgColor_2;
 
 private:
+    void                copySettings(QSettings &,QSettings&);
+
     QFont               getFont(const char *);
 
     Java *              java;

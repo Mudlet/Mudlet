@@ -40,6 +40,8 @@
 
 QString Profile::DICTIONARY("dictionary");
 
+QString Profile::COMMAND_CHARACTER("commandCharacter");
+
 QString Profile::WINDOW_WRAP("window.wrap");
 QString Profile::WINDOW_WRAP_INDENT("window.wrap.indent");
 QString Profile::WINDOW_WIDTH("window.width");
@@ -59,6 +61,8 @@ QSettings Profile::DEFAULT_SETTINGS;
 
 void setupDefaultSettings() {
     Profile::DEFAULT_SETTINGS.setValue(Profile::DICTIONARY,"en_US");
+
+    Profile::DEFAULT_SETTINGS.setValue(Profile::COMMAND_CHARACTER,"#");
 
     Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_FONT_FAMILY,"Monospace");
     Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_FONT_SIZE,"12");
@@ -118,15 +122,11 @@ Profile::Profile( int port, const QString& hostname, const QString& login, const
 , mFgColor_2           (Qt::lightGray)
 , mBgColor_2           (Qt::black)
 {
-    auto keys = Profile::DEFAULT_SETTINGS.allKeys();
 
-    // copy default settings
-    for(auto key : keys) {
-        auto value = Profile::DEFAULT_SETTINGS.value(key).toString();
-        settings.setValue(key,value);
-    }
+    copySettings(Profile::DEFAULT_SETTINGS,settings);
+    load();
+    save(); // in case new defaults were added
 
-    qDebug() << "host made!";
 }
 
 Profile::~Profile()
@@ -161,27 +161,18 @@ int Profile::getWindowWrapIndent() {
 
 QFont Profile::getFont(const char *ch) {
     QString domain(ch);
-    QString family = getString(domain + ".font.family");
-    qDebug() <<"font family=="<<family;
     QFont font(getString(domain + ".font.family"));
 
-    qDebug() <<"font family=="<<font.family();
-
     if(!QFontInfo(font).fixedPitch()) {
-        qDebug() << "setting style hint to monospace";
         font.setStyleHint(QFont::Monospace);
     }
 
     if(!QFontInfo(font).fixedPitch()) {
-        qDebug() << "setting style hint to typewriter";
         font.setStyleHint(QFont::TypeWriter);
     }
 
     int pixelSize = getInt(domain + ".font.size");
-    qDebug() << "setting pixel size to "<< pixelSize;
     font.setPixelSize(pixelSize);
-    qDebug() << "setting pixel size to "<< font.pixelSize();
-    qDebug() << QFontMetrics(font).height();
 
     /*QFont temp(font);
     QPixmap pixmap = QPixmap( 2000, 600 );
@@ -286,11 +277,34 @@ QString Profile::getId() {
 }
 
 void Profile::load() {
+    QMutexLocker locker(& lock);
+    QString fileName = MainWindow::CONFIG_DIR + "/" + id + ".profile";
+    QFile file(fileName);
 
+    if(!file.exists()) {
+        return;
+    }
+
+    QSettings loadSettings(fileName, QSettings::NativeFormat);
+    copySettings(loadSettings,settings);
+}
+
+void Profile::copySettings(QSettings &orig, QSettings &dst) {
+    auto keys = orig.allKeys();
+
+    for(auto key : keys) {
+        auto value = orig.value(key).toString();
+        dst.setValue(key,value);
+    }
 }
 
 void Profile::save() {
-    //QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    QMutexLocker locker(& lock);
+    QString fileName = MainWindow::CONFIG_DIR + "/" + id + ".profile";
+    QFile file(fileName);
+    QSettings saveSettings(fileName, QSettings::NativeFormat);
+    copySettings(settings,saveSettings);
+
 }
 
 void Profile::setId(const QString &id) {

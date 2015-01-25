@@ -64,12 +64,21 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 }
 
 static const QString timeFormat = "hh:mm:ss";
+QString MainWindow::CONFIG_DIR;
 
 QPointer<MainWindow> MainWindow::_self;
 
 void MainWindow::start()
 {
+    CONFIG_DIR = QDir::homePath()+"/.config/mudlet";
+    QDir dir;
+    if( ! dir.exists( CONFIG_DIR ) )
+    {
+        dir.mkpath( CONFIG_DIR );
+    }
+
     _self = new MainWindow;
+
 }
 
 MainWindow * MainWindow::self()
@@ -306,7 +315,6 @@ void MainWindow::addConsoleForNewHost( Profile * pH )
     activeHost = pH;
 
     pConsole->show();
-    connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
     QMap<QString, Console *> miniConsoleMap;
     mHostConsoleMap[activeHost] = miniConsoleMap;

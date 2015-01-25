@@ -62,13 +62,9 @@ TextEdit::TextEdit( Console * pC, QWidget * pW, ConsoleBuffer * pB, Profile * pH
 {
     mLastClickTimer.start();
     QFont font = mpHost->getWindowFont();
-    qDebug() << QFontMetrics(font).height();
-    qDebug() << "font==" << font.family();
 
     QFontMetrics metrics(font);
-    qDebug() << "before";
     mFontHeight = metrics.height();
-    qDebug() << "after";
     mFontWidth = metrics.width( QChar('W') );
     mScreenWidth = 100;
     if( (width()/mFontWidth ) < mScreenWidth )

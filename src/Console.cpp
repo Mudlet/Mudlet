@@ -355,7 +355,6 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
     replayButton->setFocusPolicy( Qt::NoFocus );
     replayButton->setToolTip("record a replay");
     replayButton->setIcon( QIcon( QStringLiteral( ":/icons/media-tape.png" ) ) );
-    connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -365,7 +364,6 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
     logButton->setFocusPolicy( Qt::NoFocus );
     logButton->setToolTip("start logging MUD output to log file");
     logButton->setIcon( QIcon( QStringLiteral( ":/icons/folder-downloads.png" ) ) );
-    connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
     networkLatency->setReadOnly( true );
     networkLatency->setSizePolicy( sizePolicy4 );
@@ -414,7 +412,6 @@ Console::Console( Profile * pH, bool isDebugConsole, QWidget * parent )
     emergencyStop->setFocusPolicy( Qt::NoFocus );
     emergencyStop->setCheckable( true );
     emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
-    connect( emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers( bool )));
 
     mpBufferSearchBox->setMinimumSize(QSize(100,30));
     mpBufferSearchBox->setMaximumSize(QSize(150,30));
