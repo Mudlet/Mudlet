@@ -87,6 +87,8 @@ mudlet::mudlet()
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )
 {
+    qDebug() << "new mudlet";
+
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
     setContentsMargins(0,0,0,0);
@@ -100,11 +102,11 @@ mudlet::mudlet()
     mpTabBar = new QTabBar( frame );
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy( Qt::NoFocus );
-#if QT_VERSION >= 0x040500
+
     mpTabBar->setTabsClosable ( true );
     connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
     mpTabBar->setMovable(true);
-#endif
+
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
@@ -127,8 +129,7 @@ mudlet::mudlet()
     mHostManager.addHost("default_host", "", "","" );
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
 
-    QSize generalRule( qApp->desktop()->size() );
-    generalRule -= QSize( 30, 30 );
+
     QFont mainFont;
     mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
     QFont mdiFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
@@ -141,7 +142,6 @@ mudlet::mudlet()
     QAction * mactionMultiView = new QAction(tr("MultiView"), this);
     QAction * mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
 
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
@@ -153,6 +153,7 @@ mudlet::mudlet()
     mpMusicBox3 = new QMediaPlayer(this);
     mpMusicBox4 = new QMediaPlayer(this);
 
+    addConsoleForNewHost(mpDefaultHost);
 }
 
 HostManager * mudlet::getHostManager()

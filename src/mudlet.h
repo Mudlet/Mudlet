@@ -141,7 +141,6 @@ public:
    void                          playSound( QString s );
    QString                       version;
    QPointer<Host>                mpCurrentActiveHost;
-   bool                          mAutolog;
    QMediaPlayer *                mpMusicBox1;
    QMediaPlayer *                mpMusicBox2;
    QMediaPlayer *                mpMusicBox3;

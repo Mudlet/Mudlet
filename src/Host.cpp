@@ -39,6 +39,8 @@
 
 #include <errno.h>
 
+QString Host::DICTIONARY("dictionary");
+
 QString Host::WINDOW_WRAP("window.wrap");
 QString Host::WINDOW_WRAP_INDENT("window.wrap.indent");
 QString Host::WINDOW_WIDTH("window.width");
@@ -57,6 +59,8 @@ QString Host::CMD_LINE_BG_COLOR("cmdLine.bgColor");
 QSettings Host::DEFAULT_SETTINGS;
 
 void setupDefaultSettings() {
+    Host::DEFAULT_SETTINGS.setValue(Host::DICTIONARY,"en_US");
+
     Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_FONT_FAMILY,"Monospace");
     Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_FONT_SIZE,"12");
 
@@ -73,7 +77,7 @@ void setupDefaultSettings() {
     Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_BG_COLOR,"#000");
 }
 
-Host::Host( int port, const QString& hostname, const QString& login, const QString& pass, int id )
+Host::Host( int port, const QString& hostname, const QString& login, const QString& pass )
 : mTelnet( this )
 , mpConsole( 0 )
 , mKeyUnit           ( this )
@@ -123,6 +127,8 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
         auto value = Host::DEFAULT_SETTINGS.value(key).toString();
         settings.setValue(key,value);
     }
+
+    qDebug() << "host made!";
 }
 
 Host::~Host()
@@ -131,7 +137,11 @@ Host::~Host()
 }
 
 QFont Host::getWindowFont() {
-    getFont("window");
+    return getFont("window");
+}
+
+QString Host::getDictionary() {
+    return getString(Host::DICTIONARY);
 }
 
 int Host::getWindowHeight() {
@@ -153,22 +163,33 @@ int Host::getWindowWrapIndent() {
 
 QFont Host::getFont(const char *ch) {
     QString domain(ch);
+    QString family = getString(domain + ".font.family");
+    qDebug() <<"font family=="<<family;
     QFont font(getString(domain + ".font.family"));
 
+    qDebug() <<"font family=="<<font.family();
+
     if(!QFontInfo(font).fixedPitch()) {
+        qDebug() << "setting style hint to monospace";
         font.setStyleHint(QFont::Monospace);
     }
 
     if(!QFontInfo(font).fixedPitch()) {
+        qDebug() << "setting style hint to typewriter";
         font.setStyleHint(QFont::TypeWriter);
     }
 
-    font.setPixelSize(getInt(domain + ".font.size"));
+    int pixelSize = getInt(domain + ".font.size");
+    qDebug() << "setting pixel size to "<< pixelSize;
+    font.setPixelSize(pixelSize);
+    qDebug() << "setting pixel size to "<< font.pixelSize();
+    qDebug() << QFontMetrics(font).height();
 
+    /*QFont temp(font);
     QPixmap pixmap = QPixmap( 2000, 600 );
     QPainter p(&pixmap);
-    font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-    p.setFont(font);
+    temp.setLetterSpacing(QFont::AbsoluteSpacing, 0);
+    p.setFont(temp);
     const QRectF r = QRectF(0,0,2000, 600);
 
     QRectF r2;
@@ -178,9 +199,9 @@ QFont Host::getFont(const char *ch) {
     int width = QFontMetrics( font ).width( QChar('W') );
     qreal letterSpacing = (qreal)((qreal)width-(qreal)(r2.width()/t.size()));
 
-    windowFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+    font.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);*/
 
-    return windowFont;
+    return font;
 }
 
 QFont Host::getCmdLineFont() {

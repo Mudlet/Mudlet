@@ -209,7 +209,6 @@ public:
       TChar             mFormatSystemMessage;
 
       int               mIndentCount;
-      bool              mIsDebugConsole;
       bool              mIsHighColorMode;
       bool              mIsSubConsole;
       std::map<std::string, TLabel *> mLabelMap;

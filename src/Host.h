@@ -48,6 +48,8 @@ void setupDefaultSettings();
 class Host  : public QObject
 {
 public:
+    static QString DICTIONARY;
+
     static QString WINDOW_FONT_FAMILY;
     static QString WINDOW_FONT_SIZE;
 
@@ -68,8 +70,10 @@ public:
 
 public:
 
-    Host( int port, const QString& mHostName, const QString& login, const QString& pass, int host_id );
+    Host( int port, const QString& mHostName, const QString& login, const QString& pass );
     ~Host();
+
+    QString             getDictionary();
 
     QFont               getWindowFont();
     int                 getWindowWrap();

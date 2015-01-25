@@ -63,8 +63,13 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 {
     mLastClickTimer.start();
     QFont font = mpHost->getWindowFont();
+    qDebug() << QFontMetrics(font).height();
+    qDebug() << "font==" << font.family();
+
     QFontMetrics metrics(font);
+    qDebug() << "before";
     mFontHeight = metrics.height();
+    qDebug() << "after";
     mFontWidth = metrics.width( QChar('W') );
     mScreenWidth = 100;
     if( (width()/mFontWidth ) < mScreenWidth )
@@ -1089,7 +1094,7 @@ void TTextEdit::slot_popupMenu()
 
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
-    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
+    if( ! mpConsole->mIsSubConsole )
     {
         TEvent me;
         me.mArgumentList.append( "sysWindowMousePressEvent" );
@@ -1373,7 +1378,7 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
     {
         mMouseTracking = false;
     }
-    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
+    if( ! mpConsole->mIsSubConsole )
     {
         TEvent me;
         me.mArgumentList.append( "sysWindowMouseReleaseEvent" );

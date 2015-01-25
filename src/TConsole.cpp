@@ -64,7 +64,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mIndentCount( 0 )
-, mIsDebugConsole( isDebugConsole )
 , mMainFrameBottomHeight( 0 )
 , mMainFrameLeftWidth( 0 )
 , mMainFrameRightWidth( 0 )
@@ -99,57 +98,37 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
 
-    if( mIsDebugConsole )
+    setWindowTitle( tr( "Console" ) );
+    if( parent )
     {
-        setWindowTitle( tr( "Debug Console" ) );
-        // Probably will not show up as this is used inside a QMainWindow widget
-        // which has it's own title and icon set.
-        mWrapAt = 50;
-        mIsSubConsole = false;
-        mStandardFormat.bgR = mBgColor.red();
-        mStandardFormat.bgG = mBgColor.green();
-        mStandardFormat.bgB = mBgColor.blue();
-        mStandardFormat.fgR = mFgColor.red();
-        mStandardFormat.fgG = mFgColor.green();
-        mStandardFormat.fgB = mFgColor.blue();
-        mStandardFormat.flags &= ~(TCHAR_BOLD);
-        mStandardFormat.flags &= ~(TCHAR_ITALICS);
-        mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
-        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
+        mIsSubConsole = true;
+        mpHost->mpConsole->mSubConsoleList.append( this );
+        mMainFrameTopHeight = 0;
+        mMainFrameBottomHeight = 0;
+        mMainFrameLeftWidth = 0;
+        mMainFrameRightWidth = 0;
     }
     else
     {
-        setWindowTitle( tr( "Non Debug Console" ) );
-        if( parent )
-        {
-            mIsSubConsole = true;
-            mpHost->mpConsole->mSubConsoleList.append( this );
-            mMainFrameTopHeight = 0;
-            mMainFrameBottomHeight = 0;
-            mMainFrameLeftWidth = 0;
-            mMainFrameRightWidth = 0;
-        }
-        else
-        {
-            mIsSubConsole = false;
-            mMainFrameTopHeight = 1;
-            mMainFrameBottomHeight = 1;
-            mMainFrameLeftWidth = 1;
-            mMainFrameRightWidth = 1;
-            mCommandBgColor = mpHost->mCommandBgColor;
-            mCommandFgColor = mpHost->mCommandFgColor;
-        }
-        mStandardFormat.bgR = mpHost->mBgColor.red();
-        mStandardFormat.bgG = mpHost->mBgColor.green();
-        mStandardFormat.bgB = mpHost->mBgColor.blue();
-        mStandardFormat.fgR = mpHost->mFgColor.red();
-        mStandardFormat.fgG = mpHost->mFgColor.green();
-        mStandardFormat.fgB = mpHost->mFgColor.blue();
-        mStandardFormat.flags &= ~(TCHAR_BOLD);
-        mStandardFormat.flags &= ~(TCHAR_ITALICS);
-        mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
-        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
+        mIsSubConsole = false;
+        mMainFrameTopHeight = 1;
+        mMainFrameBottomHeight = 1;
+        mMainFrameLeftWidth = 1;
+        mMainFrameRightWidth = 1;
+        mCommandBgColor = mpHost->mCommandBgColor;
+        mCommandFgColor = mpHost->mCommandFgColor;
     }
+    mStandardFormat.bgR = mpHost->mBgColor.red();
+    mStandardFormat.bgG = mpHost->mBgColor.green();
+    mStandardFormat.bgB = mpHost->mBgColor.blue();
+    mStandardFormat.fgR = mpHost->mFgColor.red();
+    mStandardFormat.fgG = mpHost->mFgColor.green();
+    mStandardFormat.fgB = mpHost->mFgColor.blue();
+    mStandardFormat.flags &= ~(TCHAR_BOLD);
+    mStandardFormat.flags &= ~(TCHAR_ITALICS);
+    mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
+    mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
+
     setContentsMargins(0,0,0,0);
     if( mpHost )
         profile_name = mpHost->getId();
@@ -508,8 +487,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     console->show();
     console2->show();
     console2->hide();
-    if( mIsDebugConsole )
-        mpCommandLine->hide();
 
     isUserScrollBack = false;
 
@@ -522,10 +499,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         layerCommandLine->hide();
         mpMainFrame->move(0,0);
         mpMainDisplay->move(0,0);
-    }
-    if( mIsDebugConsole )
-    {
-        layerCommandLine->hide();
     }
 
     mpBaseVFrame->setContentsMargins(0,0,0,0);
@@ -565,6 +538,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
     changeColors();
 
+    qDebug() <<"TConsole made";
 }
 
 Host * TConsole::getHost() { return mpHost; }
@@ -585,7 +559,7 @@ void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
 
 void TConsole::resizeEvent( QResizeEvent * event )
 {
-    if( ! mIsDebugConsole && ! mIsSubConsole )
+    if( ! mIsSubConsole )
     {
         mMainFrameTopHeight = 1;
         mMainFrameBottomHeight = 1;
@@ -596,7 +570,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
     int y = event->size().height();
 
 
-    if( ! mIsSubConsole && ! mIsDebugConsole )
+    if( ! mIsSubConsole )
     {
         mpMainFrame->resize(x,y);
         mpBaseVFrame->resize(x, y);
@@ -614,7 +588,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
     }
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
 
-    if( mIsSubConsole || mIsDebugConsole )
+    if( mIsSubConsole )
     {
         layerCommandLine->hide();
         mpCommandLine->hide();
@@ -627,7 +601,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
 
     QWidget::resizeEvent( event );
 
-    if( ! mIsDebugConsole && ! mIsSubConsole )
+    if( ! mIsSubConsole )
     {
 
         // TODO add event
@@ -646,13 +620,12 @@ void TConsole::resizeEvent( QResizeEvent * event )
 
 void TConsole::refresh()
 {
-    if( ! mIsDebugConsole )
-    {
-        mMainFrameTopHeight = 1;
-        mMainFrameBottomHeight = 1;
-        mMainFrameLeftWidth = 1;
-        mMainFrameRightWidth = 1;
-    }
+
+    mMainFrameTopHeight = 1;
+    mMainFrameBottomHeight = 1;
+    mMainFrameLeftWidth = 1;
+    mMainFrameRightWidth = 1;
+
 
     int x = width();
     int y = height();
@@ -681,20 +654,6 @@ void TConsole::refresh()
 
 void TConsole::closeEvent( QCloseEvent *event )
 {
-    if( mIsDebugConsole )
-    {
-        if( ! mudlet::self()->isGoingDown() )
-        {
-            hide();
-            event->ignore();
-            return;
-        }
-        else
-        {
-            event->accept();
-            return;
-        }
-    }
     if( mUserConsole )
     {
         if( ! mudlet::self()->isGoingDown() )
@@ -728,20 +687,7 @@ int TConsole::getButtonState()
 void TConsole::changeColors()
 {
     mDisplayFont.setFixedPitch(true);
-    if( mIsDebugConsole )
-    {
-        mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality) );
-        mDisplayFont.setFixedPitch(true);
-        console->setFont( mDisplayFont );
-        console2->setFont( mDisplayFont );
-        QPalette palette;
-        palette.setColor( QPalette::Text, mFgColor );
-        palette.setColor( QPalette::Highlight, QColor(55,55,255) );
-        palette.setColor( QPalette::Base, QColor(0,0,0) );
-        console->setPalette( palette );
-        console2->setPalette( palette );
-    }
-    else if( mIsSubConsole )
+    if( mIsSubConsole )
     {
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
@@ -825,7 +771,7 @@ void TConsole::changeColors()
     }
 
     buffer.updateColors();
-    if( ! mIsDebugConsole && ! mIsSubConsole )
+    if( ! mIsSubConsole )
     {
         buffer.mWrapAt = mpHost->getWindowWrap();
         buffer.mWrapIndent = mpHost->getWindowWrapIndent();
@@ -1136,27 +1082,21 @@ void TConsole::deselect()
 
 void TConsole::showEvent( QShowEvent * event )
 {
-    if( ! mIsDebugConsole && ! mIsSubConsole )
+    if( ! mIsSubConsole && mpHost )
     {
-        if( mpHost )
-        {
-            mpHost->mTelnet.mAlertOnNewData = false;
-        }
+        mpHost->mTelnet.mAlertOnNewData = false;
     }
     QWidget::showEvent( event );//FIXME-refac: might cause problems
 }
 
 void TConsole::hideEvent( QHideEvent * event )
 {
-    if( ! mIsDebugConsole && ! mIsSubConsole )
+    if( ! mIsSubConsole && mpHost )
     {
-        if( mpHost )
+        if( mudlet::self()->mWindowMinimized )
         {
-            if( mudlet::self()->mWindowMinimized )
-            {
 
-                mpHost->mTelnet.mAlertOnNewData = true;
-            }
+            mpHost->mTelnet.mAlertOnNewData = true;
         }
     }
     QWidget::hideEvent( event );//FIXME-refac: might cause problems
@@ -1831,7 +1771,7 @@ void TConsole::echoLink(const QString & text, QStringList & func, QStringList & 
         buffer.addLink( mTriggerEngineMode, text, func, hint, mFormatCurrent );
     else
     {
-        if( ! mIsSubConsole && ! mIsDebugConsole )
+        if( ! mIsSubConsole )
         {
             TChar f = TChar(0, 0, 255, mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(), false, false, true, false);
             buffer.addLink( mTriggerEngineMode, text, func, hint, f );
@@ -2166,15 +2106,7 @@ void TConsole::printSystemMessage(const QString & msg )
     QColor bgColor;
     QColor fgColor;
 
-    if( mIsDebugConsole )
-    {
-        bgColor = mBgColor;
-        fgColor = mFgColor;
-    }
-    else
-    {
-        bgColor = mpHost->mBgColor;
-    }
+    bgColor = mpHost->mBgColor;
 
     //int lineBeforeNewContent = buffer.getLastLineNumber();
     QString txt = QString("System Message: ")+msg;

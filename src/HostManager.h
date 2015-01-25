@@ -45,11 +45,8 @@ public:
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
     bool               renameHost( QString );
-    Host *             getHostFromHostID( int id );
-    void               postIrcMessage(QString, QString, QString );
 
 private:
-    int createNewHostID();
 
     QMutex              mPoolLock;
     QMap<QString, QSharedPointer<Host> > mHostPool;

@@ -89,17 +89,11 @@ bool HostManager::addHost( QString hostname, QString port, QString login, QStrin
         portnumber = port.toInt();
     }
 
-    int id = createNewHostID();
-    QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass, id ) );
+    QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass ) );
 
     mHostPool.insert( hostname, pNewHost );
     mpActiveHost = mHostPool.begin().value().data();
     return true;
-}
-
-int HostManager::createNewHostID()
-{
-    return (mHostPool.size() + 1);
 }
 
 QStringList HostManager::getHostList()

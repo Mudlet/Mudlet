@@ -45,7 +45,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 
 {
     QString path;
-    QString dict = pHost->getString("dictionary");
+    QString dict = pHost->getDictionary();
 #ifdef Q_OS_LINUX
     if ( QFile::exists("/usr/share/hunspell/"+ dict + ".aff") )
         path = "/usr/share/hunspell/";
