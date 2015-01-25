@@ -25,8 +25,8 @@
 #include "TConsole.h"
 
 
-#include "Host.h"
-#include "mudlet.h"
+#include "Profile.h"
+#include "MainWindow.h"
 #include "TCommandLine.h"
 #include "TEvent.h"
 #include "TLabel.h"
@@ -50,7 +50,7 @@ using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
 
-TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
+TConsole::TConsole( Profile * pH, bool isDebugConsole, QWidget * parent )
 : QWidget( parent )
 , mpHost( pH )
 , buffer( pH )
@@ -102,7 +102,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     if( parent )
     {
         mIsSubConsole = true;
-        mpHost->mpConsole->mSubConsoleList.append( this );
+        mpHost->console->mSubConsoleList.append( this );
         mMainFrameTopHeight = 0;
         mMainFrameBottomHeight = 0;
         mMainFrameLeftWidth = 0;
@@ -261,10 +261,10 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     baseHFrameLayout->setMargin(0);
     centralLayout->setMargin(0);
 
-    mpCommandLine = new TCommandLine( pH, this, mpMainDisplay );
-    mpCommandLine->setContentsMargins(0,0,0,0);
-    mpCommandLine->setSizePolicy( sizePolicy );
-    mpCommandLine->setFocusPolicy( Qt::StrongFocus );
+    cmdLine = new TCommandLine( pH, this, mpMainDisplay );
+    cmdLine->setContentsMargins(0,0,0,0);
+    cmdLine->setSizePolicy( sizePolicy );
+    cmdLine->setFocusPolicy( Qt::StrongFocus );
 
     layer = new QWidget( mpMainDisplay );
     layer->setContentsMargins(0,0,0,0);
@@ -287,7 +287,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     splitter->setHandleWidth( 3 );
     splitter->setPalette( splitterPalette );
     splitter->setParent( layer );
-    setFocusProxy( mpCommandLine );
+    setFocusProxy( cmdLine );
 
     console = new TTextEdit( this, splitter, &buffer, mpHost, isDebugConsole, false );
     console->setContentsMargins(0,0,0,0);
@@ -428,11 +428,11 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchBox->setFocusPolicy( Qt::ClickFocus );
     mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette __pal;
-    __pal.setColor(QPalette::Text, mpHost->getString(Host::CMD_LINE_FG_COLOR) );//QColor(0,0,192));
+    __pal.setColor(QPalette::Text, mpHost->getString(Profile::CMD_LINE_FG_COLOR) );//QColor(0,0,192));
     __pal.setColor(QPalette::Highlight,QColor(0,0,192));
     __pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    __pal.setColor(QPalette::Base,mpHost->getString(Host::CMD_LINE_BG_COLOR));//QColor(255,255,225));
-    __pal.setColor(QPalette::Window, mpHost->getString(Host::CMD_LINE_BG_COLOR));
+    __pal.setColor(QPalette::Base,mpHost->getString(Profile::CMD_LINE_BG_COLOR));//QColor(255,255,225));
+    __pal.setColor(QPalette::Window, mpHost->getString(Profile::CMD_LINE_BG_COLOR));
     mpBufferSearchBox->setPalette( __pal );
     mpBufferSearchBox->setToolTip("Search buffer");
     connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
@@ -460,7 +460,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/import.png" ) ) );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
-    layoutLayer2->addWidget( mpCommandLine );
+    layoutLayer2->addWidget( cmdLine );
     layoutLayer2->addWidget( buttonMainLayer );
     layoutButtonLayer->addWidget( mpBufferSearchBox,0, 0, 0, 4 );
     layoutButtonLayer->addWidget( mpBufferSearchUp, 0, 5 );
@@ -520,11 +520,11 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     buttonMainLayer->setMinimumWidth(400);
     buttonMainLayer->setMaximumWidth(400);
     setFocusPolicy(Qt::ClickFocus);
-    setFocusProxy(mpCommandLine);
+    setFocusProxy(cmdLine);
     console->setFocusPolicy(Qt::ClickFocus);
-    console->setFocusProxy(mpCommandLine);
+    console->setFocusProxy(cmdLine);
     console2->setFocusPolicy(Qt::ClickFocus);
-    console2->setFocusProxy(mpCommandLine);
+    console2->setFocusProxy(cmdLine);
 
     buttonLayerSpacer->setAutoFillBackground( true );
     buttonLayerSpacer->setPalette( __pal );
@@ -541,7 +541,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     qDebug() <<"TConsole made";
 }
 
-Host * TConsole::getHost() { return mpHost; }
+Profile * TConsole::getHost() { return mpHost; }
 
 void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
 {
@@ -578,7 +578,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
         x = x-mpLeftToolBar->width()-mpRightToolBar->width();
         y = y-mpTopToolBar->height();
         mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
-                               y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
+                               y - mMainFrameTopHeight - mMainFrameBottomHeight - cmdLine->height() );
     }
     else
     {
@@ -591,7 +591,7 @@ void TConsole::resizeEvent( QResizeEvent * event )
     if( mIsSubConsole )
     {
         layerCommandLine->hide();
-        mpCommandLine->hide();
+        cmdLine->hide();
     }
     else
     {
@@ -641,7 +641,7 @@ void TConsole::refresh()
     if( !mpTopToolBar->isHidden() ) y -= mpTopToolBar->height();
 
     mpMainDisplay->resize( x - mMainFrameLeftWidth - mMainFrameRightWidth,
-                           y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() );
+                           y - mMainFrameTopHeight - mMainFrameBottomHeight - cmdLine->height() );
 
     mpMainDisplay->move( mMainFrameLeftWidth, mMainFrameTopHeight );
     x = width();
@@ -656,7 +656,7 @@ void TConsole::closeEvent( QCloseEvent *event )
 {
     if( mUserConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
+        if( ! MainWindow::self()->isGoingDown() )
         {
             hide();
             event->ignore();
@@ -722,12 +722,12 @@ void TConsole::changeColors()
     else
     {
         QPalette pal;
-        pal.setColor(QPalette::Text, mpHost->getString(Host::CMD_LINE_FG_COLOR) );//QColor(0,0,192));
+        pal.setColor(QPalette::Text, mpHost->getString(Profile::CMD_LINE_FG_COLOR) );//QColor(0,0,192));
         pal.setColor(QPalette::Highlight,QColor(0,0,192));
         pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
-        pal.setColor(QPalette::Base,mpHost->getString(Host::CMD_LINE_BG_COLOR));//QColor(255,255,225));
-        mpCommandLine->setPalette( pal );
-        mpCommandLine->mRegularPalette = pal;
+        pal.setColor(QPalette::Base,mpHost->getString(Profile::CMD_LINE_BG_COLOR));//QColor(255,255,225));
+        cmdLine->setPalette( pal );
+        cmdLine->mRegularPalette = pal;
         //mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
         //mpHost->mDisplayFont.setFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
@@ -749,7 +749,7 @@ void TConsole::changeColors()
         console2->setPalette( palette );
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
-        mpCommandLine->setFont(mpHost->getWindowFont());
+        cmdLine->setFont(mpHost->getWindowFont());
         mFormatCurrent.bgR = mpHost->mBgColor.red();
         mFormatCurrent.bgG = mpHost->mBgColor.green();
         mFormatCurrent.bgB = mpHost->mBgColor.blue();
@@ -1093,7 +1093,7 @@ void TConsole::hideEvent( QHideEvent * event )
 {
     if( ! mIsSubConsole && mpHost )
     {
-        if( mudlet::self()->mWindowMinimized )
+        if( MainWindow::self()->mWindowMinimized )
         {
 
             mpHost->mTelnet.mAlertOnNewData = true;
@@ -1875,7 +1875,7 @@ void TConsole::resetMainConsole()
     it = mSubConsoleMap.begin();
     for( ; it != mSubConsoleMap.end(); it++ )
     {
-        QMap<QString, TConsole *> & dockWindowConsoleMap = mudlet::self()->mHostConsoleMap[mpHost];
+        QMap<QString, TConsole *> & dockWindowConsoleMap = MainWindow::self()->mHostConsoleMap[mpHost];
         QString n = it->first.c_str();
         dockWindowConsoleMap.remove( n );
         (*it->second).close();
@@ -1884,7 +1884,7 @@ void TConsole::resetMainConsole()
     std::map<string, TLabel *>::const_iterator it2;
     for( it2 = mLabelMap.begin(); it2 != mLabelMap.end(); it2++ )
     {
-        QMap<QString, TLabel *> & dockWindowConsoleMap = mudlet::self()->mHostLabelMap[mpHost];
+        QMap<QString, TLabel *> & dockWindowConsoleMap = MainWindow::self()->mHostLabelMap[mpHost];
         QString n = it2->first.c_str();
         dockWindowConsoleMap.remove( n );
         (*it2->second).close();
@@ -2134,7 +2134,7 @@ void TConsole::echoUserWindow(const QString & msg )
 
 void TConsole::copy()
 {
-    mpHost->mpConsole->mClipboard = buffer.copy( P_begin, P_end );
+    mpHost->console->mClipboard = buffer.copy( P_begin, P_end );
 }
 
 void TConsole::cut()
@@ -2264,7 +2264,7 @@ QSize TConsole::getMainWindowSize() const
     QSize consoleSize = size();
     int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     int toolbarHeight = mpTopToolBar->height();
-    int commandLineHeight = mpCommandLine->height();
+    int commandLineHeight = cmdLine->height();
     QSize mainWindowSize( consoleSize.width()-toolbarWidth, consoleSize.height()-(commandLineHeight+toolbarHeight));
     return mainWindowSize;
 }

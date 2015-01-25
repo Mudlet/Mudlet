@@ -1,5 +1,4 @@
-#ifndef MUDLET_KEYUNIT_H
-#define MUDLET_KEYUNIT_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -31,18 +30,16 @@
 
 #include <list>
 
-class Host;
+class Profile;
 class TKey;
 
 
-class KeyUnit
+class HotKey
 {
-    friend class XMLexport;
-    friend class XMLimport;
 
 public:
 
-                          KeyUnit( Host * pHost );
+                          HotKey( Profile * pHost );
     std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
     TKey *                getKey( int id );
     void                  compileAll();
@@ -61,13 +58,13 @@ public:
     QList<TKey*>        uninstallList;
 
 private:
-    KeyUnit(){;}
+    HotKey(){;}
     TKey *                getKeyPrivate( int id );
     void                  addKeyRootNode( TKey * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addKey( TKey * pT );
     void                  removeKeyRootNode( TKey * pT );
     void                  removeKey( TKey *);
-    QPointer<Host>        mpHost;
+    QPointer<Profile>        mpHost;
     QMap<int, TKey *>     mKeyMap;
     std::list<TKey *>     mKeyRootNodeList;
     qint64                mMaxID;
@@ -75,5 +72,3 @@ private:
     QMap<int, QString>    mKeys;
 
 };
-
-#endif // MUDLET_KEYUNIT_H

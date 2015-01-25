@@ -24,12 +24,12 @@
 #include <QToolButton>
 #include <QSettings>
 #include <QMenu>
-#include "mudlet.h"
+#include "MainWindow.h"
 
 
-#include "ctelnet.h"
-#include "Host.h"
-#include "HostManager.h"
+#include "Telnet.h"
+#include "Profile.h"
+#include "Profiles.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -67,24 +67,24 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 
 static const QString timeFormat = "hh:mm:ss";
 
-QPointer<mudlet> mudlet::_self;
+QPointer<MainWindow> MainWindow::_self;
 
-void mudlet::start()
+void MainWindow::start()
 {
-    _self = new mudlet;
+    _self = new MainWindow;
 }
 
-mudlet * mudlet::self()
+MainWindow * MainWindow::self()
 {
     return _self;
 }
 
 
-mudlet::mudlet()
+MainWindow::MainWindow()
 : QMainWindow()
 , mWindowMinimized( false )
 , version( QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD) )
-, mpCurrentActiveHost( 0 )
+, activeHost( 0 )
 , mIsGoingDown( false )
 {
     qDebug() << "new mudlet";
@@ -99,19 +99,19 @@ mudlet::mudlet()
     QWidget * frame = new QWidget( this );
     frame->setFocusPolicy( Qt::NoFocus );
     setCentralWidget( frame );
-    mpTabBar = new QTabBar( frame );
-    mpTabBar->setMaximumHeight(30);
-    mpTabBar->setFocusPolicy( Qt::NoFocus );
+    tabBar = new QTabBar( frame );
+    tabBar->setMaximumHeight(30);
+    tabBar->setFocusPolicy( Qt::NoFocus );
 
-    mpTabBar->setTabsClosable ( true );
-    connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
-    mpTabBar->setMovable(true);
+    tabBar->setTabsClosable ( true );
+    connect( tabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
+    tabBar->setMovable(true);
 
-    connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
+    connect( tabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
     layoutTopLevel->setContentsMargins(0,0,0,0);
-    layoutTopLevel->addWidget( mpTabBar );
+    layoutTopLevel->addWidget( tabBar );
     mainPane = new QWidget( frame );
     QPalette mainPalette;
     mainPane->setPalette( mainPalette );
@@ -135,7 +135,7 @@ mudlet::mudlet()
     QFont mdiFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
     setFont( mainFont );
     mainPane->setFont( mainFont );
-    mpTabBar->setFont( mdiFont );
+    tabBar->setFont( mdiFont );
 
     mainPane->show();
 
@@ -156,12 +156,12 @@ mudlet::mudlet()
     addConsoleForNewHost(mpDefaultHost);
 }
 
-HostManager * mudlet::getHostManager()
+Profiles * MainWindow::getHostManager()
 {
     return &mHostManager;
 }
 
-bool mudlet::openWebPage(const QString& path){
+bool MainWindow::openWebPage(const QString& path){
     if (path.isEmpty() || path.isNull())
         return false;
     QUrl url(path,QUrl::TolerantMode);
@@ -171,20 +171,20 @@ bool mudlet::openWebPage(const QString& path){
 }
 
 
-void mudlet::slot_close_profile_requested( int tab )
+void MainWindow::slot_close_profile_requested( int tab )
 {
-    QString name = mpTabBar->tabText( tab );
-    Host * pH = getHostManager()->getHost( name );
+    QString name = tabBar->tabText( tab );
+    Profile * pH = getHostManager()->getHost( name );
     if( ! pH ) return;
 
-    if( ! pH->mpConsole->close() )
+    if( ! pH->console->close() )
         return;
     else
-        pH->mpConsole->mUserAgreedToCloseConsole = true;
+        pH->console->mUserAgreedToCloseConsole = true;
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getId() ) )
     {
-        mpTabBar->removeTab( tab );
+        tabBar->removeTab( tab );
         mConsoleMap.remove( pH );
         mTabMap.remove( pH->getId() );
         getHostManager()->deleteHost( pH->getId() );
@@ -193,25 +193,25 @@ void mudlet::slot_close_profile_requested( int tab )
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
     if( mConsoleMap.size() > 1 )
     {
-        mpTabBar->show();
+        tabBar->show();
     }
     else
-        mpTabBar->hide();
+        tabBar->hide();
 
 }
 
-void mudlet::slot_close_profile()
+void MainWindow::slot_close_profile()
 {
-    if( mpCurrentActiveHost )
+    if( activeHost )
     {
-        if( mConsoleMap.contains( mpCurrentActiveHost ) )
+        if( mConsoleMap.contains( activeHost ) )
         {
-            QString name = mpCurrentActiveHost->getId();
-            Host * pH = mpCurrentActiveHost;
-            mConsoleMap[mpCurrentActiveHost]->close();
+            QString name = activeHost->getId();
+            Profile * pH = activeHost;
+            mConsoleMap[activeHost]->close();
             if( mTabMap.contains( pH->getId() ) )
             {
-                mpTabBar->removeTab( mpTabBar->currentIndex() );
+                tabBar->removeTab( tabBar->currentIndex() );
                 mConsoleMap.remove( pH );
                 getHostManager()->deleteHost( pH->getId() );
                 mTabMap.remove( pH->getId() );
@@ -221,25 +221,25 @@ void mudlet::slot_close_profile()
     }
 }
 
-void mudlet::slot_tab_changed( int tabID )
+void MainWindow::slot_tab_changed( int tabID )
 {
-    if( ( ! mTabMap.contains( mpTabBar->tabText( tabID ) ) ) && ( tabID != -1 ) )
+    if( ( ! mTabMap.contains( tabBar->tabText( tabID ) ) ) && ( tabID != -1 ) )
     {
-        mpCurrentActiveHost = 0;
+        activeHost = 0;
         return;
     }
 
-    if( mConsoleMap.contains( mpCurrentActiveHost ) )
+    if( mConsoleMap.contains( activeHost ) )
     {
-        mpCurrentActiveHost->mpConsole->hide();
-        QString host = mpTabBar->tabText( tabID );
+        activeHost->console->hide();
+        QString host = tabBar->tabText( tabID );
         if( mTabMap.contains( host ) )
         {
-            mpCurrentActiveHost = mTabMap[host]->mpHost;
+            activeHost = mTabMap[host]->mpHost;
         }
         else
         {
-            mpCurrentActiveHost = 0;
+            activeHost = 0;
             return;
         }
     }
@@ -247,88 +247,88 @@ void mudlet::slot_tab_changed( int tabID )
     {
         if( mTabMap.size() > 0 )
         {
-            mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
+            activeHost = mTabMap.begin().value()->mpHost;
         }
         else
         {
-            mpCurrentActiveHost = 0;
+            activeHost = 0;
             return;
         }
     }
 
-    if( ! mpCurrentActiveHost || mConsoleMap.contains( mpCurrentActiveHost ) )
+    if( ! activeHost || mConsoleMap.contains( activeHost ) )
     {
-        if( ! mpCurrentActiveHost ) return;
-        mpCurrentActiveHost->mpConsole->show();
-        mpCurrentActiveHost->mpConsole->repaint();
-        mpCurrentActiveHost->mpConsole->refresh();
-        mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-        mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-        mpCurrentActiveHost->mpConsole->show();
+        if( ! activeHost ) return;
+        activeHost->console->show();
+        activeHost->console->repaint();
+        activeHost->console->refresh();
+        activeHost->console->cmdLine->repaint();
+        activeHost->console->cmdLine->setFocus();
+        activeHost->console->show();
 
-        int x = mpCurrentActiveHost->mpConsole->width();
-        int y = mpCurrentActiveHost->mpConsole->height();
+        int x = activeHost->console->width();
+        int y = activeHost->console->height();
         QSize s = QSize(x,y);
         QResizeEvent event(s, s);
-        QApplication::sendEvent( mpCurrentActiveHost->mpConsole, &event);
+        QApplication::sendEvent( activeHost->console, &event);
     }
     else
     {
-        mpCurrentActiveHost = 0;
+        activeHost = 0;
         return;
     }
 
     // update the window title for the currently selected profile
-    setWindowTitle(mpCurrentActiveHost->getId() + " - " + version);
+    setWindowTitle(activeHost->getId() + " - " + version);
 }
 
-void mudlet::addConsoleForNewHost( Host * pH )
+void MainWindow::addConsoleForNewHost( Profile * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
     TConsole * pConsole = new TConsole( pH, false );
     if( ! pConsole ) return;
-    pH->mpConsole = pConsole;
+    pH->console = pConsole;
     pConsole->setWindowTitle( pH->getId() );
     pConsole->setObjectName( pH->getId() );
     mConsoleMap[pH] = pConsole;
-    int newTabID = mpTabBar->addTab( pH->getId() );
+    int newTabID = tabBar->addTab( pH->getId() );
     mTabMap[pH->getId()] = pConsole;
     if( mConsoleMap.size() > 1 )
     {
-        mpTabBar->show();
+        tabBar->show();
     }
     else
-        mpTabBar->hide();
+        tabBar->hide();
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getId() + " - " + version);
 
     mainPane->layout()->addWidget( pConsole );
-    if( mpCurrentActiveHost )
-        mpCurrentActiveHost->mpConsole->hide();
-    mpCurrentActiveHost = pH;
+    if( activeHost )
+        activeHost->console->hide();
+    activeHost = pH;
 
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
     QMap<QString, TConsole *> miniConsoleMap;
-    mHostConsoleMap[mpCurrentActiveHost] = miniConsoleMap;
+    mHostConsoleMap[activeHost] = miniConsoleMap;
     QMap<QString, TLabel *> labelMap;
-    mHostLabelMap[mpCurrentActiveHost] = labelMap;
-    mpCurrentActiveHost->mpConsole->show();
-    mpCurrentActiveHost->mpConsole->repaint();
-    mpCurrentActiveHost->mpConsole->refresh();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-    mpCurrentActiveHost->mpConsole->show();
-    mpTabBar->setCurrentIndex( newTabID );
-    int x = mpCurrentActiveHost->mpConsole->width();
-    int y = mpCurrentActiveHost->mpConsole->height();
+    mHostLabelMap[activeHost] = labelMap;
+    activeHost->console->show();
+    activeHost->console->repaint();
+    activeHost->console->refresh();
+    activeHost->console->cmdLine->repaint();
+    activeHost->console->cmdLine->setFocus();
+    activeHost->console->show();
+    tabBar->setCurrentIndex( newTabID );
+    int x = activeHost->console->width();
+    int y = activeHost->console->height();
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent( mpCurrentActiveHost->mpConsole, &event);
+    QApplication::sendEvent( activeHost->console, &event);
 }
 
-bool mudlet::openWindow( Host * pHost, const QString & name )
+bool MainWindow::openWindow( Profile * host, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
@@ -337,14 +337,14 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        TConsole * pC = new TConsole( pHost, false );
+        TConsole * pC = new TConsole( host, false );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
-        QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+        QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[host];
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
         return true;
@@ -352,15 +352,15 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
     else return false;
 }
 
-bool mudlet::createMiniConsole( Host * pHost, const QString & name, int x, int y, int width, int height )
+bool MainWindow::createMiniConsole( Profile * pHost, const QString & name, int x, int y, int width, int height )
 {
     if( ! pHost ) return false;
-    if( ! pHost->mpConsole ) return false;
+    if( ! pHost->console ) return false;
 
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( ! dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = pHost->mpConsole->createMiniConsole( name, x, y, width, height );
+        TConsole * pC = pHost->console->createMiniConsole( name, x, y, width, height );
         pC->mConsoleName = name;
         if( pC )
         {
@@ -379,14 +379,14 @@ bool mudlet::createMiniConsole( Host * pHost, const QString & name, int x, int y
     return false;
 }
 
-bool mudlet::createLabel( Host * pHost, const QString & name, int x, int y, int width, int height, bool fillBg )
+bool MainWindow::createLabel( Profile * pHost, const QString & name, int x, int y, int width, int height, bool fillBg )
 {
     if( ! pHost ) return false;
-    if( ! pHost->mpConsole ) return false;
+    if( ! pHost->console ) return false;
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( ! labelMap.contains( name ) )
     {
-        TLabel * pL = pHost->mpConsole->createLabel( name, x, y, width, height, fillBg );
+        TLabel * pL = pHost->console->createLabel( name, x, y, width, height, fillBg );
         if( pL )
         {
             labelMap[name] = pL;
@@ -396,15 +396,15 @@ bool mudlet::createLabel( Host * pHost, const QString & name, int x, int y, int 
     return false;
 }
 
-bool mudlet::createBuffer( Host * pHost, const QString & name )
+bool MainWindow::createBuffer( Profile * pHost, const QString & name )
 {
     if( ! pHost ) return false;
-    if( ! pHost->mpConsole ) return false;
+    if( ! pHost->console ) return false;
 
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( ! dockWindowConsoleMap.contains( name ) )
     {
-        TConsole * pC = pHost->mpConsole->createBuffer( name );
+        TConsole * pC = pHost->console->createBuffer( name );
         pC->mConsoleName = name;
         if( pC )
         {
@@ -415,7 +415,7 @@ bool mudlet::createBuffer( Host * pHost, const QString & name )
     return false;
 }
 
-bool mudlet::setBackgroundColor( Host * pHost, const QString & name, int r, int g, int b, int alpha )
+bool MainWindow::setBackgroundColor( Profile * pHost, const QString & name, int r, int g, int b, int alpha )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -437,7 +437,7 @@ bool mudlet::setBackgroundColor( Host * pHost, const QString & name, int r, int 
     return false;
 }
 
-bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & path )
+bool MainWindow::setBackgroundImage( Profile * pHost, const QString & name, QString & path )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -456,7 +456,7 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
         return false;
 }
 
-bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
+bool MainWindow::setTextFormat( Profile * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -490,19 +490,19 @@ bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, 
         return false;
 }
 
-void mudlet::showEvent( QShowEvent * event )
+void MainWindow::showEvent( QShowEvent * event )
 {
     mWindowMinimized = false;
     QMainWindow::showEvent( event );
 }
 
-void mudlet::hideEvent( QHideEvent * event )
+void MainWindow::hideEvent( QHideEvent * event )
 {
     mWindowMinimized = true;
     QMainWindow::hideEvent( event );
 }
 
-bool mudlet::clearWindow( Host * pHost, const QString & name )
+bool MainWindow::clearWindow( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -515,7 +515,7 @@ bool mudlet::clearWindow( Host * pHost, const QString & name )
         return false;
 }
 
-bool mudlet::showWindow( Host * pHost, const QString & name )
+bool MainWindow::showWindow( Profile * pHost, const QString & name )
 {
     // check labels first as they are shown/hidden more often
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
@@ -536,7 +536,7 @@ bool mudlet::showWindow( Host * pHost, const QString & name )
     return false;
 }
 
-bool mudlet::paste( Host * pHost, const QString & name )
+bool MainWindow::paste( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -548,7 +548,7 @@ bool mudlet::paste( Host * pHost, const QString & name )
         return false;
 }
 
-bool mudlet::hideWindow( Host * pHost, const QString & name )
+bool MainWindow::hideWindow( Profile * pHost, const QString & name )
 {
     // check labels first as they are shown/hidden more often
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
@@ -569,7 +569,7 @@ bool mudlet::hideWindow( Host * pHost, const QString & name )
     return false;
 }
 
-bool mudlet::resizeWindow( Host * pHost, const QString & name, int x1, int y1 )
+bool MainWindow::resizeWindow( Profile * pHost, const QString & name, int x1, int y1 )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -588,11 +588,11 @@ bool mudlet::resizeWindow( Host * pHost, const QString & name, int x1, int y1 )
     return false;
 }
 
-bool mudlet::setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 )
+bool MainWindow::setConsoleBufferSize( Profile * pHost, const QString & name, int x1, int y1 )
 {
     if( name == "main" )
     {
-        pHost->mpConsole->buffer.setBufferSize( x1, y1 );
+        pHost->console->buffer.setBufferSize( x1, y1 );
         return true;
     }
 
@@ -609,7 +609,7 @@ bool mudlet::setConsoleBufferSize( Host * pHost, const QString & name, int x1, i
 
 
 
-bool mudlet::resetFormat( Host * pHost, QString & name )
+bool MainWindow::resetFormat( Profile * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -621,7 +621,7 @@ bool mudlet::resetFormat( Host * pHost, QString & name )
         return false;
 }
 
-bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
+bool MainWindow::moveWindow( Profile * pHost, const QString & name, int x1, int y1 )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -642,7 +642,7 @@ bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
     return false;
 }
 
-bool mudlet::closeWindow( Host * pHost, const QString & name )
+bool MainWindow::closeWindow( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -654,7 +654,7 @@ bool mudlet::closeWindow( Host * pHost, const QString & name )
         return false;
 }
 
-bool mudlet::setLabelClickCallback( Host * pHost, const QString & name, const QString & func, const TEvent & pA )
+bool MainWindow::setLabelClickCallback( Profile * pHost, const QString & name, const QString & func, const TEvent & pA )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -666,7 +666,7 @@ bool mudlet::setLabelClickCallback( Host * pHost, const QString & name, const QS
         return false;
 }
 
-bool mudlet::setLabelOnEnter( Host * pHost, const QString & name, const QString & func, const TEvent & pA )
+bool MainWindow::setLabelOnEnter( Profile * pHost, const QString & name, const QString & func, const TEvent & pA )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -678,7 +678,7 @@ bool mudlet::setLabelOnEnter( Host * pHost, const QString & name, const QString 
         return false;
 }
 
-bool mudlet::setLabelOnLeave( Host * pHost, const QString & name, const QString & func, const TEvent & pA )
+bool MainWindow::setLabelOnLeave( Profile * pHost, const QString & name, const QString & func, const TEvent & pA )
 {
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -690,7 +690,7 @@ bool mudlet::setLabelOnLeave( Host * pHost, const QString & name, const QString 
         return false;
 }
 
-int mudlet::getLineNumber( Host * pHost, QString & name )
+int MainWindow::getLineNumber( Profile * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -700,7 +700,7 @@ int mudlet::getLineNumber( Host * pHost, QString & name )
     return -1;
 }
 
-int mudlet::getColumnNumber( Host * pHost, QString & name )
+int MainWindow::getColumnNumber( Profile * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -711,7 +711,7 @@ int mudlet::getColumnNumber( Host * pHost, QString & name )
 }
 
 
-int mudlet::getLastLineNumber( Host * pHost, const QString & name )
+int MainWindow::getLastLineNumber( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -721,7 +721,7 @@ int mudlet::getLastLineNumber( Host * pHost, const QString & name )
     return -1;
 }
 
-bool mudlet::moveCursorEnd( Host * pHost, const QString & name )
+bool MainWindow::moveCursorEnd( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -733,7 +733,7 @@ bool mudlet::moveCursorEnd( Host * pHost, const QString & name )
         return false;
 }
 
-bool mudlet::moveCursor( Host * pHost, const QString & name, int x, int y )
+bool MainWindow::moveCursor( Profile * pHost, const QString & name, int x, int y )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -744,7 +744,7 @@ bool mudlet::moveCursor( Host * pHost, const QString & name, int x, int y )
         return false;
 }
 
-void mudlet::deleteLine( Host * pHost, const QString & name )
+void MainWindow::deleteLine( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -753,7 +753,7 @@ void mudlet::deleteLine( Host * pHost, const QString & name )
     }
 }
 
-void mudlet::insertText( Host * pHost, const QString & name, const QString& text )
+void MainWindow::insertText( Profile * pHost, const QString & name, const QString& text )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -762,7 +762,7 @@ void mudlet::insertText( Host * pHost, const QString & name, const QString& text
     }
 }
 
-void mudlet::insertLink( Host * pHost, const QString & name, const QString& text, QStringList & func, QStringList & hint, bool customFormat )
+void MainWindow::insertLink( Profile * pHost, const QString & name, const QString& text, QStringList & func, QStringList & hint, bool customFormat )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -771,7 +771,7 @@ void mudlet::insertLink( Host * pHost, const QString & name, const QString& text
     }
 }
 
-void mudlet::replace( Host * pHost, const QString & name, const QString& text )
+void MainWindow::replace( Profile * pHost, const QString & name, const QString& text )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -780,7 +780,7 @@ void mudlet::replace( Host * pHost, const QString & name, const QString& text )
     }
 }
 
-void mudlet::setLink( Host * pHost, const QString & name, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
+void MainWindow::setLink( Profile * pHost, const QString & name, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -790,7 +790,7 @@ void mudlet::setLink( Host * pHost, const QString & name, const QString & linkTe
     }
 }
 
-void mudlet::setBold( Host * pHost, const QString & name, bool b )
+void MainWindow::setBold( Profile * pHost, const QString & name, bool b )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -800,7 +800,7 @@ void mudlet::setBold( Host * pHost, const QString & name, bool b )
     }
 }
 
-void mudlet::setItalics( Host * pHost, const QString & name, bool b )
+void MainWindow::setItalics( Profile * pHost, const QString & name, bool b )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -810,7 +810,7 @@ void mudlet::setItalics( Host * pHost, const QString & name, bool b )
     }
 }
 
-void mudlet::setUnderline( Host * pHost, const QString & name, bool b )
+void MainWindow::setUnderline( Profile * pHost, const QString & name, bool b )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -820,7 +820,7 @@ void mudlet::setUnderline( Host * pHost, const QString & name, bool b )
     }
 }
 
-void mudlet::setStrikeOut( Host * pHost, const QString & name, bool b )
+void MainWindow::setStrikeOut( Profile * pHost, const QString & name, bool b )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -830,7 +830,7 @@ void mudlet::setStrikeOut( Host * pHost, const QString & name, bool b )
     }
 }
 
-void mudlet::setFgColor( Host * pHost, const QString & name, int r, int g, int b )
+void MainWindow::setFgColor( Profile * pHost, const QString & name, int r, int g, int b )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -840,7 +840,7 @@ void mudlet::setFgColor( Host * pHost, const QString & name, int r, int g, int b
     }
 }
 
-void mudlet::setBgColor( Host * pHost, const QString & name, int r, int g, int b )
+void MainWindow::setBgColor( Profile * pHost, const QString & name, int r, int g, int b )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -850,7 +850,7 @@ void mudlet::setBgColor( Host * pHost, const QString & name, int r, int g, int b
     }
 }
 
-int mudlet::selectString( Host * pHost, const QString & name, const QString& text, int num )
+int MainWindow::selectString( Profile * pHost, const QString & name, const QString& text, int num )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -862,7 +862,7 @@ int mudlet::selectString( Host * pHost, const QString & name, const QString& tex
         return -1;
 }
 
-int mudlet::selectSection( Host * pHost, const QString & name, int f, int t )
+int MainWindow::selectSection( Profile * pHost, const QString & name, int f, int t )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -874,7 +874,7 @@ int mudlet::selectSection( Host * pHost, const QString & name, int f, int t )
         return -1;
 }
 
-void mudlet::deselect( Host * pHost, const QString & name )
+void MainWindow::deselect( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -884,7 +884,7 @@ void mudlet::deselect( Host * pHost, const QString & name )
     }
 }
 
-bool mudlet::setWindowWrap( Host * pHost, const QString & name, int & wrap )
+bool MainWindow::setWindowWrap( Profile * pHost, const QString & name, int & wrap )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString wn = name;
@@ -897,7 +897,7 @@ bool mudlet::setWindowWrap( Host * pHost, const QString & name, int & wrap )
         return false;
 }
 
-bool mudlet::setWindowWrapIndent( Host * pHost, const QString & name, int & wrap )
+bool MainWindow::setWindowWrapIndent( Profile * pHost, const QString & name, int & wrap )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString wn = name;
@@ -910,7 +910,7 @@ bool mudlet::setWindowWrapIndent( Host * pHost, const QString & name, int & wrap
         return false;
 }
 
-bool mudlet::echoWindow( Host * pHost, const QString & name, const QString & text )
+bool MainWindow::echoWindow( Profile * pHost, const QString & name, const QString & text )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString t = text;
@@ -929,7 +929,7 @@ bool mudlet::echoWindow( Host * pHost, const QString & name, const QString & tex
         return false;
 }
 
-bool mudlet::echoLink( Host * pHost, const QString & name, const QString & text, QStringList & func, QStringList & hint, bool customFormat )
+bool MainWindow::echoLink( Profile * pHost, const QString & name, const QString & text, QStringList & func, QStringList & hint, bool customFormat )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QString t = text;
@@ -942,7 +942,7 @@ bool mudlet::echoLink( Host * pHost, const QString & name, const QString & text,
         return false;
 }
 
-bool mudlet::copy( Host * pHost, const QString & name )
+bool MainWindow::copy( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -953,7 +953,7 @@ bool mudlet::copy( Host * pHost, const QString & name )
     else return false;
 }
 
-bool mudlet::pasteWindow( Host * pHost, const QString & name )
+bool MainWindow::pasteWindow( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -964,7 +964,7 @@ bool mudlet::pasteWindow( Host * pHost, const QString & name )
     else return false;
 }
 
-bool mudlet::appendBuffer( Host * pHost, const QString & name )
+bool MainWindow::appendBuffer( Profile * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -975,11 +975,11 @@ bool mudlet::appendBuffer( Host * pHost, const QString & name )
     else return false;
 }
 
-Host * mudlet::getActiveHost()
+Profile * MainWindow::getActiveHost()
 {
-    if( mConsoleMap.contains( mpCurrentActiveHost ) )
+    if( mConsoleMap.contains( activeHost ) )
     {
-        return mpCurrentActiveHost;
+        return activeHost;
     }
     else
         return 0;
@@ -987,13 +987,13 @@ Host * mudlet::getActiveHost()
 
 
 
-void mudlet::addSubWindow( TConsole* pConsole )
+void MainWindow::addSubWindow( TConsole* pConsole )
 {
     mainPane->layout()->addWidget( pConsole );
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
 
-void mudlet::closeEvent(QCloseEvent *event)
+void MainWindow::closeEvent(QCloseEvent *event)
 {
     foreach( TConsole * pC, mConsoleMap )
     {
@@ -1022,7 +1022,7 @@ void mudlet::closeEvent(QCloseEvent *event)
 }
 
 
-void mudlet::readSettings()
+void MainWindow::readSettings()
 {
     QSettings settings("Mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
@@ -1038,7 +1038,7 @@ void mudlet::readSettings()
 }
 
 
-void mudlet::writeSettings()
+void MainWindow::writeSettings()
 {
     QSettings settings("Mudlet", "Mudlet 1.0");
     settings.setValue("pos", pos());
@@ -1047,18 +1047,18 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
 }
 
-void mudlet::printSystemMessage( Host * pH, const QString & s )
+void MainWindow::printSystemMessage( Profile * pH, const QString & s )
 {
     mConsoleMap[pH]->printSystemMessage( s );
 }
 
-void mudlet::print( Host * pH, const QString & s )
+void MainWindow::print( Profile * pH, const QString & s )
 {
     mConsoleMap[pH]->print( s );
 }
 
 
-QString mudlet::readProfileData( const QString& profile, const QString& item )
+QString MainWindow::readProfileData( const QString& profile, const QString& item )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
     file.open( QIODevice::ReadOnly );
@@ -1072,21 +1072,21 @@ QString mudlet::readProfileData( const QString& profile, const QString& item )
     return ret;
 }
 
-void mudlet::processEventLoopHack()
+void MainWindow::processEventLoopHack()
 {
     QTimer::singleShot(1, this, SLOT(processEventLoopHack_timerRun()));
 }
 
-void mudlet::processEventLoopHack_timerRun()
+void MainWindow::processEventLoopHack_timerRun()
 {
-    Host * pH = getActiveHost();
+    Profile * pH = getActiveHost();
     if( !pH ) return;
-    pH->mpConsole->refresh();
+    pH->console->refresh();
 }
 
-void mudlet::slot_multi_view()
+void MainWindow::slot_multi_view()
 {
-     QMapIterator<Host *, TConsole *> it( mConsoleMap );
+     QMapIterator<Profile *, TConsole *> it( mConsoleMap );
      while( it.hasNext() )
      {
          it.next();
@@ -1094,12 +1094,12 @@ void mudlet::slot_multi_view()
      }
 }
 
-mudlet::~mudlet()
+MainWindow::~MainWindow()
 {
-    mudlet::_self = 0;
+    MainWindow::_self = 0;
 }
 
-void mudlet::toggleFullScreenView()
+void MainWindow::toggleFullScreenView()
 {
     if( isFullScreen() )
         showNormal();
@@ -1107,7 +1107,7 @@ void mudlet::toggleFullScreenView()
         showFullScreen();
 }
 
-void mudlet::stopSounds()
+void MainWindow::stopSounds()
 {
     mpMusicBox1->stop();
     mpMusicBox2->stop();
@@ -1115,7 +1115,7 @@ void mudlet::stopSounds()
     mpMusicBox4->stop();
 }
 
-void mudlet::playSound( QString s )
+void MainWindow::playSound( QString s )
 {
     if( mpMusicBox1->state() != QMediaPlayer::PlayingState )
     {

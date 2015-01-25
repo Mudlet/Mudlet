@@ -23,11 +23,11 @@
 
 #include <QNetworkReply>
 
-#include "ctelnet.h"
+#include "Telnet.h"
 
 
-#include "Host.h"
-#include "mudlet.h"
+#include "Profile.h"
+#include "MainWindow.h"
 #include "TConsole.h"
 #include "TEvent.h"
 
@@ -66,7 +66,7 @@ using namespace std;
 
 
 
-cTelnet::cTelnet( Host * pH )
+Telnet::Telnet( Profile * pH )
 : mResponseProcessed( true )
 , mAlertOnNewData( true )
 , mGA_Driver( false )
@@ -115,7 +115,7 @@ cTelnet::cTelnet( Host * pH )
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
 }
 
-void cTelnet::reset ()
+void Telnet::reset ()
 {
     //prepare option variables
     for (int i = 0; i < 256; i++)
@@ -133,7 +133,7 @@ void cTelnet::reset ()
 }
 
 
-cTelnet::~cTelnet()
+Telnet::~Telnet()
 {
     if(messageStack.size())
     {
@@ -147,7 +147,7 @@ cTelnet::~cTelnet()
 }
 
 
-void cTelnet::encodingChanged(QString encoding)
+void Telnet::encodingChanged(QString encoding)
 {
     qDebug() << "cTelnet::encodingChanged() called!";
     encoding = encoding;
@@ -165,13 +165,13 @@ void cTelnet::encodingChanged(QString encoding)
 }
 
 
-void cTelnet::connectIt(const QString &address, int port)
+void Telnet::connectTo(const QString &address, int port)
 {
 
     if( socket.state() != QAbstractSocket::UnconnectedState )
     {
         socket.abort();
-        connectIt( address, port );
+        connectTo( address, port );
         return;
     }
 
@@ -186,7 +186,7 @@ void cTelnet::connectIt(const QString &address, int port)
 }
 
 
-void cTelnet::disconnect ()
+void Telnet::disconnect ()
 {
     socket.disconnectFromHost();
     TEvent me;
@@ -197,13 +197,13 @@ void cTelnet::disconnect ()
 
 }
 
-void cTelnet::handle_socket_signal_error()
+void Telnet::handle_socket_signal_error()
 {
     QString err = "[ ERROR ] - TCP/IP socket ERROR:" % socket.errorString();
     postMessage( err );
 }
 
-void cTelnet::handle_socket_signal_connected()
+void Telnet::handle_socket_signal_connected()
 {
     reset();
     QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
@@ -219,7 +219,7 @@ void cTelnet::handle_socket_signal_connected()
 
 }
 
-void cTelnet::handle_socket_signal_disconnected()
+void Telnet::handle_socket_signal_disconnected()
 {
     postData();
     TEvent me;
@@ -242,7 +242,7 @@ void cTelnet::handle_socket_signal_disconnected()
     }
 }
 
-void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
+void Telnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
     if(!hostInfo.addresses().isEmpty())
     {
@@ -262,7 +262,7 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     }
 }
 
-bool cTelnet::sendData( QString & data )
+bool Telnet::sendData( QString & data )
 {
     while( data.indexOf("\n") != -1 )
     {
@@ -282,7 +282,7 @@ bool cTelnet::sendData( QString & data )
 }
 
 
-bool cTelnet::socketOutRaw(string & data)
+bool Telnet::socketOutRaw(string & data)
 {
     if( ! socket.isWritable() )
     {
@@ -330,7 +330,7 @@ bool cTelnet::socketOutRaw(string & data)
 
 
 
-void cTelnet::setDisplayDimensions()
+void Telnet::setDisplayDimensions()
 {
     int x = 120;
     int y = 40; // mpHost->mScreenHeight; TODO determine how to do this better
@@ -366,7 +366,7 @@ void cTelnet::setDisplayDimensions()
     }
 }
 
-void cTelnet::sendTelnetOption( char type, char option )
+void Telnet::sendTelnetOption( char type, char option )
 {
 #ifdef DEBUG_TELNET
     QString _type;
@@ -389,7 +389,7 @@ void cTelnet::sendTelnetOption( char type, char option )
 }
 
 
-void cTelnet::replyFinished( QNetworkReply * reply )
+void Telnet::replyFinished( QNetworkReply * reply )
 {
     mpProgressDialog->close();
 
@@ -409,13 +409,13 @@ void cTelnet::replyFinished( QNetworkReply * reply )
     packageName.replace( '.' , "" );
 }
 
-void cTelnet::setDownloadProgress( qint64 got, qint64 tot )
+void Telnet::setDownloadProgress( qint64 got, qint64 tot )
 {
     mpProgressDialog->setRange(0, static_cast<int>(tot) );
     mpProgressDialog->setValue(static_cast<int>(got));
 }
 
-void cTelnet::processTelnetCommand( const string & command )
+void Telnet::processTelnetCommand( const string & command )
 {
   char ch = command[1];
 #ifdef DEBUG_TELNET
@@ -685,7 +685,7 @@ void cTelnet::processTelnetCommand( const string & command )
           if( option == MXP ) // MXP support
           {
             sendTelnetOption( TN_WILL, 91 );
-            mpHost->mpConsole->print("\n<MXP support enabled>\n");
+            mpHost->console->print("\n<MXP support enabled>\n");
             break;
           }
           if( option == static_cast<char>(102) ) // channel 102 support
@@ -894,7 +894,7 @@ void cTelnet::processTelnetCommand( const string & command )
   }
 }
 
-void cTelnet::setATCPVariables(const QString & msg )
+void Telnet::setATCPVariables(const QString & msg )
 {
     QString var;
     QString arg;
@@ -943,7 +943,7 @@ void cTelnet::setATCPVariables(const QString & msg )
     }
 }
 
-void cTelnet::setGMCPVariables(const QString & msg )
+void Telnet::setGMCPVariables(const QString & msg )
 {
     QString var;
     QString arg;
@@ -965,7 +965,7 @@ void cTelnet::setGMCPVariables(const QString & msg )
     arg.remove(QChar('\r'));
 }
 
-void cTelnet::setChannel102Variables(const QString & msg )
+void Telnet::setChannel102Variables(const QString & msg )
 {
     // messages consist of 2 bytes only
     if( msg.size() < 2 )
@@ -980,7 +980,7 @@ void cTelnet::setChannel102Variables(const QString & msg )
     }
 }
 
-void cTelnet::atcpComposerCancel()
+void Telnet::atcpComposerCancel()
 {
     if( ! mpComposer ) return;
     mpComposer = 0;
@@ -988,7 +988,7 @@ void cTelnet::atcpComposerCancel()
     socketOutRaw( msg );
 }
 
-void cTelnet::atcpComposerSave( QString txt )
+void Telnet::atcpComposerSave( QString txt )
 {
     //olesetbuf \n <text>
     string _h;
@@ -1014,11 +1014,11 @@ void cTelnet::atcpComposerSave( QString txt )
 // Will store messages if the TConsole on which they are to be placed is not yet
 // in existance as happens during startup, then pumps them out in order of
 // arrival once a message arrives when the TConsole DOES exist.
-void cTelnet::postMessage( QString msg )
+void Telnet::postMessage( QString msg )
 {
     messageStack.append(msg);
 
-    if( ! mpHost->mpConsole )
+    if( ! mpHost->console )
     {
         // Console doesn't exist (yet), stack up messages until it does...
         return;
@@ -1049,8 +1049,8 @@ void cTelnet::postMessage( QString msg )
             body.removeFirst();
             if( prefix.contains("ERROR") )
             {
-                mpHost->mpConsole->print( prefix, 150, 0, 0, 0, 0, 0 ); // Red on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                mpHost->console->print( prefix, 150, 0, 0, 0, 0, 0 ); // Red on black
+                mpHost->console->print( firstLineTail.append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1059,12 +1059,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified( temp.length() + prefixLength );
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                    mpHost->console->print( body.join('\n').append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
             }
             else if( prefix.contains("WARN") )
             {
-                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 );
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 150, 0, 0, 0, 0 ); //Foreground dark grey, background bright grey
+                mpHost->console->print( prefix, 0, 150, 190, 0, 0, 0 );
+                mpHost->console->print( firstLineTail.append('\n'), 190, 150, 0, 0, 0, 0 ); //Foreground dark grey, background bright grey
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1072,12 +1072,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 150, 0, 0, 0, 0 );
+                    mpHost->console->print( body.join('\n').append('\n'), 190, 150, 0, 0, 0, 0 );
             }
             else if( prefix.contains("ALERT") )
             {
-                mpHost->mpConsole->print( prefix, 190, 100, 50, 0, 0, 0 ); // Orangish on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                mpHost->console->print( prefix, 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                mpHost->console->print( firstLineTail.append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1086,12 +1086,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                    mpHost->console->print( body.join('\n').append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
             }
             else if( prefix.contains("INFO") )
             {
-                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 ); // Cyan on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                mpHost->console->print( prefix, 0, 150, 190, 0, 0, 0 ); // Cyan on black
+                mpHost->console->print( firstLineTail.append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1099,12 +1099,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                    mpHost->console->print( body.join('\n').append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
             }
             else if( prefix.contains("OK") )
             {
-                mpHost->mpConsole->print( prefix, 0, 160, 0, 0, 0, 0 );  // Light Green on Black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                mpHost->console->print( prefix, 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                mpHost->console->print( firstLineTail.append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1112,12 +1112,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                    mpHost->console->print( body.join('\n').append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
             }
             else
             {  // Unrecognised but still in a "[ something ] -  message..." format
-                mpHost->mpConsole->print( prefix, 190, 50, 50, 190, 190, 190 ); // Foreground red, background bright grey
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                mpHost->console->print( prefix, 190, 50, 50, 190, 190, 190 ); // Foreground red, background bright grey
+                mpHost->console->print( firstLineTail.append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1125,12 +1125,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                    mpHost->console->print( body.join('\n').append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
             }
         }
         else
         {  // No prefix found
-            mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 190, 0, 0, 0 ); //Foreground bright grey, background black
+            mpHost->console->print( body.join('\n').append('\n'), 190, 190, 190, 0, 0, 0 ); //Foreground bright grey, background black
         }
         messageStack.removeFirst();
     }
@@ -1139,7 +1139,7 @@ void cTelnet::postMessage( QString msg )
 //forward data for further processing
 
 
-void cTelnet::gotPrompt( string & mud_data )
+void Telnet::gotPrompt( string & mud_data )
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
@@ -1149,7 +1149,7 @@ void cTelnet::gotPrompt( string & mud_data )
     mIsTimerPosting = false;
 }
 
-void cTelnet::gotRest( string & mud_data )
+void Telnet::gotRest( string & mud_data )
 {
 
     if( mud_data.size() < 1 )
@@ -1206,29 +1206,29 @@ void cTelnet::gotRest( string & mud_data )
     }
 }
 
-void cTelnet::slot_timerPosting()
+void Telnet::slot_timerPosting()
 {
     if( ! mIsTimerPosting ) return;
     mMudData += "\r";
     postData();
     mMudData = "";
     mIsTimerPosting = false;
-    mpHost->mpConsole->finalize();
+    mpHost->console->finalize();
 }
 
-void cTelnet::postData()
+void Telnet::postData()
 {
     //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->printOnDisplay(mMudData);
+    if (mpHost->console) {
+        mpHost->console->printOnDisplay(mMudData);
     }
     if( mAlertOnNewData )
     {
-        QApplication::alert( mudlet::self(), 0 );
+        QApplication::alert( MainWindow::self(), 0 );
     }
 }
 
-void cTelnet::initStreamDecompressor()
+void Telnet::initStreamDecompressor()
 {
     mZstream.zalloc = Z_NULL;
     mZstream.zfree = Z_NULL;
@@ -1239,7 +1239,7 @@ void cTelnet::initStreamDecompressor()
     inflateInit( & mZstream );
 }
 
-int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer )
+int Telnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer )
 {
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef *) in_buffer;
@@ -1280,7 +1280,7 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
 char loadBuffer[100001];
 int loadedBytes;
 
-void cTelnet::readPipe()
+void Telnet::readPipe()
 {
     int datalen = loadedBytes;
     string cleandata = "";
@@ -1387,11 +1387,11 @@ void cTelnet::readPipe()
        gotRest( cleandata );
     }
 
-    mpHost->mpConsole->finalize();
+    mpHost->console->finalize();
 
 }
 
-void cTelnet::handle_socket_signal_readyRead()
+void Telnet::handle_socket_signal_readyRead()
 {
     if( mWaitingForResponse )
     {
@@ -1597,6 +1597,6 @@ MAIN_LOOP_END: ;
     {
        gotRest( cleandata );
     }
-    mpHost->mpConsole->finalize();
+    mpHost->console->finalize();
     lastTimeOffset = timeOffset.elapsed();
 }

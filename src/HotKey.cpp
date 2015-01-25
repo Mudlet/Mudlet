@@ -19,16 +19,14 @@
  ***************************************************************************/
 
 
-#include "KeyUnit.h"
-
-
+#include "HotKey.h"
 #include "Host.h"
 #include "TKey.h"
 
 
 using namespace std;
 
-KeyUnit::KeyUnit( Host * pHost )
+HotKey::HotKey( Profile * pHost )
 : mpHost(pHost)
 , mMaxID(0)
 {
@@ -36,7 +34,7 @@ KeyUnit::KeyUnit( Host * pHost )
 }
 
 
-void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
+void HotKey::_uninstall( TKey * pChild, const QString& packageName )
 {
     list<TKey*> * childrenList = pChild->mpMyChildrenList;
     for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
@@ -48,7 +46,7 @@ void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
 }
 
 
-void KeyUnit::uninstall(const QString& packageName )
+void HotKey::uninstall(const QString& packageName )
 {
     for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
     {
@@ -67,7 +65,7 @@ void KeyUnit::uninstall(const QString& packageName )
      uninstallList.clear();
 }
 
-bool KeyUnit::processDataStream( int key, int modifier )
+bool HotKey::processDataStream( int key, int modifier )
 {
     for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
@@ -78,7 +76,7 @@ bool KeyUnit::processDataStream( int key, int modifier )
     return false;
 }
 
-void KeyUnit::compileAll()
+void HotKey::compileAll()
 {
     for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
@@ -90,7 +88,7 @@ void KeyUnit::compileAll()
     }
 }
 
-bool KeyUnit::enableKey(const QString & name )
+bool HotKey::enableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
@@ -103,7 +101,7 @@ bool KeyUnit::enableKey(const QString & name )
     return found;
 }
 
-bool KeyUnit::disableKey(const QString & name )
+bool HotKey::disableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
@@ -116,7 +114,7 @@ bool KeyUnit::disableKey(const QString & name )
     return found;
 }
 
-void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
+void HotKey::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
 {
     if( ! pT ) return;
     if( ! pT->getID() )
@@ -149,7 +147,7 @@ void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
     }
 }
 
-void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
+void HotKey::reParentKey( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
 {
     QMutexLocker locker(& mKeyUnitLock);
 
@@ -185,13 +183,13 @@ void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID, int pa
     }
 }
 
-void KeyUnit::removeKeyRootNode( TKey * pT )
+void HotKey::removeKeyRootNode( TKey * pT )
 {
     if( ! pT ) return;
     mKeyRootNodeList.remove( pT );
 }
 
-TKey * KeyUnit::getKey( int id )
+TKey * HotKey::getKey( int id )
 {
     QMutexLocker locker(& mKeyUnitLock);
     if( mKeyMap.find( id ) != mKeyMap.end() )
@@ -206,7 +204,7 @@ TKey * KeyUnit::getKey( int id )
 
 
 
-TKey * KeyUnit::getKeyPrivate( int id )
+TKey * HotKey::getKeyPrivate( int id )
 {
     if( mKeyMap.find( id ) != mKeyMap.end() )
     {
@@ -218,7 +216,7 @@ TKey * KeyUnit::getKeyPrivate( int id )
     }
 }
 
-bool KeyUnit::registerKey( TKey * pT )
+bool HotKey::registerKey( TKey * pT )
 {
     if( ! pT ) return false;
 
@@ -234,7 +232,7 @@ bool KeyUnit::registerKey( TKey * pT )
     }
 }
 
-void KeyUnit::unregisterKey( TKey * pT )
+void HotKey::unregisterKey( TKey * pT )
 {
     if( ! pT ) return;
     if( pT->getParent() )
@@ -250,7 +248,7 @@ void KeyUnit::unregisterKey( TKey * pT )
 }
 
 
-void KeyUnit::addKey( TKey * pT )
+void HotKey::addKey( TKey * pT )
 {
     if( ! pT ) return;
 
@@ -259,19 +257,19 @@ void KeyUnit::addKey( TKey * pT )
     mKeyMap.insert( pT->getID(), pT );
 }
 
-void KeyUnit::removeKey( TKey * pT )
+void HotKey::removeKey( TKey * pT )
 {
     if( ! pT ) return;
     mKeyMap.remove( pT->getID() );
 }
 
 
-qint64 KeyUnit::getNewID()
+qint64 HotKey::getNewID()
 {
     return ++mMaxID;
 }
 
-QString KeyUnit::getKeyName( int keyCode, int modifierCode )
+QString HotKey::getKeyName( int keyCode, int modifierCode )
 {
     QString name;
     /*
@@ -300,7 +298,7 @@ QString KeyUnit::getKeyName( int keyCode, int modifierCode )
 
 
 
-void KeyUnit::setupKeyNames()
+void HotKey::setupKeyNames()
 {
     mKeys[0x01000000]=QString("Escape");
     mKeys[0x01000001]=QString("Tab");

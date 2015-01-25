@@ -140,11 +140,7 @@ macx:LIBS += \
 INCLUDEPATH += irc/include
 
 SOURCES += \
-    ctelnet.cpp \
     FontManager.cpp \
-    Host.cpp \
-    HostManager.cpp \
-    KeyUnit.cpp \
     main.cpp \
     TBuffer.cpp \
     TCommandLine.cpp \
@@ -156,17 +152,17 @@ SOURCES += \
     TSplitterHandle.cpp \
     Java.cpp \
     TTextEdit.cpp \
-    MainWindow.cpp
+    MainWindow.cpp \
+    Telnet.cpp \
+    HotKey.cpp \
+    Profiles.cpp \
+    Profile.cpp
 
 !msvc:SOURCES +=
 msvc:SOURCES +=
 
 
 HEADERS += \
-    ctelnet.h \
-    Host.h \
-    HostManager.h \
-    KeyUnit.h \
     pre_guard.h \
     post_guard.h \
     TAStar.h \
@@ -176,14 +172,17 @@ HEADERS += \
     TEvent.h \
     THighlighter.h \
     TKey.h \
-    TMatchState.h \
     TSplitter.h \
     TSplitterHandle.h \
     Java.h \
     Tree.h \
     TTextEdit.h \
     TLabel.h \
-    MainWindow.h
+    MainWindow.h \
+    Telnet.h \
+    HotKey.h \
+    Profile.h \
+    Profiles.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.

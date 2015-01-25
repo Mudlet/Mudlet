@@ -1,5 +1,4 @@
-#ifndef MUDLET_HOSTMANAGER_H
-#define MUDLET_HOSTMANAGER_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -22,7 +21,7 @@
  ***************************************************************************/
 
 
-#include "Host.h"
+#include "Profile.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -33,25 +32,23 @@
 #include "post_guard.h"
 
 
-class HostManager
+class Profiles
 {
 public:
 
-                       HostManager() : mpActiveHost() {}
-    Host *             getHost( const QString & hostname );
+                       Profiles() : ativeHost() {}
+    Profile *             getHost( const QString & hostname );
     QStringList        getHostList();
     QList<QString>     getHostNameList();
-    Host *             getFirstHost();
+    Profile *             getFirstHost();
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
     bool               renameHost( QString );
 
 private:
 
-    QMutex              mPoolLock;
-    QMap<QString, QSharedPointer<Host> > mHostPool;
-    Host *              mpActiveHost;
+    QMutex              lock;
+    QMap<QString, QSharedPointer<Profile> > pool;
+    Profile *              ativeHost;
 
 };
-
-#endif // MUDLET_HOSTMANAGER_H

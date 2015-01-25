@@ -1,10 +1,9 @@
-#ifndef JAVA_H
-#define JAVA_H
+#pragma once
 
 #include <mutex>
 #include <jni.h>
 
-class Host;
+class Profile;
 class QString;
 
 /**
@@ -152,7 +151,7 @@ private:
 class Java
 {
 public:
-    Java(Host * const,const QString &);
+    Java(Profile * const,const QString &);
     ~Java();
 
     void                handleLine(const QString &, int );
@@ -180,11 +179,9 @@ private:
     jmethodID           eventMethod;
     jobject             session;
 
-    Host *              host;
+    Profile *              host;
     DirectBuffer *      buffer;
     QString             hostname;
 
     std::mutex          lock;
 };
-
-#endif // JAVA_H

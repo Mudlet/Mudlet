@@ -1,5 +1,4 @@
-#ifndef MUDLET_TCOMMANDLINE_H
-#define MUDLET_TCOMMANDLINE_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -33,8 +32,8 @@
 #include <hunspell/hunspell.h>
 
 class TConsole;
-class KeyUnit;
-class Host;
+class HotKey;
+class Profile;
 class TConsole;
 
 
@@ -44,7 +43,7 @@ class TCommandLine : public QPlainTextEdit//QLineEdit
 
 public:
 
-                      TCommandLine( Host *, TConsole *, QWidget * );
+                      TCommandLine( Profile *, TConsole *, QWidget * );
                       ~TCommandLine();
 //    void              keyPressEvent(QKeyEvent *event);
     void              focusInEvent ( QFocusEvent * ) override;
@@ -69,7 +68,7 @@ private:
     QMap<QString,int> mHistoryMap;
     bool              mAutoCompletion;
     bool              mTabCompletion;
-    QPointer<Host>    mpHost;
+    QPointer<Profile>    mpHost;
     int               mTabCompletionCount;
     int               mAutoCompletionCount;
     QString           mTabCompletionTyped;
@@ -78,7 +77,7 @@ private:
 
     QPalette          mTabCompletionPalette;
     QPalette          mAutoCompletionPalette;
-    KeyUnit *         mpKeyUnit;
+    HotKey *         mpKeyUnit;
     TConsole *        mpConsole;
     QString           mSelectedText;
     int               mSelectionStart;
@@ -96,5 +95,3 @@ public slots:
     void              slot_sendCommand(const char * pS);
     void              slot_popupMenu();
 };
-
-#endif // MUDLET_TCOMMANDLINE_H

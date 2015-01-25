@@ -1,5 +1,4 @@
-#ifndef MUDLET_TBUFFER_H
-#define MUDLET_TBUFFER_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -42,7 +41,7 @@
 #define TCHAR_ECHO 16
 #define TCHAR_STRIKEOUT 32
 
-class Host;
+class Profile;
 
 
 class TChar
@@ -50,7 +49,7 @@ class TChar
 public:
            TChar();
            TChar( int, int, int, int, int, int, bool, bool, bool, bool, int _link = 0 );
-           TChar( Host * );
+           TChar( Profile * );
            TChar( const TChar & copy );
     bool   operator==( const TChar & c );
     int    fgR;
@@ -81,7 +80,7 @@ class TBuffer
 {
 public:
 
-    TBuffer( Host * pH );
+    TBuffer( Profile * pH );
     QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
     bool insertInLine( QPoint & cursor, const QString & what, TChar & format );
     void expandLine( int y, int count, TChar & );
@@ -260,7 +259,7 @@ private:
     int               bgColorB;
     QColor            mBgColor;
 
-    QPointer<Host>    mpHost;
+    QPointer<Profile>    mpHost;
     int               maxx;
     int               maxy;
     bool              hadLF;
@@ -286,4 +285,3 @@ private:
     int               mCode[1024];//FIXME: potential overflow bug
 };
 
-#endif // MUDLET_TBUFFER_H

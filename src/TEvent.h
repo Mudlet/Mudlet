@@ -1,5 +1,4 @@
-#ifndef MUDLET_TEVENT_H
-#define MUDLET_TEVENT_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -36,5 +35,3 @@ public:
     QStringList mArgumentList;
     QList<int> mArgumentTypeList;
 };
-
-#endif // MUDLET_TEVENT_H

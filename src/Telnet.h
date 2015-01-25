@@ -1,5 +1,4 @@
-#ifndef MUDLET_CTELNET_H
-#define MUDLET_CTELNET_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
@@ -46,7 +45,7 @@ class QTextDecoder;
 class QTextEncoder;
 class QTimer;
 
-class Host;
+class Profile;
 class dlgComposer;
 
 
@@ -86,14 +85,14 @@ const char OPT_MXP = 91;
 const char TNSB_IS = 0;
 const char TNSB_SEND = 1;
 
-class cTelnet : public QObject
+class Telnet : public QObject
 {
     Q_OBJECT
 
 public:
-                      cTelnet( Host * pH );
-                      ~cTelnet();
-    void              connect(const QString &address, int port);
+                      Telnet( Profile * pH );
+                      ~Telnet();
+    void              connectTo(const QString &address, int port);
     void              disconnect();
     bool              sendData( QString & data );
     void              setCommandEcho( bool cmdEcho );
@@ -138,7 +137,7 @@ public slots:
 
 
 private:
-                      cTelnet(){}
+                      Telnet(){}
     void              initStreamDecompressor();
     int               decompressBuffer( char *& in_buffer, int& length, char* out_buffer );
     void              reset();
@@ -153,7 +152,7 @@ private:
 
 
 
-    QPointer<Host>    mpHost;
+    QPointer<Profile>    mpHost;
     QTcpSocket        socket;
     QHostAddress      mHostAddress;
     QTextCodec *      incomingDataCodec;
@@ -203,5 +202,3 @@ private:
     QStringList       messageStack;
     bool              loadingReplay;
 };
-
-#endif // MUDLET_CTELNET_H

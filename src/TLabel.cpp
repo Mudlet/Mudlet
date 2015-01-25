@@ -40,21 +40,21 @@ TLabel::TLabel( QWidget * pW )
 
 QString nothing = "";
 
-void TLabel::setScript( Host * pHost, const QString & func, const TEvent & args )
+void TLabel::setScript( Profile * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
     mScript = func;
     mpParameters = args;
 }
 
-void TLabel::setEnter( Host * pHost, const QString & func, const TEvent & args )
+void TLabel::setEnter( Profile * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
     mEnter = func;
     mEnterParams = args;
 }
 
-void TLabel::setLeave( Host * pHost, const QString & func, const TEvent & args )
+void TLabel::setLeave( Profile * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
     mLeave = func;

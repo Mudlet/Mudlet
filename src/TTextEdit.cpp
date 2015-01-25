@@ -38,7 +38,7 @@
 #include "post_guard.h"
 
 
-TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen )
+TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Profile * pH, bool isDebugConsole, bool isSplitScreen )
 : QWidget( pW )
 , mCursorY( 0 )
 , mIsCommandPopup( false )
@@ -282,16 +282,16 @@ void TTextEdit::updateScreenView()
             else
             {
                 mScreenWidth = currentScreenWidth;
-                mpHost->setInt(Host::WINDOW_WIDTH, currentScreenWidth);
+                mpHost->setInt(Profile::WINDOW_WIDTH, currentScreenWidth);
             }
         }
         else
         {
-            mpHost->setInt(Host::WINDOW_WIDTH, currentScreenWidth);
+            mpHost->setInt(Profile::WINDOW_WIDTH, currentScreenWidth);
             mScreenWidth = currentScreenWidth;
         }
 
-        mpHost->setInt(Host::WINDOW_HEIGHT, mScreenHeight);
+        mpHost->setInt(Profile::WINDOW_HEIGHT, mScreenHeight);
     }
     else
     {

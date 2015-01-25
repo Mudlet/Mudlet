@@ -1,5 +1,4 @@
-#ifndef MUDLET_THIGHLIGHTER_H
-#define MUDLET_THIGHLIGHTER_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
@@ -63,5 +62,3 @@ class THighlighter : public QSyntaxHighlighter
      QTextCharFormat           functionFormat;
      //bool isString;
  };
-
-#endif // MUDLET_THIGHLIGHTER_H

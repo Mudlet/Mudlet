@@ -22,13 +22,13 @@
 #include "TKey.h"
 
 
-#include "Host.h"
-#include "mudlet.h"
+#include "Profile.h"
+#include "MainWindow.h"
 
 
 using namespace std;
 
-TKey::TKey( TKey * parent, Host * pHost )
+TKey::TKey( TKey * parent, Profile * pHost )
 : Tree<TKey>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
@@ -38,7 +38,7 @@ TKey::TKey( TKey * parent, Host * pHost )
 {
 }
 
-TKey::TKey( QString name, Host * pHost )
+TKey::TKey( QString name, Profile * pHost )
 : Tree<TKey>(0)
 , exportItem(true)
 , mModuleMasterFolder(false)

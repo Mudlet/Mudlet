@@ -61,7 +61,7 @@ TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bo
         flags |= TCHAR_STRIKEOUT;
 }
 
-TChar::TChar( Host * pH )
+TChar::TChar( Profile * pH )
 {
     if( pH )
     {
@@ -113,7 +113,7 @@ TChar::TChar( const TChar & copy )
 }
 
 
-TBuffer::TBuffer( Host * pH )
+TBuffer::TBuffer( Profile * pH )
 : mLinkID            ( 0 )
 , mLinesLimit        ( 10000 )
 , mBatchDeleteSize   ( 1000 )
@@ -201,7 +201,7 @@ void TBuffer::resetFontSpecs()
 
 void TBuffer::updateColors()
 {
-    Host * pH = mpHost;
+    Profile * pH = mpHost;
     mBlack = pH->mBlack;
     mBlackR=mBlack.red();
     mBlackG=mBlack.green();

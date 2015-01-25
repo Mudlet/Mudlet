@@ -21,10 +21,10 @@
 
 #include <QPainter>
 
-#include "Host.h"
+#include "Profile.h"
 
 
-#include "mudlet.h"
+#include "MainWindow.h"
 #include "TConsole.h"
 #include "TEvent.h"
 
@@ -39,47 +39,47 @@
 
 #include <errno.h>
 
-QString Host::DICTIONARY("dictionary");
+QString Profile::DICTIONARY("dictionary");
 
-QString Host::WINDOW_WRAP("window.wrap");
-QString Host::WINDOW_WRAP_INDENT("window.wrap.indent");
-QString Host::WINDOW_WIDTH("window.width");
-QString Host::WINDOW_HEIGHT("window.width");
+QString Profile::WINDOW_WRAP("window.wrap");
+QString Profile::WINDOW_WRAP_INDENT("window.wrap.indent");
+QString Profile::WINDOW_WIDTH("window.width");
+QString Profile::WINDOW_HEIGHT("window.width");
 
-QString Host::WINDOW_FONT_FAMILY("window.font.family");
-QString Host::WINDOW_FONT_SIZE("window.font.size");
+QString Profile::WINDOW_FONT_FAMILY("window.font.family");
+QString Profile::WINDOW_FONT_SIZE("window.font.size");
 
-QString Host::CMD_LINE_FONT_FAMILY("cmdLine.font.family");
-QString Host::CMD_LINE_FONT_SIZE("cmdLine.font.size");
+QString Profile::CMD_LINE_FONT_FAMILY("cmdLine.font.family");
+QString Profile::CMD_LINE_FONT_SIZE("cmdLine.font.size");
 
-QString Host::CMD_LINE_CLEAR("cmdLine.autoClear");
-QString Host::CMD_LINE_FG_COLOR("cmdLine.fgColor");
-QString Host::CMD_LINE_BG_COLOR("cmdLine.bgColor");
+QString Profile::CMD_LINE_CLEAR("cmdLine.autoClear");
+QString Profile::CMD_LINE_FG_COLOR("cmdLine.fgColor");
+QString Profile::CMD_LINE_BG_COLOR("cmdLine.bgColor");
 
-QSettings Host::DEFAULT_SETTINGS;
+QSettings Profile::DEFAULT_SETTINGS;
 
 void setupDefaultSettings() {
-    Host::DEFAULT_SETTINGS.setValue(Host::DICTIONARY,"en_US");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::DICTIONARY,"en_US");
 
-    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_FONT_FAMILY,"Monospace");
-    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_FONT_SIZE,"12");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_FONT_FAMILY,"Monospace");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_FONT_SIZE,"12");
 
-    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_WIDTH,"1000");
-    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_HEIGHT,"800");
-    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_WRAP,"120");
-    Host::DEFAULT_SETTINGS.setValue(Host::WINDOW_WRAP_INDENT,"0");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_WIDTH,"1000");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_HEIGHT,"800");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_WRAP,"120");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::WINDOW_WRAP_INDENT,"0");
 
-    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_FONT_FAMILY,"Monospace");
-    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_FONT_SIZE,"14");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_FONT_FAMILY,"Monospace");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_FONT_SIZE,"14");
 
-    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_CLEAR,false);
-    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_FG_COLOR,"#FFF");
-    Host::DEFAULT_SETTINGS.setValue(Host::CMD_LINE_BG_COLOR,"#000");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_CLEAR,false);
+    Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_FG_COLOR,"#FFF");
+    Profile::DEFAULT_SETTINGS.setValue(Profile::CMD_LINE_BG_COLOR,"#000");
 }
 
-Host::Host( int port, const QString& hostname, const QString& login, const QString& pass )
+Profile::Profile( int port, const QString& hostname, const QString& login, const QString& pass )
 : mTelnet( this )
-, mpConsole( 0 )
+, console( 0 )
 , mKeyUnit           ( this )
 , mBlack             (Qt::black)
 , mLightBlack        (Qt::darkGray)
@@ -120,48 +120,48 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mFgColor_2           (Qt::lightGray)
 , mBgColor_2           (Qt::black)
 {
-    auto keys = Host::DEFAULT_SETTINGS.allKeys();
+    auto keys = Profile::DEFAULT_SETTINGS.allKeys();
 
     // copy default settings
     for(auto key : keys) {
-        auto value = Host::DEFAULT_SETTINGS.value(key).toString();
+        auto value = Profile::DEFAULT_SETTINGS.value(key).toString();
         settings.setValue(key,value);
     }
 
     qDebug() << "host made!";
 }
 
-Host::~Host()
+Profile::~Profile()
 {
     close();
 }
 
-QFont Host::getWindowFont() {
+QFont Profile::getWindowFont() {
     return getFont("window");
 }
 
-QString Host::getDictionary() {
-    return getString(Host::DICTIONARY);
+QString Profile::getDictionary() {
+    return getString(Profile::DICTIONARY);
 }
 
-int Host::getWindowHeight() {
-    return getInt(Host::WINDOW_HEIGHT);
+int Profile::getWindowHeight() {
+    return getInt(Profile::WINDOW_HEIGHT);
 }
 
-int Host::getWindowWidth() {
-    return getInt(Host::WINDOW_WIDTH);
+int Profile::getWindowWidth() {
+    return getInt(Profile::WINDOW_WIDTH);
 }
 
-int Host::getWindowWrap() {
-    return getInt(Host::WINDOW_WRAP);
+int Profile::getWindowWrap() {
+    return getInt(Profile::WINDOW_WRAP);
 }
 
-int Host::getWindowWrapIndent() {
-    return getInt(Host::WINDOW_WRAP_INDENT);
+int Profile::getWindowWrapIndent() {
+    return getInt(Profile::WINDOW_WRAP_INDENT);
 }
 
 
-QFont Host::getFont(const char *ch) {
+QFont Profile::getFont(const char *ch) {
     QString domain(ch);
     QString family = getString(domain + ".font.family");
     qDebug() <<"font family=="<<family;
@@ -204,15 +204,15 @@ QFont Host::getFont(const char *ch) {
     return font;
 }
 
-QFont Host::getCmdLineFont() {
+QFont Profile::getCmdLineFont() {
 
     return getFont("cmdLine");
 }
 
-void Host::resetProfile()
+void Profile::resetProfile()
 {
 
-    mpConsole->resetMainConsole();
+    console->resetMainConsole();
 
     getKeyUnit()->compileAll();
 
@@ -224,17 +224,17 @@ void Host::resetProfile()
     qDebug()<<"resetProfile() DONE";
 }
 
-void Host::adjustNAWS()
+void Profile::adjustNAWS()
 {
     mTelnet.setDisplayDimensions();
 }
 
 
-void Host::send( QString cmd )
+void Profile::send( QString cmd )
 {
-        mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
+        console->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
                                         // this is important to get the cursor position right
-    mpConsole->update();
+    console->update();
     QStringList commandList = cmd.split( QString( ";" ), QString::SkipEmptyParts );
 
     for( int i=0; i<commandList.size(); i++ )
@@ -246,100 +246,100 @@ void Host::send( QString cmd )
     }
 }
 
-KeyUnit * Host::getKeyUnit() {
+HotKey * Profile::getKeyUnit() {
     return & mKeyUnit;
 }
 
-void Host::setString(const QString &key, const QString &value) {
+void Profile::setString(const QString &key, const QString &value) {
     QMutexLocker locker(& lock);
     settings.setValue(key,value);
 }
 
-void Host::setInt(const QString &key, int value) {
+void Profile::setInt(const QString &key, int value) {
     QMutexLocker locker(& lock);
     settings.setValue(key,value);
 }
 
-void Host::setBool(const QString &key, bool value) {
+void Profile::setBool(const QString &key, bool value) {
     QMutexLocker locker(& lock);
     settings.setValue(key,value);
 }
 
-void Host::sendRaw( QString command )
+void Profile::sendRaw( QString command )
 {
     mTelnet.sendData( command );
 }
 
-void Host::incomingStreamProcessor(const QString & data, int line )
+void Profile::incomingStreamProcessor(const QString & data, int line )
 {
     //java.handleLine(data,line);
 
 }
 
-QString Host::getString(const QString &setting) {
+QString Profile::getString(const QString &setting) {
     QMutexLocker locker(& lock);
     return settings.value(setting).toString();
 }
 
-bool Host::getBool(const QString &setting) {
+bool Profile::getBool(const QString &setting) {
     QMutexLocker locker(& lock);
     return settings.value(setting).toBool();
 }
 
 
-int Host::getInt(const QString &setting) {
+int Profile::getInt(const QString &setting) {
     QMutexLocker locker(& lock);
     return settings.value(setting).toInt();
 }
 
-QString Host::getId() {
+QString Profile::getId() {
     QMutexLocker locker(& lock);
     return id;
 }
 
-void Host::load() {
+void Profile::load() {
 
 }
 
-void Host::save() {
+void Profile::save() {
     //QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
 }
 
-void Host::setId(const QString &id) {
+void Profile::setId(const QString &id) {
     QMutexLocker locker(& lock);
     this->id = id;
 }
 
-void Host::enableKey(const QString & name )
+void Profile::enableKey(const QString & name )
 {
     mKeyUnit.enableKey( name );
 }
 
-void Host::disableKey(const QString & name )
+void Profile::disableKey(const QString & name )
 {
     mKeyUnit.disableKey( name );
 }
 
-void Host::connectToServer()
+void Profile::connectToServer()
 {
     auto url = settings.value("url").toString();
     auto port = settings.value("port").toInt();
-    mTelnet.connectIt( url, port );
+    mTelnet.connectTo( url, port );
 }
 
-bool Host::isClosed() {
+bool Profile::isClosed() {
     QMutexLocker locker(& lock);
     return closed;
 }
 
-void Host::close() {
+void Profile::close() {
     QMutexLocker locker(& lock);
     closed = true;
     mTelnet.disconnect();
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool Host::removeDir( const QString& dirName, const QString& originalPath )
+bool Profile::removeDir( const QString& dirName, const QString& originalPath )
 {
     bool result = true;
     QDir dir(dirName);

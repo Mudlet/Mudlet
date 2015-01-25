@@ -1,5 +1,4 @@
-#ifndef MUDLET_TCONSOLE_H
-#define MUDLET_TCONSOLE_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -41,7 +40,7 @@ class QScrollBar;
 class QToolButton;
 
 class dlgMapper;
-class Host;
+class Profile;
 class TTextEdit;
 class TCommandLine;
 class TLabel;
@@ -84,11 +83,11 @@ Q_OBJECT
 
 public:
 
-                        TConsole( Host *, bool isDebugConsole, QWidget * parent=0 );
+                        TConsole( Profile *, bool isDebugConsole, QWidget * parent=0 );
       void              reset();
       void              resetMainConsole();
       void              echoUserWindow(const QString & );
-      Host *            getHost();
+      Profile *            getHost();
       TCommandLine *    cmdLine;
       void              replace(const QString& );
       void              insertHTML(const QString& );
@@ -180,7 +179,7 @@ public:
       QString           assemble_html_font_specs();
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
 
-      QPointer<Host>    mpHost;
+      QPointer<Profile>    mpHost;
 
       TBuffer           buffer;
       static const QString     cmLuaLineVariable;
@@ -282,5 +281,3 @@ public slots:
       void              slot_searchBufferDown();
 
 };
-
-#endif // MUDLET_TCONSOLE_H

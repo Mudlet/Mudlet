@@ -1,5 +1,4 @@
-#ifndef MUDLET_HOST_H
-#define MUDLET_HOST_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -22,8 +21,8 @@
  ***************************************************************************/
 
 
-#include "ctelnet.h"
-#include "KeyUnit.h"
+#include "Telnet.h"
+#include "HotKey.h"
 
 #include "Java.h"
 
@@ -45,7 +44,7 @@ class TConsole;
 void setupDefaultSettings();
 
 
-class Host  : public QObject
+class Profile  : public QObject
 {
 public:
     static QString DICTIONARY;
@@ -70,8 +69,8 @@ public:
 
 public:
 
-    Host( int port, const QString& mHostName, const QString& login, const QString& pass );
-    ~Host();
+    Profile( int port, const QString& mHostName, const QString& login, const QString& pass );
+    ~Profile();
 
     QString             getDictionary();
 
@@ -86,7 +85,7 @@ public:
     QString             getString(const QString &);
     int                 getInt(const QString &);
     bool                getBool(const QString &);
-    KeyUnit *           getKeyUnit();
+    HotKey *           getKeyUnit();
 
     void                setBool(const QString &, bool);
     void                setString(const QString &, const QString &);
@@ -113,9 +112,9 @@ public:
     void                load();
     void                save();
 
-    cTelnet             mTelnet;
-    QPointer<TConsole>  mpConsole;
-    KeyUnit             mKeyUnit;
+    Telnet             mTelnet;
+    QPointer<TConsole>  console;
+    HotKey             mKeyUnit;
 
     QColor              mBlack;
     QColor              mLightBlack;
@@ -170,5 +169,3 @@ private:
     QFont               cmdLineFont;
 
 };
-
-#endif // MUDLET_HOST_H

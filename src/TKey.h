@@ -1,5 +1,4 @@
-#ifndef MUDLET_TKEY_H
-#define MUDLET_TKEY_H
+#pragma once
 
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -29,7 +28,7 @@
 #include <QRegExp>
 #include "post_guard.h"
 
-class Host;
+class Profile;
 
 
 class TKey : public Tree<TKey>
@@ -41,8 +40,8 @@ public:
 
 
     virtual          ~TKey();
-                     TKey( TKey * parent, Host * pHost );
-                     TKey( QString name, Host * pHost );
+                     TKey( TKey * parent, Profile * pHost );
+                     TKey( QString name, Profile * pHost );
     void             compileAll();
     QString          getName()                          { return mName; }
     void             setName( QString name )            { mName = name; }
@@ -88,10 +87,9 @@ private:
     QString          mScript;
     QString          mFuncName;
     bool             mIsFolder;
-    QPointer<Host>   mpHost;
+    QPointer<Profile>   mpHost;
     bool             mNeedsToBeCompiled;
     bool                  mModuleMember;
 
 };
 
-#endif // MUDLET_TKEY_H

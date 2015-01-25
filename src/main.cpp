@@ -21,8 +21,8 @@
 
 
 #include "FontManager.h"
-#include "HostManager.h"
-#include "mudlet.h"
+#include "Profiles.h"
+#include "MainWindow.h"
 
 #include "pre_guard.h"
 #include <QApplication>

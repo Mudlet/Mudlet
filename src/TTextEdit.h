@@ -31,7 +31,7 @@
 
 #include <string>
 
-class Host;
+class Profile;
 class TBuffer;
 class TConsole;
 
@@ -48,7 +48,7 @@ public:
                       TTextEdit( TConsole *,
                                  QWidget *,
                                  TBuffer * pB,
-                                 Host * pH,
+                                 Profile * pH,
                                  bool isDebugConsole,
                                  bool isSplitScreen );
 
@@ -147,7 +147,7 @@ private:
     QPoint            mPB;
     TBuffer *         mpBuffer;
     TConsole *        mpConsole;
-    QPointer<Host>    mpHost;
+    QPointer<Profile>    mpHost;
     QScrollBar *      mpScrollBar;
     int               mScreenHeight;
     QPixmap           mScreenMap;

@@ -22,8 +22,8 @@
 #include "TCommandLine.h"
 
 
-#include "mudlet.h"
-#include "Host.h"
+#include "MainWindow.h"
+#include "Profile.h"
 #include "TConsole.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
@@ -35,7 +35,7 @@
 #include "post_guard.h"
 
 
-TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )
+TCommandLine::TCommandLine( Profile * pHost, TConsole * pConsole, QWidget * parent )
 : QPlainTextEdit( parent )
 , mpHost( pHost )
 , mpConsole( pConsole )
@@ -126,12 +126,12 @@ bool TCommandLine::event( QEvent * event )
         case Qt::Key_Backtab:
             if( ke->modifiers() & Qt::ControlModifier )
             {
-                    int currentIndex = mudlet::self()->mpTabBar->currentIndex();
-                    int count = mudlet::self()->mpTabBar->count();
+                    int currentIndex = MainWindow::self()->tabBar->currentIndex();
+                    int count = MainWindow::self()->tabBar->count();
                     if( currentIndex-1 < 0 )
-                            mudlet::self()->mpTabBar->setCurrentIndex(count-1);
+                            MainWindow::self()->tabBar->setCurrentIndex(count-1);
                     else
-                            mudlet::self()->mpTabBar->setCurrentIndex(currentIndex-1);
+                            MainWindow::self()->tabBar->setCurrentIndex(currentIndex-1);
             }
             else
             {
@@ -145,12 +145,12 @@ bool TCommandLine::event( QEvent * event )
         case Qt::Key_Tab:
             if( ke->modifiers() & Qt::ControlModifier )
             {
-                int currentIndex = mudlet::self()->mpTabBar->currentIndex();
-                int count = mudlet::self()->mpTabBar->count();
+                int currentIndex = MainWindow::self()->tabBar->currentIndex();
+                int count = MainWindow::self()->tabBar->count();
                 if( currentIndex+1 < count )
-                    mudlet::self()->mpTabBar->setCurrentIndex(currentIndex+1);
+                    MainWindow::self()->tabBar->setCurrentIndex(currentIndex+1);
                 else
-                    mudlet::self()->mpTabBar->setCurrentIndex(0);
+                    MainWindow::self()->tabBar->setCurrentIndex(0);
             }
             else
                 handleTabCompletion( true );
@@ -530,7 +530,7 @@ void TCommandLine::enterCommand( QKeyEvent * event )
         mHistoryList.removeAll( toPlainText() );
         mHistoryList.push_front( toPlainText() );
     }
-    if( mpHost->getBool(Host::CMD_LINE_CLEAR) )
+    if( mpHost->getBool(Profile::CMD_LINE_CLEAR) )
         clear();
     else
     {
@@ -561,10 +561,10 @@ void TCommandLine::handleTabCompletion( bool direction )
         mUserKeptOnTyping = false;
         mTabCompletionCount = -1;
     }
-    int amount = mpHost->mpConsole->buffer.size();
+    int amount = mpHost->console->buffer.size();
     if( amount > 500 ) amount = 500;
 
-    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines( amount );
+    QStringList bufferList = mpHost->console->buffer.getEndLines( amount );
     QString buffer = bufferList.join(" ");
 
     buffer.replace(QChar( 0x21af ), "\n");

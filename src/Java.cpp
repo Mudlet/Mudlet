@@ -59,7 +59,7 @@ void DirectBuffer::clear() {
 }
 
 
-Java::Java(Host * const host, const QString &hostname)
+Java::Java(Profile * const host, const QString &hostname)
 : host(host)
 , hostname(hostname)
 {

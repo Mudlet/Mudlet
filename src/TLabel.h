@@ -1,6 +1,4 @@
-#ifndef MUDLET_TLABEL_H
-#define MUDLET_TLABEL_H
-
+#pragma once
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
@@ -30,7 +28,7 @@
 #include <QString>
 #include "post_guard.h"
 
-class Host;
+class Profile;
 
 class QMouseEvent;
 
@@ -41,22 +39,21 @@ Q_OBJECT
 
 public:
 
-                  TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, const QString & func, const TEvent & args );
-void              setEnter( Host * pHost, const QString & func, const TEvent & args );
-void              setLeave( Host * pHost, const QString & func, const TEvent & args );
-void              mousePressEvent( QMouseEvent *  ) override;
-void              leaveEvent(QEvent *) override;
-void              enterEvent(QEvent *) override;
+    TLabel( QWidget * pW=0 );
 
-QPointer<Host>    mpHost;
-QString           mScript;
-QString           mEnter;
-QString           mLeave;
-TEvent            mpParameters;
-TEvent            mLeaveParams;
-TEvent            mEnterParams;
-bool              mouseInside;
+    void              setScript( Profile * pHost, const QString & func, const TEvent & args );
+    void              setEnter( Profile * pHost, const QString & func, const TEvent & args );
+    void              setLeave( Profile * pHost, const QString & func, const TEvent & args );
+    void              mousePressEvent( QMouseEvent *  ) override;
+    void              leaveEvent(QEvent *) override;
+    void              enterEvent(QEvent *) override;
+
+    QPointer<Profile>    mpHost;
+    QString           mScript;
+    QString           mEnter;
+    QString           mLeave;
+    TEvent            mpParameters;
+    TEvent            mLeaveParams;
+    TEvent            mEnterParams;
+    bool              mouseInside;
 };
-
-#endif // MUDLET_TLABEL_H

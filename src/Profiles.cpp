@@ -19,23 +19,23 @@
  ***************************************************************************/
 
 
-#include "HostManager.h"
+#include "Profiles.h"
 
 
-#include "mudlet.h"
+#include "MainWindow.h"
 
 #include "pre_guard.h"
 #include <QDebug>
 #include "post_guard.h"
 
 
-bool HostManager::deleteHost( QString hostname )
+bool Profiles::deleteHost( QString hostname )
 {
-    QMutexLocker locker(& mPoolLock);
+    QMutexLocker locker(& lock);
 
     qDebug() << "---> trying to delete host <"<<hostname.toLatin1().data()<<"> from host pool.";
     // make sure this is really a new host
-    if( ! mHostPool.contains( hostname ) )
+    if( ! pool.contains( hostname ) )
     {
         qDebug() << "[CRITICAL ERROR]: cannot delete host:"<<hostname.toLatin1().data()<<" it is not a member of host pool.";
         return false;
@@ -43,40 +43,40 @@ bool HostManager::deleteHost( QString hostname )
     else
     {
         qDebug() << "[OK] Host deleted removing pool entry ...";
-        int ret = mHostPool.remove( hostname );
+        int ret = pool.remove( hostname );
         qDebug() << "[OK] deleted Host:"<<hostname.toLatin1().data()<<" ret="<<ret;
 
     }
     return true;
 }
 
-bool HostManager::renameHost( QString id )
+bool Profiles::renameHost( QString id )
 {
-    QMutexLocker locker(& mPoolLock);
+    QMutexLocker locker(& lock);
 
     // make sure this is really a new host
-    if( mHostPool.find( id ) == mHostPool.end() )
+    if( pool.find( id ) == pool.end() )
     {
         return false;
     }
     else
     {
-        QSharedPointer<Host> host = mHostPool[id];
-        mHostPool.remove( id );
+        QSharedPointer<Profile> host = pool[id];
+        pool.remove( id );
         host->setId(id);
-        mHostPool.insert(id, host);
+        pool.insert(id, host);
     }
 
     return true;
 
 }
 
-bool HostManager::addHost( QString hostname, QString port, QString login, QString pass )
+bool Profiles::addHost( QString hostname, QString port, QString login, QString pass )
 {
-    QMutexLocker locker(&mPoolLock);
+    QMutexLocker locker(&lock);
 
     // make sure this is really a new host
-    if( mHostPool.find( hostname ) != mHostPool.end() )
+    if( pool.find( hostname ) != pool.end() )
     {
         return false;
     }
@@ -89,37 +89,37 @@ bool HostManager::addHost( QString hostname, QString port, QString login, QStrin
         portnumber = port.toInt();
     }
 
-    QSharedPointer<Host> pNewHost( new Host( portnumber, hostname, login, pass ) );
+    QSharedPointer<Profile> pNewHost( new Profile( portnumber, hostname, login, pass ) );
 
-    mHostPool.insert( hostname, pNewHost );
-    mpActiveHost = mHostPool.begin().value().data();
+    pool.insert( hostname, pNewHost );
+    ativeHost = pool.begin().value().data();
     return true;
 }
 
-QStringList HostManager::getHostList()
+QStringList Profiles::getHostList()
 {
-    QMutexLocker locker(& mPoolLock);
+    QMutexLocker locker(& lock);
 
     QStringList strlist;
-    QList<QString> hostList = mHostPool.keys();
+    QList<QString> hostList = pool.keys();
     if( hostList.size() > 0 )
         strlist << hostList;
     return strlist;
 }
 
-QList<QString> HostManager::getHostNameList()
+QList<QString> Profiles::getHostNameList()
 {
-    QMutexLocker locker(& mPoolLock);
+    QMutexLocker locker(& lock);
 
-    return mHostPool.keys();
+    return pool.keys();
 }
 
-Host * HostManager::getHost( const QString &id )
+Profile * Profiles::getHost( const QString &id )
 {
-    QMutexLocker locker(& mPoolLock);
-    if( mHostPool.find( id ) != mHostPool.end() )
+    QMutexLocker locker(& lock);
+    if( pool.find( id ) != pool.end() )
     {
-        return mHostPool[id].data();
+        return pool[id].data();
     }
     else
     {
@@ -127,8 +127,8 @@ Host * HostManager::getHost( const QString &id )
     }
 }
 
-Host * HostManager::getFirstHost()
+Profile * Profiles::getFirstHost()
 {
-    QMutexLocker locker(& mPoolLock);
-    return mHostPool.begin().value().data();
+    QMutexLocker locker(& lock);
+    return pool.begin().value().data();
 }
