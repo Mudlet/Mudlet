@@ -39,6 +39,14 @@
 #include <QMessageBox>
 #include "post_guard.h"
 
+// Moved up from depths of file - a version dependent change (16=>17) will speed
+// up a file loading operation (switches from manual regeneration of room
+// entrance data on loading to storing it in the map file) at the cost of older
+// Mudlet versions not supporting file format - once switch has been adopted
+// the conditional aspect of the write of the data in TMap::serialize(...) can
+// be removed to make it always run - recommend this is done for actual release
+// version (not greek suffixed previews). SlySven
+const int CURRENT_MAP_VERSION = 16;
 
 TMap::TMap( Host * pH )
 : mpRoomDB( new TRoomDB( this ) )
@@ -264,69 +272,26 @@ int TMap::createNewRoomID()
 
 bool TMap::setExit( int from, int to, int dir )
 {
-    TRoom * pR = mpRoomDB->getRoom( from );
+    TRoom * pR_from = mpRoomDB->getRoom( from );
     TRoom * pR_to = mpRoomDB->getRoom( to );
 
-    if( !pR ) {
+    if( ! pR_from ) {
         return false;
     }
-    if( !pR_to && to > 0 ) {
+
+    if( to > 0 && ! pR_to ) {
         return false;
     }
-    if( to < 1 ) {
+    else if( to < 1 ) {
         to = -1;
     }
 
-    mPlausaOptOut = 0;
-    bool ret = true;
+    bool ret = pR_from->setExit(to, dir);
+    // This will handle revising entrance information and updating TArea data
 
-    switch( dir ) {
-        case DIR_NORTH:
-            pR->setNorth(to);
-            break;
-        case DIR_NORTHEAST:
-            pR->setNortheast(to);
-            break;
-        case DIR_NORTHWEST:
-            pR->setNorthwest(to);
-            break;
-        case DIR_EAST:
-            pR->setEast(to);
-            break;
-        case DIR_WEST:
-            pR->setWest(to);
-            break;
-        case DIR_SOUTH:
-            pR->setSouth(to);
-            break;
-        case DIR_SOUTHEAST:
-            pR->setSoutheast(to);
-            break;
-        case DIR_SOUTHWEST:
-            pR->setSouthwest(to);
-            break;
-        case DIR_UP:
-            pR->setUp(to);
-            break;
-        case DIR_DOWN:
-            pR->setDown(to);
-            break;
-        case DIR_IN:
-            pR->setIn(to);
-            break;
-        case DIR_OUT:
-            pR->setOut(to);
-            break;
-        default:
-            ret = false;
-    }
-    pR->setExitStub(dir, false);
+    pR_from->setExitStub(dir, false);
+
     mMapGraphNeedsUpdate = true;
-    TArea * pA = mpRoomDB->getArea( pR->getArea() );
-    if( ! pA ) {
-        return false;
-    }
-    pA->determineAreaExitsOfRoom(pR->getId());
     return ret;
 }
 
@@ -389,10 +354,8 @@ void TMap::init( Host * pH )
             }
         }
     }
-    qDebug("TMap::init() Initialize run time:%i milli-seconds.", _time.elapsed() );
+    qDebug( "TMap::init() Initialize run time: %i milli-Seconds.", _time.elapsed() );
 }
-
-
 
 void TMap::setView(float x, float y, float z, float zoom )
 {
@@ -941,8 +904,6 @@ bool TMap::findPath( int from, int to )
      return false;
 }
 
-const int CURRENT_MAP_VERSION = 16;
-
 bool TMap::serialize( QDataStream & ofs )
 {
     version = CURRENT_MAP_VERSION;
@@ -955,8 +916,7 @@ bool TMap::serialize( QDataStream & ofs )
     ofs << mpRoomDB->getAreaMap().size();
     // serialize area table
     QMapIterator<int, TArea *> itAreaList(mpRoomDB->getAreaMap());
-    while( itAreaList.hasNext() )
-    {
+    while( itAreaList.hasNext() ) {
         itAreaList.next();
         int areaID = itAreaList.key();
         TArea * pA = itAreaList.value();
@@ -983,23 +943,22 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pA->zoneAreaRef;
     }
 
-    if (mRoomId)
+    if (mRoomId) {
         ofs << mRoomId;
-    else{
+    }
+    else {
         mRoomId = 0;
         ofs << mRoomId;
     }
     ofs << mapLabels.size(); //anzahl der areas
     QMapIterator<int, QMap<int, TMapLabel> > itL1(mapLabels);
-    while( itL1.hasNext() )
-    {
+    while( itL1.hasNext() ) {
         itL1.next();
         int i = itL1.key();
         ofs << itL1.value().size();//anzahl der labels pro area
         ofs << itL1.key(); //area id
         QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
-        while( itL2.hasNext() )
-        {
+        while( itL2.hasNext() ) {
             itL2.next();
             ofs << itL2.key();//label ID
             TMapLabel label = itL2.value();
@@ -1015,8 +974,7 @@ bool TMap::serialize( QDataStream & ofs )
         }
     }
     QHashIterator<int, TRoom *> it( mpRoomDB->getRoomMap() );
-    while( it.hasNext() )
-    {
+    while( it.hasNext() ) {
 
         it.next();
         TRoom * pR = it.value();
@@ -1052,6 +1010,13 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();
         ofs << pR->doors;
+        if( version >= 17 ) {
+            // TODO: At the time of writing this is NOT true, but will make
+            // future versions faster - once the version IS incremented then
+            // take out this conditional so code always runs
+            ofs << pR->getNormalEntrances();
+            ofs << pR->getSpecialEntrances();
+        }
     }
 
     return true;
@@ -1199,13 +1164,10 @@ bool TMap::restore(QString location)
                 areaLabelCount++;
             }
         }
-        while( ! ifs.atEnd() )
-        {
-            int i;
-            ifs >> i;
+        while( ! ifs.atEnd() ) {
             TRoom * pT = new TRoom(mpRoomDB);
-            mpRoomDB->restoreSingleRoom( ifs, i, pT );
-            pT->restore( ifs, i, version );
+            pT->restore( ifs, version );
+            mpRoomDB->restoreSingleRoom( ifs, pT );
 
 
         }
@@ -1225,7 +1187,8 @@ bool TMap::restore(QString location)
         customEnvColors[270] = mpHost->mLightCyan_2;
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
-        qDebug()<<"LOADED rooms:"<<mpRoomDB->size()<<" loading time:"<<_time.elapsed();
+        qDebug( "TMap::restore(\"%s\") LOADED %i rooms - loading time: %i milli-Seconds.",
+                file.fileName().toUtf8().constData(), mpRoomDB->size(), _time.elapsed());
         if( canRestore )
         {
             return true;

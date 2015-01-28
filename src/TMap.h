@@ -131,8 +131,6 @@ public:
     QList<int> conList;
     QMap<int, int> roomidToIndex;
     QMap<int, int> indexToRoomid;
-    int mPlausaOptOut;
-
     QMap<QString, int> pixNameTable;
     QMap<int, QPixmap> pixTable;
     typedef adjacency_list<listS, vecS, directedS, no_property, property<edge_weight_t, cost> > mygraph_t;

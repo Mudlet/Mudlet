@@ -20,6 +20,11 @@
  ***************************************************************************/
 
 
+// Define for testing deletion of rooms - NOT RECOMMENDED as the time to display
+// the individual room timing must slow the process down - enable and use the
+// averaging code in T2DMap::slot_deleteRoom() and TRoomDB::removeArea() instead!
+// #define DEBUG_TIMING
+
 #include "TRoom.h"
 
 
@@ -30,10 +35,12 @@
 #include <QApplication>
 #include <QDataStream>
 #include <QDebug>
+#if defined(DEBUG_TIMING)
+#include <QElapsedTimer>
+#endif
+#include <QPair>
 #include <QStringBuilder>
-#include <QTime>
 #include "post_guard.h"
-
 
 TRoom::TRoom(TRoomDB * pRDB)
 : x( 0 )
@@ -70,10 +77,17 @@ TRoom::TRoom(TRoomDB * pRDB)
 
 TRoom::~TRoom()
 {
+#if defined(DEBUG_TIMING)
+    static bool isToShowTime= false; // Set to true within debugger to control the display of this - may slow down code anyhow
     QTime timer;
     timer.start();
+#endif
     mpRoomDB->__removeRoom( id );
-    qDebug()<<"room destructor took"<<timer.elapsed();
+#if defined(DEBUG_TIMING)
+    if( isToShowTime ) {
+        qDebug( "TRoom::~TRoom() - Room (%i) destruction took: %i milli-seconds.", id, timer.elapsed() );
+    }
+#endif
 }
 
 bool TRoom::hasExitStub(int direction)
@@ -243,21 +257,142 @@ bool TRoom::setArea( int areaID, bool isToDeferAreaRelatedRecalculations )
 
 bool TRoom::setExit( int to, int direction )
 {
+    int * pExit;
     switch(direction){
-    case DIR_NORTH:     north     = to; return true; break;
-    case DIR_NORTHEAST: northeast = to; return true; break;
-    case DIR_NORTHWEST: northwest = to; return true; break;
-    case DIR_EAST:      east      = to; return true; break;
-    case DIR_WEST:      west      = to; return true; break;
-    case DIR_SOUTH:     south     = to; return true; break;
-    case DIR_SOUTHEAST: southeast = to; return true; break;
-    case DIR_SOUTHWEST: southwest = to; return true; break;
-    case DIR_UP:        up        = to; return true; break;
-    case DIR_DOWN:      down      = to; return true; break;
-    case DIR_IN:        in        = to; return true; break;
-    case DIR_OUT:       out       = to; return true;
+        case DIR_NORTH:     pExit = &north;     break;
+        case DIR_NORTHEAST: pExit = &northeast; break;
+        case DIR_NORTHWEST: pExit = &northwest; break;
+        case DIR_EAST:      pExit = &east;      break;
+        case DIR_WEST:      pExit = &west;      break;
+        case DIR_SOUTH:     pExit = &south;     break;
+        case DIR_SOUTHEAST: pExit = &southeast; break;
+        case DIR_SOUTHWEST: pExit = &southwest; break;
+        case DIR_UP:        pExit = &up;        break;
+        case DIR_DOWN:      pExit = &down;      break;
+        case DIR_IN:        pExit = &in;        break;
+        case DIR_OUT:       pExit = &out;       break;
+        default:
+            qWarning( "TRoom::setExit(%i, %i) - Warning: invalid argument(s) for Normal exit supplied!", to, direction );
+            Q_UNREACHABLE(); // Unhandled DIR_**** code value encounter!
+            return false;
     }
-    return false;
+    if( *pExit == to ) { // Bypass if no change
+        return true;
+    }
+
+    TArea * pA = mpRoomDB->getArea( area );
+    TRoom * pR_oldTo = mpRoomDB->getRoom( *pExit );
+    TArea * pA_oldTo;
+    TArea * pA_newTo;
+    if( pR_oldTo ) {
+        pA_oldTo = mpRoomDB->getArea( pR_oldTo->getArea() );
+        pR_oldTo->resetEntrance(id, direction);
+    }
+    else {
+        pA_oldTo = 0;
+    }
+
+    *pExit = to;
+
+    TRoom * pR_newTo = mpRoomDB->getRoom( to );
+    if( pR_newTo ) {
+        pA_newTo = mpRoomDB->getArea( pR_newTo->getArea() );
+        pR_newTo->setEntrance(id, direction);
+    }
+    else {
+        pA_newTo = 0;
+    }
+
+    if( pA_oldTo ) {
+        if( pA_oldTo == pA_newTo ) { // The exit used to point to a valid area and it still points to THAT area
+            if( pA && pA != pA_oldTo ) { // The room is in a valid area and the exit is (still) pointing to a DIFFERENT one
+                pA->determineAreaExitsOfRoom( id ); // So update the exit in the Area's Exits list
+            }
+        }
+        else if( pA_newTo ) {  // The exit used to point to a valid area and it now points to a DIFFERENT VALID area
+            if( pA && pA != pA_oldTo ) { // The room is in a valid area and the exit is (still) pointing to a DIFFERENT one
+                pA->determineAreaExitsOfRoom( id ); // So update the exit in the Area's Exits list
+            }
+        }
+        else if( pA ) {  // The exit used to point to a valid area and it now DOESN'T
+            pA->determineAreaExitsOfRoom( id ); // So remove the exit from the Area's Exits list
+        }
+    }
+    else if( pA_newTo ) {  // The exit DON'T used to point to a valid area and but it DOES NOW
+        if( pA && pA != pA_newTo ) {  // The exit DON'T used to point to a valid area and but it DOES NOW and that ISN'T the same as the room's
+            pA->determineAreaExitsOfRoom( id ); // So add this exit to the Area's Exits list
+        }
+    }
+    else if( pA ) {  // The exit DON'T used to point to a valid area and it still DOESN'T
+        ; // No-op
+    }
+    else { // Um, pA is NULL so this room IS NOT in a valid area SO HOW COME WE ARE SETTING EXITS TO IT?
+        qWarning( "TRoom::setExit(...) Warning: attempting to set an exit in a room(Id=%i) that is NOT within a TArea instance - area(Id=%i)!", id, area );
+    }
+    return true;
+}
+
+void TRoom::setEntrance( int from, quint8 from_dir )
+{
+    if( from > 0 && from_dir >= DIR_NORTH && from_dir <= DIR_OUT ) {
+        mNormalEntrances.insert( qMakePair( from_dir, from ) );
+    }
+    else {
+        qWarning( "TRoom::setEntrance((int)%i, (quint8)%i) - Warning: invalid argument(s) for Normal entrance supplied!", from, from_dir );
+    }
+}
+
+void TRoom::setEntrance( QPair<quint8, quint64> from )
+{
+    if( from.first >=DIR_NORTH && from.first <=DIR_OUT ) {
+        mNormalEntrances.insert( from );
+    }
+    else {
+        qWarning( "TRoom::setEntrance(QPair<(quint8)%i, (quint64)%s>) - Warning: invalid argument(s) for Normal entrance supplied!", from.first, from.second );
+    }
+}
+
+void TRoom::resetEntrance( int from, quint8 from_dir )
+{
+    if( from > 0 && from_dir >= DIR_NORTH && from_dir <= DIR_OUT ) {
+        mNormalEntrances.remove( qMakePair( from_dir, from ) );
+    }
+    else {
+        qWarning( "TRoom::resetEntrance((int)%i, (quint8)%i) - Warning: invalid argument(s) for Normal entrance supplied!", from, from_dir );
+    }
+}
+
+// Note: from_dir DOES NOT include a '0'/'1' prefix to indicate lock status
+void TRoom::setEntrance( int from, QString from_dir )
+{
+    if( from > 0 && ! from_dir.isEmpty() ) {
+        mSpecialEntrances.insert( qMakePair( from_dir, from ) );
+    }
+    else {
+        qWarning( "TRoom::setEntrance((int)%i, (QString)\"%s\") - Warning: invalid argument(s) for Special entrance supplied!", from, from_dir.toUtf8().constData() );
+    }
+}
+
+// Note: from.first DOES NOT include a '0'/'1' prefix to indicate lock status
+void TRoom::setEntrance( QPair<QString, quint64> from )
+{
+    if( ! from.first.isEmpty() ) {
+        mSpecialEntrances.insert( from );
+    }
+    else {
+        qWarning( "TRoom::setEntrance(QPair<(QString)\"%s\", (quint8)%i>) - Warning: invalid argument(s) for Special entrance supplied!", from.first.toUtf8().constData(), from.second );
+    }
+}
+
+// Note: from_dir DOES NOT include a '0'/'1' prefix to indicate lock status
+void TRoom::resetEntrance( int from, QString from_dir )
+{
+    if( from > 0 && ! from_dir.isEmpty() ) {
+        mSpecialEntrances.remove( qMakePair( from_dir, from ) );
+    }
+    else {
+        qWarning( "TRoom::resetEntrance(%i, \"%s\") - Warning: invalid argument(s) for Special entrance supplied!", from, from_dir.toUtf8().constData() );
+    }
 }
 
 bool TRoom::hasExit( int direction )
@@ -298,40 +433,70 @@ int TRoom::getExit( int direction )
     return -1;
 }
 
-QHash<int, int> TRoom::getExits()
+QSet<QPair<quint8, quint64> > TRoom::getNormalExits()
 {
-    // key is room id we exit to, value is type of exit. 0 is normal, 1 is special
-    QHash<int, int> exitList;
-    if (north != -1)
-        exitList[north] = 0;
-    if (northeast != -1)
-        exitList[northeast] = 0;
-    if (east != -1)
-        exitList[east] = 0;
-    if (southeast != -1)
-        exitList[southeast] = 0;
-    if (south != -1)
-        exitList[south] = 0;
-    if (southwest != -1)
-        exitList[southwest] = 0;
-    if (west != -1)
-        exitList[west] = 0;
-    if (northwest != -1)
-        exitList[northwest] = 0;
-    if (up != -1)
-        exitList[up] = 0;
-    if (down != -1)
-        exitList[down] = 0;
-    if (in != -1)
-        exitList[in] = 0;
-    if (out != -1)
-        exitList[out] = 0;
-    QMapIterator<int, QString> it(other);
-    while (it.hasNext()) {
-        it.next();
-        exitList[it.key()] = 1;
+    // first is direction code, second is room id we exit to
+    QSet<QPair<quint8, quint64> > exitSet;
+    if( north >= 0 ) {
+        exitSet.insert( qMakePair( DIR_NORTH,       static_cast<quint64>(north) ) );
     }
-    return exitList;
+    if( northeast >= 0 ) {
+        exitSet.insert( qMakePair( DIR_NORTHEAST,   static_cast<quint64>(northeast) ) );
+    }
+    if( east >= 0 ) {
+        exitSet.insert( qMakePair( DIR_EAST,        static_cast<quint64>(east) ) );
+    }
+    if( southeast >= 0 ) {
+        exitSet.insert( qMakePair( DIR_SOUTHEAST,   static_cast<quint64>(southeast) ) );
+    }
+    if( south >= 0 ) {
+        exitSet.insert( qMakePair( DIR_SOUTH,       static_cast<quint64>(south) ) );
+    }
+    if( southwest >= 0 ) {
+        exitSet.insert( qMakePair( DIR_SOUTHWEST,   static_cast<quint64>(southwest) ) );
+    }
+    if( west >= 0 ) {
+        exitSet.insert( qMakePair( DIR_WEST,        static_cast<quint64>(west) ) );
+    }
+    if( northwest >= 0 ) {
+        exitSet.insert( qMakePair( DIR_NORTHWEST,   static_cast<quint64>(northwest) ) );
+    }
+    if( up >= 0 ) {
+        exitSet.insert( qMakePair( DIR_UP,          static_cast<quint64>(up) ) );
+    }
+    if( down >= 0 ) {
+        exitSet.insert( qMakePair( DIR_DOWN,        static_cast<quint64>(down) ) );
+    }
+    if( in >= 0 ) {
+        exitSet.insert( qMakePair( DIR_IN,          static_cast<quint64>(in) ) );
+    }
+    if( out >= 0 ) {
+        exitSet.insert( qMakePair( DIR_OUT,         static_cast<quint64>(out) ) );
+    }
+    return exitSet;
+}
+
+// Note: .first DOES NOT include a '0'/'1' prefix to indicate lock status
+QSet<QPair<QString, quint64> > TRoom::getSpecialExits()
+{
+    QSet<QPair<QString, quint64> > exitSet;
+
+    // first is room id we exit to, second is command (eventually might be "name"...?)
+    QMapIterator<int, QString> it(other);
+    while( it.hasNext() ) {
+        it.next();
+        if( it.key() >=0 ) {
+            if(      it.value().length() > 1
+                && (    it.value().left(1) == QStringLiteral("0")
+                     || it.value().left(1) == QStringLiteral("1") ) ) {
+                exitSet.insert( qMakePair( it.value().mid(1), static_cast<quint64>(it.key()) ) );
+            }
+            else if( ! it.value().isEmpty() ) {
+                exitSet.insert( qMakePair( it.value(), static_cast<quint64>(it.key()) ) );
+            }
+        }
+    }
+    return exitSet;
 }
 
 void TRoom::setExitLock( int exit, bool state )
@@ -465,57 +630,85 @@ bool TRoom::hasSpecialExitLock( int to, const QString& cmd )
 // a poorer choice than the "command" which is currently the value item...
 // FIXME: swap key/value items in (TRoom *)->other<int, QString> map?
 // Changing to setSpecialExit(), "to" values less than 1 remove exit...
-void TRoom::setSpecialExit( int to, const QString& cmd )
+// This code is considerably more complex because of the initial character of
+// the command being '0' or '1' to indicate that this special exit is "locked"
+// the coding complexity would be seriously simpler if we just had a
+// QSet<QString>TRoom::specialExitLocks member
+bool TRoom::setSpecialExit( int to, const QString & cmd )
 {
     QString _strippedCmd;
-    QString _prefix= "";
+    QString _newPrefix;
+    QString _oldPrefix;
+    TRoom * pR_oldTo;
+    TRoom * pR_newTo;
+    TArea * pA_oldTo;
+    TArea * pA_newTo;
 
-    if( cmd.startsWith('0') || cmd.startsWith('1') )
-    {
+    if( cmd.startsWith(QLatin1Char('0')) || cmd.startsWith(QLatin1Char('1')) ) {
         _strippedCmd = cmd.mid(1);
-        _prefix = cmd.mid(0,1);
+        _newPrefix = cmd.mid(0,1);
     }
-    else
-    {
+    else {
         _strippedCmd = cmd;
     }
 
-    if( _strippedCmd.isEmpty() )
-        return; // Refuse to create an unnamed special exit!!!
-    // replace if this special exit exists, otherwise add
+    if( _strippedCmd.isEmpty() ) {
+        qWarning("TRoom::setSpecialExit( %i, \"\" ) Warning: attempt to create a special exit from room (Id=%i) with no name!", to, id);
+        return false; // Refuse to create an unnamed special exit!!!
+    }
     QMutableMapIterator<int, QString> it( other );
-    while(it.hasNext() )
-    {
+    while(it.hasNext() ) {
         it.next();
-        if( ! it.value().size() )
+        if( ! it.value().size() ) {
             continue;
+        }
 
-        if( Q_LIKELY( it.value().startsWith('0') || it.value().startsWith('1') ) )
-        {
-            if( it.value().mid(1) != _strippedCmd )
+        if( Q_LIKELY( it.value().startsWith(QLatin1Char('0')) || it.value().startsWith(QLatin1Char('1')) ) ) {
+            if( it.value().mid(1) != _strippedCmd ) {
                 continue;
-            else
-            { // Found the matching command, preserve the existing lock state
+            }
+            else {
+              // Found the matching command, preserve the existing lock state
               // unless overriden in command and also the old destination to
               // note which areas are affected
-                if( _prefix.isEmpty() )
-                {
-                    _prefix = it.value().mid(0,1);
+                _oldPrefix = it.value().mid(0,1);
+                if( _newPrefix.isEmpty() ) {
+                    _newPrefix = it.value().mid(0,1);
                 }
+                pR_oldTo = mpRoomDB->getRoom( it.key() );
+                if( pR_oldTo ) {
+                    pR_oldTo->resetEntrance(id, _strippedCmd);
+                }
+                else {
+                    qWarning( "TRoom::setSpecialExit( %i, \"%s\" ) - Warning: invalid argument(s) for Special exit supplied!", to, cmd.toUtf8().constData() );
+                }
+                if( to == it.key() && _oldPrefix == _newPrefix ) {
+                    // The above tests might be a bit too tight but should work to detect "No change" situations
+                    return true;
+                }
+
                 it.remove(); // Despite this being a "Mutable" iterator it does
                              // NOT allow us to change the KEY - we only can
                              // remove the entry to add-in a new one later.
                 break;
             }
         }
-        else
-        {
-            if( it.value() != _strippedCmd )
+        else {
+            if( it.value() != _strippedCmd ) {
                 continue;
-            else
-            { // Found the matching command, but this is an old one with no lock state prefix
-                if( _prefix.isEmpty() )
-                    _prefix = '0'; // Assume default unlock case if not set
+            }
+            else {
+                // Found the matching command, but this is an old one with no lock state prefix
+                if( _newPrefix.isEmpty() ) {
+                    _newPrefix = QLatin1Char('0'); // Assume default unlock case if not set
+                }
+                pR_oldTo = mpRoomDB->getRoom( it.key() );
+                if( pR_oldTo ) {
+                    pR_oldTo->resetEntrance(id, _strippedCmd);
+                }
+                else {
+                    qWarning( "TRoom::setSpecialExit( %i, \"%s\" ) - Warning: invalid argument(s) for Special exit supplied!", to, cmd.toUtf8().constData() );
+                }
                 it.remove();
                 break;
             }
@@ -525,16 +718,15 @@ void TRoom::setSpecialExit( int to, const QString& cmd )
     // Have definately removed the existing case of this command
     // Now add it to map if wanted
 
-    if( to > 1 )
-    {
-        if( _prefix.isEmpty() )
-            _prefix = '0';
-
-        QString finalCmd = _prefix % _strippedCmd;
+    if( to > 0 ) {
+        QString finalCmd = _newPrefix % _strippedCmd;
         other.insertMulti(to, finalCmd);
+        pR_newTo = mpRoomDB->getRoom( to );
+        if( pR_newTo ) {
+            pR_newTo->setEntrance(id, _strippedCmd);
+        }
     }
-    else
-    { // Clean up related data:
+    else { // Clean up related data:
         customLinesArrow.remove( _strippedCmd );
         customLinesColor.remove( _strippedCmd );
         customLinesStyle.remove( _strippedCmd );
@@ -544,31 +736,47 @@ void TRoom::setSpecialExit( int to, const QString& cmd )
     }
 
     TArea * pA = mpRoomDB->getArea( area );
-    if( pA )
-    {
-        pA->determineAreaExitsOfRoom( id );
-        // This updates the (TArea *)->exits map even for exit REMOVALS
+    if( pR_oldTo ) {
+        pA_oldTo = mpRoomDB->getArea( pR_oldTo->getArea() );
+    }
+    else {
+        pA_oldTo = 0;
     }
 
-}
+    if( pR_newTo ) {
+        pA_newTo = mpRoomDB->getArea( pR_newTo->getArea() );
+    }
+    else {
+        pA_newTo = 0;
+    }
 
-void TRoom::removeAllSpecialExitsToRoom( int _id )
-{
-    QList<int> keyList = other.keys();
-    QList<QString> valList = other.values();
-    for( int i=0; i<keyList.size(); i++ )
-    {
-        if( keyList[i] == _id )
-        {
-            // guaranteed to be in synch according to Qt docs
-            other.remove(keyList[i], valList[i]);
+    if( pA_oldTo ) {
+        if( pA_oldTo == pA_newTo ) { // The exit used to point to a valid area and it still points to THAT area
+            if( pA && pA != pA_oldTo ) { // The room is in a valid area and the exit is (still) pointing to a DIFFERENT one
+                pA->determineAreaExitsOfRoom( id ); // So update the exit in the Area's Exits list
+            }
+        }
+        else if( pA_newTo ) {  // The exit used to point to a valid area and it now points to a DIFFERENT VALID area
+            if( pA && pA != pA_oldTo ) { // The room is in a valid area and the exit is (still) pointing to a DIFFERENT one
+                pA->determineAreaExitsOfRoom( id ); // So update the exit in the Area's Exits list
+            }
+        }
+        else if( pA ) {  // The exit used to point to a valid area and it now DOESN'T
+                pA->determineAreaExitsOfRoom( id ); // So remove the exit from the Area's Exits list
         }
     }
-    TArea * pA = mpRoomDB->getArea( area );
-    if( pA )
-    {
-        pA->determineAreaExitsOfRoom( id );
+    else if( pA_newTo ) {  // The exit DON'T used to point to a valid area and but it DOES NOW
+        if( pA && pA != pA_newTo ) {  // The exit DON'T used to point to a valid area and but it DOES NOW and that ISN'T the same as the room's
+            pA->determineAreaExitsOfRoom( id ); // So add this exit to the Area's Exits list
+        }
     }
+    else if( pA ) {  // The exit DON'T used to point to a valid area and it still DOESN'T
+        ; // No-op
+    }
+    else { // Um, pA is NULL so this room IS NOT in a valid area SO HOW COME WE ARE SETTING EXITS TO IT?
+        qWarning( "TRoom::setSpecialExit(...) Warning: attempting to set an exit in a room(Id=%i) that is NOT within a TArea instance - area(Id=%i)!", id, area );
+    }
+    return true;
 }
 
 void TRoom::calcRoomDimensions()
@@ -611,10 +819,10 @@ void TRoom::calcRoomDimensions()
 }
 
 /* bool - N/U: no return value created or used */
-void TRoom::restore( QDataStream & ifs, int roomID, int version )
+void TRoom::restore( QDataStream & ifs, int version )
 {
 
-    id = roomID;
+    ifs >> id;
     ifs >> area;
     ifs >> x;
     ifs >> y;
@@ -635,13 +843,11 @@ void TRoom::restore( QDataStream & ifs, int roomID, int version )
     ifs >> weight;
 
     // force room weight >= 1 otherwise pathfinding choses random pathes.
-    if( weight < 1 )
-    {
+    if( weight < 1 ) {
         weight = 1;
     }
 
-    if( version < 8 )
-    {
+    if( version < 8 ) {
         float f1,f2,f3,f4;
         ifs >> f1;//rooms[i]->xRot;
         ifs >> f2;//rooms[i]->yRot;
@@ -650,120 +856,164 @@ void TRoom::restore( QDataStream & ifs, int roomID, int version )
     }
     ifs >> name;
     ifs >> isLocked;
-    if( version >= 6 )
-    {
+    if( version >= 6 ) {
         ifs >> other;
     }
-    if( version >= 9 )
-    {
+    if( version >= 9 ) {
         ifs >> c;
     }
-    if( version >= 10 )
-    {
+    if( version >= 10 ) {
         ifs >> userData;
     }
-    if( version >= 11 )
-    {
+    if( version >= 11 ) {
         ifs >> customLines;
         ifs >> customLinesArrow;
         ifs >> customLinesColor;
         ifs >> customLinesStyle;
         ifs >> exitLocks;
     }
-    if( version >= 13 )
-    {
+    if( version >= 13 ) {
         ifs >> exitStubs;
     }
-    if( version >= 16 )
-    {
+    if( version >= 16 ) {
         ifs >> exitWeights;
         ifs >> doors;
+    }
+    if( version >= 17 ) {
+        // At the time of writing this is NOT true, but will make future
+        // versions faster...
+        ifs >> mNormalEntrances;
+        ifs >> mSpecialEntrances;
     }
     calcRoomDimensions();
 }
 
 void TRoom::auditExits()
 {
-    if( north != -1 && ! mpRoomDB->getRoom(north) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"north\"", id);
-        north = -1;
+    if( north != -1 ) {
+        if( ! mpRoomDB->getRoom(north) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"north\"", id);
+            north = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            // Will only be true, and needed for pre-version 17 format map files
+            mpRoomDB->mpTempAllNormalEntrances->insert( north, qMakePair(DIR_NORTH, id ) );
+        }
     }
-    if( south != -1 && ! mpRoomDB->getRoom(south) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"south\"", id);
-        south = -1;
+    if( northeast != -1 ) {
+        if( ! mpRoomDB->getRoom(northeast) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northeast\"", id);
+            northeast = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( northeast, qMakePair(DIR_NORTHEAST, id ) );
+        }
     }
-    if( northwest != -1 && ! mpRoomDB->getRoom(northwest) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northwest\"", id);
-        northwest = -1;
+    if( east != -1 ) {
+        if( ! mpRoomDB->getRoom(east) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"east\"", id);
+            east = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( east, qMakePair(DIR_EAST, id ) );
+        }
     }
-    if( northeast != -1 && ! mpRoomDB->getRoom(northeast) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northeast\"", id);
-        northeast = -1;
+    if( southeast != -1 ) {
+        if( ! mpRoomDB->getRoom(southeast) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southeast\"", id);
+            southeast = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( southeast, qMakePair(DIR_SOUTHEAST, id ) );
+        }
     }
-    if( southwest != -1 && ! mpRoomDB->getRoom(southwest) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southwest\"", id);
-        southwest = -1;
+    if( south != -1 ) {
+        if( ! mpRoomDB->getRoom(south) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"south\"", id);
+            south = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( south, qMakePair(DIR_SOUTH, id ) );
+        }
     }
-    if( southeast != -1 && ! mpRoomDB->getRoom(southeast) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southeast\"", id);
-        southeast = -1;
+    if( southwest != -1 ) {
+        if( ! mpRoomDB->getRoom(southwest) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southwest\"", id);
+            southwest = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( southwest, qMakePair(DIR_SOUTHWEST, id ) );
+        }
     }
-    if( west != -1 && ! mpRoomDB->getRoom(west) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"west\"", id);
-        west = -1;
+    if( west != -1 ) {
+        if( ! mpRoomDB->getRoom(west) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"west\"", id);
+            west = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( west, qMakePair(DIR_WEST, id ) );
+        }
     }
-    if( east != -1 && ! mpRoomDB->getRoom(east) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"east\"", id);
-        east = -1;
+    if( northwest != -1 ) {
+        if( ! mpRoomDB->getRoom(northwest) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northwest\"", id);
+            northwest = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( northwest, qMakePair(DIR_NORTHWEST, id ) );
+        }
     }
-    if( in != -1 && ! mpRoomDB->getRoom(in) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"in\"", id);
-        in = -1;
+    if( up != -1 ) {
+        if( ! mpRoomDB->getRoom(up) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"up\"", id);
+            up = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( up, qMakePair(DIR_UP, id ) );
+        }
     }
-    if( out != -1 && ! mpRoomDB->getRoom(out) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"out\"", id);
-        out = -1;
+    if( down != -1 ) {
+        if( ! mpRoomDB->getRoom(down) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"down\"", id);
+            down = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( down, qMakePair(DIR_DOWN, id ) );
+        }
     }
-    if( up != -1 && ! mpRoomDB->getRoom(up) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"up\"", id);
-        up = -1;
+    if( in != -1 ) {
+        if( ! mpRoomDB->getRoom(in) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"in\"", id);
+            in = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( in, qMakePair(DIR_IN, id ) );
+        }
     }
-    if( down != -1 && ! mpRoomDB->getRoom(down) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"down\"", id);
-        down = -1;
+    if( out != -1 ) {
+        if( ! mpRoomDB->getRoom(out) ) {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"out\"", id);
+            out = -1;
+        }
+        else if( mpRoomDB->mpTempAllNormalEntrances ) {
+            mpRoomDB->mpTempAllNormalEntrances->insert( out, qMakePair(DIR_OUT, id ) );
+        }
     }
-    // These last two were missing!
 
-// If we use the Mutable iterator we don't have to restart after a deletion
     QMutableMapIterator<int, QString> it( other );
-    while( it.hasNext() )
-    {
+    while( it.hasNext() ) {
         it.next();
         QString _cmd = it.value();
-        if( _cmd.size() <= 0 )
-        {
+        if(      _cmd.size() == 0
+            || ( _cmd.size() == 1 && ( _cmd.startsWith(QLatin1Char('1')) || _cmd.startsWith(QLatin1Char('0')) ) ) ) {
             qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (special) exit to %i.", id, it.key());
-            // If size is less than or equal to 0 then there is nothing to print!!!
             other.remove( it.key(), it.value() );
         }
-        else if( ! ( _cmd.startsWith('1') || _cmd.startsWith('0') ) )
-        {
+        else if( _cmd.size() > 1 && ! ( _cmd.startsWith(QLatin1Char('1')) || _cmd.startsWith(QLatin1Char('0')) ) ) {
+            // Old, prepatched special exit, without lock code
             QString _nc = it.value();
             int _nk = it.key();
             _nc.prepend('0');
-            // Old, prepatched special exit could not have a lock
             other.remove( it.key(), it.value() );
             other.insertMulti( _nk, _nc );
             qWarning("TRoom::auditExits() WARNING: roomID:%6i PATCHING invalid (special) exit to %i, was:%s now:%s.",
@@ -771,6 +1021,23 @@ void TRoom::auditExits()
                      _nk,
                      qPrintable(_cmd),
                      qPrintable(_nc));
+            if( mpRoomDB->mpTempAllSpecialEntrances ) {
+                // Will only be true, and needed for pre-version 17 format map files
+                mpRoomDB->mpTempAllSpecialEntrances->insert( _nk, qMakePair(_cmd, id ) );
+            }
+        }
+        else if( _cmd.size() >= 2 ) {
+            // Correctly formed special exit
+            if( mpRoomDB->mpTempAllSpecialEntrances ) {
+                mpRoomDB->mpTempAllSpecialEntrances->insert( it.key(), qMakePair(_cmd.mid(1), id ) );
+            }
+        }
+        else {
+            qWarning("TRoom::auditExits() WARNING: roomID:%6i UNEXPECTED {invalid?} (special) exit to %i, called:%s.",
+                     id,
+                     it.key(),
+                     qPrintable(it.value()));
+            Q_UNREACHABLE();
         }
     }
 }

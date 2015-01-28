@@ -174,80 +174,19 @@ void TArea::determineAreaExitsOfRoom( int id )
     }
 
     exits.remove(id);
-    int exitId = pR->getNorth();
-    // The second term in the ifs below looks for exit room id in TArea
-    // instance's own list of rooms which will fail (with a -1 if it is NOT in
-    // the list and hence the area.
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTH);
-        exits.insertMulti( id, p );
+    QSetIterator<QPair<quint8, quint64> > itNormalExitSet = pR->getNormalExits();
+    while( itNormalExitSet.hasNext() ) {
+        QPair<quint8, quint64> _exit = itNormalExitSet.next();
+        if( rooms.indexOf( _exit.second ) < 0 ) {
+            exits.insertMulti( id, qMakePair( _exit.second, _exit.first ) );
+        }
     }
-    exitId = pR->getNortheast();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHEAST);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getEast();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_EAST);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getSoutheast();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHEAST);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getSouth();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTH);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getSouthwest();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHWEST);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getWest();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_WEST);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getNorthwest();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHWEST);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getUp();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_UP);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getDown();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_DOWN);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getIn();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_IN);
-        exits.insertMulti( id, p );
-    }
-    exitId = pR->getOut();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-        QPair<int, int> p = QPair<int,int>(exitId, DIR_OUT);
-        exits.insertMulti( id, p );
-    }
-    const QMap<int, QString> otherMap = pR->getOtherMap();
-    QMapIterator<int,QString> it( otherMap );
-    while( it.hasNext() ) {
-        it.next();
-        int _exit = it.key();
-        TRoom * pO = mpRoomDB->getRoom(_exit);
-        if( pO ) {
-            if( pO->getArea() != getAreaID() ) {
-                QPair<int, int> p = QPair<int,int>(pO->getId(), DIR_OTHER);
-                exits.insertMulti( id, p );
-            }
+
+    QSetIterator<QPair<QString, quint64> > itSpecialExitSet = pR->getSpecialExits();
+    while( itSpecialExitSet.hasNext() ) {
+        QPair<QString, quint64> _exit = itSpecialExitSet.next();
+        if( rooms.indexOf( _exit.second ) < 0 ) {
+            exits.insertMulti( id, qMakePair( _exit.second, DIR_OTHER ) );
         }
     }
 }
@@ -256,87 +195,27 @@ void TArea::determineAreaExits()
 {
     exits.clear();
     for( int i=0; i<rooms.size(); i++ ) {
-        TRoom * pR = mpRoomDB->getRoom(rooms[i]);
+        TRoom * pR = mpRoomDB->getRoom(rooms.at(i));
         if( ! pR ) {
             continue;
         }
 
-        int id = pR->getId();
-        int exitId = pR->getNorth();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTH);
-            exits.insertMulti( id, p );
+        QSetIterator<QPair<quint8, quint64> > itNormalExitSet = pR->getNormalExits();
+        while( itNormalExitSet.hasNext() ) {
+            QPair<quint8, quint64> _exit = itNormalExitSet.next();
+            if( rooms.indexOf( _exit.second ) < 0 ) {
+                exits.insertMulti( rooms.at(i), qMakePair( _exit.second, _exit.first ) );
+            }
         }
-        exitId = pR->getNortheast();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHEAST);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getEast();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_EAST);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getSoutheast();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHEAST);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getSouth();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTH);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getSouthwest();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHWEST);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getWest();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_WEST);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getNorthwest();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHWEST);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getUp();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_UP);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getDown();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_DOWN);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getIn();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_IN);
-            exits.insertMulti( id, p );
-        }
-        exitId = pR->getOut();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
-            QPair<int, int> p = QPair<int,int>(exitId, DIR_OUT);
-            exits.insertMulti( id, p );
-        }
-        const QMap<int, QString> otherMap = pR->getOtherMap();
-        QMapIterator<int,QString> it( otherMap );
-        while( it.hasNext() ) {
-            it.next();
-            int _exit = it.key();
-            TRoom * pO = mpRoomDB->getRoom(_exit);
-            if( pO ) {
-                if( pO->getArea() != getAreaID() ) {
-                    QPair<int, int> p = QPair<int,int>(pO->getId(), DIR_OTHER);
-                    exits.insertMulti( id, p );
-                }
+
+        QSetIterator<QPair<QString, quint64> > itSpecialExitSet = pR->getSpecialExits();
+        while( itSpecialExitSet.hasNext() ) {
+            QPair<QString, quint64> _exit = itSpecialExitSet.next();
+            if( rooms.indexOf( _exit.second ) < 0 ) {
+                exits.insertMulti( rooms.at(i), qMakePair( _exit.second, DIR_OTHER ) );
             }
         }
     }
-    //qDebug()<<"exits:"<<exits.size();
 }
 
 void TArea::fast_calcSpan( int id )
@@ -522,7 +401,9 @@ void TArea::removeRoom( int room )
 //    TRoom * pR = mpRoomDB->getRoom( room );
     rooms.removeOne( room );
     exits.remove( room );
-    qDebug()<<"Area removal took"<<time.elapsed();
+//    qDebug()<<"Area removal took"<<time.elapsed(); // Is room not Area!
+//// FIXME: The following recalculations are probably required despite being
+//// commented out by another coder! - SlySven
 //    int x = pR->x;
 //    int y = pR->y*-1;
 //    int z = pR->z;

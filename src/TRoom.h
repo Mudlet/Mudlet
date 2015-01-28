@@ -59,7 +59,12 @@ public:
     void setId( int );
     bool setExit( int to, int direction );
     int getExit( int direction );
-    QHash<int, int> getExits();
+    QSet<QPair<quint8, quint64> > getNormalExits();
+    QSet<QPair<QString, quint64> > getSpecialExits();
+    QSet<QPair<quint8, quint64> > getNormalEntrances() const { return mNormalEntrances; }
+    QSet<QPair<QString, quint64> > getSpecialEntrances() const { return mSpecialEntrances; }
+    void setEntrance( QPair<quint8, quint64> );
+    void setEntrance( QPair<QString, quint64> );
     bool hasExit( int direction );
     void setWeight( int );
     void setExitLock( int, bool );
@@ -67,8 +72,7 @@ public:
     bool setSpecialExitLock(const QString& cmd, bool doLock );
     bool hasExitLock( int to );
     bool hasSpecialExitLock( int, const QString& );
-    void removeAllSpecialExitsToRoom(int _id );
-    void setSpecialExit( int to, const QString& cmd );
+    bool setSpecialExit( int, const QString& );
     void clearSpecialExits() { other.clear(); }
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
     const QMap<QString, int> & getExitWeights() const { return exitWeights; }
@@ -81,41 +85,29 @@ public:
     void calcRoomDimensions();
     bool setArea( int , bool isToDeferAreaRelatedRecalculations = false );
     int getExitWeight(const QString& cmd );
-
     int getWeight() { return weight; }
     int getNorth() { return north; }
-    void setNorth( int id ) { north=id; }
     int getNorthwest() { return northwest; }
-    void setNorthwest( int id ) { northwest=id; }
     int getNortheast() { return northeast; }
-    void setNortheast( int id ) { northeast=id; }
     int getSouth() { return south; }
-    void setSouth( int id ) { south=id; }
     int getSouthwest() { return southwest; }
-    void setSouthwest( int id ) { southwest=id; }
     int getSoutheast() { return southeast; }
-    void setSoutheast( int id ) { southeast=id; }
     int getWest() { return west; }
-    void setWest( int id ) { west=id; }
     int getEast() { return east; }
-    void setEast( int id ) { east=id; }
     int getUp() { return up; }
-    void setUp( int id ) { up=id; }
     int getDown() { return down; }
-    void setDown( int id ) { down=id; }
     int getIn() { return in; }
-    void setIn( int id ) { in=id; }
     int getOut() { return out; }
-    void setOut( int id ) { out=id; }
     int getId() { return id; }
     int getArea() { return area; }
     void auditExits();
-    /*bool*/ void restore( QDataStream & ifs, int roomID, int version );
+    /*bool*/ void restore( QDataStream & ifs, int version );
+
+
     int x;
     int y;
     int z;
     int environment;
-
     bool isLocked;
     qreal min_x;
     qreal min_y;
@@ -123,7 +115,7 @@ public:
     qreal max_y;
     qint8 c;
     QString name;
-    QVector3D v;
+//    QVector3D v;
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
@@ -140,6 +132,11 @@ public:
 
 
 private:
+    void setEntrance( int, quint8 );
+    void setEntrance( int, QString );
+    void resetEntrance( int, quint8 );
+    void resetEntrance( int, QString );
+
     int id;
     int area;
     int weight;
@@ -156,6 +153,25 @@ private:
     int down;
     int in;
     int out;
+// To add in the next map file format increment so we don't have to regenerate
+// them on loading:
+    QSet<QPair<quint8, quint64> > mNormalEntrances;
+// Normal exits that have THIS room as a destination
+// first is direction code from the OTHER room, but NOT DIR_OTHER, second is fromRoomId.
+    QSet<QPair<QString, quint64> > mSpecialEntrances;
+// Special exits that have THIS room as a destination
+// first is exit text from the OTHER room, second is fromRoomId.
+// Reason for separation for special from normal entrances:
+// using text for normal exits is language dependent would make code for normal
+// exits more complex (slower) than needs be - this is based on the assumption
+// that a MUD has many more normal than special exits.
+//
+// Actually the same concept could be done for:
+//    QHash<quint8, quint64> normalExits;
+//    QHash<QString, quint64> SpecialExits;
+// Where second is the toRoomId in both cases and the first is the normal exit
+// code or special exit name...
+
 
     // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
     QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
