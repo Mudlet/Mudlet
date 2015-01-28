@@ -87,6 +87,26 @@ TRoom::~TRoom()
 #endif
 }
 
+QString TRoom::dirToString( int direction )
+{
+    switch( direction ) {
+        case DIR_NORTH:     return qApp->translate( "TRoom", "north" );       break;
+        case DIR_NORTHEAST: return qApp->translate( "TRoom", "northeast" );   break;
+        case DIR_NORTHWEST: return qApp->translate( "TRoom", "northwest" );   break;
+        case DIR_EAST:      return qApp->translate( "TRoom", "east" );        break;
+        case DIR_WEST:      return qApp->translate( "TRoom", "west" );        break;
+        case DIR_SOUTH:     return qApp->translate( "TRoom", "south" );       break;
+        case DIR_SOUTHEAST: return qApp->translate( "TRoom", "southeast" );   break;
+        case DIR_SOUTHWEST: return qApp->translate( "TRoom", "southwest" );   break;
+        case DIR_UP:        return qApp->translate( "TRoom", "up" );          break;
+        case DIR_DOWN:      return qApp->translate( "TRoom", "down" );        break;
+        case DIR_IN:        return qApp->translate( "TRoom", "in" );          break;
+        case DIR_OUT:       return qApp->translate( "TRoom", "out" );         break;
+        case DIR_OTHER:     return qApp->translate( "TRoom", "other");        break;
+        default:            return qApp->translate( "TRoom", "invalid(%1)" ).arg(direction);
+    }
+}
+
 bool TRoom::hasExitStub(int direction)
 {
     if (exitStubs.contains(direction))

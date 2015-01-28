@@ -102,6 +102,8 @@ public:
     int getArea() { return area; }
     void auditExits();
     /*bool*/ void restore( QDataStream & ifs, int version );
+    QString dirToString( int );
+
 
 
     int x;

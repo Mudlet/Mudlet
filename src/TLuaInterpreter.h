@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -109,7 +109,7 @@ public:
     void clearCaptureGroups();
     bool callEventHandler(const QString & function, const TEvent & pE );
     static QString dirToString( lua_State *, int );
-    static int dirToNumber( lua_State *, int );
+    static int dirToNumber( lua_State *, int, QString );
 
 
     int startTempTimer( double, const QString & );
@@ -385,6 +385,8 @@ public:
     static int openWebPage( lua_State * L );
     static int getRoomUserDataKeys( lua_State * L );
     static int getAllRoomUserData( lua_State * L );
+    static int getAllRoomExits( lua_State * );
+    static int getAllRoomEntrances( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;
