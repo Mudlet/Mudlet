@@ -37,6 +37,11 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
+# Enable some timing reporting code - undef for release version, must touch:
+# TArea.cpp, TMap.cpp, TRoomDB.cpp (in, but unused in TRoom.cpp) when this is
+# added or removed from DEFINES - this is not in the CMake project file!
+DEFINES += DEBUG_TIMING
+
 QT += network opengl uitools multimedia
 
 # Leave the value of the following empty, line should be "BUILD =" without quotes

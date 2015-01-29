@@ -20,9 +20,6 @@
  ***************************************************************************/
 
 
-// Define for testing TRoomDB::deleteArea(...) and TRoomDB::deleteRooms(...)!
-#define DEBUG_TIMING
-
 #include "TRoomDB.h"
 
 #include "TArea.h"
@@ -31,7 +28,10 @@
 
 #include "pre_guard.h"
 #include <QApplication>
+#include <QDebug>
+#if defined(DEBUG_TIMING)
 #include <QElapsedTimer>
+#endif
 #include "post_guard.h"
 
 
@@ -200,7 +200,6 @@ bool TRoomDB::removeRoom( int id )
 void TRoomDB::removeRooms( QList<int> & ids )
 {
 #if defined(DEBUG_TIMING)
-    static bool isToShowTime = true; // Set to true within debugger to control the display of this
     QElapsedTimer timer;
     timer.start();
 #endif
@@ -215,24 +214,21 @@ void TRoomDB::removeRooms( QList<int> & ids )
     delete mpDeletionRooms;
     mpDeletionRooms = 0;
 #if defined(DEBUG_TIMING)
-    if( isToShowTime ) {
-        qint64 elapsed = timer.elapsed();
-        double elaspedTime = elapsed / 1000.0;
-        double unitTime = 0.0;
-        if(roomCount) {
-            unitTime = elapsed / (double)(roomCount);
-        }
-        // Can't get the printf format string character right to present
-        // meaningful data - so let's let Qt sort it out
-        qDebug()<<"TRoomDB::removeRooms(...) - (" << roomCount << ") Rooms destruction took" << elaspedTime << "seconds in total. This averages to" << unitTime << "milli-seconds per room.";
+    qint64 elapsed = timer.elapsed();
+    double elaspedTime = elapsed / 1000.0;
+    double unitTime = 0.0;
+    if(roomCount) {
+        unitTime = elapsed / (double)(roomCount);
     }
+    // Can't get the printf format string character right to present
+    // meaningful data - so let's let Qt sort it out
+    qDebug()<<"TRoomDB::removeRooms(...) - (" << roomCount << ") Rooms destruction took" << elaspedTime << "seconds in total. This averages to" << unitTime << "milli-seconds per room.";
 #endif
 }
 
 bool TRoomDB::removeArea( int id )
 {
 #if defined(DEBUG_TIMING)
-    static bool isToShowTime = true; // Set to true within debugger to control the display of this
     QElapsedTimer timer;
     timer.start();
 #endif
@@ -252,24 +248,20 @@ bool TRoomDB::removeArea( int id )
         areas.remove( id );
         mpMap->mMapGraphNeedsUpdate = true;
 #if defined(DEBUG_TIMING)
-        if( isToShowTime ) {
-            qint64 elapsed = timer.elapsed();
-            double elaspedTime = elapsed / 1000.0;
-            double unitTime = 0.0;
-            if(roomCount) {
-                unitTime = elapsed / (double)(roomCount);
-            }
-            // Can't get the printf format string character right to present
-            // meaningful data - so let's let Qt sort it out
-            qDebug()<<"TRoomDB::removeArea(" << id << ") - (" << roomCount << ") Rooms destruction took" << elaspedTime << "seconds in total. This averages to" << unitTime << "milli-seconds per room.";
+        qint64 elapsed = timer.elapsed();
+        double elaspedTime = elapsed / 1000.0;
+        double unitTime = 0.0;
+        if(roomCount) {
+            unitTime = elapsed / (double)(roomCount);
         }
+        // Can't get the printf format string character right to present
+        // meaningful data - so let's let Qt sort it out
+        qDebug()<<"TRoomDB::removeArea(" << id << ") - (" << roomCount << ") Rooms destruction took" << elaspedTime << "seconds in total. This averages to" << unitTime << "milli-seconds per room.";
 #endif
         return true;
     }
 #if defined(DEBUG_TIMING)
-        if( isToShowTime ) {
-            qDebug( "TRoomDB::removeArea(%i) - No area found to destroy.", id );
-        }
+    qDebug( "TRoomDB::removeArea(%i) - No area found to destroy.", id );
 #endif
     return false;
 }
@@ -295,8 +287,10 @@ int TRoomDB::getAreaID( TArea * pA )
 
 void TRoomDB::buildAreas()
 {
+#if defined(DEBUG_TIMING)
     QElapsedTimer _time;
     _time.start();
+#endif
     QHashIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
@@ -322,7 +316,9 @@ void TRoomDB::buildAreas()
            areas[id] = new TArea( mpMap, this );
        }
     }
+#if defined(DEBUG_TIMING)
     qDebug( "TRoomDB::buildAreas(): run time: %i milli-Seconds.", _time.elapsed());
+#endif
 }
 
 
@@ -436,8 +432,10 @@ QList<int> TRoomDB::getAreaIDList()
 
 void TRoomDB::auditRooms()
 {
+#if defined(DEBUG_TIMING)
     QElapsedTimer t;
     t.start();
+#endif
     bool ok = true;
     mpTempAllNormalEntrances = new QMultiHash<quint64, QPair<quint8, quint64> >;  // key is toRoomdId, value.first is direction code, value.second is fromRoomId
     mpTempAllSpecialEntrances = new QMultiHash<quint64, QPair<QString, quint64> >;// key is toRoomId, value.first is exit name, value.second is fromRoomId
@@ -475,7 +473,9 @@ void TRoomDB::auditRooms()
         delete mpTempAllNormalEntrances;
         delete mpTempAllSpecialEntrances;
     }
+#if defined(DEBUG_TIMING)
     qDebug( "TRoomDB::auditRooms() audit Rooms took: %i milli-Seconds.", t.elapsed() );
+#endif
 }
 
 void TRoomDB::initAreasForOldMaps()
