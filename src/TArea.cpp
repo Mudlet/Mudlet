@@ -29,7 +29,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDebug>
-#include <QTime>
+#include <QElapsedTimer>
 #include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
@@ -193,6 +193,9 @@ void TArea::determineAreaExitsOfRoom( int id )
 
 void TArea::determineAreaExits()
 {
+    QElapsedTimer _time; // Needed to time for wait cursor
+    bool isLongTime = false;
+    _time.start();
     exits.clear();
     for( int i=0; i<rooms.size(); i++ ) {
         TRoom * pR = mpRoomDB->getRoom(rooms.at(i));
@@ -202,6 +205,10 @@ void TArea::determineAreaExits()
 
         QSetIterator<QPair<quint8, quint64> > itNormalExitSet = pR->getNormalExits();
         while( itNormalExitSet.hasNext() ) {
+            if( (! isLongTime ) && _time.hasExpired(100) ) {
+                isLongTime = true;
+                qApp->setOverrideCursor( Qt::WaitCursor );
+            }
             QPair<quint8, quint64> _exit = itNormalExitSet.next();
             if( rooms.indexOf( _exit.second ) < 0 ) {
                 exits.insertMulti( rooms.at(i), qMakePair( _exit.second, _exit.first ) );
@@ -210,12 +217,23 @@ void TArea::determineAreaExits()
 
         QSetIterator<QPair<QString, quint64> > itSpecialExitSet = pR->getSpecialExits();
         while( itSpecialExitSet.hasNext() ) {
+            if( (! isLongTime ) && _time.hasExpired(100) ) {
+                isLongTime = true;
+                qApp->setOverrideCursor( Qt::WaitCursor );
+            }
             QPair<QString, quint64> _exit = itSpecialExitSet.next();
             if( rooms.indexOf( _exit.second ) < 0 ) {
                 exits.insertMulti( rooms.at(i), qMakePair( _exit.second, DIR_OTHER ) );
             }
         }
     }
+    if( isLongTime ) {
+        qApp->restoreOverrideCursor();
+        isLongTime = false;
+    }
+#if defined(DEBUG_TIMING)
+    qDebug( "TArea::determineAreaExits() Area Id: %i, run time (%i rooms): %i milli-Seconds.", mpRoomDB->getAreaID(this), rooms.size(), _time.elapsed() );
+#endif
 }
 
 void TArea::fast_calcSpan( int id )
@@ -257,6 +275,10 @@ void TArea::addRoom( int id )
 
 void TArea::calcSpan()
 {
+    QElapsedTimer _time; // Needed to time for wait cursor
+    bool isLongTime = false;
+    _time.start();
+
     xminEbene.clear();
     yminEbene.clear();
     zminEbene.clear();
@@ -278,6 +300,10 @@ void TArea::calcSpan()
 
     for( int i=0; i<rooms.size(); i++ )
     {
+        if( (! isLongTime ) && _time.hasExpired(100) ) {
+            isLongTime = true;
+            qApp->setOverrideCursor( Qt::WaitCursor );
+        }
         int id = rooms[i];
         TRoom * pR = mpRoomDB->getRoom( id );
         if( !pR ) continue;
@@ -316,6 +342,10 @@ void TArea::calcSpan()
 
     for( int k=0; k<ebenen.size(); k++ )
     {
+        if( (! isLongTime ) && _time.hasExpired(100) ) {
+            isLongTime = true;
+            qApp->setOverrideCursor( Qt::WaitCursor );
+        }
         // For each of the (used) z-axis values that has been put into the list "ebenen"
         int _min_x;
         int _min_y;
@@ -392,12 +422,19 @@ void TArea::calcSpan()
             zmaxEbene[ebenen[k]] = _max_z;
         }
     }
+    if( isLongTime ) {
+        qApp->restoreOverrideCursor();
+        isLongTime = false;
+    }
+#if defined(DEBUG_TIMING)
+    qDebug( "TArea::calcSpan() Area Id: %i, run time (%i rooms): %i milli-Seconds.", mpRoomDB->getAreaID(this), rooms.size(), _time.elapsed() );
+#endif
 }
 
 void TArea::removeRoom( int room )
 {
-    QTime time;
-    time.start();
+//    QTime time;
+//    time.start();
 //    TRoom * pR = mpRoomDB->getRoom( room );
     rooms.removeOne( room );
     exits.remove( room );

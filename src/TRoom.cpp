@@ -20,10 +20,10 @@
  ***************************************************************************/
 
 
-// Define for testing deletion of rooms - NOT RECOMMENDED as the time to display
-// the individual room timing must slow the process down - enable and use the
-// averaging code in T2DMap::slot_deleteRoom() and TRoomDB::removeArea() instead!
-// #define DEBUG_TIMING
+// Define for testing deletion of rooms - NOT RECOMMENDED HERE as the time to
+// display the individual room timing must slow the process down - enable and
+// use the averaging code in other classes instead!
+#undef DEBUG_TIMING
 
 #include "TRoom.h"
 
@@ -78,15 +78,12 @@ TRoom::TRoom(TRoomDB * pRDB)
 TRoom::~TRoom()
 {
 #if defined(DEBUG_TIMING)
-    static bool isToShowTime= false; // Set to true within debugger to control the display of this - may slow down code anyhow
-    QTime timer;
+    QElapsedTimer timer;
     timer.start();
 #endif
     mpRoomDB->__removeRoom( id );
 #if defined(DEBUG_TIMING)
-    if( isToShowTime ) {
-        qDebug( "TRoom::~TRoom() - Room (%i) destruction took: %i milli-seconds.", id, timer.elapsed() );
-    }
+    qDebug( "TRoom::~TRoom() - Room (%i) destruction took: %i milli-seconds.", id, timer.elapsed() );
 #endif
 }
 

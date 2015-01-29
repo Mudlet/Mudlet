@@ -32,8 +32,12 @@
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QDebug>
 #include <QDir>
+#if defined(DEBUG_TIMING)
+#include <QElapsedTimer>
+#endif
 #include <QFileDialog>
 #include <QMainWindow>
 #include <QMessageBox>
@@ -298,8 +302,10 @@ bool TMap::setExit( int from, int to, int dir )
 void TMap::init( Host * pH )
 {
     // init areas
-    QTime _time;
+#if defined(DEBUG_TIMING)
+    QElapsedTimer _time;
     _time.start();
+#endif
 
     if( version < 14 ) {
         mpRoomDB->initAreasForOldMaps();
@@ -316,7 +322,13 @@ void TMap::init( Host * pH )
             itArea.value()->calcSpan();
         }
     }
+#if defined(DEBUG_TIMING)
+    qDebug( "TMap::init() Initialize (part one) run time: %i milli-Seconds.", _time.elapsed() );
+#endif
     mpRoomDB->auditRooms();
+#if defined(DEBUG_TIMING)
+    _time.restart();
+#endif
 
     if( version <16 ) {
         // convert old style labels, wasn't made version conditional in past but
@@ -354,7 +366,9 @@ void TMap::init( Host * pH )
             }
         }
     }
-    qDebug( "TMap::init() Initialize run time: %i milli-Seconds.", _time.elapsed() );
+#if defined(DEBUG_TIMING)
+    qDebug( "TMap::init() Initialize (part two) run time: %i milli-Seconds.", _time.elapsed() );
+#endif
 }
 
 void TMap::setView(float x, float y, float z, float zoom )
