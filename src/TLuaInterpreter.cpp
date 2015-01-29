@@ -238,45 +238,76 @@ QString TLuaInterpreter::dirToString( lua_State * L, int position )
     return 0;
 }
 
-int TLuaInterpreter::dirToNumber( lua_State * L, int position )
+// Returns >0 direction code if recognised from string or number input
+// Returns 0 if the input was of the right type but wrong value, caller should
+//    return a nil plus the error message this puts on the stack.
+// Returns -1 if the input was of the wrong type, caller should throw a
+//    lua_error using the error message this put on the stack
+int TLuaInterpreter::dirToNumber( lua_State * L, int position, QString caller )
 {
-    QString dir;
-    int dirNum;
-    if ( lua_isstring( L, position ) )
-    {
-        dir = lua_tostring( L, position );
-        dir = dir.toLower();
-        if ( dir == "n" || dir == "north" )
-            return 1;
-        if ( dir == "ne" || dir == "northeast" )
-            return 2;
-        if ( dir == "nw" || dir == "northwest" )
-            return 3;
-        if ( dir == "e" || dir == "east" )
-            return 4;
-        if ( dir == "w" || dir == "west" )
-            return 5;
-        if ( dir == "s" || dir == "south" )
-            return 6;
-        if ( dir == "se" || dir == "southeast" )
-            return 7;
-        if ( dir == "sw" || dir == "southwest" )
-            return 8;
-        if ( dir == "u" || dir == "up" )
-            return 9;
-        if ( dir == "d" || dir == "down" )
-            return 10;
-        if ( dir == "in" )
-            return 11;
-        if ( dir == "out" )
-            return 12;
+    if( lua_isnumber( L, position ) ) {
+        int dirNum = lua_tonumber( L, position );
+        if( dirNum < 1 || dirNum > 12 ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "%1: bad argument #%2 value (normal direction as a code should be one of 1=N,2=NE,3=NW,4=E,5=W,6=S,7=SE,8=SW,9=U,10=D,11=I,12=O, got %3!)" )
+                            .arg( caller ).arg( position ).arg( dirNum ).toUtf8().constData() );
+            return 0;
+        }
+        else {
+            return dirNum;
+        }
     }
-    if ( lua_isnumber( L, position ) )
-    {
-        dirNum = lua_tonumber( L, position );
-        return ( dirNum >= 1 && dirNum <= 12 ? dirNum : 0);
+    else if( lua_isstring( L, position ) ) {
+        // Can't do this first as a number can ALWAYS be coerced to a string in Lua
+        QString dir = QString::fromUtf8( lua_tostring( L, position ) ).toLower();
+        if( dir == tr( "n" ) || dir == tr( "north" ) ) {
+            return DIR_NORTH;
+        }
+        else if( dir == tr( "ne" ) || dir == tr( "northeast" ) ) {
+            return DIR_NORTHEAST;
+        }
+        else if( dir == tr( "nw" ) || dir == tr( "northwest" ) ) {
+            return DIR_NORTHWEST;
+        }
+        else if( dir == tr( "e" ) || dir == tr( "east" ) ) {
+            return DIR_EAST;
+        }
+        else if( dir == tr( "w" ) || dir == tr( "west" ) ) {
+            return DIR_WEST;
+        }
+        else if( dir == tr( "s" ) || dir == tr( "south" ) ) {
+            return DIR_SOUTH;
+        }
+        else if( dir == tr( "se" ) || dir == tr( "southeast" ) ) {
+            return DIR_SOUTHEAST;
+        }
+        else if( dir == tr( "sw" ) || dir == tr( "southwest" ) ) {
+            return DIR_SOUTHWEST;
+        }
+        else if( dir == tr( "u" ) || dir == tr( "up" ) ) {
+            return DIR_UP;
+        }
+        else if( dir == tr( "d" ) || dir == tr( "down" ) ) {
+            return DIR_DOWN;
+        }
+        else if( dir == tr( "i" ) || dir == tr( "in" ) ) {
+            return DIR_IN;
+        }
+        else if( dir == tr( "o" ) || dir == tr( "out" ) ) {
+            return DIR_OUT;
+        }
+        else {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "%1: bad argument #%2 value (normal direction as a string should be {unhyphenated for diagonals} words or initials, got %3!)" )
+                            .arg( caller ).arg( position ).arg( dir ).toUtf8().constData() );
+            return 0;
+        }
     }
-    return 0;
+    else {
+        lua_pushstring( L, tr( "%1: bad argument #%2 type (normal direction as a string or coded number expected, got %3!)" )
+                        .arg( caller ).arg( position ).arg( luaL_typename( L, position ) ).toUtf8().constData() );
+        return -1;
+    }
 }
 
 int TLuaInterpreter::denyCurrentSend( lua_State * L )
@@ -1672,140 +1703,177 @@ int TLuaInterpreter::saveMap( lua_State * L )
     return 1;
 }
 
-int TLuaInterpreter::setExitStub( lua_State * L  ){
+int TLuaInterpreter::setExitStub( lua_State * L  )
+{
     //args:room id, direction (as given by the #define direction table), status
-    int roomId, dirType;
-    bool status;
-    if (!lua_isnumber(L,1))
-    {
-        lua_pushstring( L, "setExitStub: Need a room number as first argument" );
+    int roomId;
+    int direction;
+    bool isToHaveStub;
+
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setExitStub: bad argument #1 type (from room Id as number expected, got %1!)" ).arg( luaL_typename( L, 1)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-    {
-        roomId = lua_tonumber(L,1);
+    else {
+        roomId = lua_tonumber( L, 1);
     }
-    dirType = dirToNumber( L, 2 );
-    if ( ! dirType )
-    {
-        lua_pushstring( L, "setExitStub: Need a dir number as 2nd argument" );
+
+    direction = dirToNumber( L, 2, QStringLiteral( "setExitStub" ) );
+    if( ! direction ) {
+        return 1; // The nil and warning message have already been put onto lua stack
+    }
+    else if( direction < 0 ) {
+        lua_error( L ); // The error message has already been put onto lua stack
+        return 1;
+    }
+
+    if( ! lua_isboolean( L, 3 ) ) {
+        lua_pushstring( L, tr( "setExitStub: bad argument #3 type (stub state as boolean expected, got %1!)" ).arg( luaL_typename( L, 3)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    if (!lua_isboolean(L,3))
-    {
-        lua_pushstring( L, "setExitStub: Need a true/false for third argument" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        status = lua_toboolean(L,3);
+    else {
+        isToHaveStub = lua_toboolean( L, 3 );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( !pHost->mpMap ) return 0;
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    if( !pR )
-    {
-        lua_pushstring( L, "setExitStub: RoomId doesn't exist" );
-        lua_error( L );
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setExitStub: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setExitStub: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setExitStub: bad argument #1 value (number %1 is not a valid room Id)." )
+                            .arg(roomId).toUtf8().constData() );
+            return 2;
+        }
+        int checkToRoom = pR->getExit( direction );
+        if( checkToRoom != -1 ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setExitStub: bad argument #2 value (there is already a real exit from room in %1 direction {to room with Id %2})." )
+                            .arg( pR->dirToString( direction ) ).arg( checkToRoom ).toUtf8().constData() );
+            return 2;
+        }
+        pR->setExitStub( direction, isToHaveStub );
+        lua_pushboolean( L, true );
         return 1;
     }
-    if(dirType>10 || dirType < 1)
-    {
-        lua_pushstring( L, "setExitStub: dirType must be between 1 and 10" );
-        lua_error( L );
-        return 1;
-    }
-    pR->setExitStub(dirType, status);
-    return 0;
 }
 
-int TLuaInterpreter::connectExitStub( lua_State * L  ){
+int TLuaInterpreter::connectExitStub( lua_State * L  )
+{
     //takes exit stubs from the selected room, finds the room in that direction and if
     //that room has a stub, a two way exit is formed
     //args:room id, direction
-    //OR if 3 arguments, takes first argument as from room, 2nd at to room, 3rd as direction
+    //OR if 3 arguments, takes first argument as from room, 2nd as to room, 3rd as direction
     //from start room to end room
-    int roomId;
-    int toRoom;
-    int dirType;
-    int roomsGiven = 0;
-    if ( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "connectExitStub: Need a room number as first argument" );
+    int fromRoomId;
+    int toRoomId;
+    int direction;
+    bool isToRoomGiven = ( lua_gettop( L ) > 2 );
+
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "connectExitStub: bad argument #1 type (from room Id as number expected, got %1!)" ).arg( luaL_typename( L, 1)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-        roomId = lua_tonumber( L, 1);
-    dirType = dirToNumber( L, 2 );
-    if ( ! dirType )
-    {
-        lua_pushstring( L, "connectExitStub: Need a direction number (or room id) as 2nd argument" );
-        lua_error( L );
-        return 1;
+    else {
+        fromRoomId = lua_tonumber( L, 1);
     }
-    if ( ! lua_isnumber( L, 3 ) && ! lua_isstring( L, 3) )
-    {
-        roomsGiven = 0;
-    }
-    else
-    {
-        roomsGiven = 1;
-        toRoom = lua_tonumber(L,2);
-        dirType = dirToNumber( L, 3 );
-        if( ! dirType )
-        {
-            lua_pushstring( L, "connectExitStub: Invalid direction entered.");
+
+    if( isToRoomGiven ) {
+        if( ! lua_isnumber( L, 2 ) ) {
+            lua_pushstring( L, tr( "connectExitStub: bad argument #2 type (to room Id as number, optional, got %1!)" ).arg( luaL_typename( L, 2)).toUtf8().constData() ) ;
             lua_error( L );
             return 1;
         }
+        else {
+            toRoomId = lua_tonumber( L, 2 );
+        }
+        direction = dirToNumber( L, 3, QStringLiteral( "connectExitStub" ) );
     }
+    else {
+        direction = dirToNumber( L, 2, QStringLiteral( "connectExitStub" ) );
+    }
+
+    if( ! direction ) {
+        return 1; // The nil and warning message have already been put onto lua stack
+    }
+    else if( direction < 0 ) {
+        lua_error( L );
+        return 1; // The error message has already been put onto lua stack
+    }
+    else {
+        fromRoomId = lua_tonumber( L, 1);
+    }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( !pHost->mpMap ) return 0;
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    if( ! pR )
-    {
-        lua_pushstring( L, "connectExitStub: RoomId doesn't exist" );
-        lua_error( L );
-        return 1;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "connectExitStub: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
     }
-    if( ! pR->exitStubs.contains( dirType ) )
-    {
-        lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
-        lua_error( L );
-        return 1;
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "connectExitStub: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
     }
-    if ( roomsGiven )
-    {
-        TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
-        if ( ! pR_to )
-        {
-            lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
-            lua_error( L );
-            return 1;
+    else {
+        TRoom * pR_from = pHost->mpMap->mpRoomDB->getRoom(fromRoomId);
+        TRoom * pR_to = 0;
+        if( ! pR_from ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "connectExitStub: bad argument #1 value (number %1 is not a valid from room Id)." )
+                            .arg(fromRoomId).toUtf8().constData() );
+            return 2;
         }
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        lua_pushboolean(L, pHost->mpMap->setExit( roomId, toRoom, dirType ) );
-    }
-    else
-    {
-        if ( ! pR->exitStubs.contains( dirType ) )
-        {
-            lua_pushstring( L, "connectExitStubs: ExitStub doesn't exist" );
-            lua_error( L );
-            return 1;
+        if( isToRoomGiven ) {
+            pR_to = pHost->mpMap->mpRoomDB->getRoom(toRoomId);
+            if( ! pR_from ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "connectExitStub: bad argument #2 value (number %1 is not a valid to room Id)." )
+                                .arg(toRoomId).toUtf8().constData() );
+                return 2;
+            }
         }
-        pHost->mpMap->connectExitStub( roomId, dirType );
+        int checkToRoom = pR_from->getExit( direction );
+        if( checkToRoom != -1 ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "connectExitStub: bad argument #%1 value (there is already a real exit from room in %2 direction {to room with Id %3}})." )
+                            .arg( isToRoomGiven ? 3 : 2 ).arg( pR_from->dirToString( direction ) ).arg( checkToRoom ).toUtf8().constData() );
+            return 2;
+        }
+        if( ! pR_from->exitStubs.contains( direction ) ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "connectExitStub: bad argument #%1 value (no exit stub from room in %2 direction )." )
+                            .arg( isToRoomGiven ? 3 : 2 ).arg( pR_from->dirToString( direction ) ).toUtf8().constData() );
+            return 2;
+        }
+        if( isToRoomGiven ) {
+            bool ret = pHost->mpMap->setExit( direction, toRoomId, direction );
+            lua_pushboolean( L, ret );
+            //pHost->mpMap->rooms[fromRoomId]->setExitStub(direction, false);
+            //setExit( toRoomId, fromRoomId, pHost->mpMap->reverseDirections[direction]);
+            //pHost->mpMap->rooms[toRoomId]->setExitStub(pHost->mpMap->reverseDirections[direction], false);
+            pHost->mpMap->mMapGraphNeedsUpdate = ret;
+        }
+        else {
+            pHost->mpMap->connectExitStub( fromRoomId, direction );
 // Nothing has yet been put onto stack for a LUA return value in this case,
-// and it should always be possible to add a stub exit, so provide a true value :
-        lua_pushboolean(L, true );
+// and it should always be possible to add a stub exit, so provide a true value:
+            lua_pushboolean(L, true );
+        }
+        return 1;
     }
-    pHost->mpMap->mMapGraphNeedsUpdate = true;
-    return 1;
 }
 
 int TLuaInterpreter::getExitStubs( lua_State * L  ){
@@ -3588,46 +3656,62 @@ int TLuaInterpreter::lockRoom( lua_State *L )
 
 int TLuaInterpreter::lockExit( lua_State *L )
 {
-    bool b = true;
-    int id;
-    int dir;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "lockExit: wrong argument type" );
+    bool isToBeLocked=false;
+    int roomId;
+    int direction;
+
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "lockExit: bad argument #1 type (room Id as number expected, got %1!)" ).arg( luaL_typename( L, 1)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-    {
-        id = lua_tonumber( L, 1 );
+    else {
+        roomId = lua_tonumber( L, 1);
     }
 
-    dir = dirToNumber( L, 2 );
-    if( ! dir )
-    {
-        lua_pushstring( L, "lockExit: wrong argument type" );
+    direction = dirToNumber( L, 2, QStringLiteral( "lockExit" ) );
+    if( ! direction ) {
+        return 1; // The nil and warning message have already been put onto lua stack
+    }
+    else if( direction < 0 ) {
         lua_error( L );
-        return 1;
+        return 1; // The error message has already been put onto lua stack
     }
 
-    if( ! lua_isboolean( L, 3 ) )
-    {
-        lua_pushstring( L, "lockRoom: wrong argument type" );
+    if( ! lua_isboolean( L, 3 ) ) {
+        lua_pushstring( L, tr( "lockExit: bad argument #3 type (lock state as boolean expected, got %1!)" ).arg( luaL_typename( L, 3)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-    {
-        b = lua_toboolean( L, 3 );
+    else {
+        isToBeLocked = lua_toboolean( L, 3 );
     }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
-    if( pR )
-    {
-        pR->setExitLock( dir, b );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "lockExit: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
     }
-    return 0;
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "lockExit: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "lockExit: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+            return 2;
+        }
+        else {
+            pR->setExitLock( direction, isToBeLocked );
+            pHost->mpMap->mMapGraphNeedsUpdate = true;
+            lua_pushboolean( L, true );
+            return 1;
+        }
+    }
 }
 
 int TLuaInterpreter::lockSpecialExit( lua_State *L )
@@ -3738,35 +3822,56 @@ int TLuaInterpreter::hasSpecialExitLock( lua_State *L )
 
 int TLuaInterpreter::hasExitLock( lua_State *L )
 {
-    int id;
-    int dir;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "lockExit: wrong argument type" );
+    int roomId;
+    int direction;
+
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "hasExitLock: bad argument #1 type (room Id as number expected, got %1!)" ).arg( luaL_typename( L, 1)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-    {
-        id = lua_tonumber( L, 1 );
+    else {
+        roomId = lua_tonumber( L, 1);
     }
 
-    dir = dirToNumber( L, 2 );
-    if( ! dir )
-    {
-        lua_pushstring( L, "lockExit: wrong argument type" );
+    direction = dirToNumber( L, 2, QStringLiteral( "hasExitLock" ) );
+    if( ! direction ) {
+        return 1; // The nil and warning message have already been put onto lua stack
+    }
+    else if( direction < 0 ) {
         lua_error( L );
-        return 1;
+        return 1; // The error message has already been put onto lua stack
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
-    if( pR )
-    {
-        lua_pushboolean( L, pR->hasExitLock(dir) );
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "hasExitLock: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "hasExitLock: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "hasExitLock: bad argument #1 value (number %1 is not a valid room Id)." )
+                            .arg(roomId).toUtf8().constData() );
+            return 2;
+        }
+        int checkToRoom = pR->getExit( direction );
+        if( checkToRoom == -1 ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "hasExitLock: bad argument #2 value (there is not a real exit from room in %1 direction)." )
+                            .arg( pR->dirToString( direction ) ).toUtf8().constData() );
+            return 2;
+        }
+        lua_pushboolean( L, pR->hasExitLock( direction ) );
         return 1;
     }
-    return 0;
 }
 
 int TLuaInterpreter::isLockedRoom( lua_State *L )
@@ -3894,16 +3999,153 @@ int TLuaInterpreter::getRoomExits( lua_State *L )
         return 0;
 }
 
-// EITHER searchRoom( roomId ):
-// Returns the room name for the given roomId number, or errors out if no such
-// room exists.
-// OR searchRoom( roomName ):
-// Original implimentation did a case insensitive and matched on only part
-// of the room name if a string is supplied as the argument.  Returns a table
-// of room Ids with the matching room name for each room Id.
-// NOW Enhanced in a compatible matter with two further optional boolean arguments:
-// searchRoom( roomName, < caseSensitive < , exact match > > )
-// which both default to false if omitted to reproduce the original action.
+// Give a room Id number returns a table with keys of room Id numbers that have
+// exits that enter the given room (even one way routes) each key has a (sorted)
+// list of the exit "name/direction" that if used in the room with the Id of
+// that key's will (ignoring the effect of doors or locks) goto to the original
+// room.  "Normal" exits are given by the full-word lowercase, unhypenated, but
+// possibly translated form, "Special" exits are given by the name/command.
+// Note: this command was given a name including "All" because it merges normal
+// and special routes and so that the complementary command - which was not
+// previously present - could be called getAllRoomExits().  In comparision with
+// that function though this uses the rooms on the other end of the route as the
+// key for structural reason {it seems sensible to group all the entrances to
+// this room from another one together}.
+int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
+{
+    int roomId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename(L, 1)).toUtf8().constData());
+        lua_error( L );
+    }
+    else {
+        roomId = lua_tonumber( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomEntrances: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomEntrances: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+            return 2;
+        }
+        lua_newtable(L);
+        QList<QPair<quint8, quint64> > normalEntrancesList = pR->getNormalEntrances().toList();
+        QList<QPair<QString, quint64> > specialEntrancesList = pR->getSpecialEntrances().toList();
+        // We need to sort results so we can merge them, sorted by the second
+        // value then the first - the easiest way is to build a QMultiMap,
+        // note that despite entering the keys in a sorted manner, Lua does not
+        // preserve that order!
+        QMultiMap<quint64, QString> mergedEntrancesMap;
+        QSet<quint64> fromRoomsKeySet;
+        for( uint i = 0; i < normalEntrancesList.size(); i++ ) {
+            fromRoomsKeySet.insert( normalEntrancesList.at( i ).second );
+            mergedEntrancesMap.insert( normalEntrancesList.at( i ).second, pR->dirToString( normalEntrancesList.at( i ).first ) );
+            if( normalEntrancesList.at( i ).first < DIR_NORTH || normalEntrancesList.at( i ).first > DIR_OUT ) {
+                qWarning("TLuaInterpreter::getAllRoomEntrances() Warning: unhandled entrance code %1 found for entrance to room %2 from room %3.",
+                         normalEntrancesList.at( i ).first, roomId, normalEntrancesList.at( i ).second );
+            }
+        }
+        for( uint i = 0; i < specialEntrancesList.size(); i++ ) {
+            fromRoomsKeySet.insert( specialEntrancesList.at( i ).second );
+            mergedEntrancesMap.insert( specialEntrancesList.at( i ).second, specialEntrancesList.at( i ).first );
+        }
+        QList<quint64> fromRoomsKeyList = fromRoomsKeySet.toList();
+        if( fromRoomsKeyList.size() > 1 ) {
+            std::sort( fromRoomsKeyList.begin(), fromRoomsKeyList.end() );
+        }
+        for( uint i=0; i<fromRoomsKeyList.size(); i++ ) {
+            lua_pushnumber( L, fromRoomsKeyList.at(i) );
+            lua_newtable(L);
+            QList<QString> entranceDir = mergedEntrancesMap.values(fromRoomsKeyList.at(i));
+            if( entranceDir.size() > 1 ) {
+                std::sort( entranceDir.begin(), entranceDir.end() );
+            }
+            for( int j=0; j<entranceDir.size(); j++ ) {
+                lua_pushnumber( L, j+1 );
+                lua_pushstring( L, entranceDir.at(j).toUtf8().constData() );
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+        return 1;
+    }
+}
+
+int TLuaInterpreter::getAllRoomExits( lua_State *L )
+{
+    int roomId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getAllRoomExits: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename(L, 1)).toUtf8().constData());
+        lua_error( L );
+    }
+    else {
+        roomId = lua_tonumber( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomExits: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomExits: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getAllRoomExits: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+            return 2;
+        }
+        lua_newtable(L);
+        QList<QPair<quint8, quint64> > normalExitsList = pR->getNormalExits().toList();
+        QList<QPair<QString, quint64> > specialExitsList = pR->getSpecialExits().toList();
+        QMap<QString, quint64> mergedExitsMap;
+        for( uint i = 0; i < normalExitsList.size(); i++ ) {
+            mergedExitsMap.insert( pR->dirToString( normalExitsList.at( i ).first ), normalExitsList.at( i ).second );
+            if( normalExitsList.at( i ).first < DIR_NORTH || normalExitsList.at( i ).first > DIR_OUT ) {
+                qWarning("TLuaInterpreter::getAllRoomExits() Warning: unhandled exit code %1 found for exit to room %2 from room %3.",
+                         normalExitsList.at( i ).first, roomId, normalExitsList.at( i ).second );
+            }
+        }
+        for( uint i = 0; i < specialExitsList.size(); i++ ) {
+            if( mergedExitsMap.contains( specialExitsList.at( i ).first ) ) {
+                // Oh dear, a special exit has the same name as a normal one
+                // - that might be a problem in some cases but later duplicate
+                // values will just overwrite preceeding ones...
+                qWarning("TLuaInterpreter::getAllRoomExits() Warning: name clash \"%s\" between a special exit and either a normal one expressed as words or another special exit.",
+                         specialExitsList.at( i ).first.toUtf8().constData() );
+            }
+            mergedExitsMap.insert( specialExitsList.at( i ).first, specialExitsList.at( i ).second );
+        }
+        QList<QString> directionsList = mergedExitsMap.keys();
+        if( directionsList.size() > 1 ) {
+            std::sort( directionsList.begin(), directionsList.end() ); // Probably pointless and ineffective but might help when debugging
+        }
+        for( uint i=0; i<directionsList.size(); i++ ) {
+            lua_pushstring( L, directionsList.at(i).toUtf8().constData() );
+            lua_pushnumber( L, mergedExitsMap.value( directionsList.at(i) ) );
+            lua_settable(L, -3);
+        }
+        return 1;
+    }
+}
+
 int TLuaInterpreter::searchRoom( lua_State *L )
 {
     int room_id = 0;
@@ -4181,7 +4423,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     int n = lua_gettop( L );
     bool isFullDataRequired = false;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr("getAreaExits: bad argument #1 type (area Id, as number expected, got %1).").arg( luaL_typename(L, 1)).toUtf8().constData());
+        lua_pushstring( L, tr( "getAreaExits: bad argument #1 type (area Id, as number expected, got %1)." ).arg( luaL_typename(L, 1) ).toUtf8().constData());
         lua_error( L );
     }
     else {
@@ -6854,61 +7096,112 @@ int TLuaInterpreter::deleteRoom( lua_State *L )
 {
     int id;
 
-    if( lua_isnumber( L, 1 ) )
-    {
-        id = lua_tonumber( L, 1 );
-        if( id <= 0 ) return 0;
-    }
-    else
-    {
-        lua_pushstring( L, "deleteRoom: wrong argument type" );
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "deleteRoom: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
+    else {
+        id = lua_tointeger( L, 1 );
+    }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeRoom( id ) );
-    return 1;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "deleteRoom: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "deleteRoom: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( id <= 0 ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "deleteRoom: bad argument #1 value (room Id must be > 0, got %1!)" ).arg(id).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "deleteRoom: bad argument #1 value (room Id %1 does not exist!)" ).arg(id).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeRoom( id ) );
+        return 1;
+    }
 }
 
 
 int TLuaInterpreter::setExit( lua_State *L )
 {
-    int from, to;
-    int dir;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "setExit: wrong argument type" );
+    int fromRoomId;
+    int toRoomId;
+    int direction;
+
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setExit: bad argument #1 type (from room Id as number expected, got %1!)" ).arg( luaL_typename( L, 1)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-    {
-        from = lua_tointeger( L, 1 );
+    else {
+        fromRoomId = lua_tonumber( L, 1);
     }
 
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "setExit: wrong argument type" );
+    if( ! lua_isnumber( L, 2 ) ) {
+        lua_pushstring( L, tr( "setExit: bad argument #2 type (to room Id as number expected, got %1!)" ).arg( luaL_typename( L, 2)).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
-    else
-    {
-        to = lua_tointeger( L, 2 );
+    else {
+        toRoomId = lua_tonumber( L, 2 );
     }
-    dir = dirToNumber( L, 3 );
-    if( ! dir )
-    {
-        lua_pushstring( L, "setExit: wrong argument type" );
+
+    direction = dirToNumber( L, 3, QStringLiteral( "setExit" ) );
+    if( ! direction ) {
+        return 1; // The nil and warning message have already been put onto lua stack
+    }
+    else if( direction < 0 ) {
         lua_error( L );
-        return 1;
+        return 1; // The error message has already been put onto lua stack
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean(L, pHost->mpMap->setExit( from, to, dir ) );
-    pHost->mpMap->mMapGraphNeedsUpdate = true;
-    return 1;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setExit: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setExit: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR_from = pHost->mpMap->mpRoomDB->getRoom(fromRoomId);
+        if( ! pR_from ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setExit: bad argument #1 value (number %1 is not a valid from room Id)." )
+                            .arg(fromRoomId).toUtf8().constData() );
+            return 2;
+        }
+        if( toRoomId > 0 ) {
+            TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom(toRoomId);
+            if( ! pR_to ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setExit: bad argument #2 value (number %1 is not a valid to room Id)." )
+                                .arg(toRoomId).toUtf8().constData() );
+                return 2;
+            }
+        }
+        else {
+            toRoomId = -1;
+        }
+
+        lua_pushboolean( L, pHost->mpMap->setExit( fromRoomId, toRoomId, direction ) );
+        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        return 1;
+    }
 }
 
 int TLuaInterpreter::getRoomCoordinates( lua_State * L )
@@ -11412,6 +11705,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
     lua_register( pGlobalLua, "getRoomUserDataKeys", TLuaInterpreter::getRoomUserDataKeys );
     lua_register( pGlobalLua, "getAllRoomUserData", TLuaInterpreter::getAllRoomUserData );
+    lua_register( pGlobalLua, "getAllRoomExits", TLuaInterpreter::getAllRoomExits);
+    lua_register( pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances);
 
 
 

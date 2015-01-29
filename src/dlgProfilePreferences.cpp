@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -169,6 +170,48 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     need_reconnect_for_specialoption->hide();
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+
+/* DEBUGCONTROLS 0 - Insert debug variable controls
+ * they go into groupbox_debug and are initalised from variables in THost.cpp
+ * (per profile) or mudlet.cpp (application wide).  The controls are to be
+ * connected to corresponding slots to adjust those variables via "slot_"'s
+ * in the appropriate one of those files.
+ *
+ * Use a QHBoxLayout for each control or group of controls and add that layout
+ * into "verticalLayout_debug" - which is on the last tab of the
+ * profile_preference dialog.
+ */
+    QHBoxLayout * horizontalLayout_mapFormatToBeDownVersioned = new QHBoxLayout( 0 );
+    QCheckBox * checkBox_mapFormatToBeDownVersioned = new QCheckBox( 0 );
+    checkBox_mapFormatToBeDownVersioned->setText( tr("Save Map File in previous format for use with older Mudlet version.") );
+    checkBox_mapFormatToBeDownVersioned->setToolTip( tr("<html><head/><body>"
+                                                        "<p>When set, forces the map file format to be downgraded so that maps can be loaded "
+                                                        "into the previous Mudlet version - this is to prevent the issue that when the file "
+                                                        "format is changed to improve performance and/or fix a problem the previous version "
+                                                        "will not be able to read the new type of file.</p>"
+                                                        "<p>If you are sharing your Map files with others or testing out a <i>non-release</i> version "
+                                                        "using a Map file that you will want to reused with your current version you will "
+                                                        "want to leave this control set so that a compatible file is produced on "
+                                                        "saving, however loading is likely to take longer in this or later version as the "
+                                                        "data is reconverted back into a form now used internally.  Alternatively if this "
+                                                        "is the earliest copy of Mudlet you use and you are not going to share the map "
+                                                        "saved you will get best results (a faster Map loading time) by <b>not</b> having "
+                                                        "the control activated.</p>"
+                                                        "<p>This control defaults to being set on <i>preview</i> and <i>development</i> "
+                                                        "versions but is cleared on a <i>release</i> one (it is determined from "
+                                                        "whether there is anything after the x.y.z part of the version string, which is "
+                                                        "visible on the Splash Screen or the <i>About Mudlet</i> dialog.)  The setting is "
+                                                        "<b>not</b> saved at the end of a session or affect other profiles you may have "
+                                                        "running alongside this one.</p>"
+                                                        "<p><u>Do not worry though, whichever setting you choose here, a version of the "
+                                                        "Mudlet aplication will always be able to read the Map files it saves itself!</u></body></html>" ) );
+    checkBox_mapFormatToBeDownVersioned->setChecked( mpHost->mDebug_IsMapFormatToBeDownVersioned );
+    connect(checkBox_mapFormatToBeDownVersioned, SIGNAL(clicked(bool)), mpHost, SLOT( slot_setMapFormatToBeDownVersioned(bool) ));
+    horizontalLayout_mapFormatToBeDownVersioned->addWidget(checkBox_mapFormatToBeDownVersioned);
+    verticalLayout_debug->addLayout(horizontalLayout_mapFormatToBeDownVersioned);
+    verticalLayout_debug->setAlignment( Qt::AlignTop );
+
+    groupBox_Debug->setLayout(verticalLayout_debug);
 
     Host * pHost = mpHost;
     if( pHost )

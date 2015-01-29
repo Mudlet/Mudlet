@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>596</height>
+    <height>616</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -25,7 +25,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <item>
-    <widget class="QTabWidget" name="tabWidgeta">
+    <widget class="QTabWidget" name="tabWidget_main">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -44,7 +44,7 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="General">
+     <widget class="QWidget" name="tab_General">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -113,7 +113,7 @@
           <item row="2" column="0">
            <widget class="QCheckBox" name="showMenuBar">
             <property name="toolTip">
-             <string>Enables the typical menu bar with drop-down menus in the main window. Requires restart to take effect</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the typical menu bar with drop-down menus in the main window. Requires restart to take effect.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Show menu bar</string>
@@ -123,7 +123,7 @@
           <item row="3" column="0">
            <widget class="QCheckBox" name="showToolbar">
             <property name="toolTip">
-             <string>Enables the default button bar in the main window. Requires restart to take effect</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the default button bar in the main window. Requires restart to take effect.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Show main toolbar</string>
@@ -156,7 +156,7 @@
           <item>
            <widget class="QCheckBox" name="mRawStreamDump">
             <property name="toolTip">
-             <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch log file format from HTML (contaning colored text) to raw stream dump (containing ANSI Color Esc codes) in logfiles as sent by server.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Save log files in html format instead of text only</string>
@@ -227,7 +227,7 @@
         </widget>
        </item>
        <item row="6" column="0">
-        <spacer name="verticalSpacer_8">
+        <spacer name="verticalSpacer_General">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -262,7 +262,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="input_line_tab">
+     <widget class="QWidget" name="tab_InputLine">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -291,7 +291,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Strict UNIX line endings</string>
@@ -304,7 +304,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>Echo the text you send in the display box</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Show the text you sent</string>
@@ -394,7 +394,7 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <spacer name="verticalSpacer_2">
+        <spacer name="verticalSpacer_InputLine">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -408,7 +408,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab">
+     <widget class="QWidget" name="tab_MainDisplay">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -729,9 +729,7 @@
           <item>
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
-             <string>Some MUDs (notably all IRE ones) suffer from a bug where they don't properly
-communicate with the client on where a newline should be. Enable this to fix text
-from getting appended to the previous prompt line</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some MUDs (notably all IRE ones) suffer from a bug where they do not properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Fix unnecessary linebreaks on GA servers</string>
@@ -741,8 +739,7 @@ from getting appended to the previous prompt line</string>
           <item>
            <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
             <property name="toolTip">
-             <string>Select this option for better compatability if you are using a netbook, 
-or some other computer model that has a small screen.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Use Mudlet on a netbook with a small screen</string>
@@ -753,7 +750,7 @@ or some other computer model that has a small screen.</string>
         </widget>
        </item>
        <item row="5" column="0">
-        <spacer name="verticalSpacer">
+        <spacer name="verticalSpacer_MainDisplay">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -813,7 +810,7 @@ or some other computer model that has a small screen.</string>
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="mNoAntiAlias">
             <property name="toolTip">
-             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
             </property>
             <property name="text">
              <string>Enable anti-aliasing</string>
@@ -839,7 +836,7 @@ or some other computer model that has a small screen.</string>
           <item>
            <widget class="QLineEdit" name="doubleclick_ignore_lineedit">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the characters you'd like double-clicking to stop selecting text on here. If you don't enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the characters you would like double-clicking to stop selecting text on here. If you do not enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; in the following will select &lt;span style=&quot; font-style:italic;&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;quot;Hello!&amp;quot;&lt;/span&gt;&lt;/p&gt;&lt;p&gt;If you set the characters in the field to &lt;span style=&quot; font-weight:600;&quot;&gt;'&amp;quot;! &lt;/span&gt;which will mean it should stop selecting on ' &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; &amp;quot; &lt;span style=&quot; font-style:italic;&quot;&gt;or&lt;/span&gt; ! then double-clicking on &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt; will just select &lt;span style=&quot; font-style:italic;&quot;&gt;Hello&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You say, &amp;quot;&lt;span style=&quot; font-weight:600;&quot;&gt;Hello&lt;/span&gt;!&amp;quot;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>'&quot;</string>
@@ -854,7 +851,7 @@ or some other computer model that has a small screen.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="color_view_tab">
+     <widget class="QWidget" name="tab_ColorView">
       <attribute name="title">
        <string>Color view</string>
       </attribute>
@@ -1245,7 +1242,7 @@ or some other computer model that has a small screen.</string>
            </layout>
           </item>
           <item row="6" column="0" colspan="4">
-           <spacer name="verticalSpacer_3">
+           <spacer name="verticalSpacer_ColorView">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
             </property>
@@ -1285,7 +1282,7 @@ or some other computer model that has a small screen.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="mapper_tab">
+     <widget class="QWidget" name="tab_Mapper">
       <attribute name="title">
        <string>Mapper</string>
       </attribute>
@@ -1364,9 +1361,6 @@ or some other computer model that has a small screen.</string>
          <layout class="QGridLayout" name="gridLayout_23">
           <item row="0" column="0">
            <widget class="QLabel" name="label_11">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
             <property name="text">
              <string>Download latest map provided by your MUD:</string>
             </property>
@@ -1375,7 +1369,7 @@ or some other computer model that has a small screen.</string>
           <item row="0" column="1">
            <widget class="QPushButton" name="buttonDownloadMap">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Download</string>
@@ -1438,7 +1432,7 @@ or some other computer model that has a small screen.</string>
         </widget>
        </item>
        <item row="4" column="0">
-        <spacer name="mapper_tab_bottom_spacer">
+        <spacer name="verticalSpace_Mapper">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -1452,7 +1446,7 @@ or some other computer model that has a small screen.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_4">
+     <widget class="QWidget" name="tab_MapperColors">
       <attribute name="title">
        <string>Mapper colors</string>
       </attribute>
@@ -1489,7 +1483,7 @@ or some other computer model that has a small screen.</string>
           <item row="0" column="0">
            <widget class="QLabel" name="label_39">
             <property name="text">
-             <string>Link color</string>
+             <string>Link color:</string>
             </property>
            </widget>
           </item>
@@ -1805,30 +1799,17 @@ or some other computer model that has a small screen.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_3">
+     <widget class="QWidget" name="tab_SpecialOptions">
       <attribute name="title">
        <string>Special Options</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_7">
-       <item row="1" column="0">
-        <spacer name="verticalSpacer_6">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
+      <layout class="QGridLayout" name="gridLayout_SpecialOptions">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_7">
+        <widget class="QGroupBox" name="groupBox_SpecialOptions">
          <property name="title">
           <string>Special options needed for some older MUD drivers (needs client restart to take effect)</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <layout class="QVBoxLayout" name="verticalLayout_SpecialOptions">
           <item>
            <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
             <property name="text">
@@ -1846,8 +1827,8 @@ or some other computer model that has a small screen.</string>
           <item>
            <widget class="QCheckBox" name="checkBox_mUSE_FORCE_LF_AFTER_PROMPT">
             <property name="toolTip">
-             <string>This option adds a line line break &lt;LF&gt; or &quot;
-&quot; to your command input on empty commands. This option will rarely be necessary.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This option adds a line line break &lt;LF&gt; or &quot;
+&quot; to your command input on empty commands. This option will rarely be necessary.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Force new line on empty commands</string>
@@ -1888,12 +1869,51 @@ or some other computer model that has a small screen.</string>
          </layout>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_Debug">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Debug options, for run-time control of test/development features.</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_debug"/>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <spacer name="verticalSpacer_SpecialOptions">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_BottomButtons" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>

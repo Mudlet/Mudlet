@@ -2998,11 +2998,9 @@ void T2DMap::slot_setImage()
 
 void T2DMap::slot_deleteRoom()
 {
+    mpMap->mpRoomDB->removeRooms( mMultiSelectionList );
+    mMultiSelectionList.clear();
     mMultiRect = QRect(0,0,0,0);
-    for( int j=0; j<mMultiSelectionList.size(); j++ )
-    {
-        mpMap->mpRoomDB->removeRoom( mMultiSelectionList[j] );
-    }
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
