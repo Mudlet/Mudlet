@@ -26,6 +26,7 @@
 #include <QHash>
 #include <QMultiHash>
 #include <QMap>
+#include <QPair>
 #include <QString>
 #include "post_guard.h"
 
@@ -59,8 +60,6 @@ public:
     QList<int> getRoomIDList();
     QList<int> getAreaIDList();
     const QMap<int, QString> & getAreaNamesMap() const { return areaNamesMap; }
-
-
     void buildAreas();
     void clearMapDB();
     void initAreasForOldMaps();
@@ -69,9 +68,17 @@ public:
     int getAreaID(TArea * pA);
     void restoreAreaMap( QDataStream & );
     void restoreSingleArea( QDataStream &, int, TArea * );
-    void restoreSingleRoom( QDataStream &, int, TRoom * );
-    QMap<QString,int> hashTable;
+    void restoreSingleRoom( QDataStream &, TRoom * );
+    void removeRooms( QList<int> & );
 
+
+    QMap<QString,int> hashTable;
+    // These public pointers are only intended to be used during map file
+    // loading of older file formats so the data can be built as the file is
+    // read and then discarded (the data is held within the individual rooms and
+    // saved with them from file version 17 onwards)
+    QMultiHash<quint64, QPair<quint8, quint64> > * mpTempAllNormalEntrances;    // key is toRoomdId, value.first is direction code, value.second is fromRoomId
+    QMultiHash<quint64, QPair<QString, quint64> > * mpTempAllSpecialEntrances;  // key is toRoomId, value.first is exit name, value.second is fromRoomId
 
 
 private:
@@ -80,10 +87,12 @@ private:
     bool __removeRoom( int id );
 
     QHash<int, TRoom *> rooms;
-    QMultiHash<int, int> reverseExitMap;
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;
+    // Temporarily used to hold a list of room Ids that are being bulk deleted
+    // so that we can skip some operations on them for speedup purposes:
+    QSet<int> * mpDeletionRooms;
 
     friend class TRoom;//friend TRoom::~TRoom();
     //friend class TMap;//bool TMap::restore(QString location);

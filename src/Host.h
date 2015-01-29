@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +41,8 @@
 
 class QDialog;
 class QPushButton;
+class QHBoxLayout;
+class QLabel;
 class QListWidget;
 
 class dlgTriggerEditor;
@@ -55,14 +58,13 @@ class TMap;
 
 class Host  : public QObject
 {
+    Q_OBJECT
     friend class XMLexport;
     friend class XMLimport;
 
 public:
-
                        Host( int port, QString mHostName, QString login, QString pass, int host_id );
-
-                       ~Host();
+                      ~Host();
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     void               setName( QString s )             { QMutexLocker locker(& mLock); mHostName = s; }
@@ -306,6 +308,22 @@ public:
     bool               mFORCE_MXP_NEGOTIATION_OFF;
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
+
+/* DEBUGCONTROLS 1P - Per profile debug variables declarations
+ * development/debug feature controls.
+ * Please use a "mDebug_" prefix - so others can search for where they are used
+ * 8-)!
+ */
+    bool                mDebug_IsMapFormatToBeDownVersioned;
+
+
+public slots:
+/* DEBUGCONTROLS 2P - Per profile debug variable control slots declarations
+ * connect SIGNALS from dlgProfilePreferences.cpp to these SLOTS.
+ */
+    void                slot_setMapFormatToBeDownVersioned(bool isEnabled);
+
+
 };
 
 #endif // MUDLET_HOST_H
