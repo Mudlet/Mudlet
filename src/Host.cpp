@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,6 +37,8 @@
 #include "pre_guard.h"
 #include <QtUiTools>
 #include <QDir>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMessageBox>
 #include "post_guard.h"
 
@@ -154,6 +157,10 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mCommandLineBgColor(Qt::black)
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
+/* DEBUGCONTROLS 3P - Per profile debug variable default values
+ * controls in dlgProfilePreferences here. Existing host instance.
+ */
+, mDebug_IsMapFormatToBeDownVersioned( false )
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -175,6 +182,8 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+    // Assigned value will be false for a "production" or "release" build:
+    mDebug_IsMapFormatToBeDownVersioned = ! ( QByteArray( APP_BUILD ).isEmpty() );
 }
 
 Host::~Host()
@@ -1236,4 +1245,12 @@ void Host::readPackageConfig(const QString& luaConfig, QString & packageName )
         lua_pop(L, -1);
         lua_close(L);
     }
+}
+
+/* DEBUGCONTROLS 4P - Per profile debug control adjustment slots
+ *
+ */
+void Host::slot_setMapFormatToBeDownVersioned(bool isEnabled)
+{
+    mDebug_IsMapFormatToBeDownVersioned = isEnabled;
 }

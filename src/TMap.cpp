@@ -46,11 +46,13 @@
 // Moved up from depths of file - a version dependent change (16=>17) will speed
 // up a file loading operation (switches from manual regeneration of room
 // entrance data on loading to storing it in the map file) at the cost of older
-// Mudlet versions not supporting file format - once switch has been adopted
-// the conditional aspect of the write of the data in TMap::serialize(...) can
-// be removed to make it always run - recommend this is done for actual release
-// version (not greek suffixed previews). SlySven
-const int CURRENT_MAP_VERSION = 16;
+// Mudlet versions not supporting file format - this has been ovecome by a check
+// box option on the last page of the profile preferences dialog to forceably
+// downgrade when saving.  Recommend that the value is incremented at the point
+// an incompatible (e.g. not readable by prior code) change is made to the SAVE
+// /SERIALIZE code - and make what is written by that code sensitive to the
+// now (localVersion) variable therein. SlySven
+const int CURRENT_MAP_VERSION = 17;
 
 TMap::TMap( Host * pH )
 : mpRoomDB( new TRoomDB( this ) )
@@ -920,8 +922,11 @@ bool TMap::findPath( int from, int to )
 
 bool TMap::serialize( QDataStream & ofs )
 {
-    version = CURRENT_MAP_VERSION;
-    ofs << version;
+    int usedVersion = CURRENT_MAP_VERSION;
+    if( mpHost->mDebug_IsMapFormatToBeDownVersioned ) {
+        usedVersion--;
+    }
+    ofs << usedVersion;
     ofs << envColors;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
@@ -957,13 +962,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pA->zoneAreaRef;
     }
 
-    if (mRoomId) {
-        ofs << mRoomId;
-    }
-    else {
-        mRoomId = 0;
-        ofs << mRoomId;
-    }
+    ofs << mRoomId;
     ofs << mapLabels.size(); //anzahl der areas
     QMapIterator<int, QMap<int, TMapLabel> > itL1(mapLabels);
     while( itL1.hasNext() ) {
@@ -992,7 +991,7 @@ bool TMap::serialize( QDataStream & ofs )
 
         it.next();
         TRoom * pR = it.value();
-        ofs <<  pR->getId();
+        ofs << pR->getId();
         ofs << pR->getArea();
         ofs << pR->x;
         ofs << pR->y;
@@ -1024,10 +1023,7 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();
         ofs << pR->doors;
-        if( version >= 17 ) {
-            // TODO: At the time of writing this is NOT true, but will make
-            // future versions faster - once the version IS incremented then
-            // take out this conditional so code always runs
+        if( usedVersion > 16 ) {
             ofs << pR->getNormalEntrances();
             ofs << pR->getSpecialEntrances();
         }
