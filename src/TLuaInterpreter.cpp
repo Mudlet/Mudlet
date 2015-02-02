@@ -7930,7 +7930,6 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
     {
         pR_from->setSpecialExit( id_to, _dir );
         pR_from->setSpecialExitLock( id_to, _dir, false );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -7965,7 +7964,6 @@ int TLuaInterpreter::removeSpecialExit( lua_State * L )
     if( pR )
     {
         pR->setSpecialExit( -1, _dir );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -8010,7 +8008,6 @@ int TLuaInterpreter::clearSpecialExits( lua_State * L )
     if( pR )
     {
         pR->clearSpecialExits();
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }

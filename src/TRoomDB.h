@@ -59,6 +59,8 @@ public:
     QList<int> getRoomIDList();
     QList<int> getAreaIDList();
     const QMap<int, QString> & getAreaNamesMap() const { return areaNamesMap; }
+    void updateEntranceMap(TRoom *);
+    void updateEntranceMap(int);
 
 
     void buildAreas();
@@ -80,7 +82,7 @@ private:
     bool __removeRoom( int id );
 
     QHash<int, TRoom *> rooms;
-    QMultiHash<int, int> reverseExitMap;
+    QMultiHash<int, int> entranceMap;
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;

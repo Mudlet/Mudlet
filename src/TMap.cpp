@@ -257,6 +257,7 @@ int TMap::createNewRoomID()
 
 bool TMap::setExit( int from, int to, int dir )
 {
+    // FIXME: This along with TRoom->setExit need to be unified to a controller.
     TRoom * pR = mpRoomDB->getRoom( from );
     TRoom * pR_to = mpRoomDB->getRoom( to );
 
@@ -320,6 +321,7 @@ bool TMap::setExit( int from, int to, int dir )
         return false;
     }
     pA->determineAreaExitsOfRoom(pR->getId());
+    mpRoomDB->updateEntranceMap(pR);
     return ret;
 }
 
@@ -1071,7 +1073,6 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->getExitWeights();
         ofs << pR->doors;
     }
-
     return true;
 }
 
@@ -1222,10 +1223,8 @@ bool TMap::restore(QString location)
             int i;
             ifs >> i;
             TRoom * pT = new TRoom(mpRoomDB);
-            mpRoomDB->restoreSingleRoom( ifs, i, pT );
             pT->restore( ifs, i, version );
-
-
+            mpRoomDB->restoreSingleRoom( ifs, i, pT );
         }
         customEnvColors[257] = mpHost->mRed_2;
         customEnvColors[258] = mpHost->mGreen_2;

@@ -54,10 +54,7 @@ bool TRoomDB::addRoom( int id )
     {
         rooms[id] = new TRoom( this );
         rooms[id]->setId(id);
-        QHash<int, int> exits = rooms[id]->getExits();
-        QList<int> toExits = exits.keys();
-        for (int i = 0; i < toExits.size(); i++)
-            reverseExitMap.insert(id, toExits[i]);
+        // there is no point to update the entranceMap here, as the room has no exit information
         return true;
     }
     else
@@ -77,11 +74,31 @@ bool TRoomDB::addRoom( int id, TRoom * pR )
     {
         rooms[id] = pR;
         pR->setId(id);
+        updateEntranceMap(pR);
         return true;
     }
     else
     {
         return false;
+    }
+}
+
+void TRoomDB::updateEntranceMap(int id){
+    TRoom * pR = getRoom(id);
+    updateEntranceMap(pR);
+}
+
+void TRoomDB::updateEntranceMap(TRoom * pR){
+    // entranceMap maps the room to rooms it has a viable exit to
+    // so {room_a: room_b, room_a: room_c} and so on. This allows us to delete
+    // rooms and know which other rooms are impacted by this change in a single lookup.
+    if(pR){
+        int id = pR->getId();
+        QHash<int, int> exits = pR->getExits();
+        QList<int> toExits = exits.keys();
+        entranceMap.remove(id);
+        for (int i = 0; i < toExits.size(); i++)
+           entranceMap.insert(id, toExits[i]);
     }
 }
 
@@ -91,8 +108,8 @@ bool TRoomDB::__removeRoom( int id )
     TRoom* pR = getRoom(id);
     if (pR) {
         // FIXME: make a proper exit controller so we don't need to do all these if statements
-        QMultiHash<int, int>::iterator i = reverseExitMap.find(id);
-        while (i != reverseExitMap.end() && i.key() == id) {
+        QMultiHash<int, int>::iterator i = entranceMap.find(id);
+        while (i != entranceMap.end() && i.key() == id) {
             TRoom* r = getRoom(i.value());
             if (r) {
                 if (r->getNorth() == id)
@@ -136,7 +153,7 @@ bool TRoomDB::__removeRoom( int id )
         TArea * pA = getArea( areaID );
         if (pA)
             pA->removeRoom(id);
-        reverseExitMap.remove(id);
+        entranceMap.remove(id);
         // Because we clear the graph in initGraph which will be called
         // if mMapGraphNeedsUpdate is true -- we don't need to
         // remove the vertex using clear_vertex and remove_vertex here
@@ -412,5 +429,5 @@ void TRoomDB::restoreSingleArea(QDataStream & ifs, int areaID, TArea * pA )
 
 void TRoomDB::restoreSingleRoom(QDataStream & ifs, int i, TRoom *pT)
 {
-    rooms[i] = pT;
+    addRoom(i, pT);
 }
