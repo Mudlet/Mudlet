@@ -98,7 +98,11 @@ void TRoomDB::updateEntranceMap(TRoom * pR){
         int id = pR->getId();
         QHash<int, int> exits = pR->getExits();
         QList<int> toExits = exits.keys();
-        entranceMap.remove(id);
+        // to update this we need to iterate the entire entranceMap and remove invalid
+        // connections. I'm not sure if this is efficient for every update, and given
+        // that we check for rooms existance when the map is used, we'll deal with
+        // possible spurious exits for now.
+        //entranceMap.remove(id);
         for (int i = 0; i < toExits.size(); i++)
            entranceMap.insert(toExits.at(i), id);
     }
