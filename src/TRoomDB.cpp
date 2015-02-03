@@ -89,8 +89,10 @@ void TRoomDB::updateEntranceMap(int id){
 }
 
 void TRoomDB::updateEntranceMap(TRoom * pR){
-    // entranceMap maps the room to rooms it has a viable exit to
-    // so {room_a: room_b, room_a: room_c} and so on. This allows us to delete
+    // entranceMap maps the room to rooms it has a viable exit to. So if room b and c both have
+    // an exit to room a, upon deleting room a we want a map that allows us to find
+    // room b and c efficiently.
+    // So we create a mapping like: {room_a: room_b, room_a: room_c}. This allows us to delete
     // rooms and know which other rooms are impacted by this change in a single lookup.
     if(pR){
         int id = pR->getId();
@@ -98,7 +100,7 @@ void TRoomDB::updateEntranceMap(TRoom * pR){
         QList<int> toExits = exits.keys();
         entranceMap.remove(id);
         for (int i = 0; i < toExits.size(); i++)
-           entranceMap.insert(id, toExits[i]);
+           entranceMap.insert(toExits.at(i), id);
     }
 }
 
@@ -108,6 +110,7 @@ bool TRoomDB::__removeRoom( int id )
     TRoom* pR = getRoom(id);
     if (pR) {
         // FIXME: make a proper exit controller so we don't need to do all these if statements
+        // Remove the links from the rooms entering this room
         QMultiHash<int, int>::iterator i = entranceMap.find(id);
         while (i != entranceMap.end() && i.key() == id) {
             TRoom* r = getRoom(i.value());
