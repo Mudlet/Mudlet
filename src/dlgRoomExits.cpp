@@ -1464,6 +1464,14 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
                  roomId, qPrintable( doorText ), pR->getDoor( doorText ) );
     }
 
+    if ( exitId > 0 ) {
+        if( ! mpHost->mpMap->mpRoomDB->getRoom( exitId ) ) {
+            // Recover from a missing exit room - not doing this was causing seg. faults
+            qWarning("dlgRoomExits::initExit: Warning: missing exit to %i in direction %s, resetting exit.", exitId, weightText.toUtf8().constData() );
+            exitId = -1;
+        }
+    }
+
     if ( exitId > 0 ) { //Does this exit point anywhere
         exitLineEdit->setText(QString::number( exitId ));  //Put in the value
         exitLineEdit->setEnabled(true);     //Enable it for editing
