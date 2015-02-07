@@ -405,6 +405,7 @@ void TRoomDB::clearMapDB()
 {
     QList<TRoom*> rPtrL = getRoomPtrList();
     rooms.clear();
+    entranceMap.clear();
     areaNamesMap.clear();
     hashTable.clear();
     for(int i=0; i<rPtrL.size(); i++ )
