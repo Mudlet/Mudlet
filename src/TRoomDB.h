@@ -61,6 +61,7 @@ public:
     const QMap<int, QString> & getAreaNamesMap() const { return areaNamesMap; }
     void updateEntranceMap(TRoom *);
     void updateEntranceMap(int);
+    const QMultiHash<int, int> & getEntranceHash() const { return entranceMap; }
 
 
     void buildAreas();

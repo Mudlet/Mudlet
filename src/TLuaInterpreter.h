@@ -379,6 +379,7 @@ public:
     static int getMapMenus(lua_State * L);
     static int getMudletVersion( lua_State * L );
     static int openWebPage( lua_State * L );
+    static int getAllRoomEntrances( lua_State * L );
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
