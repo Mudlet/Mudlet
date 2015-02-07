@@ -88,7 +88,9 @@ void TRoomDB::updateEntranceMap(int id){
     updateEntranceMap(pR);
 }
 
-void TRoomDB::updateEntranceMap(TRoom * pR){
+void TRoomDB::updateEntranceMap(TRoom * pR)
+{
+    static bool showDebug = false;
     // entranceMap maps the room to rooms it has a viable exit to. So if room b and c both have
     // an exit to room a, upon deleting room a we want a map that allows us to find
     // room b and c efficiently.
@@ -98,13 +100,28 @@ void TRoomDB::updateEntranceMap(TRoom * pR){
         int id = pR->getId();
         QHash<int, int> exits = pR->getExits();
         QList<int> toExits = exits.keys();
+        QString values;
         // to update this we need to iterate the entire entranceMap and remove invalid
         // connections. I'm not sure if this is efficient for every update, and given
         // that we check for rooms existance when the map is used, we'll deal with
         // possible spurious exits for now.
         //entranceMap.remove(id);
-        for (int i = 0; i < toExits.size(); i++)
-           entranceMap.insert(toExits.at(i), id);
+
+        for (int i = 0; i < toExits.size(); i++) {
+            values.append( QStringLiteral("%1,").arg(toExits.at(i)) );
+            entranceMap.insert(toExits.at(i), id);
+        }
+        if( showDebug ) {
+            if( ! values.isEmpty() ) {
+                values.chop(1);
+            }
+            if( values.isEmpty() ) {
+                qDebug( "TRoomDB::updateEntranceMap(TRoom * pR) called for room with Id:%i, it is not an Entrance for any Rooms.", id );
+            }
+            else {
+                qDebug( "TRoomDB::updateEntranceMap(TRoom * pR) called for room with Id:%i, it is an Entrance for Room(s): %s.", id, values.toLatin1().constData() );
+            }
+        }
     }
 }
 
