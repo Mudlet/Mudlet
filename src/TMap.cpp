@@ -34,6 +34,7 @@
 #include "pre_guard.h"
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QMainWindow>
 #include <QMessageBox>
@@ -328,7 +329,7 @@ bool TMap::setExit( int from, int to, int dir )
 void TMap::init( Host * pH )
 {
     // init areas
-    QTime _time;
+    QElapsedTimer _time;
     _time.start();
 
     if( version < 14 ) {
@@ -384,7 +385,7 @@ void TMap::init( Host * pH )
             }
         }
     }
-    qDebug("TMap::init() Initialize run time:%i milli-seconds.", _time.elapsed() );
+    qDebug() << "TMap::init() Initialize run time:" << _time.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 
@@ -1079,7 +1080,8 @@ bool TMap::serialize( QDataStream & ofs )
 bool TMap::restore(QString location)
 {
     qDebug()<<"restoring map of profile:"<<mpHost->getName()<<" url:"<<mpHost->getUrl();
-    QTime _time; _time.start();
+    QElapsedTimer _time;
+    _time.start();
     QString folder;
     QStringList entries;
     qDebug()<<"RESTORING MAP";
@@ -1242,7 +1244,7 @@ bool TMap::restore(QString location)
         customEnvColors[270] = mpHost->mLightCyan_2;
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
-        qDebug()<<"LOADED rooms:"<<mpRoomDB->size()<<" loading time:"<<_time.elapsed();
+        qDebug() << "TMap::restore() Loaded" << mpRoomDB->size() << "rooms in:" << _time.nsecsElapsed()* 1.0e-9 << "sec.";
         if( canRestore )
         {
             return true;

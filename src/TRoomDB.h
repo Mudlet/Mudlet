@@ -44,7 +44,8 @@ public:
 //     int getArea( TArea * pA ); use duplicate int getAreaID( TArea * pA ) instead
     bool addRoom( int id );
     int size() { return rooms.size(); }
-    bool removeRoom( int id );
+    bool removeRoom( int );
+    void removeRoom( QList<int> & );
     bool removeArea( int id );
     bool removeArea( QString name );
     void removeArea( TArea * );
@@ -59,16 +60,17 @@ public:
     QList<int> getRoomIDList();
     QList<int> getAreaIDList();
     const QMap<int, QString> & getAreaNamesMap() const { return areaNamesMap; }
-    void updateEntranceMap(TRoom *);
+    void updateEntranceMap(TRoom *, bool isMapLoading = false );
     void updateEntranceMap(int);
     const QMultiHash<int, int> & getEntranceHash() const { return entranceMap; }
-
+    void deleteValuesFromEntranceMap( int );
+    void deleteValuesFromEntranceMap( QSet<int> & );
 
     void buildAreas();
     void clearMapDB();
     void initAreasForOldMaps();
     void auditRooms();
-    bool addRoom(int id, TRoom *pR);
+    bool addRoom(int id, TRoom *pR, bool isMapLoading = false);
     int getAreaID(TArea * pA);
     void restoreAreaMap( QDataStream & );
     void restoreSingleArea( QDataStream &, int, TArea * );
@@ -87,6 +89,7 @@ private:
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;
+    QList<int> * mpTempRoomDeletionList; // Used during bulk room deletion
 
     friend class TRoom;//friend TRoom::~TRoom();
     //friend class TMap;//bool TMap::restore(QString location);
