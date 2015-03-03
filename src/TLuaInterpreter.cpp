@@ -9865,6 +9865,14 @@ int TLuaInterpreter::appendCmdLine( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::getCmdLine( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString curText = pHost->mpConsole->mpCommandLine->toPlainText();
+    lua_pushstring( L, curText.toLatin1().data() );
+    return 1;
+}
+
 int TLuaInterpreter::installPackage( lua_State * L )
 {
     string event;
@@ -11346,6 +11354,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearRoomUserDataItem", TLuaInterpreter::clearRoomUserDataItem );
     lua_register( pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile );
     lua_register( pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine );
+    lua_register( pGlobalLua, "getCmdLine", TLuaInterpreter::getCmdLine );
     lua_register( pGlobalLua, "openUrl", TLuaInterpreter::openUrl );
     lua_register( pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket );
     lua_register( pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash );
