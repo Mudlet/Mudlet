@@ -9869,7 +9869,7 @@ int TLuaInterpreter::getCmdLine( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString curText = pHost->mpConsole->mpCommandLine->toPlainText();
-    lua_pushstring( L, curText.toLatin1().data() );
+    lua_pushstring( L, curText.toUtf8().constData() );
     return 1;
 }
 
