@@ -8400,7 +8400,7 @@ int TLuaInterpreter::resetRoomArea( lua_State * L )
         lua_pushstring( L, tr( "resetRoomArea: bad argument #1 value (room Id must exist)." ).toUtf8().constData() );
         return 2;
     }
-    else if ( pHost ) {
+    else {
        lua_pushboolean( L, pHost->mpMap->setRoomArea( id, -1, false ) );
        return 1;
     }
