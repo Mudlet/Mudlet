@@ -105,6 +105,14 @@ bool TCommandLine::event( QEvent * event )
     if( event->type() == QEvent::KeyPress )
     {
         QKeyEvent *ke = static_cast<QKeyEvent *>( event );
+
+        // Shortcut for keypad keys
+        if(((int)ke->modifiers() & 0x20000000) && mpKeyUnit->processDataStream( ke->key(), (int)ke->modifiers() ) )
+        {
+            ke->accept();
+            return true;
+        }
+
         switch( ke->key() )
         {
             case Qt::Key_Space:
