@@ -107,7 +107,7 @@ bool TCommandLine::event( QEvent * event )
         QKeyEvent *ke = static_cast<QKeyEvent *>( event );
 
         // Shortcut for keypad keys
-        if(((int)ke->modifiers() & 0x20000000) && mpKeyUnit->processDataStream( ke->key(), (int)ke->modifiers() ) )
+	if((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream( ke->key(), (int)ke->modifiers() ) )
         {
             ke->accept();
             return true;
