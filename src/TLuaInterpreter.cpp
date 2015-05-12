@@ -2870,24 +2870,72 @@ int TLuaInterpreter::calcFontSize( lua_State *L )
     return 2;
 }
 
+// Badly named, because it will STOP logging if the supplied argument is false
+// Now returns 4 values:
+// * true on sucessfully changing logging state; nil otherwise
+// * an internationalizable/translated message
+// * the log pathAndFile name involved (or nil if there wasn't one)
+// * a numeric code indicating what happend:
+//    0 = logging was just stopped
+//    1 = logging has just started
+//   -1 = logging was already in progress so no change in logging state
+//   -2 = logging was already not in progress so no change in logging state
 int TLuaInterpreter::startLogging( lua_State *L )
 {
     bool logOn = true;
-    if( ! lua_isboolean( L, 1 ) )
-    {
-        lua_pushstring( L, "startLogging: wrong argument type" );
+    if( ! lua_isboolean( L, 1 ) ) {
+        lua_pushfstring( L, tr( "startLogging: bad argument #1 (turn logging on/off, as boolean expected, got %s)", luaL_typename(L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
+    else {
         logOn = lua_toboolean( L, 1 );
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->mLogToLogFile = ! logOn;
-    pHost->mpConsole->slot_toggleLogging();
-    return 0;
+    QString savedLogFileName;
+    if( pHost->mpConsole->mLogToLogFile ) {
+        savedLogFileName = pHost->mpConsole->mLogFileName;
+    // Don't assume we will be able to find the file name once recording has
+    // stopped.
+    }
+
+    if( pHost->mpConsole->mLogToLogFile != logOn ) {
+        pHost->mpConsole->toggleLogging( false );
+        // Changes state of pHost->mpConsole->mLogToLogFile, but that can't be
+        // really be called a side-effect!
+
+        lua_pushboolean( L, true );
+        if( pHost->mpConsole->mLogToLogFile ) {
+            pHost->mpConsole->logButton->setChecked(true);
+            // Sets the button as checked but clicked() & pressed() signals are NOT generated
+            lua_pushstring( L, tr( "Main console output has started to be logged to file: %1" ).arg( pHost->mpConsole->mLogFileName ).toUtf8().constData() );
+            lua_pushstring( L, pHost->mpConsole->mLogFileName.toUtf8().constData() );
+            lua_pushnumber( L, 1 );
+        }
+        else {
+            pHost->mpConsole->logButton->setChecked(false);
+            lua_pushstring( L, tr( "Main console output has stopped being logged to file: %1" ).arg( savedLogFileName ).toUtf8().constData() );
+            lua_pushstring( L, pHost->mpConsole->mLogFileName.toUtf8().constData() );
+            lua_pushnumber( L, 0 );
+        }
+
+    }
+    else {
+        lua_pushnil( L );
+        if( pHost->mpConsole->mLogToLogFile ) {
+            lua_pushstring( L, tr( "Main console output is already being logged to file: %1" ).arg( pHost->mpConsole->mLogFileName ).toUtf8().constData() );
+            lua_pushstring( L, pHost->mpConsole->mLogFileName.toUtf8().constData() );
+            lua_pushnumber( L, -1 );
+        }
+        else {
+            lua_pushstring( L, tr( "Main console output was already not being logged to a file." ).toUtf8().constData() );
+            lua_pushnil( L );
+            lua_pushnumber( L, -2 );
+        }
+
+    }
+    return 4;
 }
 
 int TLuaInterpreter::setBackgroundImage( lua_State *L )
