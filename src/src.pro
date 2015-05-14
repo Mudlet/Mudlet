@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -28,8 +28,16 @@ VERSION = 3.0.1
 !msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
 !msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+# Before we impose OUR idea about the optimisation levels to use, remove any
+# that Qt tries to put in automatically for us for release builds, only the
+# last, ours, is supposed to apply but it can be confusing to see multiple
+# alternatives during compilations.
+!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+# NOW we can put ours in:
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
+# There is NO need to put in the -g option as it is done already for debug bugs
+# For gdb type debugging it helps if there is NO optimisations so use -O0.
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
 # enable C++11 for builds.
 CONFIG += c++11
@@ -169,11 +177,6 @@ SOURCES += \
     dlgKeysMainArea.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
-    dlgOptionsAreaAction.cpp \
-    dlgOptionsAreaAlias.cpp \
-    dlgOptionsAreaScripts.cpp \
-    dlgOptionsAreaTimers.cpp \
-    dlgOptionsAreaTriggers.cpp \
     dlgPackageExporter.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
@@ -258,11 +261,6 @@ HEADERS += \
     dlgKeysMainArea.h \
     dlgMapper.h \
     dlgNotepad.h \
-    dlgOptionsAreaAction.h \
-    dlgOptionsAreaAlias.h \
-    dlgOptionsAreaScripts.h \
-    dlgOptionsAreaTimers.h \
-    dlgOptionsAreaTriggers.h \
     dlgPackageExporter.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
@@ -344,11 +342,6 @@ FORMS += \
     ui/main_window.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
-    ui/options_area_actions.ui \
-    ui/options_area_aliases.ui \
-    ui/options_area_scripts.ui \
-    ui/options_area_timers.ui \
-    ui/options_area_triggers.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
@@ -433,6 +426,7 @@ macx: {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -452,3 +446,13 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
+
+DISTFILES += \
+    CMakeLists.txt \
+    irc/CMakeLists.txt \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh

@@ -27,7 +27,6 @@
 #include <QPointer>
 #include "post_guard.h"
 
-#include "dlgOptionsAreaTriggers.h"
 #include "dlgSearchArea.h"
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
@@ -58,14 +57,9 @@ class dlgSystemMessageArea;
 class dlgSourceEditorArea;
 class dlgTriggersMainArea;
 class dlgActionMainArea;
-class dlgOptionsAreaTriggers;
 class dlgSearchArea;
 class dlgAliasMainArea;
 class dlgScriptsMainArea;
-class dlgOptionsAreaAlias;
-class dlgOptionsAreaScripts;
-class dlgOptionsAreaTimers;
-class dlgOptionsAreaAction;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
 class TAction;
@@ -277,15 +271,10 @@ private:
     dlgTimersMainArea *         mpTimersMainArea;
     dlgSystemMessageArea *      mpSystemMessageArea;
     dlgSourceEditorArea *       mpSourceEditorArea;
-    dlgOptionsAreaTriggers *    mpOptionsAreaTriggers;
     dlgAliasMainArea *          mpAliasMainArea;
     dlgActionMainArea *         mpActionsMainArea;
     dlgScriptsMainArea *        mpScriptsMainArea;
     dlgKeysMainArea *           mpKeysMainArea;
-    dlgOptionsAreaScripts *     mpOptionsAreaScripts;
-    dlgOptionsAreaAction *      mpOptionsAreaActions;
-    dlgOptionsAreaAlias *       mpOptionsAreaAlias;
-    dlgOptionsAreaTimers *      mpOptionsAreaTimers;
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;
