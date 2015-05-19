@@ -28,12 +28,13 @@
 
 #include "pre_guard.h"
 #include <QDebug>
-#include <QTime>
+#include <QElapsedTimer>
 #include "post_guard.h"
 
 
 TRoomDB::TRoomDB( TMap * pMap )
 : mpMap( pMap )
+, mpTempRoomDeletionList( 0 )
 {
 }
 
@@ -54,10 +55,7 @@ bool TRoomDB::addRoom( int id )
     {
         rooms[id] = new TRoom( this );
         rooms[id]->setId(id);
-        QHash<int, int> exits = rooms[id]->getExits();
-        QList<int> toExits = exits.keys();
-        for (int i = 0; i < toExits.size(); i++)
-            reverseExitMap.insert(id, toExits[i]);
+        // there is no point to update the entranceMap here, as the room has no exit information
         return true;
     }
     else
@@ -71,12 +69,13 @@ bool TRoomDB::addRoom( int id )
     }
 }
 
-bool TRoomDB::addRoom( int id, TRoom * pR )
+bool TRoomDB::addRoom( int id, TRoom * pR, bool isMapLoading )
 {
     if( !rooms.contains( id ) && id > 0 && pR )
     {
         rooms[id] = pR;
         pR->setId(id);
+        updateEntranceMap(pR, isMapLoading);
         return true;
     }
     else
@@ -85,14 +84,133 @@ bool TRoomDB::addRoom( int id, TRoom * pR )
     }
 }
 
+void TRoomDB::deleteValuesFromEntranceMap( int value )
+{
+    QList<int> keyList = entranceMap.keys();
+    QList<int> valueList = entranceMap.values();
+    QList<uint> deleteEntries;
+    uint index = valueList.indexOf( value );
+    while ( index != -1 ) {
+        deleteEntries.append( index );
+        index = valueList.indexOf( value, index + 1 );
+    }
+    for (int i = deleteEntries.size() - 1; i >= 0; --i ) {
+        entranceMap.remove( keyList.at(deleteEntries.at(i)), valueList.at(deleteEntries.at(i)) );
+    }
+}
+
+void TRoomDB::deleteValuesFromEntranceMap( QSet<int> & valueSet )
+{
+    QElapsedTimer timer;
+    timer.start();
+    QList<int> keyList = entranceMap.keys();
+    QList<int> valueList = entranceMap.values();
+    QList<uint> deleteEntries;
+    foreach(int roomId, valueSet) {
+        int index = valueList.indexOf( roomId );
+        while (index >= 0 ) {
+            deleteEntries.append( index );
+            index = valueList.indexOf( roomId, index + 1 );
+        }
+    }
+    for (uint i = 0; i < deleteEntries.size(); ++i) {
+        entranceMap.remove( keyList.at(deleteEntries.at(i)), valueList.at(deleteEntries.at(i)) );
+    }
+    qDebug() << "TRoomDB::deleteValuesFromEntranceMap() with a list of:" << valueSet.size() << "items, run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
+}
+
+void TRoomDB::updateEntranceMap(int id)
+{
+    TRoom * pR = getRoom(id);
+    updateEntranceMap(pR);
+}
+
+void TRoomDB::updateEntranceMap(TRoom * pR, bool isMapLoading)
+{
+    static bool showDebug = false; // Enable this at runtime (set a breakpoint on it) for debugging!
+
+    // entranceMap maps the room to rooms it has a viable exit to. So if room b and c both have
+    // an exit to room a, upon deleting room a we want a map that allows us to find
+    // room b and c efficiently.
+    // So we create a mapping like: {room_a: room_b, room_a: room_c}. This allows us to delete
+    // rooms and know which other rooms are impacted by this change in a single lookup.
+    if(pR){
+        int id = pR->getId();
+        QHash<int, int> exits = pR->getExits();
+        QList<int> toExits = exits.keys();
+        QString values;
+        // to update this we need to iterate the entire entranceMap and remove invalid
+        // connections. I'm not sure if this is efficient for every update, and given
+        // that we check for rooms existance when the map is used, we'll deal with
+        // possible spurious exits for now.
+        // entranceMap.remove(id); // <== not what is wanted
+        // We need to remove all values == id NOT keys == id, so try and do that
+        // now. SlySven
+
+        if( ! isMapLoading ) {
+            deleteValuesFromEntranceMap( id ); // When LOADING a map, will never need to do this
+        }
+        for (int i = 0; i < toExits.size(); i++) {
+            if( showDebug ) {
+                values.append( QStringLiteral("%1,").arg(toExits.at(i)) );
+            }
+            entranceMap.insert(toExits.at(i), id);
+        }
+        if( showDebug ) {
+            if( ! values.isEmpty() ) {
+                values.chop(1);
+            }
+            if( values.isEmpty() ) {
+                qDebug( "TRoomDB::updateEntranceMap(TRoom * pR) called for room with Id:%i, it is not an Entrance for any Rooms.", id );
+            }
+            else {
+                qDebug( "TRoomDB::updateEntranceMap(TRoom * pR) called for room with Id:%i, it is an Entrance for Room(s): %s.", id, values.toLatin1().constData() );
+            }
+        }
+    }
+}
+
 // this is call by TRoom destructor only
 bool TRoomDB::__removeRoom( int id )
 {
-    TRoom* pR = getRoom(id);
+    static QMultiHash<int, int> _entranceMap; // Make it persistant - for multiple room deletions
+    static bool isBulkDelete = false;
+    // Gets set / reset by mpTempRoomDeletionList being non-null, used to setup
+    // _entranceMap the first time around for multi-room deletions
+
+    TRoom * pR = getRoom(id);
+    // This will FAIL during map deletion as TRoomDB::rooms has already been
+    // zapped, so can use to skip everything...
     if (pR) {
+        if( mpTempRoomDeletionList && mpTempRoomDeletionList->size() > 1 ) { // We are deleting multiple rooms
+            if( ! isBulkDelete ) {
+                _entranceMap = entranceMap;
+                _entranceMap.detach(); // MUST take a deep copy of the data
+                isBulkDelete = true; // But only do it the first time for a bulk delete
+            }
+        }
+        else { // We are deleting a single room
+            if( isBulkDelete ) { // Last time was a bulk delete but it isn't one now
+                isBulkDelete = false;
+            }
+            _entranceMap.clear();
+            _entranceMap = entranceMap; // Refresh our local copy
+            _entranceMap.detach(); // MUST take a deep copy of the data
+        }
+
         // FIXME: make a proper exit controller so we don't need to do all these if statements
-        QMultiHash<int, int>::iterator i = reverseExitMap.find(id);
-        while (i != reverseExitMap.end() && i.key() == id) {
+        // Remove the links from the rooms entering this room
+        QMultiHash<int, int>::const_iterator i = _entranceMap.find(id);
+        // The removeAllSpecialExitsToRoom below modifies the entranceMap - and
+        // it is unsafe to modify (use copy operations on) something that an STL
+        // iterator is active on - see "Implicit sharing iterator problem" in
+        // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
+        // copy and iterating through that instead whilst modifying the original
+        while (i != entranceMap.end() && i.key() == id) {
+            if( i.value() == id || mpTempRoomDeletionList && mpTempRoomDeletionList->size() > 1 && mpTempRoomDeletionList->contains( i.value() ) ) {
+                ++i;
+                continue; // Bypass rooms we know are also to be deleted
+            }
             TRoom* r = getRoom(i.value());
             if (r) {
                 if (r->getNorth() == id)
@@ -136,7 +254,10 @@ bool TRoomDB::__removeRoom( int id )
         TArea * pA = getArea( areaID );
         if (pA)
             pA->removeRoom(id);
-        reverseExitMap.remove(id);
+        if( ( ! mpTempRoomDeletionList ) || mpTempRoomDeletionList->size() == 1 ) { // if NOT deleting multiple rooms
+            entranceMap.remove(id); // Only removes matching keys
+            deleteValuesFromEntranceMap(id); // Needed to remove matching values
+        }
         // Because we clear the graph in initGraph which will be called
         // if mMapGraphNeedsUpdate is true -- we don't need to
         // remove the vertex using clear_vertex and remove_vertex here
@@ -157,22 +278,49 @@ bool TRoomDB::removeRoom( int id )
     return false;
 }
 
+void TRoomDB::removeRoom( QList<int> & ids )
+{
+    QElapsedTimer timer;
+    timer.start();
+    QSet<int> deletedRoomIds;
+    mpTempRoomDeletionList = &ids; // Will activate "bulk room deletion" code
+                                   // When used by TLuaInterpreter::deleteArea()
+                                   // via removeArea(int) the list of rooms to
+                                   // delete - as suppplied by the reference
+                                   // type argument IS NOT CONSTANT - it is
+                                   // ALTERED by TArea::removeRoom( int room )
+                                   // for each room that is removed
+    quint64 roomcount = mpTempRoomDeletionList->size();
+    while( ! mpTempRoomDeletionList->isEmpty() ) {
+        int deleteRoomId = mpTempRoomDeletionList->first();
+        TRoom * pR = getRoom( deleteRoomId );
+        if( pR ) {
+            deletedRoomIds.insert( deleteRoomId );
+            delete pR;
+        }
+    }
+    foreach(int deleteRoomId, deletedRoomIds ) {
+        entranceMap.remove( deleteRoomId ); // This has been deferred from __removeRoom()
+    }
+    deleteValuesFromEntranceMap( deletedRoomIds );
+    mpTempRoomDeletionList->clear();
+    mpTempRoomDeletionList=0;
+    qDebug() << "TRoomDB::removeRoom(QList<int>) run time for" << roomcount << "rooms:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
+}
+
 bool TRoomDB::removeArea( int id )
 {
-    areaNamesMap.remove( id );
-    if( areas.contains( id ) )
-    {
-        TArea * pA = areas[id];
-        QList<int> rl;
-        for( int i=0; i< pA->rooms.size(); i++ )
-        {
-            rl.push_back( pA->rooms[i] );
+    if( areas.contains( id ) ) {
+        TArea * pA = areas.value( id );
+        if( ! rooms.isEmpty() ) {
+            removeRoom( pA->rooms ); // During map deletion rooms will already
+                                     // have been cleared so this would not
+                                     // be wanted to be done in that case.
         }
-        for( int i=0; i<rl.size(); i++ )
-        {
-            removeRoom( rl[i] );
-        }
-        areas.remove( id );
+        areaNamesMap.remove( id ); // During map deletion areaNamesMap will
+                                   // already have been cleared !!!
+        areas.remove( id ); // This means areas.clear() is not needed during map
+                            // deletion
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
@@ -182,16 +330,30 @@ bool TRoomDB::removeArea( int id )
 
 bool TRoomDB::removeArea( QString name )
 {
-    if( areaNamesMap.values().contains( name ) )
-    {
-        return removeArea( areaNamesMap.key( name ) );
+    if( areaNamesMap.values().contains( name ) ) {
+        return removeArea( areaNamesMap.key( name ) ); // i.e. call the removeArea(int) method
     }
-    return false;
+    else {
+        return false;
+    }
 }
 
 void TRoomDB::removeArea( TArea * pA )
 {
-    removeArea( getAreaID(pA) );
+    if( ! pA ) {
+        qWarning( "TRoomDB::removeArea(TArea *) Warning - attempt to remove an area with a NULL TArea pointer!" );
+        return;
+    }
+
+    int areaId = areas.key(pA, 0);
+    if( areaId == areas.key(pA, -1) ) {
+        // By testing twice with different default keys to return if value NOT
+        // found, we can be certain we have an actual valid value
+        removeArea( areaId );
+    }
+    else {
+        qWarning( "TRoomDB::removeArea(TArea *) Warning - attempt to remove an area NOT in TRoomDB::areas!" );
+    }
 }
 
 int TRoomDB::getAreaID( TArea * pA )
@@ -201,7 +363,8 @@ int TRoomDB::getAreaID( TArea * pA )
 
 void TRoomDB::buildAreas()
 {
-    QTime _time; _time.start();
+    QElapsedTimer timer;
+    timer.start();
     QHashIterator<int, TRoom *> it( rooms );
     while( it.hasNext() )
     {
@@ -227,7 +390,7 @@ void TRoomDB::buildAreas()
            areas[id] = new TArea( mpMap, this );
        }
     }
-    qDebug()<<"BUILD AREAS run time:"<<_time.elapsed();
+    qDebug() << "TRoomDB::buildAreas() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 
@@ -341,7 +504,8 @@ QList<int> TRoomDB::getAreaIDList()
 
 void TRoomDB::auditRooms()
 {
-    QTime t; t.start();
+    QElapsedTimer timer;
+    timer.start();
     // rooms konsolidieren
     QHashIterator<int, TRoom* > itRooms( rooms );
     while( itRooms.hasNext() )
@@ -351,7 +515,7 @@ void TRoomDB::auditRooms()
         pR->auditExits();
 
     }
-    qDebug()<<"audit map: runtime:"<<t.elapsed();
+    qDebug() << "TRoomDB::auditRooms() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TRoomDB::initAreasForOldMaps()
@@ -379,24 +543,27 @@ void TRoomDB::initAreasForOldMaps()
 
 void TRoomDB::clearMapDB()
 {
+    QElapsedTimer timer;
+    timer.start();
     QList<TRoom*> rPtrL = getRoomPtrList();
-    rooms.clear();
+    rooms.clear(); // Prevents any further use of TRoomDB::getRoom(int) !!!
+    entranceMap.clear();
     areaNamesMap.clear();
     hashTable.clear();
-    for(int i=0; i<rPtrL.size(); i++ )
+    for( uint i=0; i<rPtrL.size(); i++ )
     {
-        delete rPtrL[i];
+        delete rPtrL.at(i); // Uses the internally held value of the room Id
+                            // (TRoom::id) to call TRoomDB::__removeRoom(id)
     }
-    assert( rooms.size() == 0 );
+//    assert( rooms.size() == 0 ); // Pointless as rooms.clear() will have achieved the test condition
 
     QList<TArea*> areaList = getAreaPtrList();
-    for( int i=0; i<areaList.size(); i++ )
+    for( uint i=0; i<areaList.size(); i++ )
     {
-        delete areaList[i];
+        delete areaList.at(i);
     }
     assert( areas.size() == 0 );
-
-
+    qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 
@@ -412,5 +579,5 @@ void TRoomDB::restoreSingleArea(QDataStream & ifs, int areaID, TArea * pA )
 
 void TRoomDB::restoreSingleRoom(QDataStream & ifs, int i, TRoom *pT)
 {
-    rooms[i] = pT;
+    addRoom(i, pT, true);
 }

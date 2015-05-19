@@ -2988,11 +2988,10 @@ void T2DMap::slot_setImage()
 
 void T2DMap::slot_deleteRoom()
 {
+    mpMap->mpRoomDB->removeRoom( mMultiSelectionList );
+    // mMultiSelectionList gets cleared as rooms are removed by
+    // TRoomDB::removeRoom() so no need to clear it here!
     mMultiRect = QRect(0,0,0,0);
-    for( int j=0; j<mMultiSelectionList.size(); j++ )
-    {
-        mpMap->mpRoomDB->removeRoom( mMultiSelectionList[j] );
-    }
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();

@@ -31,7 +31,7 @@
 #include <QDataStream>
 #include <QDebug>
 #include <QStringBuilder>
-#include <QTime>
+#include <QElapsedTimer>
 #include "post_guard.h"
 
 
@@ -70,10 +70,16 @@ TRoom::TRoom(TRoomDB * pRDB)
 
 TRoom::~TRoom()
 {
-    QTime timer;
+    static double cumulativeMean = 0.0;
+    static quint64 runCount = 0 ;
+    QElapsedTimer timer;
     timer.start();
     mpRoomDB->__removeRoom( id );
-    qDebug()<<"room destructor took"<<timer.elapsed();
+    quint64 thisTime = timer.nsecsElapsed();
+    cumulativeMean += ( ( (thisTime * 1.0e-9) - cumulativeMean) / ++runCount );
+    if( runCount % 1000 == 0 ) {
+        qDebug()<<"TRoom::~TRoom() took" << thisTime * 1.0e-9 << "Sec this time and after" << runCount <<"times the average is" << cumulativeMean << "Sec.";
+    }
 }
 
 bool TRoom::hasExitStub(int direction)
@@ -244,21 +250,24 @@ bool TRoom::setArea( int areaID, bool isToDeferAreaRelatedRecalculations )
 
 bool TRoom::setExit( int to, int direction )
 {
+    // FIXME: This along with TRoom->setExit need to be unified to a controller.
     switch(direction){
-    case DIR_NORTH:     north     = to; return true; break;
-    case DIR_NORTHEAST: northeast = to; return true; break;
-    case DIR_NORTHWEST: northwest = to; return true; break;
-    case DIR_EAST:      east      = to; return true; break;
-    case DIR_WEST:      west      = to; return true; break;
-    case DIR_SOUTH:     south     = to; return true; break;
-    case DIR_SOUTHEAST: southeast = to; return true; break;
-    case DIR_SOUTHWEST: southwest = to; return true; break;
-    case DIR_UP:        up        = to; return true; break;
-    case DIR_DOWN:      down      = to; return true; break;
-    case DIR_IN:        in        = to; return true; break;
-    case DIR_OUT:       out       = to; return true;
+    case DIR_NORTH:     north     = to; break;
+    case DIR_NORTHEAST: northeast = to; break;
+    case DIR_NORTHWEST: northwest = to; break;
+    case DIR_EAST:      east      = to; break;
+    case DIR_WEST:      west      = to; break;
+    case DIR_SOUTH:     south     = to; break;
+    case DIR_SOUTHEAST: southeast = to; break;
+    case DIR_SOUTHWEST: southwest = to; break;
+    case DIR_UP:        up        = to; break;
+    case DIR_DOWN:      down      = to; break;
+    case DIR_IN:        in        = to; break;
+    case DIR_OUT:       out       = to; break;
+    default: return false;
     }
-    return false;
+    mpRoomDB->updateEntranceMap(this);
+    return true;
 }
 
 // Original code unused - checked all the normal exits to see if there is one to
@@ -584,7 +593,14 @@ void TRoom::setSpecialExit( int to, QString cmd )
         pA->determineAreaExitsOfRoom( id );
         // This updates the (TArea *)->exits map even for exit REMOVALS
     }
+    mpRoomDB->updateEntranceMap(this);
+    mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+}
 
+void TRoom::clearSpecialExits(){
+    other.clear();
+    mpRoomDB->updateEntranceMap(this);
+    mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
 }
 
 void TRoom::removeAllSpecialExitsToRoom( int _id )
@@ -604,6 +620,8 @@ void TRoom::removeAllSpecialExitsToRoom( int _id )
     {
         pA->determineAreaExitsOfRoom( id );
     }
+    mpRoomDB->updateEntranceMap(this);
+    mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
 }
 
 void TRoom::calcRoomDimensions()
