@@ -232,7 +232,7 @@ bool TRoom::setArea( int areaID, bool isToDeferAreaRelatedRecalculations )
     pA->addRoom( id );
 
     dirtyAreas.insert( pA );
-    pA->mIsDirty;
+    pA->mIsDirty = true;
 
     if( ! isToDeferAreaRelatedRecalculations ) {
         QSetIterator<TArea *> itpArea = dirtyAreas;

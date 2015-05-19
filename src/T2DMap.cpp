@@ -3272,7 +3272,7 @@ void T2DMap::slot_setArea()
 
     int newAreaId = arealist_combobox->itemData( arealist_combobox->currentIndex() ).toInt();
     mMultiRect = QRect(0,0,0,0);
-    uint maxRoomIndex = mMultiSelectionList.size() - 1;
+    int maxRoomIndex = mMultiSelectionList.size() - 1;
     for( int j = 0; j <= maxRoomIndex; j++ ) {
         if( j < maxRoomIndex ) {
             mpMap->setRoomArea( mMultiSelectionList.at(j), newAreaId, true );
