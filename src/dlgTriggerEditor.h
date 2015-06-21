@@ -102,11 +102,12 @@ public:
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, int );
     void                        show_vars( );
 
-signals:
 
+signals:
     void                        signal_establish_connection( const QString& profile_name );
     void                        accept();
     void                        update();
+
 
 public slots:
     void                        slot_toggleHiddenVars();
@@ -148,7 +149,6 @@ public slots:
     void                        slot_alias_selected( QTreeWidgetItem *pItem );
     void                        slot_action_selected( QTreeWidgetItem * pItem );
     void                        slot_key_selected( QTreeWidgetItem *pItem );
-    void                        slot_update();
     void                        slot_connection_dlg_finnished();
     void                        slot_add_new();
     void                        slot_add_new_folder();
