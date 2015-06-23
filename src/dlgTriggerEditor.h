@@ -103,12 +103,6 @@ public:
     void                        show_vars( );
 
 
-signals:
-    void                        signal_establish_connection( const QString& profile_name );
-    void                        accept();
-    void                        update();
-
-
 public slots:
     void                        slot_toggleHiddenVars();
     void                        slot_toggleHiddenVar( bool );
