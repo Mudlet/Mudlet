@@ -135,9 +135,15 @@ void TMap::importMapFromDatabase()
 bool TMap::setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations )
 {
     TRoom * pR = mpRoomDB->getRoom( id );
-
     if( !pR ) {
         QString msg = qApp->translate( "TMap", "RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!" ).arg(id).arg(area);
+        logError(msg);
+        return false;
+    }
+
+    TArea * pA = mpRoomDB->getArea( area );
+    if( ! pA ) {
+        QString msg = qApp->translate( "TMap", "AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!" ).arg(id).arg(area);
         logError(msg);
         return false;
     }
