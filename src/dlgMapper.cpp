@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -141,22 +142,26 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 void dlgMapper::updateAreaComboBox()
 {
-    QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
-    //sort them alphabetically (case sensitive)
-    QMap <QString, QString> areaNames;
-    while( it.hasNext() )
-    {
-        it.next();
-        QString name = it.value();
-        areaNames.insert(name.toLower(), name);
+    QMapIterator<int, QString> itAreaNamesA( mpMap->mpRoomDB->getAreaNamesMap() );
+    //insert sort them alphabetically (case INsensitive)
+    QMap <QString, QString> _areaNames;
+    while( itAreaNamesA.hasNext() ) {
+        itAreaNamesA.next();
+        uint deduplicate = 0;
+        QString _name;
+        do {
+            _name = QStringLiteral( "%1+%2" ).arg( itAreaNamesA.value().toLower() ).arg( ++deduplicate );
+            // Use a different suffix separator to one that area names
+            // deduplication uses ('_') - makes debugging easier?
+        } while( _areaNames.contains( _name ) );
+        _areaNames.insert( _name, itAreaNamesA.value() );
     }
-    //areaNames.sort();
-    QMapIterator<QString, QString> areaIt( areaNames );
+
     showArea->clear();
-    while( areaIt.hasNext() )
-    {
-        areaIt.next();
-        showArea->addItem( areaIt.value() );
+    QMapIterator<QString, QString> itAreaNamesB( _areaNames );
+    while( itAreaNamesB.hasNext() ) {
+        itAreaNamesB.next();
+        showArea->addItem( itAreaNamesB.value() );
     }
 }
 
