@@ -107,9 +107,6 @@ public:
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, int );
     void                        show_vars( );
 
-signals:
-
-    void                        signal_establish_connection( QString profile_name );
 
 public slots:
     void                        slot_toggleHiddenVars();
