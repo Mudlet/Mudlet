@@ -6670,13 +6670,15 @@ int TLuaInterpreter::setAreaName( lua_State *L )
         return 1;
     }
     else {
-        newName = QString( lua_tostring( L, 2 ) );
+        newName = QString::fromUtf8( lua_tostring( L, 2 ) ).trimmed();
+        // Now allow non-Ascii names but eliminate any leading or trailing spaces
     }
 
     if( newName.isEmpty() ) {
         // Empty name not allowed (any more)
         lua_pushnil( L );
-        lua_pushstring( L, tr( "setAreaName: bad argument #2 value (area names may not be empty strings)." ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setAreaName: bad argument #2 value (area names may not be empty strings {and spaces are trimmed from the ends})!" )
+                        .toUtf8().constData() );
         return 2;
     }
     else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().values().count( newName ) > 0 ) {
@@ -6718,55 +6720,60 @@ int TLuaInterpreter::setAreaName( lua_State *L )
     return 1;
 }
 
+// Despite the name this actually returns either the area ID or Name
+// respectively if given the other...
 int TLuaInterpreter::getRoomAreaName( lua_State *L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomAreaName: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomAreaName: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
     int id;
-    string name;
-    bool gotString = false;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        if( ! lua_isstring( L, 1 ) )
-        {
-            lua_pushstring( L, "getRoomAreaName: wrong argument type" );
+    QString name;
+    if( ! lua_isnumber( L, 1 ) ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr("getRoomAreaName: bad argument #1 type (area Id, as number or area name as string expected, got %1).")
+                            .arg( luaL_typename(L, 1)).toUtf8().constData());
             lua_error( L );
             return 1;
         }
-        else
-        {
-            name = lua_tostring( L, 1 );
-            gotString = true;
+        else {
+            name = QString::fromUtf8( lua_tostring( L, 1 ) );
         }
     }
-    else
-    {
+    else {
         id = lua_tonumber( L, 1 );
     }
 
-    QString _name = name.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( gotString )
-    {
-        QList<int> idList = pHost->mpMap->mpRoomDB->getAreaNamesMap().keys( _name );
-        if( idList.size() > 0 )
-        {
-            lua_pushnumber( L, idList[0] );
+    if( ! name.isNull() ) {
+        int result = pHost->mpMap->mpRoomDB->getAreaNamesMap().key( name, -1 );
+        lua_pushnumber( L, result );
+        if( result != -1 ) {
             return 1;
         }
-        else
-        {
-            lua_pushnumber( L, -1 );
-            return 1;
+        else {
+            lua_pushstring( L, tr( "getRoomAreaName: bad argument #1 value (area name %1 not found)." ).arg( name ).toUtf8().constData() );
+            return 2;
         }
     }
-    else
-    {
-        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) )
-        {
-            lua_pushstring( L, pHost->mpMap->mpRoomDB->getAreaNamesMap().value(id).toLatin1().data() );
+    else {
+        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
+            lua_pushstring( L, pHost->mpMap->mpRoomDB->getAreaNamesMap().value(id).toUtf8().constData() );
+            return 1;
         }
-        else
+        else {
             lua_pushnumber( L, -1 );
-        return 1;
+            lua_pushstring( L, tr( "getRoomAreaName: bad argument #1 value (area Id=%1 not found)." ).arg( id ).toUtf8().constData() );
+            return 2;
+        }
     }
 }
 
@@ -6782,7 +6789,7 @@ int TLuaInterpreter::addAreaName( lua_State *L )
         return 1;
     }
     else {
-        name = QString::fromUtf8( lua_tostring( L, 1 ) );
+        name = QString::fromUtf8( lua_tostring( L, 1 ) ).trimmed();
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -6801,7 +6808,7 @@ int TLuaInterpreter::addAreaName( lua_State *L )
     else if( name.isEmpty() ) {
         // Empty names now not allowed
         lua_pushnil( L );
-        lua_pushstring( L, tr( "addAreaName: bad argument #1 value (area names may not be empty strings)." )
+        lua_pushstring( L, tr( "addAreaName: bad argument #1 value (area names may not be empty strings {and spaces are trimmed from the ends})!" )
                         .toUtf8().constData() );
         return 2;
     }
@@ -6814,12 +6821,13 @@ int TLuaInterpreter::addAreaName( lua_State *L )
         return 2;
     }
 
+    lua_pushnumber( L, pHost->mpMap->mpRoomDB->addArea( name ) );
+
     // Update mapper Area names widget, using method designed for it...!
     if( pHost->mpMap->mpMapper ) {
         pHost->mpMap->mpMapper->updateAreaComboBox();
     }
 
-    lua_pushnumber( L, pHost->mpMap->mpRoomDB->addArea( name ) );
     return 1;
 }
 
@@ -8644,12 +8652,12 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: bad argument #1 value (room Id must exist.)" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomArea: bad argument #1 value (room Id=%1 must exist.)" ).arg( id ).toUtf8().constData() );
         return 2;
     }
     else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( area ) ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id must exist.)" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id=%1 must exist.)" ).arg( area ).toUtf8().constData() );
         return 2;
     }
     else {
