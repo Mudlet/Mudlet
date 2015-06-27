@@ -6570,7 +6570,7 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
 
 int TLuaInterpreter::setAreaName( lua_State *L )
 {
-    int id;
+    int id = -1;
     QString existingName;
     QString newName;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -6595,12 +6595,16 @@ int TLuaInterpreter::setAreaName( lua_State *L )
                             .arg( id ).toUtf8().constData() );
             return 2;
         }
-        else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
-            lua_pushnil( L );
-            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area Id=%1 does not exist)." )
-                            .arg( id ).toUtf8().constData() );
-            return 2;
-        }
+// Strangely, previous code allowed this command to create a NEW area's name
+// with this ID, but without a TArea instance to accompany it (the latter was/is
+// instantiated as needed when a room is moved to the relevent area...) and we
+// need to continue to allow this - Slysven
+//        else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
+//            lua_pushnil( L );
+//            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area Id=%1 does not exist)." )
+//                            .arg( id ).toUtf8().constData() );
+//            return 2;
+//        }
     }
     else if( lua_isstring( L, 1 ) ) {
         existingName = QString::fromUtf8( lua_tostring( L, 1 ) );
@@ -6664,10 +6668,11 @@ int TLuaInterpreter::setAreaName( lua_State *L )
 
     bool isCurrentAreaRenamed = false;
     if( pHost->mpMap->mpMapper ) {
-        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) == pHost->mpMap->mpMapper->showArea->currentText() ) {
+        if( id > 0 && pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) == pHost->mpMap->mpMapper->showArea->currentText() ) {
             isCurrentAreaRenamed = true;
         }
     }
+
     bool result = pHost->mpMap->mpRoomDB->setAreaName( id, newName );
     if( result ) {
         // Update mapper Area names widget, using method designed for it...!
@@ -6820,7 +6825,8 @@ int TLuaInterpreter::deleteArea( lua_State *L )
                             .arg( id ).toUtf8().constData() );
             return 2;
         }
-        else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
+        else if(    ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id )
+                 && ! pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
             lua_pushnil( L );
             lua_pushstring( L, tr( "deleteArea: bad argument #1 value (area Id=%1 does not exist)." )
                             .arg( id ).toUtf8().constData() );

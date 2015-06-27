@@ -333,6 +333,11 @@ bool TRoomDB::removeArea( int id )
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
     }
+    else if( areaNamesMap.contains( id ) ) {
+        // Handle corner case where the area name was created but not used
+        areaNamesMap.remove( id );
+        return true;
+    }
     return false;
 }
 
@@ -457,6 +462,10 @@ bool TRoomDB::setAreaName( int areaID, QString name )
         }
     }
     areaNamesMap[areaID] = name;
+    // This creates a NEW area name with given areaID if the ID was not
+    // previously used - but the TArea only gets created if the user manually
+    // creates it with TLuaInterpreter::addArea(areaId), OR moves a room to the
+    // area with either a Lua command or GUI action.
     return true;
 }
 
