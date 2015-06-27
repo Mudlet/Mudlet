@@ -67,7 +67,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( login_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_login(const QString)));
     connect( character_password_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_pass(const QString)));
     connect( mud_description_textedit, SIGNAL(textChanged()), this, SLOT(slot_update_description()));
-    connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( profiles_tree_widget, SIGNAL( currentItemChanged( QListWidgetItem *, QListWidgetItem * ) ), this, SLOT( slot_item_clicked( QListWidgetItem * )));
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QListWidgetItem * ) ), this, SLOT ( accept() ) );
 
@@ -1293,11 +1292,6 @@ void dlgConnectionProfiles::slot_chose_history()
 
     emit signal_establish_connection( profile_name, -1 );
     QDialog::accept();
-}
-
-void dlgConnectionProfiles::slot_update()
-{
-    update();
 }
 
 bool dlgConnectionProfiles::validateConnect()
