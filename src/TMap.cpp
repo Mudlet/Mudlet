@@ -143,9 +143,19 @@ bool TMap::setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculation
 
     TArea * pA = mpRoomDB->getArea( area );
     if( ! pA ) {
-        QString msg = qApp->translate( "TMap", "AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!" ).arg(id).arg(area);
-        logError(msg);
-        return false;
+        // Uh oh, the area doesn't seem to exist as a TArea instance, lets check
+        // to see if it exists as a name only:
+        if( ! mpRoomDB->getAreaNamesMap().contains( area ) ) {
+            // Ah, no it doesn't so moan:
+            QString msg = qApp->translate( "TMap", "AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!" ).arg(id).arg(area);
+            logError(msg);
+            return false;
+        }
+        // If got to this point then there is NOT a TArea instance for the given
+        // area Id but there is a Name - and the pR->setArea(...) call WILL
+        // instantiate the required TArea structure - this seems a bit twisty
+        // and convoluted, but it was how previous code was wired up and we need
+        // to retain the API for the lua subsystem...
     }
 
     bool result = pR->setArea( area, isToDeferAreaRelatedRecalculations );
