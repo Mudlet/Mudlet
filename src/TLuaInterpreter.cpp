@@ -8618,28 +8618,12 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 
 }
 
-
+// Can now take area as a Name (non-Ascii characters in area names are now
+// permitted) instead of an Id number as the second argument.  Can set the room
+// to an area which does not have a TArea instance but does appear in the
+// TRoomDB::areaNamesMap...
 int TLuaInterpreter::setRoomArea( lua_State * L )
 {
-    int id, area;
-    if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "setRoomArea: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
-        lua_error( L );
-        return 1;
-    }
-    else {
-        id = lua_tointeger( L, 1 );
-    }
-
-    if( ! lua_isnumber( L, 2 ) ) {
-        lua_pushstring( L, tr( "setRoomArea: bad argument #2 type (area Id, as number expected, got %1)." ).arg( luaL_typename( L, 2 ) ).toUtf8().constData() );
-        lua_error( L );
-        return 1;
-    }
-    else {
-        area = lua_tointeger( L, 2 );
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
@@ -8651,25 +8635,77 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         lua_pushstring( L, tr( "setRoomArea: no map present or loaded!" ).toUtf8().constData() );
         return 2;
     }
-    else if( area <= 0 ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id must be > 0.  To remove a room's area, use resetRoomArea(roomId) )." ).toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: bad argument #1 value (room Id=%1 must exist.)" ).arg( id ).toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( area ) ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id=%1 must exist.)" ).arg( area ).toUtf8().constData() );
-        return 2;
-    }
-    else {
-        lua_pushboolean( L, pHost->mpMap->setRoomArea( id, area, false ) );
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setRoomArea: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
         return 1;
     }
+    else {
+        id = lua_tointeger( L, 1 );
+        if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setRoomArea: bad argument #1 value (room Id=%1 must exist.)" ).arg( id ).toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    int areaId;
+    QString areaName;
+    if( lua_isnumber( L, 2 ) ) {
+        areaId = lua_tonumber( L, 2 );
+        if( areaId < 1 ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id must be > 0, got %1.  To remove a room's area, use resetRoomArea(roomId) )." )
+                            .arg( areaId ).toUtf8().constData() );
+            return 2;
+        }
+        else if( !pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( areaId ) ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area Id=%1 does not exist.)" )
+                            .arg( areaId ).toUtf8().constData() );
+            return 2;
+        }
+    }
+    else if( lua_isstring( L, 2 ) ) {
+        areaName = QString::fromUtf8( lua_tostring( L, 2 ) );
+        // areaId will be zero if not found!
+        if( areaName.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area name cannot be empty)." )
+                            .toUtf8().constData() );
+            return 2;
+        }
+        areaId = pHost->mpMap->mpRoomDB->getAreaNamesMap().key( areaName, 0 );
+        if( ! areaId ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setRoomArea: bad argument #2 value (area name \"%1\" does not exist)." )
+                            .arg( areaName ).toUtf8().constData() );
+            return 2;
+        }
+    }
+    else {
+        lua_pushstring( L, tr( "setRoomArea: bad argument #2 type (area Id as number or area name as string expected, got %1)." )
+                        .arg( luaL_typename( L, 2) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+
+    bool result = pHost->mpMap->setRoomArea( id, areaId, false );
+    if( result ) {
+        // As a sucessfull result WILL change the area a room is in then the map
+        // should be updated.  The GUI code that modifies room(s) areas already
+        // includes such a call to update the mapper.
+        if( pHost->mpMap->mpMapper ) {
+            pHost->mpMap->mpMapper->mp2dMap->update();
+        }
+        if( pHost->mpMap->mpM ) {
+            pHost->mpMap->mpM->update();
+        }
+    }
+    lua_pushboolean( L, result );
+    return 1;
 }
 
 int TLuaInterpreter::resetRoomArea( lua_State * L )
@@ -8701,9 +8737,21 @@ int TLuaInterpreter::resetRoomArea( lua_State * L )
         lua_pushstring( L, tr( "resetRoomArea: bad argument #1 value (room Id must exist)." ).toUtf8().constData() );
         return 2;
     }
-    else if ( pHost ) {
-       lua_pushboolean( L, pHost->mpMap->setRoomArea( id, -1, false ) );
-       return 1;
+    else {
+        bool result = pHost->mpMap->setRoomArea( id, -1, false );
+        if( result ) {
+            // As a sucessfull result WILL change the area a room is in then the map
+            // should be updated.  The GUI code that modifies room(s) areas already
+            // includes such a call to update the mapper.
+            if( pHost->mpMap->mpMapper ) {
+                pHost->mpMap->mpMapper->mp2dMap->update();
+            }
+            if( pHost->mpMap->mpM ) {
+                pHost->mpMap->mpM->update();
+            }
+        }
+        lua_pushboolean( L, result );
+        return 1;
     }
 }
 
