@@ -324,7 +324,9 @@ HEADERS += \
     TTreeWidgetItem.h \
     TTrigger.h \
     TVar.h \
-    VarUnit.h
+    VarUnit.h \
+    XMLexport.h \
+    XMLimport.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
