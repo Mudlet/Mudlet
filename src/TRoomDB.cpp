@@ -651,7 +651,7 @@ void TRoomDB::restoreAreaMap( QDataStream & ifs )
         }
         if( areaNamesMap.values().contains( nonEmptyAreaName ) ) {
             // Oh dear, we have a duplicate
-            if( nonEmptyAreaName.contains( QRegExp( "_\d\d\d$" ) ) ) {
+            if( nonEmptyAreaName.contains( QRegExp( "_\\d\\d\\d$" ) ) ) {
                 // the areaName already is of form "something_###" where # is a
                 // digit, have to strip that off and remember so warning message
                 // can include advice on this change

@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -318,7 +318,9 @@ HEADERS += \
     TTreeWidgetItem.h \
     TTrigger.h \
     TVar.h \
-    VarUnit.h
+    VarUnit.h \
+    XMLexport.h \
+    XMLimport.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
