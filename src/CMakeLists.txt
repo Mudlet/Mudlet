@@ -40,7 +40,6 @@ SET(mudlet_SRCS
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
     dlgScriptsMainArea.cpp
-    dlgSearchArea.cpp
     dlgSourceEditorArea.cpp
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
@@ -136,7 +135,6 @@ SET(mudlet_MOC_HDRS
     dlgProfilePreferences.h
     dlgRoomExits.h
     dlgScriptsMainArea.h
-    dlgSearchArea.h
     dlgSourceEditorArea.h
     dlgSystemMessageArea.h
     dlgTimersMainArea.h
