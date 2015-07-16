@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -149,7 +150,6 @@ public slots:
     void                        slot_alias_selected( QTreeWidgetItem *pItem );
     void                        slot_action_selected( QTreeWidgetItem * pItem );
     void                        slot_key_selected( QTreeWidgetItem *pItem );
-    void                        slot_connection_dlg_finnished();
     void                        slot_add_new();
     void                        slot_add_new_folder();
     void                        slot_addTrigger();
