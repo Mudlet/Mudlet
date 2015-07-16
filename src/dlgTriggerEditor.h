@@ -28,7 +28,6 @@
 #include <QPointer>
 #include "post_guard.h"
 
-#include "dlgSearchArea.h"
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"

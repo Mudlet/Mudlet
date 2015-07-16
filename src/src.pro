@@ -181,7 +181,6 @@ SOURCES += \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgScriptsMainArea.cpp \
-    dlgSearchArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
@@ -265,7 +264,6 @@ HEADERS += \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgScriptsMainArea.h \
-    dlgSearchArea.h \
     dlgSourceEditorArea.h \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
@@ -338,7 +336,6 @@ FORMS += \
     ui/composer.ui \
     ui/connection_profiles.ui \
     ui/dlgPackageExporter.ui \
-    ui/extended_search_area.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
