@@ -3566,6 +3566,9 @@ int TLuaInterpreter::solveRoomCollisions( lua_State *L )
     return 0;
 }
 
+// At one stage there was an isRoomLocked() function as well but it was
+// functionally identical - however as it was not registered by a call to
+// lua_register() in initLuaGlobals() it was not available to the user!
 int TLuaInterpreter::roomLocked( lua_State *L )
 {
     int id;
@@ -3816,34 +3819,6 @@ int TLuaInterpreter::hasExitLock( lua_State *L )
     }
     return 0;
 }
-
-int TLuaInterpreter::isLockedRoom( lua_State *L )
-{
-    int id;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "lockRoom: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        id = lua_tonumber( L, 1 );
-    }
-
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
-    if( pR )
-    {
-        lua_pushboolean( L, pR->isLocked );
-    }
-    else
-    {
-        lua_pushboolean(L, false);
-    }
-    return 1;
-}
-
 
 int TLuaInterpreter::getRoomExits( lua_State *L )
 {
