@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,6 +22,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TRoom.h"
 
 #ifndef Q_MOC_RUN
 #include "pre_guard.h"
@@ -34,10 +36,12 @@
 
 #include "pre_guard.h"
 #include <QDebug>
+#include <QString>
 #include "post_guard.h"
 
 #include <math.h>    // for sqrt
 
+class TRoom;
 
 using namespace boost;
 using namespace std;
@@ -46,49 +50,19 @@ using namespace std;
 // auxiliary types
 struct location
 {
-  float y, x, z; // lat, long
-  int id, area;
+    int         id; // Typically 4 bytes
+    TRoom *     pR; // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
 };
+
 typedef float cost;
 
-template <class Name, class LocMap>
-class city_writer {
-public:
-  city_writer(Name n, LocMap l, float _minx, float _maxx, float _minz,
-              float _miny, float _maxy, float _maxz,
-              unsigned int _ptx, unsigned int _pty, unsigned int _ptz )
-    : name(n), loc(l), minx(_minx), maxx(_maxx), miny(_miny),
-      maxy(_maxy), minz(_minz), maxz(_maxz), ptx(_ptx), pty(_pty), ptz(_ptz) {}
-  template <class Vertex>
-  void operator()(ostream& out, const Vertex& v) const {
-    float px = 1 - (loc[v].x - minx) / (maxx - minx);
-    float py = (loc[v].y - miny) / (maxy - miny);
-    float pz = (loc[v].z - minz) / (maxz - minz);
-    out << "[label=\"" << name[v] << "\", pos=\""
-        << static_cast<unsigned int>(ptx * px) << ","
-        << static_cast<unsigned int>(pty * py) << ","
-        << static_cast<unsigned int>(ptz * pz)
-        << "\", fontsize=\"11\"]";
-  }
-private:
-  Name name;
-  LocMap loc;
-  float minx, maxx, miny, maxy, minz, maxz;
-  unsigned int ptx, pty, ptz;
+// Used to record edge details and to deduplicate parallel ones:
+struct route
+{
+    float       cost;           // Needed during establising the best parallel edge
+    quint8      direction;      // Use DIR_xxx values to code exit direction
+    QString     specialExitName;// If direction is DIR_OTHER then this is needed
 };
-
-template <class WeightMap>
-class time_writer {
-public:
-  time_writer(WeightMap w) : wm(w) {}
-  template <class Edge>
-  void operator()(ostream &out, const Edge& e) const {
-    out << "[label=\"" << wm[e] << "\", fontsize=\"11\"]";
-  }
-private:
-  WeightMap wm;
-};
-
 
 // euclidean distance heuristic
 template <class Graph, class CostType, class LocMap>
@@ -100,14 +74,16 @@ public:
     : m_location(l), m_goal(goal) {}
   CostType operator()(Vertex u)
   {
-      if (m_location[m_goal].area != m_location[u].area)
+      if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea() ) {
           return 1;
-      CostType dx = m_location[m_goal].x - m_location[u].x;
-      CostType dy = m_location[m_goal].y - m_location[u].y;
-      //qDebug() << "dx" << dx << "dy" << dy << "\n";
-      CostType dz = m_location[m_goal].z - m_location[u].z;
-      return ::sqrt(dx * dx + dy * dy + dz * dz);
+      }
+      CostType dx = m_location[m_goal].pR->x - m_location[u].pR->x;
+      CostType dy = m_location[m_goal].pR->y - m_location[u].pR->y;
+      CostType dz = m_location[m_goal].pR->z - m_location[u].pR->z;
+
+      return std::sqrt(dx * dx + dy * dy + dz * dz);
   }
+
 private:
   LocMap m_location;
   Vertex m_goal;
