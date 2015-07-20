@@ -165,6 +165,7 @@ public slots:
     void slot_setExits();
     void slot_setUserData();
     void slot_lockRoom();
+    void slot_unlockRoom();
     void slot_setRoomWeight();
     void slot_setArea();
     void slot_setCustomLine();
