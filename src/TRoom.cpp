@@ -616,6 +616,8 @@ void TRoom::restore( QDataStream & ifs, int roomID, int version )
 
     id = roomID;
     ifs >> area;
+// Can be useful when analysing suspect map files!
+//     qDebug() << "TRoom::restore(...," << roomID << ",...) has AreaId:" << area;
     ifs >> x;
     ifs >> y;
     ifs >> z;

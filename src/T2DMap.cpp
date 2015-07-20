@@ -2315,6 +2315,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             QAction * action6 = new QAction("lock", this );
             action6->setStatusTip(tr("lock room for speed walks"));
             connect( action6, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
+            QAction * action17 = new QAction("unlock", this );
+            action17->setStatusTip(tr("unlock room for speed walks"));
+            connect( action17, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
             QAction * action7 = new QAction("weight", this );
             action7->setStatusTip(tr("set room weight"));
             connect( action7, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
@@ -2372,6 +2375,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             popup->addAction( action9 );
             //popup->addAction( action5 );
             popup->addAction( action6 );
+            popup->addAction( action17 );
             popup->addAction( action7 );
             popup->addAction( action2 );
             popup->addAction( action12 );
@@ -3225,6 +3229,19 @@ void T2DMap::slot_lockRoom()
     }
 }
 
+void T2DMap::slot_unlockRoom()
+{
+    mMultiRect = QRect(0,0,0,0);
+    for( int j=0; j<mMultiSelectionList.size(); j++ )
+    {
+        TRoom * pR = mpMap->mpRoomDB->getRoom(mMultiSelectionList[j]);
+        if( pR )
+        {
+            pR->isLocked = false;
+            mpMap->mMapGraphNeedsUpdate = true;
+        }
+    }
+}
 
 void T2DMap::slot_setRoomWeight()
 {

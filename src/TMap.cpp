@@ -34,6 +34,7 @@
 #include "pre_guard.h"
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QMainWindow>
 #include <QMessageBox>
@@ -287,7 +288,6 @@ bool TMap::setExit( int from, int to, int dir )
         to = -1;
     }
 
-    mPlausaOptOut = 0;
     bool ret = true;
 
     switch( dir ) {
@@ -478,6 +478,8 @@ bool TMap::gotoRoom( int r )
     return findPath( mRoomId, r );
 }
 
+// As can be seen this only sets the target and start point for a path find
+// the speedwalk is instigated by the Host class caller...
 bool TMap::gotoRoom( int r1, int r2 )
 {
     return findPath( r1, r2 );
@@ -485,470 +487,437 @@ bool TMap::gotoRoom( int r1, int r2 )
 
 void TMap::initGraph()
 {
-    QTime _time; _time.start();
+    QElapsedTimer _time;
+    _time.start();
     locations.clear();
     roomidToIndex.clear();
     g.clear();
     g = mygraph_t();
-    weightmap = get(edge_weight, g);
-    QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
-    int roomCount=0;
-    int edgeCount=0;
-    for( int _k=0; _k<roomList.size(); _k++ )
-    {
-        TRoom * pR = roomList[_k];
-        int i = pR->getId();
-        if( pR->isLocked || i < 1 )
-        {
+    unsigned int roomCount=0;
+    unsigned int edgeCount=0;
+    QSet<unsigned int> unUsableRoomSet;
+    // Keep track of the unusuable rather than the useable ones because that is
+    // hopefully a MUCH smaller set in normal situations!
+    QHashIterator<int, TRoom *> itRoom = mpRoomDB->getRoomMap();
+    while( itRoom.hasNext() ) {
+        itRoom.next();
+        TRoom * pR = itRoom.value();
+        if( itRoom.key() < 1 || ! pR || pR->isLocked ) {
+            unUsableRoomSet.insert( itRoom.key() );
             continue;
         }
-        roomCount++;
+
         location l;
-        l.x = pR->x;
-        l.y = pR->y;
-        l.z = pR->z;
-        l.id = pR->getId();
-        l.area = pR->getArea();
+        l.pR = pR;
+        l.id = itRoom.key();
+        // locations is std::vector<location> and (locations.at( k )).id will give room ID value
         locations.push_back( l );
+        // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
+        roomidToIndex.insert( itRoom.key(), roomCount++ );
     }
-    for( unsigned int i=0;i<locations.size();i++){
-        roomidToIndex[locations[i].id] = i;
-        indexToRoomid[i] = locations[i].id;
-    }
-    for( int _k=0; _k<roomList.size(); _k++ ){
-        TRoom * pR = roomList[_k];
-        if( pR->isLocked || !roomidToIndex.contains(pR->getId()) )
-        {
-            continue;
-        }
-        int roomIndex = roomidToIndex[pR->getId()];
-        TRoom * pN = mpRoomDB->getRoom( pR->getNorth() );
-        TRoom * pNW = mpRoomDB->getRoom( pR->getNorthwest() );
-        TRoom * pNE = mpRoomDB->getRoom( pR->getNortheast() );
-        TRoom * pS = mpRoomDB->getRoom( pR->getSouth() );
-        TRoom * pSW = mpRoomDB->getRoom( pR->getSouthwest() );
-        TRoom * pSE = mpRoomDB->getRoom( pR->getSoutheast() );
-        TRoom * pW = mpRoomDB->getRoom( pR->getWest() );
-        TRoom * pE = mpRoomDB->getRoom( pR->getEast() );
-        TRoom * pUP = mpRoomDB->getRoom( pR->getUp() );
-        TRoom * pDOWN = mpRoomDB->getRoom( pR->getDown() );
-        TRoom * pIN = mpRoomDB->getRoom( pR->getIn() );
-        TRoom * pOUT = mpRoomDB->getRoom( pR->getOut() );
 
+    // Now identify the routes between rooms, and pick out the best edges of parallel ones
+    foreach(location l, locations) {
+        unsigned int source = l.id;
+        TRoom * pSourceR = l.pR;
+        QHash<unsigned int, route> bestRoutes;
+        // key is target (destination room),
+        // value is data we will need to store later,
+        QMap<QString, int> exitWeights = pSourceR->getExitWeights();
 
-        QMap<QString, int> exitWeights = pR->getExitWeights();
+        int target = pSourceR->getNorth();
+        TRoom * pTargetR;
+        quint8 direction = DIR_NORTH;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            // In above tests the second test is to eliminate self-edges (they
+            // are of no use).  The third test is to eliminate targets that we
+            // have already found to be unreachable because they are invalid or
+            // locked.
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) { // OK got something that is valid
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("n"), pTargetR->getWeight() );
+                r.direction = direction;
+                bestRoutes.insert(target, r);
+            }
+        }
 
-        if( pN && !pN->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_NORTH ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getNorth()],
-                                                  g );
-                if( exitWeights.contains("n"))
-                    weightmap[e] = pR->getExitWeight("n");
-                else
-                    weightmap[e] = pN->getWeight();
-            }
-        }
-        if( pS && !pS->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_SOUTH ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getSouth()],
-                                                  g );
-                if( exitWeights.contains("s"))
-                    weightmap[e] = pR->getExitWeight("s");
-                else
-                    weightmap[e] = pS->getWeight();
-            }
-        }
-        if( pNE && !pNE->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_NORTHEAST ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getNortheast()],
-                                                  g );
-                if( exitWeights.contains("ne"))
-                    weightmap[e] = pR->getExitWeight("ne");
-                else
-                    weightmap[e] = pNE->getWeight();
-            }
-        }
-        if( pE && !pE->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_EAST ) )
-            {
-               //edgeCount++;
-               edge_descriptor e;
-               bool inserted;
-               std::tie(e, inserted) = add_edge( roomIndex,
-                                                 roomidToIndex[pR->getEast()],
-                                                 g );
-               if( exitWeights.contains("e"))
-                   weightmap[e] = pR->getExitWeight("e");
-               else
-                   weightmap[e] = pE->getWeight();
-            }
-        }
-        if( pW && !pW->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_WEST ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getWest()],
-                                                  g );
-                if( exitWeights.contains("w"))
-                    weightmap[e] = pR->getExitWeight("w");
-                else
-                    weightmap[e] = pW->getWeight();
-            }
-        }
-        if( pSW && !pSW->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_SOUTHWEST ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getSouthwest()],
-                                                  g );
-                if( exitWeights.contains("sw"))
-                    weightmap[e] = pR->getExitWeight("sw");
-                else
-                    weightmap[e] = pSW->getWeight();
-            }
-        }
-        if( pSE && !pSE->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_SOUTHEAST ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getSoutheast()],
-                                                  g );
-                if( exitWeights.contains("se"))
-                    weightmap[e] = pR->getExitWeight("se");
-                else
-                    weightmap[e] = pSE->getWeight();
-            }
-        }
-        if( pNW && !pNW->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_NORTHWEST ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getNorthwest()],
-                                                  g );
-                if( exitWeights.contains("nw"))
-                    weightmap[e] = pR->getExitWeight("nw");
-                else
-                    weightmap[e] = pNW->getWeight();
-            }
-        }
-        if( pUP && !pUP->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_UP ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getUp()],
-                                                  g );
-                if( exitWeights.contains("up"))
-                    weightmap[e] = pR->getExitWeight("up");
-                else
-                    weightmap[e] = pUP->getWeight();
-            }
-        }
-        if( pDOWN && !pDOWN->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_DOWN ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getDown()],
-                                                  g );
-                if( exitWeights.contains("down"))
-                    weightmap[e] = pR->getExitWeight("down");
-                else
-                    weightmap[e] = pDOWN->getWeight();
-            }
-        }
-        if( pIN && !pIN->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_IN ) )
-            {
-                edge_descriptor e;
-                bool inserted;
-                std::tie(e, inserted) = add_edge( roomIndex,
-                                                  roomidToIndex[pR->getIn()],
-                                                  g );
-                if( exitWeights.contains("in"))
-                    weightmap[e] = pR->getExitWeight("in");
-                else
-                    weightmap[e] = pIN->getWeight();
-            }
-        }
-        if( pOUT && !pOUT->isLocked )
-        {
-            if( !pR->hasExitLock( DIR_OUT ) )
-            {
-                 edge_descriptor e;
-                 bool inserted;
-                 std::tie(e, inserted) = add_edge( roomIndex,
-                                                   roomidToIndex[pR->getOut()],
-                                                   g );
-                 if( exitWeights.contains("out"))
-                     weightmap[e] = pR->getExitWeight("out");
-                 else
-                     weightmap[e] = pOUT->getWeight();
-            }
-        }
-        if( pR->getOtherMap().size() > 0 )
-        {
-            QMapIterator<int, QString> it( pR->getOtherMap() );
-            while( it.hasNext() )
-            {
-                it.next();
-                int _id = it.key();
-                QString _cmd = it.value();
-                if( _cmd.size()>0 ) _cmd.remove(0,1);//strip special exit lock information
-                TRoom * pSpecial = mpRoomDB->getRoom( _id );
-                if( !pSpecial || pR->hasSpecialExitLock( _id, _cmd ) || pSpecial->isLocked)
-                    continue;
-                else
-                {
-                    edge_descriptor e;
-                    bool inserted;
-                    std::tie(e, inserted) = add_edge( roomIndex,
-                                                      roomidToIndex[pSpecial->getId()],
-                                                      g );
-                    if( exitWeights.contains(_cmd))
-                    {
-                        weightmap[e] = pR->getExitWeight(_cmd);
-                    }
-                    else
-                    {
-                        weightmap[e] = pSpecial->getWeight();
-                    }
-
+        target = pSourceR->getEast();
+        direction = DIR_EAST;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("e"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) { // Ah, this is a better route
+                    r.direction = direction;
+                    bestRoutes.insert(target, r); // If the second part of conditional is the truth this will replace previous best route to this target
                 }
             }
         }
-    }
+
+        target = pSourceR->getSouth();
+        direction = DIR_SOUTH;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("s"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getWest();
+        direction = DIR_WEST;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("w"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getUp();
+        direction = DIR_UP;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("up"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getDown();
+        direction = DIR_DOWN;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("down"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getNortheast();
+        direction = DIR_NORTHEAST;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("ne"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getSoutheast();
+        direction = DIR_SOUTHEAST;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("se"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getSouthwest();
+        direction = DIR_SOUTHWEST;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("sw"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getNorthwest();
+        direction = DIR_NORTHWEST;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("nw"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getIn();
+        direction = DIR_IN;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("in"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        target = pSourceR->getOut();
+        direction = DIR_OUT;
+        if( target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction) ) {
+            pTargetR = mpRoomDB->getRoom( target );
+            if( pTargetR && ! pTargetR->isLocked ) {
+                route r;
+                r.cost = exitWeights.value(QStringLiteral("out"), pTargetR->getWeight() );
+                if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                    r.direction = direction;
+                    bestRoutes.insert(target, r);
+                }
+            }
+        }
+
+        QMapIterator<int, QString> itSpecialExit( pSourceR->getOtherMap() );
+        while( itSpecialExit.hasNext() ) {
+            itSpecialExit.next();
+            if( (itSpecialExit.value()).startsWith( QStringLiteral("1") ) ) {
+                continue; // Is a locked exit so forget it...
+            }
+
+            target = itSpecialExit.key();
+            direction = DIR_OTHER;
+            if( target > 0 && source != target && !unUsableRoomSet.contains(target) ) {
+                pTargetR = mpRoomDB->getRoom( target );
+                if( pTargetR && ! pTargetR->isLocked ) {
+                    route r;
+                    if( Q_LIKELY( (itSpecialExit.value()).startsWith( QStringLiteral("0")) ) ) {
+                        r.specialExitName = itSpecialExit.value().mid(1);
+                         }
+                    else {
+                        r.specialExitName = itSpecialExit.value();
+                    }
+                    r.cost = exitWeights.value( r.specialExitName, pTargetR->getWeight() );
+                    if( ! bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost ) {
+                        r.direction = direction;
+                        bestRoutes.insert(target, r);
+                    }
+                }
+            }
+        } // End of while(itSpecialExit.hasNext())
+
+        // Now we have eliminated possibe duplicate and useless edges we can create and
+        // insert the remainder into the BGL graph:
+        QHashIterator<unsigned int, route> itRoute = bestRoutes;
+        while( itRoute.hasNext() ) {
+            itRoute.next();
+            edge_descriptor e;
+            bool inserted; // This is always going to be false as it gets set if
+                           // we had tried to insert a parallel edge into a graph
+                           // that does not support them - but we've just been
+                           // and disposed of those already!
+            tie(e, inserted) = add_edge( roomidToIndex.value( source ),
+                                         roomidToIndex.value( itRoute.key() ),
+                                         itRoute.value().cost,
+                                         g );
+            edgeHash.insert( qMakePair(source, itRoute.key()), itRoute.value() );
+            // The key is made from the QPair<edgeSourceRoomId, edgeTargetRoomId>...
+            edgeCount++;
+        }
+    } // End of foreach(location l, locations)
 
     mMapGraphNeedsUpdate = false;
-    qDebug()<<"initGraph: nodes: "<<locations.size()<<"/"<<roomCount<<" edges:"<<edgeCount<<" run time:"<<_time.elapsed();
+    qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount <<") locations(roomCount), and discarded" << unUsableRoomSet.count() << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-9 << "seconds.";
 }
 
 bool TMap::findPath( int from, int to )
 {
-     if( mMapGraphNeedsUpdate )
-     {
+    if( mMapGraphNeedsUpdate ) {
         initGraph();
-     }
+    }
 
-     TRoom * pFrom = mpRoomDB->getRoom( from );
-     TRoom * pTo = mpRoomDB->getRoom( to );
+    QElapsedTimer t;
+    t.start();
 
-     if( !pFrom || !pTo )
-     {
-         return false;
-     }
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    // Clear the previous path data here so that if the following test is
+    // passed, the data is empty - and valid for THAT case!
 
-     bool hasUsableExit = false;
+    if( from == to ) {
+        return true; // Take a short-cut for trival "already there" case!
+    }
 
-     if( pFrom->getNorth()                        > 0 && ( ! pFrom->hasExitLock( DIR_NORTH ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getSouth()     > 0 && ( ! pFrom->hasExitLock( DIR_SOUTH     ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getWest()      > 0 && ( ! pFrom->hasExitLock( DIR_WEST      ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getEast()      > 0 && ( ! pFrom->hasExitLock( DIR_EAST      ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getUp()        > 0 && ( ! pFrom->hasExitLock( DIR_UP        ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getDown()      > 0 && ( ! pFrom->hasExitLock( DIR_DOWN      ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getNortheast() > 0 && ( ! pFrom->hasExitLock( DIR_NORTHEAST ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getNorthwest() > 0 && ( ! pFrom->hasExitLock( DIR_NORTHWEST ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getSoutheast() > 0 && ( ! pFrom->hasExitLock( DIR_SOUTHEAST ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getSouthwest() > 0 && ( ! pFrom->hasExitLock( DIR_SOUTHWEST ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getIn()        > 0 && ( ! pFrom->hasExitLock( DIR_IN        ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit && pFrom->getOut()       > 0 && ( ! pFrom->hasExitLock( DIR_OUT       ) ) )
-         hasUsableExit = true;
-     if( ! hasUsableExit )
-     { // No available normal exits from this room so check the special ones
-         QStringList specialExitCommands = pFrom->getOtherMap().values();
-         while( ! specialExitCommands.isEmpty() )
-         {
-             if( specialExitCommands.at(0).mid(0,1)== "0" )
-             {
-                 hasUsableExit = true;
-                 break;
-             }
-             specialExitCommands.removeFirst();
-         }
-     }
-     if( ! hasUsableExit )
-         return false; // No available exits from the start room so give up!
+    TRoom * pFrom = mpRoomDB->getRoom( from );
+    TRoom * pTo = mpRoomDB->getRoom( to );
 
+    if( !pFrom || !pTo ) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: NULL TRoom pointer for start or target rooms!";
+        return false;
+    }
 
-     vertex start = roomidToIndex[from];
-     vertex goal = roomidToIndex[to];
+    bool hasUsableExit = false;
 
-     vector<mygraph_t::vertex_descriptor> p(num_vertices(g));
-     vector<cost> d(num_vertices(g));
-     QTime t;
-     t.start();
-     try
-     {
-         astar_search( g,
-                       start,
-                       distance_heuristic<mygraph_t, cost, std::vector<location> >(locations, goal),
-                       predecessor_map(&p[0]).distance_map(&d[0]).
-                       visitor(astar_goal_visitor<vertex>(goal)) );
-     }
-     catch( found_goal )
-     {
-         qDebug()<<"time elapsed in astar:"<<t.elapsed();
-         t.restart();
-         list<vertex> shortest_path;
-         for(vertex v = goal; ; v = p[v])
-         {
-             int nextRoom = indexToRoomid[v];
-             if( ! mpRoomDB->getRoom( nextRoom ) )
-             {
-                 cout<<"ERROR path assembly: path room not in map!"<<endl;
-                 return false;
-             }
-             shortest_path.push_front(nextRoom);
-             if(p[v] == v) break;
-         }
-         TRoom * pRD1 = mpRoomDB->getRoom(from);
-         TRoom * pRD2 = mpRoomDB->getRoom(to);
-         if( !pRD1 || !pRD2 ) return false;
-         cout << "Shortest path from " << pRD1->getId() << " to "
-              << pRD2->getId() << ": ";
-         list<vertex>::iterator spi = shortest_path.begin();
-         cout << pRD1->getId();
-         mPathList.clear();
-         mDirList.clear();
-         int curRoom = from;
+    if( pFrom->getNorth()                        > 0 && ( ! pFrom->hasExitLock( DIR_NORTH ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getSouth()     > 0 && ( ! pFrom->hasExitLock( DIR_SOUTH     ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getWest()      > 0 && ( ! pFrom->hasExitLock( DIR_WEST      ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getEast()      > 0 && ( ! pFrom->hasExitLock( DIR_EAST      ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getUp()        > 0 && ( ! pFrom->hasExitLock( DIR_UP        ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getDown()      > 0 && ( ! pFrom->hasExitLock( DIR_DOWN      ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getNortheast() > 0 && ( ! pFrom->hasExitLock( DIR_NORTHEAST ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getNorthwest() > 0 && ( ! pFrom->hasExitLock( DIR_NORTHWEST ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getSoutheast() > 0 && ( ! pFrom->hasExitLock( DIR_SOUTHEAST ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getSouthwest() > 0 && ( ! pFrom->hasExitLock( DIR_SOUTHWEST ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getIn()        > 0 && ( ! pFrom->hasExitLock( DIR_IN        ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit && pFrom->getOut()       > 0 && ( ! pFrom->hasExitLock( DIR_OUT       ) ) ) {
+        hasUsableExit = true;
+    }
+    if( ! hasUsableExit ) {
+        // No available normal exits from this room so check the special ones
+        QStringList specialExitCommands = pFrom->getOtherMap().values();
+        while( ! specialExitCommands.isEmpty() ) {
+            if( specialExitCommands.at(0).mid(0,1)== "0" ) {
+                hasUsableExit = true;
+                break;
+            }
+            specialExitCommands.removeFirst();
+        }
+    }
+    if( ! hasUsableExit ) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: no usable exits from start room!";
+        return false; // No available exits from the start room so give up!
+    }
 
-         for( ++spi; spi != shortest_path.end(); ++spi )
-         {
-             TRoom * pRcurRoom = mpRoomDB->getRoom( curRoom );
-             TRoom * pRPath = mpRoomDB->getRoom( *spi );
-             if( !pRcurRoom || !pRPath )
-             {
-                 cout << "ERROR: path not possible. curRoom not in map!" << endl;
-                 mPathList.clear();
-                 mDirList.clear();
-                 return false;
-             }
-             cout <<" spi:"<<*spi<<" curRoom:"<< curRoom << endl;//" -> ";
-             mPathList.push_back( *spi );
-             if( pRcurRoom->getNorth() == pRPath->getId() )
-             {
-                 mDirList.push_back("n");
-             }
-             else if( pRcurRoom->getNortheast() == pRPath->getId() )
-             {
-                 mDirList.push_back("ne");
-             }
-             else if( pRcurRoom->getNorthwest() == pRPath->getId() )
-             {
-                 mDirList.push_back("nw");
-             }
-             else if( pRcurRoom->getSoutheast() == pRPath->getId() )
-             {
-                 mDirList.push_back("se");
-             }
-             else if( pRcurRoom->getSouthwest() == pRPath->getId() )
-             {
-                 mDirList.push_back("sw");
-             }
-             else if( pRcurRoom->getSouth() == pRPath->getId() )
-             {
-                 mDirList.push_back("s");
-             }
-             else if( pRcurRoom->getEast() == pRPath->getId() )
-             {
-                 mDirList.push_back("e");
-             }
-             else if( pRcurRoom->getWest() == pRPath->getId() )
-             {
-                 mDirList.push_back("w");
-             }
-             else if( pRcurRoom->getUp() == pRPath->getId() )
-             {
-                 mDirList.push_back("up");
-             }
-             else if( pRcurRoom->getDown() == pRPath->getId() )
-             {
-                 mDirList.push_back("down");
-             }
-             else if( pRcurRoom->getIn() == pRPath->getId() )
-             {
-                 mDirList.push_back("in");
-             }
-             else if( pRcurRoom->getOut() == pRPath->getId() )
-             {
-                 mDirList.push_back("out");
-             }
-             else if( pRcurRoom->getOtherMap().size() > 0 )
-             {
-                 QMapIterator<int, QString> it( pRcurRoom->getOtherMap() );
-                 while( it.hasNext() )
-                 {
-                     it.next();
-                     if( it.key() == pRPath->getId() )
-                     {
-                         QString _cmd = it.value();
-                         if( _cmd.size() > 0 && (_cmd.startsWith('0')))
-                         {
-                             _cmd = _cmd.mid(1);
-                             mDirList.push_back( _cmd );
-                             qDebug()<<" adding special exit: roomID:"<<pRcurRoom->getId()<<" OPEN special exit:"<<_cmd;
-                         }
-                         else if( _cmd.startsWith('1'))
-                         {
-                             qDebug()<<"NOT adding roomID:"<<pRcurRoom->getId()<<" LOCKED special exit:"<<_cmd;
-                         }
-                         else
-                             qDebug()<<"ERROR adding roomID:"<<pRcurRoom->getId()<<" special exit:"<<_cmd;
-                     }
-                 }
-             }
+    if( ! roomidToIndex.contains(from) ) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: start room not in map graph!";
+        return false;
+        // The start room is NOT one that has been included in the BGL graph
+        // probably because it is locked - so no route finding can be done
+    }
+    vertex start = roomidToIndex.value(from);
 
-             curRoom = *spi;
-         }
-        qDebug()<<"time elapsed building path"<<t.elapsed();
-         return true;
-     }
+    if( ! roomidToIndex.contains(to) ) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
+        return false;
+        // The target room is NOT one that has been included in the BGL graph
+        // probably because it is locked - so no route finding can be done
+    }
+    vertex goal = roomidToIndex.value(to);
 
-     return false;
+    std::vector<vertex> p(num_vertices(g));
+    // Somehow p is an acending, monotonic series of numbers start at 0, it
+    // seems we have a redundent indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
+    std::vector<cost> d(num_vertices(g));
+    try {
+        astar_search( g,
+                      start,
+                      distance_heuristic<mygraph_t, cost, std::vector<location> >(locations, goal),
+                      predecessor_map(&p[0]).distance_map(&d[0]).
+                      visitor(astar_goal_visitor<vertex>(goal)) );
+    }
+    catch( found_goal ) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+             t.restart();
+        if( ! roomidToIndex.contains(to) ) {
+            qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
+            return false;
+        }
+
+        vertex currentVertex = roomidToIndex.value(to);
+        unsigned int currentRoomId = (locations.at(currentVertex)).id;
+
+        // We step through the found path BACKWARDS so advance (well retard)
+        // the "previous" one first, and it will be the SOURCE vertex for the
+        // edge and current will be the TARGET vertex:
+        vertex previousVertex = currentVertex;
+        do {
+            previousVertex = p[currentVertex];
+            if( previousVertex == currentVertex ) {
+                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds." ;
+                mPathList.clear();
+                mDirList.clear();
+                mWeightList.clear(); // Reset any partial results...
+                return false;
+            }
+            unsigned int previousRoomId = (locations.at(previousVertex)).id;
+            QPair<unsigned int, unsigned int> edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
+            route r = edgeHash.value( edgeRoomIdPair );
+            mPathList.prepend( currentRoomId );
+            Q_ASSERT_X( r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
+            // Above was found to be triggered by the situation described in:
+            // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
+            // this is because previousVertex was the same as currentVertex after
+            // the "previousVertex = p[currentVertex]" operation at the start of
+            // the do{} loop - added a test for this so should bail out if it
+            // happens - Slysven
+            mWeightList.prepend( r.cost );
+            switch( r.direction ) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
+            case DIR_NORTH:        mDirList.prepend( qApp->translate( "TMap", "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!" ) );      break;
+            case DIR_NORTHEAST:    mDirList.prepend( qApp->translate( "TMap", "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
+            case DIR_EAST:         mDirList.prepend( qApp->translate( "TMap", "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!" ) );       break;
+            case DIR_SOUTHEAST:    mDirList.prepend( qApp->translate( "TMap", "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
+            case DIR_SOUTH:        mDirList.prepend( qApp->translate( "TMap", "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!" ) );      break;
+            case DIR_SOUTHWEST:    mDirList.prepend( qApp->translate( "TMap", "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
+            case DIR_WEST:         mDirList.prepend( qApp->translate( "TMap", "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!" ) );       break;
+            case DIR_NORTHWEST:    mDirList.prepend( qApp->translate( "TMap", "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
+            case DIR_UP:           mDirList.prepend( qApp->translate( "TMap", "up", "This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!" ) );        break;
+            case DIR_DOWN:         mDirList.prepend( qApp->translate( "TMap", "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!" ) );    break;
+            case DIR_IN:           mDirList.prepend( qApp->translate( "TMap", "in", "This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!" ) );        break;
+            case DIR_OUT:          mDirList.prepend( qApp->translate( "TMap", "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!" ) );      break;
+            case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
+            default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from Id:" << previousRoomId << ", to Id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
+            }
+            currentVertex = previousVertex;
+            currentRoomId = previousRoomId;
+        } while( currentVertex != start );
+
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds." ;
+        return true;
+    }
+
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds." ;
+    return false;
 }
 
 const int CURRENT_MAP_VERSION = 16;
@@ -1135,6 +1104,15 @@ bool TMap::restore(QString location)
                 int areaID;
                 ifs >> areaID;
                 ifs >> pA->rooms;
+// Can be useful when analysing suspect map files!
+//                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
+// This is not essential but can help when debugging - so the rooms are in
+// ascending order
+                if( pA->rooms.count() > 1 ) {
+                    qSort( pA->rooms.begin(), pA->rooms.end() );
+                }
+// Can be useful when analysing suspect map files!
+//                qDebug() << "Rooms:" << pA->rooms;
 
                 ifs >> pA->ebenen;
                 ifs >> pA->exits;

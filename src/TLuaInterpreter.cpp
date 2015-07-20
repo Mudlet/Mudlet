@@ -3566,6 +3566,9 @@ int TLuaInterpreter::solveRoomCollisions( lua_State *L )
     return 0;
 }
 
+// At one stage there was an isRoomLocked() function as well but it was
+// functionally identical - however as it was not registered by a call to
+// lua_register() in initLuaGlobals() it was not available to the user!
 int TLuaInterpreter::roomLocked( lua_State *L )
 {
     int id;
@@ -3816,34 +3819,6 @@ int TLuaInterpreter::hasExitLock( lua_State *L )
     }
     return 0;
 }
-
-int TLuaInterpreter::isLockedRoom( lua_State *L )
-{
-    int id;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "lockRoom: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        id = lua_tonumber( L, 1 );
-    }
-
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
-    if( pR )
-    {
-        lua_pushboolean( L, pR->isLocked );
-    }
-    else
-    {
-        lua_pushboolean(L, false);
-    }
-    return 1;
-}
-
 
 int TLuaInterpreter::getRoomExits( lua_State *L )
 {
@@ -4327,53 +4302,105 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
 
 int TLuaInterpreter::gotoRoom( lua_State *L )
 {
-    int r;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "gotoRoom: wrong argument type" );
+    int targetRoomId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "gotoRoom: bad argument #1 type (target room Id, as number expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        r = lua_tonumber( L, 1 );
+    else {
+        targetRoomId = lua_tonumber( L, 1 );
     }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool ret = pHost->mpMap->gotoRoom( r );
-    pHost->startSpeedWalk();
-    lua_pushboolean( L, ret );
-    return 1;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "gotoRoom: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "gotoRoom: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "gotoRoom: bad argument #1 value (target room Id must exist.)" ).toUtf8().constData() );
+        return 2;
+    }
+
+    if( pHost->mpMap->gotoRoom( targetRoomId ) ) {
+        pHost->startSpeedWalk();
+        lua_pushboolean( L, true );
+        return 1;
+    }
+    else {
+        int totalWeight = pHost->assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
+        Q_UNUSED(totalWeight);
+        lua_pushboolean( L, false );
+        lua_pushstring( L, tr( "gotoRoom: no path found from current room to room with Id %1!" ).arg(targetRoomId).toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::getPath( lua_State *L )
 {
-    int r1;
-    int r2;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getPath: wrong argument type" );
+    int originRoomId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getPath: bad argument #1 type (starting room Id, as number expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        r1 = lua_tonumber( L, 1 );
+    else {
+        originRoomId = lua_tonumber( L, 1 );
     }
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "getPath: wrong argument type" );
+
+    int targetRoomId;
+    if( ! lua_isnumber( L, 2 ) ) {
+        lua_pushstring( L, tr( "getPath: bad argument #2 type (target room Id, as number expected, got %1!)" ).arg( luaL_typename(L, 2) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        r2 = lua_tonumber( L, 2 );
+    else {
+        targetRoomId = lua_tonumber( L, 2 );
     }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool ret = pHost->mpMap->gotoRoom( r1, r2 );
-    pHost->assemblePath();
-    lua_pushboolean( L, ret );
-    return 1;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getPath: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getPath: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap->mpRoomDB->getRoom( originRoomId ) ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getPath: bad argument #1 value (source room Id must exist.)" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getPath: bad argument #2 value (target room Id must exist.)" ).toUtf8().constData() );
+        return 2;
+    }
+
+    bool ret = pHost->mpMap->gotoRoom( originRoomId, targetRoomId );
+    int totalWeight = pHost->assemblePath(); // Needed even if unsucessful, to clear lua tables then
+    if( ret )
+    {
+        lua_pushboolean( L, true );
+        lua_pushnumber( L, totalWeight );
+        return 2;
+    }
+    else {
+        lua_pushboolean( L, false );
+        lua_pushnumber( L, -1 );
+        lua_pushstring( L, tr( "getPath: no path found from room, with Id %1 to room %2!" ).arg(originRoomId).arg(targetRoomId).toUtf8().constData() );
+        return 3;
+    }
 }
 
 int TLuaInterpreter::deselect( lua_State *L )
@@ -11095,10 +11122,10 @@ void TLuaInterpreter::set_lua_table(const QString & tableName, QStringList & var
     for( int i=0; i<variableList.size(); i++ )
     {
         lua_pushnumber( L, i+1 ); // Lua indexes start with 1
-        lua_pushstring( L, variableList[i].toLatin1().data() );
+        lua_pushstring( L, variableList[i].toUtf8().constData() );
         lua_settable( L, -3 );
     }
-    lua_setglobal( L, tableName.toLatin1().data() );
+    lua_setglobal( L, tableName.toUtf8().constData() );
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
 }
 
@@ -11111,13 +11138,10 @@ void TLuaInterpreter::set_lua_string( const QString & varName, const QString & v
         return;
     }
 
-    //lua_pushstring( L, varName.toLatin1().data() );
-    lua_pushstring( L, varValue.toLatin1().data() );
-    lua_setglobal( L, varName.toLatin1().data() );
-    //lua_setfield( L, LUA_GLOBALSINDEX, s )
+    lua_pushstring( L, varValue.toUtf8().constData() );
+    lua_setglobal( L, varName.toUtf8().constData() );
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
 
-//lua_settable( L, LUA_GLOBALSINDEX );
 }
 
 QString TLuaInterpreter::get_lua_string(const QString & stringName )
@@ -11129,8 +11153,8 @@ QString TLuaInterpreter::get_lua_string(const QString & stringName )
         return QString( "LUA CRITICAL ERROR" );
     }
 
-    lua_getglobal( L, stringName.toLatin1().data() );
-    lua_getfield( L, LUA_GLOBALSINDEX, stringName.toLatin1().data() );
+    lua_getglobal( L, stringName.toUtf8().constData() );
+    lua_getfield( L, LUA_GLOBALSINDEX, stringName.toUtf8().constData() );
     return QString( lua_tostring( L, 1 ) );
 }
 
