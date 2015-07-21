@@ -288,7 +288,7 @@ HEADERS += \
     TAction.h \
     TAlias.h \
     TArea.h \
-    TAStar.h \
+    TAstar.h \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \

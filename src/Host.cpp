@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -356,24 +357,30 @@ void Host::resetProfile()
     qDebug()<<"resetProfile() DONE";
 }
 
-void Host::assemblePath()
+// Now returns the total weight of the path
+const unsigned int Host::assemblePath()
 {
-    QStringList list;
-    for( int i=0; i<mpMap->mPathList.size(); i++ )
-    {
-        QString n = QString::number( mpMap->mPathList[i]);
-        list.append( n );
+    unsigned int totalWeight = 0;
+    QStringList pathList;
+    for(unsigned int i=0; i<mpMap->mPathList.size(); i++ ) {
+        QString n = QString::number( mpMap->mPathList.at(i) );
+        pathList.append( n );
     }
-    QStringList list2;
-    for( int i=0; i<mpMap->mDirList.size(); i++ )
-    {
-        QString n = mpMap->mDirList[i];
-        list2.append( n );
+    QStringList directionList = mpMap->mDirList;
+    QStringList weightList;
+    for(unsigned int i=0; i<mpMap->mWeightList.size(); i++ ) {
+        unsigned int stepWeight = mpMap->mWeightList.at(i);
+        totalWeight += stepWeight;
+        QString n = QString::number( stepWeight );
+        weightList.append( n );
     }
-    QString t1 = "speedWalkPath";
-    mLuaInterpreter.set_lua_table( t1, list );
-    QString t2 = "speedWalkDir";
-    mLuaInterpreter.set_lua_table( t2, list2 );
+    QString tableName = QStringLiteral("speedWalkPath");
+    mLuaInterpreter.set_lua_table( tableName, pathList );
+    tableName = QStringLiteral("speedWalkDir");
+    mLuaInterpreter.set_lua_table( tableName, directionList );
+    tableName = QStringLiteral("speedWalkWeight");
+    mLuaInterpreter.set_lua_table( tableName, weightList );
+    return totalWeight;
 }
 
 int Host::check_for_mappingscript()
@@ -388,24 +395,10 @@ int Host::check_for_mappingscript()
 
 void Host::startSpeedWalk()
 {
-    QStringList list;
-    for( int i=0; i<mpMap->mPathList.size(); i++ )
-    {
-        QString n = QString::number( mpMap->mPathList[i]);
-        list.append( n );
-    }
-    QStringList list2;
-    for( int i=0; i<mpMap->mDirList.size(); i++ )
-    {
-        QString n = mpMap->mDirList[i];
-        list2.append( n );
-    }
-    QString t1 = "speedWalkPath";
-    mLuaInterpreter.set_lua_table( t1, list );
-    QString t2 = "speedWalkDir";
-    mLuaInterpreter.set_lua_table( t2, list2 );
-    QString f = "doSpeedWalk";
-    QString n = "";
+    int totalWeight = assemblePath();
+    Q_UNUSED(totalWeight);
+    QString f = QStringLiteral("doSpeedWalk");
+    QString n = QStringLiteral("");
     mLuaInterpreter.call( f, n );
 }
 
@@ -1215,9 +1208,9 @@ void Host::readPackageConfig( QString luaConfig, QString & packageName )
     }
     else // error
     {
-        string e = "no error message available from Lua";
+        std::string e = "no error message available from Lua";
         e = lua_tostring( L, -1 );
-        string reason;
+        std::string reason;
         switch (error)
         {
             case 4:
