@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1434,34 +1434,41 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
                              QRadioButton * closed, QRadioButton * locked,
                              QSpinBox * weight) {
 
-    QString doorText;   // lowercase, initials
-    QString weightText; // lowercase, full words, no space
+    QString doorAndWeightText;   // lowercase, initials for XY-plane, words for others
+    QString exitText; // lowercase, full words, no space
     switch( direction ) {
-        case DIR_NORTHWEST: doorText =   "nw"; weightText = "northwest"; break;
-        case DIR_NORTH    : doorText =    "n"; weightText =     "north"; break;
-        case DIR_NORTHEAST: doorText =   "ne"; weightText = "northeast"; break;
-        case DIR_UP       : doorText =   "up"; weightText =        "up"; break;
-        case DIR_WEST     : doorText =    "w"; weightText =      "west"; break;
-        case DIR_EAST     : doorText =    "e"; weightText =      "east"; break;
-        case DIR_DOWN     : doorText = "down"; weightText =      "down"; break;
-        case DIR_SOUTHWEST: doorText =   "sw"; weightText = "southwest"; break;
-        case DIR_SOUTH    : doorText =    "s"; weightText =     "south"; break;
-        case DIR_SOUTHEAST: doorText =   "se"; weightText = "southeast"; break;
-        case DIR_IN       : doorText =   "in"; weightText =        "in"; break;
-        case DIR_OUT      : doorText =  "out"; weightText =       "out"; break;
+        case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   exitText = tr("northwest"); break;
+        case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    exitText = tr("north");     break;
+        case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   exitText = tr("northeast"); break;
+        case DIR_UP       : doorAndWeightText = QStringLiteral("up");   exitText = tr("up");        break;
+        case DIR_WEST     : doorAndWeightText = QStringLiteral("w");    exitText = tr("west");      break;
+        case DIR_EAST     : doorAndWeightText = QStringLiteral("e");    exitText = tr("east");      break;
+        case DIR_DOWN     : doorAndWeightText = QStringLiteral("down"); exitText = tr("down");      break;
+        case DIR_SOUTHWEST: doorAndWeightText = QStringLiteral("sw");   exitText = tr("southwest"); break;
+        case DIR_SOUTH    : doorAndWeightText = QStringLiteral("s");    exitText = tr("south");     break;
+        case DIR_SOUTHEAST: doorAndWeightText = QStringLiteral("se");   exitText = tr("southeast"); break;
+        case DIR_IN       : doorAndWeightText = QStringLiteral("in");   exitText = tr("in");        break;
+        case DIR_OUT      : doorAndWeightText = QStringLiteral("out");  exitText = tr("out");       break;
         default: Q_UNREACHABLE();
     }
 
-    weight->setValue( pR->hasExitWeight( weightText ) ? pR->getExitWeight( weightText ) : 0 );
+    weight->setValue( pR->hasExitWeight( doorAndWeightText ) ? pR->getExitWeight( doorAndWeightText ) : 0 );
 
-    switch( pR->getDoor( doorText ) ) {
+    switch( pR->getDoor( doorAndWeightText ) ) {
     case 0:   none->setChecked(true); break;
     case 1:   open->setChecked(true); break;
     case 2: closed->setChecked(true); break;
     case 3: locked->setChecked(true); break;
     default:
-        qWarning("dlgRoomExits::initExit roomId(%i) unexpected doors[\"%s\"] value:%i found for room!",
-                 roomId, qPrintable( doorText ), pR->getDoor( doorText ) );
+        qWarning()<<"dlgRoomExits::initExit(...) in room Id("<<roomId<<") unexpected doors["<<doorAndWeightText<<"] value:"<<pR->getDoor( doorAndWeightText )<<"found for room!";
+    }
+
+    if ( exitId > 0 ) {
+        if( ! mpHost->mpMap->mpRoomDB->getRoom( exitId ) ) {
+            // Recover from a missing exit room - not doing this was causing seg. faults
+            qWarning()<<"dlgRoomExits::initExit(...): Warning: missing exit to"<<exitId<<"in direction "<<exitText<<", resetting exit.";
+            exitId = -1;
+        }
     }
 
     if ( exitId > 0 ) { //Does this exit point anywhere
@@ -1499,7 +1506,7 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
             locked->setEnabled(true);
         } else {
             exitLineEdit->setEnabled(true);
-            exitLineEdit->setToolTip("Set the number of the room " % weightText % " of this one, will be blue for a valid number or red for invalid.");
+            exitLineEdit->setToolTip("Set the number of the room " % doorAndWeightText % " of this one, will be blue for a valid number or red for invalid.");
             stub->setChecked(false);
             none->setEnabled(false);   //Disable door type controls, can't lock a non-existant exit..
             open->setEnabled(false);   //.. and ensure the "none" one is set if it ever gets enabled
@@ -1632,7 +1639,7 @@ void dlgRoomExits::init( int id ) {
                 pI->setCheckState( 6, Qt::Checked );
                 break;
             default:
-                qDebug()<<"dlgRoomExits::init() unexpected (other exit) doors["<<dir<<"] value:"<<pR->doors[dir]<<" found for roomID["<<id<<"]!";
+                qDebug()<<"dlgRoomExits::init("<<id<<") unexpected (other exit) doors["<<dir<<"] value:"<<pR->doors[dir]<<" found!";
             }
             originalSpecialExits.value( dir )->door = specialDoor;
         }
