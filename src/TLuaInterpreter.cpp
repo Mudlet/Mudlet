@@ -10230,7 +10230,7 @@ bool TLuaInterpreter::compile( QString & code, QString & errorMsg )
     }
     else
     {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"\nLUA: code compiled without errors. OK\n" >> 0;}
+        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"\nLUA: code compiled without errors. OK\n" >> 0;}
     }
     lua_pop( L, lua_gettop( L ) );
 
@@ -10745,7 +10745,7 @@ bool TLuaInterpreter::call( QString & function, QString & mName )
             {
                 e += lua_tostring( L, i );
                 logError( e, mName, function );
-                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()>>0;}
+                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()<<"\n">>0;}
             }
         }
     }
