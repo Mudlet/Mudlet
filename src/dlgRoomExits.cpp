@@ -75,10 +75,11 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem * pI, int column )
     if ( mpEditItem != 0 && ( pI != mpEditItem || mEditColumn != column ) ) {
         // Thing that was clicked on is not the same as last thing that was clicked on
         // ... so clean up the old column
+        TRoom * pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom( mpEditItem->text(0).toInt() );
         switch ( mEditColumn ) {
         case 0:
-            if( mpEditItem->text(0).toInt() < 1 || mpHost->mpMap->mpRoomDB->getRoom( mpEditItem->text(0).toInt() ) == 0 )
-                mpEditItem->setText(0, "<room ID>");
+            if( mpEditItem->text(0).toInt() < 1 )
+                mpEditItem->setText(0, tr("<room ID>", "This string is used in 2 places, ensure they match!") );
             specialExits->closePersistentEditor( mpEditItem, mEditColumn );
             break;
 
@@ -116,14 +117,36 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem * pI, int column )
             break;
 
         case 7:
-            if( ! mpEditItem->text(7).trimmed().length() )
-                mpEditItem->setText(7, "<command or Lua script>");
+            if( ! mpEditItem->text(7).trimmed().length() ) {
+                mpEditItem->setText(7, tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (1 of 5)" ) );
+            }
             specialExits->closePersistentEditor( mpEditItem, mEditColumn );
             //            qDebug()<<"Closed PE on item:"<<mpEditItem->text(7)<<"column:"<<mEditColumn;
             break;
         default:
             ; //noop for other column (1)
         }
+
+        if ( pExitToRoom ) {
+            mpEditItem->setForeground( 0, QColor(Qt::blue) );
+            if( ! pExitToRoom->name.isEmpty() ) {
+                mpEditItem->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                                        .arg( tr( "Exit to \"%1\"." )
+                                              .arg( pExitToRoom->name ) )
+                                        .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                              .arg( pExitToRoom->getWeight() ) ));
+            } else {
+                mpEditItem->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                                        .arg( tr( "Exit to unnamed room is valid" ) )
+                                        .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                              .arg( pExitToRoom->getWeight() ) ));
+            }
+        } else {
+            mpEditItem->setForeground( 0, QColor(Qt::red) );
+            mpEditItem->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                                    .arg( tr( "Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked." ) ) );
+        }
+
         mpEditItem = 0;   //This will cause a new PE to be opened, it will also be zeroed on the first time this funciton is called
         mEditColumn = -1;
     }
@@ -181,16 +204,31 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem * pI, int column )
 void dlgRoomExits::slot_addSpecialExit()
 {
     QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
-    pI->setText(0, "<room ID>"); //Exit RoomID
+    pI->setText(0, tr("<room ID>", "This string is used in 2 places, ensure they match!") ); //Exit RoomID
+    pI->setForeground( 0, QColor(Qt::red) );
+    pI->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked." ) ) );
     pI->setTextAlignment(0, Qt::AlignRight );
+    pI->setToolTip( 1, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "Prevent a route being created via this exit, equivalent to an infinite exit weight.") ) );
     pI->setCheckState(1, Qt::Unchecked); //Locked
-    pI->setText(2, "0");  //Exit Weight
+    pI->setText(2, QStringLiteral("0"));  //Exit Weight
     pI->setTextAlignment(2, Qt::AlignRight );
+    pI->setToolTip( 2, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.") ) );
     pI->setCheckState(3, Qt::Checked);   //Doortype: none
+    pI->setToolTip( 3, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "No door symbol is drawn on 2D Map for this exit (only functional choice currently).") ) );
     pI->setCheckState(4, Qt::Unchecked); //Doortype: open
+    pI->setToolTip( 4, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).") ) );
     pI->setCheckState(5, Qt::Unchecked); //Doortype: closed
+    pI->setToolTip( 5, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).") ) );
     pI->setCheckState(6, Qt::Unchecked); //Doortype: locked
-    pI->setText(7, "<command or Lua script>"); //Exit command
+    pI->setToolTip( 6, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                    .arg( tr( "Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).") ) );
+    pI->setText(7, tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (2 of 5)" ) ); //Exit command
     pI->setTextAlignment(7, Qt::AlignLeft );
     specialExits->addTopLevelItem(pI);
 }
@@ -227,7 +265,8 @@ void dlgRoomExits::save()
         else if ( pI->checkState(3) == Qt::Checked )
             door = 0;
         QString value = pI->text(7);
-        if ( value != "<command or Lua script>" && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) !=0 ) {
+        if (    value != tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (3 of 5)" )
+             && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) !=0 ) {
             originalExitCmds.remove( value );
             if ( pI->checkState(1) == Qt::Unchecked )
                 value = value.prepend( '0' );
@@ -1741,9 +1780,29 @@ void dlgRoomExits::init( int id ) {
 
         originalSpecialExits[dir] = new TExit();
         QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
+        TRoom * pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom( id_to );
         //0 was locked, now exit roomID
         pI->setText( 0, QString::number(id_to) );
         pI->setTextAlignment( 0, Qt::AlignRight );
+        if ( pExitToRoom ) {
+            pI->setForeground( 0, QColor(Qt::blue) );
+            if( ! pExitToRoom->name.isEmpty() ) {
+                pI->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                                .arg( tr( "Exit to \"%1\"." )
+                                      .arg( pExitToRoom->name ) )
+                                .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                      .arg( pExitToRoom->getWeight() ) ));
+            } else {
+                pI->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                                .arg( tr( "Exit to unnamed room is valid" ) )
+                                .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                      .arg( pExitToRoom->getWeight() ) ));
+            }
+        } else {
+            pI->setForeground( 0, QColor(Qt::red) );
+            pI->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                            .arg( tr( "Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number." ) ) );
+        }
         originalSpecialExits.value( dir )->destination = id_to;
         //1 was roomID, now locked (or more properly "No route") - setCheckedState
         //automagically makes it a CheckBox!!!
@@ -1754,6 +1813,8 @@ void dlgRoomExits::init( int id ) {
             pI->setCheckState( 1, Qt::Unchecked );
             originalSpecialExits.value( dir )->hasNoRoute = false;
         }
+        pI->setToolTip( 1, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Prevent a route being created via this exit, equivalent to an infinite exit weight.") ) );
 
         //2 was script, now exit weight - ideally want a spin box - but use a text edit for now
         if ( pR->hasExitWeight( dir ) )
@@ -1761,12 +1822,27 @@ void dlgRoomExits::init( int id ) {
         else
             pI->setText( 2, QString::number(0) );
         pI->setTextAlignment( 2, Qt::AlignRight );
+        pI->setToolTip( 2, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.") ) );
         originalSpecialExits.value( dir )->weight = pI->text(2).toInt();
+
 
         //3-6 are new, now holds a buttongroup of 4, ideally QRadioButtons, to select a door type
         pI->setCheckState( 3, Qt::Unchecked );
+        pI->setTextAlignment( 3, Qt::AlignCenter );
+        pI->setToolTip( 3, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "No door symbol is drawn on 2D Map for this exit (only functional choice currently).") ) );
         pI->setCheckState( 4, Qt::Unchecked );
+        pI->setTextAlignment( 4, Qt::AlignCenter );
+        pI->setToolTip( 4, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).") ) );
         pI->setCheckState( 5, Qt::Unchecked );
+        pI->setTextAlignment( 5, Qt::AlignCenter );
+        pI->setToolTip( 5, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).") ) );
+        pI->setTextAlignment( 6, Qt::AlignCenter );
+        pI->setToolTip( 6, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).") ) );
         pI->setCheckState( 6, Qt::Unchecked );
         {
             int specialDoor = pR->getDoor( dir );
