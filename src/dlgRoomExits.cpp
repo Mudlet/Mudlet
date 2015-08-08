@@ -559,15 +559,25 @@ void dlgRoomExits::slot_nw_textEdited(const QString &text)
         doortype_open_nw->setEnabled(true);
         doortype_closed_nw->setEnabled(true);
         doortype_locked_nw->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            nw->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            nw->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            nw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to \"%1\"." )
+                                  .arg( exitToRoom->name ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            nw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to unnamed room is valid" ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0 ) {
         // Something is entered but it does not yield a valid exit roomID
         // Enable stub exit control
         nw->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        nw->setToolTip("Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.");
+        nw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number." ) ) );
         stub_nw->setEnabled(true);
         noroute_nw->setEnabled(false);
         weight_nw->setEnabled(false);
@@ -577,8 +587,9 @@ void dlgRoomExits::slot_nw_textEdited(const QString &text)
         doortype_locked_nw->setEnabled(false);
     } else {
         // Nothing is entered - so we can enable the stub exit control
-        nw->setStyleSheet("");
-        nw->setToolTip("Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.");
+        nw->setStyleSheet( QStringLiteral("") );
+        nw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.") ) );
         stub_nw->setEnabled(true);
         noroute_nw->setEnabled(false);
         weight_nw->setEnabled(false);
@@ -604,13 +615,23 @@ void dlgRoomExits::slot_n_textEdited(const QString &text)
         doortype_open_n->setEnabled(true);
         doortype_closed_n->setEnabled(true);
         doortype_locked_n->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            n->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            n->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            n->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to \"%1\"." )
+                                 .arg( exitToRoom->name ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            n->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to unnamed room is valid" ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         n->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        n->setToolTip("Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.");
+        n->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number." ) ) );
         stub_n->setEnabled(true);
         noroute_n->setEnabled(false);
         weight_n->setEnabled(false);
@@ -619,8 +640,9 @@ void dlgRoomExits::slot_n_textEdited(const QString &text)
         doortype_closed_n->setEnabled(false);
         doortype_locked_n->setEnabled(false);
     } else {
-        n->setStyleSheet("");
-        n->setToolTip("Set the number of the room north of this one, will be blue for a valid number or red for invalid.");
+        n->setStyleSheet( QStringLiteral("") );
+        n->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room north of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_n->setEnabled(true);
         noroute_n->setEnabled(false);
         weight_n->setEnabled(false);
@@ -646,13 +668,23 @@ void dlgRoomExits::slot_ne_textEdited(const QString &text)
         doortype_open_ne->setEnabled(true);
         doortype_closed_ne->setEnabled(true);
         doortype_locked_ne->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            ne->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            ne->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            ne->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to \"%1\"." )
+                                  .arg( exitToRoom->name ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            ne->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to unnamed room is valid" ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         ne->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        ne->setToolTip("Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.");
+        ne->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number." ) ) );
         stub_ne->setEnabled(true);
         noroute_ne->setEnabled(false);
         weight_ne->setEnabled(false);
@@ -661,8 +693,9 @@ void dlgRoomExits::slot_ne_textEdited(const QString &text)
         doortype_closed_ne->setEnabled(false);
         doortype_locked_ne->setEnabled(false);
     } else {
-        ne->setStyleSheet("");
-        ne->setToolTip("Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.");
+        ne->setStyleSheet( QStringLiteral("") );
+        ne->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room northeast of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_ne->setEnabled(true);
         noroute_ne->setEnabled(false);
         weight_ne->setEnabled(false);
@@ -688,13 +721,23 @@ void dlgRoomExits::slot_up_textEdited(const QString &text)
         doortype_open_up->setEnabled(true);
         doortype_closed_up->setEnabled(true);
         doortype_locked_up->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            up->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            up->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            up->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to \"%1\"." )
+                                 .arg( exitToRoom->name ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            up->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to unnamed room is valid" ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         up->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        up->setToolTip("Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.");
+        up->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number." ) ) );
         stub_up->setEnabled(true);
         noroute_up->setEnabled(false);
         weight_up->setEnabled(false);
@@ -703,8 +746,9 @@ void dlgRoomExits::slot_up_textEdited(const QString &text)
         doortype_closed_up->setEnabled(false);
         doortype_locked_up->setEnabled(false);
     } else {
-        up->setStyleSheet("");
-        up->setToolTip("Set the number of the room up from this one, will be blue for a valid number or red for invalid.");
+        up->setStyleSheet( QStringLiteral("") );
+        up->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room up from this one, will be blue for a valid number or red for invalid." ) ) );
         stub_up->setEnabled(true);
         noroute_up->setEnabled(false);
         weight_up->setEnabled(false);
@@ -730,13 +774,23 @@ void dlgRoomExits::slot_w_textEdited(const QString &text)
         doortype_open_w->setEnabled(true);
         doortype_closed_w->setEnabled(true);
         doortype_locked_w->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            w->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            w->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            w->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to \"%1\"." )
+                                 .arg( exitToRoom->name ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            w->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to unnamed room is valid" ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         w->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        w->setToolTip("Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.");
+        w->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number." ) ) );
         stub_w->setEnabled(true);
         noroute_w->setEnabled(false);
         weight_w->setEnabled(false);
@@ -745,8 +799,9 @@ void dlgRoomExits::slot_w_textEdited(const QString &text)
         doortype_closed_w->setEnabled(false);
         doortype_locked_w->setEnabled(false);
     } else {
-        w->setStyleSheet("");
-        w->setToolTip("Set the number of the room west of this one, will be blue for a valid number or red for invalid.");
+        w->setStyleSheet( QStringLiteral("") );
+        w->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room west of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_w->setEnabled(true);
         noroute_w->setEnabled(false);
         weight_w->setEnabled(false);
@@ -772,13 +827,23 @@ void dlgRoomExits::slot_e_textEdited(const QString &text)
         doortype_open_e->setEnabled(true);
         doortype_closed_e->setEnabled(true);
         doortype_locked_e->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            e->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            e->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            e->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to \"%1\"." )
+                                 .arg( exitToRoom->name ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            e->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to unnamed room is valid" ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         e->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        e->setToolTip("Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.");
+        e->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number." ) ) );
         stub_e->setEnabled(true);
         noroute_e->setEnabled(false);
         weight_e->setEnabled(false);
@@ -787,8 +852,9 @@ void dlgRoomExits::slot_e_textEdited(const QString &text)
         doortype_closed_e->setEnabled(false);
         doortype_locked_e->setEnabled(false);
     } else {
-        e->setStyleSheet("");
-        e->setToolTip("Set the number of the room east of this one, will be blue for a valid number or red for invalid.");
+        e->setStyleSheet( QStringLiteral("") );
+        e->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room east of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_e->setEnabled(true);
         noroute_e->setEnabled(false);
         weight_e->setEnabled(false);
@@ -814,13 +880,23 @@ void dlgRoomExits::slot_down_textEdited(const QString &text)
         doortype_open_down->setEnabled(true);
         doortype_closed_down->setEnabled(true);
         doortype_locked_down->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            down->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            down->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            down->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                              .arg( tr( "Exit to \"%1\"." )
+                                    .arg( exitToRoom->name ) )
+                              .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                    .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            down->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                              .arg( tr( "Exit to unnamed room is valid" ) )
+                              .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                    .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         down->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        down->setToolTip("Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.");
+        down->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                          .arg( tr( "Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number." ) ) );
         stub_down->setEnabled(true);
         noroute_down->setEnabled(false);
         weight_down->setEnabled(false);
@@ -829,8 +905,9 @@ void dlgRoomExits::slot_down_textEdited(const QString &text)
         doortype_closed_down->setEnabled(false);
         doortype_locked_down->setEnabled(false);
     } else {
-        down->setStyleSheet("");
-        down->setToolTip("Set the number of the room down from this one, will be blue for a valid number or red for invalid.");
+        down->setStyleSheet( QStringLiteral("") );
+        down->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                          .arg( tr( "Set the number of the room down from this one, will be blue for a valid number or red for invalid." ) ) );
         stub_down->setEnabled(true);
         noroute_down->setEnabled(false);
         weight_down->setEnabled(false);
@@ -856,13 +933,23 @@ void dlgRoomExits::slot_sw_textEdited(const QString &text)
         doortype_open_sw->setEnabled(true);
         doortype_closed_sw->setEnabled(true);
         doortype_locked_sw->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            sw->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            sw->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            sw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to \"%1\"." )
+                                  .arg( exitToRoom->name ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            sw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to unnamed room is valid" ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         sw->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        sw->setToolTip("Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.");
+        sw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number." ) ) );
         stub_sw->setEnabled(true);
         noroute_sw->setEnabled(false);
         weight_sw->setEnabled(false);
@@ -871,8 +958,9 @@ void dlgRoomExits::slot_sw_textEdited(const QString &text)
         doortype_closed_sw->setEnabled(false);
         doortype_locked_sw->setEnabled(false);
     } else {
-        sw->setStyleSheet("");
-        sw->setToolTip("Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.");
+        sw->setStyleSheet( QStringLiteral("") );
+        sw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room southwest of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_sw->setEnabled(true);
         noroute_sw->setEnabled(false);
         weight_sw->setEnabled(false);
@@ -898,13 +986,23 @@ void dlgRoomExits::slot_s_textEdited(const QString &text)
         doortype_open_s->setEnabled(true);
         doortype_closed_s->setEnabled(true);
         doortype_locked_s->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            s->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            s->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            s->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to \"%1\"." )
+                                 .arg( exitToRoom->name ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            s->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                           .arg( tr( "Exit to unnamed room is valid" ) )
+                           .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                 .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         s->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        s->setToolTip("Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.");
+        s->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number." ) ) );
         stub_s->setEnabled(true);
         noroute_s->setEnabled(false);
         weight_s->setEnabled(false);
@@ -913,8 +1011,9 @@ void dlgRoomExits::slot_s_textEdited(const QString &text)
         doortype_closed_s->setEnabled(false);
         doortype_locked_s->setEnabled(false);
     } else {
-        s->setStyleSheet("");
-        s->setToolTip("Set the number of the room south of this one, will be blue for a valid number or red for invalid.");
+        s->setStyleSheet( QStringLiteral("") );
+        s->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room south of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_s->setEnabled(true);
         noroute_s->setEnabled(false);
         weight_s->setEnabled(false);
@@ -940,13 +1039,23 @@ void dlgRoomExits::slot_se_textEdited(const QString &text)
         doortype_open_se->setEnabled(true);
         doortype_closed_se->setEnabled(true);
         doortype_locked_se->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            se->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            se->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            se->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to \"%1\"." )
+                                  .arg( exitToRoom->name ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            se->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to unnamed room is valid" ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         se->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        se->setToolTip("Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.");
+        se->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                         .arg( tr( "Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number." ) ) );
         stub_se->setEnabled(true);
         noroute_se->setEnabled(false);
         weight_se->setEnabled(false);
@@ -955,8 +1064,9 @@ void dlgRoomExits::slot_se_textEdited(const QString &text)
         doortype_closed_se->setEnabled(false);
         doortype_locked_se->setEnabled(false);
     } else {
-        se->setStyleSheet("");
-        se->setToolTip("Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.");
+        se->setStyleSheet( QStringLiteral("") );
+        se->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room southeast of this one, will be blue for a valid number or red for invalid." ) ) );
         stub_se->setEnabled(true);
         noroute_se->setEnabled(false);
         weight_se->setEnabled(false);
@@ -982,13 +1092,23 @@ void dlgRoomExits::slot_in_textEdited(const QString &text)
         doortype_open_in->setEnabled(true);
         doortype_closed_in->setEnabled(true);
         doortype_locked_in->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            in->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            in->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            in->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to \"%1\"." )
+                                  .arg( exitToRoom->name ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            in->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                            .arg( tr( "Exit to unnamed room is valid" ) )
+                            .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                  .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         in->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        in->setToolTip("Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.");
+        in->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number." ) ) );
         stub_in->setEnabled(true);
         noroute_in->setEnabled(false);
         weight_in->setEnabled(false);
@@ -997,8 +1117,9 @@ void dlgRoomExits::slot_in_textEdited(const QString &text)
         doortype_closed_in->setEnabled(false);
         doortype_locked_in->setEnabled(false);
     } else {
-        in->setStyleSheet("");
-        in->setToolTip("Set the number of the room in from this one, will be blue for a valid number or red for invalid.");
+        in->setStyleSheet( QStringLiteral("") );
+        in->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room in from this one, will be blue for a valid number or red for invalid." ) ) );
         stub_in->setEnabled(true);
         noroute_in->setEnabled(false);
         weight_in->setEnabled(false);
@@ -1024,13 +1145,23 @@ void dlgRoomExits::slot_out_textEdited(const QString &text)
         doortype_open_out->setEnabled(true);
         doortype_closed_out->setEnabled(true);
         doortype_locked_out->setEnabled(true);
-        if( exitToRoom->name.trimmed().length() )
-            out->setToolTip(QString("Exit to \"" % exitToRoom->name % "\""));
-        else
-            out->setToolTip(QString("Exit to unnamed room is valid"));
+        if( exitToRoom->name.trimmed().length() ) {
+            out->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                             .arg( tr( "Exit to \"%1\"." )
+                                   .arg( exitToRoom->name ) )
+                             .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                   .arg( exitToRoom->getWeight() ) ));
+        }
+        else {
+            out->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                             .arg( tr( "Exit to unnamed room is valid" ) )
+                             .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                   .arg( exitToRoom->getWeight() ) ));
+        }
     } else if ( text.size() > 0) {
         out->setStyleSheet( QStringLiteral(".QLineEdit { color:red }") );
-        out->setToolTip("Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.");
+        out->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                         .arg( tr( "Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number." ) ) );
         stub_out->setEnabled(true);
         noroute_out->setEnabled(false);
         weight_out->setEnabled(false);
@@ -1039,8 +1170,9 @@ void dlgRoomExits::slot_out_textEdited(const QString &text)
         doortype_closed_out->setEnabled(false);
         doortype_locked_out->setEnabled(false);
     } else {
-        out->setStyleSheet("");
-        out->setToolTip("Set the number of the room out from this one, will be blue for a valid number or red for invalid.");
+        out->setStyleSheet( QStringLiteral("") );
+        out->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                         .arg( tr( "Set the number of the room out from this one, will be blue for a valid number or red for invalid." ) ) );
         stub_out->setEnabled(true);
         noroute_out->setEnabled(false);
         weight_out->setEnabled(false);
@@ -1463,22 +1595,32 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
         qWarning()<<"dlgRoomExits::initExit(...) in room Id("<<roomId<<") unexpected doors["<<doorAndWeightText<<"] value:"<<pR->getDoor( doorAndWeightText )<<"found for room!";
     }
 
+    TRoom * pExitR;
     if ( exitId > 0 ) {
-        if( ! mpHost->mpMap->mpRoomDB->getRoom( exitId ) ) {
+        pExitR = mpHost->mpMap->mpRoomDB->getRoom( exitId );
+        if( ! pExitR ) {
             // Recover from a missing exit room - not doing this was causing seg. faults
             qWarning()<<"dlgRoomExits::initExit(...): Warning: missing exit to"<<exitId<<"in direction "<<exitText<<", resetting exit.";
             exitId = -1;
         }
     }
 
-    if ( exitId > 0 ) { //Does this exit point anywhere
+    if ( exitId > 0 && pExitR ) { //Does this exit point anywhere
         exitLineEdit->setText(QString::number( exitId ));  //Put in the value
         exitLineEdit->setEnabled(true);     //Enable it for editing
-        exitLineEdit->setStyleSheet( QStringLiteral(".QLineEdit { color:blue }") );
-        if( mpHost->mpMap->mpRoomDB->getRoom( exitId )->name.trimmed().length() )
-            exitLineEdit->setToolTip(QString("Exit to \"" % mpHost->mpMap->mpRoomDB->getRoom( exitId )->name % "\""));
-        else
-            exitLineEdit->setToolTip(QString("Exit to unnamed room is valid"));
+        exitLineEdit->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
+        if( pExitR->name.trimmed().length() ) {
+            exitLineEdit->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                                      .arg( tr( "Exit to \"%1\"." )
+                                            .arg( pExitR->name ) )
+                                      .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                            .arg( pExitR->getWeight() ) ));
+        } else {
+            exitLineEdit->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p><p>%2</p></body></html>" )
+                                      .arg( tr( "Exit to unnamed room is valid" ) )
+                                      .arg( tr( "<b>Room</b> Weight of destination: %1.", "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not." )
+                                            .arg( pExitR->getWeight() ) ));
+        }
         noRoute->setEnabled(true);    //Enable speedwalk lock control
         none->setEnabled(true);   //Enable door type controls...
         open->setEnabled(true);
@@ -1489,8 +1631,8 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
         stub->setChecked(false);  //Ensure stub exit isn't set
         noRoute->setChecked( pR->hasExitLock( direction ) );  //Set/reset "locK" control as appropriate
     } else {  //No exit is set on initialisation
-        exitLineEdit->setText("");    //Nothing to put in exitID box
-        exitLineEdit->setStyleSheet("");
+        exitLineEdit->setText( QStringLiteral("") );    //Nothing to put in exitID box
+        exitLineEdit->setStyleSheet( QStringLiteral("") );
         noRoute->setEnabled(false);   //Disable lock control, can't lock a non-existant exit..
         noRoute->setChecked(false);   //.. and ensure there isn't one
         weight->setEnabled(false);   //Disable exit weight control...
@@ -1498,7 +1640,8 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
         stub->setEnabled(true);  //Enable stub exit control
         if ( pR->hasExitStub( direction ) ) {
             exitLineEdit->setEnabled(false); //There is a stub exit, so prevent exit number entry...
-            exitLineEdit->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+            exitLineEdit->setToolTip( QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                      .arg( tr("Clear the stub exit for this exit to enter an exit roomID." ) ) );
             stub->setChecked(true);
             none->setEnabled(true);   //Enable door type controls, can have a door on a stub exit..
             open->setEnabled(true);
@@ -1506,7 +1649,9 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
             locked->setEnabled(true);
         } else {
             exitLineEdit->setEnabled(true);
-            exitLineEdit->setToolTip("Set the number of the room " % doorAndWeightText % " of this one, will be blue for a valid number or red for invalid.");
+            exitLineEdit->setToolTip( QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                      .arg( tr("Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.")
+                                            .arg( exitText ) ) );
             stub->setChecked(false);
             none->setEnabled(false);   //Disable door type controls, can't lock a non-existant exit..
             open->setEnabled(false);   //.. and ensure the "none" one is set if it ever gets enabled
