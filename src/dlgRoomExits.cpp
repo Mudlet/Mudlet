@@ -19,21 +19,29 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+/*
+ * Eventually these should be defined for whole application to force explicit
+ * definition of all strings as:
+ * EITHER: QStringLiteral("<string>") for internal non-user visable use not
+ * subject to translation
+ * OR: tr("<string>") for GUI or other user visible strings that need to be
+ * handled by the translation system {or qApp->translate("<classname>",
+ * "<string>") for classes NOT derived from qobject...
+ */
+#define QT_NO_CAST_FROM_ASCII
+#define QT_NO_CAST_TO_ASCII
 
 #include "dlgRoomExits.h"
 
 
+#include "Host.h"
 #include "TArea.h"
 #include "TMap.h"
-#include "TRoom.h"
-#include "TRoomDB.h"
-#include "Host.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
 #include <QDebug>
-#include <QStringBuilder>
 #include "post_guard.h"
 
 dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW ): QDialog( pW ), mpHost( pH ), mpEditItem( 0 )
@@ -243,7 +251,8 @@ void dlgRoomExits::save()
     QMutableMapIterator<int, QString> exitIterator = oldSpecialExits;
     while (exitIterator.hasNext()) {
         exitIterator.next();
-        if ( exitIterator.value().length() > 1 && ( exitIterator.value().startsWith("0") || exitIterator.value().startsWith("1") ) )
+        if ( exitIterator.value().length() > 1 && (    exitIterator.value().startsWith( QStringLiteral("0") )
+                                                    || exitIterator.value().startsWith( QStringLiteral("1") ) ) )
             exitIterator.setValue( exitIterator.value().mid(1) );
     }
     QSet<QString> originalExitCmds = oldSpecialExits.values().toSet();
@@ -269,9 +278,9 @@ void dlgRoomExits::save()
              && key != 0 && mpHost->mpMap->mpRoomDB->getRoom(key) !=0 ) {
             originalExitCmds.remove( value );
             if ( pI->checkState(1) == Qt::Unchecked )
-                value = value.prepend( '0' );
+                value = value.prepend( QStringLiteral( "0" ) );
             else
-                value = value.prepend( '1' );
+                value = value.prepend( QStringLiteral( "1" ) );
             pR->setSpecialExit( key, value ); // Now can overwrite an existing exit with a different destination
             if ( pR->hasExitWeight(value.mid(1))  || weight > 0 )
                 pR->setExitWeight(value.mid(1), weight);
@@ -297,19 +306,19 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_NORTHWEST))   // And ensure that stub exit is cleared if set
             pR->setExitStub(DIR_NORTHWEST, false);
         if (weight_nw->value())  // And store any weighing specifed
-            pR->setExitWeight( "nw", weight_nw->value());
+            pR->setExitWeight( QStringLiteral("nw"), weight_nw->value());
         else
-            pR->setExitWeight( "nw", 0);
+            pR->setExitWeight( QStringLiteral("nw"), 0);
     } else { // No valid exit on the dialogue
         pR->setExit( -1, DIR_NORTHWEST ); // So ensure the value for no exit is stored
         if (stub_nw->isChecked() != pR->hasExitStub(DIR_NORTHWEST))
             // Does the stub exit setting differ from what is stored
             pR->setExitStub(DIR_NORTHWEST, stub_nw->isChecked()); // So change stored idea to match
-        pR->setExitWeight( "nw", 0); // And clear any weighting that was stored
-        pR->customLinesArrow.remove( "NW" );
-        pR->customLinesColor.remove( "NW" );
-        pR->customLinesStyle.remove( "NW" );
-        pR->customLines.remove( "NW" ); // And remove any custom line stuff, which uses opposite case keys - *sigh*
+        pR->setExitWeight( QStringLiteral("nw"), 0); // And clear any weighting that was stored
+        pR->customLinesArrow.remove( QStringLiteral("NW") );
+        pR->customLinesColor.remove( QStringLiteral("NW") );
+        pR->customLinesStyle.remove( QStringLiteral("NW") );
+        pR->customLines.remove( QStringLiteral("NW") ); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
     if (n->isEnabled() && n->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != 0 ) {
@@ -317,18 +326,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_NORTH))
             pR->setExitStub(DIR_NORTH, false);
         if (weight_n->value())
-            pR->setExitWeight( "n", weight_n->value());
+            pR->setExitWeight( QStringLiteral("n"), weight_n->value());
         else
-            pR->setExitWeight( "n", 0);
+            pR->setExitWeight( QStringLiteral("n"), 0);
     } else {
         pR->setExit( -1, DIR_NORTH );
         if (stub_n->isChecked() != pR->hasExitStub(DIR_NORTH))
             pR->setExitStub(DIR_NORTH, stub_n->isChecked());
-        pR->setExitWeight( "n", 0);
-        pR->customLinesArrow.remove( "N" );
-        pR->customLinesColor.remove( "N" );
-        pR->customLinesStyle.remove( "N" );
-        pR->customLines.remove( "N" );
+        pR->setExitWeight( QStringLiteral("n"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("N") );
+        pR->customLinesColor.remove( QStringLiteral("N") );
+        pR->customLinesStyle.remove( QStringLiteral("N") );
+        pR->customLines.remove( QStringLiteral("N") );
     }
 
     if (ne->isEnabled() && ne->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != 0 ) {
@@ -336,18 +345,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_NORTHEAST))
             pR->setExitStub(DIR_NORTHEAST, false);
         if (weight_ne->value())
-            pR->setExitWeight( "ne", weight_ne->value());
+            pR->setExitWeight( QStringLiteral("ne"), weight_ne->value());
         else
-            pR->setExitWeight( "ne", 0);
+            pR->setExitWeight( QStringLiteral("ne"), 0);
     } else {
         pR->setExit( -1, DIR_NORTHEAST );
         if (stub_ne->isChecked() != pR->hasExitStub(DIR_NORTHEAST))
             pR->setExitStub(DIR_NORTHEAST, stub_ne->isChecked());
-        pR->setExitWeight( "ne", 0);
-        pR->customLinesArrow.remove( "NE" );
-        pR->customLinesColor.remove( "NE" );
-        pR->customLinesStyle.remove( "NE" );
-        pR->customLines.remove( "NE" );
+        pR->setExitWeight( QStringLiteral("ne"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("NE") );
+        pR->customLinesColor.remove( QStringLiteral("NE") );
+        pR->customLinesStyle.remove( QStringLiteral("NE") );
+        pR->customLines.remove( QStringLiteral("NE") );
     }
 
     if (up->isEnabled() && up->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != 0 ) {
@@ -355,18 +364,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_UP))
             pR->setExitStub(DIR_UP, false);
         if (weight_up->value())
-            pR->setExitWeight( "up", weight_up->value());
+            pR->setExitWeight( QStringLiteral("up"), weight_up->value());
         else
-            pR->setExitWeight( "up", 0);
+            pR->setExitWeight( QStringLiteral("up"), 0);
     } else {
         pR->setExit( -1, DIR_UP );
         if (stub_up->isChecked() != pR->hasExitStub(DIR_UP))
             pR->setExitStub(DIR_UP, stub_up->isChecked());
-        pR->setExitWeight( "up", 0);
-        pR->customLinesArrow.remove( "UP" );
-        pR->customLinesColor.remove( "UP" );
-        pR->customLinesStyle.remove( "UP" );
-        pR->customLines.remove( "UP" );
+        pR->setExitWeight( QStringLiteral("up"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("UP") );
+        pR->customLinesColor.remove( QStringLiteral("UP") );
+        pR->customLinesStyle.remove( QStringLiteral("UP") );
+        pR->customLines.remove( QStringLiteral("UP") );
     }
 
     if (w->isEnabled() && w->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != 0 ) {
@@ -374,18 +383,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_WEST))
             pR->setExitStub(DIR_WEST, false);
         if (weight_w->value())
-            pR->setExitWeight( "w", weight_w->value());
+            pR->setExitWeight( QStringLiteral("w"), weight_w->value());
         else
-            pR->setExitWeight( "w", 0);
+            pR->setExitWeight( QStringLiteral("w"), 0);
     } else {
         pR->setExit( -1, DIR_WEST );
         if (stub_w->isChecked() != pR->hasExitStub(DIR_WEST))
             pR->setExitStub(DIR_WEST, stub_w->isChecked());
-        pR->setExitWeight( "w", 0);
-        pR->customLinesArrow.remove( "W" );
-        pR->customLinesColor.remove( "W" );
-        pR->customLinesStyle.remove( "W" );
-        pR->customLines.remove( "W" );
+        pR->setExitWeight( QStringLiteral("w"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("W") );
+        pR->customLinesColor.remove( QStringLiteral("W") );
+        pR->customLinesStyle.remove( QStringLiteral("W") );
+        pR->customLines.remove( QStringLiteral("W") );
     }
 
     if (e->isEnabled() && e->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != 0 ) {
@@ -393,18 +402,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_EAST))
             pR->setExitStub(DIR_EAST, false);
         if (weight_e->value())
-            pR->setExitWeight( "e", weight_e->value());
+            pR->setExitWeight( QStringLiteral("e"), weight_e->value());
         else
-            pR->setExitWeight( "e", 0);
+            pR->setExitWeight( QStringLiteral("e"), 0);
     } else {
         pR->setExit( -1, DIR_EAST );
         if (stub_e->isChecked() != pR->hasExitStub(DIR_EAST))
             pR->setExitStub(DIR_EAST, stub_e->isChecked());
-        pR->setExitWeight( "e", 0);
-        pR->customLinesArrow.remove( "E" );
-        pR->customLinesColor.remove( "E" );
-        pR->customLinesStyle.remove( "E" );
-        pR->customLines.remove( "E" );
+        pR->setExitWeight( QStringLiteral("e"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("E") );
+        pR->customLinesColor.remove( QStringLiteral("E") );
+        pR->customLinesStyle.remove( QStringLiteral("E") );
+        pR->customLines.remove( QStringLiteral("E") );
     }
 
     if (down->isEnabled() && down->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != 0 ) {
@@ -412,18 +421,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_DOWN))
             pR->setExitStub(DIR_DOWN, false);
         if (weight_down->value())
-            pR->setExitWeight( "down", weight_down->value());
+            pR->setExitWeight( QStringLiteral("down"), weight_down->value());
         else
-            pR->setExitWeight( "down", 0);
+            pR->setExitWeight( QStringLiteral("down"), 0);
     } else {
         pR->setExit( -1, DIR_DOWN );
         if (stub_down->isChecked() != pR->hasExitStub(DIR_DOWN))
             pR->setExitStub(DIR_DOWN, stub_down->isChecked());
-        pR->setExitWeight( "down", 0);
-        pR->customLinesArrow.remove( "DOWN" );
-        pR->customLinesColor.remove( "DOWN" );
-        pR->customLinesStyle.remove( "DOWN" );
-        pR->customLines.remove( "DOWN" );
+        pR->setExitWeight( QStringLiteral("down"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("DOWN") );
+        pR->customLinesColor.remove( QStringLiteral("DOWN") );
+        pR->customLinesStyle.remove( QStringLiteral("DOWN") );
+        pR->customLines.remove( QStringLiteral("DOWN") );
     }
 
     if (sw->isEnabled() && sw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != 0 ) {
@@ -431,18 +440,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_SOUTHWEST))
             pR->setExitStub(DIR_SOUTHWEST, false);
         if (weight_sw->value())
-            pR->setExitWeight( "sw", weight_sw->value());
+            pR->setExitWeight( QStringLiteral("sw"), weight_sw->value());
         else
-            pR->setExitWeight( "sw", 0);
+            pR->setExitWeight( QStringLiteral("sw"), 0);
     } else {
         pR->setExit( -1, DIR_SOUTHWEST );
         if (stub_sw->isChecked() != pR->hasExitStub(DIR_SOUTHWEST))
             pR->setExitStub(DIR_SOUTHWEST, stub_sw->isChecked());
-        pR->setExitWeight( "sw", 0);
-        pR->customLinesArrow.remove( "SW" );
-        pR->customLinesColor.remove( "SW" );
-        pR->customLinesStyle.remove( "SW" );
-        pR->customLines.remove( "SW" );
+        pR->setExitWeight( QStringLiteral("sw"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("SW") );
+        pR->customLinesColor.remove( QStringLiteral("SW") );
+        pR->customLinesStyle.remove( QStringLiteral("SW") );
+        pR->customLines.remove( QStringLiteral("SW") );
     }
 
     if (s->isEnabled() && s->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != 0 ) {
@@ -450,18 +459,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_SOUTH))
             pR->setExitStub(DIR_SOUTH, false);
         if (weight_s->value())
-            pR->setExitWeight( "s", weight_s->value());
+            pR->setExitWeight( QStringLiteral("s"), weight_s->value());
         else
-            pR->setExitWeight( "s", 0);
+            pR->setExitWeight( QStringLiteral("s"), 0);
     } else {
         pR->setExit( -1, DIR_SOUTH );
         if (stub_s->isChecked() != pR->hasExitStub(DIR_SOUTH))
             pR->setExitStub(DIR_SOUTH, stub_s->isChecked());
-        pR->setExitWeight( "s", 0);
-        pR->customLinesArrow.remove( "S" );
-        pR->customLinesColor.remove( "S" );
-        pR->customLinesStyle.remove( "S" );
-        pR->customLines.remove( "S" );
+        pR->setExitWeight( QStringLiteral("s"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("S") );
+        pR->customLinesColor.remove( QStringLiteral("S") );
+        pR->customLinesStyle.remove( QStringLiteral("S") );
+        pR->customLines.remove( QStringLiteral("S") );
     }
 
     if (se->isEnabled() && se->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != 0 ) {
@@ -469,18 +478,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_SOUTHEAST))
             pR->setExitStub(DIR_SOUTHEAST, false);
         if (weight_se->value())
-            pR->setExitWeight( "se", weight_se->value());
+            pR->setExitWeight( QStringLiteral("se"), weight_se->value());
         else
-            pR->setExitWeight( "se", 0);
+            pR->setExitWeight( QStringLiteral("se"), 0);
     } else {
         pR->setExit( -1, DIR_SOUTHEAST );
         if (stub_se->isChecked() != pR->hasExitStub(DIR_SOUTHEAST))
             pR->setExitStub(DIR_SOUTHEAST, stub_se->isChecked());
-        pR->setExitWeight( "se", 0);
-        pR->customLinesArrow.remove( "SE" );
-        pR->customLinesColor.remove( "SE" );
-        pR->customLinesStyle.remove( "SE" );
-        pR->customLines.remove( "SE" );
+        pR->setExitWeight( QStringLiteral("se"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("SE") );
+        pR->customLinesColor.remove( QStringLiteral("SE") );
+        pR->customLinesStyle.remove( QStringLiteral("SE") );
+        pR->customLines.remove( QStringLiteral("SE") );
     }
 
     if (in->isEnabled() && in->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0 ) {
@@ -488,18 +497,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_IN))
             pR->setExitStub(DIR_IN, false);
         if (weight_in->value())
-            pR->setExitWeight( "in", weight_in->value());
+            pR->setExitWeight( QStringLiteral("in"), weight_in->value());
         else
-            pR->setExitWeight( "in", 0);
+            pR->setExitWeight( QStringLiteral("in"), 0);
     } else {
         pR->setExit( -1, DIR_IN );
         if (stub_in->isChecked() != pR->hasExitStub(DIR_IN))
             pR->setExitStub(DIR_IN, stub_in->isChecked());
-        pR->setExitWeight( "in", 0);
-        pR->customLinesArrow.remove( "IN" );
-        pR->customLinesColor.remove( "IN" );
-        pR->customLinesStyle.remove( "IN" );
-        pR->customLines.remove( "IN" );
+        pR->setExitWeight( QStringLiteral("in"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("IN") );
+        pR->customLinesColor.remove( QStringLiteral("IN") );
+        pR->customLinesStyle.remove( QStringLiteral("IN") );
+        pR->customLines.remove( QStringLiteral("IN") );
     }
 
     if (out->isEnabled() && out->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != 0 ) {
@@ -507,18 +516,18 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(DIR_OUT))
             pR->setExitStub(DIR_OUT, false);
         if (weight_out->value())
-            pR->setExitWeight( "out", weight_out->value());
+            pR->setExitWeight( QStringLiteral("out"), weight_out->value());
         else
-            pR->setExitWeight( "out", 0);
+            pR->setExitWeight( QStringLiteral("out"), 0);
     } else {
         pR->setExit( -1, DIR_OUT );
         if (stub_out->isChecked() != pR->hasExitStub(DIR_OUT))
             pR->setExitStub(DIR_OUT, stub_out->isChecked());
-        pR->setExitWeight( "out", 0);
-        pR->customLinesArrow.remove( "OUT" );
-        pR->customLinesColor.remove( "OUT" );
-        pR->customLinesStyle.remove( "OUT" );
-        pR->customLines.remove( "OUT" );
+        pR->setExitWeight( QStringLiteral("out"), 0);
+        pR->customLinesArrow.remove( QStringLiteral("OUT") );
+        pR->customLinesColor.remove( QStringLiteral("OUT") );
+        pR->customLinesStyle.remove( QStringLiteral("OUT") );
+        pR->customLines.remove( QStringLiteral("OUT") );
     }
 
     pR->setExitLock(DIR_NORTHWEST, noroute_nw->isChecked());
@@ -539,40 +548,40 @@ void dlgRoomExits::save()
     //   created without an explict Id, any attempt to set a different Id using
     //   setId() seems to fail for me :(
     if (doortype_nw->checkedId()<-1)
-        pR->setDoor( "nw", -2-doortype_nw->checkedId());
+        pR->setDoor( QStringLiteral("nw"), -2-doortype_nw->checkedId());
 
     if (doortype_n->checkedId()<-1)
-        pR->setDoor( "n", -2-doortype_n->checkedId());
+        pR->setDoor( QStringLiteral("n"), -2-doortype_n->checkedId());
 
     if (doortype_ne->checkedId()<-1)
-        pR->setDoor( "ne", -2-doortype_ne->checkedId());
+        pR->setDoor( QStringLiteral("ne"), -2-doortype_ne->checkedId());
 
     if (doortype_up->checkedId()<-1)
-        pR->setDoor( "up", -2-doortype_up->checkedId());
+        pR->setDoor( QStringLiteral("up"), -2-doortype_up->checkedId());
 
     if (doortype_w->checkedId()<-1)
-        pR->setDoor( "w", -2-doortype_w->checkedId());
+        pR->setDoor( QStringLiteral("w"), -2-doortype_w->checkedId());
 
     if (doortype_e->checkedId()<-1)
-        pR->setDoor( "e", -2-doortype_e->checkedId());
+        pR->setDoor( QStringLiteral("e"), -2-doortype_e->checkedId());
 
     if (doortype_down->checkedId()<-1)
-        pR->setDoor( "down", -2-doortype_down->checkedId());
+        pR->setDoor( QStringLiteral("down"), -2-doortype_down->checkedId());
 
     if (doortype_sw->checkedId()<-1)
-        pR->setDoor( "sw", -2-doortype_sw->checkedId());
+        pR->setDoor( QStringLiteral("sw"), -2-doortype_sw->checkedId());
 
     if (doortype_s->checkedId()<-1)
-        pR->setDoor( "s", -2-doortype_s->checkedId());
+        pR->setDoor( QStringLiteral("s"), -2-doortype_s->checkedId());
 
     if (doortype_se->checkedId()<-1)
-        pR->setDoor( "se", -2-doortype_se->checkedId());
+        pR->setDoor( QStringLiteral("se"), -2-doortype_se->checkedId());
 
     if (doortype_in->checkedId()<-1)
-        pR->setDoor( "in", -2-doortype_in->checkedId());
+        pR->setDoor( QStringLiteral("in"), -2-doortype_in->checkedId());
 
     if (doortype_out->checkedId()<-1)
-        pR->setDoor( "out", -2-doortype_out->checkedId());
+        pR->setDoor( QStringLiteral("out"), -2-doortype_out->checkedId());
 
     TArea * pA = mpHost->mpMap->mpRoomDB->getArea( pR->getArea() );
     if( pA )
@@ -1228,14 +1237,15 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != 0 ) {
-            nw->setText("");
-            nw->setStyleSheet("");
+            nw->setText( QStringLiteral("") );
+            nw->setStyleSheet( QStringLiteral("") );
             weight_nw->setValue(0); // Can't have a weight for a stub exit
             noroute_nw->setChecked(false); // nor a "lock"
         }
         noroute_nw->setEnabled(false); // Disable "lock" on this exit
         nw->setEnabled(false); // Prevent entry of an exit roomID
-        nw->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        nw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_nw->setEnabled(true);
         doortype_open_nw->setEnabled(true);
         doortype_closed_nw->setEnabled(true);
@@ -1243,7 +1253,8 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
         weight_nw->setEnabled(false); // Prevent a weight to be set/changed on a stub
     } else {
         nw->setEnabled(true);
-        nw->setToolTip("Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.");
+        nw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room northwest of this one, will be blue for a valid number or red for invalid." ) ) );
         //  noroute_nw->setEnabled(true); although this branch will enable the exit entry
         //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
         doortype_none_nw->setEnabled(false);
@@ -1262,14 +1273,15 @@ void dlgRoomExits::slot_stub_n_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != 0 ) {
-            n->setText("");
-            n->setStyleSheet("");
+            n->setText( QStringLiteral("") );
+            n->setStyleSheet( QStringLiteral("") );
             weight_n->setValue(0);
             noroute_n->setChecked(false);
         }
         noroute_n->setEnabled(false);
         n->setEnabled(false);
-        n->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        n->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_n->setEnabled(true);
         doortype_open_n->setEnabled(true);
         doortype_closed_n->setEnabled(true);
@@ -1277,7 +1289,8 @@ void dlgRoomExits::slot_stub_n_stateChanged(int state)
         weight_n->setEnabled(false);
     } else {
         n->setEnabled(true);
-        n->setToolTip("Set the number of the room north of this one, will be blue for a valid number or red for invalid.");
+        n->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room north of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_n->setEnabled(false);
         doortype_open_n->setEnabled(false);
         doortype_closed_n->setEnabled(false);
@@ -1293,14 +1306,15 @@ void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != 0 ) {
-            ne->setText("");
-            ne->setStyleSheet("");
+            ne->setText( QStringLiteral("") );
+            ne->setStyleSheet( QStringLiteral("") );
             weight_ne->setValue(0);
             noroute_ne->setChecked(false);
         }
         noroute_ne->setEnabled(false);
         ne->setEnabled(false);
-        ne->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        ne->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_ne->setEnabled(true);
         doortype_open_ne->setEnabled(true);
         doortype_closed_ne->setEnabled(true);
@@ -1308,7 +1322,8 @@ void dlgRoomExits::slot_stub_ne_stateChanged(int state)
         weight_ne->setEnabled(false);
     } else {
         ne->setEnabled(true);
-        ne->setToolTip("Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.");
+        ne->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room northeast of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_ne->setEnabled(false);
         doortype_open_ne->setEnabled(false);
         doortype_closed_ne->setEnabled(false);
@@ -1324,14 +1339,15 @@ void dlgRoomExits::slot_stub_up_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != 0 ) {
-            up->setText("");
-            up->setStyleSheet("");
+            up->setText( QStringLiteral("") );
+            up->setStyleSheet( QStringLiteral("") );
             weight_up->setValue(0);
             noroute_up->setChecked(false);
         }
         noroute_up->setEnabled(false);
         up->setEnabled(false);
-        up->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        up->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_up->setEnabled(true);
         doortype_open_up->setEnabled(true);
         doortype_closed_up->setEnabled(true);
@@ -1339,7 +1355,8 @@ void dlgRoomExits::slot_stub_up_stateChanged(int state)
         weight_up->setEnabled(false);
     } else {
         up->setEnabled(true);
-        up->setToolTip("Set the number of the room up from this one, will be blue for a valid number or red for invalid.");
+        up->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room up from this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_up->setEnabled(false);
         doortype_open_up->setEnabled(false);
         doortype_closed_up->setEnabled(false);
@@ -1355,14 +1372,15 @@ void dlgRoomExits::slot_stub_w_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != 0 ) {
-            w->setText("");
-            w->setStyleSheet("");
+            w->setText( QStringLiteral("") );
+            w->setStyleSheet( QStringLiteral("") );
             weight_w->setValue(0);
             noroute_w->setChecked(false);
         }
         noroute_w->setEnabled(false);
         w->setEnabled(false);
-        w->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        w->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_w->setEnabled(true);
         doortype_open_w->setEnabled(true);
         doortype_closed_w->setEnabled(true);
@@ -1370,7 +1388,8 @@ void dlgRoomExits::slot_stub_w_stateChanged(int state)
         weight_w->setEnabled(false);
     } else {
         w->setEnabled(true);
-        w->setToolTip("Set the number of the room west of this one, will be blue for a valid number or red for invalid.");
+        w->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room west of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_w->setEnabled(false);
         doortype_open_w->setEnabled(false);
         doortype_closed_w->setEnabled(false);
@@ -1386,14 +1405,15 @@ void dlgRoomExits::slot_stub_e_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != 0 ) {
-            e->setText("");
-            e->setStyleSheet("");
+            e->setText( QStringLiteral("") );
+            e->setStyleSheet( QStringLiteral("") );
             weight_e->setValue(0);
             noroute_e->setChecked(false);
         }
         noroute_e->setEnabled(false);
         e->setEnabled(false);
-        e->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        e->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_e->setEnabled(true);
         doortype_open_e->setEnabled(true);
         doortype_closed_e->setEnabled(true);
@@ -1401,7 +1421,8 @@ void dlgRoomExits::slot_stub_e_stateChanged(int state)
         weight_e->setEnabled(false);
     } else {
         e->setEnabled(true);
-        e->setToolTip("Set the number of the room east of this one, will be blue for a valid number or red for invalid.");
+        e->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room east of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_e->setEnabled(false);
         doortype_open_e->setEnabled(false);
         doortype_closed_e->setEnabled(false);
@@ -1417,14 +1438,15 @@ void dlgRoomExits::slot_stub_down_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != 0 ) {
-            down->setText("");
-            down->setStyleSheet("");
+            down->setText( QStringLiteral("") );
+            down->setStyleSheet( QStringLiteral("") );
             weight_down->setValue(0);
             noroute_down->setChecked(false);
         }
         noroute_down->setEnabled(false);
         down->setEnabled(false);
-        down->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        down->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                          .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_down->setEnabled(true);
         doortype_open_down->setEnabled(true);
         doortype_closed_down->setEnabled(true);
@@ -1432,7 +1454,8 @@ void dlgRoomExits::slot_stub_down_stateChanged(int state)
         weight_down->setEnabled(false);
     } else {
         down->setEnabled(true);
-        down->setToolTip("Set the number of the room down from this one, will be blue for a valid number or red for invalid.");
+        down->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                          .arg( tr( "Set the number of the room down from this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_down->setEnabled(false);
         doortype_open_down->setEnabled(false);
         doortype_closed_down->setEnabled(false);
@@ -1448,14 +1471,15 @@ void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != 0 ) {
-            sw->setText("");
-            sw->setStyleSheet("");
+            sw->setText( QStringLiteral("") );
+            sw->setStyleSheet( QStringLiteral("") );
             weight_sw->setValue(0);
             noroute_sw->setChecked(false);
         }
         noroute_sw->setEnabled(false);
         sw->setEnabled(false);
-        sw->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        sw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_sw->setEnabled(true);
         doortype_open_sw->setEnabled(true);
         doortype_closed_sw->setEnabled(true);
@@ -1463,7 +1487,8 @@ void dlgRoomExits::slot_stub_sw_stateChanged(int state)
         weight_sw->setEnabled(false);
     } else {
         sw->setEnabled(true);
-        sw->setToolTip("Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.");
+        sw->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room southwest of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_sw->setEnabled(false);
         doortype_open_sw->setEnabled(false);
         doortype_closed_sw->setEnabled(false);
@@ -1479,14 +1504,15 @@ void dlgRoomExits::slot_stub_s_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != 0 ) {
-            s->setText("");
-            s->setStyleSheet("");
+            s->setText( QStringLiteral("") );
+            s->setStyleSheet( QStringLiteral("") );
             weight_s->setValue(0);
             noroute_s->setChecked(false);
         }
         noroute_s->setEnabled(false);
         s->setEnabled(false);
-        s->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        s->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_s->setEnabled(true);
         doortype_open_s->setEnabled(true);
         doortype_closed_s->setEnabled(true);
@@ -1494,7 +1520,8 @@ void dlgRoomExits::slot_stub_s_stateChanged(int state)
         weight_s->setEnabled(false);
     } else {
         s->setEnabled(true);
-        s->setToolTip("Set the number of the room south of this one, will be blue for a valid number or red for invalid.");
+        s->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                       .arg( tr( "Set the number of the room south of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_s->setEnabled(false);
         doortype_open_s->setEnabled(false);
         doortype_closed_s->setEnabled(false);
@@ -1510,14 +1537,15 @@ void dlgRoomExits::slot_stub_se_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != 0 ) {
-            se->setText("");
-            se->setStyleSheet("");
+            se->setText( QStringLiteral("") );
+            se->setStyleSheet( QStringLiteral("") );
             weight_se->setValue(0);
             noroute_se->setChecked(false);
         }
         noroute_se->setEnabled(false);
         se->setEnabled(false);
-        se->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        se->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_se->setEnabled(true);
         doortype_open_se->setEnabled(true);
         doortype_closed_se->setEnabled(true);
@@ -1525,7 +1553,8 @@ void dlgRoomExits::slot_stub_se_stateChanged(int state)
         weight_se->setEnabled(false);
     } else {
         se->setEnabled(true);
-        se->setToolTip("Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.");
+        se->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room southeast of this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_se->setEnabled(false);
         doortype_open_se->setEnabled(false);
         doortype_closed_se->setEnabled(false);
@@ -1541,14 +1570,15 @@ void dlgRoomExits::slot_stub_in_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != 0 ) {
-            in->setText("");
-            in->setStyleSheet("");
+            in->setText( QStringLiteral("") );
+            in->setStyleSheet( QStringLiteral("") );
             weight_in->setValue(0);
             noroute_in->setChecked(false);
         }
         noroute_in->setEnabled(false);
         in->setEnabled(false);
-        in->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        in->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Clear the stub exit for this exit to enter an exit roomID." ) ) );
         doortype_none_in->setEnabled(true);
         doortype_open_in->setEnabled(true);
         doortype_closed_in->setEnabled(true);
@@ -1556,7 +1586,8 @@ void dlgRoomExits::slot_stub_in_stateChanged(int state)
         weight_in->setEnabled(false);
     } else {
         in->setEnabled(true);
-        in->setToolTip("Set the number of the room in from this one, will be blue for a valid number or red for invalid.");
+        in->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                        .arg( tr( "Set the number of the room in from this one, will be blue for a valid number or red for invalid." ) ) );
         doortype_none_in->setEnabled(false);
         doortype_open_in->setEnabled(false);
         doortype_closed_in->setEnabled(false);
@@ -1572,14 +1603,15 @@ void dlgRoomExits::slot_stub_out_stateChanged(int state)
 {
     if ( state==Qt::Checked ) {
         if ( mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != 0 ) {
-            out->setText("");
-            out->setStyleSheet("");
+            out->setText( QStringLiteral("") );
+            out->setStyleSheet( QStringLiteral("") );
             weight_out->setValue(0);
             noroute_out->setChecked(false);
         }
         noroute_out->setEnabled(false);
         out->setEnabled(false);
-        out->setToolTip("Clear the stub exit for this exit to enter an exit roomID.");
+        out->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                         .arg( tr("Clear the stub exit for this exit to enter an exit roomID.") ) );
         doortype_none_out->setEnabled(true);
         doortype_open_out->setEnabled(true);
         doortype_closed_out->setEnabled(true);
@@ -1587,7 +1619,8 @@ void dlgRoomExits::slot_stub_out_stateChanged(int state)
         weight_out->setEnabled(false);
     } else {
         out->setEnabled(true);
-        out->setToolTip("Set the number of the room out from this one, will be blue for a valid number or red for invalid.");
+        out->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                         .arg( tr("Set the number of the room out from this one, will be blue for a valid number or red for invalid.") ) );
         doortype_none_out->setEnabled(false);
         doortype_open_out->setEnabled(false);
         doortype_closed_out->setEnabled(false);
@@ -1702,7 +1735,8 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
     originalExits[ direction ] = makeExitFromControls( direction );
 }
 
-void dlgRoomExits::init( int id ) {
+void dlgRoomExits::init( int id )
+{
     pR = mpHost->mpMap->mpRoomDB->getRoom( id );
     if ( !pR )
         return;
@@ -1711,9 +1745,9 @@ void dlgRoomExits::init( int id ) {
     roomWeight->setText(QString::number(pR->getWeight()));
     QString titleText;
     if( pR->name.trimmed().length() )
-        titleText = QString("Exits for room: \"%1\" [*]").arg(pR->name);
+        titleText = tr("Exits for room: \"%1\" [*]").arg(pR->name);
     else
-        titleText = QString("Exits for room Id: %1 [*]").arg(id);
+        titleText = tr("Exits for room Id: %1 [*]").arg(id);
 
     this->setWindowTitle(titleText);
 
@@ -1775,7 +1809,7 @@ void dlgRoomExits::init( int id ) {
         QString dir = it.value();
         if ( dir.size() < 1 )
             continue;
-        if ( dir.startsWith('0') || dir.startsWith('1') )
+        if ( dir.startsWith( QStringLiteral("0") ) || dir.startsWith( QStringLiteral("1") ) )
             dir = dir.mid(1);  // Not sure if this will be relevent here??
 
         originalSpecialExits[dir] = new TExit();
@@ -2160,7 +2194,7 @@ void dlgRoomExits::slot_checkModified()
  *                   pI->text(0).toInt(),
  *                   qPrintable(pI->text(7)));
  */
-            if( pI->text(7) == "<command or Lua script>"
+            if( pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (4 of 5)" )
                 || pI->text(0).toInt() <= 0 )
                 continue; // Ignore new or to be deleted entries
             currentCount++;
@@ -2181,7 +2215,7 @@ void dlgRoomExits::slot_checkModified()
  *                           pI->text(0).toInt(),
  *                           qPrintable(pI->text(7)));
  */
-                    if( pI->text(7) == "<command or Lua script>"
+                    if(    pI->text(7) == tr("<command or Lua script>", "This string is also used programmatically ensure all instances are the same, (5 of 5)" )
                         || pI->text(0).toInt() <= 0 )
                         continue; // Ignore new or to be deleted entries
                     QString currentCmd = pI->text(7);
