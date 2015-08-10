@@ -28,7 +28,6 @@
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
-#include "dlgSearchArea.h"
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "Host.h"
