@@ -29,7 +29,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDebug>
-#include <QTime>
+#include <QElapsedTimer>
 #include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
@@ -254,6 +254,9 @@ void TArea::determineAreaExitsOfRoom( int id )
 
 void TArea::determineAreaExits()
 {
+    QElapsedTimer timer;
+    timer.start();
+
     exits.clear();
     for( int i=0; i<rooms.size(); i++ ) {
         TRoom * pR = mpRoomDB->getRoom(rooms[i]);
@@ -337,6 +340,7 @@ void TArea::determineAreaExits()
         }
     }
     //qDebug()<<"exits:"<<exits.size();
+    qDebug() << "TArea::determineAreaExits() area"<< mpRoomDB->getAreaID(this) << "took:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TArea::fast_calcSpan( int id )
@@ -517,12 +521,18 @@ void TArea::calcSpan()
 
 void TArea::removeRoom( int room )
 {
-    QTime time;
-    time.start();
+    static double cumulativeMean = 0.0;
+    static quint64 runCount = 0 ;
+    QElapsedTimer timer;
+    timer.start();
 //    TRoom * pR = mpRoomDB->getRoom( room );
     rooms.removeOne( room );
     exits.remove( room );
-    qDebug()<<"Area removal took"<<time.elapsed();
+    quint64 thisTime = timer.nsecsElapsed();
+    cumulativeMean += ( ( (thisTime * 1.0e-9) - cumulativeMean) / ++runCount );
+    if( runCount % 1000 == 0 ) {
+        qDebug()<<"TArea::removeRoom(" << room << ") from Area took" << thisTime * 1.0e-9 << "sec. this time and after" << runCount << "times the average is" << cumulativeMean << "sec.";
+    }
 //    int x = pR->x;
 //    int y = pR->y*-1;
 //    int z = pR->z;
@@ -575,7 +585,7 @@ const QMultiMap<int, QPair<QString, int> > TArea::getAreaExitRoomData() const
             case DIR_OUT:       exitData.first = QString("out");           break;
             case DIR_OTHER:     roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());   break;
             default:
-                qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %1 found for exit from room %2 to room %3.",
+                qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %i found for exit from room %i to room %i.",
                          itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first );
         }
         if( ! exitData.first.isEmpty() ) {

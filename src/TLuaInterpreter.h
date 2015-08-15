@@ -384,6 +384,7 @@ public:
     static int openWebPage( lua_State * L );
     static int getRoomUserDataKeys( lua_State * L );
     static int getAllRoomUserData( lua_State * L );
+    static int getAllRoomEntrances( lua_State * L );
 
 
     std::list<std::string> mCaptureGroupList;

@@ -69,7 +69,7 @@ public:
     bool hasSpecialExitLock( int, const QString& );
     void removeAllSpecialExitsToRoom(int _id );
     void setSpecialExit( int to, const QString& cmd );
-    void clearSpecialExits() { other.clear(); }
+    void clearSpecialExits();
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
     const QMap<QString, int> & getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w );
