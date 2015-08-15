@@ -10918,7 +10918,7 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
             {
                 e += lua_tostring( L, i );
                 logError( e, mName, function );
-                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()>>0;}
+                if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< mName << " (" << function <<") ERROR:"<<e.c_str()<<"\n">>0;}
             }
         }
     }
