@@ -159,7 +159,6 @@ public:
     static int createMapLabel( lua_State * );
     static int deleteMapLabel( lua_State * );
     static int getRooms( lua_State * );
-    static int isLockedRoom( lua_State * );
     static int connectToServer( lua_State *L );
     static int sendIrc( lua_State * );
     static int showUnzipProgress( lua_State * );
