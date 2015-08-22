@@ -56,7 +56,6 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int> > > koordinatenSystem();
-    bool mIsDirty;
 
 
     QList<int> rooms;                       // rooms of this area
@@ -78,7 +77,9 @@ public:
     bool gridMode;
     bool isZone;
     int zoneAreaRef;
-    TRoomDB* mpRoomDB;
+    TRoomDB * mpRoomDB;
+    bool mIsDirty;
+
 
 private:
     TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };

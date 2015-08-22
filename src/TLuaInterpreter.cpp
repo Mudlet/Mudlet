@@ -3917,6 +3917,54 @@ int TLuaInterpreter::getRoomExits( lua_State *L )
         return 0;
 }
 
+// Given a room Id number, returns a lua list (monotonically increasing keys
+// starting at 1) with (sorted) values being room Id numbers that have exit(s)
+// that enter the given room (even one way routes).
+// TODO: Provide exit details:
+int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
+{
+    int roomId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename(L, 1)).toUtf8().constData());
+        lua_error( L );
+    }
+    else {
+       roomId = lua_tonumber( L, 1 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomEntrances: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomEntrances: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+    else {
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+            return 2;
+        }
+        lua_newtable(L);
+        QList<int> entrances = pHost->mpMap->mpRoomDB->getEntranceHash().values( roomId );
+        // Could use a .toSet().toList() to remove duplicates values
+        if( entrances.count() > 1 ) {
+            std::sort( entrances.begin(), entrances.end() );
+        }
+        for( uint i = 0; i < entrances.size(); i++ ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushnumber( L, entrances.at( i ) );
+            lua_settable(L, -3);
+        }
+        return 1;
+    }
+}
+
 // EITHER searchRoom( roomId ):
 // Returns the room name for the given roomId number, or errors out if no such
 // room exists.
@@ -8197,7 +8245,6 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
     {
         pR_from->setSpecialExit( id_to, _dir );
         pR_from->setSpecialExitLock( id_to, _dir, false );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -8232,7 +8279,6 @@ int TLuaInterpreter::removeSpecialExit( lua_State * L )
     if( pR )
     {
         pR->setSpecialExit( -1, _dir );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -8335,7 +8381,6 @@ int TLuaInterpreter::clearSpecialExits( lua_State * L )
     if( pR )
     {
         pR->clearSpecialExits();
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -11546,6 +11591,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
     lua_register( pGlobalLua, "getRoomUserDataKeys", TLuaInterpreter::getRoomUserDataKeys );
     lua_register( pGlobalLua, "getAllRoomUserData", TLuaInterpreter::getAllRoomUserData );
+    lua_register( pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances );
 
 
 
