@@ -124,6 +124,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.flags &= ~(TCHAR_BOLD);
         mStandardFormat.flags &= ~(TCHAR_ITALICS);
         mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
+        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
     }
     else
     {
@@ -156,6 +157,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.flags &= ~(TCHAR_BOLD);
         mStandardFormat.flags &= ~(TCHAR_ITALICS);
         mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
+        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
     }
     setContentsMargins(0,0,0,0);
     if( mpHost )
@@ -1293,6 +1295,7 @@ void TConsole::reset()
     mFormatCurrent.flags &= ~(TCHAR_BOLD);
     mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+    mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
 }
 
 void TConsole::insertLink( QString text, QStringList & func, QStringList & hint, QPoint P, bool customFormat )
@@ -1329,7 +1332,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                 buffer.insertInLine( P, text, mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.insertInLine( P, text, _f );
             }
             buffer.applyLink( P, P2, text, func, hint );
@@ -1341,7 +1346,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                 buffer.insertInLine( P, text, mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.insertInLine( P, text, _f );
             }
             buffer.applyLink( P, P2, text, func, hint );
@@ -1356,7 +1363,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                 buffer.addLink( mTriggerEngineMode, text, func, hint, mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.addLink( mTriggerEngineMode, text, func, hint, _f );
             }
 
@@ -1384,7 +1393,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                                      mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.insertInLine( mUserCursor,
                                      text,
                                      _f );
@@ -1465,7 +1476,8 @@ void TConsole::insertText( QString text, QPoint P )
                            mFormatCurrent.bgB,
                            mFormatCurrent.flags & TCHAR_BOLD,
                            mFormatCurrent.flags & TCHAR_ITALICS,
-                           mFormatCurrent.flags & TCHAR_UNDERLINE );
+                           mFormatCurrent.flags & TCHAR_UNDERLINE,
+                           mFormatCurrent.flags & TCHAR_STRIKEOUT );
             console->showNewLines();
             console2->showNewLines();
         }
@@ -1951,6 +1963,15 @@ void TConsole::setUnderline( bool b )
     buffer.applyUnderline( P_begin, P_end, b );
 }
 
+void TConsole::setStrikeOut( bool b )
+{
+    if( b )
+        mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+    else
+        mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+    buffer.applyStikeOut( P_begin, P_end, b );
+}
+
 void TConsole::setFgColor( int r, int g, int b )
 {
     mFormatCurrent.fgR = r;
@@ -1989,6 +2010,7 @@ void TConsole::printCommand( QString & msg )
                            mCommandBgColor.red(),
                            mCommandBgColor.green(),
                            mCommandBgColor.blue(),
+                           false,
                            false,
                            false,
                            false );
@@ -2038,12 +2060,16 @@ void TConsole::echoLink( QString & text, QStringList & func, QStringList & hint,
     {
         if( ! mIsSubConsole && ! mIsDebugConsole )
         {
-            TChar f = TChar(0, 0, 255, mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(), false, false, true);
+            TChar f = TChar( 0, 0, 255,
+                             mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(),
+                             false, false, true, false );
             buffer.addLink( mTriggerEngineMode, text, func, hint, f );
         }
         else
         {
-            TChar f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true);
+            TChar f = TChar(0, 0, 255,
+                            mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                            false, false, true, false);
             buffer.addLink( mTriggerEngineMode, text, func, hint, f );
         }
     }
@@ -2064,7 +2090,8 @@ void TConsole::echo( QString & msg )
                            mFormatCurrent.bgB,
                            mFormatCurrent.flags & TCHAR_BOLD,
                            mFormatCurrent.flags & TCHAR_ITALICS,
-                           mFormatCurrent.flags & TCHAR_UNDERLINE );
+                           mFormatCurrent.flags & TCHAR_UNDERLINE,
+                           mFormatCurrent.flags & TCHAR_STRIKEOUT );
     }
     else
     {
@@ -2086,7 +2113,8 @@ void TConsole::print( const char * txt )
                    mFormatCurrent.bgB,
                    mFormatCurrent.flags & TCHAR_BOLD,
                    mFormatCurrent.flags & TCHAR_ITALICS,
-                   mFormatCurrent.flags & TCHAR_UNDERLINE );
+                   mFormatCurrent.flags & TCHAR_UNDERLINE,
+                   mFormatCurrent.flags & TCHAR_STRIKEOUT );
     console->showNewLines();
     console2->showNewLines();
 }
@@ -2102,6 +2130,7 @@ void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
                    d.red(),
                    d.green(),
                    d.blue(),
+                   false,
                    false,
                    false,
                    false );
@@ -2359,7 +2388,8 @@ void TConsole::print( QString & msg )
                     mFormatCurrent.bgB,
                     mFormatCurrent.flags & TCHAR_BOLD,
                     mFormatCurrent.flags & TCHAR_ITALICS,
-                    mFormatCurrent.flags & TCHAR_UNDERLINE );
+                    mFormatCurrent.flags & TCHAR_UNDERLINE,
+                    mFormatCurrent.flags & TCHAR_STRIKEOUT );
     console->showNewLines();
     console2->showNewLines();
 }
@@ -2375,6 +2405,7 @@ void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, i
                     bgColorR,
                     bgColorG,
                     bgColorB,
+                    false,
                     false,
                     false,
                     false );
@@ -2411,6 +2442,7 @@ void TConsole::printSystemMessage( QString & msg )
                     mSystemMessageBgColor.red(),
                     mSystemMessageBgColor.green(),
                     mSystemMessageBgColor.blue(),
+                    false,
                     false,
                     false,
                     false );

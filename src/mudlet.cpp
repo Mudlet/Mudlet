@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1085,7 +1085,10 @@ bool mudlet::setBackgroundImage( Host * pHost, QString & name, QString & path )
         return false;
 }
 
-bool mudlet::setTextFormat( Host * pHost, QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics )
+bool mudlet::setTextFormat( Host * pHost, QString & name,
+                            int r1, int g1, int b1,
+                            int r2, int g2, int b2,
+                            bool bold, bool underline, bool italics, bool strikeout )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1098,21 +1101,43 @@ bool mudlet::setTextFormat( Host * pHost, QString & name, int r1, int g1, int b1
         pC->mFormatCurrent.fgG = g2;
         pC->mFormatCurrent.fgB = b2;
         if( bold )
+        {
             pC->mFormatCurrent.flags |= TCHAR_BOLD;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
+        }
         if( underline )
+        {
             pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+        }
         if( italics )
+        {
             pC->mFormatCurrent.flags |= TCHAR_ITALICS;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
+        }
+        if( strikeout )
+        {
+            pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+        }
+        else
+        {
+            pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+        }
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 void mudlet::showEvent( QShowEvent * event )
@@ -1454,6 +1479,16 @@ void mudlet::setUnderline( Host * pHost, QString & name, bool b )
     {
         TConsole * pC = dockWindowConsoleMap[name];
         pC->setUnderline( b );
+    }
+}
+
+void mudlet::setStrikeOut( Host * pHost, QString & name, bool b )
+{
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    if( dockWindowConsoleMap.contains( name ) )
+    {
+        TConsole * pC = dockWindowConsoleMap[name];
+        pC->setStrikeOut( b );
     }
 }
 

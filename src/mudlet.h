@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -90,7 +91,7 @@ public:
    bool                          pasteWindow( Host * pHost, QString & name );
    bool                          setBackgroundColor( Host *, QString & name, int r, int g, int b, int alpha );
    bool                          setBackgroundImage( Host *, QString & name, QString & path );
-   bool                          setTextFormat( Host *, QString & name, int, int, int, int, int, int, bool, bool, bool );
+   bool                          setTextFormat( Host *, QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, QString &, QString &, TEvent * );
    bool                          setLabelOnEnter( Host *, QString &, QString &, TEvent * );
    bool                          setLabelOnLeave( Host *, QString &, QString &, TEvent * );
@@ -104,6 +105,7 @@ public:
    void                          setLink( Host * pHost, QString & name, QString & linkText, QStringList & linkFunction, QStringList & );
    void                          setItalics( Host *, QString & name, bool );
    void                          setUnderline( Host *, QString & name, bool );
+   void                          setStrikeOut( Host *, QString & name, bool );
    void                          setFgColor( Host *, QString & name, int, int, int );
    void                          setBgColor( Host *, QString & name, int, int, int );
    bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
