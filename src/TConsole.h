@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -46,42 +47,6 @@ class TCommandLine;
 class TLabel;
 class TSplitter;
 class dlgNotepad;
-
-
-class TFontSpecsLogger
-{
-public:
-    TFontSpecsLogger(){ reset(); }
-    QString getFontWeight()
-    {
-        if(bold)
-        {
-            return QString("bold");
-        }
-        else return QString("normal");
-    }
-    QString getFontStyle(){ return (italics) ? QString("italics") : QString("normal");}
-    QString getFontDecoration(){ return (underline) ? QString("underline") : QString("normal");}
-    void reset()
-    {
-        bold = false;
-        italics = false;
-        underline = false;
-        m_bgColorHasChanged = false;
-        m_fgColorHasChanged = false;
-    }
-    void bg_color_change(){ m_bgColorHasChanged=true; }
-    void fg_color_change(){ m_fgColorHasChanged=true; }
-    QColor fgColor;
-    QColor fgColorLight;
-    QColor bgColor;
-    bool m_bgColorHasChanged;
-    bool m_fgColorHasChanged;
-    bool bold;
-    bool italics;
-    bool underline;
-
-};
 
 
 class TConsole : public QWidget
@@ -180,9 +145,6 @@ public:
       void              selectCurrentLine();
       bool              saveMap(QString location);
       bool              loadMap(QString location);
-      QString           logger_translate( QString & );
-      void              logger_set_text_properties( QString );
-      QString           assemble_html_font_specs();
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
 
       Host *            mpHost;
@@ -197,7 +159,6 @@ public:
       QWidget *         layer;
       QWidget *         layerCommandLine;
       QWidget *         layerEdit;
-      TFontSpecsLogger  m_LoggerfontSpecs;
       QColor            mBgColor;
       int               mButtonState;
       TBuffer           mClipboard;

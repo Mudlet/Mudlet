@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -117,7 +118,6 @@ public:
     void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
     void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, int linkID=0 );
     int lookupColor( QString & s, int pos );
-    void set_text_properties(int tag);
     void setWrapAt( int i ){ mWrapAt = i; }
     void setWrapIndent( int i ){ mWrapIndent = i; }
     void updateColors();
