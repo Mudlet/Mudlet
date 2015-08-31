@@ -779,41 +779,84 @@ void TBuffer::translateToPlainText( std::string & s )
                                      }
                                     continue;
                                 }
-                                if( tag < 232 )
+                                else if( tag < 232 )
                                 {
                                     tag-=16; // because color 1-15 behave like normal ANSI colors
-                                    // 6x6 RGB color space
+                                    // 6x6x6 RGB color space
                                     int r = tag / 36;
                                     int g = (tag-(r*36)) / 6;
                                     int b = (tag-(r*36))-(g*6);
-                                    fgColorR = r*42;
-                                    fgColorLightR = r*42;
-                                    fgColorG = g*42;
-                                    fgColorLightG = g*42;
-                                    fgColorB = b*42;
-                                    fgColorLightB = b*42;
+                                    // Did use 42 as a factor but that isn't
+                                    // right as it yields:
+                                    // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
+                                    // 6 x 42 DOES equal 252 BUT IT IS OUT OF
+                                    // RANGE... Instead we should use 51:
+                                    // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
+                                    fgColorR = r*51;
+                                    fgColorLightR = r*51;
+                                    fgColorG = g*51;
+                                    fgColorLightG = g*51;
+                                    fgColorB = b*51;
+                                    fgColorLightB = b*51;
                                 }
                                 else
                                 {
                                     // black + 23 tone grayscale from dark to light gray
-                                    tag -= 232;
-                                    fgColorR = tag*10;
-                                    fgColorLightR = tag*10;
-                                    fgColorG = tag*10;
-                                    fgColorLightG = tag*10;
-                                    fgColorB = tag*10;
-                                    fgColorLightB = tag*10;
+                                    // Similiar to RGB case the multipler is a bit off
+                                    // we have been using 10 but 23 x 10 = 230
+                                    // whereas 23 should map to 255, this requires
+                                    // a non-integer multiplier, instead of mulipling
+                                    // and rounding we, for speed, can use a look-up table:
+                                    int value;
+                                    switch( tag )
+                                    {
+                                    case 232:   value =   0; break; //   0.000
+                                    case 233:   value =  11; break; //  11.087
+                                    case 234:   value =  22; break; //  22.174
+                                    case 235:   value =  33; break; //  33.261
+                                    case 236:   value =  44; break; //  44.348
+                                    case 237:   value =  55; break; //  55.435
+                                    case 238:   value =  67; break; //  66.522
+                                    case 239:   value =  78; break; //  77.609
+                                    case 240:   value =  89; break; //  88.696
+                                    case 241:   value = 100; break; //  99.783
+                                    case 242:   value = 111; break; // 110.870
+                                    case 243:   value = 122; break; // 121.957
+                                    case 244:   value = 133; break; // 133.043
+                                    case 245:   value = 144; break; // 144.130
+                                    case 246:   value = 155; break; // 155.217
+                                    case 247:   value = 166; break; // 166.304
+                                    case 248:   value = 177; break; // 177.391
+                                    case 249:   value = 188; break; // 188.478
+                                    case 250:   value = 200; break; // 199.565
+                                    case 251:   value = 211; break; // 210.652
+                                    case 252:   value = 222; break; // 221.739
+                                    case 253:   value = 233; break; // 232.826
+                                    case 254:   value = 244; break; // 243.913
+                                    case 255:   value = 255; break; // 255.000
+                                    default:
+                                        value = 192;
+                                        qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for foreground failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to light-grey!";
+                                    }
+
+                                    fgColorR = value;
+                                    fgColorLightR = value;
+                                    fgColorG = value;
+                                    fgColorLightG = value;
+                                    fgColorB = value;
+                                    fgColorLightB = value;
                                 }
                                 mHighColorModeForeground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
                                 continue;
                             }
+
                             if( mHighColorModeBackground )
                             {
                                 if( tag < 16 )
                                 {
-                                    mHighColorModeForeground = false;
+                                    mHighColorModeBackground = false;
                                     mWaitingForHighColorCode = false;
                                     mIsHighColorMode = false;
 
@@ -917,17 +960,48 @@ void TBuffer::translateToPlainText( std::string & s )
                                     int r = tag / 36;
                                     int g = (tag-(r*36)) / 6;
                                     int b = (tag-(r*36))-(g*6);
-                                    bgColorR = r*42;
-                                    bgColorG = g*42;
-                                    bgColorB = b*42;
+                                    bgColorR = r*51;
+                                    bgColorG = g*51;
+                                    bgColorB = b*51;
                                 }
                                 else
                                 {
-                                    // black + 23 tone grayscale from dark to light gray
-                                    tag -= 232;
-                                    bgColorR = tag*10;
-                                    bgColorG = tag*10;
-                                    bgColorB = tag*10;
+                                    // black + 23 tone grayscale from dark to (NOT light gray, but) white
+                                    int value;
+                                    switch( tag )
+                                    {
+                                    case 232:   value =   0; break; //   0.000
+                                    case 233:   value =  11; break; //  11.087
+                                    case 234:   value =  22; break; //  22.174
+                                    case 235:   value =  33; break; //  33.261
+                                    case 236:   value =  44; break; //  44.348
+                                    case 237:   value =  55; break; //  55.435
+                                    case 238:   value =  67; break; //  66.522
+                                    case 239:   value =  78; break; //  77.609
+                                    case 240:   value =  89; break; //  88.696
+                                    case 241:   value = 100; break; //  99.783
+                                    case 242:   value = 111; break; // 110.870
+                                    case 243:   value = 122; break; // 121.957
+                                    case 244:   value = 133; break; // 133.043
+                                    case 245:   value = 144; break; // 144.130
+                                    case 246:   value = 155; break; // 155.217
+                                    case 247:   value = 166; break; // 166.304
+                                    case 248:   value = 177; break; // 177.391
+                                    case 249:   value = 188; break; // 188.478
+                                    case 250:   value = 200; break; // 199.565
+                                    case 251:   value = 211; break; // 210.652
+                                    case 252:   value = 222; break; // 221.739
+                                    case 253:   value = 233; break; // 232.826
+                                    case 254:   value = 244; break; // 243.913
+                                    case 255:   value = 255; break; // 255.000
+                                    default:
+                                        value = 64;
+                                        qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for background failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to dark-grey!";
+                                    }
+
+                                    bgColorR = value;
+                                    bgColorG = value;
+                                    bgColorB = value;
                                 }
                                 mHighColorModeBackground = false;
                                 mWaitingForHighColorCode = false;
@@ -948,9 +1022,29 @@ void TBuffer::translateToPlainText( std::string & s )
                             mHighColorModeBackground = true;
                             continue;
                         }
-                        if( ( mIsHighColorMode ) && ( tag == 5 ) )
+
+                        if( mIsHighColorMode )
                         {
-                            mWaitingForHighColorCode = true;
+                            switch( tag )
+                            {
+                            case 5: // Indexed 256 color mode
+                                mWaitingForHighColorCode = true;
+                                break;
+                            case 2: // 24Bit RGB color mode
+// TODO:
+//                                mWaitingFor24BitColor = true;
+//                                break;
+                            case 4: // 24Bit CYMB color mode
+                            case 3: // 24Bit CYM color mode
+                            case 1: // "Transparent" mode
+                            case 0: // "Application defined" mode
+                                qWarning() << "TBuffer::translateToPlainText(...) Warning unhandled ANSI SGR 38/48 type color code encountered, first parameter is:" << tag;
+                                break;
+                            default:
+                                qWarning() << "TBuffer::translateToPlainText(...) Warning unknown ANSI SGR 38/48 type color code encountered, first parameter is:" << tag;
+                                break;
+                            }
+
                             continue;
                         }
 
@@ -1089,7 +1183,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             fgColorLightB = mLightWhiteB;
                             mIsDefaultColor = false;
                             break;
-                        case 39: //default text color
+                        case 39: //default foreground color
                             fgColorR = mFgColorR;
                             fgColorG = mFgColorG;
                             fgColorB = mFgColorB;
