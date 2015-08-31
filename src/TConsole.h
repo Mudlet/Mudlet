@@ -236,7 +236,6 @@ public:
       QPoint            P_end;
       QString           profile_name;
       TSplitter *       splitter;
-      int               mLastBufferLogLine;
       bool              mIsPromptLine;
       QToolButton *     logButton;
       bool              mUserAgreedToCloseConsole;

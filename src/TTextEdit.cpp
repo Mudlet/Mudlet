@@ -1490,12 +1490,10 @@ void TTextEdit::copySelectionToClipboard()
 
 void TTextEdit::copySelectionToClipboardHTML()
 {
-    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
-    {
+    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) ) {
         swap( mPA, mPB );
     }
-    if( mPA.y() > mPB.y() )
-    {
+    if( mPA.y() > mPB.y() ) {
         swap( mPA, mPB );
     }
 
@@ -1565,22 +1563,29 @@ void TTextEdit::copySelectionToClipboardHTML()
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>");
 
-    for( int y=mPA.y(); y<=mPB.y(); y++ )
-    {
-        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
+    for( int y=mPA.y(); y<=mPB.y(); y++ ) {
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) {
+            return;
+        }
         int x = 0;
-        if( y == mPA.y() )
-        {
+        if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
+            if( x ) {
+                text.append( "<span>" );
+                text.append( QString( x, QLatin1Char(' ') ) );
+                text.append( "</span>" );
+                // Pad out with spaces to the right so a partial first line lines up
+            }
+
             text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
         }
-        else if ( y == mPB.y() )
-        {
+        else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
         }
-        else
+        else { // inside lines of selection
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+        }
     }
     QClipboard * clipboard = QApplication::clipboard();
     clipboard->setText( text );
