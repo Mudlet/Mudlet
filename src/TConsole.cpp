@@ -1984,7 +1984,7 @@ void TConsole::setStrikeOut( bool b )
         mFormatCurrent.flags |= TCHAR_STRIKEOUT;
     else
         mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
-    buffer.applyStikeOut( P_begin, P_end, b );
+    buffer.applyStrikeOut( P_begin, P_end, b );
 }
 
 void TConsole::setFgColor( int r, int g, int b )
