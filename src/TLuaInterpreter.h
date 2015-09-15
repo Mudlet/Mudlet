@@ -190,6 +190,7 @@ public:
     static int getSpecialExits( lua_State * );
     static int getSpecialExitsSwap( lua_State * );
     static int appendCmdLine( lua_State * );
+    static int getCmdLine( lua_State * L );
     static int clearSpecialExits( lua_State * );
     static int solveRoomCollisions( lua_State * );
     static int setGridMode( lua_State * L );
