@@ -3440,57 +3440,82 @@ int TLuaInterpreter::setRoomEnv( lua_State *L )
 
 int TLuaInterpreter::setRoomName( lua_State *L )
 {
-    int id;
-    string name;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "setRoomName: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        id = lua_tonumber( L, 1 );
-    }
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setRoomName: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        name = lua_tostring( L, 2 );
-    }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString _name = name.c_str();
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
-    if( pR )
-    {
-        pR->name = _name;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setRoomName: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setRoomName: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
     }
 
-    return 0;
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setRoomName: bad argument #1 type (room Id as number expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    QString name;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setRoomName: bad argument #2 type (room name as string expected, got %1!)" ).arg( luaL_typename(L, 2) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        name = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    if( pR ) {
+        pR->name = name;
+        lua_pushboolean( L, true ); // Might conceivably wish to update the mappers after this...!
+        return 1;
+    }
+    else {
+        lua_pushnil(L);
+        lua_pushstring(L, tr( "setRoomName: bad argument #1 value (room Id %1 not found.)" ).arg( id ).toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::getRoomName( lua_State *L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomName: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomName: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
     int id;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getRoomName: wrong argument type" );
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getRoomName: bad argument #1 type (room Id as number expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
+    else {
         id = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
-    if( pR )
-    {
-        lua_pushstring(L, pR->name.toLatin1().data() );
+    if( pR ) {
+        lua_pushstring(L, pR->name.toUtf8().constData() );
+    }
+    else {
+        lua_pushnil(L);
+        lua_pushstring(L, tr( "getRoomName: bad argument #1 value (room Id %1 not found.)" ).arg( id ).toUtf8().constData() );
     }
 
     return 1;
@@ -3983,7 +4008,7 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
 {
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 type (room Id, as number expected, got %1)." ).arg( luaL_typename(L, 1)).toUtf8().constData());
+        lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 type (room Id, as number expected, got %1!)." ).arg( luaL_typename(L, 1)).toUtf8().constData());
         lua_error( L );
     }
     else {
@@ -4023,61 +4048,110 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
     }
 }
 
+// EITHER searchRoom( roomId ):
+// Returns the room name for the given roomId number, or errors out if no such
+// room exists.
+// OR searchRoom( roomName ):
+// Original implimentation did a case insensitive and matched on only part
+// of the room name if a string is supplied as the argument.  Returns a table
+// of room Ids with the matching room name for each room Id.
+// NOW Enhanced in a compatible matter with two further optional boolean arguments:
+// searchRoom( roomName, < caseSensitive < , exact match > > )
+// which both default to false if omitted to reproduce the original action.
 int TLuaInterpreter::searchRoom( lua_State *L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "searchRoom: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "searchRoom: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
     int room_id = 0;
+    int n = lua_gettop( L );
     bool gotRoomID = false;
-    string room;
-    if( lua_isnumber( L, 1 ) )
-    {
+    bool caseSensitive = false;
+    bool exactMatch = false;
+    QString room;
+
+    if( lua_isnumber( L, 1 ) ) {
         room_id = lua_tointeger( L, 1 );
         gotRoomID = true;
     }
-    else if( lua_isstring( L, 1 ) )
-    {
-        room = lua_tostring( L, 1 );
+    else if( lua_isstring( L, 1 ) ) {
+        if( n > 1 ) {
+            if( lua_isboolean( L, 2) ) {
+                caseSensitive = lua_toboolean( L, 2 );
+                if( n > 2 ) {
+                    if( lua_isboolean( L, 3) )
+                        exactMatch = lua_toboolean( L, 3);
+                    else {
+                        lua_pushstring( L, tr( "searchRoom: bad argument #3 type (\"exact match\" as optional boolean value, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+                        lua_error( L );
+                        return 1;
+                    }
+                }
+            }
+            else {
+                lua_pushstring( L, tr( "searchRoom: bad argument #2 type (\"case sensitive\" as optional boolean value, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+                lua_error( L );
+                return 1;
+            }
+        }
+        room = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
-    else
-    {
-        lua_pushstring( L, "searchRoom: wrong argument type" );
+    else {
+        lua_pushstring( L, tr( "searchRoom: bad argument #1 type (room name as string \"room name\" expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( gotRoomID )
-    {
+    if( gotRoomID ) {
         TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(room_id);
-        if( pR )
-        {
-            lua_pushstring( L, pR->name.toLatin1().data() );
+        if( pR ) {
+            lua_pushstring( L, pR->name.toUtf8().constData() );
             return 1;
         }
-        else
-        {
-            lua_pushstring( L, "searchRoom ERROR: no such room" );
+        else {
+            lua_pushstring( L, tr( "searchRoom ERROR: no such room!" ).toUtf8().constData());
+            // Should've been a nil with this as an second returned string !
             return 1;
         }
     }
-    else
-    {
+    else {
         QList<TRoom *> roomList = pHost->mpMap->mpRoomDB->getRoomPtrList();
         lua_newtable(L);
-        for( int i=0; i<roomList.size();i++ )
-        {
-            TRoom * pR = roomList[i];
-            if( pR->name.contains( QString(room.c_str()), Qt::CaseInsensitive ) )
-            {
+        QList<int> roomIdsFound;
+        for( int i=0; i<roomList.size();i++ ) {
+            TRoom * pR = roomList.at(i);
+            if( exactMatch ) {
+                if( pR->name.compare( room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive ) == 0 ) {
+                    roomIdsFound.append(pR->getId());
+                }
+            }
+            else {
+                if( pR->name.contains( room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive ) ) {
+                    roomIdsFound.append(pR->getId());
+                }
+            }
+        }
+        if( ! roomIdsFound.isEmpty() ) {
+            for( int i=0; i<roomIdsFound.size();i++ ) {
+                TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomIdsFound.at(i) );
                 QString name = pR->name;
                 int roomID = pR->getId();
                 lua_pushnumber( L, roomID );
-                lua_pushstring( L, name.toLatin1().data() );
+                lua_pushstring( L, name.toUtf8().constData() );
                 lua_settable(L, -3);
             }
         }
         return 1;
     }
-    return 0;
 }
 
 int TLuaInterpreter::searchRoomUserData( lua_State *L )
