@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -472,20 +473,22 @@ inline void TTextEdit::drawBackground( QPainter & painter,
 }
 
 inline void TTextEdit::drawCharacters( QPainter & painter,
-                                const QRect & rect,
-                                QString & text,
-                                bool isBold,
-                                bool isUnderline,
-                                bool isItalics,
-                                QColor & fgColor,
-                                QColor & bgColor )
+                                       const QRect & rect,
+                                       QString & text,
+                                       bool isBold,
+                                       bool isUnderline,
+                                       bool isItalics,
+                                       bool isStrikeOut,
+                                       QColor & fgColor,
+                                       QColor & bgColor )
 {
-    if( ( painter.font().bold() != isBold ) || ( painter.font().underline() != isUnderline ) || (painter.font().italic() != isItalics) )
+    if( ( painter.font().bold() != isBold ) || ( painter.font().underline() != isUnderline ) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut) )
     {
         QFont font = painter.font();
         font.setBold( isBold );
         font.setUnderline( isUnderline );
         font.setItalic( isItalics );
+        font.setStrikeOut( isStrikeOut );
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
@@ -549,6 +552,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                 bool isBold = false;
                 bool isUnderline = false;
                 bool isItalics = false;
+                bool isStrikeOut = false;
                 QRect textRect = QRect( mFontWidth * i2,
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
@@ -556,7 +560,7 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                 QColor bgTime = QColor(22,22,22);
                 QColor fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
-                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, fgTime, bgTime );
+                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
             }
             else
@@ -594,12 +598,13 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                     else
                         drawBackground( p, textRect, bgColor );
                 }
-                if( ( p.font().bold() != (f.flags & TCHAR_BOLD) ) || ( p.font().underline() != (f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != (f.flags & TCHAR_ITALICS)) )
+                if( ( p.font().bold() != (f.flags & TCHAR_BOLD) ) || ( p.font().underline() != (f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != (f.flags & TCHAR_ITALICS)) || (p.font().strikeOut() != (f.flags & TCHAR_STRIKEOUT)) )
                 {
                     QFont font = p.font();
                     font.setBold( f.flags & TCHAR_BOLD );
                     font.setUnderline( f.flags & TCHAR_UNDERLINE );
                     font.setItalic( f.flags & TCHAR_ITALICS );
+                    font.setStrikeOut( f.flags & TCHAR_STRIKEOUT );
                     font.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
                     p.setFont( font );
                 }
@@ -760,6 +765,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                 bool isBold = false;
                 bool isUnderline = false;
                 bool isItalics = false;
+                bool isStrikeOut = false;
                 QRect textRect = QRect( mFontWidth * i2,
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
@@ -767,7 +773,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                 QColor bgTime = QColor(22,22,22);
                 QColor fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
-                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, fgTime, bgTime );
+                drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
             }
             else
@@ -842,7 +848,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                 {
                     drawBackground( p, textRect, bgColor );
                 }
-                drawCharacters( p, textRect, text, f.flags & TCHAR_BOLD, f.flags & TCHAR_UNDERLINE, f.flags & TCHAR_ITALICS, fgColor, bgColor );
+                drawCharacters( p, textRect, text, f.flags & TCHAR_BOLD, f.flags & TCHAR_UNDERLINE, f.flags & TCHAR_ITALICS, f.flags & TCHAR_STRIKEOUT, fgColor, bgColor );
                 i2+=delta;
             }
         }
@@ -1484,15 +1490,72 @@ void TTextEdit::copySelectionToClipboard()
 
 void TTextEdit::copySelectionToClipboardHTML()
 {
-    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
-    {
+    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) ) {
         swap( mPA, mPB );
     }
-    if( mPA.y() > mPB.y() )
-    {
+    if( mPA.y() > mPB.y() ) {
         swap( mPA, mPB );
     }
-    QString text = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb(";
+
+    QString title;
+    if( this->mIsDebugConsole ) {
+        title = tr( "Mudlet, debug console extract" );
+    }
+    else if( this->mIsMiniConsole ) {
+        if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
+            for( std::map<std::string, TConsole *>::iterator it
+                     = this->mpHost->mpConsole->mSubConsoleMap.begin();
+                 it != this->mpHost->mpConsole->mSubConsoleMap.end();
+                 ++it ) {
+                if( (*it).second == this->mpConsole ) {
+                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
+                    break;
+                }
+            }
+        }
+    }
+    else {
+        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg( this->mpConsole->mConsoleName ).arg(  this->mpHost->getName() );
+    }
+
+    QStringList fontsList; // List of fonts to become the font-family entry for
+                           // the master css in the header
+    fontsList << this->fontInfo().family(); // Seems to be the best way to get the
+                                        // font in use, as different TConsole
+                                        // instances within the same profile
+                                        // might have different fonts in future,
+                                        // and although the font is settable for
+                                        // the main profile window, it is not yet
+                                        // for user miniConsoles, or the Debug one
+    fontsList << QStringLiteral( "Courier New" );
+    fontsList << QStringLiteral( "Monospace" );
+    fontsList << QStringLiteral( "Courier" );
+    fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
+
+    QString text =   "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
+    text.append("<html>\n");
+    text.append(" <head>\n");
+    text.append("  <meta http-equiv='content-type' content='text/html; charset=utf-8'>");
+    // put the charset as early as possible as the parser MUST restart when it
+    // switches away from the ASCII default
+    text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
+    text.append(APP_VERSION);
+    text.append(APP_BUILD);
+    text.append("'>\n");
+    // Nice to identify what made the file!
+    text.append("  <title>");
+    text.append(title);
+    text.append("</title>\n");
+     // Web-page title
+    text.append("  <style type='text/css'>\n");
+    text.append("   <!-- body { font-family: '");
+    text.append(fontsList.join("', '"));
+    text.append("'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb(");
+    // Line height, I think, should be equal to 18 point for a 16 point default
+    // font size by default but this seems to work even when the size is not 16
+    // Use a "%age" for a IE compatible font size, 16 point is the default for
+    // web-pages, but 14 seems to produce a more reasonable size but that could
+    // just be the browsers I tested it on! - Slysven
     text.append(QString::number(mpHost->mBgColor.red()));
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.green()));
@@ -1500,22 +1563,29 @@ void TTextEdit::copySelectionToClipboardHTML()
     text.append(QString::number(mpHost->mBgColor.blue()));
     text.append(");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>");
 
-    for( int y=mPA.y(); y<=mPB.y(); y++ )
-    {
-        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
+    for( int y=mPA.y(); y<=mPB.y(); y++ ) {
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) {
+            return;
+        }
         int x = 0;
-        if( y == mPA.y() )
-        {
+        if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
+            if( x ) {
+                text.append( "<span>" );
+                text.append( QString( x, QLatin1Char(' ') ) );
+                text.append( "</span>" );
+                // Pad out with spaces to the right so a partial first line lines up
+            }
+
             text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
         }
-        else if ( y == mPB.y() )
-        {
+        else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
         }
-        else
+        else { // inside lines of selection
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+        }
     }
     QClipboard * clipboard = QApplication::clipboard();
     clipboard->setText( text );

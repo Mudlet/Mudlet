@@ -243,7 +243,10 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
     writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
     writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
-    writeAttribute( "mRawStreamDump", pT->mRawStreamDump ? "yes" : "no" );
+    // FIXME: Change to a string or integer property when possible to support more
+    // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
+    // future - phpBB code might be useful if it can be done.
+    writeAttribute( "mRawStreamDump", pT->mIsNextLogFileInHtmlFormat ? "yes" : "no" );
     writeAttribute( "mAlertOnNewData", pT->mAlertOnNewData ? "yes" : "no" );
     writeAttribute( "mFORCE_NO_COMPRESSION", pT->mFORCE_NO_COMPRESSION ? "yes" : "no" );
     writeAttribute( "mFORCE_GA_OFF", pT->mFORCE_GA_OFF ? "yes" : "no" );

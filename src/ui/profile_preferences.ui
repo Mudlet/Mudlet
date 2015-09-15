@@ -154,12 +154,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="mRawStreamDump">
+           <widget class="QCheckBox" name="mIsToLogInHtml">
             <property name="toolTip">
-             <string>Switch log file format from HTML to raw stream dump in logfiles as sent by server. The logfile can then be can be loaded by Mudlet to test your trigger systems offline.</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Save log files in html format instead of text only</string>
+             <string>Save log files in HTML format instead of plain text</string>
             </property>
            </widget>
           </item>

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -94,7 +94,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mWindowIsHidden( false )
 , mWrapAt( 100 )
 , networkLatency( new QLineEdit )
-, mLastBufferLogLine( 0 )
 , mUserAgreedToCloseConsole( false )
 , mpBufferSearchBox( new QLineEdit )
 , mpBufferSearchUp( new QToolButton )
@@ -124,6 +123,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.flags &= ~(TCHAR_BOLD);
         mStandardFormat.flags &= ~(TCHAR_ITALICS);
         mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
+        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
     }
     else
     {
@@ -156,6 +156,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         mStandardFormat.flags &= ~(TCHAR_BOLD);
         mStandardFormat.flags &= ~(TCHAR_ITALICS);
         mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
+        mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
     }
     setContentsMargins(0,0,0,0);
     if( mpHost )
@@ -396,7 +397,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     logButton->setCheckable( true );
     logButton->setSizePolicy( sizePolicy5 );
     logButton->setFocusPolicy( Qt::NoFocus );
-    logButton->setToolTip("start logging MUD output to log file");
+    logButton->setToolTip( tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>") );
     logButton->setIcon( QIcon( QStringLiteral( ":/icons/folder-downloads.png" ) ) );
     connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
@@ -855,51 +856,104 @@ int TConsole::getButtonState()
 
 void TConsole::slot_toggleLogging()
 {
-    if( mIsDebugConsole ) return;
-    mLogToLogFile = ! mLogToLogFile;
-    //mpHost->mLogStatus = mLogToLogFile;
-    if( mLogToLogFile )
-    {
-        QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
+    if( mIsDebugConsole || mIsSubConsole ) {
+        return;
+        // We don't support logging anything other than main console (at present?)
+    }
+
+    QFile file( QStringLiteral( "%1/.config/mudlet/autolog" ).arg( QDir::homePath() ) );
+    if( ! mLogToLogFile ) {
         file.open( QIODevice::WriteOnly | QIODevice::Text );
         QTextStream out(&file);
         file.close();
-    }
-    else
-    {
-       QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
-       file.remove();
-    }
-    if( mLogToLogFile )
-    {
-        mLastBufferLogLine = buffer.size();
-        QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        if( mpHost->mRawStreamDump )
-        {
-            mLogFileName.append(".html");
-        }
-        else
-            mLogFileName.append(".txt");
 
+        QString directoryLogFile = QStringLiteral( "%1/.config/mudlet/profiles/%2/log" ).arg( QDir::homePath() ).arg( profile_name );
+        mLogFileName = QStringLiteral( "%1/%2" ).arg( directoryLogFile ).arg( QDateTime::currentDateTime().toString( QStringLiteral( "yyyy-MM-dd#hh-mm-ss" ) ) );
+        // Revised file name derived from time so that alphabetical filename and
+        // date sort order are the same...
         QDir dirLogFile;
-        if( ! dirLogFile.exists( directoryLogFile ) )
-        {
+        if( ! dirLogFile.exists( directoryLogFile ) ) {
             dirLogFile.mkpath( directoryLogFile );
+        }
+
+        mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
+            mLogFileName.append( QStringLiteral( ".html" ) );
+        }
+        else {
+            mLogFileName.append( QStringLiteral( ".txt" ) );
         }
         mLogFile.setFileName( mLogFileName );
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
-        if( mpHost->mRawStreamDump ) mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
-        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
+        QString message = tr( "Logging has started. Log file is %1.\n" ).arg( mLogFile.fileName() );
         printSystemMessage( message );
+        // This puts text onto console that WOULD IMMEDIATELY BE POSTED into log
+        // file so must be done BEFORE logging starts - or actually mLogToLogFile gets set!
+        mLogToLogFile = true;
     }
-    else
-    {
-        if( mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
+    else {
+        file.remove();
+        mLogToLogFile = false;
+    }
+
+    if( mLogToLogFile ) {
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
+            QStringList fontsList; // List of fonts to become the font-family entry for
+                                   // the master css in the header
+            fontsList << this->fontInfo().family(); // Seems to be the best way to get the
+                                                // font in use, as different TConsole
+                                                // instances within the same profile
+                                                // might have different fonts in future,
+                                                // and although the font is settable for
+                                                // the main profile window, it is not yet
+                                                // for user miniConsoles, or the Debug one
+            fontsList << QStringLiteral( "Courier New" );
+            fontsList << QStringLiteral( "Monospace" );
+            fontsList << QStringLiteral( "Courier" );
+            fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
+
+            mLogStream << QStringLiteral( "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n" );
+            mLogStream << QStringLiteral( "<html>\n" );
+            mLogStream << QStringLiteral( " <head>\n" );
+            mLogStream << QStringLiteral( "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>\n" );
+            // put the charset as early as possible as the parser MUST restart when it
+            // switches away from the ASCII default
+            mLogStream << QStringLiteral( "  <meta name='generator' content='Mudlet MUD Client version: %1%2'>\n" ).arg( APP_VERSION ).arg( APP_BUILD );
+            // Nice to identify what made the file!
+            mLogStream << QStringLiteral( "  <title>%1</title>\n" ).arg( tr( "Mudlet, log from %1 profile" ).arg(profile_name) );
+             // Web-page title
+            mLogStream << QStringLiteral( "  <style type='text/css'>\n" );
+            mLogStream << QStringLiteral( "   <!-- body { font-family: '%1'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(%2,%3,%4); background-color:rgb(%5,%6,%7);}\n" )
+                          .arg( fontsList.join( QStringLiteral( "', '" ) ) )
+                          .arg( mpHost->mFgColor.red() )
+                          .arg( mpHost->mFgColor.green() )
+                          .arg( mpHost->mFgColor.blue() )
+                          .arg( mpHost->mBgColor.red() )
+                          .arg( mpHost->mBgColor.green() )
+                          .arg( mpHost->mBgColor.blue() );
+            mLogStream << QStringLiteral( "        span { white-space: pre; } -->\n" );
+            mLogStream << QStringLiteral( "  </style>\n" );
+            mLogStream << QStringLiteral( "  </head>\n" );
+            mLogStream << QStringLiteral( "  <body><div>" );
+            // <div></div> tags required around outside of the body <span></spans> for
+            // strict HTML 4 as we do not use <p></p>s or anything else
+            mLogFile.flush();
+        }
+        logButton->setToolTip( QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                               .arg( tr( "Stop logging MUD output to log file." ) ) );
+    }
+    else {
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
+            mLogStream << QStringLiteral( "</div></body>\n" );
+            mLogStream << QStringLiteral( "</html>\n" );
+        }
+        mLogFile.flush();
         mLogFile.close();
-        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
+        QString message = tr( "Logging has been stopped. Log file is %1.\n" ).arg( mLogFile.fileName() );
         printSystemMessage( message );
+        logButton->setToolTip( QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                               .arg( tr( "Start logging MUD output to log file." ) ) );
     }
 }
 
@@ -1104,44 +1158,7 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
-//    if( mLogToLogFile )
-//    {
-//        if( ! mIsDebugConsole )
-//        {
-//            if( buffer.size() < mLastBufferLogLine )
-//            {
-//                mLastBufferLogLine -= buffer.mBatchDeleteSize;
-//                qDebug()<<"---> RESETTING mLastBufferLogLine";
-//                if( mLastBufferLogLine < 0 )
-//                {
-//                    mLastBufferLogLine = 0;
-//                }
-//            }
-//            if( buffer.size() > mLastBufferLogLine + 1 )
-//            {
-//                for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
-//                {
-//                    QString toLog;
-//                    if( mpHost->mRawStreamDump )
-//                    {
-//                        QPoint P1 = QPoint(0,i);
-//                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
-//                        toLog = buffer.bufferToHtml(P1, P2);
-//                    }
-//                    else
-//                    {
-//                        toLog = buffer.lineBuffer[i];
-//                        toLog.append("\n");
-//                    }
-//                    mLogStream << toLog;
-//                    qDebug()<<"LOG:"<<i<<" lastLogLine="<<mLastBufferLogLine<<" size="<<buffer.size()<<" toLog<"<<toLog<<">";
-//                    mLastBufferLogLine++;
-//                }
-//                mLastBufferLogLine--;
-//            }
-//            mLogStream.flush();
-//        }
-//    }
+
     double processT = mProcessingTime.elapsed();
     if( mpHost->mTelnet.mGA_Driver )
     {
@@ -1182,152 +1199,6 @@ void TConsole::finalize()
     console2->showNewLines();
 }
 
-QString TConsole::assemble_html_font_specs()
-{
-    QString s;
-    s = "</span><span style=\"";
-    if( m_LoggerfontSpecs.m_fgColorHasChanged )
-    {
-        s+="color: rgb("+
-            QString::number(m_LoggerfontSpecs.fgColor.red())+","+
-            QString::number(m_LoggerfontSpecs.fgColor.green())+","+
-            QString::number(m_LoggerfontSpecs.fgColor.blue()) + ");";
-    }
-    if( m_LoggerfontSpecs.m_bgColorHasChanged )
-    {
-        s += " background: rgb("+
-            QString::number(m_LoggerfontSpecs.bgColor.red())+","+
-            QString::number(m_LoggerfontSpecs.bgColor.green())+","+
-            QString::number(m_LoggerfontSpecs.bgColor.blue()) +");";
-    }
-    s += " font-weight: " + m_LoggerfontSpecs.getFontWeight() +
-        "; font-style: " + m_LoggerfontSpecs.getFontStyle() +
-        "; font-decoration: " + m_LoggerfontSpecs.getFontDecoration() +
-        "\">";
-    return s;
-}
-
-void TConsole::logger_set_text_properties( QString tags )
-{
-    switch( tags.toInt() )
-    {
-    case 0:
-        m_LoggerfontSpecs.reset();
-        break;
-    case 1:
-        m_LoggerfontSpecs.bold = true;
-        break;
-    case 2:
-        m_LoggerfontSpecs.bold = false;
-        break;
-    case 3:
-        m_LoggerfontSpecs.italics = true;
-        break;
-    case 4:
-        m_LoggerfontSpecs.underline = true;
-    case 5:
-        break; //FIXME support blinking
-    case 6:
-        break; //FIXME support fast blinking
-    case 7:
-        break; //FIXME support inverse
-    case 9:
-        break; //FIXME support strikethrough
-    case 22:
-        m_LoggerfontSpecs.bold = false;
-        break;
-    case 23:
-        m_LoggerfontSpecs.italics = false;
-        break;
-    case 24:
-        m_LoggerfontSpecs.underline = false;
-        break;
-    case 27:
-        break; //FIXME inverse off
-    case 29:
-        break; //FIXME
-    case 30:
-        m_LoggerfontSpecs.fgColor = mpHost->mBlack;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightBlack;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 31:
-        m_LoggerfontSpecs.fgColor = mpHost->mRed;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightRed;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 32:
-        m_LoggerfontSpecs.fgColor = mpHost->mGreen;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightGreen;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 33:
-        m_LoggerfontSpecs.fgColor = mpHost->mYellow;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightYellow;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 34:
-        m_LoggerfontSpecs.fgColor = mpHost->mBlue;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightBlue;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 35:
-        m_LoggerfontSpecs.fgColor = mpHost->mMagenta;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightMagenta;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 36:
-        m_LoggerfontSpecs.fgColor = mpHost->mCyan;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightCyan;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 37:
-        m_LoggerfontSpecs.fgColor = mpHost->mWhite;
-        m_LoggerfontSpecs.fgColorLight = mpHost->mLightWhite;
-        m_LoggerfontSpecs.fg_color_change();
-        break;
-    case 39:
-        m_LoggerfontSpecs.bgColor = mpHost->mBgColor;//mWhite
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 40:
-        m_LoggerfontSpecs.bgColor = mpHost->mBlack;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 41:
-        m_LoggerfontSpecs.bgColor = mpHost->mRed;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 42:
-        m_LoggerfontSpecs.bgColor = mpHost->mGreen;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 43:
-        m_LoggerfontSpecs.bgColor = mpHost->mYellow;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 44:
-        m_LoggerfontSpecs.bgColor = mpHost->mBlue;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 45:
-        m_LoggerfontSpecs.bgColor = mpHost->mMagenta;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 46:
-        m_LoggerfontSpecs.bgColor = mpHost->mCyan;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    case 47:
-        m_LoggerfontSpecs.bgColor = mpHost->mWhite;
-        m_LoggerfontSpecs.bg_color_change();
-        break;
-    };
-}
-
-
-QString TConsole::logger_translate( QString & s )
-{
      /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
       -----------------------------------------
       0 reset
@@ -1362,49 +1233,6 @@ QString TConsole::logger_translate( QString & s )
       46 bg cyan
       47 bg white
       49 bg black     */
-
-
-    //s.replace(QChar('\\'), "\\\\");
-    s.replace(QChar('\n'), "<br />");
-    s.replace(QChar('\t'), "     ");
-    int sequence_begin = 0;
-    int sequence_end = 0;
-    QString sequence;
-    while( (sequence_begin = s.indexOf(QString("\033["),0) ) != -1 )
-    {
-        sequence_end = s.indexOf(QChar('m'),sequence_begin);
-        int sequence_length = abs(sequence_begin - sequence_end )+1;
-        if( sequence_end != -1 )
-        {
-            sequence = s.mid(sequence_begin+2,sequence_length-3); // weil 3 elemente ausgelassen werden
-            QStringList textPropertyList;
-            if( sequence.indexOf(QChar(';'),0) )
-            {
-                textPropertyList = sequence.split(QChar(';'),QString::SkipEmptyParts);
-            }
-            else
-            {
-                textPropertyList << sequence;
-            }
-            for( int i=0; i<textPropertyList.size(); i++ )
-            {
-                m_LoggerfontSpecs.m_fgColorHasChanged = false;
-                m_LoggerfontSpecs.m_bgColorHasChanged = false;
-                logger_set_text_properties(textPropertyList[i]);
-                //            qDebug()<<"set property:"<<textPropertyList[i];
-            }
-            QString html_tags = assemble_html_font_specs();
-            s.replace(sequence_begin,sequence_length,html_tags);
-        }
-        else
-        {
-            break; // sequenzende befindet sich im naechsten tcp/ip packet
-        }
-    }
-
-    return s;
-}
-
 
 void TConsole::scrollDown( int lines )
 {
@@ -1482,6 +1310,7 @@ void TConsole::reset()
     mFormatCurrent.flags &= ~(TCHAR_BOLD);
     mFormatCurrent.flags &= ~(TCHAR_ITALICS);
     mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+    mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
 }
 
 void TConsole::insertLink( QString text, QStringList & func, QStringList & hint, QPoint P, bool customFormat )
@@ -1518,7 +1347,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                 buffer.insertInLine( P, text, mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.insertInLine( P, text, _f );
             }
             buffer.applyLink( P, P2, text, func, hint );
@@ -1530,7 +1361,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                 buffer.insertInLine( P, text, mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.insertInLine( P, text, _f );
             }
             buffer.applyLink( P, P2, text, func, hint );
@@ -1545,7 +1378,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                 buffer.addLink( mTriggerEngineMode, text, func, hint, mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.addLink( mTriggerEngineMode, text, func, hint, _f );
             }
 
@@ -1573,7 +1408,9 @@ void TConsole::insertLink( QString text, QStringList & func, QStringList & hint,
                                      mFormatCurrent );
             else
             {
-                TChar _f = TChar(0,0,255,mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true );
+                TChar _f = TChar( 0, 0, 255,
+                                  mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                                  false, false, true, false );
                 buffer.insertInLine( mUserCursor,
                                      text,
                                      _f );
@@ -1654,7 +1491,8 @@ void TConsole::insertText( QString text, QPoint P )
                            mFormatCurrent.bgB,
                            mFormatCurrent.flags & TCHAR_BOLD,
                            mFormatCurrent.flags & TCHAR_ITALICS,
-                           mFormatCurrent.flags & TCHAR_UNDERLINE );
+                           mFormatCurrent.flags & TCHAR_UNDERLINE,
+                           mFormatCurrent.flags & TCHAR_STRIKEOUT );
             console->showNewLines();
             console2->showNewLines();
         }
@@ -2140,6 +1978,15 @@ void TConsole::setUnderline( bool b )
     buffer.applyUnderline( P_begin, P_end, b );
 }
 
+void TConsole::setStrikeOut( bool b )
+{
+    if( b )
+        mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+    else
+        mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+    buffer.applyStrikeOut( P_begin, P_end, b );
+}
+
 void TConsole::setFgColor( int r, int g, int b )
 {
     mFormatCurrent.fgR = r;
@@ -2178,6 +2025,7 @@ void TConsole::printCommand( QString & msg )
                            mCommandBgColor.red(),
                            mCommandBgColor.green(),
                            mCommandBgColor.blue(),
+                           false,
                            false,
                            false,
                            false );
@@ -2227,12 +2075,16 @@ void TConsole::echoLink( QString & text, QStringList & func, QStringList & hint,
     {
         if( ! mIsSubConsole && ! mIsDebugConsole )
         {
-            TChar f = TChar(0, 0, 255, mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(), false, false, true);
+            TChar f = TChar( 0, 0, 255,
+                             mpHost->mBgColor.red(), mpHost->mBgColor.green(), mpHost->mBgColor.blue(),
+                             false, false, true, false );
             buffer.addLink( mTriggerEngineMode, text, func, hint, f );
         }
         else
         {
-            TChar f = TChar(0, 0, 255, mBgColor.red(), mBgColor.green(), mBgColor.blue(), false, false, true);
+            TChar f = TChar(0, 0, 255,
+                            mBgColor.red(), mBgColor.green(), mBgColor.blue(),
+                            false, false, true, false);
             buffer.addLink( mTriggerEngineMode, text, func, hint, f );
         }
     }
@@ -2253,7 +2105,8 @@ void TConsole::echo( QString & msg )
                            mFormatCurrent.bgB,
                            mFormatCurrent.flags & TCHAR_BOLD,
                            mFormatCurrent.flags & TCHAR_ITALICS,
-                           mFormatCurrent.flags & TCHAR_UNDERLINE );
+                           mFormatCurrent.flags & TCHAR_UNDERLINE,
+                           mFormatCurrent.flags & TCHAR_STRIKEOUT );
     }
     else
     {
@@ -2275,7 +2128,8 @@ void TConsole::print( const char * txt )
                    mFormatCurrent.bgB,
                    mFormatCurrent.flags & TCHAR_BOLD,
                    mFormatCurrent.flags & TCHAR_ITALICS,
-                   mFormatCurrent.flags & TCHAR_UNDERLINE );
+                   mFormatCurrent.flags & TCHAR_UNDERLINE,
+                   mFormatCurrent.flags & TCHAR_STRIKEOUT );
     console->showNewLines();
     console2->showNewLines();
 }
@@ -2291,6 +2145,7 @@ void TConsole::printDebug( QColor & c, QColor & d, QString & msg )
                    d.red(),
                    d.green(),
                    d.blue(),
+                   false,
                    false,
                    false,
                    false );
@@ -2548,7 +2403,8 @@ void TConsole::print( QString & msg )
                     mFormatCurrent.bgB,
                     mFormatCurrent.flags & TCHAR_BOLD,
                     mFormatCurrent.flags & TCHAR_ITALICS,
-                    mFormatCurrent.flags & TCHAR_UNDERLINE );
+                    mFormatCurrent.flags & TCHAR_UNDERLINE,
+                    mFormatCurrent.flags & TCHAR_STRIKEOUT );
     console->showNewLines();
     console2->showNewLines();
 }
@@ -2564,6 +2420,7 @@ void TConsole::print( QString & msg, int fgColorR, int fgColorG, int fgColorB, i
                     bgColorR,
                     bgColorG,
                     bgColorB,
+                    false,
                     false,
                     false,
                     false );
@@ -2600,6 +2457,7 @@ void TConsole::printSystemMessage( QString & msg )
                     mSystemMessageBgColor.red(),
                     mSystemMessageBgColor.green(),
                     mSystemMessageBgColor.blue(),
+                    false,
                     false,
                     false,
                     false );

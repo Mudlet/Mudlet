@@ -3139,147 +3139,199 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 
 int TLuaInterpreter::setTextFormat( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    double r1;
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        r1 = lua_tonumber( L, 2 );
-    }
-    double g1;
-    if( ! lua_isnumber( L, 3 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        g1 = lua_tonumber( L, 3 );
-    }
-    double b1;
-    if( ! lua_isnumber( L, 4 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        b1 = lua_tonumber( L, 4 );
-    }
-    double r2;
-    if( ! lua_isnumber( L, 5 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        r2 = lua_tonumber( L, 5 );
-    }
-    double g2;
-    if( ! lua_isnumber( L, 6 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        g2 = lua_tonumber( L, 6 );
-    }
-    double b2;
-    if( ! lua_isnumber( L, 7 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        b2 = lua_tonumber( L, 7 );
-    }
-    double bold;
-    if( ! lua_isnumber( L, 8 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        bold = lua_tonumber( L, 8 );
-    }
-    double underline;
-    if( ! lua_isnumber( L, 9 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        underline = lua_tonumber( L, 9 );
-    }
-    double italics;
-    if( ! lua_isnumber( L, 10 ) )
-    {
-        lua_pushstring( L, "setTextFormat: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        italics = lua_tonumber( L, 10 );
-    }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    if( text == "main" )
-    {
-        TConsole * pC = pHost->mpConsole;
-        pC->mFormatCurrent.bgR = r1;
-        pC->mFormatCurrent.bgG = g1;
-        pC->mFormatCurrent.bgB = b1;
-        pC->mFormatCurrent.fgR = r2;
-        pC->mFormatCurrent.fgG = g2;
-        pC->mFormatCurrent.fgB = b2;
-        if( bold )
-            pC->mFormatCurrent.flags |= TCHAR_BOLD;
-        else
-            pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
-        if( underline )
-            pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
-        else
-            pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
-        if( italics )
-            pC->mFormatCurrent.flags |= TCHAR_ITALICS;
-        else
-            pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
-        return true;
-    }
-    else
-    {
-        mudlet::self()->setTextFormat( pHost, text, static_cast<int>(r1), static_cast<int>(g1), static_cast<int>(b1), static_cast<int>(r2),static_cast<int>(g2), static_cast<int>(b2), static_cast<bool>(bold), static_cast<bool>(underline), static_cast<bool>(italics) );
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setTextFormat: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
     }
 
-    return 0;
+    int n = lua_gettop( L );
+    int s = 0;
+
+    QString windowName;
+    if( ! lua_isstring( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (window name as string {use \"main\" or empty string for main console} expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        windowName = QString::fromUtf8( lua_tostring( L, s ) );
+    }
+
+    QVector<int>colorComponents(6); // 0-2 RGB foreground, 3-5 RGB background
+    if( ! lua_isnumber( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (red foreground color component as number expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        colorComponents[0] = qRound( qBound( 0.0, lua_tonumber( L, s ), 255.0 ) );
+    }
+
+    if( ! lua_isnumber( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (green foreground color component as number expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        colorComponents[1] = qRound( qBound( 0.0, lua_tonumber( L, s ), 255.0 ) );
+    }
+
+    if( ! lua_isnumber( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (blue foreground color component as number expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        colorComponents[2] = qRound( qBound( 0.0, lua_tonumber( L, s ), 255.0 ) );
+    }
+
+    if( ! lua_isnumber( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (red background color component as number expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        colorComponents[3] = qRound( qBound( 0.0, lua_tonumber( L, s ), 255.0 ) );
+    }
+
+    if( ! lua_isnumber( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (green background color component as number expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        colorComponents[4] = qRound( qBound( 0.0, lua_tonumber( L, s ), 255.0 ) );
+    }
+
+    if( ! lua_isnumber( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (blue background color component as number expected, got %2!)" )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        colorComponents[5] = qRound( qBound( 0.0, lua_tonumber( L, s ), 255.0 ) );
+    }
+
+    bool bold;
+    if( lua_isboolean( L, ++s ) )
+    {
+        bold = lua_toboolean( L, s );
+    }
+    else if( lua_isnumber( L, s ) )
+    {
+        bold = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
+    }
+    else
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (bold format as boolean {or number, non-zero is true} expected, got %2!)" )
+                .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+
+    bool underline;
+    if( lua_isboolean( L, ++s ) )
+    {
+        underline = lua_toboolean( L, s );
+    }
+    else if( lua_isnumber( L, s ) )
+    {
+        underline = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
+    }
+    else
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (underline format as boolean {or number, non-zero is true} expected, got %2!)" )
+                .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+
+    bool italics;
+    if( lua_isboolean( L, ++s ) )
+    {
+        italics = lua_toboolean( L, s );
+    }
+    else if( lua_isnumber( L, s ) )
+    {
+        italics = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
+    }
+    else
+    {
+        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (italic format as boolean {or number, non-zero is true} expected, got %2!)" )
+                .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+
+    bool strikeout = false;
+    if( s > n ) // s has not been incremented yet so this means we still have another argument!
+    {
+        if( lua_isboolean( L, ++s ) )
+        {
+            strikeout = lua_toboolean( L, s );
+        }
+        else if( lua_isnumber( L, s ) )
+        {
+            strikeout = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
+        }
+        else
+        {
+            lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (strikeout format as boolean {or number, non-zero is true} optional, got %2!)" )
+                    .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    if( windowName.isEmpty() || windowName.compare( QStringLiteral("main"), Qt::CaseSensitive ) )
+    {
+        TConsole * pC = pHost->mpConsole;
+        pC->mFormatCurrent.bgR = colorComponents.at(0);
+        pC->mFormatCurrent.bgG = colorComponents.at(1);
+        pC->mFormatCurrent.bgB = colorComponents.at(2);
+        pC->mFormatCurrent.fgR = colorComponents.at(3);
+        pC->mFormatCurrent.fgG = colorComponents.at(4);
+        pC->mFormatCurrent.fgB = colorComponents.at(5);
+        int flags = (bold ? TCHAR_BOLD : 0)
+                + (underline ? TCHAR_UNDERLINE : 0)
+                + (italics ? TCHAR_ITALICS : 0)
+                + (strikeout ? TCHAR_STRIKEOUT : 0);
+        pC->mFormatCurrent.flags &= ~(TCHAR_BOLD|TCHAR_UNDERLINE|TCHAR_ITALICS|TCHAR_STRIKEOUT) ;
+        pC->mFormatCurrent.flags |= flags;
+        lua_pushboolean( L, true );
+    }
+    else
+    {
+        lua_pushboolean( L, mudlet::self()->setTextFormat( pHost, windowName,
+                                                           colorComponents.at(0), colorComponents.at(1), colorComponents.at(2),
+                                                           colorComponents.at(3), colorComponents.at(4), colorComponents.at(5),
+                                                           bold, underline, italics, strikeout ) );
+    }
+
+    return 1;
 }
 
 int TLuaInterpreter::showUserWindow( lua_State *L )
@@ -4824,120 +4876,203 @@ int TLuaInterpreter::setPopup( lua_State *L )
     return 0;
 }
 
-
 int TLuaInterpreter::setBold( lua_State * L )
 {
-    string luaWindowName;
-    bool b;
-    int s = 1;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setBold: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    QString windowName;
+    int s = 0;
     if( lua_gettop( L ) > 1 )
-    {
-        if( ! lua_isstring( L, s ) )
+    { // Have more than one argument so first must be a console name
+        if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushstring( L, "setBold: wrong argument type" );
+            lua_pushstring( L, tr( "setBold: bad argument #%1 type (more than one argument supplied and first, window name, as string expected {ommision selects \"main\" console window}, got %2!" )
+                            .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
             lua_error( L );
             return 1;
         }
         else
         {
-            luaWindowName = lua_tostring( L, s );
-            s++;
+            windowName = QString::fromUtf8( lua_tostring( L, s ) );
         }
     }
-    if( ! lua_isboolean( L, s ) )
+
+    bool isAtttributeEnabled;
+    if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushstring( L, "setBold: wrong argument type" );
+        lua_pushstring( L, tr( "setBold: bad argument #%1 type (enable bold attribute as boolean expected, got %2!) " )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
     else
     {
-        b = lua_toboolean( L, s );
+        isAtttributeEnabled = lua_toboolean( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString windowName(luaWindowName.c_str());
-    if( windowName.size() > 0 )
-        mudlet::self()->setBold( pHost, windowName, b );
+    if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
+    {
+        pHost->mpConsole->setBold( isAtttributeEnabled );
+    }
     else
-        pHost->mpConsole->setBold( b );
+    {
+        mudlet::self()->setBold( pHost, windowName, isAtttributeEnabled );
+    }
     return 0;
 }
 
-int TLuaInterpreter::setItalics( lua_State *L )
+int TLuaInterpreter::setItalics( lua_State * L )
 {
-        string luaWindowName;
-    bool b;
-    int s = 1;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setItalics: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    QString windowName;
+    int s = 0;
     if( lua_gettop( L ) > 1 )
-    {
-        if( ! lua_isstring( L, s ) )
+    { // Have more than one argument so first must be a console name
+        if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushstring( L, "setItalics: wrong argument type" );
+            lua_pushstring( L, tr( "setItalics: bad argument #%1 type (more than one argument supplied and first, window name, as string expected {ommision selects \"main\" console window}, got %2!" )
+                            .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
             lua_error( L );
             return 1;
         }
         else
         {
-            luaWindowName = lua_tostring( L, s );
-            s++;
+            windowName = QString::fromUtf8( lua_tostring( L, s ) );
         }
     }
-    if( ! lua_isboolean( L, s ) )
+
+    bool isAtttributeEnabled;
+    if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushstring( L, "setItalics: wrong argument type" );
+        lua_pushstring( L, tr( "setItalics: bad argument #%1 type (enable italic attribute as boolean expected, got %2!) " )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
     else
     {
-        b = lua_toboolean( L, s );
+        isAtttributeEnabled = lua_toboolean( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString windowName(luaWindowName.c_str());
-    if( windowName.size() > 0 )
-        mudlet::self()->setItalics( pHost, windowName, b );
+    if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
+    {
+        pHost->mpConsole->setItalics( isAtttributeEnabled );
+    }
     else
-        pHost->mpConsole->setItalics( b );
+    {
+        mudlet::self()->setItalics( pHost, windowName, isAtttributeEnabled );
+    }
     return 0;
 }
-int TLuaInterpreter::setUnderline( lua_State *L )
+
+int TLuaInterpreter::setUnderline( lua_State * L )
 {
-    string luaWindowName;
-    bool b;
-    int s = 1;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setUnderline: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    QString windowName;
+    int s = 0;
     if( lua_gettop( L ) > 1 )
-    {
-        if( ! lua_isstring( L, s ) )
+    { // Have more than one argument so first must be a console name
+        if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushstring( L, "setUnderline: wrong argument type" );
+            lua_pushstring( L, tr( "setUnderline: bad argument #%1 type (more than one argument supplied and first, window name, as string expected {ommision selects \"main\" console window}, got %2!" )
+                            .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
             lua_error( L );
             return 1;
         }
         else
         {
-            luaWindowName = lua_tostring( L, s );
-            s++;
+            windowName = QString::fromUtf8( lua_tostring( L, s ) );
         }
     }
-    if( ! lua_isboolean( L, s ) )
+
+    bool isAtttributeEnabled;
+    if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushstring( L, "setUnderline: wrong argument type" );
+        lua_pushstring( L, tr( "setUnderline: bad argument #%1 type (enable underline attribute as boolean expected, got %2!) " )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
     }
     else
     {
-        b = lua_toboolean( L, s );
+        isAtttributeEnabled = lua_toboolean( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString windowName(luaWindowName.c_str());
-    if( windowName.size() > 0 )
-        mudlet::self()->setUnderline( pHost, windowName, b );
+    if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
+    {
+        pHost->mpConsole->setUnderline( isAtttributeEnabled );
+    }
     else
-        pHost->mpConsole->setUnderline( b );
+    {
+        mudlet::self()->setUnderline( pHost, windowName, isAtttributeEnabled );
+    }
+    return 0;
+}
+
+int TLuaInterpreter::setStrikeOut( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setStrikeOut: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    QString windowName;
+    int s = 0;
+    if( lua_gettop( L ) > 1 )
+    { // Have more than one argument so first must be a console name
+        if( ! lua_isstring( L, ++s ) )
+        {
+            lua_pushstring( L, tr( "setStrikeOut: bad argument #%1 type (more than one argument supplied and first, window name, as string expected {ommision selects \"main\" console window}, got %2!" )
+                            .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            windowName = QString::fromUtf8( lua_tostring( L, s ) );
+        }
+    }
+
+    bool isAtttributeEnabled;
+    if( ! lua_isboolean( L, ++s ) )
+    {
+        lua_pushstring( L, tr( "setStrikeOut: bad argument #%1 type (enable strikeout attribute as boolean expected, got %2!) " )
+                        .arg( s ).arg( luaL_typename( L, s ) ).toUtf8().constData() ) ;
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        isAtttributeEnabled = lua_toboolean( L, s );
+    }
+
+    if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
+    {
+        pHost->mpConsole->setStrikeOut( isAtttributeEnabled );
+    }
+    else
+    {
+        mudlet::self()->setStrikeOut( pHost, windowName, isAtttributeEnabled );
+    }
     return 0;
 }
 
@@ -11185,6 +11320,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBold", TLuaInterpreter::setBold );
     lua_register( pGlobalLua, "setItalics", TLuaInterpreter::setItalics );
     lua_register( pGlobalLua, "setUnderline", TLuaInterpreter::setUnderline );
+    lua_register( pGlobalLua, "setStrikeOut", TLuaInterpreter::setStrikeOut );
     lua_register( pGlobalLua, "disconnect", TLuaInterpreter::disconnect );
     lua_register( pGlobalLua, "tempButtonToolbar", TLuaInterpreter::tempButtonToolbar );
     lua_register( pGlobalLua, "tempButton", TLuaInterpreter::tempButton );
