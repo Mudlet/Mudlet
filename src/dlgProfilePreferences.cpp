@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1394,25 +1395,37 @@ void dlgProfilePreferences::loadMap()
     if( ! pHost ) return;
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet map"),
-                                                    QDir::homePath(), "Mudlet map (*.dat);;Any file (*)");
-    if( fileName.isEmpty() ) return;
+                                                    QDir::homePath(), "Mudlet map (*.dat);;Mudlet XML map import (*.xml);;Any file (*)");
+    if( fileName.isEmpty() ) {
+        return;
+    }
 
     map_file_action->show();
-    map_file_action->setText("Loading map...");
+    if( fileName.endsWith(".xml", Qt::CaseInsensitive ) ) {
+        map_file_action->setText( tr("Importing map...") );
+        if( mpHost->mpConsole->importMap(fileName) ) {
+            map_file_action->setText( tr("Imported map from %1.").arg( fileName ) );
+        }
+        else {
+            map_file_action->setText( tr("Could not import map from %1." ).arg( fileName ) );
+        }
+    }
+    else {
+        map_file_action->setText( tr("Loading map...") );
+        if( mpHost->mpConsole->loadMap(fileName) ) {
+            map_file_action->setText( tr("Loaded map from %1.").arg( fileName ) );
+        }
+        else {
+            map_file_action->setText( tr("Could not load map from %1." ).arg( fileName ) );
+        }
+    }
 
-    if ( mpHost->mpConsole->loadMap(fileName) )
-    {
-        map_file_action->setText("Loaded map from "+fileName);
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
-    }
-    else
-    {
-        map_file_action->setText("Couldn't load map from "+fileName);
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
-    }
-    if( mpHost->mpMap )
-        if( mpHost->mpMap->mpMapper )
+    QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    if( mpHost->mpMap ) {
+        if( mpHost->mpMap->mpMapper ) {
             mpHost->mpMap->mpMapper->updateAreaComboBox();
+        }
+    }
 }
 
 void dlgProfilePreferences::saveMap()

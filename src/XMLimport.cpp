@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,7 @@
 
 #include "LuaInterface.h"
 #include "mudlet.h"
+#include "TArea.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -45,11 +47,34 @@
 int maxRooms;
 int maxAreas;
 QMap<int,int> areaMap;
-//int module = 0;
 
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
 {
+}
+
+void XMLimport::dumpElementAttributes( QString & elementName, QMap<QString, QString> & elementAttributes, const QString & title )
+{
+    elementName = name().toString();
+    elementAttributes.clear();
+    foreach( QXmlStreamAttribute elementAttribute, attributes() ) {
+        elementAttributes.insert( elementAttribute.name().toString(), elementAttribute.value().toString() );
+    }
+    QString output;
+    if( ! elementAttributes.isEmpty() ) {
+        output = QStringLiteral( "XMLimport::%1 INFO: parsing <%2 " ).arg( title ).arg( elementName );
+        QMapIterator<QString, QString> itAttribute( elementAttributes );
+        while( itAttribute.hasNext() ) {
+            itAttribute.next();
+            output.append( QStringLiteral( "%1=\"%2\" " ).arg( itAttribute.key() ).arg( itAttribute.value() ) );
+        }
+        output.chop(1); // lose unwanted last space
+        output.append( QStringLiteral( ">" ) );
+    }
+    else {
+        output = QStringLiteral( "XMLimport::%1 INFO: parsing <%2>" ).arg( title ).arg( elementName );
+    }
+    qDebug() << output.toUtf8().constData();
 }
 
 bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleFlag)
@@ -65,10 +90,9 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
     gotScript = false;
     module = moduleFlag;
 
-    if( ! packName.isEmpty() )
-    {
+    if( ! packName.isEmpty() ) {
         mpKey = new TKey( 0, mpHost );
-        if (module){
+        if( module ) {
             mpKey->mModuleMasterFolder=true;
             mpKey->mModuleMember=true;
         }
@@ -78,7 +102,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpKey->setIsFolder( true );
 
         mpTrigger = new TTrigger( 0, mpHost );
-        if (module){
+        if( module ) {
             mpTrigger->mModuleMasterFolder=true;
             mpTrigger->mModuleMember=true;
         }
@@ -88,32 +112,30 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpTrigger->setIsFolder( true );
 
         mpTimer = new TTimer( 0, mpHost );
-        mpTimer->setIsFolder( true );
-
-        if (module){
+        if( module ) {
             mpTimer->mModuleMasterFolder=true;
             mpTimer->mModuleMember=true;
         }
-
         mpTimer->setPackageName( mPackageName );
-        mpTimer->setName( mPackageName );
         mpTimer->setIsActive( true );
+        mpTimer->setName( mPackageName );
+        mpTimer->setIsFolder( true );
 
         mpAlias = new TAlias( 0, mpHost );
-        if (module){
+        if( module ) {
             mpAlias->mModuleMasterFolder=true;
             mpAlias->mModuleMember=true;
         }
         mpAlias->setPackageName( mPackageName );
         mpAlias->setName( mPackageName );
         mpAlias->setIsFolder( true );
-        QString _nothing = "";
-        mpAlias->setScript(_nothing);
-        mpAlias->setRegexCode("");
+        QString _nothing = QString();
+        mpAlias->setScript( _nothing );
+        mpAlias->setRegexCode( QString() );
         mpAlias->setIsActive( true );
 
         mpAction = new TAction( 0, mpHost );
-        if (module){
+        if( module ) {
             mpAction->mModuleMasterFolder=true;
             mpAction->mModuleMember=true;
         }
@@ -121,8 +143,9 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpAction->setIsActive( true );
         mpAction->setName( mPackageName );
         mpAction->setIsFolder( true );
+
         mpScript = new TScript( 0, mpHost );
-        if (module){
+        if( module ) {
             mpScript->mModuleMasterFolder=true;
             mpScript->mModuleMember=true;
         }
@@ -130,6 +153,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpScript->setIsActive( true );
         mpScript->setName( mPackageName );
         mpScript->setIsFolder( true );
+
         mpHost->getTriggerUnit()->registerTrigger( mpTrigger );
         mpHost->getTimerUnit()->registerTimer( mpTimer );
         mpHost->getAliasUnit()->registerAlias( mpAlias );
@@ -137,74 +161,92 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpHost->getKeyUnit()->registerKey( mpKey );
         mpHost->getScriptUnit()->registerScript( mpScript );
     }
-    while( ! atEnd() )
-    {
+
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    if( ! atEnd() ) { // Originally a while() but we only do this once!
         readNext();
 
-        if( isStartElement() )
-        {
-            if( name() == "MudletPackage" )// && attributes().value("version") == "1.0")
-            {
-                readPackage();
+        if( isStartDocument() ) {
+            qDebug() << "XMLimport::importPackage(...) INFO: Xml encoding:" << documentEncoding() << "Xml version:" << documentVersion();
+            readNext(); // Move on to next element
+        }
+
+        if( isDTD() ) {
+            QString message = QStringLiteral( "XMLimport::importPackage(...) INFO: DTD name: \"%1\" DTD Public Id: \"%2\" DTD System Id: \"%3\"" ).arg( dtdName().toString() ).arg( dtdPublicId().toString() ).arg( dtdSystemId().toString() );
+            QXmlStreamEntityDeclarations documentEntityDeclarations = entityDeclarations();
+            if( ! documentEntityDeclarations.isEmpty() ) {
+                message.append( QStringLiteral( "\n    INFO: external entity declarations:" ) );
+                foreach(QXmlStreamEntityDeclaration documentEntityDeclaration, documentEntityDeclarations ) {
+                    message.append( QStringLiteral( "\n    \"%1\" ==> \"%2\"" ).arg( documentEntityDeclaration.name().toString() ).arg(  documentEntityDeclaration.value().toString() ) ); // There is more that we might show but pretty academic for us
+                }
             }
-            else if( name() == "map" )
-            {
+            qDebug() << message.toUtf8().constData();
+            readNext(); // Move on to next element
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "importPackage(...)" ) );
+            if( name() == QStringLiteral( "MudletPackage" ) /* && attributes().value( QStringLiteral("version") == QStringLiteral("1.0" */ ) {
+                readPackage(); // only returns at end of file (though should also on error!)
+            }
+            else if( name() == QStringLiteral( "map" ) ) {
                 maxAreas = 0;
                 maxRooms = 0;
                 areaMap.clear();
-                readMap();
+                mpHost->mpMap->mpRoomDB->clearMapDB();
+                readMap(); // only returns at end of file (though should also on error!)
                 mpHost->mpMap->init(mpHost);
             }
-            else
-            {
-                qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
+            else {
+                qDebug() << "XMLimport::importPackage(...) ERROR: unrecognised top level element, name:" << name().toString() << "text:" << text().toString();
             }
         }
     }
 
-    if( gotTimer && ! packName.isEmpty() )
-    {
+    if( gotTimer && ! packName.isEmpty() ) {
         mpTimer->setIsActive( true );
         mpTimer->enableTimer( mpTimer->getID() );
     }
 
-    if( gotAlias && ! packName.isEmpty() )
-    {
+    if( gotAlias && ! packName.isEmpty() ) {
         mpAlias->setIsActive( true );
     }
 
-    if( gotAction && ! packName.isEmpty() )
-    {
+    if( gotAction && ! packName.isEmpty() ) {
         mpHost->getActionUnit()->updateToolbar();
     }
 
-    if( ! packName.isEmpty())
-    {
-       if( ! gotTrigger )
+    if( ! packName.isEmpty()) {
+       if( ! gotTrigger ) {
             mpHost->getTriggerUnit()->unregisterTrigger( mpTrigger );
-       if( ! gotTimer )
+       }
+       if( ! gotTimer ) {
             mpHost->getTimerUnit()->unregisterTimer( mpTimer );
-       if( ! gotAlias )
+       }
+       if( ! gotAlias ) {
             mpHost->getAliasUnit()->unregisterAlias( mpAlias );
-       if( ! gotAction )
+       }
+       if( ! gotAction ) {
             mpHost->getActionUnit()->unregisterAction( mpAction );
-       if( ! gotKey )
+       }
+       if( ! gotKey ) {
             mpHost->getKeyUnit()->unregisterKey( mpKey );
-       if( ! gotScript )
+       }
+       if( ! gotScript ) {
             mpHost->getScriptUnit()->unregisterScript( mpScript );
+       }
     }
     return ! error();
 }
 
-void XMLimport::readVariableGroup( TVar *pParent )
+void XMLimport::readVariableGroup( TVar * pParent )
 {
     TVar * var;
-    if( pParent )
-    {
+    if( pParent ) {
         var = new TVar( pParent );
     }
-    else
-    {
+    else {
         var = new TVar( );
     }
 
@@ -213,31 +255,35 @@ void XMLimport::readVariableGroup( TVar *pParent )
     QString keyName, value;
     int keyType = 0;
     int valueType;
-    while( ! atEnd() )
-    {
-        readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
+        readNext();
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readVariableGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 keyName = readElementText();
                 continue;
             }
-
-            else if( name() == "value")
-            {
+            else if( name() == QStringLiteral( "value" ) ) {
                 value = readElementText();
                 continue;
             }
-            else if( name() == "keyType" )
-            {
+            else if( name() == QStringLiteral( "keyType" ) ) {
                 keyType = readElementText().toInt() ;
                 continue;
             }
-            else if ( name() == "valueType" )
-            {
+            else if ( name() == QStringLiteral( "valueType" ) ) {
                 valueType = readElementText().toInt();
                 var->setName( keyName, keyType );
                 var->setValue( value, valueType );
@@ -245,12 +291,10 @@ void XMLimport::readVariableGroup( TVar *pParent )
                 lI->setValue( var );
                 continue;
             }
-            else if( name() == "VariableGroup" )
-            {
+            else if( name() == QStringLiteral( "VariableGroup" ) ) {
                 readVariableGroup( var );
             }
-            else if( name() == "Variable" )
-            {
+            else if( name() == QStringLiteral( "Variable" ) ) {
                 readVariableGroup( var );
             }
         }
@@ -261,15 +305,22 @@ void XMLimport::readHiddenVariables()
 {
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readHiddenVariables(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 QString var = readElementText();
                 vu->addHidden( var );
                 continue;
@@ -283,21 +334,26 @@ void XMLimport::readVariablePackage()
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     mpVar = vu->getBase();
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isStartElement() )
-        {
-            if( name() == "VariableGroup" )
-            {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readVariablePackage()" ) );
+            if(  name() == QStringLiteral( "VariableGroup" )
+              || name() == QStringLiteral( "Variable" ) ) {
                 readVariableGroup( mpVar );
             }
-            else if( name() == "Variable" )
-            {
-                readVariableGroup( mpVar );
-            }
-            else if ( name() == "HiddenVariables")
-            {
+            else if ( name() == QStringLiteral( "HiddenVariables") ) {
                 readHiddenVariables( );
             }
         }
@@ -306,25 +362,32 @@ void XMLimport::readVariablePackage()
 
 void XMLimport::readMap()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
 
-        if( isStartElement() )
-        {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
 
-            if( name() == "areas" )
-            {
-                mpHost->mpMap->mpRoomDB->clearMapDB();
-                readAreas();
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readMap()" ) );
+            if( name() == QStringLiteral( "areas" ) ) {
+                readAreas(); // Read ALL the areas, should return on the endElement </areas> (or <areas/> ???)
             }
-            else if( name() == "rooms" )
-            {
+            else if( name() == QStringLiteral( "rooms" ) ) {
                 readRooms();
             }
-            else if( name() == "environments" )
-            {
+            else if( name() == QStringLiteral( "environments" ) ) {
                 readEnvColors();
+            }
+            else {
+                // TODO: Store any other (1st level) XML map data
             }
         }
     }
@@ -332,73 +395,113 @@ void XMLimport::readMap()
 
 void XMLimport::readEnvColors()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( name() == "environment" )
-        {
-            readEnvColor();
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
         }
-        /*else
-        {
-            readUnknownMapElement();
-        }*/
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readEnvColors()" ) );
+
+            if( name() == QStringLiteral( "environment" ) ) {
+                readEnvColor();
+            }
+            else {
+                readUnknownElement();
+            }
+            readNext(); // Move to endElement of this <environment> tag
+        }
     }
 }
 
 void XMLimport::readEnvColor()
 {
 
-    int id = attributes().value("id").toString().toInt();
-    int color = attributes().value("color").toString().toInt();
-    mpHost->mpMap->envColors[id] = color;
+    int id = attributes().value( QStringLiteral("id") ).toString().toInt();
+    int color = attributes().value( QStringLiteral("color") ).toString().toInt();
+    // TODO: Parse, or at least record, other data elements, possibly including a "description"
+    mpHost->mpMap->envColorsMap[id] = color;
 }
 
+// Should be on startElement <areas> tag
 void XMLimport::readAreas()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( name() == "areas")
-        {
-            break;
-        }
-        if( name() == "area" )
-        {
-            readAreaNames();
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
         }
 
+        if( isEndElement() ) {
+            break; // Should be at endElement, </areas>
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readAreas(...)" ) );
+            if( name() == QStringLiteral( "area" ) ) {
+                readArea();
+            }
+            else {
+                readUnknownElement();
+            }
+            readNext(); // Move to endElement of THIS startElement
+        }
     }
 }
 
-void XMLimport::readAreaNames()
+void XMLimport::readArea()
 {
-    int id = attributes().value("id").toString().toInt();
-    QString name = attributes().value("name").toString();
+    int id = attributes().value( QStringLiteral( "id" ) ).toString().toInt();
+    QString name = attributes().value( QStringLiteral( "name" ) ).toString();
     mpHost->mpMap->mpRoomDB->addArea( id, name );
 }
 
 void XMLimport::readRooms()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "room" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readRooms()" ) );
+
+            if( name() == QStringLiteral( "room" ) ) {
                 readRoom();
             }
-
-            else
-            {
+            else {
                 readUnknownMapElement();
             }
+        }
+    }
+    // Need to update the TArea instances, to do the deferred actions from the
+    // per room calls to TRoomDB::addRoom( pT->id, pT, true ) in readRoom()
+    QMapIterator<int, TArea *> itArea( mpHost->mpMap->mpRoomDB->getAreaMap() );
+    while( itArea.hasNext() ) {
+        itArea.next();
+        if( itArea.value() ) {
+            itArea.value()->calcSpan();
+            itArea.value()->determineAreaExits();
+            itArea.value()->mIsDirty = false;
         }
     }
 }
@@ -407,211 +510,250 @@ void XMLimport::readRooms()
 void XMLimport::readRoom()
 {
     TRoom * pT = new TRoom( mpHost->mpMap->mpRoomDB );
-    pT->id = attributes().value("id").toString().toInt();
-    pT->area = attributes().value("area").toString().toInt();
-    pT->name = attributes().value("title").toString();
-    pT->environment = attributes().value("environment").toString().toInt();
+    pT->id = attributes().value( QStringLiteral("id") ).toString().toInt();
+    pT->area = attributes().value( QStringLiteral("area") ).toString().toInt();
+    pT->name = attributes().value( QStringLiteral("title") ).toString();
+    pT->environment = attributes().value( QStringLiteral("environment") ).toString().toInt();
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
 
-        if( name() == "" ) continue;
-        if( name() == "coord" )
-        {
-            if( attributes().value("x").toString() == "" ) continue;
-            pT->x = attributes().value("x").toString().toInt();
-            pT->y = attributes().value("y").toString().toInt();
-            pT->z = attributes().value("z").toString().toInt();
-            continue;
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
         }
-        else if( name() == "exit")
-        {
-            QString dir = attributes().value("direction").toString();
-            int e = attributes().value("target").toString().toInt();
-            if( dir == "" ) continue;
-            if( dir == "north" )
-            {
-                pT->north = e;
-            }
-            if( dir == "south" )
-            {
-                pT->south = e;
-            }
-            if( dir == "northwest" )
-            {
-                pT->northwest = e;
-            }
-            if( dir == "southwest" )
-            {
-                pT->southwest = e;
-            }
-            if( dir == "northeast" )
-            {
-                pT->northeast = e;
-            }
-            if( dir == "southeast" )
-            {
-                pT->southeast = e;
-            }
-            if( dir == "west" )
-            {
-                pT->west = e;
-            }
-            if( dir == "east" )
-            {
-                pT->east = e;
-            }
-            if( dir == "up" )
-            {
-                pT->up = e;
-            }
-            if( dir == "down" )
-            {
-                pT->down = e;
-            }
-            if( dir == "in" )
-            {
-                pT->in = e;
-            }
-            if( dir == "out" )
-            {
-                pT->out = e;
-            }
-            continue;
-        }
-        if( isEndElement() )
-        {
+
+        if( isEndElement() ) {
             break;
         }
+
+        if( isStartElement() ) {
+            if( name() == QStringLiteral("coord") ) {
+//                dumpElementAttributes( elementName, elementAttributes, "readRoom()" );
+                pT->x = attributes().value( QStringLiteral("x") ).toString().toInt();
+                pT->y = attributes().value( QStringLiteral("y") ).toString().toInt();
+                pT->z = attributes().value( QStringLiteral("z") ).toString().toInt();
+                // Aachea also has a "building" attribute which can be common to several rooms
+                // could put this and other unhandled attributes in TRoom::roomUserData ???
+            }
+            else if( name() == QStringLiteral("exit") ) {
+//                dumpElementAttributes( elementName, elementAttributes, "readRoom()" );
+                QString dir = attributes().value( QStringLiteral("direction") ).toString();
+                int e = attributes().value( QStringLiteral("target") ).toString().toInt();
+                // The following was suggested by browsing an Achea map, which had
+                // door = "1" or hidden = "1" on some exits, allow for 2 or 3 also
+                // for doors, and treat "hidden" (though hidden can appear without door)
+                // as door = 3...! - Slysven
+                int door = 0;
+                if( attributes().hasAttribute( QStringLiteral("door") ) ) {
+                    bool isOk = false;
+                    int _door = attributes().value( QStringLiteral("target") ).toString().toInt(&isOk);
+                    if( isOk && _door > 0 && _door <= 3 ) {
+                        door = _door;
+                    }
+                }
+                if( attributes().hasAttribute( QStringLiteral("hidden") ) ) {
+                    bool isOk = false;
+                    int _hidden = attributes().value( QStringLiteral("hidden") ).toString().toInt(&isOk);
+                    if( isOk && _hidden == 1 ) {
+                        door = 3;  // So make it a "locked" (red) door
+                    }
+                }
+
+                if( dir.isEmpty() ) {
+                    qWarning() << "XMLimport::readRoom() WARN: <exit> element with an empty exit id string found, it has been discarded!";
+                }
+                else if( dir == QStringLiteral("north") ) {
+                    pT->north = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("n"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("south") ) {
+                    pT->south = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("s"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("northwest") ) {
+                    pT->northwest = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("nw"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("southwest") ) {
+                    pT->southwest = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("sw"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("northeast") ) {
+                    pT->northeast = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("nw"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("southeast") ) {
+                    pT->southeast = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("se"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("west") ) {
+                    pT->west = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("w"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("east") ) {
+                    pT->east = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("e"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("up") ) {
+                    pT->up = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("up"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("down") ) {
+                    pT->down = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("down"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("in") ) {
+                    pT->in = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("in"), door );
+                    }
+                }
+                else if( dir == QStringLiteral("out") ) {
+                    pT->out = e;
+                    if( door ) {
+                        pT->setDoor( QStringLiteral("out"), door );
+                    }
+                }
+                else {
+                    // TODO: What about special exits?
+                    qWarning() << "XMLimport::readRoom() WARN: unhandled (Special ?) exit element with an empty exit id string found for room id:" << pT->id << ", it has been discarded!";
+                }
+            }
+            else {
+                dumpElementAttributes( elementName, elementAttributes, "readRoom()" );
+                readUnknownElement();
+            }
+        readNext(); // Pull to the endElement of this
+        }
     }
-    if( pT->id != 0 )
-    {
-        mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT );
+
+    if( pT->id > 0 ) { // CHECKME: Changed from just a test for non-zero
+        mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT, true ); // Last flag is because we are loading a map and can skip some things
+        mpHost->mpMap->setRoomArea( pT->id, pT->area, true );
         maxRooms++;
     }
-    else
+    else {
+        qDebug() << "XMLimport::readRoom() INFO: Discarding room with room Id less than 1!";
         delete pT;
+    }
 }
 
 void XMLimport::readUnknownMapElement()
 {
-    while( ! atEnd() )
-    {
-
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
 
-        if( isEndElement() )
-        {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral("readUnknownMapElement()") );
             readMap();
         }
     }
 }
 
-void XMLimport::readUnknownRoomElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        qDebug()<<"[ERROR]: UNKNOWN room element:name="<<name().toString();
-
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readRoom();
-        }
-    }
-}
-
-
-
+// Will be at startElement of "<MudletPackage>" on entry
 void XMLimport::readPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() && error() == QXmlStreamReader::NoError ) { // Should really do something about QXmlStreamReader::PrematureEndOfDocumentError
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "HostPackage" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readPackage()" ) );
+            if( name() == QStringLiteral( "HostPackage" ) ) {
                 readHostPackage();
-                continue;
             }
-            if( name() == "TriggerPackage" )
-            {
+            else if( name() == QStringLiteral( "TriggerPackage" ) ) {
                 readTriggerPackage();
-                continue;
             }
-            else if( name() == "TimerPackage" )
-            {
+            else if( name() == QStringLiteral( "TimerPackage" ) ) {
                 readTimerPackage();
-                continue;
             }
-            else if( name() == "AliasPackage" )
-            {
+            else if( name() == QStringLiteral( "AliasPackage" ) ) {
                 readAliasPackage();
-                continue;
             }
-            else if( name() == "ActionPackage" )
-            {
+            else if( name() == QStringLiteral( "ActionPackage" ) ) {
                 readActionPackage();
-                continue;
             }
-            else if( name() == "ScriptPackage" )
-            {
+            else if( name() == QStringLiteral( "ScriptPackage" ) ) {
                 readScriptPackage();
-                continue;
             }
-            else if( name() == "KeyPackage" )
-            {
+            else if( name() == QStringLiteral( "KeyPackage" ) ) {
                 readKeyPackage();
-                continue;
             }
-            else if(name() == "HelpPackage"){
+            else if( name() == QStringLiteral( "HelpPackage") ) {
                 readHelpPackage();
-                continue;
             }
-            else if( name() == "VariablePackage" )
-            {
+            else if( name() == QStringLiteral( "VariablePackage" ) ) {
                 readVariablePackage();
             }
-            else
-            {
-                readUnknownPackage();
+            else {
+                readUnknownElement();
             }
         }
     }
 }
 
-void XMLimport::readHelpPackage(){
-    while( ! atEnd() )
-    {
+void XMLimport::readHelpPackage()
+{
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if(isEndElement())
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
-        if( isStartElement() )
-        {
-            if( name() == "helpURL" )
-            {
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readHelpPackage()" ) );
+            if( name() == QStringLiteral( "helpURL" ) ) {
                 QString contents = readElementText();
-                mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
+                mpHost->moduleHelp[mPackageName].insert( QStringLiteral( "helpURL" ), contents );
                 continue;
             }
         }
@@ -619,189 +761,44 @@ void XMLimport::readHelpPackage(){
 }
 
 
-void XMLimport::readUnknownPackage()
+// Changed to use readElement() which parses ALL the contents under the current
+// element, and as it is generic can be used for all unknown elements:
+void XMLimport::readUnknownElement()
 {
-    while( ! atEnd() )
-    {
-
-        readNext();
-        qDebug()<<"[ERROR]: UNKNOWN readUnknownPackage() Package Element:"<<name().toString()<<"text:"<<text().toString();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readPackage();
-        }
+    if( ! isStartElement() ) {
+        qWarning() << "XMLimport::readUnknownHostElement() ERROR: Tried to use when NOT at a startElement.";
+    }
+    else {
+        QString contents = readElementText( QXmlStreamReader::IncludeChildElements );
+        // This will get everything until the corresponding closing tag...
+        qDebug() << "    WARNING: This element was unexpected, its {text} contents are: " << contents;
     }
 }
-
-void XMLimport::readUnknownHostElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Host Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readHostPackage( mpHost );
-        }
-    }
-}
-
-
-void XMLimport::readUnknownTriggerElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Trigger Package Element:name="<<name().toString()<<"text:"<<text().toString();
-
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readTriggerPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownTimerElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readTimerPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownAliasElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readAliasPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownActionElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readActionPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownScriptElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readScriptPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownKeyElement()
-{
-    while( ! atEnd() )
-    {
-
-        readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            readKeyPackage();
-        }
-    }
-}
-
-
 
 void XMLimport::readTriggerPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "TriggerGroup" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readTriggerPackage()" ) );
+
+            if( name() == QStringLiteral( "TriggerGroup" ) ) {
                 gotTrigger = true;
-                if( mPackageName.isEmpty() )
-                    readTriggerGroup(0);
-                else
-                    readTriggerGroup(mpTrigger);
+                readTriggerGroup( mPackageName.isEmpty() ? 0 : mpTrigger );
             }
-            else if( name() == "Trigger" )
-            {
-                gotTrigger = true;
-                if( mPackageName.isEmpty() )
-                    readTriggerGroup(0);
-                else
-                    readTriggerGroup(mpTrigger);
-            }
-            else
-            {
-                readUnknownTriggerElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -809,29 +806,33 @@ void XMLimport::readTriggerPackage()
 
 void XMLimport::readHostPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "Host" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readHostPackage()" ) );
+            if( name() == QStringLiteral( "Host" ) ) {
                 readHostPackage( mpHost );
             }
-
-            else
-            {
-                readUnknownHostElement();
+            else {
+                readUnknownElement();
             }
         }
     }
 }
 
+// This actually parses the "<Host ....>" element under the <HostPackage> one,
+// Will be at the <Host ...> startElement on entry
 void XMLimport::readHostPackage( Host * pT )
 {
     pT->mAutoClearCommandLineAfterSend = ( attributes().value("autoClearCommandLineAfterSend") == "yes" );
@@ -855,344 +856,236 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
     pT->mMapperUseAntiAlias = ( attributes().value("mMapperUseAntiAlias") == "yes" );
     pT->mFORCE_MXP_NEGOTIATION_OFF = ( attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes" );
-    pT->mRoomSize = attributes().value("mRoomSize").toString().toInt();
-    if (!pT->mRoomSize)
-        pT->mRoomSize=3;
-    pT->mLineSize = attributes().value("mLineSize").toString().toInt();
-    if (!pT->mLineSize)
-        pT->mLineSize=1;
+    // Round these to one decimal place (were being treated as integers!)
+    pT->mRoomSize = qRound( attributes().value("mRoomSize").toString().toFloat() * 10.0 ) / 10.0;
+    pT->mLineSize = qRound( attributes().value("mLineSize").toString().toFloat() * 10.0 ) / 10.0;
     pT->mBubbleMode = ( attributes().value("mBubbleMode") == "yes" );
     pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
     pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
     pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
-    QStringRef ignore = attributes().value("mDoubleClickIgnore");
-    for(int i=0;i<ignore.size();i++)
+    QString ignore = attributes().value("mDoubleClickIgnore").toString();
+
+    if( !pT->mRoomSize ) {
+        pT->mRoomSize=3;
+    }
+    if( !pT->mLineSize ) {
+        pT->mLineSize=1;
+    }
+    for( int i=0; i < ignore.size(); i++ ) {
         pT->mDoubleClickIgnore.insert( ignore.at( i ) );
+    }
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
-                pT->mHostName = readElementText();
-                continue;
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readHostPackage(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
+                pT->mHostName = readElementText(); // Actually a bit pointless as it is already set...!
             }
-            else if( name() == "mInstalledModules")
-            {
+            else if( name() == QStringLiteral( "mInstalledModules") ) {
                 QMap<QString, QStringList> entry;
                 readMapList(entry);
+
                 QMapIterator<QString, QStringList> it(entry);
-                while (it.hasNext()){
+                while( it.hasNext() ) {
                     it.next();
                     QStringList moduleList;
                     QStringList entryList = it.value();
-                    moduleList << entryList[0];
-                    moduleList << entryList[1];
+                    moduleList << entryList.at(0);
+                    moduleList << entryList.at(1);
                     pT->mInstalledModules[it.key()] = moduleList;
-                    pT->mModulePriorities[it.key()] = entryList[2].toInt();
-
+                    pT->mModulePriorities[it.key()] = entryList.at(2).toInt();
                 }
-                //readMapList( pT->mInstalledModules );
-                continue;
             }
-            else if( name() == "mInstalledPackages")
-            {
+            else if( name() == QStringLiteral( "mInstalledPackages") ) {
                 readStringList( pT->mInstalledPackages );
-                continue;
             }
-            else if( name() =="url" )
-            {
+            else if( name() == QStringLiteral( "url" ) ) {
                 pT->mUrl = readElementText();
-                continue;
             }
-            else if( name() =="serverPackageName" )
-            {
+            else if( name() == QStringLiteral( "serverPackageName" ) ) {
                 pT->mServerGUI_Package_name = readElementText();
-                continue;
             }
-            else if( name() == "serverPackageVersion")
-            {
+            else if( name() == QStringLiteral( "serverPackageVersion" ) ) {
                 pT->mServerGUI_Package_version = readElementText().toInt();
-                continue;
             }
-            else if( name() == "port")
-            {
+            else if( name() == QStringLiteral( "port" ) ) {
                 pT->mPort = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderTopHeight")
-            {
+            else if( name() == QStringLiteral( "borderTopHeight" ) ) {
                 pT->mBorderTopHeight = readElementText().toInt();
-                continue;
             }
-            else if( name() == "commandLineMinimumHeight")
-            {
+            else if( name() == QStringLiteral( "commandLineMinimumHeight" ) ) {
                 pT->commandLineMinimumHeight = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderBottomHeight")
-            {
+            else if( name() == QStringLiteral( "borderBottomHeight" ) ) {
                 pT->mBorderBottomHeight = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderLeftWidth")
-            {
+            else if( name() == QStringLiteral( "borderLeftWidth" ) ) {
                 pT->mBorderLeftWidth = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderRightWidth")
-            {
+            else if( name() == QStringLiteral( "borderRightWidth" ) ) {
                 pT->mBorderRightWidth = readElementText().toInt();
-                continue;
             }
-            else if( name() == "wrapAt")
-            {
+            else if( name() == QStringLiteral( "wrapAt" ) ) {
                 pT->mWrapAt = readElementText().toInt();
-                continue;
             }
-            else if( name() == "wrapIndentCount" )
-            {
+            else if( name() == QStringLiteral( "wrapIndentCount" ) ) {
                 pT->mWrapIndentCount = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mCommandSeparator" )
-            {
+            else if( name() == QStringLiteral( "mCommandSeparator" ) ) {
                 pT->mCommandSeparator = readElementText();
-                continue;
             }
-            else if( name() == "mCommandLineFgColor")
-            {
+            else if( name() == QStringLiteral( "mCommandLineFgColor" ) ) {
                 pT->mCommandLineFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCommandLineBgColor")
-            {
+            else if( name() == QStringLiteral( "mCommandLineBgColor" ) ) {
                 pT->mCommandLineBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mFgColor")
-            {
+            else if( name() == QStringLiteral( "mFgColor" ) ) {
                 pT->mFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBgColor")
-            {
+            else if( name() == QStringLiteral( "mBgColor" ) ) {
                 pT->mBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCommandFgColor")
-            {
+            else if( name() == QStringLiteral( "mCommandFgColor" ) ) {
                 pT->mCommandFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCommandBgColor")
-            {
+            else if( name() == QStringLiteral( "mCommandBgColor" ) ) {
                 pT->mCommandBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlack")
-            {
+            else if( name() == QStringLiteral( "mBlack" ) ) {
                 pT->mBlack.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlack")
-            {
+            else if( name() == QStringLiteral( "mLightBlack" ) ) {
                 pT->mLightBlack.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mRed")
-            {
+            else if( name() == QStringLiteral( "mRed" ) ) {
                 pT->mRed.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightRed")
-            {
+            else if( name() == QStringLiteral( "mLightRed" ) ) {
                 pT->mLightRed.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlue")
-            {
+            else if( name() == QStringLiteral( "mBlue" ) ) {
                 pT->mBlue.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlue")
-            {
+            else if( name() == QStringLiteral( "mLightBlue" ) ) {
                 pT->mLightBlue.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mGreen")
-            {
+            else if( name() == QStringLiteral( "mGreen" ) ) {
                 pT->mGreen.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightGreen")
-            {
+            else if( name() == QStringLiteral( "mLightGreen" ) ) {
                 pT->mLightGreen.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mYellow")
-            {
+            else if( name() == QStringLiteral( "mYellow" ) ) {
                 pT->mYellow.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightYellow")
-            {
+            else if( name() == QStringLiteral( "mLightYellow" ) ) {
                 pT->mLightYellow.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCyan")
-            {
+            else if( name() == QStringLiteral( "mCyan" ) ) {
                 pT->mCyan.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightCyan")
-            {
+            else if( name() == QStringLiteral( "mLightCyan" ) ) {
                 pT->mLightCyan.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mMagenta")
-            {
+            else if( name() == QStringLiteral( "mMagenta" ) ) {
                 pT->mMagenta.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightMagenta")
-            {
+            else if( name() == QStringLiteral( "mLightMagenta" ) ) {
                 pT->mLightMagenta.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mWhite")
-            {
+            else if( name() == QStringLiteral( "mWhite" ) ) {
                 pT->mWhite.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightWhite")
-            {
+            else if( name() == QStringLiteral( "mLightWhite" ) ) {
                 pT->mLightWhite.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mDisplayFont")
-            {
+            else if( name() == QStringLiteral( "mDisplayFont" ) ) {
                 pT->mDisplayFont.fromString( readElementText() );
                 pT->mDisplayFont.setFixedPitch( true );
-//                pT->mDisplayFont.setWordSpacing( 0 );
-//                pT->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
-                continue;
             }
-            else if( name() == "mCommandLineFont")
-            {
+            else if( name() == QStringLiteral( "mCommandLineFont" ) ) {
                 pT->mCommandLineFont.fromString( readElementText() );
-                continue;
             }
-            else if( name() == "mFgColor2")
-            {
+            else if( name() == QStringLiteral( "mFgColor2" ) ) {
                 pT->mFgColor_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBgColor2")
-            {
+            else if( name() == QStringLiteral( "mBgColor2" ) ) {
                 pT->mBgColor_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlack2")
-            {
+            else if( name() == QStringLiteral( "mBlack2" ) ) {
                 pT->mBlack_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlack2")
-            {
+            else if( name() == QStringLiteral( "mLightBlack2" ) ) {
                 pT->mLightBlack_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mRed2")
-            {
+            else if( name() == QStringLiteral( "mRed2" ) ) {
                 pT->mRed_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightRed2")
-            {
+            else if( name() == QStringLiteral( "mLightRed2" ) ) {
                 pT->mLightRed_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlue2")
-            {
+            else if( name() == QStringLiteral( "mBlue2" ) ) {
                 pT->mBlue_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlue2")
-            {
+            else if( name() == QStringLiteral( "mLightBlue2" ) ) {
                 pT->mLightBlue_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mGreen2")
-            {
+            else if( name() == QStringLiteral( "mGreen2" ) ) {
                 pT->mGreen_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightGreen2")
-            {
+            else if( name() == QStringLiteral( "mLightGreen2" ) ) {
                 pT->mLightGreen_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mYellow2")
-            {
+            else if( name() == QStringLiteral( "mYellow2" ) ) {
                 pT->mYellow_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightYellow2")
-            {
+            else if( name() == QStringLiteral( "mLightYellow2" ) ) {
                 pT->mLightYellow_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCyan2")
-            {
+            else if( name() == QStringLiteral( "mCyan2" ) ) {
                 pT->mCyan_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightCyan2")
-            {
+            else if( name() == QStringLiteral( "mLightCyan2" ) ) {
                 pT->mLightCyan_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mMagenta2")
-            {
+            else if( name() == QStringLiteral( "mMagenta2" ) ) {
                 pT->mMagenta_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightMagenta2")
-            {
+            else if( name() == QStringLiteral( "mLightMagenta2" ) ) {
                 pT->mLightMagenta_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mWhite2")
-            {
+            else if( name() == QStringLiteral( "mWhite2" ) ) {
                 pT->mWhite_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightWhite2")
-            {
+            else if( name() == QStringLiteral( "mLightWhite2" ) ) {
                 pT->mLightWhite_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mSpellDic")
-            {
+            else if( name() == QStringLiteral( "mSpellDic" ) ) {
                 pT->mSpellDic = readElementText();
-                continue;
             }
-            else if( name() == "mRoomSize" )
-            {
-                pT->mRoomSize = readElementText().toDouble();
-            }
-            else if( name() == "mLineSize" )
-            {
-                pT->mLineSize = readElementText().toDouble();
-            }
-            else
-            {
-                readUnknownHostElement();
+// Removed previous long term error, this data already included as attributes to parent "<Host>"...
+//            else if( name() == QStringLiteral( "mRoomSize" ) ) {
+//                pT->mRoomSize = readElementText().toDouble();
+//            }
+//            else if( name() == QStringLiteral( "mLineSize" ) ) {
+//                pT->mLineSize = readElementText().toDouble();
+//            }
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1201,172 +1094,126 @@ void XMLimport::readHostPackage( Host * pT )
 
 void XMLimport::readTriggerGroup( TTrigger * pParent )
 {
-    TTrigger * pT;
-    if( pParent )
-    {
-        pT = new TTrigger( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TTrigger( 0, mpHost );
-    }
-    if (module){
-        pT->mModuleMember = true;
-    }
+    TTrigger * pT = new TTrigger( pParent, mpHost );
+    pT->mModuleMember = (module != 0);
 
     mpHost->getTriggerUnit()->registerTrigger( pT );
 
-    pT->setIsActive( (attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
-    pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
-    pT->mPerlSlashGOption = ( attributes().value("isPerlSlashGOption") == "yes" );
-    pT->mIsColorizerTrigger = ( attributes().value("isColorizerTrigger") == "yes" );
-    pT->mFilterTrigger = ( attributes().value("isFilterTrigger") == "yes" );
-    pT->mSoundTrigger = ( attributes().value("isSoundTrigger") == "yes" );
-    pT->mColorTrigger = ( attributes().value("isColorTrigger") == "yes" );
-    pT->mColorTriggerBg = ( attributes().value("isColorTriggerBg") == "yes" );
-    pT->mColorTriggerFg = ( attributes().value("isColorTriggerFg") == "yes" );
+    pT->setIsActive( (attributes().value( QStringLiteral("isActive") ) == QStringLiteral("yes") ) );
+    pT->mIsFolder = ( attributes().value( QStringLiteral("isFolder") ) == QStringLiteral("yes") );
+    pT->mIsTempTrigger = ( attributes().value( QStringLiteral("isTempTrigger") ) == QStringLiteral("yes") );
+    pT->mIsMultiline = ( attributes().value( QStringLiteral("isMultiline") ) == QStringLiteral("yes") );
+    pT->mPerlSlashGOption = ( attributes().value( QStringLiteral("isPerlSlashGOption") ) == QStringLiteral("yes") );
+    pT->mIsColorizerTrigger = ( attributes().value( QStringLiteral("isColorizerTrigger") ) == QStringLiteral("yes") );
+    pT->mFilterTrigger = ( attributes().value( QStringLiteral("isFilterTrigger") ) == QStringLiteral("yes") );
+    pT->mSoundTrigger = ( attributes().value( QStringLiteral("isSoundTrigger") ) == QStringLiteral("yes") );
+    pT->mColorTrigger = ( attributes().value( QStringLiteral("isColorTrigger") ) == QStringLiteral("yes") );
+    pT->mColorTriggerBg = ( attributes().value( QStringLiteral("isColorTriggerBg") ) == QStringLiteral("yes") );
+    pT->mColorTriggerFg = ( attributes().value( QStringLiteral("isColorTriggerFg") ) == QStringLiteral("yes") );
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        //qDebug()<<"[INFO] element:"<<name().toString()<<" text:"<<text().toString();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
 
-                pT->setName( readElementText() );
-                continue;
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readTriggerGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
+                pT->setName( readElementText() ); // This will read everything in this element, and leave at the endElement...!
             }
-
-            else if( name() == "script")
-            {
+            else if( name() == QStringLiteral( "script" ) ) {
                 pT->mScript = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == QStringLiteral( "packageName" ) ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "triggerType" )
-            {
+            else if( name() == QStringLiteral( "triggerType" ) ) {
                 pT->mTriggerType = readElementText().toInt();
-                continue;
             }
-            else if( name() == "conditonLineDelta" )
-            {
+            else if( name() == QStringLiteral( "conditonLineDelta" ) ) {
                 pT->mConditionLineDelta = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mStayOpen" )
-            {
+            else if( name() == QStringLiteral( "mStayOpen" ) ) {
                 pT->mStayOpen = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mCommand" )
-            {
+            else if( name() == QStringLiteral( "mCommand" ) ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-
-            else if( name() == "mFgColor")
-            {
+            else if( name() == QStringLiteral( "mFgColor" ) ) {
                 pT->mFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBgColor")
-            {
+            else if( name() == QStringLiteral( "mBgColor" ) ) {
                 pT->mBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "colorTriggerFgColor")
-            {
+            else if( name() == QStringLiteral( "colorTriggerFgColor" ) ) {
                 pT->mColorTriggerFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "colorTriggerBgColor")
-            {
+            else if( name() == QStringLiteral( "colorTriggerBgColor" ) ) {
                 pT->mColorTriggerBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mSoundFile" )
-            {
+            else if( name() == QStringLiteral( "mSoundFile" ) ) {
                 pT->mSoundFile = readElementText();
-                continue;
             }
-            else if( name() == "regexCodeList")
-            {
+            else if( name() == QStringLiteral( "regexCodeList" ) ) {
                 readStringList( pT->mRegexCodeList );
-                continue;
             }
-            else if( name() == "regexCodePropertyList" )
-            {
+            else if( name() == QStringLiteral( "regexCodePropertyList" ) ) {
                 readIntegerList( pT->mRegexCodePropertyList );
-                continue;
+                // Do this now, to avoid confusing things with children's data,
+                // It does assume that this element comes AFTER <regexCodeList>
+                // CHECKME: Would make the setRegexCodeList(...) conditional on non-empty arguments' list's sizes but not sure if that is OK
+                if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) ) {
+                    qWarning() << "XMLimport::readTriggerGroup(...) ERROR: whilst importing, can not initialize pattern list for a trigger, name:" << pT->getName();
+                }
             }
-
-            else if( name() == "TriggerGroup" )
-            {
+            else if(  name() == QStringLiteral( "TriggerGroup" )
+                   || name() == QStringLiteral( "Trigger" ) ) {
                 readTriggerGroup( pT );
             }
-            else if( name() == "Trigger" )
-            {
-                readTriggerGroup( pT );
-            }
-            else
-            {
-                readUnknownTriggerElement();
+            else {
+                readUnknownElement();
             }
         }
     }
 
-    if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) )
-    {
-        qDebug()<<"IMPORT: ERROR: cant initialize pattern list for trigger "<<pT->getName();
-    }
     QString script = pT->mScript;
-    if( ! pT->setScript( script ) )
-    {
-        qDebug()<<"IMPORT: ERROR: trigger script "<< pT->getName()<<" does not compile";
+    if( ! pT->setScript( script ) ) {
+        qWarning() << "XMLimport::readTriggerGroup(...) ERROR: whilst importing, a trigger script does not compile, name:" << pT->getName();
     }
 }
 
 void XMLimport::readTimerPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "TimerGroup" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readTimerPackage(...)" ) );
+            if(  name() == QStringLiteral( "TimerGroup" )
+              || name() == QStringLiteral( "Timer" ) ) {
                 gotTimer = true;
-                if( mPackageName.isEmpty() )
-                    readTimerGroup(0);
-                else
-                    readTimerGroup(mpTimer);
+                readTimerGroup( mPackageName.isEmpty() ? 0 : mpTimer);
             }
-            else if( name() == "Timer" )
-            {
-                gotTimer = true;
-                if( mPackageName.isEmpty() )
-                    readTimerGroup(0);
-                else
-                    readTimerGroup(mpTimer);
-            }
-            else
-            {
-                readUnknownTimerElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1374,146 +1221,93 @@ void XMLimport::readTimerPackage()
 
 void XMLimport::readTimerGroup( TTimer * pParent )
 {
-    TTimer * pT;
+    TTimer * pT = new TTimer( pParent, mpHost );
 
-    QTime _time(10,0,0,0);
-
-    if( pParent )
-    {
-        pT = new TTimer( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TTimer( 0, mpHost );
-    }
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
+    pT->mIsFolder = ( attributes().value( QStringLiteral("isFolder") ) == QStringLiteral("yes") );
+    pT->mIsTempTimer = ( attributes().value( QStringLiteral("isTempTimer") ) == QStringLiteral("yes") );
 
     mpHost->getTimerUnit()->registerTimer( pT );
-    pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
+    pT->setShouldBeActive( attributes().value( QStringLiteral("isActive") ) == QStringLiteral("yes") );
 
-// N/U:     bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
+// N/U:     bool isOffsetTimer = ( attributes().value( QStringLiteral("isOffsetTimer") ) == QStringLiteral("yes") );
 
+    pT->mModuleMember = (module != 0);
 
-    if (module)
-        pT->mModuleMember = true;
-
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
 
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readTimerGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 pT->setName( readElementText() );
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == QStringLiteral( "packageName" ) ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
+            else if( name() == QStringLiteral( "script" ) ) {
                 QString script = readElementText();
                 pT->setScript( script );
-                continue;
             }
-            else if( name() == "command")
-            {
+            else if( name() == QStringLiteral( "command" ) ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-            else if( name() == "time")
-            {
+            else if( name() == QStringLiteral( "time" ) ) {
                 QString timeString = readElementText();
-                QTime time = QTime::fromString( timeString, "hh:mm:ss.zzz" );
+                QTime time = QTime::fromString( timeString, QStringLiteral("hh:mm:ss.zzz") );
                 pT->setTime( time );
-                continue;
             }
-            else if( name() == "TimerGroup" )
-            {
+            else if(  name() == QStringLiteral( "TimerGroup" )
+                   || name() == QStringLiteral( "Timer" ) ) {
                 readTimerGroup( pT );
             }
-            else if( name() == "Timer" )
-            {
-                readTimerGroup( pT );
-            }
-            else
-            {
-                readUnknownTimerElement();
+            else {
+                readUnknownElement();
             }
         }
     }
 
-
-
     mudlet::self()->registerTimer( pT, pT->mpTimer );
 
-    //if( ( ! isOffsetTimer ) && ( ! pT->isFolder() ) && ( pT->shouldBeActive() ) )
-    if( ! pT->mpParent && pT->shouldBeActive() )
-    {
+    if( ! pT->mpParent && pT->shouldBeActive() ) {
         pT->setIsActive( true );
         pT->enableTimer( pT->getID() );
-//        if( pT->canBeUnlocked( 0 ) )
-//        {
-//            if( pT->activate() )
-//            {
-//                pT->mpTimer->start();
-//            }
-//            else
-//            {
-//                pT->deactivate();
-//                pT->mpTimer->stop();
-//            }
-//        }
     }
-    else
-    {
-//        qDebug()<<"NOT enabling Timer name:"<<pT->getName();
-        //pT->disableTimer( pT->getID() );
-        //pT->deactivate();
-        //pT->mpTimer->stop();
-        //pT->setIsActive( pT->shouldBeActive() );
-    }
-
 }
 
 void XMLimport::readAliasPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "AliasGroup" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readAliasPackage()" ) );
+            if(  name() == QStringLiteral( "AliasGroup" )
+              || name() == QStringLiteral( "Alias" ) ) {
                 gotAlias = true;
-                if( mPackageName.isEmpty() )
-                    readAliasGroup(0);
-                else
-                    readAliasGroup(mpAlias);
-
+                readAliasGroup( mPackageName.isEmpty() ? 0 : mpAlias );
             }
-            else if( name() == "Alias" )
-            {
-                gotAlias = true;
-                if( mPackageName.isEmpty() )
-                    readAliasGroup(0);
-                else
-                    readAliasGroup(mpAlias);
-            }
-            else
-            {
-                readUnknownAliasElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1521,103 +1315,79 @@ void XMLimport::readAliasPackage()
 
 void XMLimport::readAliasGroup( TAlias * pParent )
 {
-    TAlias * pT;
-    if( pParent )
-    {
-        pT = new TAlias( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TAlias( 0, mpHost );
-    }
+    TAlias * pT = new TAlias( pParent, mpHost );
 
     mpHost->getAliasUnit()->registerAlias( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    pT->setIsActive( attributes().value( QStringLiteral("isActive") ) == QStringLiteral("yes" ) );
+    pT->mIsFolder = ( attributes().value( QStringLiteral("isFolder") ) == QStringLiteral("yes" ) );
+    pT->mModuleMember = (module != 0);
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readAliasGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 pT->setName( readElementText() );
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == QStringLiteral( "packageName" ) ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
+            else if( name() == QStringLiteral( "script" ) ) {
                 QString script = readElementText();
                 pT->setScript( script );
-                continue;
             }
-            else if( name() == "command")
-            {
+            else if( name() == QStringLiteral( "command" ) ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-            else if( name() == "regex")
-            {
+            else if( name() == QStringLiteral( "regex") ) {
                 pT->setRegexCode( readElementText() );
-                continue;
             }
-            else if( name() == "AliasGroup" )
-            {
+            else if(  name() == QStringLiteral( "Alias" )
+                   || name() == QStringLiteral( "AliasGroup" ) ) {
                 readAliasGroup( pT );
             }
-            else if( name() == "Alias" )
-            {
-                readAliasGroup( pT );
-            }
-            else
-            {
-                readUnknownAliasElement();
+            else {
+                readUnknownElement();
             }
         }
     }
-
-
 }
 
 void XMLimport::readActionPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
-        if( isStartElement() )
-        {
-            if( name() == "ActionGroup" )
-            {
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readActionPackage()" ) );
+            if(  name() == QStringLiteral( "Action" )
+              || name() == QStringLiteral( "ActionGroup" ) ) {
                 gotAction = true;
-                if( mPackageName.isEmpty() )
-                    readActionGroup(0);
-                else
-                    readActionGroup(mpAction);
+                readActionGroup( mPackageName.isEmpty() ? 0 : mpAction );
             }
-            else if( name() == "Action" )
-            {
-                gotAction = true;
-                if( mPackageName.isEmpty() )
-                    readActionGroup(0);
-                else
-                    readActionGroup(mpAction);
-            }
-            else
-            {
-                readUnknownActionElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1625,169 +1395,118 @@ void XMLimport::readActionPackage()
 
 void XMLimport::readActionGroup( TAction * pParent )
 {
-    TAction * pT;
-    if( pParent )
-    {
-        pT = new TAction( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TAction( 0, mpHost );
-    }
+    TAction * pT = new TAction( pParent, mpHost );
+
     mpHost->getActionUnit()->registerAction( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
-    pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
-    pT->mUseCustomLayout = ( attributes().value("useCustomLayout") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    pT->setIsActive( attributes().value( QStringLiteral("isActive") ) == QStringLiteral("yes") );
+    pT->mIsFolder = ( attributes().value( QStringLiteral("isFolder") ) == QStringLiteral("yes") );
+    pT->mIsPushDownButton = ( attributes().value( QStringLiteral("isPushButton") ) == QStringLiteral("yes") );
+    pT->mButtonFlat = ( attributes().value( QStringLiteral("isFlatButton") ) == QStringLiteral("yes") );
+    pT->mUseCustomLayout = ( attributes().value( QStringLiteral("useCustomLayout") ) == QStringLiteral("yes") );
+    pT->mModuleMember = (module != 0);
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readActionGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 pT->mName = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == QStringLiteral( "packageName" ) ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
+            else if( name() == QStringLiteral( "script" ) ) {
                 QString script = readElementText();
                 pT->setScript( script );
-                continue;
             }
-            else if( name() == "css")
-            {
+            else if( name() == QStringLiteral( "css" ) ) {
                 pT->css = readElementText();
-                continue;
             }
-            else if( name() == "commandButtonUp")
-            {
+            else if( name() == QStringLiteral( "commandButtonUp" ) ) {
                 pT->mCommandButtonUp = readElementText();
-                continue;
             }
-            else if( name() == "commandButtonDown")
-            {
+            else if( name() == QStringLiteral( "commandButtonDown" ) ) {
                 pT->mCommandButtonDown = readElementText();
-                continue;
             }
-            else if( name() == "icon")
-            {
+            else if( name() == QStringLiteral( "icon" ) ) {
                 pT->mIcon = readElementText();
-                continue;
             }
-            else if( name() == "orientation")
-            {
+            else if( name() == QStringLiteral( "orientation" ) ) {
                 pT->mOrientation = readElementText().toInt();
-                continue;
             }
-            else if( name() == "location")
-            {
+            else if( name() == QStringLiteral( "location" ) ) {
                 pT->mLocation = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "buttonRotation")
-            {
+            else if( name() == QStringLiteral( "buttonRotation" ) ) {
                 pT->mButtonRotation = readElementText().toInt();
-                continue;
             }
-            else if( name() == "sizeX")
-            {
+            else if( name() == QStringLiteral( "sizeX" ) ) {
                 pT->mSizeX = readElementText().toInt();
-                continue;
             }
-            else if( name() == "sizeY")
-            {
+            else if( name() == QStringLiteral( "sizeY" ) ) {
                 pT->mSizeY = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mButtonState")
-            {
+            else if( name() == QStringLiteral( "mButtonState" ) ) {
                 pT->mButtonState = readElementText().toInt();
-                continue;
             }
-            else if( name() == "buttonColor")
-            {
+            else if( name() == QStringLiteral( "buttonColor" ) ) {
                 pT->mButtonColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "buttonColumn")
-            {
+            else if( name() == QStringLiteral( "buttonColumn" ) ) {
                 pT->mButtonColumns = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "posX")
-            {
+            else if( name() == QStringLiteral( "posX" ) ) {
                 pT->mPosX = readElementText().toInt();
-                continue;
             }
-            else if( name() == "posY")
-            {
+            else if( name() == QStringLiteral( "posY" ) ) {
                 pT->mPosY = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "ActionGroup" )
-            {
+            else if(  name() == QStringLiteral( "Action" )
+                   || name() == QStringLiteral( "ActionGroup" ) ) {
                 readActionGroup( pT );
             }
-            else if( name() == "Action" )
-            {
-                readActionGroup( pT );
-            }
-            else
-            {
-                readUnknownActionElement();
+            else {
+                readUnknownElement();
             }
         }
     }
-
-
 }
 
 void XMLimport::readScriptPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "ScriptGroup" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readScriptPackage()" ) );
+            if(  name() == QStringLiteral( "ScriptGroup" )
+              || name() == QStringLiteral( "Script" ) ) {
                 gotScript = true;
-                if( mPackageName.isEmpty() )
-                    readScriptGroup(0);
-                else
-                    readScriptGroup(mpScript);
+                readScriptGroup( mPackageName.isEmpty() ? 0 : mpScript );
             }
-            else if( name() == "Script" )
-            {
-                gotScript = true;
-                if( mPackageName.isEmpty() )
-                    readScriptGroup(0);
-                else
-                    readScriptGroup(mpScript);
-            }
-            else
-            {
-                readUnknownScriptElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1795,61 +1514,47 @@ void XMLimport::readScriptPackage()
 
 void XMLimport::readScriptGroup( TScript * pParent )
 {
-    TScript * pT;
-    if( pParent )
-    {
-        pT = new TScript( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TScript( 0, mpHost );
-    }
+    TScript * pT = new TScript( pParent, mpHost );
     mpHost->getScriptUnit()->registerScript( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    pT->setIsActive( attributes().value( QStringLiteral("isActive") ) == QStringLiteral("yes") );
+    pT->mIsFolder = ( attributes().value( QStringLiteral("isFolder") ) == QStringLiteral("yes") );
+    pT->mModuleMember = (module != 0);
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readScriptGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 pT->mName = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == QStringLiteral( "packageName" ) ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
+            else if( name() == QStringLiteral( "script" ) ) {
                 QString script = readElementText();
                 pT->setScript( script );
-                continue;
             }
-            else if( name() == "eventHandlerList")
-            {
+            else if( name() == QStringLiteral( "eventHandlerList" ) ) {
                 readStringList( pT->mEventHandlerList );
                 pT->setEventHandlerList( pT->mEventHandlerList );
-                continue;
             }
-            else if( name() == "ScriptGroup" )
-            {
+            else if(  name() == QStringLiteral( "Script" )
+                   || name() == QStringLiteral( "ScriptGroup" ) ) {
                 readScriptGroup( pT );
             }
-            else if( name() == "Script" )
-            {
-                readScriptGroup( pT );
-            }
-            else
-            {
-                readUnknownScriptElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1857,36 +1562,28 @@ void XMLimport::readScriptGroup( TScript * pParent )
 
 void XMLimport::readKeyPackage()
 {
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
-            if( name() == "KeyGroup" )
-            {
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readKeyPackage()" ) );
+            if(  name() == QStringLiteral( "Key" )
+              || name() == QStringLiteral( "KeyGroup" ) ) {
                 gotKey = true;
-                if( mPackageName.isEmpty() )
-                    readKeyGroup(0);
-                else
-                    readKeyGroup(mpKey);
-
+                readKeyGroup( mPackageName.isEmpty() ? 0 : mpKey );
             }
-            else if( name() == "Key" )
-            {
-                gotKey = true;
-                if( mPackageName.isEmpty() )
-                    readKeyGroup(0);
-                else
-                    readKeyGroup(mpKey);
-            }
-            else
-            {
-                readUnknownKeyElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -1894,131 +1591,113 @@ void XMLimport::readKeyPackage()
 
 void XMLimport::readKeyGroup( TKey * pParent )
 {
-    TKey * pT;
-    if( pParent )
-    {
-        pT = new TKey( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TKey( 0, mpHost );
-    }
+    TKey * pT = new TKey( pParent, mpHost );
     mpHost->getKeyUnit()->registerKey( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    pT->setIsActive( attributes().value( QStringLiteral("isActive") ) == QStringLiteral("yes") );
+    pT->mIsFolder = ( attributes().value( QStringLiteral("isFolder") ) == QStringLiteral("yes") );
+    pT->mModuleMember = (module !=0);
 
-    while( ! atEnd() )
-    {
+    QString elementName;
+    QMap<QString, QString> elementAttributes;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
+
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readKeyGroup(...)" ) );
+            if( name() == QStringLiteral( "name" ) ) {
                 pT->mName = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == QStringLiteral( "packageName" ) ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
+            else if( name() == QStringLiteral( "script" ) ) {
                 QString script = readElementText();
                 pT->setScript( script );
-                continue;
             }
-            else if( name() == "command")
-            {
+            else if( name() == QStringLiteral( "command") ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-            else if( name() == "keyCode" )
-            {
+            else if( name() == QStringLiteral( "keyCode" ) ) {
                 pT->mKeyCode = readElementText().toInt();
-                continue;
             }
-            else if( name() == "keyModifier" )
-            {
+            else if( name() == QStringLiteral( "keyModifier" ) ) {
                 pT->mKeyModifier = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "KeyGroup" )
-            {
+            else if(  name() == QStringLiteral( "Key" )
+                   || name() == QStringLiteral( "KeyGroup" ) ) {
                 readKeyGroup( pT );
             }
-            else if( name() == "Key" )
-            {
-                readKeyGroup( pT );
-            }
-            else
-            {
-                readUnknownKeyElement();
+            else {
+                readUnknownElement();
             }
         }
     }
 }
 
-void XMLimport::readMapList( QMap<QString, QStringList> & map)
+void XMLimport::readMapList( QMap<QString, QStringList> & map )
 {
     QString key;
     QStringList entry;
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
 
-        if( isEndElement() ) break;
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
 
-        if( isStartElement() )
-        {
-            if( name() == "key")
-            {
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            if( name() == QStringLiteral( "key" ) ) {
                 key = readElementText();
             }
-            else if (name() == "filepath"){
-                entry << readElementText();
-                //map[key] = readElementText();
-            }
-            else if (name() == "globalSave"){
+            else if (name() == QStringLiteral( "filepath" ) ) {
                 entry << readElementText();
             }
-            else if (name() == "priority"){
+            else if (name() == QStringLiteral( "globalSave" ) ) {
+                entry << readElementText();
+            }
+            else if (name() == QStringLiteral( "priority" ) ) {
                 entry << readElementText();
                 map[key] = entry;
                 entry.clear();
-
             }
-            else
-            {
-                readUnknownHostElement();
+            else {
+                readUnknownElement();
             }
         }
     }
 }
 
-
 void XMLimport::readStringList( QStringList & list )
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
 
-        if( isEndElement() ) break;
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
 
-        if( isStartElement() )
-        {
-            if( name() == "string")
-            {
-                list << readElementText();
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            if( name() == QStringLiteral( "string" ) ) {
+                list << readElementText(); // Have found that there can be duplicates, but it is not helpful to add them...!
             }
-            else
-            {
-                readUnknownTriggerElement();
+            else {
+                readUnknownElement();
             }
         }
     }
@@ -2026,31 +1705,31 @@ void XMLimport::readStringList( QStringList & list )
 
 void XMLimport::readIntegerList( QList<int> & list )
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
 
-        if( isEndElement() ) break;
+        if( isCharacters() && isWhitespace() ) {
+            readNext(); // Skip the linefeed and whitespace that separates tags
+        }
 
-        if( isStartElement() )
-        {
-            if( name() == "integer")
-            {
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            if( name() == QStringLiteral( "integer" ) ) {
                 bool ok = false;
-                int num;
-                num = readElementText().toInt( &ok, 10 );
-                if( ok )
-                {
+                QString _text = readElementText();
+                int num = _text.toInt( &ok, 10 );
+                if( ok ) {
                     list << num;
                 }
-                else
-                {
-                    qFatal("FATAL ERROR: reading package property list contained invalid elements");
+                else {
+                    qWarning() << "XMLimport::readIntegerList(...) ERROR: whilst reading package property list, contained invalid non-integer number element:" << _text;
                 }
             }
-            else
-            {
-                readUnknownTriggerElement();
+            else {
+                readUnknownElement();
             }
         }
     }

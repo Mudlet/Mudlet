@@ -741,62 +741,62 @@ void TRoom::auditExits()
 {
     if( north != -1 && ! mpRoomDB->getRoom(north) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"north\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"north\" which did have exitRoomID:%6i", id, north);
         north = -1;
     }
     if( south != -1 && ! mpRoomDB->getRoom(south) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"south\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"south\" which did have exitRoomID:%6i", id, south);
         south = -1;
     }
     if( northwest != -1 && ! mpRoomDB->getRoom(northwest) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northwest\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northwest\" which did have exitRoomID:%6i", id, northwest);
         northwest = -1;
     }
     if( northeast != -1 && ! mpRoomDB->getRoom(northeast) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northeast\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northeast\" which did have exitRoomID:%6i", id, northeast);
         northeast = -1;
     }
     if( southwest != -1 && ! mpRoomDB->getRoom(southwest) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southwest\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southwest\" which did have exitRoomID:%6i", id, southwest);
         southwest = -1;
     }
     if( southeast != -1 && ! mpRoomDB->getRoom(southeast) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southeast\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southeast\" which did have exitRoomID:%6i", id, southeast);
         southeast = -1;
     }
     if( west != -1 && ! mpRoomDB->getRoom(west) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"west\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"west\" which did have exitRoomID:%6i", id, west);
         west = -1;
     }
     if( east != -1 && ! mpRoomDB->getRoom(east) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"east\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"east\" which did have exitRoomID:%6i", id, east);
         east = -1;
     }
     if( in != -1 && ! mpRoomDB->getRoom(in) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"in\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"in\" which did have exitRoomID:%6i", id, in);
         in = -1;
     }
     if( out != -1 && ! mpRoomDB->getRoom(out) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"out\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"out\" which did have exitRoomID:%6i", id, out);
         out = -1;
     }
     if( up != -1 && ! mpRoomDB->getRoom(up) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"up\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"up\" which did have exitRoomID:%6i", id, up);
         up = -1;
     }
     if( down != -1 && ! mpRoomDB->getRoom(down) )
     {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"down\"", id);
+        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"down\" which did have exitRoomID:%6i", id, down);
         down = -1;
     }
     // These last two were missing!

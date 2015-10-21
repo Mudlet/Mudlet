@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -311,7 +312,6 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "borderRightWidth", QString::number(pT->mBorderRightWidth) );
     writeTextElement( "wrapAt", QString::number(pT->mWrapAt) );
     writeTextElement( "wrapIndentCount", QString::number(pT->mWrapIndentCount) );
-    writeTextElement( "commandSeperator", pT->mCommandSeperator );
     writeTextElement( "mFgColor", pT->mFgColor.name() );
     writeTextElement( "mBgColor", pT->mBgColor.name() );
     writeTextElement( "mCommandFgColor", pT->mCommandFgColor.name() );
@@ -338,7 +338,6 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mCommandLineFont", pT->mCommandLineFont.toString() );
     writeTextElement( "mCommandSeparator", pT->mCommandSeparator );
     writeTextElement( "commandLineMinimumHeight", QString::number(pT->commandLineMinimumHeight) );
-
     writeTextElement( "mFgColor2", pT->mFgColor_2.name() );
     writeTextElement( "mBgColor2", pT->mBgColor_2.name() );
     writeTextElement( "mBlack2", pT->mBlack_2.name() );
@@ -358,8 +357,6 @@ bool XMLexport::writeHost( Host * pT )
     writeTextElement( "mWhite2", pT->mWhite_2.name() );
     writeTextElement( "mLightWhite2", pT->mLightWhite_2.name() );
     writeTextElement( "mSpellDic", pT->mSpellDic );
-    writeTextElement( "mLineSize", QString::number(pT->mLineSize) );
-    writeTextElement( "mRoomSize", QString::number(pT->mRoomSize) );
     writeEndElement(); // end Host tag
     writeEndElement(); // end HostPackage tag
 
