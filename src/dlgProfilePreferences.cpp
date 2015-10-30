@@ -254,6 +254,10 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
             ignore = ignore.append(it.next());
         doubleclick_ignore_lineedit->setText( ignore );
 
+        timeEdit_timerDebugOutputMinimumInterval->setTime( QTime( 0, 0, 0, 1).addMSecs( pHost->mTimerDebugOutputSuppressionInterval - 1 ) );
+        // The above funky setting method is because a zero time is INVALID
+        // and since Qt 5.0-ish adding any value to an invalid time still leaves
+        // the time as "invalid".
     }
 }
 
@@ -928,8 +932,17 @@ void dlgProfilePreferences::slot_save_and_exit()
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
     QString lIgnore = doubleclick_ignore_lineedit->text();
+    pHost->mDoubleClickIgnore.clear();
     for(int i=0;i<lIgnore.size();i++){
-        mpHost->mDoubleClickIgnore.insert(lIgnore.at(i));
+        pHost->mDoubleClickIgnore.insert(lIgnore.at(i));
+    }
+    QTime _midnight( 0, 0, 0, 1 );
+    // zero time is NOT valid and QTime::msecsTo( const QTime & other ) returns
+    // 0 if EITHER time is invalid
+    pHost->mTimerDebugOutputSuppressionInterval = _midnight.msecsTo( timeEdit_timerDebugOutputMinimumInterval->time() ) - 1;
+    if( pHost->mTimerDebugOutputSuppressionInterval < 0 ) {
+        // Clean up if the control IS at zero, so the msecTo() fails and returns 0
+        pHost->mTimerDebugOutputSuppressionInterval = 0;
     }
 
     //pHost->mIRCNick = ircNick->text();
