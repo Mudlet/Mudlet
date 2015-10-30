@@ -321,6 +321,14 @@ public:
     bool               mFORCE_MXP_NEGOTIATION_OFF;
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
+    int                 mTimerDebugOutputSuppressionInterval;
+                        // Set from last page of profile preferences if the
+                        // timer interval is less than this in milliseconds then
+                        // the normal reoccuring debug output of the entire
+                        // command and script for any timer with a timeout LESS
+                        // than this is NOT shown - this is so the spammy output
+                        // from short timeout timers can be suppressed.  The
+                        // single execute OK line will still be shown.
 };
 
 #endif // MUDLET_HOST_H
