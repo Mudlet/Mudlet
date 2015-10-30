@@ -233,22 +233,29 @@ bool TTimer::checkRestart()
 
 void TTimer::execute()
 {
-    if( ! isActive() || mIsFolder )
-    {
+    if( ! isActive() || mIsFolder ) {
         mpTimer->stop();
         return;
     }
 
-    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
+    if( mudlet::debugMode
+     && mpTimer->interval() > mpHost->mTimerDebugOutputSuppressionInterval ) {
+        // Second term is to suppress execution debug output from short interval timers
+        TDebug( QColor(Qt::darkYellow), QColor(Qt::darkBlue) ) << "\n[TIMER EXECUTES]: "
+                                                               << mName
+                                                               << " fired. Executing command="
+                                                               << mCommand
+                                                               << " and executing script:"
+                                                               << mScript
+                                                               << "\n"
+                                                               >> 0;
+    }
 
-    if( mIsTempTimer )
-    {
-        if( mScript == "" )
-        {
+    if( mIsTempTimer ) {
+        if( mScript.isEmpty() ) {
             mpHost->mLuaInterpreter.call_luafunction( this );
         }
-        else
-        {
+        else {
             mpHost->mLuaInterpreter.compileAndExecuteScript( mScript );
         }
         mpTimer->stop();
@@ -256,40 +263,36 @@ void TTimer::execute()
         return;
     }
 
-    if( ( ! isFolder() && hasChildren() ) || ( isOffsetTimer() ) )
-    {
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
+    if( ( ! isFolder() && hasChildren() )
+     || ( isOffsetTimer() ) ) {
+
+        for( auto it = mpMyChildrenList->begin();
+             it != mpMyChildrenList->end();
+             ++it ) {
+
             TTimer * pChild = *it;
-            if( pChild->isOffsetTimer() )
-            {
+            if( pChild->isOffsetTimer() ) {
                 pChild->enableTimer( pChild->getID() );
             }
         }
-        if( isOffsetTimer() )
-        {
+        if( isOffsetTimer() ) {
             disableTimer( mID );
             deactivate();
         }
     }
 
-    if( mCommand.size() > 0 )
-    {
+    if( ! mCommand.isEmpty() ) {
         mpHost->send( mCommand );
     }
 
-    if( mScript.size() > 0 )
-    {
-        if( mNeedsToBeCompiled )
-        {
-            if( ! compileScript() )
-            {
+    if( ! mScript.isEmpty() ) {
+        if( mNeedsToBeCompiled ) {
+            if( ! compileScript() ) {
                 disableTimer();
                 return;
             }
         }
-        if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) )
-        {
+        if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) ) {
             mpTimer->stop();
         }
     }
