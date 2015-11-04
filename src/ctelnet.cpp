@@ -1310,7 +1310,6 @@ void cTelnet::postMessage( QString msg )
                 {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    // Fix for lua using tabs for indentation which was messing up justification:
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
