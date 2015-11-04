@@ -380,13 +380,13 @@ void TMap::init( Host * pH )
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
                         if( newID > -1 ) {
                             QString msg = qApp->translate("TMap","[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(labelIDList.at(i));
-                            mpHost->mTelnet.postMessage(msg);
+                            mpHost->postMessage(msg);
                             mapLabels[areaID][labelIDList.at(i)] = mapLabels[areaID][newID];
                             deleteMapLabel( areaID, newID );
                         }
                         else {
                             QString msg = qApp->translate("TMap","[ WARN ] - CONVERTING: cannot convert old style label, areaID:%1 labelID:%2.").arg(areaID).arg(labelIDList.at(i));
-                            mpHost->mTelnet.postMessage(msg);
+                            mpHost->postMessage(msg);
                         }
                     }
                     if (    ( l.size.width() >  std::numeric_limits<qreal>::max() )

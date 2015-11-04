@@ -11628,12 +11628,12 @@ void TLuaInterpreter::initLuaGlobals()
         QString msg = "[ ERROR ] - Cannot find Lua module rex_pcre.\n"
                                   "Some functions may not be available.\n";
         msg.append( e.c_str() );
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
     else
     {
         QString msg = "[  OK  ]  - Lua module rex_pcre loaded.";
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
 
     error = luaL_dostring( pGlobalLua, "require \"zip\"" );
@@ -11647,12 +11647,12 @@ void TLuaInterpreter::initLuaGlobals()
         }
         QString msg = "[ ERROR ] - Cannot find Lua module zip.\n";
         msg.append( e.c_str() );
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
     else
     {
         QString msg = "[  OK  ]  - Lua module zip loaded.";
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
 
     error = luaL_dostring( pGlobalLua, "require \"lfs\"" );
@@ -11667,12 +11667,12 @@ void TLuaInterpreter::initLuaGlobals()
         QString msg = "[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
                                   "Probably will not be able to access Mudlet Lua code.\n";
         msg.append( e.c_str() );
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
     else
     {
         QString msg = "[  OK  ]  - Lua module lfs loaded";
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
 
     error = luaL_dostring( pGlobalLua, "luasql = require \"luasql.sqlite3\"" );
@@ -11687,12 +11687,12 @@ void TLuaInterpreter::initLuaGlobals()
         QString msg = "[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
                                   "Database support will not be available.\n";
         msg.append( e.c_str() );
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
     else
     {
         QString msg = "[  OK  ]  - Lua module sqlite3 loaded";
-        mpHost->mTelnet.postMessage( msg );
+        mpHost->postMessage( msg );
     }
 
 //    QString path = QDir::homePath()+"/.config/mudlet/mudlet-lua/lua/LuaGlobal.lua";
@@ -11769,15 +11769,15 @@ void TLuaInterpreter::loadGlobal()
                                 "Error from Lua: ";
                 e += lua_tostring( pGlobalLua, -1 );
             }
-            mpHost->mTelnet.postMessage( e.c_str() );
+            mpHost->postMessage( e.c_str() );
         }
         else {
-            mpHost->mTelnet.postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+            mpHost->postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
         }
     }
     else
     {
-        mpHost->mTelnet.postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+        mpHost->postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
     }
 
 }
