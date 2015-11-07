@@ -12,6 +12,8 @@ before_script:
   - mkdir build
   - cd src
 script:
+  # Try and work out what is going on with NOT finding a Qt5 qmake
+  - locate bin/qmake
   - qmake && make -j2
   # Use qmake for both platforms not just for MacOs
   # - cd ../build
