@@ -1893,7 +1893,10 @@ or some other computer model that has a small screen.</string>
          <property name="title">
           <string>Other Special options</string>
          </property>
-         <layout class="QFormLayout" name="formLayout">
+         <layout class="QFormLayout" name="formLayout_Debug">
+          <property name="labelAlignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
           <item row="0" column="0">
            <widget class="QLabel" name="label_timerDebugOutputMinimumInterval">
             <property name="text">
@@ -1930,6 +1933,37 @@ or some other computer model that has a small screen.</string>
             <property name="displayFormat">
              <string notr="true">h:mm:ss.zzz</string>
             </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_mapFileSaveFormatVersion">
+            <property name="text">
+             <string>Override map file format version:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+            <property name="currentText">
+             <string># {default version}</string>
+            </property>
+            <item>
+             <property name="text">
+              <string># {default version}</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>

@@ -79,6 +79,7 @@ public:
     int zoneAreaRef;
     TRoomDB * mpRoomDB;
     bool mIsDirty;
+    QMap<QString, QString> mUserData;
 
 
 private:
