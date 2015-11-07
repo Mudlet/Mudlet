@@ -8,16 +8,26 @@ before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
   # Report what builds of Qt are available
-  - qtchooser -list-versions
-  #
-  # - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export PATH="/usr/local/opt/qt5/bin:$PATH" ; fi
-  # - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="/usr/lib/x86_64-linux-gnu/qt5/bin:$PATH" ; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+      export PATH="/usr/local/opt/qt5/bin:$PATH"
+    else
+      qtchooser -list-versions
+  #   export PATH="/usr/lib/x86_64-linux-gnu/qt5/bin:$PATH"
+    fi
   - mkdir build
-  - cd src
 script:
-  # Use whatever is the default qmake for the current platform but ensure we use a Qt5.x verson
-  - qtchooser -qt=5 -run-tool=qmake && make -j2
-  # And use qmake for both platforms not just for MacOs
+  - cd build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+      # Report qmake version (and what Qt libs it will use)
+      qmake -v
+      qmake ../src/src.pro && make -j2
+    else
+  # Use whatever is the default qmake for the current platform but ensure we use
+  # a Qt5.x verson, report this first:
+      qtchooser -qt=5 -run-tool=qmake -v
+      qtchooser -qt=5 -run-tool=qmake ../src/src.pro && make -j2
+    fi
+  # We are using qmake for both platforms now, not just for MacOs
   # - cd ../build
   # - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2 && make check; fi
 notifications:
