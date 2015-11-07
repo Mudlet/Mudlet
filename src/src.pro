@@ -467,4 +467,5 @@ DISTFILES += \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
-    ../CMakeLists.txt
+    ../CMakeLists.txt \
+    ../.travis.yml

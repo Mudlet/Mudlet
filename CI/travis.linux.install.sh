@@ -1,5 +1,6 @@
 #!/bin/bash
 set -ev
+echo Running travis.linux.install.sh...
 sudo apt-get install \
   build-essential \
   qt5-default qtmultimedia5-dev qttools5-dev \
