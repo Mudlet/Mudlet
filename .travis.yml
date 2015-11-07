@@ -13,7 +13,8 @@ before_script:
   - cd src
 script:
   # Try and work out what is going on with NOT finding a Qt5 qmake
-  - locate bin/qmake
+  - which qmake
+  - find / -name qmake -print 2>/dev/null
   - qmake && make -j2
   # Use qmake for both platforms not just for MacOs
   # - cd ../build
