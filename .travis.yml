@@ -7,14 +7,10 @@ compiler:
 before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
-  # Use the path on BOTH, not just MacOs if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
-  - PATH="/usr/local/opt/qt5/bin:$PATH"
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH" ; else PATH="/usr/lib/x86_64-linux-gnu/qt5/bin:$PATH" ; fi
   - mkdir build
   - cd src
 script:
-  # Try and work out what is going on with NOT finding a Qt5 qmake
-  - which qmake
-  - find / -name qmake -print 2>/dev/null
   - qmake && make -j2
   # Use qmake for both platforms not just for MacOs
   # - cd ../build
