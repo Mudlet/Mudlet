@@ -7,12 +7,11 @@ compiler:
 before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
-  # Report what builds of Qt are available
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       export PATH="/usr/local/opt/qt5/bin:$PATH"
     else
+      # Report what builds of Qt are available
       qtchooser -list-versions
-  #   export PATH="/usr/lib/x86_64-linux-gnu/qt5/bin:$PATH"
     fi
   - mkdir build
 script:
@@ -22,8 +21,8 @@ script:
       qmake -v
       qmake ../src/src.pro && make -j2
     else
-  # Use whatever is the default qmake for the current platform but ensure we use
-  # a Qt5.x verson, report this first:
+      # Use whatever is the default qmake for the current platform but ensure we use
+      # a Qt5.x verson, report this first:
       qtchooser -qt=5 -run-tool=qmake -v
       qtchooser -qt=5 -run-tool=qmake ../src/src.pro && make -j2
     fi
