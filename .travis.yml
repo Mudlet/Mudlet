@@ -2,6 +2,7 @@ language: cpp
 os:
   - osx
   - linux
+sudo: false
 compiler:
   - gcc
 before_install: ./CI/travis.before_install.sh
@@ -10,25 +11,18 @@ before_script:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       export PATH="/usr/local/opt/qt5/bin:$PATH"
     else
-      # Report what builds of Qt are available
       qtchooser -list-versions
     fi
   - mkdir build
 script:
   - cd build
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-      # Report qmake version (and what Qt libs it will use)
       qmake -v
       qmake ../src/src.pro && make -j2
     else
-      # Use whatever is the default qmake for the current platform but ensure we use
-      # a Qt5.x verson, report this first:
       qtchooser -qt=5 -run-tool=qmake -v
       qtchooser -qt=5 -run-tool=qmake ../src/src.pro && make -j2
     fi
-  # We are using qmake for both platforms now, not just for MacOs
-  # - cd ../build
-  # - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2 && make check; fi
 notifications:
   webhooks:
     urls:
