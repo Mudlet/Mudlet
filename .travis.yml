@@ -2,20 +2,17 @@ language: cpp
 os:
   - osx
   - linux
-sudo: false
 compiler:
   - gcc
 before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export PATH="/usr/local/opt/qt5/bin:$PATH";
-    else qtchooser -list-versions;
-    fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - mkdir build
 script:
   - cd build
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then qmake -v; export LDFLAGS= "-L/usr/local/opt/qt5/lib $LDFLAGS"; export CPPFLAGS= "-I/usr/local/opt/qt5/include $CPPFLAGS"; qmake ../src/src.pro && make -j2;
-    else qtchooser -qt=5 -run-tool=qmake -v; qtchooser -qt=5 -run-tool=qmake ../src/src.pro && make -j2;
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then qmake -v; export LDFLAGS="-L/usr/local/opt/qt5/lib $LDFLAGS"; export CPPFLAGS="-I/usr/local/opt/qt5/include $CPPFLAGS"; qmake ../src/src.pro && make -j2;
+    else qtchooser -list-versions; qtchooser -qt=5 -run-tool=qmake -v; qtchooser -qt=5 -run-tool=qmake ../src/src.pro && make -j2;
     fi
 notifications:
   webhooks:
