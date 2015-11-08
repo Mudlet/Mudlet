@@ -1,5 +1,6 @@
 #!/bin/bash
 set -ev
+echo Running travis.linux.before_install.sh...
 sudo apt-add-repository ppa:ubuntu-sdk-team/ppa -y
 sudo apt-add-repository ppa:kalakris/cmake -y
 # newer GCC version, 4.7

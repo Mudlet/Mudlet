@@ -1,5 +1,6 @@
 #!/bin/bash
 set -ev
+echo Running travis.linux.install.sh...
 sudo apt-get install \
   build-essential \
   qt5-default qtmultimedia5-dev qttools5-dev \
@@ -10,7 +11,8 @@ sudo apt-get install \
   zlib1g-dbg zlib1g-dev \
   libzip-dev \
   libpulse-dev \
-  cmake \
+# Not using cmake now
+#  cmake \
   gcc-4.7 \
   g++-4.7
 sudo update-alternatives --remove gcc /usr/bin/gcc-4.6

@@ -752,10 +752,10 @@ void TRoomDB::restoreAreaMap( QDataStream & ifs )
                                                                       "set one area's name to that of another that exists at the time.")
                               .arg( mUnnamedAreaName );
         }
-        mpMap->mpHost->mTelnet.postMessage( alertText );
-        mpMap->mpHost->mTelnet.postMessage( informativeText );
+        mpMap->mpHost->postMessage( alertText );
+        mpMap->mpHost->postMessage( informativeText );
         if( ! detailText.isEmpty() ) {
-            mpMap->mpHost->mTelnet.postMessage( detailText );
+            mpMap->mpHost->postMessage( detailText );
         }
     }
 }

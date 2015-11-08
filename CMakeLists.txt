@@ -19,6 +19,11 @@
 
 PROJECT(mudlet)
 
+# FIXME: We need a check (for Qt 5.2 or greater) it is needed (at least) because
+# of: using QComboBox::currentData() introduced in 5.2, in dlgProfilePreferences
+# class
+
+# Windows builds need 2.8.11, but for other platforms 2.8.9 should be enough
 IF(MSVC)
   CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 ELSE()

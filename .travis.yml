@@ -7,13 +7,13 @@ compiler:
 before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - mkdir build
-  - cd src
 script:
-  - qmake && make -j2
-  - cd ../build
-  - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2 && make check; fi
+  - cd build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then qmake -v; export LDFLAGS="-L/usr/local/opt/qt5/lib $LDFLAGS"; export CPPFLAGS="-I/usr/local/opt/qt5/include $CPPFLAGS"; qmake ../src/src.pro && make -j2;
+    else qtchooser -list-versions; qtchooser -qt=5 -run-tool=qmake -v; qtchooser -qt=5 -run-tool=qmake ../src/src.pro && make -j2;
+    fi
 notifications:
   webhooks:
     urls:
