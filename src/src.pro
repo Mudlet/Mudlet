@@ -18,19 +18,9 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-greaterThan(QT_MAJOR_VERSION, 4) {
-  # 5 or MORE
-  isEqual(QT_MAJOR_VERSION, 5) {
-    # Exactly 5:
-    lessThan(QT_MINOR_VERSION, 2): error("requires Qt 5.2 or later")
-  }
-} else {
-# Less than OR equal to Qt 4.x
-  error("requires Qt 5.2 or later")
+lessThan(QT_MAJOR_VERSION, 5) {
+  error("requires Qt 5.0 or later")
 }
-
-# The above check (for 5.2 or greater) is needed (at least) because of:
-#   using QComboBox::currentData() introduced in 5.2, in dlgProfilePreferences class
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
