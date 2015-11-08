@@ -107,7 +107,9 @@ public:
 
 
     TRoomDB * mpRoomDB;
-    QMap<int, int> envColors;
+    QMap<int, int>      mEnvColorIdMap;     // Maps the (imported) environment "id" to a "color" number - what we call pR->env {seems to be 1-15 for IRE MUDs}
+    QMap<int, QString>  mEnvNamesMap;       // Maps the (imported) environment "name" for the id
+    QMap<int, QString>  mEnvColorNamesMap;  // Maps the (imported) environment "htmlcolor" {probably defined in a #RRGGBB form} for the id
     QVector3D span;
     Host * mpHost;
     int mRoomId;

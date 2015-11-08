@@ -24,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QCoreApplication>
 #include <QMap>
 #include <QString>
 #include <QXmlStreamAttribute>
@@ -42,6 +43,7 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
+    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
 
 public:
               XMLimport( Host * );

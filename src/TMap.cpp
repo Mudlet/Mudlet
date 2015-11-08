@@ -117,7 +117,9 @@ void TMap::mapClear()
     mRoomId = 0;
     pixNameTable.clear();
     pixTable.clear();
-    envColors.clear();
+    mEnvColorIdMap.clear();
+    mEnvNamesMap.clear();
+    mEnvColorNamesMap.clear();
     customEnvColors.clear();
     mapLabels.clear();
 }
@@ -972,11 +974,13 @@ bool TMap::serialize( QDataStream & ofs )
     }
 
     ofs << mSaveVersion;
-    ofs << envColors;
+    ofs << mEnvColorIdMap;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
     ofs << mpRoomDB->hashTable;
     if( mSaveVersion >= 17 ) {
+        ofs << mEnvNamesMap;
+        ofs << mEnvColorNamesMap;
         ofs << mUserData;
     }
 
@@ -1211,7 +1215,7 @@ bool TMap::restore(QString location)
         // As all but the room reading have version checks the fact that sub-4
         // files will still be parsed despite canRestore being false is probably OK
         if( mVersion >= 4 ) {
-            ifs >> envColors;
+            ifs >> mEnvColorIdMap;
             mpRoomDB->restoreAreaMap(ifs);
         }
         if( mVersion >= 5 ) {
@@ -1221,6 +1225,8 @@ bool TMap::restore(QString location)
             ifs >> mpRoomDB->hashTable;
         }
         if( mVersion >= 17 ) {
+            ifs >> mEnvNamesMap;
+            ifs >> mEnvColorNamesMap;
             ifs >> mUserData;
         }
         if( mVersion >= 14 ) {

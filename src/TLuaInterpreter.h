@@ -394,6 +394,10 @@ public:
     static int clearAreaUserDataItem( lua_State * );
     static int clearMapUserData( lua_State * );
     static int clearMapUserDataItem( lua_State * );
+    static int getEnvironmentTable( lua_State * );
+    static int getEnvironment( lua_State * );
+    static int setEnvironment( lua_State * );
+    static int resetEnvironment( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;

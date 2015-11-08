@@ -8951,26 +8951,39 @@ int TLuaInterpreter::getSpecialExitsSwap( lua_State * L )
 
 int TLuaInterpreter::getRoomEnv( lua_State * L )
 {
-    int roomID;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getRoomEnv: wrong argument type" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomEnv: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomEnv: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    int roomId;
+    TRoom * pR;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getRoomEnv: bad argument #1 type (room Id, as number expected, got %1)." )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        roomID = lua_tointeger( L, 1 );
+    else {
+        roomId = lua_tointeger( L, 1 );
+        pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getRoomEnv: bad argument #1 value (room Id=%1 must exist.)" )
+                            .arg( roomId ).toUtf8().constData() );
+            return 2;
+        }
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
-    if( pR )
-    {
-        lua_pushnumber( L, pR->environment );
-        return 1;
-    }
-    return 0;
+    lua_pushnumber( L, pR->environment );
+    return 1;
 }
 
 int TLuaInterpreter::getRoomUserData( lua_State * L )
@@ -11240,6 +11253,300 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::getEnvironmentTable( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironmentTable: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironmentTable: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    lua_newtable( L ); // Start outer table
+    QMapIterator<int, int> itEnvColor( pHost->mpMap->mEnvColorIdMap );
+    while( itEnvColor.hasNext() ) {
+        itEnvColor.next();
+        lua_pushnumber( L, itEnvColor.key() ); // Outer table key
+        lua_newtable( L ); // Open mid table (for data for one item in outer table)
+
+        lua_pushstring( L, QStringLiteral("name").toUtf8().constData() ); // Mid table item key
+        QString envName = pHost->mpMap->mEnvNamesMap.value( itEnvColor.key() );
+        if( ! envName.isEmpty() ) {
+            lua_pushstring( L, envName.toUtf8().constData() ); // Mid table item value
+        }
+        else {
+            lua_pushstring( L, QString().toLatin1().constData() );  // Mid table item value
+        }
+        lua_settable( L, -3 ); // End of MID table entry
+
+        lua_pushstring( L, QStringLiteral("colorId").toUtf8().constData() ); // Mid table item key
+        lua_pushnumber( L, itEnvColor.value() ); // Mid table item value
+        lua_settable( L, -3 ); // End of MID table entry
+
+        QString colorName = pHost->mpMap->mEnvColorNamesMap.value( itEnvColor.key() );
+        QColor color;
+        color.setNamedColor( colorName );
+        if( color.isValid() ) {
+            lua_pushstring( L, QStringLiteral("defaultColor").toUtf8().constData() ); // Mid table item key
+            // Present the color as a sequence of four numbers (rgba)
+            // This avoids the hassle of putting in language specific identifiers...!
+            lua_newtable( L ); // Start inner table - for four color components - as an item in MID table
+            lua_pushnumber( L, 1 );  // Inner table item key
+            lua_pushnumber( L, color.red() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry
+            lua_pushnumber( L, 2 );  // Inner table item key
+            lua_pushnumber( L, color.green() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry
+            lua_pushnumber( L, 3 );  // Inner table item key
+            lua_pushnumber( L, color.blue() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry
+            lua_pushnumber( L, 4 );  // Inner table item key
+            lua_pushnumber( L, color.alpha() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry - and table
+            lua_settable( L, -3 ); // End of MID table entry - and table
+        }
+
+        lua_settable( L, -3 ); // End of OUTER table entry - and table
+    }
+    return 1;
+}
+
+// getEnvironment((number)EnvId)
+// Returns name data for the given EnvId - avoids having to get the complete
+// table returned by getEnvironmentTable().
+int TLuaInterpreter::getEnvironment( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironment: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironment: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getEnvironment: bad argument #1 type (environment id as number, expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    if( pHost->mpMap->mEnvNamesMap.contains( id ) ) {
+        lua_pushstring( L, pHost->mpMap->mEnvNamesMap.value( id ).toUtf8().constData() );
+        return 1;
+    }
+    else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironment: bad argument #1 value (environment id: %1 not found.)" )
+                        .arg( id ).toUtf8().constData() );
+        return 2;
+    }
+}
+
+// setEnvironment((number)id, (string)name[, (number) redComponent, (number) greenComponent, (number) blueComponent[, (number) alphaComponent]])
+int TLuaInterpreter::setEnvironment( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setEnvironment: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setEnvironment: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
+    {
+        static bool isWarningIssued = false;
+        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+            QString warnMsg = tr( "[ WARN ]  - Lua command setEnvironment() used - it is currently flagged as experimental!" );
+            QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+                                              "and although that has been coded it is NOT enabled so this feature's effects\n"
+                                              "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
+                                              "To avoid filling the screen up with repeated messages, this is your only warning about\n"
+                                              "this command...!" );
+            pHost->postMessage( warnMsg );
+            pHost->postMessage( infoMsg );
+            isWarningIssued = true;
+        }
+    }
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setEnvironment: bad argument #1 type (environment id as number, expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    QString environmentName;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setEnvironment: bad argument #2 type (environment name as string, expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        environmentName = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    QColor color;
+    QString colorText;
+    if( lua_gettop( L ) > 2 ) {
+        int r;
+        if( ! lua_isnumber( L, 3 ) ) {
+            lua_pushstring( L, tr( "setEnvironment: bad argument #3 type (red component as number, is optional but got %1!)" )
+                            .arg( luaL_typename( L, 3 ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            r = lua_tonumber( L, 3 );
+            if( r < 0 or r > 255 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setEnvironment: bad argument #3 value (optional red component %1 not valid, if given must be a number between 0-255.)" )
+                                .arg( r ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        int g;
+        if( ! lua_isnumber( L, 4 ) ) {
+            lua_pushstring( L, tr( "setEnvironment: bad argument #4 type (green component as number, is optional but got %1!)" )
+                            .arg( luaL_typename( L, 4 ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            g = lua_tonumber( L, 4 );
+            if( g < 0 or g > 255 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setEnvironment: bad argument #4 value (optional red component %1 not valid, if given must be a number between 0-255.)" )
+                                .arg( g ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        int b;
+        if( ! lua_isnumber( L, 5 ) ) {
+            lua_pushstring( L, tr( "setEnvironment: bad argument #5 type (red component as number, is optional but got %1!)" )
+                            .arg( luaL_typename( L, 5 ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            b = lua_tonumber( L, 5 );
+            if( b < 0 or b > 255 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setEnvironment: bad argument #5 value (optional red component %1 not valid, if given must be a number between 0-255.)" )
+                                .arg( b ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        int a;
+        if( lua_gettop( L ) > 5 ) {
+            if( ! lua_isnumber( L, 6 ) ) {
+                lua_pushstring( L, tr( "setEnvironment: bad argument #6 type (alpha component as number, is optional but got %1!)" )
+                                .arg( luaL_typename( L, 6 ) ).toUtf8().constData() );
+                lua_error( L );
+                return 1;
+            }
+            else {
+                a = lua_tonumber( L, 6 );
+                if( a < 0 or a > 255 ) {
+                    lua_pushnil( L );
+                    lua_pushstring( L, tr( "setEnvironment: bad argument #6 value (optional alpha component %1 not valid, if given must be a number between 0-255.)" )
+                                    .arg( a ).toUtf8().constData() );
+                    return 2;
+                }
+            }
+        }
+        else {
+            a = 255;
+        }
+        color = QColor( r, g, b, a);
+    }
+    pHost->mpMap->mEnvNamesMap.insert( id, environmentName );
+    if( color.isValid() ) {
+        colorText = color.name();
+        pHost->mpMap->mEnvColorNamesMap.insert( id, colorText );
+        pHost->mpMap->mEnvColorIdMap.insert( id, id );
+        pHost->mpMap->customEnvColors.insert( id, color );
+    }
+    lua_pushboolean( L, true );
+    return 1;
+}
+
+// resetEnvironment((number)id)
+// Removes the name and the text form of the colour name, but NOT the customEnv
+// color that supports it in case it is used (or is one of the reserved first 16
+// colors)...
+int TLuaInterpreter::resetEnvironment( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "resetEnvironment: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "resetEnvironment: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
+    {
+        static bool isWarningIssued = false;
+        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+            QString warnMsg = tr( "[ WARN ]  - Lua command resetEnvironment() used - it is currently flagged as experimental!" );
+            QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+                                              "and although that has been coded it is NOT enabled so this feature's effects\n"
+                                              "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
+                                              "To avoid filling the screen up with repeated messages, this is your only warning about\n"
+                                              "this command...!" );
+            pHost->postMessage( warnMsg );
+            pHost->postMessage( infoMsg );
+            isWarningIssued = true;
+        }
+    }
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "resetEnvironment: bad argument #1 type (environment id as number, expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    pHost->mpMap->mEnvNamesMap.remove( id );
+    pHost->mpMap->mEnvColorNamesMap.remove( id );
+    if( id > 16 ) {
+        pHost->mpMap->mEnvColorIdMap.remove( id );
+    }
+    lua_pushboolean( L, true );
+    return 1;
+}
 
 bool TLuaInterpreter::compileAndExecuteScript( QString & code )
 {
@@ -12485,6 +12792,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearAreaUserDataItem", TLuaInterpreter::clearAreaUserDataItem );
     lua_register( pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData );
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
+    lua_register( pGlobalLua, "getEnvironmentTable", TLuaInterpreter::getEnvironmentTable );
+    lua_register( pGlobalLua, "getEnvironment", TLuaInterpreter::getEnvironment );
+    lua_register( pGlobalLua, "setEnvironment", TLuaInterpreter::setEnvironment );
+    lua_register( pGlobalLua, "resetEnvironment", TLuaInterpreter::resetEnvironment );
+
 
 
     luaopen_yajl(pGlobalLua);

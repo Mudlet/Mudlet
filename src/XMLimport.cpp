@@ -46,7 +46,6 @@
 
 int maxRooms;
 int maxAreas;
-QMap<int,int> areaMap;
 
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
@@ -193,9 +192,23 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             else if( name() == QStringLiteral( "map" ) ) {
                 maxAreas = 0;
                 maxRooms = 0;
-                areaMap.clear();
                 mpHost->mpMap->mpRoomDB->clearMapDB();
                 readMap(); // only returns at end of file (though should also on error!)
+                QMapIterator<int, QString> itEnv( mpHost->mpMap->mEnvColorNamesMap );
+                while( itEnv.hasNext() ) {
+                    itEnv.next();
+                    if( itEnv.value().isEmpty() ) {
+                        continue;
+                    }
+                    else {
+                        QColor envColor;
+                        envColor.setNamedColor( itEnv.value() );
+                        if( envColor.isValid() ) {
+                            mpHost->mpMap->customEnvColors.insert( itEnv.key(), envColor );
+                            mpHost->mpMap->mEnvColorIdMap.insert( itEnv.key(), itEnv.key() ); // Forceable overwrite the 1-15 mapping already read
+                        }
+                    }
+                }
                 mpHost->mpMap->init(mpHost);
             }
             else {
@@ -420,15 +433,57 @@ void XMLimport::readEnvColors()
             readNext(); // Move to endElement of this <environment> tag
         }
     }
+
 }
 
 void XMLimport::readEnvColor()
 {
+    int id;
+    int colorId;
+    bool isIdFound = false;
+    QString name;
+    QString colorName;
+    QMap<QString, QString> userData;
+    QVectorIterator<QXmlStreamAttribute> itEnvAttribute( attributes() );
+    while( itEnvAttribute.hasNext() ) {
+        QXmlStreamAttribute attribute = itEnvAttribute.next();
+        if(      attribute.name() == QStringLiteral("id") ) {
+            id = attribute.value().toString().toInt();
+            isIdFound = true;
+        }
+        else if( attribute.name() == QStringLiteral("color") ) {
+            colorId = attribute.value().toString().toInt();
+        }
+        else if( attribute.name() == QStringLiteral("name") ) {
+            name = attribute.value().toString();
+        }
+        else if( attribute.name() == QStringLiteral("htmlcolor") ) {
+            colorName = attribute.value().toString();
+        }
+        else {
+            // Let's capture anything else and make it available to user
+            userData.insert( attribute.name().toString(),
+                             attribute.value().toString() );
+        }
+    }
 
-    int id = attributes().value( QStringLiteral("id") ).toString().toInt();
-    int color = attributes().value( QStringLiteral("color") ).toString().toInt();
-    // TODO: Parse, or at least record, other data elements, possibly including a "description"
-    mpHost->mpMap->envColorsMap[id] = color;
+    mpHost->mpMap->mEnvColorIdMap[id] = colorId;
+    if( ! name.isNull() ) {
+        mpHost->mpMap->mEnvNamesMap[id] = name;
+    }
+    if( ! colorName.isNull() ) {
+        mpHost->mpMap->mEnvColorNamesMap[id] = colorName;
+    }
+    if( ! userData.isEmpty() ) {
+        QMapIterator<QString, QString> itDataItem( userData );
+        while( itDataItem.hasNext() ) {
+            itDataItem.next();
+            mpHost->mpMap->mUserData.insert( QStringLiteral( "xmlParse.environment.%1.%2" )
+                                             .arg( id )
+                                             .arg( itDataItem.key() ),
+                                             itDataItem.value() );
+        }
+    }
 }
 
 // Should be on startElement <areas> tag
@@ -462,15 +517,55 @@ void XMLimport::readAreas()
 
 void XMLimport::readArea()
 {
-    int id = attributes().value( QStringLiteral( "id" ) ).toString().toInt();
-    QString name = attributes().value( QStringLiteral( "name" ) ).toString();
-    mpHost->mpMap->mpRoomDB->addArea( id, name );
+    QMap<QString, QString> userData;
+    int id = -1;
+    QString name;
+    QVectorIterator<QXmlStreamAttribute> itAreaAttribute( attributes() );
+    while( itAreaAttribute.hasNext() ) {
+        QXmlStreamAttribute attribute = itAreaAttribute.next();
+        if(      attribute.name() == QStringLiteral("id") ) {
+            id = attribute.value().toString().toInt();
+        }
+        else if( attribute.name() == QStringLiteral("name") ) {
+            name = attribute.value().toString().toInt();
+        }
+        else {
+            // Let's capture anything else and make it available to user
+            userData.insert( QStringLiteral( "xmlParse.%1" ).arg( attribute.name().toString() ),
+                             attribute.value().toString() );
+        }
+    }
+
+    if( id >= 0 ) {
+        // Allow 0 but it might be problematic...!
+        if( mpHost->mpMap->mpRoomDB->addArea( id, name ) ) {
+            // If name is empty the area will be given a default one which will be uniquified if necessary with a number suffix
+            if( ! userData.isEmpty() ) {
+                TArea * pA = mpHost->mpMap->mpRoomDB->getArea( id );
+                pA->mUserData = userData;
+            }
+        }
+        else {
+            QString errMsg = tr( "[ ERROR ] - While parsing the XML data was unable to add an area with id:%1 called:\n"
+                                             "\"%2\" to the map - data has been lost!" )
+                             .arg( id )
+                             .arg( name );
+            mpHost->postMessage( errMsg );
+        }
+    }
+    else {
+        QString errMsg = tr( "[ ERROR ] - While parsing the XML data was unable to add an area with a negative id:%1 called:\n"
+                                         "\"%2\" to the map - data has been lost!" )
+                         .arg( id )
+                         .arg( name );
+        mpHost->postMessage( errMsg );
+    }
 }
 
 void XMLimport::readRooms()
 {
-    QString elementName;
-    QMap<QString, QString> elementAttributes;
+//    QString elementName;
+//    QMap<QString, QString> elementAttributes;
     while( ! atEnd() ) {
         readNext();
 
@@ -483,7 +578,7 @@ void XMLimport::readRooms()
         }
 
         if( isStartElement() ) {
-            dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readRooms()" ) );
+            // dumpElementAttributes( elementName, elementAttributes, QStringLiteral( "readRooms()" ) );
 
             if( name() == QStringLiteral( "room" ) ) {
                 readRoom();
@@ -510,13 +605,49 @@ void XMLimport::readRooms()
 void XMLimport::readRoom()
 {
     TRoom * pT = new TRoom( mpHost->mpMap->mpRoomDB );
-    pT->id = attributes().value( QStringLiteral("id") ).toString().toInt();
-    pT->area = attributes().value( QStringLiteral("area") ).toString().toInt();
-    pT->name = attributes().value( QStringLiteral("title") ).toString();
-    pT->environment = attributes().value( QStringLiteral("environment") ).toString().toInt();
 
-    QString elementName;
-    QMap<QString, QString> elementAttributes;
+    // Refactored code to use iterators so we can process ANY attribute found
+    QVectorIterator<QXmlStreamAttribute> itRoomAttribute( attributes() );
+    while( itRoomAttribute.hasNext() ) {
+        QXmlStreamAttribute attribute = itRoomAttribute.next();
+        if(      attribute.name() == QStringLiteral("id") ) {
+            pT->id = attribute.value().toString().toInt();
+        }
+        else if( attribute.name() == QStringLiteral("area") ) {
+            pT->area = attribute.value().toString().toInt();
+        }
+        else if( attribute.name() == QStringLiteral("title") ) {
+            pT->name = attribute.value().toString();
+        }
+        else if( attribute.name() == QStringLiteral("environment") ) {
+            pT->environment = attribute.value().toString().toInt();
+        }
+        else if( attribute.name() == QStringLiteral("locked") ) {
+            if( attribute.value().toString() == QStringLiteral( "true" )
+             || attribute.value().toString() == QStringLiteral( "1" )
+             || attribute.value().toString() == QStringLiteral( "yes" ) ) {
+                pT->isLocked = true;
+            }
+        }
+        else if( attribute.name() == QStringLiteral("cost") ) {
+            bool isWeightOk = false;
+            int weight = attribute.value().toString().toInt( &isWeightOk );
+            if(  isWeightOk && weight > 0 ) {
+                pT->weight = weight;
+            }
+        }
+        else {
+            // Though we don't {currently} have an explict room description field
+            // other clients can - and for some MUDs having this data is vital for
+            // location detection (when the MUD doesn't tell us a room Vnumb by an
+            // out-of-band channel).  It is thus something we should store if found...
+
+            // In fact - let's capture anything else and make it available to user
+            pT->userData.insert( QStringLiteral( "xmlParse.%1" ).arg( attribute.name().toString() ),
+                                                 attribute.value().toString() );
+        }
+    }
+
     while( ! atEnd() ) {
         readNext();
 
@@ -530,119 +661,170 @@ void XMLimport::readRoom()
 
         if( isStartElement() ) {
             if( name() == QStringLiteral("coord") ) {
-//                dumpElementAttributes( elementName, elementAttributes, "readRoom()" );
-                pT->x = attributes().value( QStringLiteral("x") ).toString().toInt();
-                pT->y = attributes().value( QStringLiteral("y") ).toString().toInt();
-                pT->z = attributes().value( QStringLiteral("z") ).toString().toInt();
-                // Aachea also has a "building" attribute which can be common to several rooms
-                // could put this and other unhandled attributes in TRoom::roomUserData ???
+                QVectorIterator<QXmlStreamAttribute> itCoordAttribute( attributes() );
+                while( itCoordAttribute.hasNext() ) {
+                    QXmlStreamAttribute attribute = itCoordAttribute.next();
+                    if(      attribute.name() == QStringLiteral("x") ) {
+                        pT->x = attribute.value().toString().toInt();
+                    }
+                    else if( attribute.name() == QStringLiteral("y") ) {
+                        pT->y = attribute.value().toString().toInt();
+                    }
+                    else if( attribute.name() == QStringLiteral("z") ) {
+                        pT->z = attribute.value().toString().toInt();
+                    }
+                    else {
+                        // Let's capture anything else and make it available to user
+                        pT->userData.insert( QStringLiteral( "xmlParse.coord.%1" ).arg( attribute.name().toString() ),
+                                                             attribute.value().toString() );
+                    }
+                }
             }
             else if( name() == QStringLiteral("exit") ) {
-//                dumpElementAttributes( elementName, elementAttributes, "readRoom()" );
-                QString dir = attributes().value( QStringLiteral("direction") ).toString();
-                int e = attributes().value( QStringLiteral("target") ).toString().toInt();
+                QVectorIterator<QXmlStreamAttribute> itExitAttribute( attributes() );
+                QString dir;
+                int target;
+                int _door = 0; // raw door value
+                bool isDoorOk = false;
+                int _hidden = 0; // raw hidden value - we don't support hidden exits
+                bool isHiddenOk = false;
+                int _weight = 0;
+                bool isWeightOk = false;
+                int door = 0; // cooked door value - comes from _door but can be overridden by _hidden
+                bool isLocked = false;
+                QMap<QString, QString> exitOtherDataItems;
+                while( itExitAttribute.hasNext() ) {
+                    QXmlStreamAttribute attribute = itExitAttribute.next();
+                    if(      attribute.name() == QStringLiteral("direction") ) {
+                        dir = attribute.value().toString();
+                    }
+                    else if( attribute.name() == QStringLiteral("target") ) {
+                        target = attribute.value().toString().toInt();
+                    }
+                    else if( attribute.name() == QStringLiteral("door") ) {
+                        exitOtherDataItems.insert( QStringLiteral("door"), attribute.value().toString() );
+                        _door = attribute.value().toString().toInt( &isDoorOk );
+                    }
+                    else if( attribute.name() == QStringLiteral("hidden") ) {
+                        exitOtherDataItems.insert( QStringLiteral("hidden"), attribute.value().toString() );
+                        _hidden = attribute.value().toString().toInt(&isHiddenOk);
+                    }
+                    else if( attribute.name() == QStringLiteral("locked") ) {
+                        exitOtherDataItems.insert( QStringLiteral("locked"), attribute.value().toString() );
+                        if( attribute.value().toString() == QStringLiteral( "true" )
+                         || attribute.value().toString() == QStringLiteral( "1" )
+                         || attribute.value().toString() == QStringLiteral( "yes" ) ) {
+                            isLocked = true;
+                        }
+                    }
+                    else if( attribute.name() == QStringLiteral("cost") ) {
+                        _weight = attribute.value().toString().toInt( &isWeightOk );
+                    }
+                    else {
+                        // Let's capture anything else and make it available to user
+                        exitOtherDataItems.insert( attribute.name().toString(), attribute.value().toString() );
+                    }
+                } // end of while() - finished parsing all the attributes of this exit
+
                 // The following was suggested by browsing an Achea map, which had
                 // door = "1" or hidden = "1" on some exits, allow for 2 or 3 also
                 // for doors, and treat "hidden" (though hidden can appear without door)
-                // as door = 3...! - Slysven
-                int door = 0;
-                if( attributes().hasAttribute( QStringLiteral("door") ) ) {
-                    bool isOk = false;
-                    int _door = attributes().value( QStringLiteral("target") ).toString().toInt(&isOk);
-                    if( isOk && _door > 0 && _door <= 3 ) {
-                        door = _door;
-                    }
+                // as door = 3... - Slysven
+                if( isDoorOk && _door > 0 && _door <= 3 ) {
+                    door = _door;
                 }
-                if( attributes().hasAttribute( QStringLiteral("hidden") ) ) {
-                    bool isOk = false;
-                    int _hidden = attributes().value( QStringLiteral("hidden") ).toString().toInt(&isOk);
-                    if( isOk && _hidden == 1 ) {
-                        door = 3;  // So make it a "locked" (red) door
-                    }
+                if( isHiddenOk ) {
+                    door = ( _hidden != 0 ) ? 3 : 0;  // So make it a "locked" (red) door (and override the door value!)
+                }
+                if( ( !isWeightOk ) || _weight < 1 ) {
+                    _weight = 0;
                 }
 
+                QString dirDoorAndWeightString;
                 if( dir.isEmpty() ) {
                     qWarning() << "XMLimport::readRoom() WARN: <exit> element with an empty exit id string found, it has been discarded!";
                 }
                 else if( dir == QStringLiteral("north") ) {
-                    pT->north = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("n"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("n");
+                    pT->north = target;
+                    pT->setExitLock( DIR_NORTH, isLocked );
                 }
                 else if( dir == QStringLiteral("south") ) {
-                    pT->south = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("s"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("s");
+                    pT->south = target;
+                    pT->setExitLock( DIR_SOUTH, isLocked );
                 }
                 else if( dir == QStringLiteral("northwest") ) {
-                    pT->northwest = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("nw"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("nw");
+                    pT->northwest = target;
+                    pT->setExitLock( DIR_NORTHWEST, isLocked );
                 }
                 else if( dir == QStringLiteral("southwest") ) {
-                    pT->southwest = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("sw"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("sw");
+                    pT->southwest = target;
+                    pT->setExitLock( DIR_SOUTHWEST, isLocked );
                 }
                 else if( dir == QStringLiteral("northeast") ) {
-                    pT->northeast = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("nw"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("nw");
+                    pT->northeast = target;
+                    pT->setExitLock( DIR_NORTHEAST, isLocked );
                 }
                 else if( dir == QStringLiteral("southeast") ) {
-                    pT->southeast = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("se"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("se");
+                    pT->southeast = target;
+                    pT->setExitLock( DIR_SOUTHEAST, isLocked );
                 }
                 else if( dir == QStringLiteral("west") ) {
-                    pT->west = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("w"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("w");
+                    pT->west = target;
+                    pT->setExitLock( DIR_WEST, isLocked );
                 }
                 else if( dir == QStringLiteral("east") ) {
-                    pT->east = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("e"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("e");
+                    pT->east = target;
+                    pT->setExitLock( DIR_EAST, isLocked );
                 }
                 else if( dir == QStringLiteral("up") ) {
-                    pT->up = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("up"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("up");
+                    pT->up = target;
+                    pT->setExitLock( DIR_UP, isLocked );
                 }
                 else if( dir == QStringLiteral("down") ) {
-                    pT->down = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("down"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("down");
+                    pT->down = target;
+                    pT->setExitLock( DIR_DOWN, isLocked );
                 }
                 else if( dir == QStringLiteral("in") ) {
-                    pT->in = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("in"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("in");
+                    pT->in = target;
+                    pT->setExitLock( DIR_IN, isLocked );
                 }
                 else if( dir == QStringLiteral("out") ) {
-                    pT->out = e;
-                    if( door ) {
-                        pT->setDoor( QStringLiteral("out"), door );
-                    }
+                    dirDoorAndWeightString = QStringLiteral("out");
+                    pT->out = target;
+                    pT->setExitLock( DIR_OUT, isLocked );
                 }
                 else {
-                    // TODO: What about special exits?
-                    qWarning() << "XMLimport::readRoom() WARN: unhandled (Special ?) exit element with an empty exit id string found for room id:" << pT->id << ", it has been discarded!";
+                    dirDoorAndWeightString = dir;
+                    pT->other.insert( target, QStringLiteral( "%1%2" )
+                                         .arg( isLocked ? "1" : "0" )
+                                         .arg( dir ) );
+                }
+                pT->setDoor( dirDoorAndWeightString, door );
+                pT->setExitWeight( dirDoorAndWeightString, _weight );
+
+                if( ! exitOtherDataItems.isEmpty() ) {
+                    QMapIterator<QString, QString> itExitOtherDataItem( exitOtherDataItems );
+                    while( itExitOtherDataItem.hasNext() ) {
+                        itExitOtherDataItem.next();
+                        pT->userData.insert( QStringLiteral( "xmlParse.exit.%1.%2" )
+                                                 .arg( dir )
+                                                 .arg( itExitOtherDataItem.key() ),
+                                             itExitOtherDataItem.value() );
+                    }
                 }
             }
             else {
-                dumpElementAttributes( elementName, elementAttributes, "readRoom()" );
                 readUnknownElement();
             }
         readNext(); // Pull to the endElement of this
