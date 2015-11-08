@@ -1437,7 +1437,11 @@ void dlgProfilePreferences::saveMap()
 
     // Temporarily use whatever version is currently set
     int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
+#if QT_VERSION >= 0x050200
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+#else
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
+#endif
     if( pHost->mpConsole->saveMap(fileName) ) {
         map_file_action->setText( tr("Saved map to %1").arg( fileName ) );
     } else {
@@ -1601,7 +1605,11 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mTimerDebugOutputSuppressionInterval = 0;
     }
 
+#if QT_VERSION >= 0x050200
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+#else
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
+#endif
     //pHost->mIRCNick = ircNick->text();
     QString old_nick = mudlet::self()->mIrcNick;
     QString new_nick = ircNick->text();
