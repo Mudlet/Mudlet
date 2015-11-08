@@ -11,8 +11,8 @@ before_script:
   - mkdir build
   - cd src
 script:
-  - qmake && make -j2
   - cd ../build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; qmake -v; qmake ../src/src.pro && make -j2; fi
   - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2; fi
 notifications:
   webhooks:

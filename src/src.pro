@@ -30,8 +30,16 @@ VERSION = 3.0.0
 !msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
 !msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+# Before we impose OUR idea about the optimisation levels to use, remove any
+# that Qt tries to put in automatically for us for release builds, only the
+# last, ours, is supposed to apply but it can be confusing to see multiple
+# alternatives during compilations.
+!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+# NOW we can put ours in:
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
+# There is NO need to put in the -g option as it is done already for debug bugs
+# For gdb type debugging it helps if there is NO optimisations so use -O0.
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -458,4 +466,5 @@ DISTFILES += \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
-    ../CMakeLists.txt
+    ../CMakeLists.txt \
+    ../.travis.yml
