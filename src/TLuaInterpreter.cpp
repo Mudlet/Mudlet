@@ -1702,29 +1702,44 @@ int TLuaInterpreter::deleteLine( lua_State * L )
     return 0;
 }
 
+// Although the corresponding loadMap can also process an XML map file there is
+// no current provision to export such a thing - but it may happen...!
 int TLuaInterpreter::saveMap( lua_State * L )
 {
-    string location="";
-    if( lua_gettop( L ) == 1 )
-    {
-        if( ! lua_isstring( L, 1 ) )
-        {
-            lua_pushstring( L, "saveMap: where do you want to save to?" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "saveMap: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString location;
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "saveMap: bad argument #1 type (file name as string is optional, but got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
             lua_error( L );
             return 1;
         }
-        else
-        {
-            location = lua_tostring( L, 1 );
+        else {
+            location = QString::fromUtf8( lua_tostring( L, 1 ) );
+            // An empty string is treated the same as no string, meaning save
+            // the map to a datetime named file in the profile's map subdirectory
         }
     }
 
-    QString _location( location.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-
-    bool error = pHost->mpConsole->saveMap(_location);
-    lua_pushboolean( L, error );
-    return 1;
+    if( ! location.isEmpty() && location.toLower().endsWith( QStringLiteral( ".xml" ) ) ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "saveMap: bad argument #1 value (no provision YET, to save a file in XML format...)" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        lua_pushboolean( L, pHost->mpConsole->saveMap( location ) );
+        return 1;
+    }
 }
 
 int TLuaInterpreter::setExitStub( lua_State * L  ){
@@ -2016,30 +2031,43 @@ int TLuaInterpreter::setModulePriority( lua_State * L  ){
     return 0;
 }
 
+// Now supports loading .xml files - that could have been downloaded manually...!
 int TLuaInterpreter::loadMap( lua_State * L )
 {
-    string location="";
-    if( lua_gettop( L ) == 1 )
-    {
-        if( ! lua_isstring( L, 1 ) )
-        {
-            lua_pushstring( L, "loadMap: where do you want to load from?" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "loadMap: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString location;
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "loadMap: bad argument #1 type (file name as string is optional, but got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
             lua_error( L );
             return 1;
         }
-        else
-        {
-            location = lua_tostring( L, 1 );
+        else {
+            location = QString::fromUtf8( lua_tostring( L, 1 ) );
+            // An empty string is treated the same as no string, meaning load
+            // the most recent map file from the profile's map subdirectory
         }
     }
-    QString _location( location.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool error = pHost->mpConsole->loadMap(_location);
+
+    bool error = false;
+    if( ! location.isEmpty() && location.toLower().endsWith( QStringLiteral( ".xml" ) ) ) {
+        error = pHost->mpConsole->importMap( location );
+    }
+    else {
+        error = pHost->mpConsole->loadMap( location );
+    }
     lua_pushboolean( L, error );
     return 1;
 }
-
-
 
 // enableTimer( sess, timer_name )
 int TLuaInterpreter::enableTimer( lua_State *L )
