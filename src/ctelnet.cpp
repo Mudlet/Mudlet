@@ -1296,7 +1296,9 @@ void cTelnet::postMessage( QString msg )
                 mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 150, 0, 0, 0, 0 ); //Foreground dark grey, background bright grey
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
-                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
                     mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 150, 0, 0, 0, 0 );
@@ -1307,7 +1309,9 @@ void cTelnet::postMessage( QString msg )
                 mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
-                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
                     mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
@@ -1318,7 +1322,9 @@ void cTelnet::postMessage( QString msg )
                 mpHost->mpConsole->print( firstLineTail.append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
-                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
                     mpHost->mpConsole->print( body.join('\n').append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
@@ -1329,7 +1335,9 @@ void cTelnet::postMessage( QString msg )
                 mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
-                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
                     mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
@@ -1340,7 +1348,9 @@ void cTelnet::postMessage( QString msg )
                 mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
-                    body[_i] = body.at(_i).rightJustified( body.at(0).length() + prefixLength );
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
                     mpHost->mpConsole->print( body.join('\n').append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
