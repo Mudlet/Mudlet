@@ -23,7 +23,6 @@
 #include "mudlet.h"
 
 
-#include "ctelnet.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
