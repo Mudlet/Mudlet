@@ -283,7 +283,7 @@ ELSEIF(APPLE)
   # and using pkg-config is the recommended way to get the details.
   FIND_PACKAGE(PkgConfig)
   IF(PKG_CONFIG_FOUND)
-    PKG_CHECK_MODULES(PC_ZIP REQUIRED zip)
+    PKG_CHECK_MODULES(PC_ZIP zip)
     # Use a PC_ prefix to distinguish between what pkg-config finds and a direct use of FIND_PACKAGE(ZIP)
     IF(PC_ZIP_FOUND)
       MESSAGE(STATUS "Using pkg_config, found Zip version: ${PC_ZIP_VERSION} with:")
