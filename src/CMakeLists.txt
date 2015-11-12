@@ -276,14 +276,14 @@ IF(WIN32)
       SET(ZLIB_LIBRARY ${ZLIB_LIBRARY_DEBUG} )
     ENDIF()
   ENDIF()
-ELSEIF(APPLE)
+ELSE()
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
   # we need the path to an interal header zipconf.g that it calls for using '<''>'s
   # i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
   # and using pkg-config is the recommended way to get the details.
   FIND_PACKAGE(PkgConfig)
   IF(PKG_CONFIG_FOUND)
-    PKG_SEARCH_MODULES(PC_ZIP zip libzip)
+    PKG_SEARCH_MODULE(PC_ZIP zip libzip)
     # Use a PC_ prefix to distinguish between what pkg-config finds and a direct use of FIND_PACKAGE(ZIP)
     IF(PC_ZIP_FOUND)
       MESSAGE(STATUS "Using pkg_config, found Zip version: ${PC_ZIP_VERSION} with:")
@@ -348,7 +348,7 @@ INCLUDE_DIRECTORIES(
 
 IF(PC_ZIP_FOUND)
     INCLUDE_DIRECTORIES( ${PC_ZIP_INCLUDE_DIR} )
-ELSEIF()
+ELSE()
     INCLUDE_DIRECTORIES( ${ZIP_INCLUDE_DIR} )
 ENDIF()
 
@@ -385,7 +385,7 @@ TARGET_LINK_LIBRARIES(mudlet
 
 IF(PC_ZIP_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${PC_ZIP_LIBRARIES})
-ELSEIF()
+ELSE()
     TARGET_LINK_LIBRARIES(mudlet ${ZIP_LIBRARIES})
 ENDIF()
 
