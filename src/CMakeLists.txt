@@ -277,12 +277,23 @@ IF(WIN32)
     ENDIF()
   ENDIF()
 ELSEIF(APPLE)
+  # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
+  # we need the path to an interal header zipconf.g that it calls for using '<''>'s
+  # i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
+  # and using pkg-config is the recommended way to get the details.
   FIND_PACKAGE(PkgConfig)
   IF(PKG_CONFIG_FOUND)
-    PKG_CHECK_MODULES(ZIP REQUIRED zip)
-    IF(ZIP_FOUND)
-      MESSAGE(STATUS "Using pkg_config to find Zip include directories, ZIP_INCLUDE_DIRS is: ${ZIP_INCLUDE_DIRS}; ZIP_INCLUDE_DIR is: ${ZIP_INCLUDE_DIR} and ZIP_INCLUDEDIR is: ${ZIP_INCLUDEDIR}."
-    ENDIF
+    PKG_CHECK_MODULES(PC_ZIP REQUIRED zip)
+    # Use a PC_ prefix to distinguish between what pkg-config finds and a direct use of FIND_PACKAGE(ZIP)
+    IF(PC_ZIP_FOUND)
+      MESSAGE(STATUS "Using pkg_config, found Zip version: ${PC_ZIP_VERSION} with:")
+      MESSAGE(STATUS "  include directory(ies), ZIP_INCLUDE_DIRS: ${PC_ZIP_INCLUDE_DIRS}; ZIP_INCLUDE_DIR: ${PC_ZIP_INCLUDE_DIR} and ZIP_INCLUDEDIR: ${PC_ZIP_INCLUDEDIR}.")
+      MESSAGE(STATUS "  library(ies): ZIP_LIBRARY_DIRS: ${PC_ZIP_LIBRARY_DIRS}; ZIP_LIBDIR: ${PC_ZIP_LIBDIR}.")
+    ELSEIF()
+      MESSAGE(WARNING "Using pkg_config, failed to find any version of Zip library!")
+    ENDIF()
+  ELSEIF()
+    MESSAGE(WARNING "Unable to use pkg_config - will possibly fail to find/use Zip library...")
   ENDIF()
 ENDIF()
 
@@ -293,7 +304,9 @@ FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 
-FIND_PACKAGE(ZIP REQUIRED)
+IF(NOT(PC_ZIP_FOUND))
+  FIND_PACKAGE(ZIP REQUIRED)
+ENDIF()
 FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)
 FIND_PACKAGE(ZLIB REQUIRED)
@@ -331,17 +344,13 @@ INCLUDE_DIRECTORIES(
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
-    ${ZIP_INCLUDE_DIR}
+    IF(PC_ZIP_FOUND)
+      ${PC_ZIP_INCLUDE_DIR}
+    ELSEIF()
+      ${ZIP_INCLUDE_DIR}
+    ENDIF()
     ${ZLIB_INCLUDE_DIR}
 )
-
-IF(APPLE)
-  IF(NOT(ZIP_ZIPCONF_INCLUDE_DIR STREQUAL ""))
-    INCLUDE_DIRECTORIES(
-      ${ZIP_ZIPCONF_INCLUDE_DIR}
-    )
-  ENDIF()
-ENDIF()
 
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
@@ -369,7 +378,11 @@ TARGET_LINK_LIBRARIES(mudlet
     ${OPENGL_LIBRARIES}
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
-    ${ZIP_LIBRARIES}
+    IF(PC_ZIP_FOUND)
+      ${PC_ZIP_LIBRARIES}
+    ELSEIF()
+      ${ZIP_LIBRARIES}
+    ENDIF()
     ${ZLIB_LIBRARIES}
     irccqt
 )
