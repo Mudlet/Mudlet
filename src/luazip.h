@@ -534,13 +534,13 @@ static const luaL_reg fflib[] = {
 ** Assumes the table is on top of the stack.
 */
 static void set_info (lua_State *L) {
-  Lua_pushliteral (L, "_COPYRIGHT");
+  lua_pushliteral (L, "_COPYRIGHT");
   lua_pushliteral (L, "Copyright (C) 2003-2007 Kepler Project");
-  Lua_settable (L, -3);
+  lua_settable (L, -3);
   lua_pushliteral (L, "_DESCRIPTION");
   lua_pushliteral (L, "Reading files inside zip files");
   lua_settable (L, -3);
-  Lua_pushliteral (L, "_VERSION");
+  lua_pushliteral (L, "_VERSION");
   lua_pushliteral (L, "LuaZip 1.2.3");
   lua_settable (L, -3);
 }
