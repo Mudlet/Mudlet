@@ -18,7 +18,7 @@ before_script:
   - cd src
 script:
   - cd ../build
-  - if [ "${TRAVIS_OS_NAME}" = "osx" && "${Q_OR_C_MAKE}" = "cmake" ]; then echo Seeking zip internal header zipconf.h; pkg-config --variable includedir libzip; fi # Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; then echo Seeking zip internal header zipconf.h; pkg-config --variable includedir libzip; fi # Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
   - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ../src/src.pro && make -j2; else cmake --version; cmake .. && make -j2; fi
 notifications:
