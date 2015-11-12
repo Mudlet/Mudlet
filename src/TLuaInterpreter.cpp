@@ -60,7 +60,7 @@
 #include <string>
 
 #ifdef Q_OS_MAC
-#include "luazip.c"
+#include "luazip.h"
 #endif
 
 

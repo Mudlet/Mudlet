@@ -279,8 +279,12 @@ IF(WIN32)
   ENDIF()
 ELSEIF(APPLE)
   IF(ZIP_FOUND)
+    MESSAGE(STATUS "Zip library found, headers are in ${ZIP_INCLUDE_DIR}, library is in ${ZIP_LIBRARY_DIR}...")
     FIND_PATH(ZIP_ZIPCONF_INCLUDE_DIR "zipconf.h"
       HINTS "${ZIP_LIBRARY_DIR}/include/" )
+    MESSAGE(WARNING "Value of ZIP_ZIPCONF_INCLUDE_DIR is: ${ZIP_ZIPCONF_INCLUDE_DIR}.")
+  ELSEIF()
+    MESSAGE(WARNING "Zip library NOT found.")
   ENDIF(ZIP_FOUND)
 ENDIF()
 

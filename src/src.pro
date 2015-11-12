@@ -112,7 +112,6 @@ unix:!macx {
         -lhunspell \
         -llibzip \
         -lzlib \
-        -llibzip \
         -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
         -lyajl
     INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
@@ -443,7 +442,10 @@ OTHER_FILES += \
     ../Doxyfile \
     ../INSTALL \
     mudlet_documentation.txt \
-    mac-deploy.sh
+    mac-deploy.sh \
+# This is #if defined(Q_OS_MAC) into TLuaInterpreter.cpp but should not be in SOURCES
+# variable directly, listing it here so it shows up in the project:
+    luazip.h
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
