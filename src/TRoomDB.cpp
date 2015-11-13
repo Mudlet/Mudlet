@@ -210,7 +210,8 @@ bool TRoomDB::__removeRoom( int id )
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
         // copy and iterating through that instead whilst modifying the original
         while (i != entranceMap.end() && i.key() == id) {
-            if( i.value() == id || mpTempRoomDeletionList && mpTempRoomDeletionList->size() > 1 && mpTempRoomDeletionList->contains( i.value() ) ) {
+            if(  i.value() == id
+              || ( mpTempRoomDeletionList && mpTempRoomDeletionList->size() > 1 && mpTempRoomDeletionList->contains( i.value() ) ) ) {
                 ++i;
                 continue; // Bypass rooms we know are also to be deleted
             }
@@ -443,7 +444,7 @@ TArea * TRoomDB::getArea( int id )
 bool TRoomDB::setAreaName( int areaID, QString name )
 {
     if( areaID < 1 ) {
-        qWarning( "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Suspect areaID: %n supplied.", areaID );
+        qWarning( "TRoomDB::setAreaName((int)areaID, (QString)name): WARNING: Suspect areaID: %d supplied.", areaID );
         return false;
     }
     if( name.isEmpty() ) {

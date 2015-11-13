@@ -55,8 +55,6 @@ TMap::TMap( Host * pH )
                             // TLuaInterpreter::setAreaUserData()
                             // TLuaInterpreter::setMapUserData() need 17
                             // (for persistant storage of data)
-, mVersion( mDefaultVersion ) // This is overwritten during a map restore and is
-                              // the loaded file version
 , mSaveVersion( mDefaultVersion ) // This needs to be set (for when writing new
                             // map files) as it triggers some version features
                             // that NEED a new map file format to be usable, it
@@ -65,6 +63,8 @@ TMap::TMap( Host * pH )
 , mMaxVersion( 17 )              // CHECKME: Allow 17 ( mDefaultVersion + 1 ) for testing
 , mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
 {
+    mVersion = mDefaultVersion; // This is overwritten during a map restore and
+                                // is the loaded file version
     customEnvColors[257] = mpHost->mRed_2;
     customEnvColors[258] = mpHost->mGreen_2;
     customEnvColors[259] = mpHost->mYellow_2;

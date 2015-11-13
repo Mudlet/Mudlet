@@ -26,6 +26,7 @@
  *           Converted into a single file to include into Mudlet              *
  ******************************************************************************/
 
+// Only included into the application (in TLuaInterpreter) in MacOs builds - Slysven!
 #ifndef luazip_h
 #define luazip_h
 
