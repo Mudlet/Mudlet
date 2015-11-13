@@ -1,5 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
+#    Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -281,14 +282,22 @@ ELSE()
   # we need the path to an interal header zipconf.g that it calls for using '<''>'s
   # i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
   # and using pkg-config is the recommended way to get the details.
+  # Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
   FIND_PACKAGE(PkgConfig)
   IF(PKG_CONFIG_FOUND)
     PKG_SEARCH_MODULE(PC_ZIP zip libzip)
     # Use a PC_ prefix to distinguish between what pkg-config finds and a direct use of FIND_PACKAGE(ZIP)
+    # Package "zip" is called "libzip" at least on MY Linux box so look for BOTH
     IF(PC_ZIP_FOUND)
-      MESSAGE(STATUS "Using pkg_config, found Zip version: ${PC_ZIP_VERSION} with:")
-      MESSAGE(STATUS "  include directory(ies), ZIP_INCLUDE_DIRS: ${PC_ZIP_INCLUDE_DIRS}; ZIP_INCLUDE_DIR: ${PC_ZIP_INCLUDE_DIR} and ZIP_INCLUDEDIR: ${PC_ZIP_INCLUDEDIR}.")
-      MESSAGE(STATUS "  library(ies): ZIP_LIBRARY_DIRS: ${PC_ZIP_LIBRARY_DIRS}; ZIP_LIBDIR: ${PC_ZIP_LIBDIR}.")
+      IF(PC_ZIP_zip_FOUND)
+        MESSAGE(STATUS "Using pkg_config, found \"zip\" version: ${PC_ZIP_VERSION} with:")
+      ELSEIF(PC_ZIP_libzip_FOUND)
+        MESSAGE(STATUS "Using pkg_config, found \"libzip\" version: ${PC_ZIP_VERSION} with:")
+      ELSE()
+        MESSAGE(STATUS "Using pkg_config, found Zip version: ${PC_ZIP_VERSION} with:")
+      ENDIF()
+      MESSAGE(STATUS "  include directory(ies), ZIP_INCLUDE_DIRS: ${PC_ZIP_INCLUDE_DIRS} .")
+      MESSAGE(STATUS "  library(ies): ZIP_LIBRARY_DIRS: ${PC_ZIP_LIBRARY_DIRS}; ZIP_LIBDIR: ${PC_ZIP_LIBDIR}. ")
     ELSEIF()
       MESSAGE(WARNING "Using pkg_config, failed to find any version of Zip library!")
     ENDIF()
@@ -346,6 +355,7 @@ INCLUDE_DIRECTORIES(
     ${YAJL_INCLUDE_DIR}
 )
 
+# Need to use the plural variables as there can be more than ONE directory to specify:
 IF(PC_ZIP_FOUND)
     INCLUDE_DIRECTORIES( ${PC_ZIP_INCLUDE_DIRS} )
 ELSE()
