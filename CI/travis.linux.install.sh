@@ -1,12 +1,17 @@
 #!/bin/bash
 set -ev
+sudo apt-get remove \
+  qt4-qmake libqt4-designer libqt4-dev libboost-dev
+sudo apt-get autoremove
+# libboost seems messed up in Precise 12.04 lts it mixes 1.46 and 1.48 so try
+# and force a uniform 1.55 installation
 sudo apt-get install \
   build-essential \
   qt5-default qtmultimedia5-dev qttools5-dev \
   libhunspell-dev \
   lua5.1 liblua5.1-0-dev \
   libpcre3-dev \
-  libboost1.55-dev\
+  libboost1.55-dev \
   zlib1g-dbg zlib1g-dev \
   libzip-dev \
   libpulse-dev \
