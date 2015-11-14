@@ -19,6 +19,7 @@
 
 PROJECT(mudlet)
 
+# Windows builds need 2.8.11, but for other platforms 2.8.9 should be enough
 IF(MSVC)
   CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 ELSE()
@@ -38,7 +39,7 @@ ELSE()
 ENDIF()
 
 SET(APP_VERSION 3.0.0)
-SET(APP_BUILD "-beta")
+SET(APP_BUILD "-delta")
 # APP_BUILD should only be empty/null in official "release" builds,
 # developers may like to set it to their user and branch names to make it easier
 # to tell different builds apart!

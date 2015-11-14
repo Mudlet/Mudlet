@@ -35,6 +35,7 @@
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "XMLexport.h"
+#include "XMLimport.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -1583,29 +1584,76 @@ bool TConsole::saveMap(QString location)
 
 bool TConsole::loadMap(QString location)
 {
-    if( !mpHost ) return false;
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper )
-    {
+    if( !mpHost ) {
+        return false;
+    }
+
+    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) {
         mudlet::self()->slot_mapper();
     }
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
+
+    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) {
+        return false;
+    }
 
     mpHost->mpMap->mapClear();
 
-    if ( mpHost->mpMap->restore(location) )
-    {
+    if ( mpHost->mpMap->restore(location) ) {
         mpHost->mpMap->init( mpHost );
         mpHost->mpMap->mpMapper->mp2dMap->init();
         mpHost->mpMap->mpMapper->show();
-        if( mpHost->mpMap )
-            if( mpHost->mpMap->mpMapper )
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
+        if( mpHost->mpMap->mpMapper ) {
+            mpHost->mpMap->mpMapper->updateAreaComboBox();
+        }
         // previous selections stay, so we need to clear it
         //mpHost->mpMap->mpMapper->mp2dMap->deselect();
         return true;
     }
 
     return false;
+}
+
+bool TConsole::importMap(QString location)
+{
+    if( !mpHost ) {
+        qWarning() << "TConsole::importMap(" << location << ") ERROR: NULL mpHost, unable to continue!";
+        return false;
+    }
+
+    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) {
+        mudlet::self()->slot_mapper();
+    }
+
+    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) {
+        qWarning() << "TConsole::importMap(" << location << ") ERROR: Unable to create map or mapper, unable to continue!";
+        return false;
+    }
+
+    QFile xmlMapFile(location);
+    if( ! xmlMapFile.open( QFile::ReadOnly ) ) {
+        qDebug() << "TConsole::importMap(" << location << ") WARN: Unable to open XML map file!";
+        return false; // Doesn't clear the existing map on failure
+    }
+
+    mpHost->mpMap->mapClear();
+    XMLimport reader( mpHost );
+    if( reader.importPackage( & xmlMapFile ) ) {
+        xmlMapFile.close();
+
+        if( mpHost->mpMap->mpMapper ) {
+            mpHost->mpMap->mpMapper->mp2dMap->init();
+            mpHost->mpMap->mpMapper->updateAreaComboBox();
+            mpHost->mpMap->mpMapper->show();
+        }
+        qDebug() << "TConsole::importMap(" << location << ") INFO: Imported XML map file...";
+        return true;
+    }
+    else {
+        xmlMapFile.close();
+        qDebug() << "TConsole::importMap(" << location << ") WARN: Failed to import XML map file...";
+        return false;
+    }
+
 }
 
 bool TConsole::deleteLine( int y )

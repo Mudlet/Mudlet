@@ -211,78 +211,81 @@ QColor T2DMap::getColor( int id )
 {
     QColor c;
 
-    TRoom * pR = mpMap->mpRoomDB->getRoom(id);
-    if( !pR ) return c;
+    TRoom * pR = mpMap->mpRoomDB->getRoom( id );
+    if( !pR ) {
+        return c;
+    }
 
     int env = pR->environment;
-    if( mpMap->envColors.contains(env) )
-        env = mpMap->envColors[env];
-    else
-    {
-        if( ! mpMap->customEnvColors.contains(env))
-        {
-            env = 1;
-        }
+    if( mpMap->mEnvColorNamesMap.contains(env) && mpMap->customEnvColors.contains(env) ) {
+        // We have an imported 24-bit(?) color specification for this color
+        // It will have been setup in the customEnvColors
+        c = mpMap->customEnvColors.value(env);
     }
-    switch( env )
-    {
-    case 1:
-        c = mpHost->mRed_2;
-        break;
+    else if( mpMap->mEnvColorIdMap.contains(env) ) {
+        // We are falling back to the mapping (to 1-15) range that an XML file import used
+        env = mpMap->mEnvColorIdMap.value(env);
+    }
+    else if( ! mpMap->customEnvColors.contains(env) ) {
+        // Last resort - a total unknown value so set it up to use the red colour below
+        env = 1;
+    }
 
-    case 2:
-        c = mpHost->mGreen_2;
-        break;
-    case 3:
-        c = mpHost->mYellow_2;
-        break;
-
-    case 4:
-        c = mpHost->mBlue_2;
-        break;
-
-    case 5:
-        c = mpHost->mMagenta_2;
-        break;
-    case 6:
-        c = mpHost->mCyan_2;
-        break;
-    case 7:
-        c = mpHost->mWhite_2;
-        break;
-    case 8:
-        c = mpHost->mBlack_2;
-        break;
-
-    case 9:
-        c = mpHost->mLightRed_2;
-        break;
-
-    case 10:
-        c = mpHost->mLightGreen_2;
-        break;
-    case 11:
-        c = mpHost->mLightYellow_2;
-        break;
-
-    case 12:
-        c = mpHost->mLightBlue_2;
-        break;
-
-    case 13:
-        c = mpHost->mLightMagenta_2;
-        break;
-    case 14:
-        c = mpHost->mLightCyan_2;
-        break;
-    case 15:
-        c = mpHost->mLightWhite_2;
-        break;
-    case 16:
-        c = mpHost->mLightBlack_2;
-    default: //user defined room color
-        if( ! mpMap->customEnvColors.contains(env) ) break;
-        c = mpMap->customEnvColors[env];
+    if( ! c.isValid() ) {
+        // Will be used if the FIRST branch in the previous if is NOT used.
+        switch( env ) {
+            case 1:
+                c = mpHost->mRed_2;         // IRE Maps have been using #A00000 = QColor( 160, 0, 0 )
+                break;
+            case 2:
+                c = mpHost->mGreen_2;       // IRE Maps have been using #00B300 = QColor( 0, 179, 0 )
+                break;
+            case 3:
+                c = mpHost->mYellow_2;      // IRE Maps have been using #A0A000 = QColor( 160, 160, 0 )
+                break;
+            case 4:
+                c = mpHost->mBlue_2;        // IRE Maps have been using #0000A0 = QColor( 0, 0, 160 )
+                break;
+            case 5:
+                c = mpHost->mMagenta_2;     // IRE Maps have been using #A000A0 = QColor( 160, 0, 160 )
+                break;
+            case 6:
+                c = mpHost->mCyan_2;        // IRE Maps have been using #00A0A0 = QColor( 0, 160, 160 )
+                break;
+            case 7:
+                c = mpHost->mWhite_2;       // IRE Maps have been using #C0C0C0 = QColor( 192, 192, 192 )
+                break;
+            case 8:
+                c = mpHost->mBlack_2;       // IRE Maps have been using #808080 = QColor( 128, 128, 128 )
+                break;
+            case 9:
+                c = mpHost->mLightRed_2;    // IRE Maps have been using #FF0000 = QColor( 255, 0, 0 )
+                break;
+            case 10:
+                c = mpHost->mLightGreen_2;  // IRE Maps have been using #00FF00 = QColor( 0, 255, 0 )
+                break;
+            case 11:
+                c = mpHost->mLightYellow_2; // IRE Maps have been using #FFFF00 = QColor( 255, 255, 0 )
+                break;
+            case 12:
+                c = mpHost->mLightBlue_2;   // IRE Maps have been using #0000FF = QColor( 0, 0, 255 )
+                break;
+            case 13:
+                c = mpHost->mLightMagenta_2;// IRE Maps have been using #FF00FF = QColor( 255, 0, 255 )
+                break;
+            case 14:
+                c = mpHost->mLightCyan_2;   // IRE Maps have been using #00FFFF = QColor( 0, 255, 255 )
+                break;
+            case 15:
+                c = mpHost->mLightWhite_2;  // IRE Maps have been using #FFFFFF = QColor( 255, 255, 255 )
+                break;
+            case 16:
+                c = mpHost->mLightBlack_2;  // Not spotted in the wild but logically needed, QColor( 0, 0, 0 )
+                break;
+            default: //user defined room color
+                c = mpMap->customEnvColors.value(env);
+                // The case where env is NOT in custom EnvColors has already been handled above...
+        }
     }
     return c;
 }
@@ -1269,75 +1272,77 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
         QColor c;
         int env = pR->environment;
-        if( mpMap->envColors.contains(env) )
-            env = mpMap->envColors[env];
-        else
-        {
-            if( ! mpMap->customEnvColors.contains(env))
-            {
-                env = 1;
+        if( mpMap->mEnvColorNamesMap.contains(env) && mpMap->customEnvColors.contains(env) ) {
+            // We have an imported 24-bit(?) color specification for this color
+            // It will have been setup in the customEnvColors
+            c = mpMap->customEnvColors.value(env);
+        }
+        else if( mpMap->mEnvColorIdMap.contains(env) ) {
+            // We are falling back to the mapping (to 1-15) range that an XML file import used
+            env = mpMap->mEnvColorIdMap.value(env);
+        }
+        else if( ! mpMap->customEnvColors.contains(env) ) {
+            // Last resort - a total unknown value so set it up to use the red colour below
+            env = 1;
+        }
+
+        if( ! c.isValid() ) {
+            // Will be used if the FIRST branch in the previous if is NOT used.
+            switch( env ) {
+                case 1:
+                    c = mpHost->mRed_2;         // IRE Maps have been using #A00000 = QColor( 160, 0, 0 )
+                    break;
+                case 2:
+                    c = mpHost->mGreen_2;       // IRE Maps have been using #00B300 = QColor( 0, 179, 0 )
+                    break;
+                case 3:
+                    c = mpHost->mYellow_2;      // IRE Maps have been using #A0A000 = QColor( 160, 160, 0 )
+                    break;
+                case 4:
+                    c = mpHost->mBlue_2;        // IRE Maps have been using #0000A0 = QColor( 0, 0, 160 )
+                    break;
+                case 5:
+                    c = mpHost->mMagenta_2;     // IRE Maps have been using #A000A0 = QColor( 160, 0, 160 )
+                    break;
+                case 6:
+                    c = mpHost->mCyan_2;        // IRE Maps have been using #00A0A0 = QColor( 0, 160, 160 )
+                    break;
+                case 7:
+                    c = mpHost->mWhite_2;       // IRE Maps have been using #C0C0C0 = QColor( 192, 192, 192 )
+                    break;
+                case 8:
+                    c = mpHost->mBlack_2;       // IRE Maps have been using #808080 = QColor( 128, 128, 128 )
+                    break;
+                case 9:
+                    c = mpHost->mLightRed_2;    // IRE Maps have been using #FF0000 = QColor( 255, 0, 0 )
+                    break;
+                case 10:
+                    c = mpHost->mLightGreen_2;  // IRE Maps have been using #00FF00 = QColor( 0, 255, 0 )
+                    break;
+                case 11:
+                    c = mpHost->mLightYellow_2; // IRE Maps have been using #FFFF00 = QColor( 255, 255, 0 )
+                    break;
+                case 12:
+                    c = mpHost->mLightBlue_2;   // IRE Maps have been using #0000FF = QColor( 0, 0, 255 )
+                    break;
+                case 13:
+                    c = mpHost->mLightMagenta_2;// IRE Maps have been using #FF00FF = QColor( 255, 0, 255 )
+                    break;
+                case 14:
+                    c = mpHost->mLightCyan_2;   // IRE Maps have been using #00FFFF = QColor( 0, 255, 255 )
+                    break;
+                case 15:
+                    c = mpHost->mLightWhite_2;  // IRE Maps have been using #FFFFFF = QColor( 255, 255, 255 )
+                    break;
+                case 16:
+                    c = mpHost->mLightBlack_2;  // Not spotted in the wild but logically needed, QColor( 0, 0, 0 )
+                    break;
+                default: //user defined room color
+                    c = mpMap->customEnvColors.value(env);
+                    // The case where env is NOT in custom EnvColors has already been handled above...
             }
         }
-        switch( env )
-        {
-        case 1:
-            c = mpHost->mRed_2;
-            break;
 
-        case 2:
-            c = mpHost->mGreen_2;
-            break;
-        case 3:
-            c = mpHost->mYellow_2;
-            break;
-
-        case 4:
-            c = mpHost->mBlue_2;
-            break;
-
-        case 5:
-            c = mpHost->mMagenta_2;
-            break;
-        case 6:
-            c = mpHost->mCyan_2;
-            break;
-        case 7:
-            c = mpHost->mWhite_2;
-            break;
-        case 8:
-            c = mpHost->mBlack_2;
-            break;
-
-        case 9:
-            c = mpHost->mLightRed_2;
-            break;
-
-        case 10:
-            c = mpHost->mLightGreen_2;
-            break;
-        case 11:
-            c = mpHost->mLightYellow_2;
-            break;
-
-        case 12:
-            c = mpHost->mLightBlue_2;
-            break;
-
-        case 13:
-            c = mpHost->mLightMagenta_2;
-            break;
-        case 14:
-            c = mpHost->mLightCyan_2;
-            break;
-        case 15:
-            c = mpHost->mLightWhite_2;
-            break;
-        case 16:
-            c = mpHost->mLightBlack_2;
-        default: //user defined room color
-            if( ! mpMap->customEnvColors.contains(env) ) break;
-            c = mpMap->customEnvColors[env];
-        }
         if( ( ( mPick || __Pick )
               && mPHighlight.x() >= dr.x()-(tx*rSize)
               && mPHighlight.x() <= dr.x()+(tx*rSize)

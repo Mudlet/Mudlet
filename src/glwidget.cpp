@@ -754,94 +754,133 @@ void GLWidget::paintGL()
                         glEnd();
                         //drauf
                         float mc3[] = { 0.2, 0.2, 0.6, 1.0 };
+
+                        QColor c;
                         int env = pExit->environment;
-                        if( mpMap->envColors.contains(env) )
-                            env = mpMap->envColors[env];
-                        else
-                        {
-                            if( ! mpMap->customEnvColors.contains(env))
-                            {
-                                env = 1;
+                        if( mpMap->mEnvColorNamesMap.contains(env) && mpMap->customEnvColors.contains(env) ) {
+                            // We have an imported 24-bit(?) color specification for this color
+                            // It will have been setup in the customEnvColors
+                            c = mpMap->customEnvColors.value(env);
+                        }
+                        else if( mpMap->mEnvColorIdMap.contains(env) ) {
+                            // We are falling back to the mapping (to 1-15) range that an XML file import used
+                            env = mpMap->mEnvColorIdMap.value(env);
+                        }
+                        else if( ! mpMap->customEnvColors.contains(env) ) {
+                            // Last resort - a total unknown value so set it up to use the red colour below
+                            env = 1;
+                        }
+
+                        if( ! c.isValid() ) {
+                            // Will be used if the FIRST branch in the previous if is NOT used.
+                            switch( env ) {
+                                case 1:
+                                    c = mpHost->mRed_2;         // IRE Maps have been using #A00000 = QColor( 160, 0, 0 )
+                                    // Was:
+                                    // glColor4b(128,50,50,200);
+                                    // mc3[0] = 128.0/255.0; mc3[1] =   0.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 2:
+                                    c = mpHost->mGreen_2;       // IRE Maps have been using #00B300 = QColor( 0, 179, 0 )
+                                    // Was:
+                                    // glColor4b(128,128,50, 200);
+                                    // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 3:
+                                    c = mpHost->mYellow_2;      // IRE Maps have been using #A0A000 = QColor( 160, 160, 0 )
+                                    // Was:
+                                    // glColor4b(50,128,50,200);
+                                    // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 4:
+                                    c = mpHost->mBlue_2;        // IRE Maps have been using #0000A0 = QColor( 0, 0, 160 )
+                                    // Was:
+                                    // glColor4b(50,50,128,200);
+                                    // mc3[0] =   0.0/255.0; mc3[1] =   0.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 5:
+                                    c = mpHost->mMagenta_2;     // IRE Maps have been using #A000A0 = QColor( 160, 0, 160 )
+                                    // Was:
+                                    // glColor4b(128,50,128,200);
+                                    // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 6:
+                                    c = mpHost->mCyan_2;        // IRE Maps have been using #00A0A0 = QColor( 0, 160, 160 )
+                                    // Was:
+                                    // glColor4b(50,128,128,200);
+                                    // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 7:
+                                    c = mpHost->mWhite_2;       // IRE Maps have been using #C0C0C0 = QColor( 192, 192, 192 )
+                                    // Was:
+                                    // glColor4b(52,38,78,200);
+                                    // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 8:
+                                    c = mpHost->mBlack_2;       // IRE Maps have been using #808080 = QColor( 128, 128, 128 )
+                                    // Was:
+                                    // glColor4b(65, 55, 35, 200);
+                                    // mc3[0] =  55.0/255.0; mc3[1] =  55.0/255.0; mc3[2] =  55.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 9:
+                                    c = mpHost->mLightRed_2;    // IRE Maps have been using #FF0000 = QColor( 255, 0, 0 )
+                                    // Was:
+                                    // glColor4b(175,50,50,200);
+                                    // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 10:
+                                    c = mpHost->mLightGreen_2;  // IRE Maps have been using #00FF00 = QColor( 0, 255, 0 )
+                                    // Was:
+                                    // glColor4b(255,255,50,200);
+                                    // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 11:
+                                    c = mpHost->mLightYellow_2; // IRE Maps have been using #FFFF00 = QColor( 255, 255, 0 )
+                                    // Was:
+                                    // glColor4b(50,175,175,200);
+                                    // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 12:
+                                    c = mpHost->mLightBlue_2;   // IRE Maps have been using #0000FF = QColor( 0, 0, 255 )
+                                    // Was:
+                                    // glColor4b(175,175,50,200);
+                                    // mc3[0] =  50.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 13:
+                                    c = mpHost->mLightMagenta_2;// IRE Maps have been using #FF00FF = QColor( 255, 0, 255 )
+                                    // Was:
+                                    // glColor4b(175,50,175,200);
+                                    // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 14:
+                                    c = mpHost->mLightCyan_2;   // IRE Maps have been using #00FFFF = QColor( 0, 255, 255 )
+                                    // Was:
+                                    // glColor4b(50,175,50,200);
+                                    // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 15:
+                                    c = mpHost->mLightWhite_2;  // IRE Maps have been using #FFFFFF = QColor( 255, 255, 255 )
+                                    // Was:
+                                    // glColor4b(50,50,175,200);
+                                    // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 16:
+                                    c = mpHost->mLightBlack_2;  // Not spotted in the wild but logically needed, QColor( 0, 0, 0 )
+                                    break;
+                                default: //user defined room color
+                                    c = mpMap->customEnvColors.value(env);
+                                    // The case where env is NOT in custom EnvColors has already been handled above...
                             }
                         }
-                        switch( env )
-                        {
-                        case 1:
-                            glColor4b(128,50,50,200);
-                            mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
+                        // glColor4b( c.red(), c.green(), c.blue(), 25 );
+                        // The final 25 seems wrong - it doesn't match the 1-16 values in the original switch above
+                        // which used 200...
+                        glColor4b( c.red(), c.green(), c.blue(), 200 );
+                        mc3[0]= c.redF();
+                        mc3[1]= c.greenF();
+                        mc3[2]= c.blueF();
+                        mc3[3]= 0.2f;
 
-                        case 2:
-                            glColor4b(128,128,50, 200);
-                            mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 3:
-                            glColor4b(50,128,50,200);
-                            mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 4:
-                            glColor4b(50,50,128,200);
-                            mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 5:
-                            glColor4b(128,50,128,200);
-                            mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 6:
-                            glColor4b(50,128,128,200);
-                            mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 7:
-                            glColor4b(52,38,78,200);
-                            mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 8:
-                            glColor4b(65, 55, 35, 200);
-                            mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 9:
-                            glColor4b(175,50,50,200);
-                            mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 10:
-                            glColor4b(255,255,50,200);
-                            mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 11:
-                            glColor4b(50,175,175,200);
-                            mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 12:
-                            glColor4b(175,175,50,200);
-                            mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 13:
-                            glColor4b(175,50,175,200);
-                            mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 14:
-                            glColor4b(50,175,50,200);
-                            mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 15:
-                            glColor4b(50,50,175,200);
-                            mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-                        default: //user defined room color
-                            if( ! mpMap->customEnvColors.contains(env) ) break;
-                            QColor &_c = mpMap->customEnvColors[env];
-                            glColor4b(_c.red(),_c.green(),_c.blue(),25);
-                            mc3[0]=_c.redF();
-                            mc3[1]=_c.greenF();
-                            mc3[2]=_c.blueF();
-                            mc3[3]=0.2;
-                        }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 1);
                         glDisable(GL_DEPTH_TEST);
@@ -945,7 +984,7 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        areaExit = true;
+                        areaExit = false;
                     }
 
                     float ex = static_cast<float>(pExit->x);
@@ -1106,93 +1145,131 @@ void GLWidget::paintGL()
                         //drauf
                         float mc3[] = { 0.2, 0.2, 0.6, 0.2 };
                         int env = pExit->environment;
-                        if( mpMap->envColors.contains(env) )
-                            env = mpMap->envColors[env];
-                        else
-                        {
-                            if( ! mpMap->customEnvColors.contains(env))
-                            {
-                                env = 1;
+                        QColor c;
+                        if( mpMap->mEnvColorNamesMap.contains(env) && mpMap->customEnvColors.contains(env) ) {
+                            // We have an imported 24-bit(?) color specification for this color
+                            // It will have been setup in the customEnvColors
+                            c = mpMap->customEnvColors.value(env);
+                        }
+                        else if( mpMap->mEnvColorIdMap.contains(env) ) {
+                            // We are falling back to the mapping (to 1-15) range that an XML file import used
+                            env = mpMap->mEnvColorIdMap.value(env);
+                        }
+                        else if( ! mpMap->customEnvColors.contains(env) ) {
+                            // Last resort - a total unknown value so set it up to use the red colour below
+                            env = 1;
+                        }
+
+                        if( ! c.isValid() ) {
+                            // Will be used if the FIRST branch in the previous if is NOT used.
+                            switch( env ) {
+                                case 1:
+                                    c = mpHost->mRed_2;         // IRE Maps have been using #A00000 = QColor( 160, 0, 0 )
+                                    // Was:
+                                    // glColor4b(128,50,50,2);
+                                    // mc3[0] = 128.0/255.0; mc3[1] =   0.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 2:
+                                    c = mpHost->mGreen_2;       // IRE Maps have been using #00B300 = QColor( 0, 179, 0 )
+                                    // Was:
+                                    // glColor4b(128,128,50, 2);
+                                    // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 3:
+                                    c = mpHost->mYellow_2;      // IRE Maps have been using #A0A000 = QColor( 160, 160, 0 )
+                                    // Was:
+                                    // glColor4b(50,128,50,2);
+                                    // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 4:
+                                    c = mpHost->mBlue_2;        // IRE Maps have been using #0000A0 = QColor( 0, 0, 160 )
+                                    // Was:
+                                    // glColor4b(50,50,128,2);
+                                    // mc3[0] =   0.0/255.0; mc3[1] =   0.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 5:
+                                    c = mpHost->mMagenta_2;     // IRE Maps have been using #A000A0 = QColor( 160, 0, 160 )
+                                    // Was:
+                                    // glColor4b(128,50,128,2);
+                                    // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 6:
+                                    c = mpHost->mCyan_2;        // IRE Maps have been using #00A0A0 = QColor( 0, 160, 160 )
+                                    // Was:
+                                    // glColor4b(50,128,128,2);
+                                    // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 7:
+                                    c = mpHost->mWhite_2;       // IRE Maps have been using #C0C0C0 = QColor( 192, 192, 192 )
+                                    // Was:
+                                    // glColor4b(52,38,78,2);
+                                    // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 8:
+                                    c = mpHost->mBlack_2;       // IRE Maps have been using #808080 = QColor( 128, 128, 128 )
+                                    // Was:
+                                    // glColor4b(65,55,35,2);
+                                    // mc3[0] =  55.0/255.0; mc3[1] =  55.0/255.0; mc3[2] =  55.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 9:
+                                    c = mpHost->mLightRed_2;    // IRE Maps have been using #FF0000 = QColor( 255, 0, 0 )
+                                    // Was:
+                                    // glColor4b(175,50,50,2);
+                                    // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 10:
+                                    c = mpHost->mLightGreen_2;  // IRE Maps have been using #00FF00 = QColor( 0, 255, 0 )
+                                    // Was:
+                                    // glColor4b(255,255,50,2);
+                                    // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 11:
+                                    c = mpHost->mLightYellow_2; // IRE Maps have been using #FFFF00 = QColor( 255, 255, 0 )
+                                    // Was:
+                                    // glColor4b(50,175,175,2);
+                                    // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 12:
+                                    c = mpHost->mLightBlue_2;   // IRE Maps have been using #0000FF = QColor( 0, 0, 255 )
+                                    // Was:
+                                    // glColor4b(175,175,50,2);
+                                    // mc3[0] =  50.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 13:
+                                    c = mpHost->mLightMagenta_2;// IRE Maps have been using #FF00FF = QColor( 255, 0, 255 )
+                                    // Was:
+                                    // glColor4b(175,50,175,2);
+                                    // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 14:
+                                    c = mpHost->mLightCyan_2;   // IRE Maps have been using #00FFFF = QColor( 0, 255, 255 )
+                                    // Was:
+                                    // glColor4b(50,175,50,2);
+                                    // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 15:
+                                    c = mpHost->mLightWhite_2;  // IRE Maps have been using #FFFFFF = QColor( 255, 255, 255 )
+                                    // Was:
+                                    // glColor4b(50,50,175,2);
+                                    // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                                    break;
+                                case 16:
+                                    c = mpHost->mLightBlack_2;  // Not spotted in the wild but logically needed, QColor( 0, 0, 0 )
+                                    break;
+                                default: //user defined room color
+                                    c = mpMap->customEnvColors.value(env);
+                                    // The case where env is NOT in custom EnvColors has already been handled above...
                             }
                         }
-                        switch( env )
-                        {
-                        case 1:
-                            glColor4b(128,50,50,2);
-                            mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
+                        // glColor4b( c.red(), c.green(), c.blue(), 25 );
+                        // The final 255 seems wrong - it doesn't match the 1-16 values in the original switch above
+                        // which used 2...
+                        glColor4b( c.red(), c.green(), c.blue(), 255 );
+                        mc3[0]= c.redF();
+                        mc3[1]= c.greenF();
+                        mc3[2]= c.blueF();
+                        mc3[3]= 0.2f;
 
-                        case 2:
-                            glColor4b(128,128,50, 2);
-                            mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 3:
-                            glColor4b(50,128,50,2);
-                            mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 4:
-                            glColor4b(50,50,128,2);
-                            mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 5:
-                            glColor4b(128,50,128,2);
-                            mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 6:
-                            glColor4b(50,128,128,2);
-                            mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 7:
-                            glColor4b(52,38,78,2);
-                            mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 8:
-                            glColor4b(65, 55, 35, 2);
-                            mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 9:
-                            glColor4b(175,50,50,2);
-                            mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 10:
-                            glColor4b(255,255,50,2);
-                            mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 11:
-                            glColor4b(50,175,175,2);
-                            mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 12:
-                            glColor4b(175,175,50,2);
-                            mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-
-                        case 13:
-                            glColor4b(175,50,175,2);
-                            mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 14:
-                            glColor4b(50,175,50,2);
-                            mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-                        case 15:
-                            glColor4b(50,50,175,2);
-                            mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                            break;
-                        default: //user defined room color
-                            if( ! mpMap->customEnvColors.contains(env) ) break;
-                            QColor &_c = mpMap->customEnvColors[env];
-                            glColor4b(_c.red(),_c.green(),_c.blue(),255);
-                            mc3[0]=_c.redF();
-                            mc3[1]=_c.greenF();
-                            mc3[2]=_c.blueF();
-                            mc3[3]=0.2;
-                        }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 36);
                         glDisable(GL_DEPTH_TEST);
@@ -1444,94 +1521,131 @@ void GLWidget::paintGL()
 
                 float mc3[] = { 0.2, 0.2, 0.6, 0.2 };
                 int env = pR->environment;
-                if( mpMap->envColors.contains(env) )
-                    env = mpMap->envColors[env];
-                else
-                {
-                    if( ! mpMap->customEnvColors.contains(env))
-                    {
-                        env = 1;
+                QColor c;
+                if( mpMap->mEnvColorNamesMap.contains(env) && mpMap->customEnvColors.contains(env) ) {
+                    // We have an imported 24-bit(?) color specification for this color
+                    // It will have been setup in the customEnvColors
+                    c = mpMap->customEnvColors.value(env);
+                }
+                else if( mpMap->mEnvColorIdMap.contains(env) ) {
+                    // We are falling back to the mapping (to 1-15) range that an XML file import used
+                    env = mpMap->mEnvColorIdMap.value(env);
+                }
+                else if( ! mpMap->customEnvColors.contains(env) ) {
+                    // Last resort - a total unknown value so set it up to use the red colour below
+                    env = 1;
+                }
+
+                if( ! c.isValid() ) {
+                    // Will be used if the FIRST branch in the previous if is NOT used.
+                    switch( env ) {
+                        case 1:
+                            c = mpHost->mRed_2;         // IRE Maps have been using #A00000 = QColor( 160, 0, 0 )
+                            // Was:
+                            // glColor4b(128,50,50,2);
+                            // mc3[0] = 128.0/255.0; mc3[1] =   0.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 2:
+                            c = mpHost->mGreen_2;       // IRE Maps have been using #00B300 = QColor( 0, 179, 0 )
+                            // Was:
+                            // glColor4b(128,128,50, 2);
+                            // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 3:
+                            c = mpHost->mYellow_2;      // IRE Maps have been using #A0A000 = QColor( 160, 160, 0 )
+                            // Was:
+                            // glColor4b(50,128,50,2);
+                            // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 4:
+                            c = mpHost->mBlue_2;        // IRE Maps have been using #0000A0 = QColor( 0, 0, 160 )
+                            // Was:
+                            // glColor4b(50,50,128,2);
+                            // mc3[0] =   0.0/255.0; mc3[1] =   0.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 5:
+                            c = mpHost->mMagenta_2;     // IRE Maps have been using #A000A0 = QColor( 160, 0, 160 )
+                            // Was:
+                            // glColor4b(128,50,128,2);
+                            // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 6:
+                            c = mpHost->mCyan_2;        // IRE Maps have been using #00A0A0 = QColor( 0, 160, 160 )
+                            // Was:
+                            // glColor4b(50,128,128,2);
+                            // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 7:
+                            c = mpHost->mWhite_2;       // IRE Maps have been using #C0C0C0 = QColor( 192, 192, 192 )
+                            // Was:
+                            // glColor4b(52,38,78,2);
+                            // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 8:
+                            c = mpHost->mBlack_2;       // IRE Maps have been using #808080 = QColor( 128, 128, 128 )
+                            // Was:
+                            // glColor4b(65,55,35,2);
+                            // mc3[0] =  55.0/255.0; mc3[1] =  55.0/255.0; mc3[2] =  55.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 9:
+                            c = mpHost->mLightRed_2;    // IRE Maps have been using #FF0000 = QColor( 255, 0, 0 )
+                            // Was:
+                            // glColor4b(175,50,50,2);
+                            // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 10:
+                            c = mpHost->mLightGreen_2;  // IRE Maps have been using #00FF00 = QColor( 0, 255, 0 )
+                            // Was:
+                            // glColor4b(255,255,50,2);
+                            // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 11:
+                            c = mpHost->mLightYellow_2; // IRE Maps have been using #FFFF00 = QColor( 255, 255, 0 )
+                            // Was:
+                            // glColor4b(50,175,175,2);
+                            // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 12:
+                            c = mpHost->mLightBlue_2;   // IRE Maps have been using #0000FF = QColor( 0, 0, 255 )
+                            // Was:
+                            // glColor4b(175,175,50,2);
+                            // mc3[0] =  50.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 13:
+                            c = mpHost->mLightMagenta_2;// IRE Maps have been using #FF00FF = QColor( 255, 0, 255 )
+                            // Was:
+                            // glColor4b(175,50,175,2);
+                            // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 14:
+                            c = mpHost->mLightCyan_2;   // IRE Maps have been using #00FFFF = QColor( 0, 255, 255 )
+                            // Was:
+                            // glColor4b(50,175,50,2);
+                            // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 15:
+                            c = mpHost->mLightWhite_2;  // IRE Maps have been using #FFFFFF = QColor( 255, 255, 255 )
+                            // Was:
+                            // glColor4b(50,50,175,2);
+                            // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                            break;
+                        case 16:
+                            c = mpHost->mLightBlack_2;  // Not spotted in the wild but logically needed, QColor( 0, 0, 0 )
+                            break;
+                        default: //user defined room color
+                            c = mpMap->customEnvColors.value(env);
+                            // The case where env is NOT in custom EnvColors has already been handled above...
                     }
                 }
+                // glColor4b( c.red(), c.green(), c.blue(), 25 );
+                // The final 255 seems odd - it doesn't match the 1-16 values in the original switch above
+                // which used 2 ...
+                glColor4b( c.red(), c.green(), c.blue(), 255 );
+                mc3[0]= c.redF();
+                mc3[1]= c.greenF();
+                mc3[2]= c.blueF();
+                mc3[3]= 0.2f;
 
-                switch( env )
-                {
-                case 1:
-                    glColor4b(128,50,50,2);
-                    mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 2:
-                    glColor4b(128,128,50, 2);
-                    mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                    break;
-                case 3:
-                    glColor4b(50,128,50,2);
-                    mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 4:
-                    glColor4b(50,50,128,2);
-                    mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 5:
-                    glColor4b(128,50,128,2);
-                    mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
-                    break;
-                case 6:
-                    glColor4b(50,128,128,2);
-                    mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                    break;
-                case 7:
-                    glColor4b(52,38,78,2);
-                    mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
-                    break;
-                case 8:
-                    glColor4b(65, 55, 35, 2);
-                    mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 9:
-                    glColor4b(175,50,50,2);
-                    mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 10:
-                    glColor4b(255,255,50,2);
-                    mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                    break;
-                case 11:
-                    glColor4b(50,175,175,2);
-                    mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 12:
-                    glColor4b(175,175,50,2);
-                    mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                    break;
-
-                case 13:
-                    glColor4b(175,50,175,2);
-                    mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                    break;
-                case 14:
-                    glColor4b(50,175,50,2);
-                    mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                    break;
-                case 15:
-                    glColor4b(50,50,175,2);
-                    mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
-                    break;
-                default: //user defined room color
-                    if( ! mpMap->customEnvColors.contains(env) ) break;
-                    QColor &_c = mpMap->customEnvColors[env];
-                    glColor4b(_c.red(),_c.green(),_c.blue(),255);
-                    mc3[0]=_c.redF();
-                    mc3[1]=_c.greenF();
-                    mc3[2]=_c.blueF();
-                    mc3[3]=0.2;
-                }
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 96);
                 glDisable(GL_DEPTH_TEST);
@@ -1689,94 +1803,129 @@ void GLWidget::paintGL()
 
             glEnd();
 
+            QColor c;
             int env = pR->environment;
-            if( mpMap->envColors.contains(env) )
-                env = mpMap->envColors[env];
-            else
-            {
-                if( ! mpMap->customEnvColors.contains(env))
-                {
-                    env = 1;
+            if( mpMap->mEnvColorNamesMap.contains(env) && mpMap->customEnvColors.contains(env) ) {
+                // We have an imported 24-bit(?) color specification for this color
+                // It will have been setup in the customEnvColors
+                c = mpMap->customEnvColors.value(env);
+            }
+            else if( mpMap->mEnvColorIdMap.contains(env) ) {
+                // We are falling back to the mapping (to 1-15) range that an XML file import used
+                env = mpMap->mEnvColorIdMap.value(env);
+            }
+            else if( ! mpMap->customEnvColors.contains(env) ) {
+                // Last resort - a total unknown value so set it up to use the red colour below
+                env = 1;
+            }
+
+            if( ! c.isValid() ) {
+                // Will be used if the FIRST branch in the previous if is NOT used.
+                switch( env ) {
+                    case 1:
+                        c = mpHost->mRed_2;         // IRE Maps have been using #A00000 = QColor( 160, 0, 0 )
+                        // Was:
+                        // glColor4b(128,50,50,255);
+                        // mc3[0] = 128.0/255.0; mc3[1] =   0.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 2:
+                        c = mpHost->mGreen_2;       // IRE Maps have been using #00B300 = QColor( 0, 179, 0 )
+                        // Was:
+                        // glColor4b(128,128,50, 255);
+                        // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 3:
+                        c = mpHost->mYellow_2;      // IRE Maps have been using #A0A000 = QColor( 160, 160, 0 )
+                        // Was:
+                        // glColor4b(50,128,50,255);
+                        // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 4:
+                        c = mpHost->mBlue_2;        // IRE Maps have been using #0000A0 = QColor( 0, 0, 160 )
+                        // Was:
+                        // glColor4b(50,50,128,255);
+                        // mc3[0] =   0.0/255.0; mc3[1] =   0.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 5:
+                        c = mpHost->mMagenta_2;     // IRE Maps have been using #A000A0 = QColor( 160, 0, 160 )
+                        // Was:
+                        // glColor4b(128,50,128,255);
+                        // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] =   0.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 6:
+                        c = mpHost->mCyan_2;        // IRE Maps have been using #00A0A0 = QColor( 0, 160, 160 )
+                        // Was:
+                        // glColor4b(50,128,128,255);
+                        // mc3[0] =   0.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 7:
+                        c = mpHost->mWhite_2;       // IRE Maps have been using #C0C0C0 = QColor( 192, 192, 192 )
+                        // Was:
+                        // glColor4b(52,38,78,255);
+                        // mc3[0] = 128.0/255.0; mc3[1] = 128.0/255.0; mc3[2] = 128.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 8:
+                        c = mpHost->mBlack_2;       // IRE Maps have been using #808080 = QColor( 128, 128, 128 )
+                        // Was:
+                        // glColor4b(65,55,35,255);
+                        // mc3[0] =  55.0/255.0; mc3[1] =  55.0/255.0; mc3[2] =  55.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 9:
+                        c = mpHost->mLightRed_2;    // IRE Maps have been using #FF0000 = QColor( 255, 0, 0 )
+                        // Was:
+                        // glColor4b(175,50,50,255);
+                        // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 10:
+                        c = mpHost->mLightGreen_2;  // IRE Maps have been using #00FF00 = QColor( 0, 255, 0 )
+                        // Was:
+                        // glColor4b(255,255,50,255);
+                        // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 11:
+                        c = mpHost->mLightYellow_2; // IRE Maps have been using #FFFF00 = QColor( 255, 255, 0 )
+                        // Was:
+                        // glColor4b(50,175,175,255);
+                        // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] =  50.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 12:
+                        c = mpHost->mLightBlue_2;   // IRE Maps have been using #0000FF = QColor( 0, 0, 255 )
+                        // Was:
+                        // glColor4b(175,175,50,255);
+                        // mc3[0] =  50.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 13:
+                        c = mpHost->mLightMagenta_2;// IRE Maps have been using #FF00FF = QColor( 255, 0, 255 )
+                        // Was:
+                        // glColor4b(175,50,175,255);
+                        // mc3[0] = 255.0/255.0; mc3[1] =  50.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 14:
+                        c = mpHost->mLightCyan_2;   // IRE Maps have been using #00FFFF = QColor( 0, 255, 255 )
+                        // Was:
+                        // glColor4b(50,175,50,255);
+                        // mc3[0] =  50.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 15:
+                        c = mpHost->mLightWhite_2;  // IRE Maps have been using #FFFFFF = QColor( 255, 255, 255 )
+                        // Was:
+                        // glColor4b(50,50,175,255);
+                        // mc3[0] = 255.0/255.0; mc3[1] = 255.0/255.0; mc3[2] = 255.0/255.0; mc3[3] =         0.2;
+                        break;
+                    case 16:
+                        c = mpHost->mLightBlack_2;  // Not spotted in the wild but logically needed, QColor( 0, 0, 0 )
+                        break;
+                    default: //user defined room color
+                        c = mpMap->customEnvColors.value(env);
+                        // The case where env is NOT in custom EnvColors has already been handled above...
                 }
             }
-            switch( env )
-            {
-            case 1:
-                glColor4b(128,50,50,255);
-                mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
-                break;
+            glColor4b( c.red(), c.green(), c.blue(), 255 );
+            mc3[0]= c.redF();
+            mc3[1]= c.greenF();
+            mc3[2]= c.blueF();
+            mc3[3]= 1.0f;
 
-            case 2:
-                glColor4b(128,128,50, 255);
-                mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 3:
-                glColor4b(50,128,50,255);
-                mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
-                break;
-
-            case 4:
-                glColor4b(50,50,128,255);
-                mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
-                break;
-
-            case 5:
-                glColor4b(128,50,128,255);
-                mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 6:
-                glColor4b(50,128,128,255);
-                mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 7:
-                glColor4b(52,38,78,255);
-                mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 8:
-                glColor4b(65, 55, 35, 255);
-                mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=255.0/255.0;
-                break;
-
-            case 9:
-                glColor4b(175,50,50,255);
-                mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
-                break;
-
-            case 10:
-                glColor4b(255,255,50,255);
-                mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 11:
-                glColor4b(50,175,175,255);
-                mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
-                break;
-
-            case 12:
-                glColor4b(175,175,50,255);
-                mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
-                break;
-
-            case 13:
-                glColor4b(175,50,175,255);
-                mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 14:
-                glColor4b(50,175,50,255);
-                mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            case 15:
-                glColor4b(50,50,175,255);
-                mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
-                break;
-            default: //user defined room color
-                if( ! mpMap->customEnvColors.contains(env) ) break;
-                QColor &_c = mpMap->customEnvColors[env];
-                glColor4b(_c.red(),_c.green(),_c.blue(),255);
-                mc3[0]=_c.redF();
-                mc3[1]=_c.greenF();
-                mc3[2]=_c.blueF();
-                mc3[3]=1.0;
-            }
             glDisable(GL_DEPTH_TEST);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
             glMateriali(GL_FRONT, GL_SHININESS, 6);

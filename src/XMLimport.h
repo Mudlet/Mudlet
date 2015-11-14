@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,7 +24,10 @@
 
 
 #include "pre_guard.h"
+#include <QCoreApplication>
 #include <QMap>
+#include <QString>
+#include <QXmlStreamAttribute>
 #include <QXmlStreamReader>
 #include "post_guard.h"
 
@@ -39,6 +43,7 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
+    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
 
 public:
               XMLimport( Host * );
@@ -64,18 +69,11 @@ private:
     void      readRoom();
     void      readEnvColor();
     void      readEnvColors();
-    void      readAreaNames();
     void      readAreas();
+    void      readArea();
     void      readHelpPackage();
 
-    void      readUnknownHostElement();
-    void      readUnknownRoomElement();
-    void      readUnknownTriggerElement();
-    void      readUnknownTimerElement();
-    void      readUnknownAliasElement();
-    void      readUnknownActionElement();
-    void      readUnknownScriptElement();
-    void      readUnknownKeyElement();
+    void      readUnknownElement();
 
     void      readHostPackage( Host * );
     void      readTriggerGroup( TTrigger * pParent );
@@ -111,6 +109,12 @@ private:
     bool gotAction;
     bool gotScript;
     int  module;
+
+
+private:
+    void    dumpElementAttributes( QString &, QMap<QString, QString> &, const QString & );
+
+
 };
 
 #endif // MUDLET_XMLEXPORT_H

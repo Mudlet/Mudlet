@@ -18,7 +18,9 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
+lessThan(QT_MAJOR_VERSION, 5) {
+  error("requires Qt 5.0 or later")
+}
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
@@ -28,8 +30,16 @@ VERSION = 3.0.0
 !msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
 !msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+# Before we impose OUR idea about the optimisation levels to use, remove any
+# that Qt tries to put in automatically for us for release builds, only the
+# last, ours, is supposed to apply but it can be confusing to see multiple
+# alternatives during compilations.
+!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+# NOW we can put ours in:
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
+# There is NO need to put in the -g option as it is done already for debug bugs
+# For gdb type debugging it helps if there is NO optimisations so use -O0.
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -102,7 +112,6 @@ unix:!macx {
         -lhunspell \
         -llibzip \
         -lzlib \
-        -llibzip \
         -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
         -lyajl
     INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
@@ -433,7 +442,10 @@ OTHER_FILES += \
     ../Doxyfile \
     ../INSTALL \
     mudlet_documentation.txt \
-    mac-deploy.sh
+    mac-deploy.sh \
+# This is #if defined(Q_OS_MAC) into TLuaInterpreter.cpp but should not be in SOURCES
+# variable directly, listing it here so it shows up in the project:
+    luazip.h
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
@@ -446,3 +458,15 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
+
+DISTFILES += \
+    CMakeLists.txt \
+    irc/CMakeLists.txt \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../CMakeLists.txt \
+    ../.travis.yml

@@ -60,7 +60,7 @@
 #include <string>
 
 #ifdef Q_OS_MAC
-#include "luazip.c"
+#include "luazip.h"
 #endif
 
 
@@ -1702,29 +1702,44 @@ int TLuaInterpreter::deleteLine( lua_State * L )
     return 0;
 }
 
+// Although the corresponding loadMap can also process an XML map file there is
+// no current provision to export such a thing - but it may happen...!
 int TLuaInterpreter::saveMap( lua_State * L )
 {
-    string location="";
-    if( lua_gettop( L ) == 1 )
-    {
-        if( ! lua_isstring( L, 1 ) )
-        {
-            lua_pushstring( L, "saveMap: where do you want to save to?" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "saveMap: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString location;
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "saveMap: bad argument #1 type (file name as string is optional, but got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
             lua_error( L );
             return 1;
         }
-        else
-        {
-            location = lua_tostring( L, 1 );
+        else {
+            location = QString::fromUtf8( lua_tostring( L, 1 ) );
+            // An empty string is treated the same as no string, meaning save
+            // the map to a datetime named file in the profile's map subdirectory
         }
     }
 
-    QString _location( location.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-
-    bool error = pHost->mpConsole->saveMap(_location);
-    lua_pushboolean( L, error );
-    return 1;
+    if( ! location.isEmpty() && location.toLower().endsWith( QStringLiteral( ".xml" ) ) ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "saveMap: bad argument #1 value (no provision YET, to save a file in XML format...)" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        lua_pushboolean( L, pHost->mpConsole->saveMap( location ) );
+        return 1;
+    }
 }
 
 int TLuaInterpreter::setExitStub( lua_State * L  ){
@@ -2016,30 +2031,43 @@ int TLuaInterpreter::setModulePriority( lua_State * L  ){
     return 0;
 }
 
+// Now supports loading .xml files - that could have been downloaded manually...!
 int TLuaInterpreter::loadMap( lua_State * L )
 {
-    string location="";
-    if( lua_gettop( L ) == 1 )
-    {
-        if( ! lua_isstring( L, 1 ) )
-        {
-            lua_pushstring( L, "loadMap: where do you want to load from?" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "loadMap: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString location;
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "loadMap: bad argument #1 type (file name as string is optional, but got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
             lua_error( L );
             return 1;
         }
-        else
-        {
-            location = lua_tostring( L, 1 );
+        else {
+            location = QString::fromUtf8( lua_tostring( L, 1 ) );
+            // An empty string is treated the same as no string, meaning load
+            // the most recent map file from the profile's map subdirectory
         }
     }
-    QString _location( location.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool error = pHost->mpConsole->loadMap(_location);
+
+    bool error = false;
+    if( ! location.isEmpty() && location.toLower().endsWith( QStringLiteral( ".xml" ) ) ) {
+        error = pHost->mpConsole->importMap( location );
+    }
+    else {
+        error = pHost->mpConsole->loadMap( location );
+    }
     lua_pushboolean( L, error );
     return 1;
 }
-
-
 
 // enableTimer( sess, timer_name )
 int TLuaInterpreter::enableTimer( lua_State *L )
@@ -3316,9 +3344,9 @@ int TLuaInterpreter::setTextFormat( lua_State *L )
         pC->mFormatCurrent.fgG = colorComponents.at(4);
         pC->mFormatCurrent.fgB = colorComponents.at(5);
         int flags = (bold ? TCHAR_BOLD : 0)
-                + (underline ? TCHAR_UNDERLINE : 0)
-                + (italics ? TCHAR_ITALICS : 0)
-                + (strikeout ? TCHAR_STRIKEOUT : 0);
+                  + (underline ? TCHAR_UNDERLINE : 0)
+                  + (italics ? TCHAR_ITALICS : 0)
+                  + (strikeout ? TCHAR_STRIKEOUT : 0);
         pC->mFormatCurrent.flags &= ~(TCHAR_BOLD|TCHAR_UNDERLINE|TCHAR_ITALICS|TCHAR_STRIKEOUT) ;
         pC->mFormatCurrent.flags |= flags;
         lua_pushboolean( L, true );
@@ -4236,6 +4264,93 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
         for( int i=0; i<roomIdsFound.size(); i++ ) {
             lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
             lua_pushnumber( L, roomIdsFound.at(i) );
+            lua_settable(L, -3);
+        }
+    }
+    return 1;
+}
+
+// Derived from searchRoomUserData(...)
+int TLuaInterpreter::searchAreaUserData( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "searchAreaUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "searchAreaUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+
+    QString key;
+    if( lua_isstring( L, 1 ) ) {
+        key = QString::fromUtf8( lua_tostring( L, 1 ) );
+    }
+    else {
+        lua_pushstring( L, tr( "searchAreaUserData: bad argument #1 type (\"key\" as string expected, got %1!)." )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+
+    QString value = QString(); //assigns null value which is detectable different from the empty value
+    if( lua_gettop( L ) > 1 ) {
+        if( lua_isstring( L, 2 ) ) {
+            value = QString::fromUtf8( lua_tostring( L, 2 ) );
+        }
+        else {
+            lua_pushstring( L, tr( "searchAreaUserData: bad argument #2  type (\"value\" as optional string value, got %1!)." )
+                            .arg( luaL_typename(L, 2) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    lua_newtable(L);
+    QList<TArea *> areaList = pHost->mpMap->mpRoomDB->getAreaPtrList();
+    QSet<QString> valuesFound; // Use a set as it automatically eliminates duplicates
+    QList<int> areaIdsFound;
+
+    for( int i=0; i<areaList.size(); i++ ) {
+        TArea * pA = areaList.at(i);
+        if(pA->mUserData.contains( key )) {
+            QString keyValue = pA->mUserData.value(key, QString() );
+            // If the key is NOT present, will return second argument which is a
+            // null QString which is NOT the same as an empty QString.
+            if( value.isNull() ) {
+                if( ! keyValue.isNull() ) {
+                    valuesFound.insert(keyValue);
+                }
+            }
+            else {
+                if( (! keyValue.isNull() ) && (keyValue.compare(value) == 0) ) {
+                    areaIdsFound.append( pA->getAreaID() );
+                }
+            }
+        }
+    }
+    if( value.isNull() ) {
+        QList<QString> valuesList = valuesFound.toList();
+        std::sort(valuesList.begin(), valuesList.end());
+        for( int i=0; i<valuesList.size(); i++ ) {
+            lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
+            lua_pushstring( L, valuesList.at(i).toUtf8().constData() );
+            lua_settable(L, -3);
+        }
+    }
+    else{
+        std::sort(areaIdsFound.begin(), areaIdsFound.end());
+        for( int i=0; i<areaIdsFound.size(); i++ ) {
+            lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
+            lua_pushnumber( L, areaIdsFound.at(i) );
             lua_settable(L, -3);
         }
     }
@@ -8453,18 +8568,22 @@ int TLuaInterpreter::clearRoomUserData( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "clearRoomUserData: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
         return 2;
     }
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "clearRoomUserData: no map present or loaded!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
         return 2;
     }
 
     int roomId;
     if(! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "clearRoomUserData: bad argument #1 type (room Id as number expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserData: bad argument #1 type (room Id as number expected, got %1!)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8475,7 +8594,9 @@ int TLuaInterpreter::clearRoomUserData( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "clearRoomUserData: bad argument #1 value (room Id %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserData: bad argument #1 value (room Id %1 is not a valid room Id)." )
+                        .arg( roomId )
+                        .toUtf8().constData() );
         return 2;
     }
     else {
@@ -8499,18 +8620,22 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "clearRoomUserDataItem: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserDataItem: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
         return 2;
     }
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "clearRoomUserDataItem: no map present or loaded!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserDataItem: no map present or loaded!" )
+                        .toUtf8().constData() );
         return 2;
     }
 
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "clearRoomUserDataItem: bad argument #1 type (room Id as number expected, got %1!)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserDataItem: bad argument #1 type (room Id as number expected, got %1!)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8520,7 +8645,9 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
 
     QString key = QString(); // This assigns the null value which is different from an empty one
     if ( ! lua_isstring( L, 2 ) ) {
-        lua_pushstring( L, tr( "clearRoomUserDataItem: bad argument #2 type (\"key\" as string expected, got %1!)" ).arg( luaL_typename(L, 2) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserDataItem: bad argument #2 type (\"key\" as string expected, got %1!)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8531,7 +8658,9 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "clearRoomUserDataItem: bad argument #1 value (room Id %1 is not a valid room)." ).arg(roomId).toUtf8().constData() );
+        lua_pushstring( L, tr( "clearRoomUserDataItem: bad argument #1 value (room Id %1 is not a valid room)." )
+                        .arg(roomId)
+                        .toUtf8().constData() );
         return 2;
     }
     else {
@@ -8551,6 +8680,188 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
         return 1;
     }
 }
+
+// Derived from clearRoomUserData
+int TLuaInterpreter::clearAreaUserData( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearAreaUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearAreaUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    int areaId;
+    if(! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "clearAreaUserData: bad argument #1 type (area Id as number expected, got %1!)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        areaId = lua_tointeger( L, 1 );
+    }
+
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    if( ! pA ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearAreaUserData: bad argument #1 value (area Id %1 is not a valid area Id)." )
+                        .arg(areaId)
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        if( ! pA->mUserData.isEmpty() ) {
+            pA->mUserData.clear();
+            lua_pushboolean( L , true );
+        }
+        else {
+            lua_pushboolean( L, false );
+        }
+        return 1;
+    }
+}
+
+// Derived from clearRoomUserDataItem
+int TLuaInterpreter::clearAreaUserDataItem( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearAreaUserDataItem: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearAreaUserDataItem: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    int areaId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "clearAreaUserDataItem: bad argument #1 type (area Id as number expected, got %1!)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        areaId = lua_tointeger( L, 1 );
+    }
+
+    QString key = QString(); // This assigns the null value which is different from an empty one
+    if ( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "clearAreaUserDataItem: bad argument #2 type (\"key\" as string expected, got %1!)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        key = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    if( ! pA ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearAreaUserDataItem: bad argument #1 value (area Id %1 is not a valid room)." )
+                        .arg( areaId )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        if( key.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "clearAreaUserDataItem: bad argument #2 value (\"key\" can not be an empty string)." )
+                            .toUtf8().constData() );
+            return 2;
+        }
+        else {
+            lua_pushboolean( L, (pA->mUserData.remove(key) > 0) );
+        }
+        return 1;
+    }
+}
+
+// Derived from clearRoomUserData
+// But as there is only one instance it takes no arguments
+int TLuaInterpreter::clearMapUserData( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearMapUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearMapUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    if( ! pHost->mpMap->mUserData.isEmpty() ) {
+        pHost->mpMap->mUserData.clear();
+        lua_pushboolean( L , true );
+    }
+    else {
+        lua_pushboolean( L, false );
+    }
+    return 1;
+}
+
+// Derived from clearRoomUserDataItem
+// But as there is only one instance it only takes one argument
+int TLuaInterpreter::clearMapUserDataItem( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearMapUserDataItem: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "clearMapUserDataItem: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString key = QString(); // This assigns the null value which is different from an empty one
+    if ( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "clearMapUserDataItem: bad argument #1 type (\"key\" as string expected, got %1!)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        key = QString::fromUtf8( lua_tostring( L, 1 ) );
+        if( key.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "clearMapUserDataItem: bad argument #1 value (\"key\" can not be an empty string)." )
+                            .toUtf8().constData() );
+            return 2;
+        }
+        else {
+            lua_pushboolean( L, (pHost->mpMap->mUserData.remove(key) > 0) );
+            return 1;
+        }
+    }
+}
+
 
 int TLuaInterpreter::clearSpecialExits( lua_State * L )
 {
@@ -8668,33 +8979,62 @@ int TLuaInterpreter::getSpecialExitsSwap( lua_State * L )
 
 int TLuaInterpreter::getRoomEnv( lua_State * L )
 {
-    int roomID;
-    if( ! lua_isnumber( L, 1 ) )
-    {
-        lua_pushstring( L, "getRoomEnv: wrong argument type" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomEnv: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomEnv: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    int roomId;
+    TRoom * pR;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getRoomEnv: bad argument #1 type (room Id, as number expected, got %1)." )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        roomID = lua_tointeger( L, 1 );
+    else {
+        roomId = lua_tointeger( L, 1 );
+        pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+        if( ! pR ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getRoomEnv: bad argument #1 value (room Id=%1 must exist.)" )
+                            .arg( roomId ).toUtf8().constData() );
+            return 2;
+        }
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
-    if( pR )
-    {
-        lua_pushnumber( L, pR->environment );
-        return 1;
-    }
-    return 0;
+    lua_pushnumber( L, pR->environment );
+    return 1;
 }
 
 int TLuaInterpreter::getRoomUserData( lua_State * L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "getRoomUserData: bad argument #1 (number expected, got %1)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "getRoomUserData: bad argument #1 (room Id as number expected, got %1)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8704,29 +9044,21 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
 
     QString key;
     if( ! lua_isstring( L, 2 ) ) {
-        lua_pushstring( L, tr( "getRoomUserData: bad argument #2 (string expected, got %1)" ).arg( luaL_typename(L, 2) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "getRoomUserData: bad argument #2 (key as string expected, got %1)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else {
         key = QString::fromUtf8( lua_tostring( L, 2 ) );
     }
-
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: no map present or loaded!" ).toUtf8().constData() );
-        return 2;
-    }
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+        lua_pushstring( L, tr( "getRoomUserData: bad argument #1 value (number %1 is not a valid room Id)." )
+                        .arg(roomId)
+                        .toUtf8().constData() );
         return 2;
     }
     else {
@@ -8736,17 +9068,150 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
         }
         else {
             lua_pushnil( L );
-            lua_pushstring( L, tr( "getRoomUserData: bad argument #2 value (no user data with Key:\"%1\" in room with Id:%2 )." ).arg( key ).arg(roomId).toUtf8().constData() );
+            lua_pushstring( L, tr( "getRoomUserData: bad argument #2 value (no user data with Key:\"%1\" in room with Id:%2 )." )
+                            .arg( key )
+                            .arg(roomId)
+                            .toUtf8().constData() );
             return 2;
         }
     }
 }
 
+// Derived from getRoomUserData(...)
+int TLuaInterpreter::getAreaUserData( lua_State * L )
+{
+    int areaId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getAreaUserData: bad argument #1 (area Id as number expected, got %1)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        areaId = lua_tointeger( L, 1 );
+    }
+
+    QString key;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "getAreaUserData: bad argument #2 (key as string expected, got %1)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        key = QString::fromUtf8( lua_tostring( L, 2 ) );
+        if( key.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getAreaUserData: bad argument #2 value (key is not allowed to be an empty string)." )
+                            .arg(areaId)
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAreaUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAreaUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    if( ! pA ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAreaUserData: bad argument #1 value (number %1 is not a valid area Id)." )
+                        .arg( areaId )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        if( pA->mUserData.contains( key ) ) {
+            lua_pushstring( L, pA->mUserData.value( key ).toUtf8().constData() );
+            return 1;
+        }
+        else {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getAreaUserData: bad argument #2 value (no user data with Key:\"%1\" in area with Id:%2 )." )
+                            .arg( key )
+                            .arg( areaId )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+}
+
+// Derived from getRoomUserData(...) but as there is only one instance only one
+// argument is needed
+int TLuaInterpreter::getMapUserData( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getMapUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getMapUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString key;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "getMapUserData: bad argument #1 (key as string expected, got %1)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        key = QString::fromUtf8( lua_tostring( L, 1 ) );
+    }
+
+    if( pHost->mpMap->mUserData.contains( key ) ) {
+        lua_pushstring( L, pHost->mpMap->mUserData.value( key ).toUtf8().constData() );
+        return 1;
+    }
+    else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getMapUserData: bad argument #1 value (no user data with Key:\"%1\" in map)." )
+                        .arg( key )
+                        .toUtf8().constData() );
+        return 2;
+    }
+}
+
 int TLuaInterpreter::setRoomUserData( lua_State * L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setRoomUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setRoomUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "setRoomUserData: bad argument #1 type (number expected, got %1)" ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomUserData: bad argument #1 type (room Id as number expected, got %1)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8756,17 +9221,82 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
 
     QString key;
     if( ! lua_isstring( L, 2 ) ) {
-        lua_pushstring( L, tr( "setRoomUserData: bad argument #2 type (string expected, got %1)" ).arg( luaL_typename(L, 2) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomUserData: bad argument #2 type (\"key\" as string expected, got %1)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else {
+        // Ideally should reject empty keys but this could break existing scripts so we can't
         key = QString::fromUtf8( lua_tostring( L, 2 ) );
     }
 
     QString value;
     if( ! lua_isstring( L, 3 ) ) {
-        lua_pushstring( L, tr( "setRoomUserData: bad argument #3 type (string expected, got %1)" ).arg( luaL_typename(L, 3) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setRoomUserData: bad argument #3 type (\"value\" as string expected, got %1)" )
+                        .arg( luaL_typename(L, 3) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        value = QString::fromUtf8( lua_tostring( L, 3 ) );
+    }
+
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    if( ! pR ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setRoomUserData: bad argument #1 value (number %1 is not a valid room Id)." )
+                        .arg(roomId)
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        pR->userData[key] = value;
+        lua_pushboolean( L, true );
+        return 1;
+    }
+}
+
+// Derived from setRoomUserData(...)
+int TLuaInterpreter::setAreaUserData( lua_State * L )
+{
+    int areaId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setAreaUserData: bad argument #1 type (area Id as number expected, got %1!)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        areaId = lua_tointeger( L, 1 );
+    }
+
+    QString key;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setAreaUserData: bad argument #2 type (\"key\" as string expected, got %1!)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        key = QString::fromUtf8( lua_tostring( L, 2 ) );
+        if( key.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setAreaUserData: bad argument #2 value (\"key\" is not allowed to be an empty string)." )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    QString value;
+    if( ! lua_isstring( L, 3 ) ) {
+        lua_pushstring( L, tr( "setAreaUserData: bad argument #3 type (\"value\" as string expected, got %1!)" )
+                        .arg( luaL_typename(L, 3) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8777,25 +9307,117 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setAreaUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8()
+                        .constData() );
         return 2;
     }
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: no map present or loaded!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "setAreaUserData: no map present or loaded!" )
+                        .toUtf8()
+                        .constData() );
         return 2;
     }
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    if( ! pR ) {
+
+    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
+    {
+        static bool isWarningIssued = false;
+        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+            QString warnMsg = tr( "[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!" );
+            QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+                                              "and although that has been coded it is NOT enabled so this feature's effects\n"
+                                              "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
+                                              "To avoid filling the screen up with repeated messages, this is your only warning about\n"
+                                              "this command...!" );
+            pHost->postMessage( warnMsg );
+            pHost->postMessage( infoMsg );
+            isWarningIssued = true;
+        }
+    }
+
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    if( ! pA ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+        lua_pushstring( L, tr( "setAreaUserData: bad argument #1 value (number %1 is not a valid area Id)." )
+                        .arg( areaId )
+                        .toUtf8().constData() );
         return 2;
     }
     else {
-        pR->userData[key] = value;
+        pA->mUserData[key] = value;
         lua_pushboolean( L, true );
         return 1;
     }
+}
+
+// Derived from setRoomUserData(...)
+// But as there is only one instance there is only two arguements, key and value
+int TLuaInterpreter::setMapUserData( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setMapUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setMapUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString key;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "setMapUserData: bad argument #1 type (\"key\" as string expected, got %1)" )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        key = QString::fromUtf8( lua_tostring( L, 1 ) );
+        if( key.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setMapUserData: bad argument #1 value (\"key\" is not allowed to be an empty string)." )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    QString value;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setMapUserData: bad argument #2 type (\"value\" as string expected, got %1)" )
+                        .arg( luaL_typename(L, 2) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        value = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
+    {
+        static bool isWarningIssued = false;
+        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+            QString warnMsg = tr( "[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!" );
+            QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+                                              "and although that has been coded it is NOT enabled so this feature's effects\n"
+                                              "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
+                                              "To avoid filling the screen up with repeated messages, this is your only warning about\n"
+                                              "this command...!" );
+            pHost->postMessage( warnMsg );
+            pHost->postMessage( infoMsg );
+            isWarningIssued = true;
+        }
+    }
+
+    pHost->mpMap->mUserData[key] = value;
+    lua_pushboolean( L, true );
+    return 1;
 }
 
 // getRoomUserDataKeys( roomID )
@@ -8803,11 +9425,28 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
 // an empty table if no user data or nil if the room does not exist for the
 // given roomID. This will be useful if the user is not the creator of the data
 // and does not know what has been stored in the user data area!
+// In hindsight - is a little pointless when we can use getAllRoomUserData() directly
 int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomUserDataKeys: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getRoomUserDataKeys: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "getRoomUserDataKeys: bad argument #1 (number expected, got %1)." ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "getRoomUserDataKeys: bad argument #1 (room Id as number expected, got %1)." )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8816,21 +9455,12 @@ int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
     }
 
     QStringList keys;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserDataKeys: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserDataKeys: no map present or loaded!" ).toUtf8().constData() );
-        return 2;
-    }
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserDataKeys: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+        lua_pushstring( L, tr( "getRoomUserDataKeys: bad argument #1 value (number %1 is not a valid room Id)." )
+                        .arg( roomId )
+                        .toUtf8().constData() );
         return 2;
     }
     else {
@@ -8851,9 +9481,25 @@ int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
 // roomID.
 int TLuaInterpreter::getAllRoomUserData( lua_State * L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "getAllRoomUserData: bad argument #1 (number expected, got %1)." ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushstring( L, tr( "getAllRoomUserData: bad argument #1 (number expected, got %1)." )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -8863,21 +9509,12 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
 
     QStringList keys;
     QStringList values;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getAllRoomUserData: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getAllRoomUserData: no map present or loaded!" ).toUtf8().constData() );
-        return 2;
-    }
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "getAllRoomUserData: bad argument #1 value (number %1 is not a valid room Id)." ).arg(roomId).toUtf8().constData() );
+        lua_pushstring( L, tr( "getAllRoomUserData: bad argument #1 value (number %1 is not a valid room Id)." )
+                        .arg( roomId )
+                        .toUtf8().constData() );
         return 2;
     }
     else {
@@ -8891,6 +9528,89 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
         }
         return 1;
     }
+}
+
+// Derived from getAllRoomUserData(...)
+int TLuaInterpreter::getAllAreaUserData( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllAreaUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllAreaUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    int areaId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getAllAreaUserData: bad argument #1 (area Id as number expected, got %1)." )
+                        .arg( luaL_typename(L, 1) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        areaId = lua_tointeger( L, 1 );
+    }
+
+    QStringList keys;
+    QStringList values;
+    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    if( ! pA ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllAreaUserData: bad argument #1 value (number %1 is not a valid area Id)." )
+                        .arg( areaId )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else {
+        keys = pA->mUserData.keys();
+        values = pA->mUserData.values();
+        lua_newtable( L );
+        for( int i=0; i<keys.size(); i++ ) {
+            lua_pushstring( L, keys.at(i).toUtf8().constData() );
+            lua_pushstring( L, values.at(i).toUtf8().constData() );
+            lua_settable(L, -3);
+        }
+        return 1;
+    }
+}
+
+// Derived from getAllRoomUserData(...)
+// But as there is only one instance there are no arguments
+int TLuaInterpreter::getAllMapUserData( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllMapUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllMapUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QStringList keys;
+    QStringList values;
+    keys = pHost->mpMap->mUserData.keys();
+    values = pHost->mpMap->mUserData.values();
+    lua_newtable( L );
+    for( int i=0; i<keys.size(); i++ ) {
+        lua_pushstring( L, keys.at(i).toUtf8().constData() );
+        lua_pushstring( L, values.at(i).toUtf8().constData() );
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 int TLuaInterpreter::downloadFile( lua_State * L )
@@ -10561,6 +11281,300 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::getEnvironmentTable( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironmentTable: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironmentTable: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    lua_newtable( L ); // Start outer table
+    QMapIterator<int, int> itEnvColor( pHost->mpMap->mEnvColorIdMap );
+    while( itEnvColor.hasNext() ) {
+        itEnvColor.next();
+        lua_pushnumber( L, itEnvColor.key() ); // Outer table key
+        lua_newtable( L ); // Open mid table (for data for one item in outer table)
+
+        lua_pushstring( L, QStringLiteral("name").toUtf8().constData() ); // Mid table item key
+        QString envName = pHost->mpMap->mEnvNamesMap.value( itEnvColor.key() );
+        if( ! envName.isEmpty() ) {
+            lua_pushstring( L, envName.toUtf8().constData() ); // Mid table item value
+        }
+        else {
+            lua_pushstring( L, QString().toLatin1().constData() );  // Mid table item value
+        }
+        lua_settable( L, -3 ); // End of MID table entry
+
+        lua_pushstring( L, QStringLiteral("colorId").toUtf8().constData() ); // Mid table item key
+        lua_pushnumber( L, itEnvColor.value() ); // Mid table item value
+        lua_settable( L, -3 ); // End of MID table entry
+
+        QString colorName = pHost->mpMap->mEnvColorNamesMap.value( itEnvColor.key() );
+        QColor color;
+        color.setNamedColor( colorName );
+        if( color.isValid() ) {
+            lua_pushstring( L, QStringLiteral("defaultColor").toUtf8().constData() ); // Mid table item key
+            // Present the color as a sequence of four numbers (rgba)
+            // This avoids the hassle of putting in language specific identifiers...!
+            lua_newtable( L ); // Start inner table - for four color components - as an item in MID table
+            lua_pushnumber( L, 1 );  // Inner table item key
+            lua_pushnumber( L, color.red() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry
+            lua_pushnumber( L, 2 );  // Inner table item key
+            lua_pushnumber( L, color.green() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry
+            lua_pushnumber( L, 3 );  // Inner table item key
+            lua_pushnumber( L, color.blue() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry
+            lua_pushnumber( L, 4 );  // Inner table item key
+            lua_pushnumber( L, color.alpha() ); // Inner table item value
+            lua_settable( L, -3 ); // End of INNER table entry - and table
+            lua_settable( L, -3 ); // End of MID table entry - and table
+        }
+
+        lua_settable( L, -3 ); // End of OUTER table entry - and table
+    }
+    return 1;
+}
+
+// getEnvironment((number)EnvId)
+// Returns name data for the given EnvId - avoids having to get the complete
+// table returned by getEnvironmentTable().
+int TLuaInterpreter::getEnvironment( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironment: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironment: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "getEnvironment: bad argument #1 type (environment id as number, expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    if( pHost->mpMap->mEnvNamesMap.contains( id ) ) {
+        lua_pushstring( L, pHost->mpMap->mEnvNamesMap.value( id ).toUtf8().constData() );
+        return 1;
+    }
+    else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getEnvironment: bad argument #1 value (environment id: %1 not found.)" )
+                        .arg( id ).toUtf8().constData() );
+        return 2;
+    }
+}
+
+// setEnvironment((number)id, (string)name[, (number) redComponent, (number) greenComponent, (number) blueComponent[, (number) alphaComponent]])
+int TLuaInterpreter::setEnvironment( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setEnvironment: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setEnvironment: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
+    {
+        static bool isWarningIssued = false;
+        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+            QString warnMsg = tr( "[ WARN ]  - Lua command setEnvironment() used - it is currently flagged as experimental!" );
+            QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+                                              "and although that has been coded it is NOT enabled so this feature's effects\n"
+                                              "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
+                                              "To avoid filling the screen up with repeated messages, this is your only warning about\n"
+                                              "this command...!" );
+            pHost->postMessage( warnMsg );
+            pHost->postMessage( infoMsg );
+            isWarningIssued = true;
+        }
+    }
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "setEnvironment: bad argument #1 type (environment id as number, expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    QString environmentName;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setEnvironment: bad argument #2 type (environment name as string, expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        environmentName = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    QColor color;
+    QString colorText;
+    if( lua_gettop( L ) > 2 ) {
+        int r;
+        if( ! lua_isnumber( L, 3 ) ) {
+            lua_pushstring( L, tr( "setEnvironment: bad argument #3 type (red component as number, is optional but got %1!)" )
+                            .arg( luaL_typename( L, 3 ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            r = lua_tonumber( L, 3 );
+            if( r < 0 or r > 255 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setEnvironment: bad argument #3 value (optional red component %1 not valid, if given must be a number between 0-255.)" )
+                                .arg( r ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        int g;
+        if( ! lua_isnumber( L, 4 ) ) {
+            lua_pushstring( L, tr( "setEnvironment: bad argument #4 type (green component as number, is optional but got %1!)" )
+                            .arg( luaL_typename( L, 4 ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            g = lua_tonumber( L, 4 );
+            if( g < 0 or g > 255 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setEnvironment: bad argument #4 value (optional red component %1 not valid, if given must be a number between 0-255.)" )
+                                .arg( g ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        int b;
+        if( ! lua_isnumber( L, 5 ) ) {
+            lua_pushstring( L, tr( "setEnvironment: bad argument #5 type (red component as number, is optional but got %1!)" )
+                            .arg( luaL_typename( L, 5 ) ).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            b = lua_tonumber( L, 5 );
+            if( b < 0 or b > 255 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setEnvironment: bad argument #5 value (optional red component %1 not valid, if given must be a number between 0-255.)" )
+                                .arg( b ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        int a;
+        if( lua_gettop( L ) > 5 ) {
+            if( ! lua_isnumber( L, 6 ) ) {
+                lua_pushstring( L, tr( "setEnvironment: bad argument #6 type (alpha component as number, is optional but got %1!)" )
+                                .arg( luaL_typename( L, 6 ) ).toUtf8().constData() );
+                lua_error( L );
+                return 1;
+            }
+            else {
+                a = lua_tonumber( L, 6 );
+                if( a < 0 or a > 255 ) {
+                    lua_pushnil( L );
+                    lua_pushstring( L, tr( "setEnvironment: bad argument #6 value (optional alpha component %1 not valid, if given must be a number between 0-255.)" )
+                                    .arg( a ).toUtf8().constData() );
+                    return 2;
+                }
+            }
+        }
+        else {
+            a = 255;
+        }
+        color = QColor( r, g, b, a);
+    }
+    pHost->mpMap->mEnvNamesMap.insert( id, environmentName );
+    if( color.isValid() ) {
+        colorText = color.name();
+        pHost->mpMap->mEnvColorNamesMap.insert( id, colorText );
+        pHost->mpMap->mEnvColorIdMap.insert( id, id );
+        pHost->mpMap->customEnvColors.insert( id, color );
+    }
+    lua_pushboolean( L, true );
+    return 1;
+}
+
+// resetEnvironment((number)id)
+// Removes the name and the text form of the colour name, but NOT the customEnv
+// color that supports it in case it is used (or is one of the reserved first 16
+// colors)...
+int TLuaInterpreter::resetEnvironment( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "resetEnvironment: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "resetEnvironment: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
+    {
+        static bool isWarningIssued = false;
+        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+            QString warnMsg = tr( "[ WARN ]  - Lua command resetEnvironment() used - it is currently flagged as experimental!" );
+            QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+                                              "and although that has been coded it is NOT enabled so this feature's effects\n"
+                                              "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
+                                              "To avoid filling the screen up with repeated messages, this is your only warning about\n"
+                                              "this command...!" );
+            pHost->postMessage( warnMsg );
+            pHost->postMessage( infoMsg );
+            isWarningIssued = true;
+        }
+    }
+
+    int id;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "resetEnvironment: bad argument #1 type (environment id as number, expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        id = lua_tonumber( L, 1 );
+    }
+
+    pHost->mpMap->mEnvNamesMap.remove( id );
+    pHost->mpMap->mEnvColorNamesMap.remove( id );
+    if( id > 16 ) {
+        pHost->mpMap->mEnvColorIdMap.remove( id );
+    }
+    lua_pushboolean( L, true );
+    return 1;
+}
 
 bool TLuaInterpreter::compileAndExecuteScript( QString & code )
 {
@@ -11794,6 +12808,22 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances );
     lua_register( pGlobalLua, "getRoomUserDataKeys", TLuaInterpreter::getRoomUserDataKeys );
     lua_register( pGlobalLua, "getAllRoomUserData", TLuaInterpreter::getAllRoomUserData );
+    lua_register( pGlobalLua, "searchAreaUserData", TLuaInterpreter::searchAreaUserData );
+    lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
+    lua_register( pGlobalLua, "getMapUserData", TLuaInterpreter::getMapUserData );
+    lua_register( pGlobalLua, "getAreaUserData", TLuaInterpreter::getAreaUserData );
+    lua_register( pGlobalLua, "setMapUserData", TLuaInterpreter::setMapUserData );
+    lua_register( pGlobalLua, "setAreaUserData", TLuaInterpreter::setAreaUserData );
+    lua_register( pGlobalLua, "getAllAreaUserData", TLuaInterpreter::getAllAreaUserData );
+    lua_register( pGlobalLua, "getAllMapUserData", TLuaInterpreter::getAllMapUserData );
+    lua_register( pGlobalLua, "clearAreaUserData", TLuaInterpreter::clearAreaUserData );
+    lua_register( pGlobalLua, "clearAreaUserDataItem", TLuaInterpreter::clearAreaUserDataItem );
+    lua_register( pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData );
+    lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
+    lua_register( pGlobalLua, "getEnvironmentTable", TLuaInterpreter::getEnvironmentTable );
+    lua_register( pGlobalLua, "getEnvironment", TLuaInterpreter::getEnvironment );
+    lua_register( pGlobalLua, "setEnvironment", TLuaInterpreter::setEnvironment );
+    lua_register( pGlobalLua, "resetEnvironment", TLuaInterpreter::resetEnvironment );
 
 
 

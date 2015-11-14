@@ -4,6 +4,12 @@ os:
   - linux
 compiler:
   - gcc
+env:
+  - Q_OR_C_MAKE=qmake
+  - Q_OR_C_MAKE=cmake
+matrix:
+  allow_failures:
+  - env: Q_OR_C_MAKE=cmake
 before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
@@ -11,9 +17,9 @@ before_script:
   - mkdir build
   - cd src
 script:
-  - qmake && make -j2
   - cd ../build
-  - if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then cmake .. && make -j2; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
+  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ../src/src.pro && make -j2; else cmake --version; cmake .. && make -j2; fi
 notifications:
   webhooks:
     urls:

@@ -38,8 +38,8 @@
 #include <QInputDialog>
 #include "post_guard.h"
 
-#include "zip.h"
-#include "zipconf.h"
+#include <zip.h>
+#include <zipconf.h>
 
 #include <errno.h>
 

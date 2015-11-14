@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -250,8 +251,9 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     fontSize->insertItems( 1, sizeList );
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
     //connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
-    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
-    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
+// Non-existant slots:
+//    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
+//    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
 
 
 
@@ -460,6 +462,36 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         // The above funky setting method is because a zero time is INVALID
         // and since Qt 5.0-ish adding any value to an invalid time still leaves
         // the time as "invalid".
+        timeEdit_timerDebugOutputMinimumInterval->setCurrentSection( QDateTimeEdit::SecondSection );
+        // Added so that the control is initially set to edit seconds (was
+        // defaulting to first shown which was hours which is not the most
+        // likely that the user would want to use)!
+
+        // FIXME: Check this each time that it is appropriate for THIS build version
+        comboBox_mapFileSaveFormatVersion->clear();
+        // Add default version:
+        comboBox_mapFileSaveFormatVersion->addItem( tr( "%1 {Default, recommended}" ).arg( pHost->mpMap->mDefaultVersion ),
+                                                    QVariant( pHost->mpMap->mDefaultVersion ) );
+        comboBox_mapFileSaveFormatVersion->setEnabled( false );
+        label_mapFileSaveFormatVersion->setEnabled( false );
+        if(  pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion
+          || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion ) {
+            for( short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i ) {
+                if( i == pHost->mpMap->mDefaultVersion ) {
+                    continue;
+                }
+                comboBox_mapFileSaveFormatVersion->setEnabled( true );
+                label_mapFileSaveFormatVersion->setEnabled( true );
+                if( i > pHost->mpMap->mDefaultVersion ) {
+                    comboBox_mapFileSaveFormatVersion->addItem( tr( "%1 {Upgraded, experimental/testing, NOT recommended}" ).arg( i ),
+                                                                QVariant( i ) );
+                }
+                else {
+                    comboBox_mapFileSaveFormatVersion->addItem( tr( "%1 {Downgraded, for sharing with older version users, NOT recommended}" ).arg( i ),
+                                                                QVariant( i ) );
+                }
+            }
+        }
     }
 }
 
@@ -1364,49 +1396,75 @@ void dlgProfilePreferences::loadMap()
     if( ! pHost ) return;
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet map"),
-                                                    QDir::homePath(), "Mudlet map (*.dat);;Any file (*)");
-    if( fileName.isEmpty() ) return;
+                                                    QDir::homePath(), "Mudlet map (*.dat);;Mudlet XML map import (*.xml);;Any file (*)");
+    if( fileName.isEmpty() ) {
+        return;
+    }
 
     map_file_action->show();
-    map_file_action->setText("Loading map...");
+    if( fileName.endsWith(".xml", Qt::CaseInsensitive ) ) {
+        map_file_action->setText( tr("Importing map...") );
+        if( mpHost->mpConsole->importMap(fileName) ) {
+            map_file_action->setText( tr("Imported map from %1.").arg( fileName ) );
+        }
+        else {
+            map_file_action->setText( tr("Could not import map from %1." ).arg( fileName ) );
+        }
+    }
+    else {
+        map_file_action->setText( tr("Loading map...") );
+        if( mpHost->mpConsole->loadMap(fileName) ) {
+            map_file_action->setText( tr("Loaded map from %1.").arg( fileName ) );
+        }
+        else {
+            map_file_action->setText( tr("Could not load map from %1." ).arg( fileName ) );
+        }
+    }
 
-    if ( mpHost->mpConsole->loadMap(fileName) )
-    {
-        map_file_action->setText("Loaded map from "+fileName);
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
-    }
-    else
-    {
-        map_file_action->setText("Couldn't load map from "+fileName);
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
-    }
-    if( mpHost->mpMap )
-        if( mpHost->mpMap->mpMapper )
+    QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    if( mpHost->mpMap ) {
+        if( mpHost->mpMap->mpMapper ) {
             mpHost->mpMap->mpMapper->updateAreaComboBox();
+        }
+    }
 }
 
 void dlgProfilePreferences::saveMap()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
 
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Mudlet map"),
                                                     QDir::homePath(), "Mudlet map (*.dat)");
-    if( fileName.isEmpty() ) return;
+    if( fileName.isEmpty() ) {
+        return;
+    }
 
-    if ( ! fileName.endsWith(".dat", Qt::CaseInsensitive) )
+    if( ! fileName.endsWith(".dat", Qt::CaseInsensitive) ) {
         fileName.append(".dat");
+    }
 
     map_file_action->show();
     map_file_action->setText("Saving map...");
 
-    if ( mpHost->mpConsole->saveMap(fileName) ) {
-        map_file_action->setText("Saved map to "+fileName);
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    // Temporarily use whatever version is currently set
+    int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
+#if QT_VERSION >= 0x050200
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+#else
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
+#endif
+    if( pHost->mpConsole->saveMap(fileName) ) {
+        map_file_action->setText( tr("Saved map to %1").arg( fileName ) );
     } else {
-        map_file_action->setText("Couldn't save map to "+fileName);
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+        map_file_action->setText( tr("Could not save map to %1").arg( fileName ) );
     }
+    // Then restore prior version
+    pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
+
+    QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
 }
 
 void dlgProfilePreferences::hideActionLabel()
@@ -1561,6 +1619,11 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mTimerDebugOutputSuppressionInterval = 0;
     }
 
+#if QT_VERSION >= 0x050200
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+#else
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
+#endif
     //pHost->mIRCNick = ircNick->text();
     QString old_nick = mudlet::self()->mIrcNick;
     QString new_nick = ircNick->text();

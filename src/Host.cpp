@@ -40,8 +40,8 @@
 #include <QMessageBox>
 #include "post_guard.h"
 
-#include "zip.h"
-#include "zipconf.h"
+#include <zip.h>
+#include <zipconf.h>
 
 #include <errno.h>
 
@@ -68,7 +68,6 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mCodeCompletion( true )
 , mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//( QFont("Monospace", 10, QFont::Courier) )
 , mCommandSeparator  ( QString(";") )
-, mCommandSeperator  ( QString(";") )
 , mDisableAutoCompletion( false )
 , mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
 , mEnableGMCP( false )
@@ -144,7 +143,7 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mSpellDic            ( "en_US" )
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
-, mModuleSaveBlock(false)
+, mModuleSaveBlock     ( false )
 , mpUnzipDialog        ( 0 )
 , mLineSize            ( 5.0 )
 , mRoomSize            ( 0.5 )

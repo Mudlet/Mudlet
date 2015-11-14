@@ -144,8 +144,9 @@ public:
       void              _luaWrapLine( int );
       QString           getCurrentLine();
       void              selectCurrentLine();
-      bool              saveMap(QString location);
-      bool              loadMap(QString location);
+      bool              saveMap( QString );
+      bool              loadMap( QString );
+      bool              importMap( QString );
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
 
       Host *            mpHost;
