@@ -326,6 +326,7 @@ HEADERS += \
     XMLexport.h \
     XMLimport.h
 
+macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -447,11 +448,17 @@ unix:!macx: {
 }
 
 DISTFILES += \
+    ../.travis.yml \
     CMakeLists.txt \
+    ../CMakeLists.txt \
     irc/CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
-    ../CI/travis.osx.install.sh
+    ../CI/travis.osx.install.sh \
+    ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindPCRE.cmake \
+    ../cmake/FindYAJL.cmake \
+    ../cmake/FindZIP.cmake

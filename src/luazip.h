@@ -1,12 +1,34 @@
-/*
- LuaZip - Reading files inside zip files.
- http://www.keplerproject.org/luazip/
+/******************************************************************************
+ * LuaZip - Reading files inside zip files.                                   *
+ * http://www.keplerproject.org/luazip/                                       *
+ *                                                                            *
+ * Author: Danilo Tuler                                                       *
+ * Copyright (c) 2003-2007 Kepler Project                                     *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL   *
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER *
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING    *
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER        *
+ * DEALINGS IN THE SOFTWARE.                                                  *
+ ******************************************************************************
 
- Author: Danilo Tuler
- Copyright (c) 2003-2007 Kepler Project
+ ******************************************************************************
+ *           Converted into a single file to include into Mudlet              *
+ ******************************************************************************/
 
- $Id: luazip.h,v 1.5 2007/06/18 18:47:05 carregal Exp $
-*/
+// Only included into the application (in TLuaInterpreter) in MacOs builds - Slysven!
 
 #ifndef luazip_h
 #define luazip_h
@@ -14,29 +36,17 @@
 #include "lua.h"
 
 #ifndef LUAZIP_API
-#define LUAZIP_API	LUA_API
+#define LUAZIP_API  LUA_API
 #endif
 
-#define LUA_ZIPLIBNAME	"zip"
+#define LUA_ZIPLIBNAME  "zip"
 LUAZIP_API int luaopen_zip (lua_State *L);
 
 #endif
 
-
-/*
- LuaZip - Reading files inside zip files.
- http://www.keplerproject.org/luazip/
-
- Author: Danilo Tuler
- Copyright (c) 2003-2007 Kepler Project
-
- $Id: luazip.c,v 1.11 2007/06/18 18:47:05 carregal Exp $
-*/
-
 #include <string.h>
 #include <stdlib.h>
 #include "zzip/zzip.h"
-//#include "luazip.h"
 #include "lauxlib.h"
 #if ! defined (LUA_VERSION_NUM) || LUA_VERSION_NUM < 501
 #include "compat-5.1.h"
@@ -320,21 +330,21 @@ static char* zzip_fgets(char *str, int size, ZZIP_FILE *stream)
 {
   int c, i;
 
-	for (i = 0; i < size-1; i++)
-	{
+  for (i = 0; i < size-1; i++)
+  {
     c = zzip_getc(stream);
-		if (EOF == c)
-			return NULL;
-		str[i]=c;
-		if (('\n' == c)/* || ('\r' == c)*/)
-		{
+    if (EOF == c)
+      return NULL;
+    str[i]=c;
+    if (('\n' == c)/* || ('\r' == c)*/)
+    {
       str[i++]='\n';
-			break;
-		}
-	}
-	str[i] = '\0';
+      break;
+    }
+  }
+  str[i] = '\0';
 
-	return str;
+  return str;
 }
 
 /* no support to read numbers
@@ -356,8 +366,8 @@ static int read_number (lua_State *L, ZZIP_FILE *f) {
 
 static int test_eof (lua_State *L, ZZIP_FILE *f) {
   /* TODO */
-	(void) L;
-	(void) f;
+  (void) L;
+  (void) f;
   return 1;
 }
 
@@ -529,15 +539,15 @@ static const luaL_reg fflib[] = {
 ** Assumes the table is on top of the stack.
 */
 static void set_info (lua_State *L) {
-	lua_pushliteral (L, "_COPYRIGHT");
-	lua_pushliteral (L, "Copyright (C) 2003-2007 Kepler Project");
-	lua_settable (L, -3);
-	lua_pushliteral (L, "_DESCRIPTION");
-	lua_pushliteral (L, "Reading files inside zip files");
-	lua_settable (L, -3);
-	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "LuaZip 1.2.3");
-	lua_settable (L, -3);
+  lua_pushliteral (L, "_COPYRIGHT");
+  lua_pushliteral (L, "Copyright (C) 2003-2007 Kepler Project");
+  lua_settable (L, -3);
+  lua_pushliteral (L, "_DESCRIPTION");
+  lua_pushliteral (L, "Reading files inside zip files");
+  lua_settable (L, -3);
+  lua_pushliteral (L, "_VERSION");
+  lua_pushliteral (L, "LuaZip 1.2.3");
+  lua_settable (L, -3);
 }
 
 static void createmeta (lua_State *L) {
