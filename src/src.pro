@@ -28,14 +28,25 @@ VERSION = 3.0.0
 !msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
 !msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+# Before we impose OUR idea about the optimisation levels to use, remove any
+# that Qt tries to put in automatically for us for release builds, only the
+# last, ours, is supposed to apply but it can be confusing to see multiple
+# alternatives during compilations.
+!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+# NOW we can put ours in:
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
+# There is NO need to put in the -g option as it is done already for debug bugs
+# For gdb type debugging it helps if there is NO optimisations so use -O0.
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
+
+# enable C++11 for builds.
+CONFIG += c++11
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia
 
@@ -322,6 +333,7 @@ HEADERS += \
     XMLexport.h \
     XMLimport.h
 
+macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -446,3 +458,19 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
+
+DISTFILES += \
+    ../.travis.yml \
+    CMakeLists.txt \
+    ../CMakeLists.txt \
+    irc/CMakeLists.txt \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindPCRE.cmake \
+    ../cmake/FindYAJL.cmake \
+    ../cmake/FindZIP.cmake

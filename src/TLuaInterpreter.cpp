@@ -59,8 +59,14 @@
 #include <list>
 #include <string>
 
+// Provides the lua zip module for MacOs platform that does not have an easy way
+// to provide it as a prebuilt library module (unlike Windows/Linux) - was
+// called luazip.c and it is an amalgum of both such files that came from
+// http://www.keplerproject.org/luazip {dead link} the Kelper Project has
+// restuctured their site but the URL can be pulled from the Wayback machine:
+// https://web.archive.org/web/20150129015700/http://www.keplerproject.org/luazip
 #ifdef Q_OS_MAC
-#include "luazip.c"
+#include "luazip.h"
 #endif
 
 
