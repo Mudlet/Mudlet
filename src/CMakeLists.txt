@@ -400,6 +400,23 @@ ADD_SUBDIRECTORY(irc)
 
 ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
+IF(UNIX)
+    SET(DATAROOTDIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "The platform-specific directory in which read-only data is generally installed")
+    SET(DATADIR "${DATAROOTDIR}/mudlet" CACHE STRING "Directory in which mudlet installs its read-only data")
+    SET(LUA_DEFAULT_DIR "${DATADIR}/lua" CACHE STRING "Directory in which mudlet installs its read-only lua scripts")
+ENDIF(UNIX)
+
+# Define a preprocessor symbol with the default fallback location from which
+# to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
+# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
+# will be used.
+ADD_DEFINITIONS(-DLUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+
+# Enable leak detection for MSVC debug builds.
+if(MSVC)
+  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -FItestdbg.h")
+endif()
+
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 INCLUDE_DIRECTORIES(
     ${Qt5Core_INCLUDE_DIRS}

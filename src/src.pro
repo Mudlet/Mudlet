@@ -135,8 +135,6 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
-# and define a preprocessor symbol LUA_DEFAULT_PATH with the value:
-        DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # and say what will happen:
         message("Lua files will be installed to "$${LUA.path}"...")
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
@@ -156,6 +154,12 @@ macx {
 macx:LIBS += \
     -lz \
     -lzzip
+
+# Define a preprocessor symbol with the default fallback location from which
+# to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
+# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
+# will be used.
+DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
 INCLUDEPATH += irc/include
 
