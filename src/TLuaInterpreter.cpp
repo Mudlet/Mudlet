@@ -4661,7 +4661,7 @@ int TLuaInterpreter::getMudletHomeDir( lua_State * L )
 
 int TLuaInterpreter::getMudletLuaDefaultPath( lua_State * L )
 {
-    QString path = LUA_DEFAULT_PATH "/";
+    QString path = QStringLiteral( "%1/" ).arg( LUA_DEFAULT_PATH );
     QString nativePath = QDir::toNativeSeparators( path );
     lua_pushstring( L, nativePath.toUtf8().constData() );
     return 1;
@@ -11788,7 +11788,7 @@ void TLuaInterpreter::loadGlobal()
     }
 
     // Finally try loading from LUA_DEFAULT_PATH
-    path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
+    path = QStringLiteral( "%1/LuaGlobal.lua" ).arg( LUA_DEFAULT_PATH );
     error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
     if( error != 0 )
     {
