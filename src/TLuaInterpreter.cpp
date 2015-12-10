@@ -4659,6 +4659,14 @@ int TLuaInterpreter::getMudletHomeDir( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::getMudletLuaDefaultPath( lua_State * L )
+{
+    QString path = QStringLiteral( "%1/" ).arg( LUA_DEFAULT_PATH );
+    QString nativePath = QDir::toNativeSeparators( path );
+    lua_pushstring( L, nativePath.toUtf8().constData() );
+    return 1;
+}
+
 int TLuaInterpreter::disconnect( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -11438,6 +11446,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempButton", TLuaInterpreter::tempButton );
     lua_register( pGlobalLua, "reconnect", TLuaInterpreter::reconnect );
     lua_register( pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir );
+    lua_register( pGlobalLua, "getMudletLuaDefaultPath", TLuaInterpreter::getMudletLuaDefaultPath );
     lua_register( pGlobalLua, "setTriggerStayOpen", TLuaInterpreter::setTriggerStayOpen );
     lua_register( pGlobalLua, "wrapLine", TLuaInterpreter::wrapLine );
     lua_register( pGlobalLua, "getFgColor", TLuaInterpreter::getFgColor );
@@ -11767,25 +11776,36 @@ void TLuaInterpreter::loadGlobal()
         // we check again for the user case of a windows install.
         path = "mudlet-lua/lua/LuaGlobal.lua";
         error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-        if( error != 0 ) {
-            string e = "no error message available from Lua";
-            if( lua_isstring( pGlobalLua, -1 ) )
-            {
-                e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                                "Error from Lua: ";
-                e += lua_tostring( pGlobalLua, -1 );
-            }
-            mpHost->postMessage( e.c_str() );
-        }
-        else {
+        if( error == 0 ) {
             mpHost->postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+            return;
         }
     }
     else
     {
         mpHost->postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+        return;
     }
 
+    // Finally try loading from LUA_DEFAULT_PATH
+    path = QStringLiteral( "%1/LuaGlobal.lua" ).arg( LUA_DEFAULT_PATH );
+    error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, -1 ) )
+        {
+            e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                "Error from Lua: ";
+            e += lua_tostring( pGlobalLua, -1 );
+        }
+        mpHost->postMessage( e.c_str() );
+    }
+    else
+    {
+        mpHost->postMessage( "[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded." );
+        return;
+    }
 }
 
 void TLuaInterpreter::slotEchoMessage(int hostID, const QString& msg)
