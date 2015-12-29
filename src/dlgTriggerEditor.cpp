@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,14 +27,7 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
-#include "dlgOptionsAreaAction.h"
-#include "dlgOptionsAreaAlias.h"
-#include "dlgOptionsAreaScripts.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaTriggers.h"
 #include "dlgScriptsMainArea.h"
-#include "dlgSearchArea.h"
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "Host.h"
@@ -204,29 +198,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pHB2->addWidget( mpErrorConsole );
     mpErrorConsole->show();
 
-
-    mpOptionsAreaTriggers = new dlgOptionsAreaTriggers( popupArea );
-    mpOptionsAreaTriggers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTriggers );
-
-    mpOptionsAreaAlias = new dlgOptionsAreaAlias( popupArea );
-    mpOptionsAreaAlias->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaAlias );
-
-    mpOptionsAreaActions = new dlgOptionsAreaAction( popupArea );
-    mpOptionsAreaActions->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaActions );
-
-    mpOptionsAreaScripts = new dlgOptionsAreaScripts( popupArea );
-    mpOptionsAreaScripts->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaScripts );
-
-    mpOptionsAreaTimers = new dlgOptionsAreaTimers( popupArea );
-    mpOptionsAreaTimers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTimers );
-
-
-
     mpSearchArea = tree_widget_search_results_main;
     connect( messageAreaCloseButton, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
 
@@ -240,12 +211,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget->header()->hide();
     connect( treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
     tree_widget_search_results_main->hide(); // hide search results
-
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
 
     treeWidget_alias->hide();
     treeWidget_alias->setHost( mpHost );
@@ -516,7 +481,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->editor->setFont( mpHost->mDisplayFont );
 
     connect( comboBox_search_triggers, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
-    connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
     connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
@@ -525,7 +489,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_vars, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_vars, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
-    connect( this, SIGNAL (accept()), this, SLOT (slot_connection_dlg_finnished()));
     connect( tree_widget_search_results_main, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
@@ -541,11 +504,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->hide();
 
     mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaActions->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
 
     treeWidget->show();
     treeWidget_alias->hide();
@@ -5955,17 +5913,6 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
     }
 }
 
-
-
-void dlgTriggerEditor::slot_connection_dlg_finnished()
-{
-}
-
-void dlgTriggerEditor::slot_update()
-{
-    update();
-}
-
 void dlgTriggerEditor::slot_show_search_area()
 {
     if( mpSearchArea->isVisible() )
@@ -6107,13 +6054,6 @@ void dlgTriggerEditor::changeView( int view )
     toggleHiddenVarsButton->hide();
 
     mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-
     treeWidget->hide();
     treeWidget_alias->hide();
     treeWidget_timers->hide();

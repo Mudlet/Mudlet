@@ -42,7 +42,6 @@ public:
 signals:
 
     void signal_establish_connection( QString profile_name, int historyVersion );
-    void update();
 
 public slots:
 
@@ -58,7 +57,6 @@ public slots:
     void slot_update_description();
 
     void slot_item_clicked( QListWidgetItem * );
-    void slot_update();
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();

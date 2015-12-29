@@ -161,7 +161,6 @@ public:
     static int createMapLabel( lua_State * );
     static int deleteMapLabel( lua_State * );
     static int getRooms( lua_State * );
-    static int isLockedRoom( lua_State * );
     static int connectToServer( lua_State *L );
     static int sendIrc( lua_State * );
     static int showUnzipProgress( lua_State * );
@@ -191,6 +190,7 @@ public:
     static int getSpecialExits( lua_State * );
     static int getSpecialExitsSwap( lua_State * );
     static int appendCmdLine( lua_State * );
+    static int getCmdLine( lua_State * L );
     static int clearSpecialExits( lua_State * );
     static int solveRoomCollisions( lua_State * );
     static int setGridMode( lua_State * L );
@@ -324,6 +324,7 @@ public:
     static int disconnect( lua_State * );
     static int reconnect( lua_State * );
     static int getMudletHomeDir( lua_State * );
+    static int getMudletLuaDefaultPath( lua_State * );
     static int setTriggerStayOpen( lua_State * );
     static int wrapLine( lua_State * );
     static int getFgColor( lua_State * );
@@ -385,6 +386,7 @@ public:
     static int openWebPage( lua_State * L );
     static int getRoomUserDataKeys( lua_State * L );
     static int getAllRoomUserData( lua_State * L );
+    static int getAllRoomEntrances( lua_State * L );
 
 
     std::list<std::string> mCaptureGroupList;

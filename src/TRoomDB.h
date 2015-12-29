@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,14 +45,15 @@ public:
 //     int getArea( TArea * pA ); use duplicate int getAreaID( TArea * pA ) instead
     bool addRoom( int id );
     int size() { return rooms.size(); }
-    bool removeRoom( int id );
+    bool removeRoom( int );
+    void removeRoom( QList<int> & );
     bool removeArea( int id );
     bool removeArea( QString name );
     void removeArea( TArea * );
     bool addArea(int id);
     int addArea( QString name );
     bool addArea( int id, QString name );
-    void setAreaName( int areaID, QString name );
+    bool setAreaName( int areaID, QString name );
     const QList<TRoom *> getRoomPtrList();
     const QList<TArea *> getAreaPtrList();
     const QHash<int, TRoom *> & getRoomMap() const { return rooms; }
@@ -59,13 +61,17 @@ public:
     QList<int> getRoomIDList();
     QList<int> getAreaIDList();
     const QMap<int, QString> & getAreaNamesMap() const { return areaNamesMap; }
-
+    void updateEntranceMap(TRoom *, bool isMapLoading = false );
+    void updateEntranceMap(int);
+    const QMultiHash<int, int> & getEntranceHash() const { return entranceMap; }
+    void deleteValuesFromEntranceMap( int );
+    void deleteValuesFromEntranceMap( QSet<int> & );
 
     void buildAreas();
     void clearMapDB();
     void initAreasForOldMaps();
     void auditRooms();
-    bool addRoom(int id, TRoom *pR);
+    bool addRoom(int id, TRoom *pR, bool isMapLoading = false);
     int getAreaID(TArea * pA);
     void restoreAreaMap( QDataStream & );
     void restoreSingleArea( QDataStream &, int, TArea * );
@@ -80,10 +86,12 @@ private:
     bool __removeRoom( int id );
 
     QHash<int, TRoom *> rooms;
-    QMultiHash<int, int> reverseExitMap;
+    QMultiHash<int, int> entranceMap;
     QMap<int, TArea *> areas;
     QMap<int, QString> areaNamesMap;
     TMap * mpMap;
+    QString mUnnamedAreaName;
+    QList<int> * mpTempRoomDeletionList; // Used during bulk room deletion
 
     friend class TRoom;//friend TRoom::~TRoom();
     //friend class TMap;//bool TMap::restore(QString location);

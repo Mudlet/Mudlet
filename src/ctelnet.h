@@ -5,6 +5,7 @@
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -172,7 +173,6 @@ private:
     QTextEncoder *    outgoingDataDecoder;
     QString           hostName;
     int               hostPort;
-    QDataStream       mOfs;
     double            networkLatencyMin;
     double            networkLatencyMax;
     bool              mWaitingForResponse;

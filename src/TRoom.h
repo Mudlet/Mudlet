@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,6 +45,7 @@
 #define DIR_DOWN 10
 #define DIR_IN 11
 #define DIR_OUT 12
+#define DIR_OTHER 13
 
 class XMLimport;
 class XMLexport;
@@ -67,7 +69,7 @@ public:
     bool hasSpecialExitLock( int, const QString& );
     void removeAllSpecialExitsToRoom(int _id );
     void setSpecialExit( int to, const QString& cmd );
-    void clearSpecialExits() { other.clear(); }
+    void clearSpecialExits();
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
     const QMap<QString, int> & getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w );
@@ -77,7 +79,7 @@ public:
     bool hasExitStub( int direction );
     void setExitStub( int direction, bool status );
     void calcRoomDimensions();
-    void setArea( int _areaID );
+    bool setArea( int , bool isToDeferAreaRelatedRecalculations = false );
     int getExitWeight(const QString& cmd );
 
     int getWeight() { return weight; }

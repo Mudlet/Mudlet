@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,8 +28,6 @@
 #include <QPointer>
 #include "post_guard.h"
 
-#include "dlgOptionsAreaTriggers.h"
-#include "dlgSearchArea.h"
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"
@@ -58,14 +57,9 @@ class dlgSystemMessageArea;
 class dlgSourceEditorArea;
 class dlgTriggersMainArea;
 class dlgActionMainArea;
-class dlgOptionsAreaTriggers;
 class dlgSearchArea;
 class dlgAliasMainArea;
 class dlgScriptsMainArea;
-class dlgOptionsAreaAlias;
-class dlgOptionsAreaScripts;
-class dlgOptionsAreaTimers;
-class dlgOptionsAreaAction;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
 class TAction;
@@ -108,11 +102,6 @@ public:
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, int );
     void                        show_vars( );
 
-signals:
-
-    void                        signal_establish_connection( const QString& profile_name );
-    void                        accept();
-    void                        update();
 
 public slots:
     void                        slot_toggleHiddenVars();
@@ -154,8 +143,6 @@ public slots:
     void                        slot_alias_selected( QTreeWidgetItem *pItem );
     void                        slot_action_selected( QTreeWidgetItem * pItem );
     void                        slot_key_selected( QTreeWidgetItem *pItem );
-    void                        slot_update();
-    void                        slot_connection_dlg_finnished();
     void                        slot_add_new();
     void                        slot_add_new_folder();
     void                        slot_addTrigger();
@@ -277,15 +264,10 @@ private:
     dlgTimersMainArea *         mpTimersMainArea;
     dlgSystemMessageArea *      mpSystemMessageArea;
     dlgSourceEditorArea *       mpSourceEditorArea;
-    dlgOptionsAreaTriggers *    mpOptionsAreaTriggers;
     dlgAliasMainArea *          mpAliasMainArea;
     dlgActionMainArea *         mpActionsMainArea;
     dlgScriptsMainArea *        mpScriptsMainArea;
     dlgKeysMainArea *           mpKeysMainArea;
-    dlgOptionsAreaScripts *     mpOptionsAreaScripts;
-    dlgOptionsAreaAction *      mpOptionsAreaActions;
-    dlgOptionsAreaAlias *       mpOptionsAreaAlias;
-    dlgOptionsAreaTimers *      mpOptionsAreaTimers;
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;

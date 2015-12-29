@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -74,7 +75,7 @@ public:
     int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop=true, bool noScaling=true, qreal zoom=15.0, int fontSize=15 );
     void deleteMapLabel( int area, int labelID );
     bool addRoom( int id=0 );
-    void setRoomArea( int id, int area );
+    bool setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations = false );
     // void deleteRoom( int id );
     void deleteArea( int id );
     int createNewRoomID();
@@ -113,24 +114,17 @@ public:
     float m2DPanXStart;
     float m2DPanYStart;
     int mViewArea;
-    // mapVar mVars[20];
-    // mapVar <int> mvRoomId;
-    // QMap<QString, mVarTypes> mVars;
-    // QMap<QString, *QVariant> mVars;
-    // mVars.insert("RoomId", &mRoomId);
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
+    QList<int> mWeightList;
     QMap<int, QColor> customEnvColors;
     QMap<int, QVector3D> unitVectors;
     QMap<int, int> reverseDirections; // contains complementary directions of dirs on TRoom.h
     GLWidget * mpM;
     dlgMapper * mpMapper;
-    QList<int> mTestedNodes;
-    QList<int> conList;
     QMap<int, int> roomidToIndex;
-    QMap<int, int> indexToRoomid;
-    int mPlausaOptOut;
+    // QMap<int, int> indexToRoomid;
 
     QMap<QString, int> pixNameTable;
     QMap<int, QPixmap> pixTable;
@@ -138,10 +132,8 @@ public:
     typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
-    typedef mygraph_t::vertex_iterator vertex_iterator;
-    typedef std::pair<int, int> edge;
     mygraph_t g;
-    WeightMap weightmap;
+    QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
     bool mMapGraphNeedsUpdate;
     bool mNewMove;

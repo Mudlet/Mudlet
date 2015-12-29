@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1362,39 +1363,109 @@ void TTextEdit::copySelectionToClipboard()
 
 void TTextEdit::copySelectionToClipboardHTML()
 {
-    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
-    {
+    if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) ) {
         swap( mPA, mPB );
     }
-    if( mPA.y() > mPB.y() )
-    {
+    if( mPA.y() > mPB.y() ) {
         swap( mPA, mPB );
     }
-    QString text = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb(";
+
+    QString title;
+    if( this->mIsDebugConsole ) {
+        title = tr( "Mudlet, debug console extract" );
+    }
+    else if( this->mIsMiniConsole ) {
+        if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
+            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin(); it != this->mpHost->mpConsole->mSubConsoleMap.cend(); ++it ) {
+                if( (*it).second == this->mpConsole ) {
+                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
+                    break;
+                }
+            }
+        }
+    }
+    else {
+        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg( this->mpConsole->mConsoleName ).arg(  this->mpHost->getName() );
+    }
+
+    QStringList fontsList; // List of fonts to become the font-family entry for
+                           // the master css in the header
+    fontsList << this->fontInfo().family(); // Seems to be the best way to get the
+                                        // font in use, as different TConsole
+                                        // instances within the same profile
+                                        // might have different fonts in future,
+                                        // and although the font is settable for
+                                        // the main profile window, it is not yet
+                                        // for user miniConsoles, or the Debug one
+    fontsList << QStringLiteral( "Courier New" );
+    fontsList << QStringLiteral( "Monospace" );
+    fontsList << QStringLiteral( "Courier" );
+    fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
+
+    QString text =   "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
+    text.append("<html>\n");
+    text.append(" <head>\n");
+    text.append("  <meta http-equiv='content-type' content='text/html; charset=utf-8'>");
+    // put the charset as early as possible as the parser MUST restart when it
+    // switches away from the ASCII default
+    text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
+    text.append(APP_VERSION);
+    text.append(APP_BUILD);
+    text.append("'>\n");
+    // Nice to identify what made the file!
+    text.append("  <title>");
+    text.append(title);
+    text.append("</title>\n");
+     // Web-page title
+    text.append("  <style type='text/css'>\n");
+    text.append("   <!-- body { font-family: '");
+    text.append(fontsList.join("', '"));
+    text.append("'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb(");
+    // Line height, I think, should be equal to 18 point for a 16 point default
+    // font size by default but this seems to work even when the size is not 16
+    // Use a "%age" for a IE compatible font size, 16 point is the default for
+    // web-pages, but 14 seems to produce a more reasonable size but that could
+    // just be the browsers I tested it on! - Slysven
     text.append(QString::number(mpHost->mBgColor.red()));
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.green()));
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.blue()));
-    text.append(");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>");
+    text.append(");}\n");
+    text.append("        span { white-space: pre; } -->\n");
+    text.append("  </style>\n");
+    text.append("  </head>\n");
+    text.append("  <body><div>");
+    // <div></div> tags required around outside of the body <span></spans> for
+    // strict HTML 4 as we do not use <p></p>s or anything else
 
-    for( int y=mPA.y(); y<=mPB.y(); y++ )
-    {
-        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) return;
+    for( int y=mPA.y(); y<=mPB.y(); y++ ) {
+        if( y >= static_cast<int>(mpBuffer->buffer.size()) ) {
+            return;
+        }
         int x = 0;
-        if( y == mPA.y() )
-        {
+        if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
+            if( x ) {
+                text.append( "<span>" );
+                text.append( QString( x, QLatin1Char(' ') ) );
+                text.append( "</span>" );
+                // Pad out with spaces to the right so a partial first line lines up
+            }
+
             text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
         }
-        else if ( y == mPB.y() )
-        {
+        else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
         }
-        else
+        else { // inside lines of selection
             text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+        }
     }
+    text.append( QStringLiteral( " </div></body>\n"
+                                 "</html>" ) );
+    // The last two of these tags were missing and meant the HTML was not terminated properly
     QClipboard * clipboard = QApplication::clipboard();
     clipboard->setText( text );
     mSelectedRegion = QRegion( 0, 0, 0, 0 );

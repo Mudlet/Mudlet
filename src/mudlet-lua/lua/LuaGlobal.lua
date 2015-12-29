@@ -128,7 +128,8 @@ local packages = {
 -- TODO: extend to support common Lua code being placed in system shared directory
 -- tree as ought to happen for *nix install builds.
 local prefixes = {"../src/mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
-    "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua"}
+    "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua",
+    getMudletLuaDefaultPath()}
 
 local prefix
 for i = 1, #prefixes do

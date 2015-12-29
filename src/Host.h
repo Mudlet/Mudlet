@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -82,7 +83,7 @@ public:
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
     bool               closingDown();
-    void               assemblePath();
+    const unsigned int assemblePath();
     int                check_for_mappingscript();
     TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
     TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
@@ -141,6 +142,8 @@ public:
     bool               uninstallPackage(const QString&, int module);
     bool               removeDir( const QString& dirName, const QString& originalPath);
     void               readPackageConfig(const QString&, QString & );
+    void                postMessage( const QString message ) { mTelnet.postMessage( message ); }
+
 
     cTelnet            mTelnet;
     QPointer<TConsole> mpConsole;
@@ -205,7 +208,21 @@ public:
     int                mPort;
     bool               mPrintCommand;
     QString            mPrompt;
-    bool               mRawStreamDump;
+                       // The following was incorrectly called mRawStreamDump
+                       // and caused the log file to be in HTML format rather
+                       // then plain text.  To cover the corner case of the user
+                       // changing the mode whilst a log is being written it has
+                       // been split into:
+    bool               mIsNextLogFileInHtmlFormat;
+                       // What the user has set as their preference
+    bool               mIsCurrentLogFileInHtmlFormat;
+                       // What the current file will use, set from the previous
+                       // member at the point that logging starts.
+                       // Ideally this ought to become a number so that we can
+                       // support more than two logging format modes - phpBB
+                       // format would be useful for those wanting to post to
+                       // MUD forums...!  Problem will be reading and write the
+                       // game save file in a compatible way.
     QString            mReplacementCommand;
     QString            mRest;
     bool               mResetProfile;
@@ -306,6 +323,14 @@ public:
     bool               mFORCE_MXP_NEGOTIATION_OFF;
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
+    int                 mTimerDebugOutputSuppressionInterval;
+                        // Set from last page of profile preferences if the
+                        // timer interval is less than this in milliseconds then
+                        // the normal reoccuring debug output of the entire
+                        // command and script for any timer with a timeout LESS
+                        // than this is NOT shown - this is so the spammy output
+                        // from short timeout timers can be suppressed.  The
+                        // single execute OK line will still be shown.
 };
 
 #endif // MUDLET_HOST_H

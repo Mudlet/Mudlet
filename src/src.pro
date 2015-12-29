@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -28,8 +28,16 @@ VERSION = 3.0.1
 !msvc:CONFIG += warn_off
 # ignore unused parameters, because boost has a ton of them and that is not something we need to know.
 !msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+# Before we impose OUR idea about the optimisation levels to use, remove any
+# that Qt tries to put in automatically for us for release builds, only the
+# last, ours, is supposed to apply but it can be confusing to see multiple
+# alternatives during compilations.
+!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+# NOW we can put ours in:
 !msvc:QMAKE_CXXFLAGS_RELEASE += -O3
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0 -g
+# There is NO need to put in the -g option as it is done already for debug bugs
+# For gdb type debugging it helps if there is NO optimisations so use -O0.
+!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
 # enable C++11 for builds.
 CONFIG += c++11
@@ -131,8 +139,6 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
-# and define a preprocessor symbol LUA_DEFAULT_PATH with the value:
-        DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # and say what will happen:
         message("Lua files will be installed to "$${LUA.path}"...")
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
@@ -153,6 +159,12 @@ macx:LIBS += \
     -lz \
     -lzzip
 
+# Define a preprocessor symbol with the default fallback location from which
+# to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
+# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
+# will be used.
+DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
+
 INCLUDEPATH += irc/include
 
 SOURCES += \
@@ -169,16 +181,10 @@ SOURCES += \
     dlgKeysMainArea.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
-    dlgOptionsAreaAction.cpp \
-    dlgOptionsAreaAlias.cpp \
-    dlgOptionsAreaScripts.cpp \
-    dlgOptionsAreaTimers.cpp \
-    dlgOptionsAreaTriggers.cpp \
     dlgPackageExporter.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgScriptsMainArea.cpp \
-    dlgSearchArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
@@ -258,16 +264,10 @@ HEADERS += \
     dlgKeysMainArea.h \
     dlgMapper.h \
     dlgNotepad.h \
-    dlgOptionsAreaAction.h \
-    dlgOptionsAreaAlias.h \
-    dlgOptionsAreaScripts.h \
-    dlgOptionsAreaTimers.h \
-    dlgOptionsAreaTriggers.h \
     dlgPackageExporter.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgScriptsMainArea.h \
-    dlgSearchArea.h \
     dlgSourceEditorArea.h \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
@@ -296,7 +296,7 @@ HEADERS += \
     TAction.h \
     TAlias.h \
     TArea.h \
-    TAStar.h \
+    TAstar.h \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
@@ -326,8 +326,11 @@ HEADERS += \
     TTreeWidgetItem.h \
     TTrigger.h \
     TVar.h \
-    VarUnit.h
+    VarUnit.h \
+    XMLexport.h \
+    XMLimport.h
 
+macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -338,17 +341,11 @@ FORMS += \
     ui/composer.ui \
     ui/connection_profiles.ui \
     ui/dlgPackageExporter.ui \
-    ui/extended_search_area.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
-    ui/options_area_actions.ui \
-    ui/options_area_aliases.ui \
-    ui/options_area_scripts.ui \
-    ui/options_area_timers.ui \
-    ui/options_area_triggers.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
@@ -433,6 +430,7 @@ macx: {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -452,3 +450,19 @@ unix:!macx: {
         LUA \
         LUA_GEYSER
 }
+
+DISTFILES += \
+    ../.travis.yml \
+    CMakeLists.txt \
+    ../CMakeLists.txt \
+    irc/CMakeLists.txt \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindPCRE.cmake \
+    ../cmake/FindYAJL.cmake \
+    ../cmake/FindZIP.cmake

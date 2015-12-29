@@ -94,7 +94,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mWindowIsHidden( false )
 , mWrapAt( 100 )
 , networkLatency( new QLineEdit )
-, mLastBufferLogLine( 0 )
 , mUserAgreedToCloseConsole( false )
 , mpBufferSearchBox( new QLineEdit )
 , mpBufferSearchUp( new QToolButton )
@@ -376,7 +375,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     timeStampButton->setMaximumSize(QSize(30,30));
     timeStampButton->setSizePolicy( sizePolicy5 );
     timeStampButton->setFocusPolicy( Qt::NoFocus );
-    timeStampButton->setToolTip("Show Time Stamps");
+    timeStampButton->setToolTip(tr("<html><head/><body><p>Show Time Stamps.</p></body></html>"));
     timeStampButton->setIcon( QIcon( QStringLiteral( ":/icons/dialog-information.png" ) ) );
     connect( timeStampButton, SIGNAL(pressed()), console, SLOT(slot_toggleTimeStamps()));
 
@@ -386,7 +385,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     replayButton->setMaximumSize(QSize(30,30));
     replayButton->setSizePolicy( sizePolicy5 );
     replayButton->setFocusPolicy( Qt::NoFocus );
-    replayButton->setToolTip("record a replay");
+    replayButton->setToolTip(tr("<html><head/><body><p>Record a replay.</p></body></html>"));
     replayButton->setIcon( QIcon( QStringLiteral( ":/icons/media-tape.png" ) ) );
     connect( replayButton, SIGNAL(pressed()), this, SLOT(slot_toggleReplayRecording()));
 
@@ -396,14 +395,17 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     logButton->setCheckable( true );
     logButton->setSizePolicy( sizePolicy5 );
     logButton->setFocusPolicy( Qt::NoFocus );
-    logButton->setToolTip("start logging MUD output to log file");
-    logButton->setIcon( QIcon( QStringLiteral( ":/icons/folder-downloads.png" ) ) );
+    logButton->setToolTip(tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>"));
+    QIcon logIcon;
+    logIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-downloads.png" ) ), QIcon::Normal, QIcon::Off );
+    logIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-downloads-red-cross.png" ) ), QIcon::Normal, QIcon::On );
+    logButton->setIcon( logIcon );
     connect( logButton, SIGNAL(pressed()), this, SLOT(slot_toggleLogging()));
 
     networkLatency->setReadOnly( true );
     networkLatency->setSizePolicy( sizePolicy4 );
     networkLatency->setFocusPolicy( Qt::NoFocus );
-    networkLatency->setToolTip("<i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your triggers took to process the last line(s)");
+    networkLatency->setToolTip(tr("<html><head/><body><p><i>N:</i> is the latency of the MUD server and network (aka ping, in seconds), <br><i>S:</i> is the system processing time - how long your triggers took to process the last line(s).</p></body></html>"));
     networkLatency->setMaximumSize( 120, 30 );
     networkLatency->setMinimumSize( 120, 30 );
     networkLatency->setAutoFillBackground( true );
@@ -446,7 +448,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     emergencyStop->setSizePolicy( sizePolicy4 );
     emergencyStop->setFocusPolicy( Qt::NoFocus );
     emergencyStop->setCheckable( true );
-    emergencyStop->setToolTip("Emergency Stop. Stop All Timers and Triggers");
+    emergencyStop->setToolTip(tr("<html><head/><body><p>Emergency Stop. Stops all timers and triggers.</p></body></html>"));
     connect( emergencyStop, SIGNAL(clicked(bool)), this, SLOT(slot_stop_all_triggers( bool )));
 
     mpBufferSearchBox->setMinimumSize(QSize(100,30));
@@ -462,7 +464,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette( __pal );
-    mpBufferSearchBox->setToolTip("Search buffer");
+    mpBufferSearchBox->setToolTip(tr("<html><head/><body><p>Search buffer.</p></body></html>"));
     connect( mpBufferSearchBox, SIGNAL(returnPressed()), this, SLOT(slot_searchBufferUp()));
 
 
@@ -471,8 +473,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchUp->setMinimumSize(QSize(30,30));
     mpBufferSearchUp->setMaximumSize(QSize(30,30));
     mpBufferSearchUp->setSizePolicy( sizePolicy5 );
-    mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchUp->setToolTip("next result");
+    mpBufferSearchUp->setToolTip(tr("<html><head/><body><p>Earlier search result.</p></body></html>"));
     mpBufferSearchUp->setFocusPolicy( Qt::NoFocus );
     mpBufferSearchUp->setIcon( QIcon( QStringLiteral( ":/icons/export.png" ) ) );
     connect( mpBufferSearchUp, SIGNAL(clicked()), this, SLOT(slot_searchBufferUp()));
@@ -482,9 +483,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBufferSearchDown->setMaximumSize(QSize(30,30));
     mpBufferSearchDown->setSizePolicy( sizePolicy5 );
     mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-    mpBufferSearchDown->setToolTip("next result");
-    mpBufferSearchDown->setFocusPolicy( Qt::NoFocus );
-
+    mpBufferSearchDown->setToolTip(tr("<html><head/><body><p>Later search result.</p></body></html>"));
     mpBufferSearchDown->setIcon( QIcon( QStringLiteral( ":/icons/import.png" ) ) );
     connect( mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
@@ -542,8 +541,6 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpBaseHFrame->layout()->setMargin(0);
     mpBaseHFrame->layout()->setSpacing(0);
 
-
-    setAttribute( Qt::WA_OpaquePaintEvent );//was disabled
 
     buttonLayerSpacer->setMinimumHeight(0);
     buttonLayerSpacer->setMinimumWidth(100);
@@ -855,54 +852,120 @@ int TConsole::getButtonState()
     return mButtonState;
 }
 
-void TConsole::slot_toggleLogging()
+void TConsole::toggleLogging( bool isMessageEnabled )
 {
-    if( mIsDebugConsole ) return;
-    mLogToLogFile = ! mLogToLogFile;
-    //mpHost->mLogStatus = mLogToLogFile;
-    if( mLogToLogFile )
-    {
+    if( mIsDebugConsole || mIsSubConsole ) {
+        return;
+        // We don't support logging anything other than main console (at present?)
+    }
+
+    if( ! mLogToLogFile ) {
         QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
         file.open( QIODevice::WriteOnly | QIODevice::Text );
         QTextStream out(&file);
         file.close();
-    }
-    else
-    {
-       QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
-       file.remove();
-    }
-    if( mLogToLogFile )
-    {
-        mLastBufferLogLine = buffer.size();
+
         QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-        QString mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        if( mpHost->mRawStreamDump )
-        {
+        mLogFileName = directoryLogFile + "/"+QDateTime::currentDateTime().toString("yyyy-MM-dd#hh-mm-ss");
+        // Revised file name derived from time so that alphabetical filename and
+        // date sort order are the same...
+        QDir dirLogFile;
+        if( ! dirLogFile.exists( directoryLogFile ) ) {
+            dirLogFile.mkpath( directoryLogFile );
+        }
+
+        mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
             mLogFileName.append(".html");
         }
-        else
+        else {
             mLogFileName.append(".txt");
-
-        QDir dirLogFile;
-        if( ! dirLogFile.exists( directoryLogFile ) )
-        {
-            dirLogFile.mkpath( directoryLogFile );
         }
         mLogFile.setFileName( mLogFileName );
         mLogFile.open( QIODevice::WriteOnly );
         mLogStream.setDevice( &mLogFile );
-        if( mpHost->mRawStreamDump ) mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'><html><head><style><!-- *{ font-family: 'Courier New', 'Monospace', 'Courier';} *{ white-space: pre-wrap; } *{color:rgb(255,255,255);} *{background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>";
-        QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
+        if( isMessageEnabled ) {
+            QString message = QString("Logging has started. Log file is ") + mLogFile.fileName() + "\n";
+            printSystemMessage( message );
+            // This puts text onto console that is IMMEDIATELY POSTED into log file so
+            // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
+        }
+        mLogToLogFile = true;
     }
-    else
-    {
-        if( mpHost->mRawStreamDump ) mLogStream << "</pre></body></html>";
+    else {
+        QFile file( QDir::homePath()+"/.config/mudlet/autolog" );
+        file.remove();
+        mLogToLogFile = false;
+        if( isMessageEnabled ) {
+            QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
+            printSystemMessage( message );
+            // This puts text onto console that is IMMEDIATELY POSTED into log file so
+            // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
+        }
+    }
+
+    if( mLogToLogFile ) {
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
+            QStringList fontsList; // List of fonts to become the font-family entry for
+                                   // the master css in the header
+            fontsList << this->fontInfo().family(); // Seems to be the best way to get the
+                                                // font in use, as different TConsole
+                                                // instances within the same profile
+                                                // might have different fonts in future,
+                                                // and although the font is settable for
+                                                // the main profile window, it is not yet
+                                                // for user miniConsoles, or the Debug one
+            fontsList << QStringLiteral( "Courier New" );
+            fontsList << QStringLiteral( "Monospace" );
+            fontsList << QStringLiteral( "Courier" );
+            fontsList.removeDuplicates(); // In case the actual one is one of the defaults here
+
+            mLogStream << "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01//EN' 'http://www.w3.org/TR/html4/strict.dtd'>\n";
+            mLogStream << "<html>\n";
+            mLogStream << " <head>\n";
+            mLogStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
+            // put the charset as early as possible as the parser MUST restart when it
+            // switches away from the ASCII default
+            mLogStream << "  <meta name='generator' content='Mudlet MUD Client version: " << APP_VERSION << APP_BUILD << "'>\n";
+            // Nice to identify what made the file!
+            mLogStream << "  <title>" << tr( "Mudlet, log from %1 profile" ).arg(profile_name) << "</title>\n" ;
+             // Web-page title
+            mLogStream << "  <style type='text/css'>\n";
+            mLogStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb(255,255,255); background-color:rgb("<<mpHost->mBgColor.red()<<","<<mpHost->mBgColor.green()<<","<<mpHost->mBgColor.blue()<<");}\n";
+            mLogStream << "        span { white-space: pre; } -->\n";
+            mLogStream << "  </style>\n";
+            mLogStream << "  </head>\n";
+            mLogStream << "  <body><div>";
+            // <div></div> tags required around outside of the body <span></spans> for
+            // strict HTML 4 as we do not use <p></p>s or anything else
+            mLogFile.flush();
+        }
+        logButton->setToolTip( tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>") );
+    }
+    else {
+        if( mpHost->mIsCurrentLogFileInHtmlFormat ) {
+            mLogStream << "</div></body>\n";
+            mLogStream << "</html>\n";
+        }
+        mLogFile.flush();
         mLogFile.close();
-        QString message = QString("Logging has been stopped. Log file is ") + mLogFile.fileName() + "\n";
-        printSystemMessage( message );
+        logButton->setToolTip( tr("<html><head/><body><p>Start logging MUD output to log file.</p></body></html>") );
     }
+}
+
+// Converted into a wrapper around a separate toggleLogging() method so that
+// calls to turn logging on/off via the toolbar button - which go via this
+// wrapper - generate messages on the console.  Requests to control logging from
+// the Lua interpreter call the wrapped method directly and messages are
+// generated for Lua user control by the Lua subsystem.
+void TConsole::slot_toggleLogging()
+{
+    if( mIsDebugConsole || mIsSubConsole ) {
+        return;
+        // We don't support logging anything other than main console (at present?)
+    }
+
+    toggleLogging( true );
 }
 
 void TConsole::slot_toggleReplayRecording()
@@ -1106,44 +1169,7 @@ void TConsole::printOnDisplay( std::string & incomingSocketData )
     mTriggerEngineMode = true;
     buffer.translateToPlainText( incomingSocketData );
     mTriggerEngineMode = false;
-//    if( mLogToLogFile )
-//    {
-//        if( ! mIsDebugConsole )
-//        {
-//            if( buffer.size() < mLastBufferLogLine )
-//            {
-//                mLastBufferLogLine -= buffer.mBatchDeleteSize;
-//                qDebug()<<"---> RESETTING mLastBufferLogLine";
-//                if( mLastBufferLogLine < 0 )
-//                {
-//                    mLastBufferLogLine = 0;
-//                }
-//            }
-//            if( buffer.size() > mLastBufferLogLine + 1 )
-//            {
-//                for( int i=mLastBufferLogLine+1; i<buffer.size(); i++ )
-//                {
-//                    QString toLog;
-//                    if( mpHost->mRawStreamDump )
-//                    {
-//                        QPoint P1 = QPoint(0,i);
-//                        QPoint P2 = QPoint( buffer.buffer[i].size(), i);
-//                        toLog = buffer.bufferToHtml(P1, P2);
-//                    }
-//                    else
-//                    {
-//                        toLog = buffer.lineBuffer[i];
-//                        toLog.append("\n");
-//                    }
-//                    mLogStream << toLog;
-//                    qDebug()<<"LOG:"<<i<<" lastLogLine="<<mLastBufferLogLine<<" size="<<buffer.size()<<" toLog<"<<toLog<<">";
-//                    mLastBufferLogLine++;
-//                }
-//                mLastBufferLogLine--;
-//            }
-//            mLogStream.flush();
-//        }
-//    }
+
     double processT = mProcessingTime.elapsed();
     if( mpHost->mTelnet.mGA_Driver )
     {
@@ -1345,7 +1371,7 @@ QString TConsole::logger_translate( QString & s )
       23 italics off
       24 underline off
       27 inverse off
-      28 strikethrough off
+      29 strikethrough off
       30 fg black
       31 fg red
       32 fg green
