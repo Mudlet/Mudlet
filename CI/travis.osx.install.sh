@@ -7,3 +7,4 @@ done
 for i in $BREWS; do
   brew list | grep -q $i || brew install $i
 done
+brew linkapps qt5
