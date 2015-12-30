@@ -1180,11 +1180,11 @@ local lightColours = {
   [7] = {255,255,255}, -- white
 }
 
--- black + 23 tone grayscale from dark to light gray
+-- black + 23 tone grayscale up to white
 -- The values are to be used for each of te r, g and b values
 local grayscaleComponents = {
-	[0]  =   0,
-	[1]  =  11,
+  [0]  =   0,
+  [1]  =  11,
   [2]  =  22,
   [3]  =  33,
   [4]  =  44,
