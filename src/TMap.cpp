@@ -1102,7 +1102,7 @@ bool TMap::restore(QString location)
     QStringList entries;
 
     if( location.isEmpty() ) {
-        folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/ " )
+        folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/" )
                  .arg( QDir::homePath() )
                  .arg( mpHost->getName() );
         QDir dir( folder );
