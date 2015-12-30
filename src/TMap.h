@@ -26,6 +26,7 @@
 #include "TAstar.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QColor>
 #include <QMap>
 #include <QPixmap>
@@ -66,6 +67,8 @@ public:
 
 class TMap
 {
+    Q_DECLARE_TR_FUNCTIONS(TMap) // Needed so we can use tr() even though TMap is NOT derived from QObject
+
 public:
     TMap( Host *);
     ~TMap();
@@ -103,6 +106,8 @@ public:
     void exportMapToDatabase();
     void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
+
+
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
     QVector3D span;
@@ -139,7 +144,22 @@ public:
     bool mNewMove;
     QMap<qint32, QMap<qint32, TMapLabel> > mapLabels;
 
-    int version; // map file format version
+    int mVersion; // loaded map file format version
+    const int mDefaultVersion; // replaces CURRENT_MAP_VERSION
+    const int mMaxVersion; // normally the same as mDefaultVersion but can be
+                           // higher for development builds and is the maximum
+                           // version the development build can parse.
+    const int mMinVersion; // normally the same as mDefaultVersion but can be
+                           // lower for release builds and is the minimum
+                           // version recommended for saving , which might
+                           // perhaps be one less than mDefault to permit sharing
+                           // of a map with users of an older version "in the field"!
+    int mSaveVersion; // what to use when saving the map, defaults to mDefaultVersion
+                      // but can be override by control in special options (last)
+                      // tab on profile preference dialog using the limits set
+                      // by mMinVersion and mMaxVersion.
+
+    QMap<QString, QString> mUserData;
 };
 
 #endif // MUDLET_TMAP_H
