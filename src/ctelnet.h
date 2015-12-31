@@ -6,6 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -159,6 +160,7 @@ private:
     void              gotRest( std::string & );
     void              gotPrompt( std::string & );
     void              postData();
+    void              raiseProtocolEvent( const QString & name, const QString & protocol );
 
 
 
