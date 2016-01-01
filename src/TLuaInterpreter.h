@@ -387,6 +387,17 @@ public:
     static int getRoomUserDataKeys( lua_State * L );
     static int getAllRoomUserData( lua_State * L );
     static int getAllRoomEntrances( lua_State * L );
+    static int searchAreaUserData( lua_State * );
+    static int getMapUserData( lua_State * );
+    static int getAreaUserData( lua_State * );
+    static int setMapUserData( lua_State * );
+    static int setAreaUserData( lua_State * );
+    static int getAllAreaUserData( lua_State * );
+    static int getAllMapUserData( lua_State * );
+    static int clearAreaUserData( lua_State * );
+    static int clearAreaUserDataItem( lua_State * );
+    static int clearMapUserData( lua_State * );
+    static int clearMapUserDataItem( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;

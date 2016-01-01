@@ -18,7 +18,9 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
+lessThan(QT_MAJOR_VERSION, 5) {
+  error("requires Qt 5.0 or later")
+}
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
