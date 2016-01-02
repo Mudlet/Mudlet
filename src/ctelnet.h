@@ -159,7 +159,7 @@ private:
     void              gotRest( std::string & );
     void              gotPrompt( std::string & );
     void              postData();
-    void              raiseNegotiationFinishedEvent( const QString & protocol );
+    void              raiseProtocolEvent( const QString & name, const QString & protocol );
 
 
 
