@@ -3,6 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -532,6 +533,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   _h += TN_SE;
                   socketOutRaw( _h );
                   qDebug() << "TELNET IAC DO MSDP";
+                  raiseProtocolEvent( "sysProtocolEnabled", "MSDP" );
                   break;
               }
           }
@@ -552,6 +554,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_IAC;
               _h += TN_SE;
               socketOutRaw( _h );
+              raiseProtocolEvent( "sysProtocolEnabled", "ATCP" );
               break;
           }
 
@@ -581,6 +584,8 @@ void cTelnet::processTelnetCommand( const string & command )
               _h += TN_SE;
 
               socketOutRaw( _h );
+
+              raiseProtocolEvent( "sysProtocolEnabled", "GMCP" );
               break;
           }
 
@@ -590,6 +595,8 @@ void cTelnet::processTelnetCommand( const string & command )
               {
                 sendTelnetOption( TN_DO, 91 );
                 //mpHost->mpConsole->print("\n<MXP enabled>\n");
+
+                raiseProtocolEvent( "sysProtocolEnabled", "MXP" );
                 break;
               }
               //else
@@ -602,6 +609,7 @@ void cTelnet::processTelnetCommand( const string & command )
               qDebug() << "Aardwulf channel 102 support enabled";
               enableChannel102 = true;
               sendTelnetOption( TN_DO, 102 );
+              raiseProtocolEvent( "sysProtocolEnabled", "channel102" );
               break;
           }
 
@@ -695,6 +703,26 @@ void cTelnet::processTelnetCommand( const string & command )
               #ifdef DEBUG
                   qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
               #endif
+              if( option == static_cast<char>(69) ) // MSDP got turned off
+              {
+                  raiseProtocolEvent( "sysProtocolDisabled", "MSDP" );
+              }
+              if( option == static_cast<char>(200) ) // ATCP got turned off
+              {
+                  raiseProtocolEvent( "sysProtocolDisabled", "ATCP" );
+              }
+              if( option == static_cast<char>(201) ) // GMCP got turned off
+              {
+                  raiseProtocolEvent( "sysProtocolDisabled", "GMCP" );
+              }
+              if( option == MXP ) // MXP got turned off
+              {
+                  raiseProtocolEvent( "sysProtocolDisabled", "MXP" );
+              }
+              if( option == static_cast<char>(102) ) // channel 102 support
+              {
+                  raiseProtocolEvent( "sysProtocolDisabled", "channel102" );
+              }
               //send DONT if needed (see RFC 854 for details)
               if( hisOptionState[idxOption] || ( heAnnouncedState[idxOption] ) )
               {
@@ -732,6 +760,7 @@ void cTelnet::processTelnetCommand( const string & command )
             qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption( TN_WILL, 69 );
 
+            raiseProtocolEvent( "sysProtocolEnabled", "MSDP" );
             break;
           }
           if( option == static_cast<char>(200) && !mpHost->mEnableGMCP ) // ATCP support, enable only if GMCP is off as GMCP is better
@@ -739,19 +768,22 @@ void cTelnet::processTelnetCommand( const string & command )
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
             sendTelnetOption( TN_WILL, 200 );
+            raiseProtocolEvent( "sysProtocolEnabled", "ATCP" );
             break;
           }
-          if( option == static_cast<char>(201) ) // GMCP support
+          if( option == static_cast<char>(201) && mpHost->mEnableGMCP ) // GMCP support
           {
             qDebug() << "TELNET IAC DO GMCP";
-            enableATCP = true;
+            enableGMCP = true;
             sendTelnetOption( TN_WILL, 201 );
+            raiseProtocolEvent( "sysProtocolEnabled", "GMCP" );
             break;
           }
           if( option == MXP ) // MXP support
           {
             sendTelnetOption( TN_WILL, 91 );
             mpHost->mpConsole->print("\n<MXP support enabled>\n");
+            raiseProtocolEvent( "sysProtocolEnabled", "MXP" );
             break;
           }
           if( option == static_cast<char>(102) ) // channel 102 support
@@ -759,6 +791,7 @@ void cTelnet::processTelnetCommand( const string & command )
             qDebug() << "TELNET IAC DO CHANNEL 102";
             enableChannel102 = true;
             sendTelnetOption( TN_WILL, 102 );
+            raiseProtocolEvent( "sysProtocolEnabled", "channel102" );
             break;
           }
 #ifdef DEBUG
@@ -808,6 +841,26 @@ void cTelnet::processTelnetCommand( const string & command )
               qDebug() << "cTelnet::processTelnetCommand() TN_DONT command="<<(quint8)command[2];
 #endif
           option = command[2];
+          if( option == static_cast<char>(69) ) // MSDP got turned off
+          {
+             raiseProtocolEvent( "sysProtocolDisabled", "MSDP" );
+          }
+          if( option == static_cast<char>(200) ) // ATCP got turned off
+          {
+             raiseProtocolEvent( "sysProtocolDisabled", "ATCP" );
+          }
+          if( option == static_cast<char>(201) ) // GMCP got turned off
+          {
+             raiseProtocolEvent( "sysProtocolDisabled", "GMCP" );
+          }
+          if( option == MXP ) // MXP got turned off
+          {
+             raiseProtocolEvent( "sysProtocolDisabled", "MXP" );
+          }
+          if( option == static_cast<char>(102) ) // channel 102 support
+          {
+             raiseProtocolEvent( "sysProtocolDisabled", "channel102" );
+          }
           int idxOption = static_cast<int>(option);
           if( myOptionState[idxOption] || ( !announcedState[idxOption] ) )
           {
@@ -1934,4 +1987,14 @@ MAIN_LOOP_END: ;
     }
     mpHost->mpConsole->finalize();
     lastTimeOffset = timeOffset.elapsed();
+}
+
+void cTelnet::raiseProtocolEvent( const QString & name, const QString & protocol )
+{
+    TEvent * me = new TEvent;
+    me->mArgumentList.append( name );
+    me->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    me->mArgumentList.append( protocol );
+    me->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    mpHost->raiseEvent( me );
 }
