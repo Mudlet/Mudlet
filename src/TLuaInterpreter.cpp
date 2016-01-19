@@ -309,6 +309,11 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
             pE.mArgumentList.append( QString(lua_tostring( L, i )) );
             pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         }
+        else if( lua_isboolean( L, i ) )
+        {
+            pE.mArgumentList.append( QString::number(lua_toboolean( L, i )) );
+            pE.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        }
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( pE );
@@ -11906,6 +11911,10 @@ bool TLuaInterpreter::callEventHandler(const QString & function, const TEvent & 
         {
             lua_pushnumber( L, pE.mArgumentList[i].toDouble() );
         }
+		else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
+		{
+			lua_pushboolean( L, pE.mArgumentList[i].toInt() );
+		}
         else
         {
             lua_pushstring( L, pE.mArgumentList[i].toLatin1().data() );
