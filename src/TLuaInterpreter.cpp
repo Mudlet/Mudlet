@@ -11913,7 +11913,7 @@ bool TLuaInterpreter::callEventHandler(const QString & function, const TEvent & 
         }
         else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
         {
-	        lua_pushboolean( L, pE.mArgumentList[i].toInt() );
+            lua_pushboolean( L, pE.mArgumentList[i].toInt() );
         }
         else
         {
