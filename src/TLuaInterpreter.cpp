@@ -11911,10 +11911,10 @@ bool TLuaInterpreter::callEventHandler(const QString & function, const TEvent & 
         {
             lua_pushnumber( L, pE.mArgumentList[i].toDouble() );
         }
-		else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
-		{
-			lua_pushboolean( L, pE.mArgumentList[i].toInt() );
-		}
+        else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
+        {
+	        lua_pushboolean( L, pE.mArgumentList[i].toInt() );
+        }
         else
         {
             lua_pushstring( L, pE.mArgumentList[i].toLatin1().data() );
