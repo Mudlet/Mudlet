@@ -22,6 +22,7 @@
 
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1
+#define ARGUMENT_TYPE_BOOLEAN 2
 
 class TEvent
 {
