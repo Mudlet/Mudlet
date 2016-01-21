@@ -321,7 +321,7 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
         }
         else
         {
-            lua_pushstring( L, "raiseEvent: invalid argument type" );
+            lua_pushfstring( L, "raiseEvent: bad argument #%d (expected string, number, boolean, or nil, got %s)", i, luaL_typename(L,i) );
             lua_error( L );
             return 1;
         }
