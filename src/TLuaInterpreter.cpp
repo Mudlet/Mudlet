@@ -314,6 +314,17 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
             pE.mArgumentList.append( QString::number(lua_toboolean( L, i )) );
             pE.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
         }
+        else if( lua_isnil( L, i ) )
+        {
+            pE.mArgumentList.append( QString() );
+            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else
+        {
+            lua_pushstring( L, "raiseEvent: invalid argument type" );
+            lua_error( L );
+            return 1;
+        }
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( pE );
@@ -11914,6 +11925,10 @@ bool TLuaInterpreter::callEventHandler(const QString & function, const TEvent & 
         else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
         {
             lua_pushboolean( L, pE.mArgumentList[i].toInt() );
+        }
+        else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_NIL )
+        {
+            lua_pushnil( L );
         }
         else
         {
