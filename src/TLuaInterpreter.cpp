@@ -321,7 +321,7 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
         }
         else
         {
-            lua_pushfstring( L, "raiseEvent: bad argument #%d (expected string, number, boolean, or nil, got %s)", i, luaL_typename(L,i) );
+            lua_pushstring( L, tr("raiseEvent: bad argument #%1 (expected string, number, boolean, or nil, got %2)").arg(QString::number(i), luaL_typename(L,i)).toUtf8().constData() );
             lua_error( L );
             return 1;
         }
