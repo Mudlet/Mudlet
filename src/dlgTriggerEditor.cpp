@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -2314,7 +2314,7 @@ void dlgTriggerEditor::slot_script_toggle_active()
     {
         if( pT->isActive() )
         {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
         }
         else
         {
@@ -3564,7 +3564,8 @@ void dlgTriggerEditor::saveAlias()
                     {
                         if( pT->ancestorsActive() )
                             _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
-                        _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
+                        else
+                            _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                     pItem->setIcon( 0, _icon );
                     pItem->setText( 0, name );
@@ -5359,7 +5360,7 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded( true );
 
     QStringList sL6;
-    sL5 << "Action Key Bindings";
+    sL6 << "Action Key Bindings";
     mpKeyBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL6 );
     mpKeyBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon6;

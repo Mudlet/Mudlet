@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -2850,13 +2850,13 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
 
 int TLuaInterpreter::calcFontWidth( int size )
 {
-    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
     return QFontMetrics( font ).width( QChar('W') );
 }
 
 int TLuaInterpreter::calcFontHeight( int size )
 {
-    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+    QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
     int fontDescent = QFontMetrics( font ).descent();
     int fontAscent = QFontMetrics( font ).ascent();
     return fontAscent + fontDescent;

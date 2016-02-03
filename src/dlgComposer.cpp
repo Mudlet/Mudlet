@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,7 +31,7 @@ dlgComposer::dlgComposer( Host * pH )
 
 {
     setupUi(this);
-    QFont f = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier );
+    QFont f = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal );
     edit->setFont( f );
     connect( saveButton, SIGNAL(pressed()), this, SLOT(save()));
     connect( cancelButton, SIGNAL(pressed()), this, SLOT(cancel()));
