@@ -111,6 +111,7 @@ mudlet::mudlet()
 , replayTime( 0 )
 , replayTimer( 0 )
 , replayToolBar( 0 )
+, moduleTable( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
