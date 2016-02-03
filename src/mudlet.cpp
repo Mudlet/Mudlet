@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -111,7 +111,10 @@ mudlet::mudlet()
     setAttribute( Qt::WA_DeleteOnClose );
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
-    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_16px.png" ) ) );
+    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_48px.png" ) ) );
+    QStatusBar * mainStatusBar = QMainWindow::statusBar();
+    // On at least my platform (Linux) the status bar does not seem to exist
+    // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar( this );
     addToolBar( mpMainToolBar );
     //restoreBar = menuBar()->addMenu( "" );
@@ -224,6 +227,9 @@ mudlet::mudlet()
     actionOptions->setToolTip(tr("See and edit profile preferences"));
     mpMainToolBar->addAction( actionOptions );
 
+    // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
+    // now used for the window when the visual change to the toolbar caused can
+    // be managed
     QAction * actionNotes = new QAction( QIcon( QStringLiteral( ":/icons/applications-accessories.png" ) ), tr("Notepad"), this);
     actionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
     mpMainToolBar->addAction( actionNotes );
@@ -236,7 +242,6 @@ mudlet::mudlet()
     actionModuleM->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
     mpMainToolBar->addAction( actionModuleM );
 
-
     QAction * actionReplay = new QAction( QIcon( QStringLiteral( ":/icons/media-optical.png" ) ), tr("Replay"), this);
     actionReplay->setToolTip(tr("Load a Mudlet replay"));
     mpMainToolBar->addAction( actionReplay );
@@ -244,8 +249,6 @@ mudlet::mudlet()
     actionReconnect = new QAction( QIcon( QStringLiteral( ":/icons/system-restart.png" ) ), tr("Reconnect"), this);
     actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
     mpMainToolBar->addAction( actionReconnect );
-
-
 
     QAction * actionMultiView = new QAction( QIcon( QStringLiteral( ":/icons/view-split-left-right.png" ) ), tr("MultiView"), this);
     actionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
@@ -264,8 +267,6 @@ mudlet::mudlet()
     QAction * actionAbout = new QAction( QIcon( QStringLiteral( ":/icons/mudlet_information.png" ) ), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction( actionAbout );
-
-
 
     disableToolbarButtons();
 
@@ -287,20 +288,18 @@ mudlet::mudlet()
     mpDebugArea->resize( QSize( 800, 600 ).boundedTo( generalRule ) );
     mpDebugArea->hide();
     QFont mainFont;
-    if( file_use_smallscreen.exists() )
-    {
-        mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
+    if( file_use_smallscreen.exists() ) {
+        mainFont = QFont( QStringLiteral( "Bitstream Vera Sans Mono" ), 8, QFont::Normal);
         showFullScreen();
         QAction * actionFullScreeniew = new QAction( QIcon( QStringLiteral( ":/icons/dialog-cancel.png" ) ), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction( actionFullScreeniew );
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     }
-    else
-    {
-        mainFont = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
+    else {
+        mainFont = QFont( QStringLiteral( "Bitstream Vera Sans Mono" ), 8, QFont::Normal);
     }
-    QFont mdiFont = QFont("Bitstream Vera Sans Mono", 6, QFont::Courier);
+    QFont mdiFont = QFont(QStringLiteral( "Bitstream Vera Sans Mono" ), 6, QFont::Normal);
     setFont( mainFont );
     mainPane->setFont( mainFont );
     mpTabBar->setFont( mdiFont );
@@ -326,8 +325,6 @@ mudlet::mudlet()
     connect(actionPackageM, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionModuleM, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
 
-
-
     QAction * mactionConnect = new QAction(tr("Connect"), this);
     QAction * mactionTriggers = new QAction(tr("Triggers"), this);
     QAction * mactionAlias = new QAction(tr("Aliases"), this);
@@ -348,7 +345,6 @@ mudlet::mudlet()
     connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
     connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
     connect(dactionReplay, SIGNAL(triggered()), this, SLOT(slot_replay()));
-
 
     connect(mactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(dactionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
@@ -398,16 +394,12 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
 
-    //LuaInterface * li = new LuaInterface(getActiveHost());
-    //li->getVars();
-
-
-    //qApp->setStyleSheet("QMainWindow::separator{border: 0px;width: 0px; height: 0px; padding: 0px;} QMainWindow::separator:hover {background: red;}");
-    mpMusicBox1 = new QMediaPlayer;
-    mpMusicBox2 = new QMediaPlayer;
-    mpMusicBox3 = new QMediaPlayer;
-    mpMusicBox4 = new QMediaPlayer;
-
+    mpMusicBox1 = new QMediaPlayer(this);
+    mpMusicBox2 = new QMediaPlayer(this);
+    mpMusicBox3 = new QMediaPlayer(this);
+    mpMusicBox4 = new QMediaPlayer(this);
+    // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
+    mainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start..." ), 15000 );
 }
 
 bool mudlet::moduleTableVisible()
@@ -1947,7 +1939,7 @@ void mudlet::check_for_mappingscript()
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
 
-    if (!pHost->check_for_mappingscript()) {
+    if (!pHost->checkForMappingScript()) {
         QUiLoader loader;
 
         QFile file(":/ui/lacking_mapper_script.ui");
@@ -1995,7 +1987,8 @@ void mudlet::slot_notes()
         format.setFont( pHost->mDisplayFont );
         pNotes->notesEdit->setCurrentCharFormat( format );
         pNotes->restore();
-        pNotes->setWindowTitle( pHost->getName()+" notes" );
+        pNotes->setWindowTitle( tr( "%1 - notes" ).arg( pHost->getName() ) );
+        pNotes->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_notepad.png" ) ) );
     }
     pNotes->raise();
     pNotes->show();
@@ -2007,7 +2000,8 @@ void mudlet::slot_irc()
     if( ! mpIRC )
     {
         mpIRC = new dlgIRC();
-        mpIRC->setWindowTitle( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" );
+        mpIRC->setWindowTitle( tr( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" ) );
+        mpIRC->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
         mpIRC->resize(660,380);
     }
 
@@ -2329,8 +2323,16 @@ void mudlet::replayStart()
     if( ! mpMainToolBar ) return;
     replayToolBar = new QToolBar( this );
     mReplaySpeed = 1;
+    mReplayTime.setHMS( 0, 0, 0, 1 ); // Since Qt5.0 adding anything to a zero
+                                      // (invalid) time leaves the time value
+                                      // STILL being regarded as invalid - so to
+                                      // get a valid time we have to use a very
+                                      // small, NON-zero time to initiase it...!
     replayTime = new QLabel( this );
     actionReplayTime = replayToolBar->addWidget( replayTime );
+
+    replayToolBar->setIconSize( QSize( 8 * mMainIconSize, 8 * mMainIconSize ) );
+    replayToolBar->setToolButtonStyle( mpMainToolBar->toolButtonStyle() );
 
     actionReplaySpeedUp = new QAction( QIcon( QStringLiteral( ":/icons/export.png" ) ), tr("Faster"), this);
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));

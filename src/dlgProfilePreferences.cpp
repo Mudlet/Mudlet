@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -249,9 +250,9 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     for( int i=1; i<40; i++ ) sizeList << QString::number(i);
     fontSize->insertItems( 1, sizeList );
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
-    //connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
-    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
-    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
+//    connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
+//    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
+//    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
 
 
 
@@ -1565,7 +1566,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
-  qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+//qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
     //pHost->mEncoding = encoding->currentIndex();
@@ -1645,7 +1646,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         QSize s = QSize(x,y);
         QResizeEvent event(s, s);
         QApplication::sendEvent( mudlet::self()->mConsoleMap[pHost], &event);
-qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+//qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
     close();
 }

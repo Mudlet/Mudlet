@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -197,8 +197,7 @@ void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192,192,192);
     mBgColor = QColor(0,0,0);
-    mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
-//    mDisplayFont.setWordSpacing( 0 );
+    mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
 #if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         int width = mScreenWidth*mFontWidth*2;
         int height = mFontHeight*2;
@@ -219,7 +218,7 @@ void TTextEdit::initDefaultSettings()
     mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, mLetterSpacing );
     mDisplayFont.setFixedPitch(true);
     setFont( mDisplayFont );
-    mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
+    mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
     mCommandSeperator = QString(";");
     mWrapAt = 100;
     mWrapIndentCount = 5;
