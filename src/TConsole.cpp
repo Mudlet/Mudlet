@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -64,7 +64,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , mCommandBgColor( QColor( 0, 0, 0 ) )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
 , mConsoleName( "main" )
-, mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
+, mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
 , mFgColor( QColor( 0, 0, 0 ) )
 , mIndentCount( 0 )
 , mIsDebugConsole( isDebugConsole )
@@ -418,7 +418,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
 
 
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier);
+    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
     int width;
     int maxWidth = 120;
     width = QFontMetrics( latencyFont ).boundingRect(QString("N:0.000 S:0.000")).width();
@@ -428,7 +428,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     }
     else
     {
-         QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Courier);
+         QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
          width = QFontMetrics( latencyFont2 ).boundingRect(QString("N:0.000 S:0.000")).width();
          if( width < maxWidth )
          {
@@ -436,7 +436,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
          }
          else
          {
-             QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Courier);
+             QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
              width = QFontMetrics( latencyFont3 ).boundingRect(QString("N:0.000 S:0.000")).width();
              networkLatency->setFont( latencyFont3 );
          }
@@ -992,7 +992,7 @@ void TConsole::slot_toggleReplayRecording()
     else
     {
         mReplayFile.close();
-        QString message = QString("Replay recording has been stopped. File: ") + mLogFile.fileName() + "\n";
+        QString message = QString("Replay recording has been stopped. File: ") + mReplayFile.fileName() + "\n";
         printSystemMessage( message );
     }
 }
@@ -2004,10 +2004,10 @@ bool TConsole::setMiniConsoleFontSize( std::string & buf, int size )
     {
         TConsole * pC = mSubConsoleMap[key];
         if( ! pC ) return false;
-        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
         pC->console->updateScreenView();
         pC->console->forceUpdate();
-        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Courier);
+        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
         pC->console2->updateScreenView();
         pC->console2->forceUpdate();
         return true;
