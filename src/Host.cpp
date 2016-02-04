@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -65,11 +65,11 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mBorderRightWidth( 0 )
 , mBorderTopHeight( 0 )
 , mCodeCompletion( true )
-, mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//( QFont("Monospace", 10, QFont::Courier) )
+, mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//( QFont("Monospace", 10, QFont::Courier) )
 , mCommandSeparator  ( QString(";") )
 , mCommandSeperator  ( QString(";") )
 , mDisableAutoCompletion( false )
-, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Courier ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
+, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
 , mEnableGMCP( false )
 , mEnableMSDP( false )
 , mFORCE_GA_OFF( false )
@@ -382,7 +382,7 @@ const unsigned int Host::assemblePath()
     return totalWeight;
 }
 
-int Host::check_for_mappingscript()
+const bool Host::checkForMappingScript()
 {
     // the mapper script reminder is only shown once
     // because it is too difficult and error prone (->proper script sequence)

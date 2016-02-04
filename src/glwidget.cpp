@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -367,7 +368,7 @@ void GLWidget::paintGL()
             glDepthFunc(GL_LESS);
             glClearColor (0.0,0.0,0.0,1.0);
             glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            renderText(width()/3,height()/2,"no map or no valid position on map", QFont("Bitstream Vera Sans Mono", 30, QFont::Courier ) );
+            renderText(width()/3,height()/2,"no map or no valid position on map", QFont("Bitstream Vera Sans Mono", 30, QFont::Normal ) );
 
             glLoadIdentity();
             glFlush();
@@ -945,7 +946,7 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        areaExit = true;
+                        areaExit = false;
                     }
 
                     float ex = static_cast<float>(pExit->x);
