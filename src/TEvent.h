@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1
 #define ARGUMENT_TYPE_BOOLEAN 2
+#define ARGUMENT_TYPE_NIL 3
 
 class TEvent
 {

@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -309,6 +310,17 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
             pE->mArgumentList.append( QString::number(lua_toboolean( L, i )) );
             pE->mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
         }
+        else if( lua_isnil( L, i ) )
+        {
+            pE->mArgumentList.append( QString() );
+            pE->mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else
+        {
+            lua_pushstring( L, tr("raiseEvent: bad argument #%1 type (expected string, number, boolean, or nil, got %2)").arg(QString::number(i), luaL_typename(L,i)).toUtf8().constData() );
+            lua_error( L );
+            return 1;
+		}
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( pE );
@@ -12067,6 +12079,10 @@ bool TLuaInterpreter::callEventHandler( QString & function, TEvent * pE )
         else if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
         {
             lua_pushboolean( L, pE->mArgumentList[i].toInt() );
+        }
+        else if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NIL )
+        {
+            lua_pushnil( L );
         }
         else
         {
