@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -194,6 +194,9 @@ public slots:
     void                        slot_color_trigger_fg();
     void                        slot_color_trigger_bg();
 
+private slots:
+    void                        slot_changeEditorTextOptions( QTextOption::Flags );
+
 private:
 
     void                        saveOpenChanges();
@@ -275,6 +278,7 @@ private:
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
     dlgVarsMainArea *           mpVarsMainArea;
     bool                        mChangingVar;
+    QTextDocument *             mpEditorDocument;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

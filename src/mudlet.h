@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,6 +33,7 @@
 #include <QPointer>
 #include <QQueue>
 #include <QTime>
+#include <QTextOption>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -165,6 +167,11 @@ public:
    QMediaPlayer *                mpMusicBox4;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
+   QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
+                                                    // only ::ShowTabsAndSpaces
+                                                    // and ::ShowLineAndParagraphSeparators
+                                                    // are considered/used/stored
+   void                         setEditorTextoptions( const bool, const bool );
 
 
 
@@ -212,6 +219,10 @@ public slots:
 protected:
 
    void                          closeEvent(QCloseEvent *event) override;
+
+signals:
+
+   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
 
 private slots:
 

@@ -39,6 +39,7 @@
 #include <QMainWindow>
 #include <QPalette>
 #include <QRegExp>
+#include <QTextOption>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -66,6 +67,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
     enableSpellCheck->setChecked( pH->mEnableSpellCheck );
+    checkBox_showSpacesAndTabs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces );
+    checkBox_showLineFeedsAndParagraphs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators );
 
     QString path;
 #ifdef Q_OS_LINUX
@@ -1027,5 +1030,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         QApplication::sendEvent( mudlet::self()->mConsoleMap[pHost], &event);
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
+    mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     close();
 }

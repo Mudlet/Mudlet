@@ -820,6 +820,26 @@ or some other computer model that has a small screen.</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Spaces/Tabs</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Line/Paragraphs</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
