@@ -19,7 +19,7 @@
   <property name="windowTitle">
    <string>Script editor</string>
   </property>
-  <widget class="QWidget" name="randomwidget">
+  <widget class="QWidget" name="widget_main">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
      <horstretch>0</horstretch>
@@ -115,7 +115,7 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QSplitter" name="splitter">
+              <widget class="QSplitter" name="splitter_main">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -140,7 +140,7 @@
                <property name="handleWidth">
                 <number>5</number>
                </property>
-               <widget class="QFrame" name="left_frame">
+               <widget class="QFrame" name="frame_left">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>0</horstretch>
@@ -278,7 +278,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="TTreeWidget" name="treeWidget_alias">
+                  <widget class="TTreeWidget" name="treeWidget_aliases">
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
                    </property>
@@ -413,7 +413,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="TTreeWidget" name="treeWidget_vars">
+                  <widget class="TTreeWidget" name="treeWidget_variables">
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
                    </property>
@@ -458,7 +458,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="TTreeWidget" name="treeWidget">
+                  <widget class="TTreeWidget" name="treeWidget_triggers">
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
                    </property>
@@ -506,12 +506,20 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="toggleHiddenVarsButton">
+                  <widget class="QPushButton" name="button_displayAllVariables">
                    <property name="text">
-                    <string>Toggle Hidden Variables</string>
+                    <string>Display All Variables</string>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="../mudlet_alpha.qrc">
+                     <normaloff>:/icons/tag_checkbox.png</normaloff>
+                     <normalon>:/icons/tag_checkbox_checked.png</normalon>:/icons/tag_checkbox.png</iconset>
                    </property>
                    <property name="checkable">
                     <bool>true</bool>
+                   </property>
+                   <property name="checked">
+                    <bool>false</bool>
                    </property>
                    <property name="autoDefault">
                     <bool>false</bool>
@@ -525,7 +533,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QWidget" name="mpSearchArea" native="true">
+                  <widget class="QWidget" name="widget_searchArea" native="true">
                    <layout class="QVBoxLayout" name="verticalLayout_6">
                     <property name="spacing">
                      <number>0</number>
@@ -543,7 +551,7 @@
                      <number>0</number>
                     </property>
                     <item>
-                     <widget class="QWidget" name="widget_5" native="true">
+                     <widget class="QWidget" name="widget_searchAreaTop" native="true">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                         <horstretch>0</horstretch>
@@ -640,7 +648,7 @@
                         <number>0</number>
                        </property>
                        <item>
-                        <widget class="QWidget" name="widget_7" native="true">
+                        <widget class="QWidget" name="widget_searchTerm" native="true">
                          <layout class="QHBoxLayout" name="horizontalLayout_3">
                           <property name="spacing">
                            <number>0</number>
@@ -658,7 +666,7 @@
                            <number>0</number>
                           </property>
                           <item>
-                           <widget class="QLabel" name="label">
+                           <widget class="QLabel" name="label_searchTerm">
                             <property name="sizePolicy">
                              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                               <horstretch>0</horstretch>
@@ -677,7 +685,7 @@
                            </widget>
                           </item>
                           <item>
-                           <widget class="QComboBox" name="comboBox_search_triggers">
+                           <widget class="QComboBox" name="comboBox_searchTerms">
                             <property name="sizePolicy">
                              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                               <horstretch>0</horstretch>
@@ -711,7 +719,7 @@
                            </widget>
                           </item>
                           <item>
-                           <spacer name="horizontalSpacer_2">
+                           <spacer name="horizontalSpacer_searchTerm">
                             <property name="orientation">
                              <enum>Qt::Horizontal</enum>
                             </property>
@@ -730,7 +738,7 @@
                         </widget>
                        </item>
                        <item>
-                        <widget class="QWidget" name="widget_6" native="true">
+                        <widget class="QWidget" name="widget_searchAreaCloseButton" native="true">
                          <property name="sizePolicy">
                           <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
                            <horstretch>0</horstretch>
@@ -766,7 +774,7 @@
                            <number>0</number>
                           </property>
                           <item>
-                           <widget class="QToolButton" name="messageAreaCloseButton">
+                           <widget class="QToolButton" name="button_searchAreaClose">
                             <property name="minimumSize">
                              <size>
                               <width>16</width>
@@ -801,7 +809,7 @@
                            </widget>
                           </item>
                           <item>
-                           <spacer name="verticalSpacer">
+                           <spacer name="verticalSpacer_searchCloseButton">
                             <property name="orientation">
                              <enum>Qt::Vertical</enum>
                             </property>
@@ -820,7 +828,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QTreeWidget" name="tree_widget_search_results_main">
+                     <widget class="QTreeWidget" name="treeWidget_searchResults">
                       <property name="frameShape">
                        <enum>QFrame::NoFrame</enum>
                       </property>
@@ -887,8 +895,17 @@
                   </widget>
                  </item>
                 </layout>
+                <zorder>treeWidget_timers</zorder>
+                <zorder>treeWidget_keys</zorder>
+                <zorder>treeWidget_aliases</zorder>
+                <zorder>treeWidget_actions</zorder>
+                <zorder>treeWidget_scripts</zorder>
+                <zorder>treeWidget_triggers</zorder>
+                <zorder>button_displayAllVariables</zorder>
+                <zorder>widget_searchArea</zorder>
+                <zorder>treeWidget_variables</zorder>
                </widget>
-               <widget class="QFrame" name="right_frame">
+               <widget class="QFrame" name="frame_right">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>1</horstretch>
@@ -932,7 +949,7 @@
                   <number>0</number>
                  </property>
                  <item>
-                  <widget class="QSplitter" name="splitter_3">
+                  <widget class="QSplitter" name="splitter_rightTopBottom">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                      <horstretch>0</horstretch>
@@ -971,7 +988,7 @@
                    <property name="childrenCollapsible">
                     <bool>true</bool>
                    </property>
-                   <widget class="QFrame" name="frame_9">
+                   <widget class="QFrame" name="frame_rightTop">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                       <horstretch>0</horstretch>
@@ -1030,7 +1047,7 @@
                      </item>
                     </layout>
                    </widget>
-                   <widget class="QFrame" name="frame_4">
+                   <widget class="QFrame" name="frame_rightBottom">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>

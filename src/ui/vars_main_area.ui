@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>584</width>
+    <width>601</width>
     <height>92</height>
    </rect>
   </property>
@@ -133,11 +133,7 @@ p, li { white-space: pre-wrap; }
         </palette>
        </property>
        <property name="toolTip">
-        <string>Hides this variable from the variables view, if hidden variables are enabled. 
-
-You might want to hide variables that aren't related to you, so you can focus only
-on your own system and not be distrated by some of the Mudlet defaults -
-or, alternatively, use this not to mess them by up accident</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Hides this variable (and its children if it is a table) from the Variables view, if the &lt;i&gt;Display All Variables&lt;/i&gt; control is off.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You might want to use this to hide variables that are not related to your scipts, so you can focus only on your own system and not be distrated by some of the Mudlet defaults - or, alternatively, to use this to not mess them by up accident!&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="autoFillBackground">
         <bool>true</bool>
@@ -185,7 +181,7 @@ or, alternatively, use this not to mess them by up accident</string>
            </size>
           </property>
           <property name="text">
-           <string>doesn't show if hidden variables are enabled</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does not show in area to the left unless &lt;b&gt;Display All Variables&lt;/b&gt; is on.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
