@@ -60,6 +60,8 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTextCursor>
+#include <QTextDocument>
 #include <QTextOption>
 #include <QToolBar>
 #include "post_guard.h"
@@ -117,7 +119,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 , mpCurrentAliasItem( 0 )
 , mpCurrentVarItem( 0 )
 , mpHost( pH )
-, mpEditorDocument( 0 )
+, mpSourceEditor( 0 )
+, mpSourceEditorDocument( 0 )
 {
     // init generated dialog
     setupUi(this);
@@ -190,15 +193,24 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy( sizePolicy5 );
     pVB1->addWidget( mpSourceEditorArea );
-    QPlainTextEdit * pEditor= mpSourceEditorArea->editor;
-    pEditor->setWordWrapMode( QTextOption::NoWrap );
-    mpEditorDocument = pEditor->document();
-    QTextOption _options = mpEditorDocument->defaultTextOption();
+    mpSourceEditor = mpSourceEditorArea->editor;
+    mpSourceEditor->setWordWrapMode( QTextOption::NoWrap );
+#if QT_VERSION >= 0x050200
+    // Only added in Qt 5.2 (even though the built-into Qt Creator form designer
+    // for Qt 5.1.1. allows it to be entered) - the work around for older
+    // versions involve reimplementing the paint Event which is a bit too much
+    // effort for something just to put up some helpful dummy text when the
+    // editor widget is empty! - Slysven
+    mpSourceEditor->setPlaceholderText( tr( "Enter your Lua code here for any item except variables. Note that if the first line is a Lua comment (which begins with \"--\") that will likely show up in error messages displayed in the error window below or the main debug console if either of them is visible - this may make it easier to track down where errors occur in Lua code!" ) );
+#endif
+    mpSourceEditorDocument = mpSourceEditor->document();
+    QTextOption _options = mpSourceEditorDocument->defaultTextOption();
     QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
     _flags |= mudlet::self()->mEditorTextOptions & ( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
     _options.setFlags( _flags );
-    mpEditorDocument->setDefaultTextOption( _options );
-    connect( pEditor, SIGNAL( cursorPositionChanged() ), this, SLOT( slot_cursorPositionChanged() ) );
+    mpSourceEditorDocument->setDefaultTextOption( _options );
+
+    connect( mpSourceEditor, SIGNAL( cursorPositionChanged() ), this, SLOT( slot_cursorPositionChanged() ) );
     connect( mudlet::self(), SIGNAL( signal_editorTextOptionsChanged( QTextOption::Flags ) ), this,  SLOT( slot_changeEditorTextOptions( QTextOption::Flags ) ) );
 
     // option areas
@@ -524,7 +536,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar );
 
-    mpSourceEditorArea->editor->setFont( mpHost->mDisplayFont );
+    mpSourceEditor->setFont( mpHost->mDisplayFont );
 
     connect( comboBox_search_triggers, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( treeWidget, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
@@ -2688,7 +2700,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
-    mpSourceEditorArea->editor->clear();
+    mpSourceEditor->clear();
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
@@ -2792,7 +2804,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
-    mpSourceEditorArea->editor->clear();
+    mpSourceEditor->clear();
     mCurrentTimer = pNewItem;
     treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
@@ -2806,16 +2818,16 @@ void dlgTriggerEditor::addVar( bool isFolder )
     mpVarsMainArea->key_type->setCurrentIndex(0);
     if (isFolder)
     {
-        mpSourceEditorArea->editor->setReadOnly(true);
+        mpSourceEditor->setReadOnly(true);
         mpVarsMainArea->var_type->setDisabled(true);
         mpVarsMainArea->var_type->setCurrentIndex(4);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
-        mpSourceEditorArea->editor->setPlainText("NewTable");
+        mpSourceEditor->setPlainText("NewTable");
         name="";
     }
     else{
-        mpSourceEditorArea->editor->setReadOnly(false);
+        mpSourceEditor->setReadOnly(false);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Variable name...");
         mpVarsMainArea->var_type->setDisabled(false);
@@ -2956,7 +2968,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
-    mpSourceEditorArea->editor->clear();
+    mpSourceEditor->clear();
     mCurrentKey = pNewItem;
     treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
@@ -3052,7 +3064,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorArea->editor->clear();
+    mpSourceEditor->clear();
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
@@ -3155,7 +3167,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpSourceEditorArea->editor->clear();
+    mpSourceEditor->clear();
 
     mpHost->getActionUnit()->updateToolbar();
     mpCurrentActionItem = pNewItem;
@@ -3254,7 +3266,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
-    mpSourceEditorArea->editor->setPlainText( script );
+    mpSourceEditor->setPlainText( script );
     mCurrentScript = pNewItem;
     treeWidget_scripts->setCurrentItem( pNewItem );
     slot_scripts_selected( treeWidget_scripts->currentItem() );
@@ -3297,7 +3309,7 @@ void dlgTriggerEditor::saveTrigger()
         else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
         else if( _type == 6 ) regexPropertyList << REGEX_COLOR_PATTERN;
     }
-    QString script = mpSourceEditorArea->editor->toPlainText();
+    QString script = mpSourceEditor->toPlainText();
 
     if( pItem )
     {
@@ -3441,7 +3453,7 @@ void dlgTriggerEditor::saveTimer()
     QTreeWidgetItem * pItem = mCurrentTimer;
     if( ! pItem ) return;
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
-    QString script = mpSourceEditorArea->editor->toPlainText();
+    QString script = mpSourceEditor->toPlainText();
 
     if( pItem )
     {
@@ -3561,7 +3573,7 @@ void dlgTriggerEditor::saveAlias()
                   .arg(name));
         return;
     }
-    QString script = mpSourceEditorArea->editor->toPlainText();
+    QString script = mpSourceEditor->toPlainText();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -3674,7 +3686,7 @@ void dlgTriggerEditor::saveAction()
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
-    QString script = mpSourceEditorArea->editor->toPlainText();
+    QString script = mpSourceEditor->toPlainText();
     int rotation = mpActionsMainArea->buttonRotation->currentIndex();
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
@@ -3792,7 +3804,7 @@ void dlgTriggerEditor::saveScript()
 
     QString old_name;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
-    QString script = mpSourceEditorArea->editor->toPlainText();
+    QString script = mpSourceEditor->toPlainText();
     mpScriptsMainAreaEditHandlerItem = 0;
     QList<QListWidgetItem*> itemList;
     for( int i=0; i<mpScriptsMainArea->listWidget_registered_event_handlers->count(); i++ )
@@ -3954,7 +3966,7 @@ void dlgTriggerEditor::saveVar()
     if ( !var )
         return;
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
-    QString newValue = mpSourceEditorArea->editor->toPlainText();
+    QString newValue = mpSourceEditor->toPlainText();
     if (newName == "")
     {
         slot_var_selected(pItem);
@@ -4154,7 +4166,7 @@ void dlgTriggerEditor::saveKey()
         name = mpKeysMainArea->lineEdit_key->text();
     }
     QString command = mpKeysMainArea->lineEdit_command->text();
-    QString script = mpSourceEditorArea->editor->toPlainText();
+    QString script = mpSourceEditor->toPlainText();
     if( pItem )
     {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -4299,7 +4311,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditorArea->editor->setPlainText( "" );
+    mpSourceEditor->setPlainText( "" );
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
@@ -4434,7 +4446,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
         mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
         mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
         QString script = pT->getScript();
-        mpSourceEditorArea->editor->setPlainText( script );
+        mpSourceEditor->setPlainText( script );
 
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -4455,7 +4467,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorArea->editor->setPlainText( "" );
+    mpSourceEditor->setPlainText( "" );
 
     if( pItem == 0 )
     {
@@ -4479,7 +4491,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
         mpAliasMainArea->lineEdit_alias_name->setText( name );
 
         QString script = pT->getScript();
-        mpSourceEditorArea->editor->setPlainText( script );
+        mpSourceEditor->setPlainText( script );
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -4499,7 +4511,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditorArea->editor->setPlainText( "" );
+    mpSourceEditor->setPlainText( "" );
     if( pItem == 0 )
     {
         return;
@@ -4517,7 +4529,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
         QString keyName = mpHost->getKeyUnit()->getKeyName( pT->getKeyCode(), pT->getKeyModifiers() );
         mpKeysMainArea->lineEdit_key->setText( keyName );
         QString script = pT->getScript();
-        mpSourceEditorArea->editor->setPlainText( script );
+        mpSourceEditor->setPlainText( script );
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -4692,7 +4704,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
-        mpSourceEditorArea->editor->setPlainText("");
+        mpSourceEditor->setPlainText("");
         //check for temp item
         var = vu->getTVar( pItem );
         if ( var && var->getValueType() == LUA_TTABLE )
@@ -4713,7 +4725,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     int keyType = var->getKeyType();
     QIcon icon;
     mpVarsMainArea->key_type->setEnabled(true);
-    mpSourceEditorArea->editor->setReadOnly(false);
+    mpSourceEditor->setReadOnly(false);
     mpVarsMainArea->var_type->setEnabled(true);
     if (keyType == 4)
         mpVarsMainArea->key_type->setCurrentIndex(1);
@@ -4731,7 +4743,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     }
     if (varType == LUA_TTABLE || varType == LUA_TFUNCTION)
     {
-        mpSourceEditorArea->editor->setReadOnly(true);
+        mpSourceEditor->setReadOnly(true);
         if ( varType == LUA_TTABLE )
         {
             if ( pItem->childCount() )
@@ -4758,7 +4770,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     }
     mpVarsMainArea->hideVariable->setChecked( vu->isHidden( var ) );
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
-    mpSourceEditorArea->editor->setPlainText(lI->getValue( var ));
+    mpSourceEditor->setPlainText(lI->getValue( var ));
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
@@ -4785,10 +4797,10 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 
     mCurrentAction = pItem;
     mpActionsMainArea->show();
-    mpSourceEditorArea->editor->show();
+    mpSourceEditor->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditorArea->editor->setPlainText( "" );
+    mpSourceEditor->setPlainText( "" );
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -4807,7 +4819,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
-        mpSourceEditorArea->editor->setPlainText( pT->getScript() );
+        mpSourceEditor->setPlainText( pT->getScript() );
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
         if( location > 0 ) location--;
@@ -4872,7 +4884,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorArea->editor->setPlainText( "" );
+    mpSourceEditor->setPlainText( "" );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
     if( pItem == 0 )
@@ -4895,7 +4907,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
         }
         mpScriptsMainArea->lineEdit_scripts_name->clear();
         QString script = pT->getScript();
-        mpSourceEditorArea->editor->setPlainText( script );
+        mpSourceEditor->setPlainText( script );
         mpScriptsMainArea->lineEdit_scripts_name->setText( name );
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -4913,7 +4925,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorArea->editor->setPlainText( "" );
+    mpSourceEditor->setPlainText( "" );
     mpTimersMainArea->lineEdit_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
     mpTimersMainArea->timeEdit_hours->clear();
@@ -4956,7 +4968,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
         mpTimersMainArea->timeEdit_msecs->setTime(t5);
 
         QString script = pT->getScript();
-        mpSourceEditorArea->editor->setPlainText( script );
+        mpSourceEditor->setPlainText( script );
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -6145,9 +6157,9 @@ void dlgTriggerEditor::changeView( int view )
         mNeedUpdateData = false;
     }
 
-    mpSourceEditorArea->editor->setReadOnly(false);
+    mpSourceEditor->setReadOnly(false);
     if (mCurrentView != view)
-        mpSourceEditorArea->editor->clear();
+        mpSourceEditor->clear();
     mCurrentView = view;
 
     mpTriggersMainArea->hide();
@@ -7335,27 +7347,30 @@ void dlgTriggerEditor::slot_color_trigger_bg()
 
 void dlgTriggerEditor::slot_cursorPositionChanged()
 {
-    int _line = (mpSourceEditorArea->editor->textCursor()).blockNumber();
-    int _maxLines = mpSourceEditorArea->editor->blockCount();
-    QString line;
+    // We only have one block so block count is the same as line count...!
+    int _line = mpSourceEditor->textCursor().blockNumber();
+    int _maxLines = mpSourceEditor->blockCount();
+    int _character = mpSourceEditor->textCursor().position();
+    int _characterInLine = mpSourceEditor->textCursor().positionInBlock();
+    int _charactersInLine = mpSourceEditor->textCursor().block().length();
+    int _maxCharacter = mpSourceEditorDocument->characterCount();
 
-    if( mCurrentView == cmScriptView )
-    {
-        line = QString("current line number: %1/%2").arg( _line + 1 ).arg( _maxLines );
-    }
-    else
-    {
-        line = QString("current line number: %1/%2").arg( _line + 2 ).arg( _maxLines + 1 );
-    }
+    QString line = tr( "Current character: %1/%2 (line) %3/%4 (overall); line: %5/%6" )
+                       .arg( _characterInLine )
+                       .arg( _charactersInLine - 1 )
+                       .arg( _character )
+                       .arg( _maxCharacter - 1 )
+                       .arg( _line + 1 )
+                       .arg( _maxLines );
     QMainWindow::statusBar()->showMessage( line );
 }
 
 void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 {
 
-    QTextOption _options = mpEditorDocument->defaultTextOption();
+    QTextOption _options = mpSourceEditorDocument->defaultTextOption();
     QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
     _flags |= state & ( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
     _options.setFlags( _flags );
-    mpEditorDocument->setDefaultTextOption( _options );
+    mpSourceEditorDocument->setDefaultTextOption( _options );
 }
