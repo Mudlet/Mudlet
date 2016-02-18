@@ -1722,6 +1722,7 @@ void mudlet::readSettings()
     mTEFolderIconSize = settings.value("tefoldericonsize", QVariant(3)).toInt();
     mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
     mShowToolbar = settings.value("showToolbar",QVariant(0)).toBool();
+    mEditorTextOptions = QTextOption::Flags( settings.value( "editorTextOptions",QVariant(0)).toInt() );
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
@@ -1772,6 +1773,7 @@ void mudlet::writeSettings()
     settings.setValue("showMenuBar", mShowMenuBar );
     settings.setValue("showToolbar", mShowToolbar );
     settings.setValue("maximized", isMaximized());
+    settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions) );
 }
 
 void mudlet::connectToServer()
@@ -2450,4 +2452,11 @@ void mudlet::playSound( QString s )
         mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
         mpMusicBox4->play();
     }
+}
+
+void mudlet::setEditorTextoptions( const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown )
+{
+    mEditorTextOptions = QTextOption::Flags( ( isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0 )
+                                           | ( isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0 ) );
+    emit signal_editorTextOptionsChanged( mEditorTextOptions );
 }

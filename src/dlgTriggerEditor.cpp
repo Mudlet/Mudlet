@@ -60,6 +60,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTextOption>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -116,6 +117,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 , mpCurrentAliasItem( 0 )
 , mpCurrentVarItem( 0 )
 , mpHost( pH )
+, mpEditorDocument( 0 )
 {
     // init generated dialog
     setupUi(this);
@@ -188,9 +190,17 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy( sizePolicy5 );
     pVB1->addWidget( mpSourceEditorArea );
-    QPlainTextEdit * editp = mpSourceEditorArea->editor;
-    editp->setWordWrapMode( QTextOption::NoWrap );
-    connect(editp,SIGNAL(cursorPositionChanged()), this, SLOT(slot_cursorPositionChanged()));
+    QPlainTextEdit * pEditor= mpSourceEditorArea->editor;
+    pEditor->setWordWrapMode( QTextOption::NoWrap );
+    mpEditorDocument = pEditor->document();
+    QTextOption _options = mpEditorDocument->defaultTextOption();
+    QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
+    _flags |= mudlet::self()->mEditorTextOptions & ( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
+    _options.setFlags( _flags );
+    mpEditorDocument->setDefaultTextOption( _options );
+    connect( pEditor, SIGNAL( cursorPositionChanged() ), this, SLOT( slot_cursorPositionChanged() ) );
+    connect( mudlet::self(), SIGNAL( signal_editorTextOptionsChanged( QTextOption::Flags ) ), this,  SLOT( slot_changeEditorTextOptions( QTextOption::Flags ) ) );
+
     // option areas
 
     QHBoxLayout * pHB2 = new QHBoxLayout(popupArea);
@@ -7338,4 +7348,14 @@ void dlgTriggerEditor::slot_cursorPositionChanged()
         line = QString("current line number: %1/%2").arg( _line + 2 ).arg( _maxLines + 1 );
     }
     QMainWindow::statusBar()->showMessage( line );
+}
+
+void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
+{
+
+    QTextOption _options = mpEditorDocument->defaultTextOption();
+    QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
+    _flags |= state & ( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
+    _options.setFlags( _flags );
+    mpEditorDocument->setDefaultTextOption( _options );
 }
