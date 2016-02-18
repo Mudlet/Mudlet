@@ -104,7 +104,7 @@ public:
 
 
 public slots:
-    void                        slot_toggleHiddenVars();
+    void                        slot_toggleHiddenVariables( bool );
     void                        slot_toggleHiddenVar( bool );
     void                        slot_addVar();
     void                        slot_addVarGroup();
