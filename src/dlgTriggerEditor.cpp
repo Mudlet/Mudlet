@@ -195,7 +195,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     // versions involve reimplementing the paint Event which is a bit too much
     // effort for something just to put up some helpful dummy text when the
     // editor widget is empty! - Slysven
-    mpSourceEditor->setPlaceholderText( tr( "Enter your Lua code here for any item except variables. Note that if the first line is a Lua comment (which begins with \"--\") that will likely show up in error messages displayed in the error window below or the main debug console if either of them is visible - this may make it easier to track down where errors occur in Lua code!" ) );
+    mpSourceEditor->setPlaceholderText( tr( "Enter your Lua code (or value for variable) here..." ) );
 #endif
     mpSourceEditorDocument = mpSourceEditor->document();
     QTextOption _options = mpSourceEditorDocument->defaultTextOption();
