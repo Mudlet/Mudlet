@@ -278,7 +278,8 @@ private:
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
     dlgVarsMainArea *           mpVarsMainArea;
     bool                        mChangingVar;
-    QTextDocument *             mpEditorDocument;
+    QPlainTextEdit *            mpSourceEditor;
+    QTextDocument *             mpSourceEditorDocument;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
