@@ -796,28 +796,38 @@ void dlgProfilePreferences::downloadMap()
 void dlgProfilePreferences::loadMap()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost )
+    {
+        return;
+    }
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet map"),
-                                                    QDir::homePath(), "Mudlet map (*.dat);;Any file (*)");
-    if( fileName.isEmpty() ) return;
+    QString fileName = QFileDialog::getOpenFileName(this,
+                                                    tr( "Load Mudlet map" ),
+                                                    QDir::homePath(),
+                                                    tr( "Mudlet map (*.dat);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!" ) );
+    if( fileName.isEmpty() )
+    {
+        return;
+    }
 
     map_file_action->show();
-    map_file_action->setText("Loading map...");
+    map_file_action->setText( tr( "Loading map - please wait..." ) );
+    qApp->processEvents(); // Needed to make the above message show up when loading big maps
 
     if ( mpHost->mpConsole->loadMap(fileName) )
     {
-        map_file_action->setText("Loaded map from "+fileName);
+        map_file_action->setText( tr( "Loaded map from %1." ).arg( fileName ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
     else
     {
-        map_file_action->setText("Couldn't load map from "+fileName);
+        map_file_action->setText( tr( "Could not load map from %1." ).arg( fileName ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
-    if( mpHost->mpMap )
-        if( mpHost->mpMap->mpMapper )
+    if( mpHost->mpMap && mpHost->mpMap->mpMapper )
+    {
             mpHost->mpMap->mpMapper->updateAreaComboBox();
+    }
 }
 
 void dlgProfilePreferences::saveMap()
@@ -825,15 +835,23 @@ void dlgProfilePreferences::saveMap()
     Host * pHost = mpHost;
     if( ! pHost ) return;
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Mudlet map"),
-                                                    QDir::homePath(), "Mudlet map (*.dat)");
-    if( fileName.isEmpty() ) return;
+    QString fileName = QFileDialog::getSaveFileName( this,
+                                                     tr( "Save Mudlet map" ),
+                                                     QDir::homePath(),
+                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programatically!" ) );
+    if( fileName.isEmpty() ) {
+        return;
+    }
 
-    if ( ! fileName.endsWith(".dat", Qt::CaseInsensitive) )
-        fileName.append(".dat");
+    if( ! fileName.endsWith( QStringLiteral( ".dat" ), Qt::CaseInsensitive) ) {
+        fileName.append( QStringLiteral( ".dat" ) );
+    }
 
     map_file_action->show();
-    map_file_action->setText("Saving map...");
+    map_file_action->setText( tr( "Saving map - please wait..." ) );
+    qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                           // Just in case is needed to make the above message
+                           // show up when saving big maps
 
     // Temporarily use whatever version is currently set
     int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
@@ -843,9 +861,9 @@ void dlgProfilePreferences::saveMap()
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
 #endif
     if( pHost->mpConsole->saveMap(fileName) ) {
-        map_file_action->setText( tr("Saved map to %1").arg( fileName ) );
+        map_file_action->setText( tr( "Saved map to %1." ).arg( fileName ) );
     } else {
-        map_file_action->setText( tr("Could not save map to %1").arg( fileName ) );
+        map_file_action->setText( tr( "Could not save map to %1." ).arg( fileName ) );
     }
     // Then restore prior version
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
@@ -861,22 +879,34 @@ void dlgProfilePreferences::hideActionLabel()
 void dlgProfilePreferences::copyMap()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost )
+    {
+        return;
+    }
 
     QString toProfile = mapper_profiles_combobox->itemText(mapper_profiles_combobox->currentIndex());
 
     // at first, save our current map
     map_file_action->show();
-    map_file_action->setText("Copying map...");
-    if ( ! mpHost->mpConsole->saveMap("") ) {
-        map_file_action->setText("Couldn't copy the map - saving it failed.");
+    map_file_action->setText( tr( "Backing up current map - please wait..." ) );
+    qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                           // Just in case is needed to make the above message
+                           // show up when saving big maps
+
+    if ( ! mpHost->mpConsole->saveMap( QString() ) )
+    {
+        map_file_action->setText( tr( "Could not backup the map - saving it failed." ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
         return;
     }
 
     // then copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
+    map_file_action->setText( tr( "Copying over map - please wait..." ) );
+    qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                           // Just in case is needed to make the above message
+                           // show up when saving big maps
     QDir dir_map;
-    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+toProfile+"/map";
+    QString directory_map = QStringLiteral( "%1/.config/mudlet/profiles/%2/map" ).arg( QDir::homePath() ).arg( toProfile );
     if( ! dir_map.exists( directory_map ) )
     {
         dir_map.mkpath( directory_map );
@@ -884,32 +914,37 @@ void dlgProfilePreferences::copyMap()
 
     // work out which map is latest
     QFile latestMap;
-    QString toMapFolder(QDir::homePath()+"/.config/mudlet/profiles/"+pHost->getName()+"/map");
+    QString toMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" ).arg( QDir::homePath() ).arg( pHost->getName() ) );
     QStringList mProfileList = QDir(toMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for( int i=0; i<mProfileList.size(); i++ )
     {
         QString s = mProfileList[i];
-        if( s.size() < 1 )
+        if( s.size() < 1 ) {
             continue;
+        }
 
-        latestMap.setFileName(toMapFolder+"/"+mProfileList[i]);
+        latestMap.setFileName( QStringLiteral( "%1/%2" ).arg( toMapFolder ).arg( mProfileList.at( i ) ) );
         break;
     }
 
-    if ( latestMap.fileName() == "" ) {
-        map_file_action->setText("Couldn't copy the map - failed to work out which map file did we just save the map as.");
+    if ( latestMap.fileName().isEmpty() )
+    {
+        map_file_action->setText( tr( "Could not copy the map - failed to work out which map file we just saved the map as!" ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
         return;
     }
 
     QFileInfo lm(latestMap.fileName());
 
-    if ( !latestMap.copy(directory_map+"/"+lm.fileName()) ) {
-        map_file_action->setText("Couldn't copy the map - couldn't copy the offline map file over.");
+    if ( !latestMap.copy( QStringLiteral( "%1/%2" ).arg( directory_map ) .arg( lm.fileName() ) ) ) {
+        map_file_action->setText( tr( "Could not copy the map - unable to copy the offline map file over." ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
         return;
     }
-    map_file_action->setText("Map copied successfully."); // don't mention offline here, would be a bit confusing
+    map_file_action->setText( tr( "Map copied successfully." ) ); // don't mention offline here, would be a bit confusing
+    qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                           // Just in case is needed to make the above message
+                           // show up when saving big maps
 
     // then force that profile to reload it's latest map - this covers the online case
     QMap<Host *, TConsole *> activeSessions = mudlet::self()->mConsoleMap;
@@ -918,13 +953,23 @@ void dlgProfilePreferences::copyMap()
         it2.next();
         Host * host = it2.key();
         if (host->mHostName != toProfile)
+        {
             continue;
+        }
 
-        if ( host->mpConsole->loadMap(directory_map+"/"+lm.fileName()) ) {
-            map_file_action->setText("Map copied and reloaded on "+toProfile+".");
+        map_file_action->setText( tr("Loading map into other running profile - please wait...") );
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                               // Just in case is needed to make the above message
+                               // show up when saving big maps
+
+        if ( host->mpConsole->loadMap( QStringLiteral( "%1/%2" ).arg( directory_map ).arg( lm.fileName() ) ) )
+        {
+            map_file_action->setText( tr( "Map copied and reloaded on %1." ).arg( toProfile ) );
             QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
-        } else {
-            map_file_action->setText("Map copied, but couldn't be reloaded on "+toProfile+".");
+        }
+        else
+        {
+            map_file_action->setText( tr( "Map copied, but could not be reloaded on %1." ).arg( toProfile ) );
             QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
         }
 
