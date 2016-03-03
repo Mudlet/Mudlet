@@ -426,20 +426,29 @@ void T2DMap::switchArea(QString name)
 
 void T2DMap::paintEvent( QPaintEvent * e )
 {
-    if( !mpMap ) return;
+    if( !mpMap )
+    {
+        return;
+    }
     bool __Pick = mPick;
     QElapsedTimer __time;
     __time.start();
 
     QPainter p( this );
-    if( ! p.isActive() ) return;
+    if( ! p.isActive() )
+    {
+        return;
+    }
 
     mAreaExitList.clear();
 
     float _w = width();
     float _h = height();
 
-    if( _w < 10 || _h < 10 ) return;
+    if( _w < 10 || _h < 10 )
+    {
+        return;
+    }
 
     if( _w > _h )
     {
@@ -472,6 +481,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
     int ox, oy; // N/U: oz;
     if( mRID != mpMap->mRoomId && mShiftMode ) mShiftMode = false;
+    {
+        mShiftMode = false;
+    }
     TArea * pAID;
     TRoom * pRID;
     if( (! __Pick && ! mShiftMode ) || mpMap->mNewMove )
@@ -480,7 +492,10 @@ void T2DMap::paintEvent( QPaintEvent * e )
         mShiftMode = true;
         mpMap->mNewMove = false; // das ist nur hier von Interesse, weil es nur hier einen map editor gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich mit mNewRoom ein map update bei centerview()
 
-        if( !mpMap->mpRoomDB->getArea( pPlayerRoom->getArea() ) ) return;
+        if( !mpMap->mpRoomDB->getArea( pPlayerRoom->getArea() ) )
+        {
+            return;
+        }
         mRID = mpMap->mRoomId;
         pRID = mpMap->mpRoomDB->getRoom( mRID );
         mAID = pRID->getArea();
