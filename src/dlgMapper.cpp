@@ -288,7 +288,10 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
         it.next();
         int i = it.key();
         TRoom * pR = mpMap->mpRoomDB->getRoom(i);
-        if( !pR ) continue;
+        if( !pR )
+        {
+            continue;
+        }
         if( pR->name == txt )
         {
             qDebug()<<"found room id="<<i;
@@ -299,7 +302,9 @@ void dlgMapper::choseRoom(QListWidgetItem * pT )
                 mpHost->mpConsole->printSystemMessage(msg);
             }
             else
+            {
                 mpMap->mpHost->startSpeedWalk();
+            }
             break;
         }
     }

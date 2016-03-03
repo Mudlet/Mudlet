@@ -4447,7 +4447,9 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
         }
     }
     else
+    {
         roomId = pHost->mpMap->mRoomId;
+    }
 
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( pR )
@@ -4456,7 +4458,9 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
         return 1;
     }
     else
+    {
         return 0;
+    }
 
 
 }

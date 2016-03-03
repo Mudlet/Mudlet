@@ -327,7 +327,9 @@ void GLWidget::initializeGL()
 
 void GLWidget::showArea(QString name)
 {
-    if( !mpMap ) return;
+    if( !mpMap ) {
+        return;
+    }
     QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
     while( it.hasNext() )
     {
@@ -351,7 +353,9 @@ void GLWidget::showArea(QString name)
 
 void GLWidget::paintGL()
 {
-    if( ! mpMap ) return;
+    if( ! mpMap ) {
+        return;
+    }
     float px,py,pz;
     if( mRID != mpMap->mRoomId && mShiftMode )  mShiftMode = false;
 
