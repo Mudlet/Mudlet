@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include "ui_main_window.h"
+#include <QFlags>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
@@ -169,6 +170,14 @@ public:
                                                     // are considered/used/stored
    void                         setEditorTextoptions( const bool, const bool );
 
+   enum StatusBarOption {
+       statusBarHidden = 0x0,     // Currently not on display
+       statusBarAutoShown = 0x1,  // Currently shown but to hide as soon as there is no text to display
+       statusBarAlwaysShown = 0x2
+   };
+
+   Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
+   StatusBarOptions             mStatusBarState;
 
 
 public slots:
@@ -234,6 +243,7 @@ private slots:
    void                          show_key_dialog();
    void                          show_variable_dialog();
    void                          show_options_dialog();
+   void                         slot_statusBarMessageChanged( QString );
 
 private:
 
@@ -271,7 +281,10 @@ private:
    QPushButton *                 moduleInstallButton;
    QPushButton *                 moduleHelpButton;
 
+   QStatusBar *                 mpMainStatusBar;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 
 class TConsoleMonitor : public QObject
  {
