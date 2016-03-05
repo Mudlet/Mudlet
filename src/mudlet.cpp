@@ -112,6 +112,7 @@ mudlet::mudlet()
 , replayTimer( 0 )
 , replayToolBar( 0 )
 , moduleTable( 0 )
+, mStatusBarState( statusBarAlwaysShown )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -121,7 +122,7 @@ mudlet::mudlet()
     QSizePolicy sizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
     setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_main_48px.png" ) ) );
-    QStatusBar * mainStatusBar = QMainWindow::statusBar();
+    mpMainStatusBar = QMainWindow::statusBar();
     // On at least my platform (Linux) the status bar does not seem to exist
     // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar( this );
@@ -378,8 +379,10 @@ mudlet::mudlet()
     mpMusicBox2 = new QMediaPlayer(this);
     mpMusicBox3 = new QMediaPlayer(this);
     mpMusicBox4 = new QMediaPlayer(this);
+
+    connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
-    mainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start..." ), 15000 );
+    mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (you can turn this status bar off via the options!)" ), 15000 );
 }
 
 HostManager * mudlet::getHostManager()
@@ -1667,6 +1670,7 @@ void mudlet::readSettings()
     mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
     mShowToolbar = settings.value("showToolbar",QVariant(0)).toBool();
     mEditorTextOptions = QTextOption::Flags( settings.value( "editorTextOptions",QVariant(0)).toInt() );
+    mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarAlwaysShown ).toInt() );
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
@@ -1718,6 +1722,7 @@ void mudlet::writeSettings()
     settings.setValue("showToolbar", mShowToolbar );
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions) );
+    settings.setValue("statusBarOptions", static_cast<int>(mStatusBarState) );
 }
 
 void mudlet::connectToServer()
@@ -2336,4 +2341,27 @@ void mudlet::setEditorTextoptions( const bool isTabsAndSpacesToBeShown, const bo
     mEditorTextOptions = QTextOption::Flags( ( isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0 )
                                            | ( isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0 ) );
     emit signal_editorTextOptionsChanged( mEditorTextOptions );
+}
+
+void mudlet::slot_statusBarMessageChanged( QString text )
+{
+    if( mStatusBarState & statusBarAutoShown ) {
+        if( text.isEmpty() ) {
+            mpMainStatusBar->hide();
+        }
+        else {
+            mpMainStatusBar->show();
+        }
+    }
+    else if( mStatusBarState & statusBarAlwaysShown ) {
+        if( ! mpMainStatusBar->isVisible() ) {
+            mpMainStatusBar->show();
+        }
+    }
+    else {
+        // Should be hidden
+        if( mpMainStatusBar->isVisible() ) {
+            mpMainStatusBar->hide();
+        }
+    }
 }

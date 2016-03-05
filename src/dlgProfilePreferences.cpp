@@ -41,6 +41,7 @@
 #include <QRegExp>
 #include <QTextOption>
 #include <QToolBar>
+#include <QVariant>
 #include "post_guard.h"
 
 
@@ -173,6 +174,17 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     need_reconnect_for_specialoption->hide();
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
+
+    comboBox_statusBarSetting->addItem( tr( "Off" ), QVariant( mudlet::self()->statusBarHidden ) );
+    comboBox_statusBarSetting->addItem( tr( "Auto" ), QVariant( mudlet::self()->statusBarAutoShown ) );
+    comboBox_statusBarSetting->addItem( tr( "On" ), QVariant( mudlet::self()->statusBarAlwaysShown ) );
+    comboBox_statusBarSetting->setMaxCount( 3 );
+    comboBox_statusBarSetting->setInsertPolicy( QComboBox::NoInsert );
+    comboBox_statusBarSetting->setMaxVisibleItems( 3 );
+    int _indexForStatusBarSetting = comboBox_statusBarSetting->findData( QVariant(mudlet::self()->mStatusBarState), Qt::UserRole );
+    if( _indexForStatusBarSetting >=0 ) {
+        comboBox_statusBarSetting->setCurrentIndex( _indexForStatusBarSetting );
+    }
 
     Host * pHost = mpHost;
     if( pHost )
@@ -994,8 +1006,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if QT_VERSION >= 0x050200
+    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->currentData().toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 #else
+    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->itemData( comboBox_statusBarSetting->currentIndex() ).toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
 #endif
     //pHost->mIRCNick = ircNick->text();
