@@ -1129,7 +1129,7 @@ int TLuaInterpreter::centerview( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( pHost->mpMap && pHost->mpMap->mpRoomDB->getRoom( roomid ) )
     {
-        pHost->mpMap->mRoomId = roomid;
+        pHost->mpMap->mRoomIdHash[ pHost->getName() ] = roomid;
         pHost->mpMap->mNewMove = true;
         if( pHost->mpMap->mpM )
         {
@@ -4448,7 +4448,7 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
     }
     else
     {
-        roomId = pHost->mpMap->mRoomId;
+        roomId = pHost->mpMap->mRoomIdHash.value( pHost->getName() );
     }
 
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );

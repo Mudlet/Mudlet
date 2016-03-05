@@ -52,15 +52,19 @@ TMap::TMap( Host * pH )
                             // THIS, mMinVersion AND mMaxVersion SHOULD BE
                             // REVISED WHEN WE SWITCH FROM A PREVIEW TO A RELEASE VERSION!
                             // Currently:
-                            // TLuaInterpreter::setAreaUserData()
-                            // TLuaInterpreter::setMapUserData() need 17
+                            // + TLuaInterpreter::setAreaUserData()
+                            // + TLuaInterpreter::setMapUserData() need 17
                             // (for persistant storage of data)
+                            // + TArea::rooms as QSet<int> needs 18,
+                            // is/was QList<int> in prior versions
+                            // + TMap::mRoomIdHash as QHash<QString, int> needs 18, is/was
+                            // a single mRoomId in prior versions
 , mSaveVersion( mDefaultVersion ) // This needs to be set (for when writing new
                             // map files) as it triggers some version features
                             // that NEED a new map file format to be usable, it
                             // can be changed by control in last tab of profile
                             // preference dialog.
-, mMaxVersion( 17 )              // CHECKME: Allow 17 ( mDefaultVersion + 1 ) for testing
+, mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
 , mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
 {
     mVersion = mDefaultVersion; // This is overwritten during a map restore and
@@ -115,7 +119,7 @@ TMap::~TMap() {
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();
-    mRoomId = 0;
+    mRoomIdHash.clear();
     pixNameTable.clear();
     pixTable.clear();
     envColors.clear();
@@ -536,7 +540,7 @@ void TMap::getConnectedNodesSmallerThanY( int id, int min )
 bool TMap::gotoRoom( int r )
 {
     mTargetID = r;
-    return findPath( mRoomId, r );
+    return findPath( mRoomIdHash.value( mpHost->getName() ), r );
 }
 
 // As can be seen this only sets the target and start point for a path find
@@ -1037,7 +1041,14 @@ bool TMap::serialize( QDataStream & ofs )
         int areaID = itAreaList.key();
         TArea * pA = itAreaList.value();
         ofs << areaID;
-        ofs << pA->rooms;
+        if( mSaveVersion >= 18 ) {
+            ofs << pA->rooms;
+        }
+        else {
+            // Switched to a (faster) QSet<int> from a QList<int> in version 18
+            QList<int> _oldList = pA->rooms.toList();
+            ofs << _oldList;
+        }
         ofs << pA->ebenen;
         ofs << pA->exits;
         ofs << pA->gridMode;
@@ -1101,7 +1112,15 @@ bool TMap::serialize( QDataStream & ofs )
     }
     // End of TODO
 
-    ofs << mRoomId;
+    if( mSaveVersion >= 18 ) {
+        // Revised in version 18 to store mRoomId as a per profile case so that
+        // sharing/copying between profiles respects each profile's player
+        // location
+        ofs << mRoomIdHash;
+    }
+    else {
+        ofs << mRoomIdHash.value( mpHost->getName() );
+    }
 
     ofs << mapLabels.size(); //anzahl der areas
     QMapIterator<int, QMap<int, TMapLabel> > itL1(mapLabels);
@@ -1275,6 +1294,10 @@ bool TMap::restore(QString location)
                                                       "beware that this file may not be usable by the current release version\n"
                                                       "of Mudlet that you or others with whom you might share it have!" );
                     mpHost->postMessage( infoMsg );
+                    mSaveVersion = mVersion; // Make the save version default to the loaded one
+                                             // this means that each session using a particular
+                                             // map file version will continue to use it unless
+                                             // the user intervenes.
                 }
             }
         }
@@ -1289,12 +1312,15 @@ bool TMap::restore(QString location)
                                               "be better off starting again..." );
             mpHost->postMessage( infoMsg );
             canRestore = false;
+            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
         }
         else {
+            // Less than (but not less than 4) or equal to default version
             QString infoMsg = tr( "[ INFO ]  - Reading map file: \"%1\", format version:%2, please wait..." )
                               .arg( file.fileName() )
                               .arg( mVersion );
             mpHost->postMessage( infoMsg );
+            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
         }
 
         // As all but the room reading have version checks the fact that sub-4
@@ -1320,7 +1346,16 @@ bool TMap::restore(QString location)
                 TArea * pA = new TArea( this, mpRoomDB );
                 int areaID;
                 ifs >> areaID;
-                ifs >> pA->rooms;
+                if( mVersion >= 18 ) {
+                    // In version 18 changed from QList<int> to QSet<int> as the later is
+                    // faster in many of the cases where we use it.
+                    ifs >> pA->rooms;
+                }
+                else {
+                    QList<int> oldRoomsList;
+                    ifs >> oldRoomsList;
+                    pA->rooms = oldRoomsList.toSet();
+                }
 // Can be useful when analysing suspect map files!
 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
 //                qDebug() << "Rooms:" << pA->rooms;
@@ -1359,8 +1394,16 @@ bool TMap::restore(QString location)
             }
         }
 
-        if( mVersion >= 12 ) {
-            ifs >> mRoomId;
+        if( mVersion >= 18 ) {
+            // In version 18 we changed to store the "userRoom" for each profile
+            // so that when copied/shared between profiles they do not interfere
+            // with each other's saved value
+            ifs >> mRoomIdHash;
+        }
+        else if( mVersion >= 12 ) {
+            int oldRoomId;
+            ifs >> oldRoomId;
+            mRoomIdHash[ mpHost->getName() ] = oldRoomId;
         }
 
         if( mVersion >= 11 ) {
@@ -1466,6 +1509,237 @@ bool TMap::restore(QString location)
     return canRestore;//FIXME
 }
 
+// Reads the newest map file from the profile and retrieves some stats and data,
+// including the current player room - was mRoomId in 12 to pre-18 map files and
+// is in mRoomIdHash since then so that it can be reinserted into a map that is
+// copied across (if the room STILL exists!  This is to avoid a replacement map
+// (copied/shared) from one profile to another from repositioning the other
+// player location. Though this is written as a member function it is intended
+// also for use to retrieve details from maps from OTHER profiles, importantly
+// it does (or should) NOT interact with this TMap instance...!
+const bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, int * fileVersion = 0, int * roomId = 0, int * areaCount = 0, int * roomCount = 0 )
+{
+    if( profile.isEmpty() ) {
+        return false;
+    }
+
+    QString folder;
+    QStringList entries;
+    folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/" )
+             .arg( QDir::homePath() )
+             .arg( profile );
+    QDir dir( folder );
+    dir.setSorting( QDir::Time );
+    entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
+
+    // As the files are sorted by time this gets the latest one
+    QFile file( QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at( 0 ) ) );
+
+    if( ! file.open( QFile::ReadOnly ) ) {
+        QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
+                         .arg( file.fileName() );
+        mpHost->postMessage( errMsg );
+        return false;
+    }
+
+    if( latestFileName ) {
+        *latestFileName = file.fileName();
+    }
+    int otherProfileVersion = 0;
+    QDataStream ifs( & file );
+    ifs >> otherProfileVersion;
+
+    QString infoMsg = tr( "[ INFO ]  - Checking map file: \"%1\", format version:%2, please wait..." )
+                      .arg( file.fileName() )
+                      .arg( otherProfileVersion );
+    mpHost->postMessage( infoMsg );
+
+    if( otherProfileVersion > mDefaultVersion ) {
+        if( QByteArray( APP_BUILD ).isEmpty() ) {
+            // This is a release version - should not support any map file versions higher that it was built for
+            if( fileVersion ) {
+                * fileVersion = otherProfileVersion;
+            }
+            file.close();
+            return true;
+        }
+        else {
+            // Is a development version so check against mMaxVersion
+            if( otherProfileVersion > mMaxVersion ) {
+                // Oh dear, can't handle THIS
+                if( fileVersion ) {
+                    * fileVersion = otherProfileVersion;
+                }
+                file.close();
+                return true;
+            }
+            else {
+                if( fileVersion ) {
+                    * fileVersion = otherProfileVersion;
+                }
+            }
+        }
+    }
+    else {
+        if( fileVersion ) {
+            * fileVersion = otherProfileVersion;
+        }
+    }
+
+    if( otherProfileVersion >= 4 ) {
+        // envColorMap
+        QMap<int, int> _dummyQMapIntInt;
+        ifs >> _dummyQMapIntInt;
+
+        // AreaNamesMap
+        QMap<int, QString> _dummyQMapIntQString;
+        ifs >> _dummyQMapIntQString;
+    }
+
+    if( otherProfileVersion >= 5 ) {
+        // customEnvColors
+        QMap<int, QColor> _dummyQMapIntQColor;
+        ifs >> _dummyQMapIntQColor;
+    }
+
+    if( otherProfileVersion >= 7 ) {
+        // hashTable
+        QHash<QString, int> _dummyQHashQStringInt;
+        ifs >> _dummyQHashQStringInt;
+    }
+
+    if( otherProfileVersion >= 17 ) {
+        // userMapData
+        QMap<QString, QString> _dummyQMapQStringQString;
+        ifs >> _dummyQMapQStringQString;
+    }
+
+    if( otherProfileVersion >= 14 ) {
+        int areaSize;
+        ifs >> areaSize;
+        if( areaCount ) {
+            * areaCount = areaSize;
+        }
+        // read each area
+        for( int i = 0; i < areaSize; i++ ) {
+            TArea * pA = new TArea( 0, 0 );
+            int areaID;
+            ifs >> areaID;
+            ifs >> pA->rooms;
+            ifs >> pA->ebenen;
+            ifs >> pA->exits;
+            ifs >> pA->gridMode;
+            ifs >> pA->max_x;
+            ifs >> pA->max_y;
+            ifs >> pA->max_z;
+            ifs >> pA->min_x;
+            ifs >> pA->min_y;
+            ifs >> pA->min_z;
+            ifs >> pA->span;
+            if( otherProfileVersion >= 17 ) {
+                ifs >> pA->xmaxEbene;
+                ifs >> pA->ymaxEbene;
+                ifs >> pA->xminEbene;
+                ifs >> pA->yminEbene;
+            }
+            else {
+                QMap<int, int> dummyMinMaxEbene;
+                ifs >> pA->xmaxEbene;
+                ifs >> pA->ymaxEbene;
+                ifs >> dummyMinMaxEbene;
+                ifs >> pA->xminEbene;
+                ifs >> pA->yminEbene;
+                ifs >> dummyMinMaxEbene;
+            }
+            ifs >> pA->pos;
+            ifs >> pA->isZone;
+            ifs >> pA->zoneAreaRef;
+            if( otherProfileVersion >= 17 ) {
+                ifs >> pA->mUserData;
+            }
+        }
+    }
+
+    if( otherProfileVersion >= 18 ) {
+        // In version 18 we changed to store the "userRoom" for each profile
+        // so that when copied/shared between profiles they do not interfere
+        // with each other's saved value
+        QHash<QString, int> _dummyQHashQStringInt;
+        ifs >> _dummyQHashQStringInt;
+        if( roomId ) {
+           *roomId = _dummyQHashQStringInt.value( profile );
+        }
+    }
+    else if( otherProfileVersion >= 12 ) {
+        int oldRoomId;
+        ifs >> oldRoomId;
+        if( roomId ) {
+           *roomId = oldRoomId;
+        }
+    }
+    else {
+        if( roomId ) {
+           *roomId = -1; // Not found value
+        }
+    }
+
+    if( otherProfileVersion >= 11 ) {
+        int size;
+        ifs >> size; //size of mapLabels
+        int areaLabelCount = 0;
+        while( ! ifs.atEnd() && areaLabelCount < size ) {
+            int areaID;
+            int size_labels;
+            ifs >> size_labels;
+            ifs >> areaID;
+            int labelCount = 0;
+            while( ! ifs.atEnd() &&  labelCount < size_labels ) {
+                int labelID;
+                ifs >> labelID;
+                TMapLabel label;
+                if( otherProfileVersion >= 12 ) {
+                    ifs >> label.pos;
+                }
+                else {
+                    QPointF __label_pos;
+                    ifs >> __label_pos;
+                    label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                }
+                ifs >> label.pointer;
+                ifs >> label.size;
+                ifs >> label.text;
+                ifs >> label.fgColor;
+                ifs >> label.bgColor;
+                ifs >> label.pix;
+                if( otherProfileVersion >= 15 ) {
+                    ifs >> label.noScaling;
+                    ifs >> label.showOnTop;
+                }
+                labelCount++;
+            }
+            areaLabelCount++;
+        }
+    }
+
+    TRoom * _pT = new TRoom( 0 );
+    QSet<int> _dummyRoomIdSet;
+    while( ! ifs.atEnd() ) {
+        int i;
+        ifs >> i;
+        _pT->restore( ifs, i, otherProfileVersion );
+        // Can't do mpRoomDB->restoreSingleRoom( ifs, i, pT ) as it would mess up
+        // this TMap::mpRoomDB
+        // So emulate using _dummyRoomIdSet
+        if( i > 0 && ! _dummyRoomIdSet.contains( i ) ) {
+            _dummyRoomIdSet.insert( i );
+        }
+    }
+    if( roomCount ) {
+        *roomCount = _dummyRoomIdSet.count();
+    }
+
+    return true;
+}
 
 int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize )
 {

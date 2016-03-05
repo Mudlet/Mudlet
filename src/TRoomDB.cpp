@@ -279,8 +279,13 @@ bool TRoomDB::__removeRoom( int id )
 bool TRoomDB::removeRoom( int id )
 {
     if( rooms.contains( id ) && id > 0 ) {
-        if( mpMap->mRoomId == id ) {
-            mpMap->mRoomId = 0;
+        if( mpMap->mRoomIdHash.value( mpMap->mpHost->getName() ) == id ) {
+            // Now we store mRoomId for each profile, we must remove any where
+            // this room was used
+            QList<QString> profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys( id );
+            foreach( QString key, profilesWithUserInThisRoom ) {
+                mpMap->mRoomIdHash[ key ] = 0;
+            }
         }
         if( mpMap->mTargetID == id ) {
             mpMap->mTargetID = 0;
