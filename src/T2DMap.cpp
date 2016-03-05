@@ -471,7 +471,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     int px,py;
     QList<int> exitList;
     QList<int> oneWayExits;
-    TRoom * pPlayerRoom = mpMap->mpRoomDB->getRoom( mpMap->mRoomId );
+    TRoom * pPlayerRoom = mpMap->mpRoomDB->getRoom( mpMap->mRoomIdHash.value( mpHost->getName() ) );
     if( !pPlayerRoom )
     {
         p.drawText(_w/2,_h/2,"No map or no valid position.");
@@ -480,7 +480,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     }
 
     int ox, oy; // N/U: oz;
-    if( mRID != mpMap->mRoomId && mShiftMode ) mShiftMode = false;
+    if( mRID != mpMap->mRoomIdHash.value( mpHost->getName() ) && mShiftMode )
     {
         mShiftMode = false;
     }
@@ -496,7 +496,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
         {
             return;
         }
-        mRID = mpMap->mRoomId;
+        mRID = mpMap->mRoomIdHash.value( mpHost->getName() );
         pRID = mpMap->mpRoomDB->getRoom( mRID );
         mAID = pRID->getArea();
         pAID = mpMap->mpRoomDB->getArea( mAID );
@@ -1427,9 +1427,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 if( mpMap->mpRoomDB->getRoom(mTarget) )
                 {
                     mpMap->mTargetID = mTarget;
-                    if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                    if( mpMap->findPath( mpMap->mRoomIdHash.value( mpHost->getName() ), mpMap->mTargetID) )
                     {
-                        mpMap->mpHost->startSpeedWalk();
+                        mpHost->startSpeedWalk();
                     }
                     else
                     {
@@ -1508,7 +1508,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 p.setPen(__pen);
             }
 
-            if( mShiftMode && currentAreaRoom == mpMap->mRoomId )
+            if( mShiftMode && currentAreaRoom == mpMap->mRoomIdHash.value( mpHost->getName() ) )
             {
                 float _radius = (1.2*tx)/2;
                 QPointF _center = QPointF(rx,ry);
@@ -1658,9 +1658,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
                    if( mpMap->mpRoomDB->getRoom(mTarget) )
                    {
                        mpMap->mTargetID = mTarget;
-                       if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                       if( mpMap->findPath( mpMap->mRoomIdHash.value( mpHost->getName() ), mpMap->mTargetID) )
                        {
-                          mpMap->mpHost->startSpeedWalk();
+                            mpHost->startSpeedWalk();
                        }
                        else
                        {
@@ -1706,7 +1706,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     if( mpMap->mpRoomDB->getRoom(mTarget) )
                     {
                         mpMap->mTargetID = mTarget;
-                        if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+                        if( mpMap->findPath( mpMap->mRoomIdHash.value( mpHost->getName() ), mpMap->mTargetID) )
                         {
                            mpMap->mpHost->startSpeedWalk();
                         }
@@ -3027,7 +3027,7 @@ void T2DMap::slot_setPlayerLocation()
     int _newRoomId = *( mMultiSelectionSet.constBegin() );
     if( mpMap->mpRoomDB->getRoom( _newRoomId ) ) {
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
-        mpMap->mRoomId = _newRoomId;
+        mpMap->mRoomIdHash[ mpHost->getName() ] = _newRoomId;
         mpMap->mNewMove = true;
         TEvent * pManualSetEvent = new TEvent;
         pManualSetEvent->mArgumentList.append( QStringLiteral( "sysManualLocationSetEvent" ) );

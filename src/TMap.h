@@ -99,7 +99,8 @@ public:
     bool gotoRoom( int, int );
     void setView( float, float, float, float );
     bool serialize( QDataStream & );
-    bool restore(QString location);
+    bool restore( QString );
+    const bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
     void initGraph();
     void exportMapToDatabase();
     void importMapFromDatabase();
@@ -110,7 +111,9 @@ public:
     QMap<int, int> envColors;
     QVector3D span;
     Host * mpHost;
-    int mRoomId;
+    // Was a single int mRoomId but that breaks things when maps are
+    // copied/shared between profiles - so now we track the profile name
+    QHash<QString, int> mRoomIdHash;
     bool m2DPanMode;
     bool mLeftDown;
     bool mRightDown;

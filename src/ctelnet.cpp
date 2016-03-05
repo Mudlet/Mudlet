@@ -1119,7 +1119,7 @@ void cTelnet::setATCPVariables( QString & msg )
     {
         if( mpHost->mpMap )
         {
-            mpHost->mpMap->mRoomId = arg.toInt();
+            mpHost->mpMap->mRoomIdHash[ mpHost->getName() ] = arg.toInt();
             if( mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap )
             {
                 mpHost->mpMap->mpM->update();

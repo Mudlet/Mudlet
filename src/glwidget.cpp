@@ -339,7 +339,7 @@ void GLWidget::showArea(QString name)
         if( name == _n )
         {
             mAID = areaID;
-            mRID = mpMap->mRoomId;//FIXME:
+            mRID = mpMap->mRoomIdHash.value( mpMap->mpHost->getName() );
             mShiftMode = true;
             mOx = 0;
             mOy = 0;
@@ -357,14 +357,16 @@ void GLWidget::paintGL()
         return;
     }
     float px,py,pz;
-    if( mRID != mpMap->mRoomId && mShiftMode )  mShiftMode = false;
+    if( mRID != mpMap->mRoomIdHash.value( mpMap->mpHost->getName() ) && mShiftMode ) {
+        mShiftMode = false;
+    }
 
     int ox, oy, oz;
     if( ! mShiftMode )
     {
 
 
-        mRID = mpMap->mRoomId;
+        mRID = mpMap->mRoomIdHash.value( mpMap->mpHost->getName() );
         TRoom * pRID = mpMap->mpRoomDB->getRoom( mRID );
         if( !pRID  )
         {
@@ -1986,7 +1988,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
         if( mpMap->mpRoomDB->getRoom(mTarget) )
         {
             mpMap->mTargetID = mTarget;
-            if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+            if( mpMap->findPath( mpMap->mRoomIdHash.value( mpMap->mpHost->getName() ), mpMap->mTargetID) )
             {
                mpMap->mpHost->startSpeedWalk();
             }
