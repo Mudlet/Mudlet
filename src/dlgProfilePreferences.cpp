@@ -266,6 +266,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         // Added so that the control is initially set to edit seconds (was
         // defaulting to first shown which was hours which is not the most
         // likely that the user would want to use)!
+        connect(timeEdit_timerDebugOutputMinimumInterval, SIGNAL(timeChanged(QTime)), this, SLOT(slot_timeValueChanged(QTime)));
 
         // FIXME: Check this each time that it is appropriate for THIS build version
         comboBox_mapFileSaveFormatVersion->clear();
@@ -290,6 +291,10 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
                     comboBox_mapFileSaveFormatVersion->addItem( tr( "%1 {Downgraded, for sharing with older version users, NOT recommended}" ).arg( i ),
                                                                 QVariant( i ) );
                 }
+            }
+            int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData( pHost->mpMap->mSaveVersion, Qt::UserRole );
+            if( _indexForCurrentSaveFormat >=0 ) {
+                comboBox_mapFileSaveFormatVersion->setCurrentIndex( _indexForCurrentSaveFormat );
             }
         }
     }
@@ -1032,4 +1037,25 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
     mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     close();
+}
+
+// Needed to fixup the jump from zero (special "show all") to a non-zero time
+// value always jumping to the most significant section (Hours) when for our
+// purposes we would like it to be Seconds!
+void dlgProfilePreferences::slot_timeValueChanged(QTime newTime)
+{
+    static QTime oldTime = QTime( 0, 0, 0, 0);
+
+    // Has the value changed?
+    if( oldTime != newTime ) {
+        // Yes - was the old time zero (the special case "show all")?
+        if( oldTime == QTime( 0, 0, 0, 0 ) && newTime == QTime( 1, 0, 0, 0) ) {
+            // Yes - then set the section to be the seconds one:
+            timeEdit_timerDebugOutputMinimumInterval->setCurrentSection( QDateTimeEdit::SecondSection );
+            // And fix the fact that the +1 has already been applied but to the
+            // hours and not the seconds:
+            timeEdit_timerDebugOutputMinimumInterval->setTime( QTime( 0, 0, 1, 0 ) );
+        }
+        oldTime = newTime;
+    }
 }
