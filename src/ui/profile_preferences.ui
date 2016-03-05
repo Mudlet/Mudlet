@@ -1932,6 +1932,9 @@ or some other computer model that has a small screen.</string>
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When a Timer fires and the Debugging console or the Editor Error are showing, the code for the timer is displayed as it is executed. For Timers of a short duration this output can obscure the output from less frequent Timers or other elements in a user or package item.  This control will attempt to reduce the &lt;i&gt;spam&lt;/i&gt; by hiding the code for Timers for an interval less than the specified interval - a line will still be shown for each timer firing but not all the output.  By default this is set for a &lt;i&gt;10 second&lt;/i&gt; period but it can be reduced to zero to show all output - the control will display &amp;quot;&lt;i&gt;Show all&lt;/i&gt;&amp;quot; in that case.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
@@ -1972,6 +1975,9 @@ or some other computer model that has a small screen.</string>
               <width>200</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Mudlet&lt;/span&gt; is a project.that is under active development. 8-)&lt;/p&gt;&lt;p&gt;As such, when new features are added, it is sometimes necessary to change what information is stored between sessions.&lt;/p&gt;&lt;p&gt;To allow new features to be incorporated the developers will need to test when that extra data is part of the map data files that Mudlet uses and this control allows them to temporarily change what is written out as part of the map file.&lt;/p&gt;&lt;p&gt;It is not recommended to change this setting to be &lt;b&gt;&lt;i&gt;above&lt;/i&gt;&lt;/b&gt; the &lt;i&gt;default&lt;/i&gt; unless you know why you want to do so as the files that are produced may not be readable by other versions that you or others might have if you do have multiple versions installed (e.g. for testing) or you share your maps with others; also, if there is a defect in the new code you may experence data loss!&lt;/p&gt;&lt;p&gt;Conversely selecting a version &lt;b&gt;&lt;i&gt;below&lt;/i&gt;&lt;/b&gt; the &lt;i&gt;default&lt;/i&gt; may cause data loss and would not normally be recommend &lt;u&gt;unless you need to fall back by one version so that you CAN share map files with others who have not &lt;i&gt;yet&lt;/i&gt; updated to a freshly released version&lt;/u&gt;.&lt;/p&gt;&lt;p&gt;In short - do not mess with this unless you know what the effects wil be.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="editable">
              <bool>false</bool>

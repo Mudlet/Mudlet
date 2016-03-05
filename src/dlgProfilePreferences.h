@@ -97,6 +97,9 @@ public slots:
     void hideActionLabel();
     void slot_save_and_exit();
 
+private slots:
+    void slot_timeValueChanged(QTime);
+
 private:
     void setColors();
     Host * mpHost;

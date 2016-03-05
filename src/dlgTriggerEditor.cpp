@@ -195,8 +195,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pVB1->addWidget( mpSourceEditorArea );
     mpSourceEditor = mpSourceEditorArea->editor;
     mpSourceEditor->setWordWrapMode( QTextOption::NoWrap );
-#if QT_VERSION >= 0x050200
-    // Only added in Qt 5.2 (even though the built-into Qt Creator form designer
+#if QT_VERSION >= 0x050300
+    // Only added in Qt 5.3 (even though the built-into Qt Creator form designer
     // for Qt 5.1.1. allows it to be entered) - the work around for older
     // versions involve reimplementing the paint Event which is a bit too much
     // effort for something just to put up some helpful dummy text when the
@@ -6032,11 +6032,9 @@ void dlgTriggerEditor::slot_show_search_area()
 {
     if( widget_searchArea->isVisible() ) {
         widget_searchArea->hide();
-        popupArea->hide();
     }
     else {
         widget_searchArea->show();
-        popupArea->show();
     }
 }
 
@@ -7344,13 +7342,19 @@ void dlgTriggerEditor::slot_cursorPositionChanged()
     int _charactersInLine = mpSourceEditor->textCursor().block().length();
     int _maxCharacter = mpSourceEditorDocument->characterCount();
 
-    QString line = tr( "Current character: %1/%2 (line) %3/%4 (overall); line: %5/%6" )
-                       .arg( _characterInLine )
-                       .arg( _charactersInLine - 1 )
-                       .arg( _character )
-                       .arg( _maxCharacter - 1 )
-                       .arg( _line + 1 )
-                       .arg( _maxLines );
+    QString line;
+    if( mpSourceEditorDocument->isEmpty() ) {
+        line = tr( "Current line: <none>, character in line: <none>, overall: <none>" );
+    }
+    else {
+        line = tr( "Current line: %1/%2, character in line: %3/%4, overall: %5/%6" )
+                   .arg( _line + 1 )
+                   .arg( _maxLines )
+                   .arg( _characterInLine )
+                   .arg( _charactersInLine - 1 )
+                   .arg( _character )
+                   .arg( _maxCharacter - 1 );
+    }
     QMainWindow::statusBar()->showMessage( line );
 }
 
