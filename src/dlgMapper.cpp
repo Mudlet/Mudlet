@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -118,6 +118,18 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpDownloader = new QNetworkAccessManager( this );
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
     connect(showRoomIDs, SIGNAL(stateChanged(int)), this, SLOT(slot_toggleShowRoomIDs(int)));
+    QFont mapperFont = QFont( mpHost->mDisplayFont.family() );
+    if( mpHost->mNoAntiAlias )
+    {
+        mapperFont.setStyleStrategy( QFont::NoAntialias );
+    }
+    else
+    {
+        mapperFont.setStyleStrategy( static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality) );
+    }
+    setFont( mapperFont );
+    // Explicitly set the font otherwise it changes between the Application and
+    // the default System one as the mapper is docked and undocked!
     mp2dMap->mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
     glWidget->hide();
     mpMap->customEnvColors[257] = mpHost->mRed_2;

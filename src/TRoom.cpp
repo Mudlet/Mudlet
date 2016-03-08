@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -211,7 +211,7 @@ bool TRoom::setArea( int areaID, bool isToDeferAreaRelatedRecalculations )
     //remove from the old area
     TArea * pA2 = mpRoomDB->getArea( area );
     if( pA2 ) {
-        pA2->removeRoom( id );
+        pA2->removeRoom( id, isToDeferAreaRelatedRecalculations );
         // Ah, all rooms in the OLD area that led to the room now become area
         // exits for that OLD area {so must run determineAreaExits() for the
         // old area after the room has moved to the new area see other
