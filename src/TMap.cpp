@@ -1335,7 +1335,7 @@ bool TMap::restore(QString location)
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr( "[  OK  ]  - Sucessfully read map file, will now check some consistancy details." );
+        QString okMsg = tr( "[  OK  ]  - Sucessfully read map file, will now check some consistency details." );
         mpHost->postMessage( okMsg );
         if( canRestore ) {
             return true;
