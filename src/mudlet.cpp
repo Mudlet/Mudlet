@@ -403,7 +403,14 @@ mudlet::mudlet()
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
-    mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (you can turn this status bar off via the options!)" ), 15000 );
+    if(  mStatusBarState & statusBarAlwaysShown
+      || mStatusBarState & statusBarAutoShown ) {
+
+        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!)" ), 15000 );
+    }
+    else {
+        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
+    }
 }
 
 bool mudlet::moduleTableVisible()
@@ -1726,7 +1733,11 @@ void mudlet::readSettings()
     mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
     mShowToolbar = settings.value("showToolbar",QVariant(0)).toBool();
     mEditorTextOptions = QTextOption::Flags( settings.value( "editorTextOptions",QVariant(0)).toInt() );
-    mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarAlwaysShown ).toInt() );
+    mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarHidden ).toInt() );
+    // By default the status bar will not be shown for new/upgraded
+    // installations - if the user wants the status bar shown either all the
+    // time or when it has something to show, they will have to enable that
+    // themselves, but that only has to be done once! - Slysven
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
