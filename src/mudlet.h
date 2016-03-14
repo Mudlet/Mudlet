@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,12 +27,14 @@
 
 #include "pre_guard.h"
 #include "ui_main_window.h"
+#include <QFlags>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QQueue>
 #include <QTime>
+#include <QTextOption>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -165,7 +168,20 @@ public:
    QMediaPlayer *                mpMusicBox4;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
+   QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
+                                                    // only ::ShowTabsAndSpaces
+                                                    // and ::ShowLineAndParagraphSeparators
+                                                    // are considered/used/stored
+   void                         setEditorTextoptions( const bool, const bool );
 
+   enum StatusBarOption {
+       statusBarHidden = 0x0,     // Currently not on display
+       statusBarAutoShown = 0x1,  // Currently shown but to hide as soon as there is no text to display
+       statusBarAlwaysShown = 0x2
+   };
+
+   Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
+   StatusBarOptions             mStatusBarState;
 
 
 public slots:
@@ -213,6 +229,10 @@ protected:
 
    void                          closeEvent(QCloseEvent *event) override;
 
+signals:
+
+   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
+
 private slots:
 
    void                          slot_close_profile();
@@ -227,6 +247,7 @@ private slots:
    void                          show_key_dialog();
    void                          show_variable_dialog();
    void                          show_options_dialog();
+   void                         slot_statusBarMessageChanged( QString );
 
 private:
 
@@ -269,7 +290,10 @@ private:
    QPushButton *                 moduleHelpButton;
 
    HostManager                   mHostManager;
+   QStatusBar *                 mpMainStatusBar;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 
 class TConsoleMonitor : public QObject
  {

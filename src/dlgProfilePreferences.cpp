@@ -39,7 +39,9 @@
 #include <QMainWindow>
 #include <QPalette>
 #include <QRegExp>
+#include <QTextOption>
 #include <QToolBar>
+#include <QVariant>
 #include "post_guard.h"
 
 
@@ -66,6 +68,8 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
     enableSpellCheck->setChecked( pH->mEnableSpellCheck );
+    checkBox_showSpacesAndTabs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces );
+    checkBox_showLineFeedsAndParagraphs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators );
 
     QString path;
 #ifdef Q_OS_LINUX
@@ -171,6 +175,17 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
 
+    comboBox_statusBarSetting->addItem( tr( "Off" ), QVariant( mudlet::self()->statusBarHidden ) );
+    comboBox_statusBarSetting->addItem( tr( "Auto" ), QVariant( mudlet::self()->statusBarAutoShown ) );
+    comboBox_statusBarSetting->addItem( tr( "On" ), QVariant( mudlet::self()->statusBarAlwaysShown ) );
+    comboBox_statusBarSetting->setMaxCount( 3 );
+    comboBox_statusBarSetting->setInsertPolicy( QComboBox::NoInsert );
+    comboBox_statusBarSetting->setMaxVisibleItems( 3 );
+    int _indexForStatusBarSetting = comboBox_statusBarSetting->findData( QVariant(mudlet::self()->mStatusBarState), Qt::UserRole );
+    if( _indexForStatusBarSetting >=0 ) {
+        comboBox_statusBarSetting->setCurrentIndex( _indexForStatusBarSetting );
+    }
+
     Host * pHost = mpHost;
     if( pHost )
     {
@@ -263,6 +278,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         // Added so that the control is initially set to edit seconds (was
         // defaulting to first shown which was hours which is not the most
         // likely that the user would want to use)!
+        connect(timeEdit_timerDebugOutputMinimumInterval, SIGNAL(timeChanged(QTime)), this, SLOT(slot_timeValueChanged(QTime)));
 
         // FIXME: Check this each time that it is appropriate for THIS build version
         comboBox_mapFileSaveFormatVersion->clear();
@@ -287,6 +303,10 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
                     comboBox_mapFileSaveFormatVersion->addItem( tr( "%1 {Downgraded, for sharing with older version users, NOT recommended}" ).arg( i ),
                                                                 QVariant( i ) );
                 }
+            }
+            int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData( pHost->mpMap->mSaveVersion, Qt::UserRole );
+            if( _indexForCurrentSaveFormat >=0 ) {
+                comboBox_mapFileSaveFormatVersion->setCurrentIndex( _indexForCurrentSaveFormat );
             }
         }
     }
@@ -986,8 +1006,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if QT_VERSION >= 0x050200
+    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->currentData().toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 #else
+    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->itemData( comboBox_statusBarSetting->currentIndex() ).toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
 #endif
     //pHost->mIRCNick = ircNick->text();
@@ -1027,5 +1049,27 @@ void dlgProfilePreferences::slot_save_and_exit()
         QApplication::sendEvent( mudlet::self()->mConsoleMap[pHost], &event);
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
+    mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     close();
+}
+
+// Needed to fixup the jump from zero (special "show all") to a non-zero time
+// value always jumping to the most significant section (Hours) when for our
+// purposes we would like it to be Seconds!
+void dlgProfilePreferences::slot_timeValueChanged(QTime newTime)
+{
+    static QTime oldTime = QTime( 0, 0, 0, 0);
+
+    // Has the value changed?
+    if( oldTime != newTime ) {
+        // Yes - was the old time zero (the special case "show all")?
+        if( oldTime == QTime( 0, 0, 0, 0 ) && newTime == QTime( 1, 0, 0, 0) ) {
+            // Yes - then set the section to be the seconds one:
+            timeEdit_timerDebugOutputMinimumInterval->setCurrentSection( QDateTimeEdit::SecondSection );
+            // And fix the fact that the +1 has already been applied but to the
+            // hours and not the seconds:
+            timeEdit_timerDebugOutputMinimumInterval->setTime( QTime( 0, 0, 1, 0 ) );
+        }
+        oldTime = newTime;
+    }
 }
