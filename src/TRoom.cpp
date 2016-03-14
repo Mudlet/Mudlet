@@ -82,6 +82,27 @@ TRoom::~TRoom()
     }
 }
 
+const QString TRoom::dirCodeToDisplayName( const int dirCode )
+{
+    switch( dirCode ) {
+    case DIR_NORTH:     return tr( "North" );       break;
+    case DIR_NORTHEAST: return tr( "North-east" );  break;
+    case DIR_NORTHWEST: return tr( "North-west" );  break;
+    case DIR_SOUTH:     return tr( "South" );       break;
+    case DIR_SOUTHEAST: return tr( "South-east" );  break;
+    case DIR_SOUTHWEST: return tr( "South-west" );  break;
+    case DIR_EAST:      return tr( "East" );        break;
+    case DIR_WEST:      return tr( "West" );        break;
+    case DIR_UP:        return tr( "Up" );          break;
+    case DIR_DOWN:      return tr( "Down" );        break;
+    case DIR_IN:        return tr( "In" );          break;
+    case DIR_OUT:       return tr( "Out" );         break;
+    case DIR_OTHER:     return tr( "Other" );       break;
+    default:
+        return tr( "Unknown" );
+    }
+}
+
 bool TRoom::hasExitStub(int direction)
 {
     if (exitStubs.contains(direction))
@@ -219,7 +240,7 @@ bool TRoom::setArea( int areaID, bool isToDeferAreaRelatedRecalculations )
         // areas are still "out of area exits" UNLESS the room moves to the SAME
         // area that the other exits are in.
         dirtyAreas.insert( pA2 ); // Add to local store of dirty areas
-        pA2->mIsDirty = true; // Flag the area itself in case soemthing goes
+        pA2->mIsDirty = true; // Flag the area itself in case something goes
                               // wrong on last room in a series
     }
     else {
@@ -703,95 +724,597 @@ void TRoom::restore( QDataStream & ifs, int roomID, int version )
     calcRoomDimensions();
 }
 
-void TRoom::auditExits()
+void TRoom::audit( const QHash<int, int> roomRemapping, const QHash<int, int> areaRemapping )
 {
-    if( north != -1 && ! mpRoomDB->getRoom(north) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"north\"", id);
-        north = -1;
+    if( areaRemapping.contains( area ) ) {
+        userData.insert( QStringLiteral( "audit.remapped_area" ), QString::number( area ) );
+        area = areaRemapping.value( area );
     }
-    if( south != -1 && ! mpRoomDB->getRoom(south) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"south\"", id);
-        south = -1;
-    }
-    if( northwest != -1 && ! mpRoomDB->getRoom(northwest) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northwest\"", id);
-        northwest = -1;
-    }
-    if( northeast != -1 && ! mpRoomDB->getRoom(northeast) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"northeast\"", id);
-        northeast = -1;
-    }
-    if( southwest != -1 && ! mpRoomDB->getRoom(southwest) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southwest\"", id);
-        southwest = -1;
-    }
-    if( southeast != -1 && ! mpRoomDB->getRoom(southeast) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"southeast\"", id);
-        southeast = -1;
-    }
-    if( west != -1 && ! mpRoomDB->getRoom(west) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"west\"", id);
-        west = -1;
-    }
-    if( east != -1 && ! mpRoomDB->getRoom(east) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"east\"", id);
-        east = -1;
-    }
-    if( in != -1 && ! mpRoomDB->getRoom(in) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"in\"", id);
-        in = -1;
-    }
-    if( out != -1 && ! mpRoomDB->getRoom(out) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"out\"", id);
-        out = -1;
-    }
-    if( up != -1 && ! mpRoomDB->getRoom(up) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"up\"", id);
-        up = -1;
-    }
-    if( down != -1 && ! mpRoomDB->getRoom(down) )
-    {
-        qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (general) exit: \"down\"", id);
-        down = -1;
-    }
-    // These last two were missing!
 
-// If we use the Mutable iterator we don't have to restart after a deletion
-    QMutableMapIterator<int, QString> it( other );
-    while( it.hasNext() )
+    auditExits( roomRemapping );
+}
+
+void TRoom::auditExits( const QHash<int, int> roomRemapping )
+{
+    // Clone all the structures into working copies that we can eliminate valid
+    // members from to identify any rogue members before removing them:
+
+    QMap<QString, int> exitWeightsCopy = exitWeights;
+    QSet<int> exitStubsCopy = exitStubs.toSet();
+    QSet<int> exitLocksCopy = exitLocks.toSet();
+    QMap<QString, int> doorsCopy = doors;
+    QMap<QString, QList<QPointF> > customLinesCopy = customLines;
+    QMap<QString, QList<int> > customLinesColorCopy = customLinesColor;
+    QMap<QString, QString> customLinesStyleCopy = customLinesStyle;
+    QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
+
+    exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
+    exitStubsCopy.detach();
+    exitLocksCopy.detach();
+    doorsCopy.detach();
+    customLinesCopy.detach();
+    customLinesColorCopy.detach();
+    customLinesStyleCopy.detach();
+    customLinesArrowCopy.detach();
+
+    auditExit( north, DIR_NORTH, tr( "North" ), QStringLiteral( "n" ), QStringLiteral( "N" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( northeast, DIR_NORTHEAST, tr( "Northeast" ), QStringLiteral( "ne" ), QStringLiteral( "NE" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( northwest, DIR_NORTHWEST, tr( "Northwest" ), QStringLiteral( "nw" ), QStringLiteral( "NW" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( south, DIR_SOUTH, tr( "South" ), QStringLiteral( "s" ), QStringLiteral( "S" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( southeast, DIR_SOUTHEAST, tr( "Southeast" ), QStringLiteral( "se" ), QStringLiteral( "SE" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( southwest, DIR_SOUTHWEST, tr( "Southwest" ), QStringLiteral( "sw" ), QStringLiteral( "SW" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( east, DIR_EAST, tr( "East" ), QStringLiteral( "e" ), QStringLiteral( "E" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( west, DIR_WEST, tr( "West" ), QStringLiteral( "w" ), QStringLiteral( "W" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( up, DIR_UP, tr( "Up" ), QStringLiteral( "up" ), QStringLiteral( "UP" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( down, DIR_DOWN, tr( "Down" ), QStringLiteral( "down" ), QStringLiteral( "DOWN" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( in, DIR_IN, tr( "In" ), QStringLiteral( "in" ), QStringLiteral( "IN" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    auditExit( out, DIR_OUT, tr( "Out" ), QStringLiteral( "out" ), QStringLiteral( "OUT" ),
+               exitWeightsCopy, exitStubsCopy, exitLocksCopy, doorsCopy,
+               customLinesCopy, customLinesColorCopy, customLinesStyleCopy, customLinesArrowCopy,
+               roomRemapping );
+
+    // If we use the Mutable iterator we don't have to restart after a deletion
+    { // Block code to limit scope of iterator
+        QMutableMapIterator<int, QString> it( other );
+        QMultiMap<int, QString> replacements;
+        while( it.hasNext() ) {
+            it.next();
+            QString _cmd = it.value();
+            if( _cmd.size() <= 0 ) {
+                QString warnMsg = tr( "[ WARN ]  - In room Id:%1 removing invalid (special) exit to %2 {with no name!}" )
+                                      .arg( id, 6, QLatin1Char( '0' ) )
+                                      .arg( it.key(), 6, QLatin1Char( '0' ) );
+                // If size is less than or equal to 0 then there is nothing to print!!!
+                /* This is wrong, must modify thing being iterated over via iterator:
+                 * other.remove( it.key(), it.value() );
+                 */
+                it.remove();
+                mpRoomDB->mpMap->postMessage( warnMsg );
+            }
+            else if( ! ( _cmd.startsWith('1') || _cmd.startsWith('0') ) ) {
+                QString _nc = it.value();
+                int _nk = it.key();
+                _nc.prepend('0');
+                // Old, prepatched special exit could not have a lock
+                /*
+                 * This is wrong, must modify thing being iterated over via iterator:
+                 * other.remove( it.key(), it.value() );
+                 * other.insertMulti( _nk, _nc );
+                 */
+                replacements.insert( _nk, _nc );
+                it.remove();
+                QString warnMsg = tr( "[ INFO ]  - In room Id:%1 patching {internal fixup} of (special) exit to\n"
+                                                  "%2, was: \"%3\" now: \"%4\"." )
+                                      .arg( id, 6, QLatin1Char( '0' ) )
+                                      .arg( _nk, 6, QLatin1Char( '0' ) )
+                                      .arg( _cmd )
+                                      .arg( _nc );
+                mpRoomDB->mpMap->postMessage( warnMsg );
+            }
+        }
+        // Now finished with (mutable) iterator, can re-insert changed things
+        if( ! replacements.isEmpty() ) {
+            other.unite( replacements );
+            // unite() is OK to use here as we have already removed the
+            // key/value pairs that are to be replaced (otherwise they'd be
+            // duplicated!)
+        }
+    }
+
+    // Now do the exit room ids if there is any remapping
+    if( ! roomRemapping.isEmpty() ) {
+        QMutableMapIterator<int, QString> it( other );
+        QMultiMap<int, QString> replacements;
+        while( it.hasNext() ) {
+            it.next();
+            int exitRoomId = it.key();
+            QString exitText = it.value();
+            QString exitName = exitText.mid( 1 );
+
+            if( roomRemapping.contains( exitRoomId ) ) {
+                QString auditKey = QStringLiteral( "audit.remapped_special_exit.%1" ).arg( exitName );
+                userData.insert( auditKey, QString::number( exitRoomId ) );
+                QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 correcting special exit \"%2\" that\n"
+                                                  "was to room with an exit to invalid room: %3 to now go\n"
+                                                  "to: %4." )
+                                      .arg( id )
+                                      .arg( exitName )
+                                      .arg( exitRoomId )
+                                      .arg( roomRemapping.value( exitRoomId ) );
+                mpRoomDB->mpMap->postMessage( infoMsg );
+                replacements.insert( roomRemapping.value( exitRoomId ), exitText );
+                it.remove();
+                exitRoomId = roomRemapping.value( exitRoomId );
+            }
+        }
+        if( ! replacements.isEmpty() ) {
+            other.unite( replacements );
+        }
+    }
+
+    { // Now check for the validity of the special exit room destinations after
+      // remapping - and clean up any exit elements related to the invalid or
+      // missing ones
+        QMutableMapIterator<int, QString> it( other );
+        while( it.hasNext() ) {
+            it.next();
+            int exitRoomId = it.key();
+            QString exitText = it.value();
+            QString exitName = exitText.mid( 1 );
+
+            if( exitRoomId > 0 ) {
+                // A real exit - should have a real destination
+                if( Q_UNLIKELY( ! mpRoomDB->getRoom( exitRoomId ) ) ) {
+                    // But it doesn't exist
+                    QString auditKey = QStringLiteral( "audit.removed_valid_but_missing_special_exit.%1" ).arg( exitName );
+                    QString warnMsg = tr( "[ WARN ]  - Room with Id: %1 has a special exit \"%2\" with an\n"
+                                                      "exit to: %3 but that room does not exist.  The exit will\n"
+                                                      "be removed (but the destination room Id will be stored in\n"
+                                                      "the room user data under a key:\n"
+                                                      "\"%4\")." )
+                                          .arg( id )
+                                          .arg( exitName )
+                                          .arg( exitRoomId )
+                                          .arg( auditKey );
+                    mpRoomDB->mpMap->postMessage( warnMsg );
+                    userData.insert( auditKey, QString::number( exitRoomId ) );
+                    it.remove();
+
+                    // Remove the corresponding things from the pools of things
+                    // that have to be checked:
+                    // TODO: Add additional warnings if we ARE deleting any data in following
+                    exitWeights.remove( exitName );
+                    doors.remove( exitName );
+                    customLines.remove( exitName );
+                    customLinesColor.remove( exitName );
+                    customLinesStyle.remove( exitName );
+                    customLinesArrow.remove( exitName );
+                    exitWeightsCopy.remove( exitName );
+                    doorsCopy.remove( exitName );
+                    customLinesCopy.remove( exitName );
+                    customLinesColorCopy.remove( exitName );
+                    customLinesStyleCopy.remove( exitName );
+                    customLinesArrowCopy.remove( exitName );
+                }
+                else {
+                    // Exit id is for a room that DOES exist and is in the valid range
+                    // So remove from the pools of things to check all the things that
+                    // CAN be associated with this exit direction:
+                    exitWeightsCopy.remove( exitName );
+                    doorsCopy.remove( exitName );
+                    customLinesCopy.remove( exitName );
+                    customLinesColorCopy.remove( exitName );
+                    customLinesStyleCopy.remove( exitName );
+                    customLinesArrowCopy.remove( exitName );
+                }
+            }
+            else {
+                // < 1 and not renumbered because the bad room Id DID NOT exist
+                QString auditKey = QStringLiteral( "audit.removed_invalid_special_exit.%1" ).arg( exitName );
+                userData.insert( auditKey, QString::number( exitRoomId ) );
+                QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 special exit \"%2\"\n"
+                                      "that was to room with an invalid room: %3 that does not exist.\n"
+                                      "The exit will be removed (the bad destination room Id will be stored in the\n"
+                                      "room user data under a key:\n"
+                                      "\"%4\")." )
+                                      .arg( id )
+                                      .arg( exitName )
+                                      .arg( exitRoomId )
+                                      .arg( auditKey );
+                mpRoomDB->mpMap->postMessage( infoMsg );
+                it.remove();
+                // We cannot have a door or anything else on a non-existant special exit
+                doors.remove( exitName );
+                exitWeights.remove( exitName );
+                customLines.remove( exitName );
+                customLinesColor.remove( exitName );
+                customLinesStyle.remove( exitName );
+                customLinesArrow.remove( exitName );
+                doorsCopy.remove( exitName );
+                exitWeightsCopy.remove( exitName );
+                customLinesCopy.remove( exitName );
+                customLinesColorCopy.remove( exitName );
+                customLinesStyleCopy.remove( exitName );
+                customLinesArrowCopy.remove( exitName );
+            }
+        }
+    }
+
+    // Finally check for any left over exit elements that should not be there:
+    // Doors:
+    if( ! doorsCopy.isEmpty() ) {
+        QStringList extras;
+        QMapIterator<QString, int> itSpareDoors( doorsCopy );
+        while( itSpareDoors.hasNext() ) {
+            itSpareDoors.next();
+            doors.remove( itSpareDoors.key() );
+            switch( itSpareDoors.value() ) {
+            case 0:
+                extras.append( tr( "%1 {none}" ).arg( itSpareDoors.key() ) );
+                break;
+            case 1:
+                extras.append( tr( "%1 (open)" ).arg( itSpareDoors.key() ) );
+                break;
+            case 2:
+                extras.append( tr( "%1 (closed)" ).arg( itSpareDoors.key() ) );
+                break;
+            case 3:
+                extras.append( tr( "%1 (locked)" ).arg( itSpareDoors.key() ) );
+                break;
+            default:
+                extras.append( tr( "%1 {invalid}" ).arg( itSpareDoors.key() ) );
+            }
+        }
+        QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 found one or more surplus door items that were removed:\n"
+                                          "%2." )
+                              .arg( id )
+                              .arg( extras.join( QStringLiteral( ", " ) ) );
+        mpRoomDB->mpMap->postMessage( infoMsg );
+    }
+
+    // ExitStubs - cannot validate like this as can be present without an exit
+    // in fact cannot be present WITH an exit
+//    if( ! exitStubsCopy.isEmpty() ) {
+//        QStringList extras;
+//        QSetIterator<int> itSpareStubs( exitStubsCopy );
+//        while( itSpareStubs.hasNext() ) {
+//            int dirCode = itSpareStubs.next();
+//        ...
+//            extras.append( dirCodeToDisplayName( dirCode ) );
+//        }
+//        QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 found one or more exit stubs:\n"
+//                                          "%2." )
+//                              .arg( id )
+//                              .arg( extras.join( QStringLiteral( ", " ) ) );
+//        mpRoomDB->mpMap->postMessage( infoMsg );
+//    }
+
+    // ExitWeights:
+    if( ! exitWeightsCopy.isEmpty() ) {
+        QStringList extras;
+        QMapIterator<QString, int> itSpareExitWeight( exitWeightsCopy );
+        while( itSpareExitWeight.hasNext() ) {
+            itSpareExitWeight.next();
+            exitWeights.remove( itSpareExitWeight.key() );
+            extras.append( QStringLiteral( "\"%1\"(%2)" )
+                               .arg( itSpareExitWeight.key() )
+                               .arg( itSpareExitWeight.value() ) );
+        }
+        QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 found one or more surplus weight items that were removed:\n"
+                                          "%2." )
+                              .arg( id )
+                              .arg( extras.join( QStringLiteral( ", " ) ) );
+        mpRoomDB->mpMap->postMessage( infoMsg );
+    }
+
+    // ExitLocks:
+    if( ! exitLocksCopy.isEmpty() ) {
+        QStringList extras;
+        QSetIterator<int> itSpareExitLock( exitLocksCopy );
+        while( itSpareExitLock.hasNext() ) {
+            int dirCode = itSpareExitLock.next();
+            extras.append( dirCodeToDisplayName( dirCode ) );
+            exitLocks.removeAll( dirCode );
+        }
+        QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 found one or more surplus exit lock items that were removed:\n"
+                                          "%2." )
+                              .arg( id )
+                              .arg( extras.join( QStringLiteral( ", " ) ) );
+        mpRoomDB->mpMap->postMessage( infoMsg );
+    }
+
+    // Custom Lines - points - the master element - if the entry for an exit is
+    // not valid then remove corresponding entries in other elements
     {
-        it.next();
-        QString _cmd = it.value();
-        if( _cmd.size() <= 0 )
-        {
-            qWarning("TRoom::auditExits() WARNING: roomID:%6i REMOVING invalid (special) exit to %i.", id, it.key());
-            // If size is less than or equal to 0 then there is nothing to print!!!
-            other.remove( it.key(), it.value() );
+        QStringList extras;
+        if( ! customLinesCopy.isEmpty() ) {
+            QMapIterator<QString, QList<QPointF> > itSpareCustomLine( customLinesCopy );
+            while( itSpareCustomLine.hasNext() ) {
+                itSpareCustomLine.next();
+                customLines.remove( itSpareCustomLine.key() );
+                customLinesColor.remove( itSpareCustomLine.key() );
+                customLinesStyle.remove( itSpareCustomLine.key() );
+                customLinesArrow.remove( itSpareCustomLine.key() );
+                customLinesColorCopy.remove( itSpareCustomLine.key() );
+                customLinesStyleCopy.remove( itSpareCustomLine.key() );
+                customLinesArrowCopy.remove( itSpareCustomLine.key() );
+                if( itSpareCustomLine.key().isEmpty() ) {
+                    extras.append( "<empty string>" );
+                }
+                else {
+                    extras.append( itSpareCustomLine.key() );
+                }
+            }
         }
-        else if( ! ( _cmd.startsWith('1') || _cmd.startsWith('0') ) )
-        {
-            QString _nc = it.value();
-            int _nk = it.key();
-            _nc.prepend('0');
-            // Old, prepatched special exit could not have a lock
-            other.remove( it.key(), it.value() );
-            other.insertMulti( _nk, _nc );
-            qWarning("TRoom::auditExits() WARNING: roomID:%6i PATCHING invalid (special) exit to %i, was:%s now:%s.",
-                     id,
-                     _nk,
-                     qPrintable(_cmd),
-                     qPrintable(_nc));
+
+        // Custom Lines - colors
+        if( ! customLinesColorCopy.isEmpty() ) {
+            QMapIterator<QString, QList<int> > itSpareCustomLine( customLinesColorCopy );
+            while( itSpareCustomLine.hasNext() ) {
+                itSpareCustomLine.next();
+                customLinesColor.remove( itSpareCustomLine.key() );
+                customLinesStyle.remove( itSpareCustomLine.key() );
+                customLinesArrow.remove( itSpareCustomLine.key() );
+                customLinesStyleCopy.remove( itSpareCustomLine.key() );
+                customLinesArrowCopy.remove( itSpareCustomLine.key() );
+                if( itSpareCustomLine.key().isEmpty() ) {
+                    extras.append( "<empty string>" );
+                }
+                else {
+                    extras.append( itSpareCustomLine.key() );
+                }
+            }
         }
+
+        // Custom Lines - styles
+        if( ! customLinesStyleCopy.isEmpty() ) {
+            QMapIterator<QString, QString> itSpareCustomLine( customLinesStyleCopy );
+            while( itSpareCustomLine.hasNext() ) {
+                itSpareCustomLine.next();
+                customLinesStyle.remove( itSpareCustomLine.key() );
+                customLinesArrow.remove( itSpareCustomLine.key() );
+                customLinesArrowCopy.remove( itSpareCustomLine.key() );
+                if( itSpareCustomLine.key().isEmpty() ) {
+                    extras.append( "<empty string>" );
+                }
+                else {
+                    extras.append( itSpareCustomLine.key() );
+                }
+            }
+        }
+
+        // Custom Lines - ending arrow
+        if( ! customLinesArrowCopy.isEmpty() ) {
+            QMapIterator<QString, bool> itSpareCustomLine( customLinesArrowCopy );
+            while( itSpareCustomLine.hasNext() ) {
+                itSpareCustomLine.next();
+                customLinesArrow.remove( itSpareCustomLine.key() );
+                if( itSpareCustomLine.key().isEmpty() ) {
+                    extras.append( "<empty string>" );
+                }
+                else {
+                    extras.append( itSpareCustomLine.key() );
+                }
+            }
+        }
+
+        if( ! extras.isEmpty() ) {
+            QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 found one or more surplus custom line elements that\n"
+                                              "were removed: %2." )
+                                  .arg( id )
+                                  .arg( extras.join( QStringLiteral( ", " ) ) );
+            mpRoomDB->mpMap->postMessage( infoMsg );
+        }
+    }
+}
+
+void TRoom::auditExit( int & exitRoomId,                    // Reference to where exit goes to
+                       const int dirCode,                         // DIR_xxx code for this exit - to access stubs & locks
+                       const QString displayName,                 // What to present as the name of the exit
+                       const QString doorAndWeight,               // To access doors and weights
+                       const QString customLine,                  // To access custom exit line elements
+                       QMap<QString, int> & exitWeightsPool,// References to working copies of things - valid ones will be removed
+                       QSet<int> & exitStubsPool,
+                       QSet<int> & exitLocksPool,
+                       QMap<QString, int> & doorsPool,
+                       QMap<QString, QList<QPointF> > & customLinesPool,
+                       QMap<QString, QList<int> > & customLinesColorPool,
+                       QMap<QString, QString> & customLinesStylePool,
+                       QMap<QString, bool> & customLinesArrowPool,
+                       const QHash<int,int> roomRemapping )
+{
+
+    if( roomRemapping.contains( exitRoomId ) ) {
+        QString auditKey = QStringLiteral( "audit.remapped_exit.%1" ).arg( DIR_NORTH );
+        userData.insert( auditKey, QString::number( exitRoomId ) );
+        QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 correcting exit \"%2\" that was to room with\n"
+                                          "an exit to invalid room: %3 to now go to: %4." )
+                              .arg( id )
+                              .arg( displayName )
+                              .arg( exitRoomId )
+                              .arg( roomRemapping.value( exitRoomId ) );
+        mpRoomDB->mpMap->postMessage( infoMsg );
+        exitRoomId = roomRemapping.value( exitRoomId );
+    }
+
+    if( exitRoomId > 0 ) {
+        // A real exit - should have a real destination, and NOT have a stub
+        if( Q_UNLIKELY( ! mpRoomDB->getRoom( exitRoomId ) ) ) {
+            // But it doesn't exist
+            QString auditKey = QStringLiteral( "audit.made_stub_of_valid_but_missing_exit.%1" ).arg( DIR_NORTH );
+            QString warnMsg = tr( "[ WARN ]  - Room with Id: %1 has an exit \"%2\" with an exit to: %3 but that room\n"
+                                              "does not exist.  The exit will be removed (but the destination room\n"
+                                              "Id will be stored in the room user data under a key:\n"
+                                              "\"%4\")\n"
+                                              "and the exit will be turned into a stub." )
+                                  .arg( id )
+                                  .arg( displayName )
+                                  .arg( exitRoomId )
+                                  .arg( auditKey );
+            mpRoomDB->mpMap->postMessage( warnMsg );
+            userData.insert( auditKey, QString::number( exitRoomId ) );
+            if( ! exitStubs.contains( dirCode ) ) {
+                exitStubs.append( dirCode ); // Add a stub (this is so we can retain doors, though exit weights, custom lines and locks will go)
+                exitStubsPool.remove( dirCode ); // Remove a (now valid) stub in this direction from check pool
+            }
+
+            exitRoomId = -1;
+
+            // Remove the following things that a stub exit does not handle
+            // And eliminate the corresponding things from the pools of things
+            // that have to be checked:
+            // TODO: Add additional warnings if we ARE deleting any data in following
+            exitLocks.removeAll( dirCode );
+            exitLocksPool.remove( dirCode );
+
+            exitWeights.remove( doorAndWeight );
+            exitWeightsPool.remove( doorAndWeight );
+
+            doorsPool.remove( doorAndWeight ); // we now have a stub exit and that can take a door so clear the door from the check pool
+
+            customLines.remove( customLine );
+            customLinesPool.remove( customLine );
+
+            customLinesColor.remove( customLine );
+            customLinesColorPool.remove( customLine );
+
+            customLinesStyle.remove( customLine );
+            customLinesStylePool.remove( customLine );
+
+            customLinesArrow.remove( customLine );
+            customLinesArrowPool.remove( customLine );
+        }
+        else {
+            // we do have a valid exit destination room
+
+            // We cannot allow a stub exit at the same time as a real exit:
+            if( exitStubs.contains( dirCode ) ) {
+                QString warnMsg = tr( "[ ALERT ] - Room with Id: %1 has an exit \"%2\" with an exit to: %3 but also\n"
+                                                  "has a record of a stub exit!  That stub will be removed." )
+                                      .arg( id )
+                                      .arg( displayName )
+                                      .arg( exitRoomId );
+                mpRoomDB->mpMap->postMessage( warnMsg );
+                exitStubs.removeAll( dirCode );
+                exitStubsPool.remove( dirCode ); // Remove the stub in this direction from check pool as we have handled it
+            }
+
+            // Exit id is for a room that DOES exist and is in the valid range
+            // So remove from the pools of things to check all the things CAN be
+            // associated with this exit direction:
+            exitLocksPool.remove( dirCode );
+            exitWeightsPool.remove( doorAndWeight );
+            doorsPool.remove( doorAndWeight );
+            customLinesPool.remove( customLine );
+            customLinesColorPool.remove( customLine );
+            customLinesStylePool.remove( customLine );
+            customLinesArrowPool.remove( customLine );
+        }
+    }
+    else if( exitRoomId == -1 ) {
+        // No exit - so do we have a stub?
+        if( exitStubs.contains( dirCode ) ) {
+            exitStubsPool.remove( dirCode ); // Remove the stub in this direction from check pool as we have handled it
+        }
+        else {
+            // If NOT we cannot have a door
+            doors.remove( doorAndWeight );
+            doorsPool.remove( doorAndWeight );
+        }
+        // Whether we do or not have a stub exit we cannot have a lock, custom
+        // line or a weight - so remove them if they exist:
+        exitLocks.removeAll( dirCode );
+        exitWeights.remove( doorAndWeight );
+        customLines.remove( customLine );
+        customLinesColor.remove( customLine );
+        customLinesStyle.remove( customLine );
+        customLinesArrow.remove( customLine );
+        // Whether we have a stub or not we have handled all the things that we
+        // want to check the existance of so take them out of the pools of
+        // things left to check after all the exits have been looked at
+        exitLocksPool.remove( dirCode );
+        exitWeightsPool.remove( doorAndWeight );
+        customLinesPool.remove( customLine );
+        customLinesColorPool.remove( customLine );
+        customLinesStylePool.remove( customLine );
+        customLinesArrowPool.remove( customLine );
+    }
+    else {
+        // either 0 or < -1 and not renumbered because the bad room Id DID NOT exist
+        QString auditKey = QStringLiteral( "audit.made_stub_of_invalid_exit.%1" ).arg( DIR_NORTH );
+        userData.insert( auditKey, QString::number( exitRoomId ) );
+        QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 exit \"%2\" that was to room with an invalid\n"
+                              "room: %3 that does not exist.  The exit will be removed (the bad destination\n"
+                              "room Id will be stored in the room user data under a key:\n"
+                              "\"%4\")\n"
+                              "and the exit will be turned into a stub." )
+                              .arg( id )
+                              .arg( displayName )
+                              .arg( exitRoomId )
+                              .arg( auditKey );
+        mpRoomDB->mpMap->postMessage( infoMsg );
+        exitRoomId = -1;
+
+        exitLocks.removeAll( dirCode );
+        exitWeights.remove( doorAndWeight );
+        customLines.remove( customLine );
+        customLinesColor.remove( customLine );
+        customLinesStyle.remove( customLine );
+        customLinesArrow.remove( customLine );
+        // Whether we have a stub or not we have handled all the things that we
+        // want to check the existance of so take them out of the pools of
+        // things left to check after all the exits have been looked at
+
+        doorsPool.remove( doorAndWeight ); // Can still have a door on a stub
+        exitLocksPool.remove( dirCode );
+        exitWeightsPool.remove( doorAndWeight );
+        customLinesPool.remove( customLine );
+        customLinesColorPool.remove( customLine );
+        customLinesStylePool.remove( customLine );
+        customLinesArrowPool.remove( customLine );
     }
 }

@@ -1876,8 +1876,9 @@ void mudlet::slot_mapper()
 
     if( pHost->mpMap->mpRoomDB->getRoomIDList().size() < 1 )
     {
-        pHost->mpMap->restore("");
-        pHost->mpMap->init( pHost );
+        if( pHost->mpMap->restore( QString() ) ) {
+            pHost->mpMap->audit();
+        }
         pHost->mpMap->mpMapper->mp2dMap->init();
         pHost->mpMap->mpMapper->show();
     }

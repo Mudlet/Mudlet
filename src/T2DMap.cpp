@@ -545,8 +545,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         p.setRenderHint(QPainter::NonCosmeticDefaultPen);
     p.setPen( pen );
 
-    //mpMap->auditRooms();
-
     if( mpMap->mapLabels.contains( mAID ) )
     {
         QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAID]);

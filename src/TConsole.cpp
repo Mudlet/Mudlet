@@ -1786,7 +1786,7 @@ bool TConsole::loadMap(const QString& location)
 
     if ( mpHost->mpMap->restore(location) )
     {
-        mpHost->mpMap->init( mpHost );
+        mpHost->mpMap->audit();
         mpHost->mpMap->mpMapper->mp2dMap->init();
         mpHost->mpMap->mpMapper->show();
         if( mpHost->mpMap )
@@ -2449,8 +2449,9 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         mpMapper->mpHost = mpHost;
-        mpHost->mpMap->restore("");
-        mpHost->mpMap->init( mpHost );
+        if( mpHost->mpMap->restore( QString() ) ) {
+            mpHost->mpMap->audit();
+        }
 
         TEvent mapOpenEvent;
         mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
