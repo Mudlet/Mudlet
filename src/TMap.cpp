@@ -979,10 +979,21 @@ bool TMap::serialize( QDataStream & ofs )
     if( mSaveVersion >= 17 ) {
         ofs << mUserData;
     }
+    // TODO: Remove when versions < 17 are not an option...
+    else {
+        if( ! mUserData.isEmpty() ) {
+            QString message = tr( "[ ALERT ]  - Map User data has been lost in saved map file.  Re-save in a\n"
+                                               "format of at least 17 to preserve it before quitting!" )
+                                  .arg( mSaveVersion );
+            mpHost->mTelnet.postMessage( message );
+        }
+    }
+    // End of TODO:
 
     ofs << mpRoomDB->getAreaMap().size();
     // serialize area table
     QMapIterator<int, TArea *> itAreaList(mpRoomDB->getAreaMap());
+    QList<int> areasWithData; // TODO: Remove when versions < 17 are not an option
     while( itAreaList.hasNext() )
     {
         itAreaList.next();
@@ -1012,7 +1023,32 @@ bool TMap::serialize( QDataStream & ofs )
         if( mSaveVersion >= 17 ) {
             ofs << pA->mUserData;
         }
+        // TODO: Remove when versions < 17 are not an option...
+        else {
+            if( ! pA->mUserData.isEmpty() ) {
+                areasWithData.append( areaID );
+            }
+        }
+        // End of TODO:
     }
+
+    // TODO: Remove when versions < 17 are not an option...
+    if( ! areasWithData.isEmpty() ) {
+        if( areasWithData.size() > 1 ) {
+            std::sort( areasWithData.begin(), areasWithData.end() );
+        }
+        QStringList areaIds;
+        do {
+            areaIds.append( QString::number( areasWithData.takeFirst() ) );
+        } while( ! areasWithData.isEmpty() );
+
+        QString message = tr( "[ ALERT ]  - Area User data has been lost in saved map file.  Re-save in a\n"
+                                           "format of at least 17 to preserve it before quitting!\n"
+                                           "Areas Id affected: %1." )
+                              .arg( areaIds.join( tr( ", " ) ) ); // Translatable in case list separators are locale dependendent!
+        mpHost->mTelnet.postMessage( message );
+    }
+    // End of TODO
 
     ofs << mRoomId;
 
@@ -1047,9 +1083,14 @@ bool TMap::serialize( QDataStream & ofs )
     {
 
         it.next();
-// N/U:         int i = it.key();
         TRoom * pR = it.value();
-        ofs <<  pR->getId();
+        if( ! pR ) {
+            qDebug() << "TMap::serialize(...) skipping a room with a NULL TRoom pointer:"
+                     << it.key();
+            continue;
+        }
+
+        ofs << pR->getId();
         ofs << pR->getArea();
         ofs << pR->x;
         ofs << pR->y;

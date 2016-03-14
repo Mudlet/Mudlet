@@ -1405,7 +1405,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         action->setStatusTip(tr("copy selected text to clipboard"));
         connect( action, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboard()));
         QAction * action2 = new QAction("copy HTML", this );
-        action->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
+        action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect( action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
         QMenu * popup = new QMenu( this );
         popup->addAction( action );
