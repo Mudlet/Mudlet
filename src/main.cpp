@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2016 by Stephen Lyons                        *
+ *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -334,13 +335,14 @@ int main(int argc, char *argv[])
 
     QString splash_message;
     if (show_splash) {
-        splash_message.append("Mudlet comes with\n"
+        splash_message.append("\n\nMudlet comes with\n"
                               "ABSOLUTELY NO WARRANTY!\n"
-                              "This is free software, and you are welcome to\n"
-                              "redistribute it under certain conditions;\n"
-                              "select the 'About' item for details.\n\n");
+                              "This is free software, and you are\n"
+                              "welcome to redistribute it under\n"
+                              "certain conditions; select the\n"
+                              "'About' item for details.\n\n");
         splash_message.append("Locating profiles... ");
-        splash.showMessage(splash_message, Qt::AlignCenter);
+        splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
         app->processEvents();
     }
 
@@ -353,7 +355,7 @@ int main(int argc, char *argv[])
 
     if (show_splash) {
         splash_message.append("Done.\n\nLoading font files... ");
-        splash.showMessage(splash_message, Qt::AlignCenter);
+        splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
         app->processEvents();
     }
 
@@ -406,7 +408,7 @@ int main(int argc, char *argv[])
         splash_message.append("Done.\n\n"
                               "All data has been loaded successfully.\n\n"
                               "Starting... Have fun!\n\n");
-        splash.showMessage(splash_message, Qt::AlignCenter);
+        splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
         app->processEvents();
     }
 
