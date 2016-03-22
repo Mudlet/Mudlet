@@ -568,7 +568,22 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layerCommandLine->setPalette( __pal );
 
     changeColors();
-
+    if( ! mIsSubConsole && ! mIsDebugConsole )
+    {
+        // During first use where mIsDebugConsole IS true mudlet::self() is null
+        // then - but we rely on that flag to avoid having to also test for a
+        // non-null mudlet::self() - the connect(...) will produce a debug
+        // message and not make THAT connection should it indeed be null but it
+        // is not fatal...
+        // So, this SHOULD be the main profile console - Slysven
+        connect( mudlet::self(),
+                 SIGNAL( signal_profileMapReloadRequested( QList<QString> ) ),
+                 this,
+                 SLOT( slot_reloadMap( QList<QString> ) ),
+                 Qt::UniqueConnection );
+        // For some odd reason the first seems to get connected twice - the
+        // last flag prevents multiple ones being made
+    }
 }
 
 Host * TConsole::getHost() { return mpHost; }
@@ -1775,29 +1790,36 @@ bool TConsole::saveMap(const QString& location)
 
 bool TConsole::loadMap(const QString& location)
 {
-    if( !mpHost ) return false;
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper )
-    {
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
+        // in later software versions and is a weak pointer until used
+        // (I think - Slysven ?)
+        return false;
+    }
+
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // No map or map currently loaded - soi try and created them
         mudlet::self()->slot_mapper();
     }
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
+
+    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) {
+        // And that failed so give up
+        return false;
+    }
 
     mpHost->mpMap->mapClear();
 
-    if ( mpHost->mpMap->restore(location) )
-    {
+    if( mpHost->mpMap->restore( location ) ) {
         mpHost->mpMap->audit();
         mpHost->mpMap->mpMapper->mp2dMap->init();
         mpHost->mpMap->mpMapper->show();
-        if( mpHost->mpMap )
-            if( mpHost->mpMap->mpMapper )
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-        // previous selections stay, so we need to clear it
-        //mpHost->mpMap->mpMapper->mp2dMap->deselect();
+        mpHost->mpMap->mpMapper->updateAreaComboBox();
         return true;
     }
-
-    return false;
+    else {
+        return false;
+    }
 }
 
 bool TConsole::deleteLine( int y )
@@ -2848,4 +2870,35 @@ QSize TConsole::getMainWindowSize() const
     int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize( consoleSize.width()-toolbarWidth, consoleSize.height()-(commandLineHeight+toolbarHeight));
     return mainWindowSize;
+}
+
+void TConsole::slot_reloadMap( QList<QString> profilesList )
+{
+    Host * pHost = getHost();
+    if( ! pHost ) {
+        return;
+    }
+
+    QString ourName = pHost->getName();
+    if( ! profilesList.contains( ourName ) ) {
+        qDebug() << "TConsole::slot_reloadMap("
+                 << profilesList
+                 << ") request received but we:"
+                 << ourName
+                 << "are not mentioned - so we are ignoring it...!";
+        return;
+    }
+
+    QString infoMsg = tr( "[ INFO ]  - Map reload request received from system..." );
+    pHost->postMessage( infoMsg );
+
+    QString outcomeMsg;
+    if( loadMap( QString() ) ) {
+        outcomeMsg = tr( "[  OK  ]  - ... System Map reload request completed." );
+    }
+    else {
+        outcomeMsg = tr( "[ WARN ]  - ... System Map reload request failed." );
+    }
+
+    pHost->postMessage( outcomeMsg );
 }

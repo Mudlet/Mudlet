@@ -243,26 +243,43 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         mEnableMSDP->setChecked( pHost->mEnableMSDP );
 
         // load profiles into mappers "copy map to profile" combobox
-        // this feature should worm seamlessly both for online and offline profiles
-        QStringList mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Time); // sort by profile "hotness"
-        for( int i=0; i<mProfileList.size(); i++ )
-        {
-            QString s = mProfileList[i];
-            if( s.size() < 1 )
+        // this feature should work seamlessly both for online and offline profiles
+        QStringList profileList = QDir( QStringLiteral( "%1/.config/mudlet/profiles" ).arg( QDir::homePath() ) )
+                                   .entryList( QDir::Dirs|QDir::NoDotAndDotDot , QDir::Time ); // sort by profile "hotness"
+        pushButton_chooseProfiles->setEnabled( false );
+        pushButton_copyMap->setEnabled( false );
+        QMenu * pMenu = new QMenu( tr( "Other profiles to Map to:" ) );
+        for( unsigned int i=0, total = profileList.size(); i < total; ++i ) {
+            QString s = profileList.at( i );
+            if(    s.isEmpty()
+              || ! s.compare( pHost->getName() )
+              || ! s.compare( QStringLiteral( "default_host" ) ) ) {
+                // Do not include THIS profile in the list - it will
+                // automatically get saved - as the file to copy to the other
+                // profiles!  Also exclude the dummy "default_host" one
                 continue;
-            if( (mProfileList[i] == ".") || (mProfileList[i] == ".." ) )
-                continue;
+            }
 
-            mapper_profiles_combobox->addItem( mProfileList[i] );
+            QAction * pItem = new QAction( s, 0 );
+            pItem->setCheckable( true );
+            pItem->setChecked( false );
+            pMenu->addAction( pItem );
+            //Enable it as we now have at least one profile to copy to
+            pushButton_chooseProfiles->setEnabled( true );
         }
 
-        connect(copy_map_profile, SIGNAL(clicked()), this, SLOT(copyMap()));
+        pushButton_chooseProfiles->setMenu( pMenu );
+        connect(pMenu, SIGNAL(triggered(QAction *)), this, SLOT(slot_chooseProfilesChanged(QAction *)));
+        connect(this, SIGNAL(signal_otherProfilesToReloadMaps(QList<QString>)),
+                mudlet::self(), SLOT(slot_requestProfilesToReloadMaps(QList<QString>)));
+
+        connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
 
         // label to show on sucessful map file action
-        map_file_action->hide();
+        label_mapFileActionResult->hide();
 
-        connect(load_map_button, SIGNAL(clicked()), this, SLOT(loadMap()));
-        connect(save_map_button, SIGNAL(clicked()), this, SLOT(saveMap()));
+        connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
+        connect(pushButton_saveMap, SIGNAL(clicked()), this, SLOT(saveMap()));
 
         //doubleclick ignore
         QString ignore;
@@ -811,18 +828,18 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    map_file_action->show();
-    map_file_action->setText( tr( "Loading map - please wait..." ) );
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText( tr( "Loading map - please wait..." ) );
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
 
     if ( mpHost->mpConsole->loadMap(fileName) )
     {
-        map_file_action->setText( tr( "Loaded map from %1." ).arg( fileName ) );
+        label_mapFileActionResult->setText( tr( "Loaded map from %1." ).arg( fileName ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
     else
     {
-        map_file_action->setText( tr( "Could not load map from %1." ).arg( fileName ) );
+        label_mapFileActionResult->setText( tr( "Could not load map from %1." ).arg( fileName ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
     if( mpHost->mpMap && mpHost->mpMap->mpMapper )
@@ -848,8 +865,8 @@ void dlgProfilePreferences::saveMap()
         fileName.append( QStringLiteral( ".dat" ) );
     }
 
-    map_file_action->show();
-    map_file_action->setText( tr( "Saving map - please wait..." ) );
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText( tr( "Saving map - please wait..." ) );
     qApp->processEvents(); // Copied from "Loading map - please wait..." case
                            // Just in case is needed to make the above message
                            // show up when saving big maps
@@ -862,9 +879,9 @@ void dlgProfilePreferences::saveMap()
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
 #endif
     if( pHost->mpConsole->saveMap(fileName) ) {
-        map_file_action->setText( tr( "Saved map to %1." ).arg( fileName ) );
+        label_mapFileActionResult->setText( tr( "Saved map to %1." ).arg( fileName ) );
     } else {
-        map_file_action->setText( tr( "Could not save map to %1." ).arg( fileName ) );
+        label_mapFileActionResult->setText( tr( "Could not save map to %1." ).arg( fileName ) );
     }
     // Then restore prior version
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
@@ -874,13 +891,9 @@ void dlgProfilePreferences::saveMap()
 
 void dlgProfilePreferences::hideActionLabel()
 {
-    map_file_action->hide();
+    label_mapFileActionResult->hide();
 }
 
-
-// TODO: Reorder actions to get mRoomIdHash value from destination profile if NOT
-// active - or from other profile if it is - THEN update the value in our
-// mRoomIdHash QHash before saving and copying across.
 void dlgProfilePreferences::copyMap()
 {
     Host * pHost = mpHost;
@@ -888,60 +901,87 @@ void dlgProfilePreferences::copyMap()
         return;
     }
 
-    QString toProfile = mapper_profiles_combobox->itemText( mapper_profiles_combobox->currentIndex() );
+    QMap<QString, int> toProfilesRoomIdMap;
+    QMenu * _menu = pushButton_chooseProfiles->menu();
+    QListIterator<QAction *> itAction( _menu->actions() );
+    while( itAction.hasNext() ) {
+        QAction * _action = itAction.next();
+        if( _action->isChecked() ) {
+            QString toProfileName = _action->text();
+            toProfilesRoomIdMap.insert( toProfileName, 0 );
+            // 0 is used as sentinel value that we don't have a valid Id yet
+            // for the given Host - the contents of this map will be used to
+            // update, or rather REPLACE TMap::mRoomIdHash
 
-    // Identify if other profile is active
-    Host * pOtherHost = 0;
-    QMapIterator<Host *, TConsole *> itSession( mudlet::self()->mConsoleMap );
-    while( itSession.hasNext() ) {
-        itSession.next();
-        pOtherHost = itSession.key();
-        if( pOtherHost->getName() != toProfile ) {
-            pOtherHost = 0;
-            continue;
-        }
-        break;
-    }
-    // pOtherHost will now be null if the profile is NOT active
-
-    // Try and get the player Room Id from the other profile if ACTIVE
-    int otherProfileCurrentRoomId = 0;
-    if( pOtherHost && pOtherHost->mpMap ) {
-        otherProfileCurrentRoomId = pOtherHost->mpMap->mRoomIdHash.value( toProfile, -1 );
-    }
-
-    // Check for the destination directory for the other profile
-    QDir otherProfileDir;
-    QString otherProfileDirPathString = QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
-                                            .arg( QDir::homePath() )
-                                            .arg( toProfile );
-    if( ! otherProfileDir.exists( otherProfileDirPathString ) ) {
-        if( ! otherProfileDir.mkpath( otherProfileDirPathString ) ) {
-            QString errMsg = tr( "[ ERROR ] - Unable to create directory to store map for other profile.  Please\n"
-                                             "check that you have permissions/access to:\n"
-                                             "\"%1\"\n"
-                                             "and there is enough space. The copying operation has failed." );
-            pHost->postMessage( errMsg );
-            map_file_action->show();
-            map_file_action->setText( tr( "Creating destination directory failed..." ) );
+            // Check for the destination directory for the other profiles
+            QDir toProfileDir;
+            QString toProfileDirPathString = QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
+                                                    .arg( QDir::homePath() )
+                                                    .arg( toProfileName );
+            if( ! toProfileDir.exists( toProfileDirPathString ) ) {
+                if( ! toProfileDir.mkpath( toProfileDirPathString ) ) {
+                    QString errMsg = tr( "[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
+                                                     "Please check that you have permissions/access to:\n"
+                                                     "\"%2\"\n"
+                                                     "and there is enough space. The copying operation has failed." )
+                                         .arg( toProfileName )
+                                         .arg( toProfileDirPathString );
+                    pHost->postMessage( errMsg );
+                    label_mapFileActionResult->show();
+                    label_mapFileActionResult->setText( tr( "Creating a destination directory failed..." ) );
+                    return;
+                }
+            }
         }
     }
 
-    // We now KNOW there is a place where the destination profile will/has stored
-    // its maps - if we do not already know where the player is in the other
-    // profile - because it isn't active - or was not set - try and find out
-    // what it was from the last saved file - ignoring other details that we
-    // could have also obtained.
+    // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
+    QSet<Host *> activeHosts( mudlet::self()->mConsoleMap.keys().toSet() );
+    QMap<QString, Host *> activeOtherHostMap;
+    QSetIterator<Host *> itActiveHost( activeHosts );
+    while( itActiveHost.hasNext() ) {
+        Host * pOtherHost = itActiveHost.next();
+        if( pOtherHost && pHost != pOtherHost && pOtherHost ) {
+            QString otherHostName = pOtherHost->getName();
+            if( toProfilesRoomIdMap.contains( otherHostName ) ) {
+                activeOtherHostMap.insert( otherHostName, pOtherHost );
+                toProfilesRoomIdMap.insert( otherHostName, pOtherHost->mpMap->mRoomIdHash.value( otherHostName, -1 ) );
+            }
+        }
+    }
     // otherProfileCurrentRoomId will be -1 if tried and failed to get it from
     // current running profile, > 0 on sucess or 0 if not running as another profile
 
-    if( otherProfileCurrentRoomId < 1 ) {
-        // Try and get it from saved profile
+    // We now KNOW there are places where the destination profiles will/have
+    // stored their maps - if we do not already know where the player is in the
+    // other profiles - because they aren't active - or have not set it - try
+    // and find out what the rooms are from the last saved files - ignoring
+    // other details that we have also obtained.
+    QMutableMapIterator<QString, int> itOtherProfile( toProfilesRoomIdMap );
+    while( itOtherProfile.hasNext() ) {
+        itOtherProfile.next();
+        if( itOtherProfile.value() > 0 ) {
+            // Skip the ones where we have already got the player room from the
+            // active profile
+            qDebug() << "dlgProfilePreference::copyMap() in other ACTIVE profile:"
+                     << itOtherProfile.key()
+                     << "\n    the player was located in:"
+                     << itOtherProfile.value();
+            if( pHost->mpMap->mpRoomDB->getRoom( itOtherProfile.value() ) ) {
+                // That room IS in the map we are copying across, so update the
+                // local record of it for the map for that profile:
+                pHost->mpMap->mRoomIdHash[ itOtherProfile.key() ] = itOtherProfile.value();
+            }
+            continue;
+        }
+
+        // Most of these we'll just get for debugging!
         QString otherProfileFileUsed;
         int otherProfileRoomCount;
         int otherProfileAreaCount;
         int otherProfileVersion;
-        if( pHost->mpMap->retrieveMapFileStats( toProfile,
+        int otherProfileCurrentRoomId; // What we are looking for!
+        if( pHost->mpMap->retrieveMapFileStats( itOtherProfile.key(),
                                                  & otherProfileFileUsed,
                                                  & otherProfileVersion,
                                                  & otherProfileCurrentRoomId,
@@ -949,110 +989,116 @@ void dlgProfilePreferences::copyMap()
                                                  & otherProfileRoomCount ) ) {
 
             qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
-                     << toProfile
-                     << "\nthe file examined was:"
+                     << itOtherProfile.key()
+                     << "\n    the file examined was:"
                      << otherProfileFileUsed
-                     << "\nit was of version:"
+                     << "\n    it was of version:"
                      << otherProfileVersion
-                     << "\nit had an area count of:"
+                     << "\n    it had an area count of:"
                      << otherProfileAreaCount
-                     << "\nit had a room count of:"
+                     << "\n    it had a room count of:"
                      << otherProfileRoomCount
-                     << "\nthe player was located in:"
+                     << "\n    the player was located in:"
                      << otherProfileCurrentRoomId;
+            itOtherProfile.setValue( otherProfileCurrentRoomId );
+            // Using a mutable iterator we must modify (mutate) the data through
+            // the iterator!
+            if( pHost->mpMap->mpRoomDB->getRoom( otherProfileCurrentRoomId ) ) {
+                // That room IS in the map we are copying across, so update the
+                // local record of it for the map for that profile:
+                pHost->mpMap->mRoomIdHash[ itOtherProfile.key() ] = otherProfileCurrentRoomId;
+            }
         }
     }
-    else {
-        qDebug() << "dlgProfilePreference::copyMap() in other ACTIVE profile:"
-                 << toProfile
-                 << "\nthe player was located in:"
-                 << otherProfileCurrentRoomId;
-    }
 
-    if( pHost->mpMap->mpRoomDB->getRoom( otherProfileCurrentRoomId ) ) {
-        // If the data for the player location in the other map IS valid in the
-        // current one push the value into the store for THIS profile's map
-        // which will supplant the other profile's one
-        pHost->mpMap->mRoomIdHash[ toProfile ] = otherProfileCurrentRoomId;
-    }
-
-    // Now, save our current map
-    map_file_action->show();
-    map_file_action->setText( tr( "Backing up current map - please wait..." ) );
+    // Now, we can save our current map with all the profiles' player room data
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText( tr( "Backing up current map - please wait..." ) );
     qApp->processEvents(); // Copied from "Loading map - please wait..." case
                            // Just in case is needed to make the above message
                            // show up when saving big maps
 
+    // Temporarily use whatever version is currently set
+    int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
+#if QT_VERSION >= 0x050200
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+#else
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
+#endif
+
     if ( ! pHost->mpConsole->saveMap( QString() ) ) {
-        map_file_action->setText( tr( "Could not backup the map - saving it failed." ) );
+        label_mapFileActionResult->setText( tr( "Could not backup the map - saving it failed." ) );
         QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
         return;
     }
 
-    // then copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
-    map_file_action->setText( tr( "Copying over map - please wait..." ) );
-    qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                           // Just in case is needed to make the above message
-                           // show up when saving big maps
+    // Then restore prior version
+    pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
 
     // work out which map is latest in THIS profile - which SHOULD be the one
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString toMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
-                             .arg( QDir::homePath() )
-                             .arg( pHost->getName() ) );
-    QStringList mProfileList = QDir( toMapFolder )
-                                   .entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
-    for( unsigned int i = 0; i < mProfileList.size(); ++i ) {
+    QString sourceMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
+                                 .arg( QDir::homePath() )
+                                 .arg( pHost->getName() ) );
+    QStringList mProfileList = QDir( sourceMapFolder )
+                                   .entryList( QDir::Files | QDir::NoDotAndDotDot, QDir::Time );
+    for( unsigned int i = 0, total = mProfileList.size(); i < total; ++i ) {
         thisProfileLatestMapPathFileName = mProfileList.at( i );
-        if( thisProfileLatestMapPathFileName.size() < 1 ) {
+        if( thisProfileLatestMapPathFileName.isEmpty() ) {
             continue;
         }
 
         thisProfileLatestMapFile.setFileName( QStringLiteral( "%1/%2" )
-                                                  .arg( toMapFolder )
+                                                  .arg( sourceMapFolder )
                                                   .arg( thisProfileLatestMapPathFileName ) );
         break;
     }
 
     if( thisProfileLatestMapFile.fileName().isEmpty() ) {
-        map_file_action->setText( tr( "Could not copy the map - failed to work out which map file we just saved the map as!" ) );
+        label_mapFileActionResult->setText( tr( "Could not copy the map - failed to work out which map file we just saved the map as!" ) );
         QTimer::singleShot( 10 * 1000, this, SLOT( hideActionLabel() ) );
         return;
     }
 
-    if( ! thisProfileLatestMapFile.copy( QStringLiteral( "%1/%2" )
-                                             .arg( otherProfileDirPathString )
-                                             .arg( thisProfileLatestMapPathFileName ) ) ) {
-        map_file_action->setText( tr( "Could not copy the map - unable to copy the offline map file over." ) );
-        QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
-        return;
-    }
-
-    if( ! pOtherHost ) {
-        // Other profile NOT running - so report success
-        map_file_action->setText( tr( "Map copied successfully." ) ); // don't mention offline here, would be a bit confusing
-        qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                               // Just in case is needed to make the above message
-                               // show up when saving big maps
-    }
-    else {
-        map_file_action->setText( tr( "Map copied successfully - loading it into other running profile - please wait...") );
+    // Make the copies into the destination profiles (for all to profiles whether
+    // in use or not):
+    itOtherProfile.toFront();
+    while( itOtherProfile.hasNext() ) {
+        itOtherProfile.next();
+        QString otherHostName = itOtherProfile.key();
+        // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
+        label_mapFileActionResult->setText( tr( "Copying over map to %1 - please wait..." )
+                                                .arg( otherHostName ) );
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if( pOtherHost->mpConsole->loadMap( QStringLiteral( "%1/%2" )
-                                                .arg( otherProfileDirPathString )
-                                                .arg( thisProfileLatestMapPathFileName ) ) ) {
-            map_file_action->setText( tr( "Map copied and reloaded on %1." ).arg( toProfile ) );
+        if( ! thisProfileLatestMapFile.copy( QStringLiteral( "%1/.config/mudlet/profiles/%2/map/%3" )
+                                                 .arg( QDir::homePath() )
+                                                 .arg( otherHostName )
+                                                 .arg( thisProfileLatestMapPathFileName ) ) ) {
+            label_mapFileActionResult->setText( tr( "Could not copy the map to %1 - unable to copy the new map file over." )
+                                                        .arg( otherHostName ));
+            QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
+            continue; // Try again with next profile
         }
         else {
-            map_file_action->setText( tr( "Map copied, but could not be reloaded on %1." ).arg( toProfile ) );
+            label_mapFileActionResult->setText( tr( "Map copied successfully to other profile %1." )
+                                                    .arg( otherHostName ) );
+            qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                                   // Just in case is needed to make the above message
+                                   // show up when saving big maps
         }
     }
 
+    // Finally, signal the other profiles to reload their maps:
+    emit signal_otherProfilesToReloadMaps( toProfilesRoomIdMap.keys() );
+    // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
+    // QStringList in many ways, the SLOT/SIGNAL system treats them as different
+    // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
+    label_mapFileActionResult->setText( tr( "Map copied, now signalling other profiles to reload it." ) );
     QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
 }
 
@@ -1194,5 +1240,28 @@ void dlgProfilePreferences::slot_timeValueChanged(QTime newTime)
             timeEdit_timerDebugOutputMinimumInterval->setTime( QTime( 0, 0, 1, 0 ) );
         }
         oldTime = newTime;
+    }
+}
+
+void dlgProfilePreferences::slot_chooseProfilesChanged( QAction * _action )
+{
+    Q_UNUSED( _action );
+
+    QMenu * _menu = pushButton_chooseProfiles->menu();
+    QListIterator<QAction *> itAction( _menu->actions() );
+    unsigned int selectionCount = 0;
+    while( itAction.hasNext() ) {
+        QAction * _currentAction = itAction.next();
+        if( _currentAction->isChecked() ) {
+            ++selectionCount;
+        }
+    }
+    if( selectionCount ) {
+        pushButton_copyMap->setEnabled( true );
+        pushButton_chooseProfiles->setText( tr( "%1 selected - press to change" ).arg( selectionCount ) );
+    }
+    else {
+        pushButton_copyMap->setEnabled( false );
+        pushButton_chooseProfiles->setText( tr( "Press to pick destination(s)" ) );
     }
 }

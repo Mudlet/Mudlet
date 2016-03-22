@@ -42,6 +42,9 @@ public:
     int mFontSize;
 
 signals:
+    // Used by "Copy Map" to inform a list of profiles - asynchronously, via
+    // mudlet class - to load in an updated map
+    void    signal_otherProfilesToReloadMaps( QList<QString> );
 
 
 public slots:
@@ -101,6 +104,7 @@ public slots:
     void loadMap();
     void saveMap();
     void copyMap();
+    void slot_chooseProfilesChanged(QAction *);
 
     // Save.
     void slot_save_and_exit();
