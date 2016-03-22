@@ -1169,7 +1169,7 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
 {
 
     if( roomRemapping.contains( exitRoomId ) ) {
-        QString auditKey = QStringLiteral( "audit.remapped_exit.%1" ).arg( DIR_NORTH );
+        QString auditKey = QStringLiteral( "audit.remapped_exit.%1" ).arg( dirCode );
         userData.insert( auditKey, QString::number( exitRoomId ) );
         QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 correcting exit \"%2\" that was to room with\n"
                                           "an exit to invalid room: %3 to now go to: %4." )
@@ -1185,7 +1185,7 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
         // A real exit - should have a real destination, and NOT have a stub
         if( Q_UNLIKELY( ! mpRoomDB->getRoom( exitRoomId ) ) ) {
             // But it doesn't exist
-            QString auditKey = QStringLiteral( "audit.made_stub_of_valid_but_missing_exit.%1" ).arg( DIR_NORTH );
+            QString auditKey = QStringLiteral( "audit.made_stub_of_valid_but_missing_exit.%1" ).arg( dirCode );
             QString warnMsg = tr( "[ WARN ]  - Room with Id: %1 has an exit \"%2\" with an exit to: %3 but that room\n"
                                               "does not exist.  The exit will be removed (but the destination room\n"
                                               "Id will be stored in the room user data under a key:\n"
@@ -1285,7 +1285,7 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
     }
     else {
         // either 0 or < -1 and not renumbered because the bad room Id DID NOT exist
-        QString auditKey = QStringLiteral( "audit.made_stub_of_invalid_exit.%1" ).arg( DIR_NORTH );
+        QString auditKey = QStringLiteral( "audit.made_stub_of_invalid_exit.%1" ).arg( dirCode );
         userData.insert( auditKey, QString::number( exitRoomId ) );
         QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 exit \"%2\" that was to room with an invalid\n"
                               "room: %3 that does not exist.  The exit will be removed (the bad destination\n"
