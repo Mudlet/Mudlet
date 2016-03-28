@@ -1910,6 +1910,7 @@ void TBuffer::append( QString & text,
         buffer.back().push_back( c );
         if( firstChar ) {
             timeBuffer.back() = QTime::currentTime().toString( QStringLiteral( "hh:mm:ss.zzz   " ) );
+            firstChar = false;
         }
     }
 }
