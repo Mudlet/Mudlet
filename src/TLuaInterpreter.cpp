@@ -9512,6 +9512,90 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
     }
 }
 
+// getAllRoomsUserDataKeys( roomID )
+// returns a sorted list of the user data keys for ALL rooms.  Will return
+// an empty table if no user data. This will be useful if the user is not the
+// creator of the data and does not know what has been stored in the user data
+// area!
+int TLuaInterpreter::getAllRoomsUserDataKeys( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomsUserDataKeys: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllRoomsUserDataKeys: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QSet<QString> keysSet;
+    QHashIterator<int, TRoom *> it( pHost->mpMap->mpRoomDB->getRoomMap() );
+    while( it.hasNext() ) {
+        it.next();
+        keysSet.unite( it.value()->userData.keys().toSet() );
+    }
+
+    QStringList keys = keysSet.toList();
+    if( keys.size() > 1 ) {
+        std::sort( keys.begin(), keys.end() );
+    }
+
+    lua_newtable( L );
+    for( unsigned int i=0, total = keys.size(); i<total; ++i ) {
+        lua_pushnumber( L, i+1 );
+        lua_pushstring( L, keys.at(i).toUtf8().constData() );
+        lua_settable( L, -3 );
+    }
+    return 1;
+}
+
+// getAllAreaUserDataKeys( roomID )
+// returns a sorted list of the user data keys for ALL areas.  Will return
+// an empty table if no user data. This will be useful if the user is not the
+// creator of the data and does not know what has been stored in the user data
+// area!
+int TLuaInterpreter::getAllAreasUserDataKeys( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllAreasUserDataKeys: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getAllAreasUserDataKeys: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QSet<QString> keysSet;
+    QMapIterator<int, TArea *> it( pHost->mpMap->mpRoomDB->getAreaMap() );
+    while( it.hasNext() ) {
+        it.next();
+        keysSet.unite( it.value()->mUserData.keys().toSet() );
+    }
+
+    QStringList keys = keysSet.toList();
+    if( keys.size() > 1 ) {
+        std::sort( keys.begin(), keys.end() );
+    }
+
+    lua_newtable( L );
+    for( unsigned int i=0, total = keys.size(); i<total; ++i ) {
+        lua_pushnumber( L, i+1 );
+        lua_pushstring( L, keys.at(i).toUtf8().constData() );
+        lua_settable( L, -3 );
+    }
+    return 1;
+}
+
 // Derived from getAllRoomUserData(...)
 int TLuaInterpreter::getAllAreaUserData( lua_State * L )
 {
@@ -12505,7 +12589,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomUserDataKeys", TLuaInterpreter::getRoomUserDataKeys );
     lua_register( pGlobalLua, "getAllRoomUserData", TLuaInterpreter::getAllRoomUserData );
     lua_register( pGlobalLua, "searchAreaUserData", TLuaInterpreter::searchAreaUserData );
-    lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
     lua_register( pGlobalLua, "getMapUserData", TLuaInterpreter::getMapUserData );
     lua_register( pGlobalLua, "getAreaUserData", TLuaInterpreter::getAreaUserData );
     lua_register( pGlobalLua, "setMapUserData", TLuaInterpreter::setMapUserData );
@@ -12516,6 +12599,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearAreaUserDataItem", TLuaInterpreter::clearAreaUserDataItem );
     lua_register( pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData );
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
+    lua_register( pGlobalLua, "getAllRoomsUserDataKeys", TLuaInterpreter::getAllRoomsUserDataKeys );
+    lua_register( pGlobalLua, "getAllAreasUserDataKeys", TLuaInterpreter::getAllAreasUserDataKeys );
 
 
     luaopen_yajl(pGlobalLua);
