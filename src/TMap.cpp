@@ -278,17 +278,18 @@ void TMap::connectExitStub(int roomId, int dirType)
     }
 }
 
-int TMap::createNewRoomID()
+int TMap::createNewRoomID( int minimumId )
 {
-    int _id = 1;
-    for( ; ; _id++ )
-    {
-        if( ! mpRoomDB->getRoom( _id ) )
-        {
-            return _id;
-        }
+    int _id = 0;
+    if( minimumId > 0 ) {
+        _id = minimumId - 1;
     }
-    return -1;
+
+    do {
+        ; // Empty loop as increment done in test
+    } while( mpRoomDB->getRoom( ++_id ) );
+
+    return _id;
 }
 
 bool TMap::setExit( int from, int to, int dir )
