@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -81,7 +81,7 @@ public:
     bool setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations = false );
     // void deleteRoom( int id );
     void deleteArea( int id );
-    int createNewRoomID();
+    int createNewRoomID( int minimumId = 1 );
     void logError(QString &msg);
     void tidyMap( int area );
     void getConnectedNodesGreaterThanX( int id, int x );
