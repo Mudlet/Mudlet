@@ -9352,7 +9352,7 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
     }
 }
 
-// getAllRoomsUserDataKeys( roomID )
+// getAllRoomsUserDataKeys()
 // returns a sorted list of the user data keys for ALL rooms.  Will return
 // an empty table if no user data. This will be useful if the user is not the
 // creator of the data and does not know what has been stored in the user data
@@ -9394,7 +9394,7 @@ int TLuaInterpreter::getAllRoomsUserDataKeys( lua_State * L )
     return 1;
 }
 
-// getAllAreaUserDataKeys( roomID )
+// getAllAreaUserDataKeys()
 // returns a sorted list of the user data keys for ALL areas.  Will return
 // an empty table if no user data. This will be useful if the user is not the
 // creator of the data and does not know what has been stored in the user data
