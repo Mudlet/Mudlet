@@ -398,8 +398,6 @@ public:
     static int clearAreaUserDataItem( lua_State * );
     static int clearMapUserData( lua_State * );
     static int clearMapUserDataItem( lua_State * );
-    static int getAllRoomsUserDataKeys( lua_State * );
-    static int getAllAreasUserDataKeys( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;
