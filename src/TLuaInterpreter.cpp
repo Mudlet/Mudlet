@@ -7429,7 +7429,39 @@ int TLuaInterpreter::addRoom( lua_State * L )
 int TLuaInterpreter::createRoomID( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushnumber( L, pHost->mpMap->createNewRoomID() );
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "createRoomID: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "createRoomID: no map present or loaded!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isnumber( L, 1 ) ) {
+            lua_pushstring( L, tr( "createRoomID: bad argument #1 type (minimum room Id as number is optional, got %1!)" )
+                            .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+            lua_error( L );
+        }
+        else {
+            int minId = lua_tointeger( L, 1 );
+            if( minId <  1 ) {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "createRoomID: bad argument #1 value (bad minimum room Id %1, an optional value but if provided it must be greater than zero.)" )
+                                .arg( minId ).toUtf8().constData() );
+                return 2;
+            }
+        }
+        lua_pushnumber( L, pHost->mpMap->createNewRoomID( lua_tointeger( L, 1 ) ) );
+    }
+    else {
+        lua_pushnumber( L, pHost->mpMap->createNewRoomID() );
+    }
     return 1;
 }
 
