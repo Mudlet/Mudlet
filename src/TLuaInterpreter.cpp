@@ -4185,83 +4185,126 @@ int TLuaInterpreter::searchRoom( lua_State *L )
 // searchRoomUserData(key)
 //     return a sorted lua "array" of the unique "values" found against that "key"
 //     - linear search time, plus (q)sort(?) of values found
+// searchRoomUserData() - LATER ADDED FEATURE
+//     return a sorted lua "array" of the unique "keys" found in all rooms
 int TLuaInterpreter::searchRoomUserData( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "searchRoomUserData: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "searchRoomUserData: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
         return 2;
     }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    else if( ! pHost->mpMap ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "searchRoomUserData: no map present or loaded!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "searchRoomUserData: no map present or loaded!" )
+                        .toUtf8().constData() );
         return 2;
     }
 
+    QString key = QString();
+    QString value = QString(); //both of thses assigns a null value which is detectable different from the empty value
 
-    QString key;
-    if( lua_isstring( L, 1 ) ) {
-        key = QString::fromUtf8( lua_tostring( L, 1 ) );
-    }
-    else {
-        lua_pushstring( L, tr( "searchRoomUserData: bad argument #1 type (\"key\" as string expected, got %1!)." ).arg( luaL_typename(L, 1) ).toUtf8().constData() );
-        lua_error( L );
-        return 1;
-    }
-
-    QString value = QString(); //assigns null value which is detectable different from the empty value
-    if( lua_gettop( L ) > 1 ) {
-        if( lua_isstring( L, 2 ) ) {
-            value = QString::fromUtf8( lua_tostring( L, 2 ) );
-        }
-        else {
-            lua_pushstring( L, tr( "searchRoomUserData: bad argument #2  type (\"value\" as optional string value, got %1!)." ).arg( luaL_typename(L, 2) ).toUtf8().constData() );
+    if( lua_gettop( L ) ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "searchRoomUserData: bad argument #1 (string \"key\" optional value permitted, got %1!)" )
+                            .arg( luaL_typename(L, 1) ).toUtf8().constData() );
             lua_error( L );
             return 1;
+        }
+        else {
+            key = QString::fromUtf8( lua_tostring( L, 1 ) );
+        }
+
+        if( lua_gettop( L ) > 1 ) {
+            if( ! lua_isstring( L, 2 ) ) {
+                lua_pushstring( L, tr( "searchRoomUserData: bad argument #2 (string \"value\" optional value permitted, got %1!)" )
+                                .arg( luaL_typename(L, 2) ).toUtf8().constData() );
+                lua_error( L );
+                return 1;
+            }
+            else {
+                value = QString::fromUtf8( lua_tostring( L, 2 ) );
+            }
         }
     }
 
     lua_newtable(L);
-    QList<TRoom*> roomList = pHost->mpMap->mpRoomDB->getRoomPtrList();
-    QSet<QString> valuesFound; // Use a set as it automatically eliminates duplicates
-    QList<int> roomIdsFound;
 
-    for( int i=0; i<roomList.size(); i++ ) {
-        TRoom * pR = roomList.at(i);
-        if(pR->userData.contains( key )) {
-            QString keyValue = pR->userData.value(key, QString() );
+    QHashIterator<int, TRoom *> itRoom( pHost->mpMap->mpRoomDB->getRoomMap() );
+    // For best performance do the three different types of action in three
+    // different branches each with a loop - rather than choosing a branch
+    // within a loop for each room
+
+    lua_newtable( L );
+    if( key.isNull() ) { // Find all keys everywhere
+        QSet<QString> keysSet;
+        while( itRoom.hasNext() ) {
+            itRoom.next();
+            keysSet.unite( itRoom.value()->userData.keys().toSet() );
+        }
+
+        QStringList keys = keysSet.toList();
+        if( keys.size() > 1 ) {
+            std::sort( keys.begin(), keys.end() );
+        }
+
+        for( unsigned int i=0, total = keys.size(); i<total; ++i ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushstring( L, keys.at(i).toUtf8().constData() );
+            lua_settable( L, -3 );
+        }
+    }
+    else if( value.isNull() ) { // Find all values for a particular key in every room
+        QSet<QString> valuesSet; // Use a set as it automatically eliminates duplicates
+        while( itRoom.hasNext() ) {
+            itRoom.next();
+            QString roomValueForKey = itRoom.value()->userData.value( key, QString() );
             // If the key is NOT present, will return second argument which is a
             // null QString which is NOT the same as an empty QString.
-            if( value.isNull() ) {
-                if( ! keyValue.isNull() ) {
-                    valuesFound.insert(keyValue);
-                }
-            }
-            else {
-                if( (! keyValue.isNull() ) && (keyValue.compare(value) == 0) ) {
-                    roomIdsFound.append(pR->getId());
-                }
+            if( ! roomValueForKey.isNull() ) {
+                valuesSet.insert( roomValueForKey );
             }
         }
-    }
-    if( value.isNull() ) {
-        QList<QString> valuesList = valuesFound.toList();
-        std::sort(valuesList.begin(), valuesList.end());
-        for( int i=0; i<valuesList.size(); i++ ) {
-            lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
-            lua_pushstring( L, valuesList.at(i).toUtf8().constData() );
-            lua_settable(L, -3);
+
+        QStringList values = valuesSet.toList();
+        if( values.size() > 1 ) {
+            std::sort( values.begin(), values.end() );
+        }
+
+        for( unsigned int i=0, total = values.size(); i<total; ++i ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushstring( L, values.at(i).toUtf8().constData() );
+            lua_settable( L, -3 );
         }
     }
-    else{
-        std::sort(roomIdsFound.begin(), roomIdsFound.end());
-        for( int i=0; i<roomIdsFound.size(); i++ ) {
-            lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
-            lua_pushnumber( L, roomIdsFound.at(i) );
-            lua_settable(L, -3);
+    else {
+        QSet<int> roomIdsSet;
+        while( itRoom.hasNext() ) { // Find all room with a particular key AND value
+            itRoom.next();
+
+            if( ! value.compare( itRoom.value()->userData.value( key, QString() ), Qt::CaseSensitive ) ) {
+            // If the key is NOT present, .value() will return second argument
+            // which is a null QString which is NOT the same as an empty QString
+            // we CAN compare this to value as we have already specified that
+            // that is NOT null...
+                roomIdsSet.insert( itRoom.key() );
+            }
+        }
+
+        QList<int> roomIds = roomIdsSet.toList();
+        if( roomIds.size() > 1 ) {
+            std::sort( roomIds.begin(), roomIds.end() );
+        }
+
+        for( unsigned int i=0, total = roomIds.size(); i<total; ++i ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushnumber( L, roomIds.at(i) );
+            lua_settable( L, -3 );
         }
     }
+
     return 1;
 }
 
@@ -4275,80 +4318,115 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
                         .toUtf8().constData() );
         return 2;
     }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    else if( ! pHost->mpMap ) {
         lua_pushnil( L );
         lua_pushstring( L, tr( "searchAreaUserData: no map present or loaded!" )
                         .toUtf8().constData() );
         return 2;
     }
 
+    QString key = QString();
+    QString value = QString(); //both of thses assigns a null value which is detectable different from the empty value
 
-    QString key;
-    if( lua_isstring( L, 1 ) ) {
-        key = QString::fromUtf8( lua_tostring( L, 1 ) );
-    }
-    else {
-        lua_pushstring( L, tr( "searchAreaUserData: bad argument #1 type (\"key\" as string expected, got %1!)." )
-                        .arg( luaL_typename(L, 1) )
-                        .toUtf8().constData() );
-        lua_error( L );
-        return 1;
-    }
-
-    QString value = QString(); //assigns null value which is detectable different from the empty value
-    if( lua_gettop( L ) > 1 ) {
-        if( lua_isstring( L, 2 ) ) {
-            value = QString::fromUtf8( lua_tostring( L, 2 ) );
-        }
-        else {
-            lua_pushstring( L, tr( "searchAreaUserData: bad argument #2  type (\"value\" as optional string value, got %1!)." )
-                            .arg( luaL_typename(L, 2) )
-                            .toUtf8().constData() );
+    if( lua_gettop( L ) ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "searchAreaUserData: bad argument #1 (string \"key\" optional value permitted, got %1!)" )
+                            .arg( luaL_typename(L, 1) ).toUtf8().constData() );
             lua_error( L );
             return 1;
+        }
+        else {
+            key = QString::fromUtf8( lua_tostring( L, 1 ) );
+        }
+
+        if( lua_gettop( L ) > 1 ) {
+            if( ! lua_isstring( L, 2 ) ) {
+                lua_pushstring( L, tr( "searchAreaUserData: bad argument #2 (string \"value\" optional value permitted, got %1!)" )
+                                .arg( luaL_typename(L, 2) ).toUtf8().constData() );
+                lua_error( L );
+                return 1;
+            }
+            else {
+                value = QString::fromUtf8( lua_tostring( L, 2 ) );
+            }
         }
     }
 
     lua_newtable(L);
-    QList<TArea *> areaList = pHost->mpMap->mpRoomDB->getAreaPtrList();
-    QSet<QString> valuesFound; // Use a set as it automatically eliminates duplicates
-    QList<int> areaIdsFound;
 
-    for( int i=0; i<areaList.size(); i++ ) {
-        TArea * pA = areaList.at(i);
-        if(pA->mUserData.contains( key )) {
-            QString keyValue = pA->mUserData.value(key, QString() );
+    QMapIterator<int, TArea *> itArea( pHost->mpMap->mpRoomDB->getAreaMap() );
+    // For best performance do the three different types of action in three
+    // different branches each with a loop - rather than choosing a branch
+    // within a loop for each room
+
+    lua_newtable( L );
+    if( key.isNull() ) { // Find all keys everywhere
+        QSet<QString> keysSet;
+        while( itArea.hasNext() ) {
+            itArea.next();
+            keysSet.unite( itArea.value()->mUserData.keys().toSet() );
+        }
+
+        QStringList keys = keysSet.toList();
+        if( keys.size() > 1 ) {
+            std::sort( keys.begin(), keys.end() );
+        }
+
+        for( unsigned int i=0, total = keys.size(); i<total; ++i ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushstring( L, keys.at(i).toUtf8().constData() );
+            lua_settable( L, -3 );
+        }
+    }
+    else if( value.isNull() ) { // Find all values for a particular key in every room
+        QSet<QString> valuesSet; // Use a set as it automatically eliminates duplicates
+        while( itArea.hasNext() ) {
+            itArea.next();
+            QString areaValueForKey = itArea.value()->mUserData.value( key, QString() );
             // If the key is NOT present, will return second argument which is a
             // null QString which is NOT the same as an empty QString.
-            if( value.isNull() ) {
-                if( ! keyValue.isNull() ) {
-                    valuesFound.insert(keyValue);
-                }
-            }
-            else {
-                if( (! keyValue.isNull() ) && (keyValue.compare(value) == 0) ) {
-                    areaIdsFound.append( pA->getAreaID() );
-                }
+            if( ! areaValueForKey.isNull() ) {
+                valuesSet.insert( areaValueForKey );
             }
         }
-    }
-    if( value.isNull() ) {
-        QList<QString> valuesList = valuesFound.toList();
-        std::sort(valuesList.begin(), valuesList.end());
-        for( int i=0; i<valuesList.size(); i++ ) {
-            lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
-            lua_pushstring( L, valuesList.at(i).toUtf8().constData() );
-            lua_settable(L, -3);
+
+        QStringList values = valuesSet.toList();
+        if( values.size() > 1 ) {
+            std::sort( values.begin(), values.end() );
+        }
+
+        for( unsigned int i=0, total = values.size(); i<total; ++i ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushstring( L, values.at(i).toUtf8().constData() );
+            lua_settable( L, -3 );
         }
     }
-    else{
-        std::sort(areaIdsFound.begin(), areaIdsFound.end());
-        for( int i=0; i<areaIdsFound.size(); i++ ) {
-            lua_pushnumber( L, i+1 ); // List arrays begin at 1 not 0
-            lua_pushnumber( L, areaIdsFound.at(i) );
-            lua_settable(L, -3);
+    else {
+        QSet<int> areaIdsSet;
+        while( itArea.hasNext() ) { // Find all room with a particular key AND value
+            itArea.next();
+
+            if( ! value.compare( itArea.value()->mUserData.value( key, QString() ), Qt::CaseSensitive ) ) {
+            // If the key is NOT present, .value() will return second argument
+            // which is a null QString which is NOT the same as an empty QString
+            // we CAN compare this to value as we have already specified that
+            // that is NOT null...
+                areaIdsSet.insert( itArea.key() );
+            }
+        }
+
+        QList<int> areaIds = areaIdsSet.toList();
+        if( areaIds.size() > 1 ) {
+            std::sort( areaIds.begin(), areaIds.end() );
+        }
+
+        for( unsigned int i=0, total = areaIds.size(); i<total; ++i ) {
+            lua_pushnumber( L, i+1 );
+            lua_pushnumber( L, areaIds.at(i) );
+            lua_settable( L, -3 );
         }
     }
+
     return 1;
 }
 
@@ -12537,7 +12615,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getRoomUserDataKeys", TLuaInterpreter::getRoomUserDataKeys );
     lua_register( pGlobalLua, "getAllRoomUserData", TLuaInterpreter::getAllRoomUserData );
     lua_register( pGlobalLua, "searchAreaUserData", TLuaInterpreter::searchAreaUserData );
-    lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
     lua_register( pGlobalLua, "getMapUserData", TLuaInterpreter::getMapUserData );
     lua_register( pGlobalLua, "getAreaUserData", TLuaInterpreter::getAreaUserData );
     lua_register( pGlobalLua, "setMapUserData", TLuaInterpreter::setMapUserData );
