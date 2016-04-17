@@ -2439,3 +2439,8 @@ void mudlet::slot_statusBarMessageChanged( QString text )
         }
     }
 }
+
+void mudlet::slot_requestProfilesToReloadMaps( QList<QString> affectedProfiles )
+{
+    emit signal_profileMapReloadRequested( affectedProfiles );
+}

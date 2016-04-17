@@ -220,6 +220,10 @@ public slots:
    void                          slot_module_manager();
    void                          layoutModules();
    void                          slot_help_module();
+   void                          slot_requestProfilesToReloadMaps( QList<QString> );
+                                 // Used by a profile to tell the mudlet class
+                                 // to tell other profiles to reload the updated
+                                 // maps (via signal_profileMapReloadRequested(...))
 
 protected:
 
@@ -228,6 +232,7 @@ protected:
 signals:
 
    void                         signal_editorTextOptionsChanged( QTextOption::Flags );
+   void                         signal_profileMapReloadRequested( QList<QString> );
 
 private slots:
 
