@@ -26,6 +26,7 @@
 #include "TMap.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QColor>
 #include <QMap>
 #include <QVector3D>
@@ -53,6 +54,8 @@ class TRoomDB;
 
 class TRoom
 {
+    Q_DECLARE_TR_FUNCTIONS(TRoom) // Needed so we can use tr() even though TRoom is NOT derived from QObject
+
 public:
     TRoom( TRoomDB* pRDB );
     ~TRoom();
@@ -109,8 +112,18 @@ public:
     void setOut( int id ) { out=id; }
     int getId() { return id; }
     int getArea() { return area; }
-    void auditExits();
+    void audit( const QHash<int, int>, const QHash<int, int> );
+    void auditExits( const QHash<int, int> );
     /*bool*/ void restore( QDataStream & ifs, int roomID, int version );
+    void auditExit( int &, const int, const QString, const QString, const QString,
+                    QMap<QString, int> &, QSet<int> &, QSet<int> &,
+                    QMap<QString, int> &, QMap<QString, QList<QPointF> > &,
+                    QMap<QString, QList<int> > &, QMap<QString, QString> &,
+                    QMap<QString, bool> &,
+                    const QHash<int, int> );
+    const QString dirCodeToDisplayName( const int dirCode );
+
+
     int x;
     int y;
     int z;

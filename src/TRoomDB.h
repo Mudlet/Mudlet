@@ -24,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QHash>
 #include <QMultiHash>
 #include <QMap>
@@ -37,12 +38,15 @@ class TRoom;
 
 class TRoomDB
 {
+    Q_DECLARE_TR_FUNCTIONS(TRoomDB) // Needed so we can use tr() even though TRoomDB is NOT derived from QObject
+
 public:
     TRoomDB( TMap * );
 
     TRoom * getRoom( int id );
     TArea * getArea( int id );
 //     int getArea( TArea * pA ); use duplicate int getAreaID( TArea * pA ) instead
+    TArea * getRawArea( int, bool * );
     bool addRoom( int id );
     int size() { return rooms.size(); }
     bool removeRoom( int );
@@ -69,8 +73,7 @@ public:
 
     void buildAreas();
     void clearMapDB();
-    void initAreasForOldMaps();
-    void auditRooms();
+    void auditRooms( QHash<int, int> &, QHash<int, int> & );
     bool addRoom(int id, TRoom *pR, bool isMapLoading = false);
     int  getAreaID(TArea * pA);
     void restoreAreaMap( QDataStream & );

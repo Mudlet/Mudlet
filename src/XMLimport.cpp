@@ -153,7 +153,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
                 maxRooms = 0;
                 areaMap.clear();
                 readMap();
-                mpHost->mpMap->init(mpHost);
+                mpHost->mpMap->audit();
             }
             else
             {

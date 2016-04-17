@@ -115,6 +115,17 @@ TMap::TMap( Host * pH )
 // N/U:     int mViewArea = 0;
 }
 
+TMap::~TMap()
+{
+    delete mpRoomDB;
+    if( ! mStoredMessages.isEmpty() ) {
+        qWarning( "TMap::~TMap() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
+        foreach(QString message, mStoredMessages) {
+                qWarning("%s\n------------", qPrintable( message ) );
+        }
+    }
+}
+
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();
@@ -397,32 +408,27 @@ bool TMap::setExit( int from, int to, int dir )
     return ret;
 }
 
-void TMap::init( Host * pH )
+void TMap::audit()
 {
     // init areas
     QElapsedTimer _time;
     _time.start();
 
-    if( mVersion < 14 ) {
-        mpRoomDB->initAreasForOldMaps();
+    { // Blocked - just to limit the scope of infoMsg...!
+        QString infoMsg = tr( "[ INFO ]  - ...auditing of map starting..." );
+        postMessage( infoMsg );
     }
-    else if( mVersion < 17 ) {
-        // The second half of mpRoomDB->initAreasForOldMaps() - needed to fixup
-        // all the (TArea *)->areaExits() that were built wrongly previously,
-        // calcSpan() may not be required to be done here and now but it is in my
-        // sights as a target for revision in the future. Slysven
-        QMapIterator<int, TArea *> itArea( mpRoomDB->getAreaMap() );
-        while( itArea.hasNext() ) {
-            itArea.next();
-            itArea.value()->determineAreaExits();
-            itArea.value()->calcSpan();
-        }
-    }
-    mpRoomDB->auditRooms();
+
+    // The old mpRoomDB->initAreasForOldMaps() was a subset of these checks
+
+    QHash<int, int> roomRemapping; // These are populated by the auditRooms(...)
+    QHash<int, int> areaRemapping; // call and contain "Keys" of old Ids and
+                                   // "Values" of new Ids to use in their stead
 
     if( mVersion <16 ) {
         // convert old style labels, wasn't made version conditional in past but
         // not likely to be an issue in recent map file format versions (say 16+)
+
         QMapIterator<int, TArea *> itArea( mpRoomDB->getAreaMap() );
         while( itArea.hasNext() ) {
             itArea.next();
@@ -460,7 +466,26 @@ void TMap::init( Host * pH )
             }
         }
     }
-    qDebug() << "TMap::init() Initialize run time:" << _time.nsecsElapsed() * 1.0e-9 << "sec.";
+
+    mpRoomDB->auditRooms( roomRemapping, areaRemapping );
+
+    // The second half of old mpRoomDB->initAreasForOldMaps() - needed to fixup
+    // all the (TArea *)->areaExits() that were built wrongly previously,
+    // calcSpan() may not be required to be done here and now but it is in my
+    // sights as a target for revision in the future. Slysven
+    QMapIterator<int, TArea *> itArea( mpRoomDB->getAreaMap() );
+    while( itArea.hasNext() ) {
+        itArea.next();
+        itArea.value()->determineAreaExits();
+        itArea.value()->calcSpan();
+        itArea.value()->mIsDirty = false;
+    }
+
+    { // Blocked - just to limit the scope of infoMsg...!
+        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed in %1 seconds. Enjoy your game..." )
+                              .arg( _time.nsecsElapsed() * 1.0e-9 );
+        postMessage( infoMsg );
+    }
 }
 
 
@@ -1319,9 +1344,9 @@ bool TMap::restore(QString location)
         }
         else {
             // Less than (but not less than 4) or equal to default version
-            QString infoMsg = tr( "[ INFO ]  - Reading map file: \"%1\", format version:%2, please wait..." )
-                              .arg( file.fileName() )
-                              .arg( mVersion );
+            QString infoMsg = tr( "[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait..." )
+                                  .arg( mVersion )
+                                  .arg( file.fileName() );
             mpHost->postMessage( infoMsg );
             mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
         }
@@ -1475,8 +1500,9 @@ bool TMap::restore(QString location)
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        qDebug() << "TMap::restore(...) loading time:" << _time.nsecsElapsed() * 1.0e-9 << "sec.";
-        QString okMsg = tr( "[  OK  ]  - Sucessfully read map file, will now check some consistancy details." );
+        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, will now check\n"
+                                        "some consistency details, please wait..." )
+                            .arg( _time.nsecsElapsed() * 1.0e-9 );
         mpHost->postMessage( okMsg );
         if( canRestore ) {
             return true;
@@ -1496,16 +1522,12 @@ bool TMap::restore(QString location)
             QPushButton *yesButton = msgBox.addButton("Download the map", QMessageBox::ActionRole);
             QPushButton *noButton = msgBox.addButton("Start my own", QMessageBox::ActionRole);
             msgBox.exec();
-            init( mpHost );
-            if( msgBox.clickedButton() == yesButton) {
+            if( msgBox.clickedButton() == yesButton ) {
                 mpMapper->downloadMap();
             }
             else if( msgBox.clickedButton() == noButton) {
                 ; //No-op to avoid unused "noButton"
             }
-        }
-        else {
-            mpHost->mpMap->init( mpHost );
         }
     }
 
@@ -1868,4 +1890,15 @@ void TMap::deleteMapLabel(int area, int labelID )
     if( ! mapLabels[area].contains( labelID ) ) return;
     mapLabels[area].remove( labelID );
     if( mpMapper ) mpMapper->mp2dMap->update();
+}
+
+void TMap::postMessage( const QString text )
+{
+    mStoredMessages.append( text );
+    Host * pHost = mpHost;
+    if( pHost ) {
+        while( ! mStoredMessages.isEmpty() ) {
+            pHost->postMessage( mStoredMessages.takeFirst() );
+        }
+    }
 }

@@ -69,7 +69,8 @@ class TMap
     Q_DECLARE_TR_FUNCTIONS(TMap) // Needed so we can use tr() even though TMap is NOT derived from QObject
 
 public:
-    TMap( Host *);
+            TMap( Host *);
+           ~TMap();
     void mapClear();
     int createMapLabelID( int area );
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling );
@@ -90,7 +91,7 @@ public:
     void astHoehenAnpassung( int id, int );
     bool setExit( int from, int to, int dir );
     bool setRoomCoordinates( int id, int x, int y, int z );
-    void init(Host*);
+    void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!
     QList<int> detectRoomCollisions( int id );
     void solveRoomCollision( int id, int creationDirection, bool PCheck=true );
     void setRoom( int );
@@ -105,6 +106,7 @@ public:
     void exportMapToDatabase();
     void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
+    void postMessage( const QString text );
 
 
     TRoomDB * mpRoomDB;
@@ -161,6 +163,9 @@ public:
                       // by mMinVersion and mMaxVersion.
 
     QMap<QString, QString> mUserData;
+
+private:
+    QStringList mStoredMessages;
 };
 
 #endif // MUDLET_TMAP_H

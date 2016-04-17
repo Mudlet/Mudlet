@@ -4605,10 +4605,11 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     return 1;
 }
 
+// Now audits the whole map
 int TLuaInterpreter::auditAreas( lua_State * L )
 {
     Host * pH = TLuaInterpreter::luaInterpreterMap[L];
-    pH->mpMap->mpRoomDB->initAreasForOldMaps();
+    pH->mpMap->audit();
     return 0;
 }
 

@@ -37,7 +37,7 @@
 TRoomDB::TRoomDB( TMap * pMap )
 : mpMap( pMap )
 , mpTempRoomDeletionSet( 0 )
-, mUnnamedAreaName( qApp->translate( "TRoomDB", "Unnamed Area" ) )
+, mUnnamedAreaName( tr( "Unnamed Area" ) )
 {
 }
 
@@ -452,6 +452,23 @@ TArea * TRoomDB::getArea( int id )
     }
 }
 
+// Used by TMap::audit() - can detect and return areas with normally invalids Id (less than -1 or zero)!
+TArea * TRoomDB::getRawArea( int id, bool * isValid = 0 )
+{
+    if( areas.contains( id ) ) {
+        if( isValid ) {
+            *isValid = true;
+        }
+        return areas.value( id );
+    }
+    else {
+        if( isValid ) {
+            *isValid = false;
+        }
+        return nullptr;
+    }
+}
+
 bool TRoomDB::setAreaName( int areaID, QString name )
 {
     if( areaID < 1 ) {
@@ -500,7 +517,7 @@ bool TRoomDB::addArea( int id )
         return true;
     }
     else {
-        QString error = qApp->translate( "TRoomDB", "Area with ID=%1 already exists!" ).arg(id);
+        QString error = tr( "Area with ID=%1 already exists!" ).arg(id);
         mpMap->logError(error);
         return false;
     }
@@ -519,12 +536,12 @@ int TRoomDB::addArea( QString name )
 {
     // reject it if area name already exists or is empty
     if( name.isEmpty() ) {
-        QString error = qApp->translate( "TRoomDB", "An Unnamed Area is (no longer) permitted!" );
+        QString error = tr( "An Unnamed Area is (no longer) permitted!" );
         mpMap->logError(error);
         return 0;
     }
     else if( areaNamesMap.values().contains( name ) ) {
-        QString error = qApp->translate( "TRoomDB", "An area called %1 already exists!" ).arg(name);
+        QString error = tr( "An area called %1 already exists!" ).arg(name);
         mpMap->logError(error);
         return 0;
     }
@@ -574,43 +591,346 @@ QList<int> TRoomDB::getAreaIDList()
     return areas.keys();
 }
 
-void TRoomDB::auditRooms()
+/*
+ * Tasks to perform
+ * 1) Validate all room Ids and remap any problem ones ( <1 ), retaining
+ *    remappings for fixups later on
+ * 2) Find all areas that the rooms demand
+ * 3) Find all areas that the areanames demand
+ * 4) Validate all existing area Ids and remap any problem one
+ * 5) Merge in area Ids that rooms and areanames demand, remapping any problem
+ *    ones
+ * 6) If rooms have been remapped, fixup rooms' exits' to use the new room Ids
+ * 7) If areas have been remapped, fixup rooms to use new area Ids
+ * 8) Validate area::rooms - adding or removing roomId based on the rooms' idea
+ *    of the area they should be in - not forgetting any remappings of area/room
+ *    Ids..
+ * 9) Validate TRoom elements: exits, stubs (beware of duplicate QList<T>
+ *    elements), doors (must have a real or stub in that direction), custom
+ *    lines (no key for an normal or special exit that isn't there), locks
+ *    (beware of duplicate QList<T> elements), room and exit weights (can only
+ *    have a weight on an actual exit).
+ *10) Validate TArea elements: ebenen (beware of duplicate QList<T> elements)
+ */
+void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & areaRemapping )
 {
     QElapsedTimer timer;
     timer.start();
-    // rooms konsolidieren
-    QHashIterator<int, TRoom* > itRooms( rooms );
-    while( itRooms.hasNext() )
-    {
-        itRooms.next();
-        TRoom * pR = itRooms.value();
-        pR->auditExits();
 
-    }
-    qDebug() << "TRoomDB::auditRooms() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
-}
+    QSet<int> validUsedRoomIds; // Used good ids (>= 1)
+    QSet<int> validUsedAreaIds; // As rooms
 
-void TRoomDB::initAreasForOldMaps()
-{
-    buildAreas();
+    // START OF TASK 1 & 2:
+    // Scan through all rooms and record their idea of which area they
+    // should be in.  Note invalid room Ids those will be fixed up later...
+    QHash<int, int> roomAreaHash; // Key: room Id, Value: area it believes it should be in
+    QMultiHash<int, int> areaRoomMultiHash; // Key: areaId, ValueS: rooms that believe they belong there
 
-    // area mit raeumen fuellen
-    QHashIterator<int, TRoom *> it( rooms );
-    while( it.hasNext() )
-    {
-        it.next();
-        int roomID = it.key();
-        int areaID = rooms[roomID]->getArea();
-        if( areas.contains(areaID)) areas[areaID]->rooms.insert( roomID );
+    { // Block this code to limit scope of iterator
+        QMutableHashIterator<int, TRoom *> itRoom( rooms );
+        while( itRoom.hasNext() ) {
+            itRoom.next();
+            TRoom * pR = itRoom.value();
+            if( ! pR ) {
+                QString warnMsg = tr( "[ WARN ]  - Problem with data structure associated with room Id: %1 - that\n"
+                                                  "room's data has been lost so the Id is now being deleted.  This\n"
+                                                  "suggests serious problems with the currently running version of\n"
+                                                  "Mudlet - is your system running out of memory?" )
+                                      .arg( itRoom.key() );
+                mpMap->postMessage( warnMsg );
+                itRoom.remove();
+            }
+            else {
+                if( itRoom.key() >= 1 ) {
+                    validUsedRoomIds.insert( itRoom.key() );
+                }
+                else {
+                    roomRemapping.insert( itRoom.key(), itRoom.key() );
+                    //Store them for now, will assign new values when we have the
+                    // set of good ones already used
+                }
+            }
+
+            int areaId = pR->getArea();
+            areaRoomMultiHash.insert( areaId, itRoom.key() );
+            roomAreaHash.insert( itRoom.key(), areaId );
+        }
     }
-    QMapIterator<int, TArea *> it2( areas );
-    while( it2.hasNext() )
-    {
-        it2.next();
-        TArea * pA = it2.value();
-        pA->determineAreaExits();
-        pA->calcSpan();
+
+    // Check for existance of all areas needed by rooms
+    QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
+
+    // START OF TASK 3
+    // Throw in the area Ids from the areaNamesMap:
+    areaIdSet.unite( areaNamesMap.keys().toSet() );
+
+    // And the area Ids used by the map labels:
+    areaIdSet.unite( mpMap->mapLabels.keys().toSet() );
+
+    // Check the set of area Ids against the ones we actually have:
+    QSetIterator<int> itUsedArea( areaIdSet );
+    while( itUsedArea.hasNext() ) {
+        int usedAreaId = itUsedArea.next();
+        if( usedAreaId < -1 || ! usedAreaId ) {
+            areaRemapping.insert( usedAreaId, usedAreaId ); // Will find new value to use later
+        }
+        else {
+            validUsedAreaIds.insert( usedAreaId );
+        }
+
+        if( ! areas.contains( usedAreaId ) ) {
+            QString warnMsg = tr( "[ ALERT ] - Area with id: %1 expected but not found, will be created." )
+                                  .arg( usedAreaId );
+            mpMap->postMessage( warnMsg );
+        }
     }
+
+    // START OF TASK 4
+    // Check for any problem Id in original areas
+    QMapIterator<int, TArea *> itArea( areas );
+    while( itArea.hasNext() ) {
+        itArea.next();
+        int areaId = itArea.key();
+        if( areaId < -1 || ! areaId ) {
+            areaRemapping.insert( areaId, areaId ); // Will find new value to use later
+        }
+        else {
+            validUsedAreaIds.insert( areaId );
+        }
+    }
+
+    // START OF TASK 5
+    // Now process problem areaIds
+    if( ! areaRemapping.isEmpty() ) {
+        QString alertMsg = tr( "[ ALERT ] - Bad, (less than +1 and not the reserved -1) area Ids found (count: %1)\n"
+                                           "in map, now working out what new Id numbers to use..." )
+                               .arg( areaRemapping.count() );
+        mpMap->postMessage( alertMsg );
+
+        QString infoMsg = tr( "[ INFO ]  - The renumbered area Ids will be:\n"
+                                          "Old ==> New" );
+        QMutableHashIterator<int, int> itRemappedArea( areaRemapping );
+        while( itRemappedArea.hasNext() ) {
+            itRemappedArea.next();
+            int faultyAreaId = itRemappedArea.key();
+            int replacementAreaId = 0;
+            do {
+                ; // No-op, increment done in test
+            } while( areas.contains( ++replacementAreaId ) );
+            // Insert replacement value into hash
+            itRemappedArea.setValue( replacementAreaId );
+            infoMsg.append( QStringLiteral( "\n%1 ==> %2" )
+                                .arg( faultyAreaId )
+                                .arg( replacementAreaId ) );
+
+            TArea * pA = 0;
+            if( areas.contains( faultyAreaId ) ) {
+                pA = areas.take( faultyAreaId );
+            }
+            else {
+                pA = new TArea( mpMap, this );
+            }
+            if( areaNamesMap.contains( faultyAreaId ) ) {
+                QString areaName = areaNamesMap.value( faultyAreaId );
+                areaNamesMap.remove( faultyAreaId );
+                areaNamesMap.insert( replacementAreaId, areaName );
+            }
+            else {
+                // I think this is unlikely but better provide code to cover it
+                // if it does arise that we need a new area but do not have a
+                // provided name
+                QString newAreaName = mUnnamedAreaName;
+                if( areaNamesMap.values().contains( newAreaName ) ) {
+                    // We already have an "unnamed area"
+                    uint deduplicateSuffix = 0;
+                    do {
+                        newAreaName = QStringLiteral( "%1_%2" ).arg( mUnnamedAreaName ).arg( ++deduplicateSuffix, 3, 10, QLatin1Char('0') );
+                    } while ( areaNamesMap.values().contains( newAreaName ) );
+                }
+                areaNamesMap.insert( replacementAreaId, newAreaName );
+            }
+            pA->mUserData.insert( QStringLiteral( "audit.remapped_id" ), QString::number( faultyAreaId ) );
+            validUsedAreaIds.insert( replacementAreaId );
+            areas.insert( replacementAreaId, pA );
+
+            // Fixup map labels as well
+            if( mpMap->mapLabels.contains( faultyAreaId ) ) {
+                QMap<qint32, TMapLabel> areaMapLabels = mpMap->mapLabels.take( faultyAreaId );
+                mpMap->mapLabels.insert( replacementAreaId, areaMapLabels );
+            }
+
+            pA->mIsDirty = true;
+        }
+        mpMap->postMessage( infoMsg );
+    }
+    else {
+        QString infoMsg = tr( "[ INFO ]  - Area Id numbering is satisfactory." );
+        mpMap->postMessage( infoMsg );
+    }
+    // END OF TASK 2,3,4,5 - all needed areas exist and remap details are in
+    // areaRemapping - still need to update rooms and areaNames and mapLabels
+
+    // Now complete TASK 1 - find the new room Ids to use
+    if( ! roomRemapping.isEmpty() ) {
+        QString alertMsg = tr( "[ ALERT ] - Bad, (less than +1) room Ids found (count: %1) in map, now working\n"
+                                           "out what new Id numbers to use." )
+                               .arg( roomRemapping.count() );
+        mpMap->postMessage( alertMsg );
+
+        QString infoMsg = tr( "[ INFO ]  - The renumbered rooms will be:\n" );
+        QMutableHashIterator<int, int> itRenumberedRoomId( roomRemapping );
+        while( itRenumberedRoomId.hasNext() ) {
+            itRenumberedRoomId.next();
+            unsigned int newRoomId = 0;
+            do {
+                ; // Noop - needed increment is done in test condition!
+            } while( validUsedRoomIds.contains( ++newRoomId ) );
+
+            itRenumberedRoomId.setValue( newRoomId ); // Update the QHash
+            validUsedRoomIds.insert( newRoomId );
+            infoMsg.append( QStringLiteral( "%1 ==> %2" )
+                                .arg( itRenumberedRoomId.key() )
+                                .arg( itRenumberedRoomId.value() ) );
+
+        }
+        mpMap->postMessage( infoMsg );
+
+        QSet<TRoom *> holdingSet;
+        { // Block this code to limit scope of iterator
+            QMutableHashIterator<int, TRoom* > itRoom( rooms );
+            // Although this is "mutable" we can only changed the VALUE not the KEY
+            // Also we cannot directly change the collection being iterated over -
+            // though we can REMOVE items via the iterator - so pull the
+            // affected TRoom instances out of the Hash, renumber them and then
+            // hold onto them before reinserting them after we have finished
+            // this iteration
+            while( itRoom.hasNext() ) {
+                itRoom.next();
+                TRoom * pR = itRoom.value();
+                if( roomRemapping.contains( itRoom.key() ) ) {
+                    pR->userData.insert( QStringLiteral( "audit.remapped_id" ), QString::number( itRoom.key() ) );
+                    pR->setId( roomRemapping.value( itRoom.key() ) );
+                    itRoom.remove();
+                    holdingSet.insert( pR );
+                }
+            }
+        }
+
+        // Now stuff the modified values back in under the new key values
+        QSetIterator<TRoom *> itModifiedRoom( holdingSet );
+        while( itModifiedRoom.hasNext() ) {
+            TRoom * pR = itModifiedRoom.next();
+            int newRoomId = pR->getId();
+            rooms.insert( newRoomId, pR );
+        }
+    }
+    else {
+        QString infoMsg = tr( "[ INFO ]  - Room Id numbering is satisfactory." );
+        mpMap->postMessage( infoMsg );
+    }
+    // END OF TASK 1
+
+    // START OF TASK 6,7 & 9
+    { // Block the following code to limit the scope of the itRoom iterator
+        QMutableHashIterator<int, TRoom *> itRoom( rooms );
+        while( itRoom.hasNext() ) {
+            itRoom.next();
+            TRoom * pR = itRoom.value();
+
+            // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
+            // Exit stubs:
+            unsigned int _listCount = pR->exitStubs.count();
+            QSet<int> _set = pR->exitStubs.toSet();
+            if( _set.count() < _listCount ) {
+                QString infoMsg = tr( "[ INFO ]  - Duplicate exit stub identifiers found in room Id: %1, this is an\n"
+                                                  "anomoly but has been cleaned up easily." )
+                                       .arg( itRoom.key() );
+                mpMap->postMessage( infoMsg );
+            }
+            pR->exitStubs = _set.toList();
+
+            // Exit locks:
+            _listCount = pR->exitLocks.count();
+            _set = pR->exitLocks.toSet();
+            if( _set.count() < _listCount ) {
+                QString infoMsg = tr( "[ INFO ]  - Duplicate exit lock identifiers found in room Id: %1, this is an\n"
+                                                  "anomoly but has been cleaned up easily." )
+                                       .arg( itRoom.key() );
+                mpMap->postMessage( infoMsg );
+            }
+            pR->exitLocks = _set.toList();
+
+            // TASK 9 IS DONE INSIDE THIS METHOD:
+            pR->audit(roomRemapping, areaRemapping);
+        }
+    }
+    // END OF TASK 6,7 & 9
+
+    // START TASK 8
+    {
+        QMapIterator<int, TArea *> itArea(areas);
+        while( itArea.hasNext() ) {
+            itArea.next();
+            TArea * pA = itArea.value();
+            QSet<int> replacementRoomsSet;
+            { // Block code to limit scope of iterator, find and pull out renumbered rooms
+                QMutableSetIterator<int> itAreaRoom( pA->rooms );
+                if( ! roomRemapping.isEmpty() ) {
+                    while( itAreaRoom.hasNext() ) {
+                        int originalRoomId = itAreaRoom.next();
+                        if( roomRemapping.contains( originalRoomId ) ) {
+                            itAreaRoom.remove();
+                            replacementRoomsSet.insert( roomRemapping.value( originalRoomId ) );
+                        }
+                    }
+                }
+            }
+            // Merge back in the renumbered rooms
+            if( ! replacementRoomsSet.isEmpty() ) {
+                pA->rooms.unite( replacementRoomsSet );
+            }
+
+            // Now compare pA->rooms to areaRoomMultiHash.values( itArea.key() )
+            QSet<int> foundRooms = areaRoomMultiHash.values( itArea.key() ).toSet();
+//            QSet<int> correctRooms = pA->rooms.intersect( foundRooms );
+            QSet<int> extraRooms = pA->rooms;
+            extraRooms.subtract( foundRooms );
+            QSet<int> missingRooms = foundRooms;
+            missingRooms.subtract( pA->rooms );
+            if( ! missingRooms.isEmpty() ) {
+                QStringList roomList;
+                QSetIterator<int> itMissingRoom( missingRooms );
+                while( itMissingRoom.hasNext() ) {
+                    roomList.append( QString::number( itMissingRoom.next() ) );
+                }
+                QString infoMsg = tr( "[ INFO ]  - In area with Id: %1 there were %2 rooms missing from those it\n"
+                                                  "should be recording as possessing, they were:\n%3\nthey have been added." )
+                                      .arg( itArea.key() )
+                                      .arg( missingRooms.count() )
+                                      .arg( roomList.join( QStringLiteral( ", " ) ) );
+                mpMap->postMessage( infoMsg );
+                pA->mIsDirty = true;
+            }
+            if( ! extraRooms.isEmpty() ) {
+                QStringList roomList;
+                QSetIterator<int> itExtraRoom( extraRooms );
+                while( itExtraRoom.hasNext() ) {
+                    roomList.append( QString::number( itExtraRoom.next() ) );
+                }
+                QString infoMsg = tr( "[ INFO ]  - In area with Id: %1 there were %2 extra rooms compared to those it\n"
+                                                  "should be recording as possessing, they were:\n%3\nthey have been removed." )
+                                      .arg( itArea.key() )
+                                      .arg( extraRooms.count() )
+                                      .arg( roomList.join( QStringLiteral( ", " ) ) );
+                mpMap->postMessage( infoMsg );
+                pA->mIsDirty = true;
+            }
+            pA->rooms = foundRooms;
+        }
+    }
+    // END OF TASK 8
+
+    qDebug() << "TRoomDB::auditRooms(...) run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TRoomDB::clearMapDB()
@@ -699,82 +1019,82 @@ void TRoomDB::restoreAreaMap( QDataStream & ifs )
         QString extraTextForMatchingSuffixAlreadyUsed;
         QString detailText;
         if( isMatchingSuffixAlreadyPresent ) {
-            extraTextForMatchingSuffixAlreadyUsed = qApp->translate( "TRoomDB", "It has been detected that \"_###\" form suffixes have already been used, for "
-                                                                                "simplicity in the renaming algorithm these will have been removed and possibly "
-                                                                                "changed as Mudlet sorts this matter out, if a number assigned in this way "
-                                                                                "<b>is</b> important to you, you can change it back, provided you rename the area "
-                                                                                "that has been allocated the suffix that was wanted first...!</p>" );
+            extraTextForMatchingSuffixAlreadyUsed = tr( "It has been detected that \"_###\" form suffixes have already been used, for "
+                                                        "simplicity in the renaming algorithm these will have been removed and possibly "
+                                                        "changed as Mudlet sorts this matter out, if a number assigned in this way "
+                                                        "<b>is</b> important to you, you can change it back, provided you rename the area "
+                                                        "that has been allocated the suffix that was wanted first...!</p>" );
         }
         if( renamedMap.size() ) {
-            detailText = qApp->translate( "TRoomDB", "[  OK  ]  - The changes made are:\n"
-                                                                 "(ID) \"old name\" ==> \"new name\"\n" );
+            detailText = tr( "[  OK  ]  - The changes made are:\n"
+                                         "(ID) \"old name\" ==> \"new name\"\n" );
             QMapIterator<QString, QString> itRemappedNames = renamedMap;
             itRemappedNames.toBack();
             // Seems to look better if we iterate through backwards!
             while( itRemappedNames.hasPrevious() ) {
                 itRemappedNames.previous();
                 detailText.append( QStringLiteral( "(%1) \"%2\" ==> \"%3\"\n" )
-                                   .arg( areaNamesMap.key( itRemappedNames.value() ) )
-                                   .arg( itRemappedNames.key().isEmpty() ? qApp->translate( "TRoomDB", "<nothing>" ) : itRemappedNames.key() )
-                                   .arg( itRemappedNames.value() ) );
+                                       .arg( areaNamesMap.key( itRemappedNames.value() ) )
+                                       .arg( itRemappedNames.key().isEmpty() ? tr( "<nothing>" ) : itRemappedNames.key() )
+                                       .arg( itRemappedNames.value() ) );
             }
             detailText.chop(1); // Trim last "\n" off
         }
         if( renamedMap.size() && isEmptyAreaNamePresent ) {
             // At least one unnamed area and at least one duplicate area name
             // - may be the same items
-            alertText = qApp->translate( "TRoomDB", "[ ALERT ] - Empty and duplicate area names detected in Map file!" );
-            informativeText = qApp->translate( "TRoomDB", "[ INFO ]  - Due to some situations not being checked in the past,  Mudlet had\n"
-                                                                      "allowed the map to have more than one area with the same or no name.\n"
-                                                                      "These make some things confusing and are now disallowed.\n"
-                                                                      "  To resolve these cases, an area without a name here (or created in\n"
-                                                                      "the future) will automatically be assigned the name \"%1\".\n"
-                                                                      "  Duplicated area names will cause all but the first encountered one\n"
-                                                                      "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
-                                                                      "number; you may wish to change these, perhaps by replacing them with\n"
-                                                                      "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
-                                                                      "other then you will not be able to set one area's name to that of\n"
-                                                                      "another that exists at the time.\n"
-                                                                      "  If there were more than one area without a name then all but the\n"
-                                                                      "first will also gain a suffix in this manner.\n"
-                                                                      "%2")
-                              .arg( mUnnamedAreaName )
-                              .arg( extraTextForMatchingSuffixAlreadyUsed );
+            alertText = tr( "[ ALERT ] - Empty and duplicate area names detected in Map file!" );
+            informativeText = tr( "[ INFO ]  - Due to some situations not being checked in the past,  Mudlet had\n"
+                                              "allowed the map to have more than one area with the same or no name.\n"
+                                              "These make some things confusing and are now disallowed.\n"
+                                              "  To resolve these cases, an area without a name here (or created in\n"
+                                              "the future) will automatically be assigned the name \"%1\".\n"
+                                              "  Duplicated area names will cause all but the first encountered one\n"
+                                              "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
+                                              "number; you may wish to change these, perhaps by replacing them with\n"
+                                              "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
+                                              "other then you will not be able to set one area's name to that of\n"
+                                              "another that exists at the time.\n"
+                                              "  If there were more than one area without a name then all but the\n"
+                                              "first will also gain a suffix in this manner.\n"
+                                              "%2" )
+                                  .arg( mUnnamedAreaName )
+                                  .arg( extraTextForMatchingSuffixAlreadyUsed );
         }
         else if( renamedMap.size() ) {
             // Duplicates but no unnnamed area
-            alertText = qApp->translate( "TRoomDB", "[ ALERT ] - Duplicate area names detected in the Map file!" );
-            informativeText = qApp->translate( "TRoomDB", "[ INFO ]  - Due to some situations not being checked in the past, Mudlet had\n"
-                                                                      "allowed the user to have more than one area with the same name.\n"
-                                                                      "These make some things confusing and are now disallowed.\n"
-                                                                      "  Duplicated area names will cause all but the first encountered one\n"
-                                                                      "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
-                                                                      "number; you may wish to change these, perhaps by replacing them with\n"
-                                                                      "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
-                                                                      "other then you will not be able to set one area's name to that of\n"
-                                                                      "another that exists at the time.\n"
-                                                                      "  If there were more than one area without a name then all but the\n"
-                                                                      "first will also gain a suffix in this manner.\n"
-                                                                      "%1)")
-                              .arg( extraTextForMatchingSuffixAlreadyUsed );
+            alertText = tr( "[ ALERT ] - Duplicate area names detected in the Map file!" );
+            informativeText = tr( "[ INFO ]  - Due to some situations not being checked in the past, Mudlet had\n"
+                                              "allowed the user to have more than one area with the same name.\n"
+                                              "These make some things confusing and are now disallowed.\n"
+                                              "  Duplicated area names will cause all but the first encountered one\n"
+                                              "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
+                                              "number; you may wish to change these, perhaps by replacing them with\n"
+                                              "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
+                                              "other then you will not be able to set one area's name to that of\n"
+                                              "another that exists at the time.\n"
+                                              "  If there were more than one area without a name then all but the\n"
+                                              "first will also gain a suffix in this manner.\n"
+                                              "%1)")
+                                  .arg( extraTextForMatchingSuffixAlreadyUsed );
         }
         else {
             // A single unnamed area found
-            alertText = qApp->translate( "TRoomDB", "[ ALERT ] - An empty area name was detected in the Map file!" );
+            alertText = tr( "[ ALERT ] - An empty area name was detected in the Map file!" );
             // Use OK for this one because it is the last part and indicates the
             // sucessful end of something, whereas INFO is an intermediate step
-            informativeText = qApp->translate( "TRoomDB", "[  OK  ]  - Due to some situations not being checked in the past, Mudlet had\n"
-                                                                      "allowed the map to have an area with no name. This can make some\n"
-                                                                      "things confusing and is now disallowed.\n"
-                                                                      "  To resolve this case, the area without a name here (or one created\n"
-                                                                      "in the future) will automatically be assigned the name \"%1\".\n"
-                                                                      "  If this happens more then once the duplication of area names will\n"
-                                                                      "cause all but the first encountered one to gain a \"_###\" style\n"
-                                                                      "suffix where each \"###\" is an increasing number; you may wish to\n"
-                                                                      "change these, perhaps by adding more meaningful area names but it is\n"
-                                                                      "entirely up to you what is used, other then you will not be able to\n"
-                                                                      "set one area's name to that of another that exists at the time.")
-                              .arg( mUnnamedAreaName );
+            informativeText = tr( "[  OK  ]  - Due to some situations not being checked in the past, Mudlet had\n"
+                                              "allowed the map to have an area with no name. This can make some\n"
+                                              "things confusing and is now disallowed.\n"
+                                              "  To resolve this case, the area without a name here (or one created\n"
+                                              "in the future) will automatically be assigned the name \"%1\".\n"
+                                              "  If this happens more then once the duplication of area names will\n"
+                                              "cause all but the first encountered one to gain a \"_###\" style\n"
+                                              "suffix where each \"###\" is an increasing number; you may wish to\n"
+                                              "change these, perhaps by adding more meaningful area names but it is\n"
+                                              "entirely up to you what is used, other then you will not be able to\n"
+                                              "set one area's name to that of another that exists at the time.")
+                                  .arg( mUnnamedAreaName );
         }
         mpMap->mpHost->postMessage( alertText );
         mpMap->mpHost->postMessage( informativeText );

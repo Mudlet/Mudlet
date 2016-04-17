@@ -234,7 +234,6 @@ void dlgMapper::cancel()
     qDebug()<<"download was cancalled";
     mpProgressDialog->close();
     mpReply->abort();
-    mpHost->mpMap->init( mpHost );
     glWidget->updateGL();
 }
 
@@ -264,7 +263,7 @@ void dlgMapper::replyFinished( QNetworkReply * reply )
     XMLimport reader( mpHost );
     reader.importPackage( & file );
 
-    mpHost->mpMap->init( mpHost );
+    mpHost->mpMap->audit();
     glWidget->updateGL();
 
     if( mpHost->mpMap )
