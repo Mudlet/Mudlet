@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -210,7 +210,10 @@ int compSign(int a, int b){
 void TMap::connectExitStub(int roomId, int dirType)
 {
     TRoom * pR = mpRoomDB->getRoom( roomId );
-    if( !pR ) return;
+    if( !pR )
+    {
+        return;
+    }
     int area = pR->getArea();
     int minDistance = 999999;
     int minDistanceRoom=0, meanSquareDistance=0;
@@ -220,44 +223,70 @@ void TMap::connectExitStub(int roomId, int dirType)
     int rx = pR->x, ry = pR->y, rz = pR->z;
     int dx=0,dy=0,dz=0;
     TArea * pA = mpRoomDB->getArea(area);
-    if( !pA ) return;
-    for( int i=0; i< pA->rooms.size(); i++ )
+    if( !pA )
     {
-        pR = mpRoomDB->getRoom( pA->rooms[i] );
-        if( !pR ) continue;
-        if( pR->getId() == roomId ) continue;
+        return;
+    }
+    QSetIterator<int> itRoom( pA->getAreaRooms() );
+    while( itRoom.hasNext() )
+    {
+        pR = mpRoomDB->getRoom( itRoom.next() );
+        if( !pR )
+        {
+            continue;
+        }
+        if( pR->getId() == roomId )
+        {
+            continue;
+        }
         if(uz)
         {
-            dz = (int)pR->z-rz;
-            if(!compSign(dz,uz) || !dz) continue;
+            dz = pR->z-rz;
+            if(!compSign(dz,uz) || !dz)
+            {
+                continue;
+            }
         }
         else
         {
             //to avoid lower/upper floors from stealing stubs
-            if((int)pR->z != rz) continue;
+            if(pR->z != rz)
+            {
+                continue;
+            }
         }
         if(ux)
         {
-            dx = (int)pR->x-rx;
+            dx = pR->x-rx;
             if (!compSign(dx,ux) || !dx) //we do !dx to make sure we have a component in the desired direction
-                continue;
+            {
+               continue;
+            }
         }
         else
         {
             //to avoid rooms on same plane from stealing stubs
-            if((int)pR->x != rx) continue;
+            if((int)pR->x != rx)
+            {
+                continue;
+            }
         }
         if(uy)
         {
-            dy = (int)pR->y-ry;
+            dy = pR->y-ry;
             //if the sign is the SAME here we keep it b/c we flip our y coordinate.
             if (compSign(dy,uy) || !dy)
+            {
                 continue;
+            }
         }
         else
         {
             //to avoid rooms on same plane from stealing stubs
-            if((int)pR->y != ry) continue;
+            if(pR->y != ry)
+            {
+                continue;
+            }
         }
         meanSquareDistance=dx*dx+dy*dy+dz*dz;
         if(meanSquareDistance < minDistance)
@@ -269,7 +298,10 @@ void TMap::connectExitStub(int roomId, int dirType)
     if(minDistanceRoom)
     {
         pR = mpRoomDB->getRoom(minDistanceRoom);
-        if( !pR ) return;
+        if( !pR )
+        {
+            return;
+        }
         if(pR->exitStubs.contains(reverseDirections[dirType]))
         {
             setExit( roomId, minDistanceRoom, dirType);
@@ -443,30 +475,34 @@ void TMap::solveRoomCollision( int id, int creationDirection, bool PCheck )
 
 QList<int> TMap::detectRoomCollisions( int id )
 {
+    QList<int> collList;
     TRoom * pR = mpRoomDB->getRoom( id );
     if( !pR )
     {
-        QList<int> l;
-        return l;
+        return collList;
     }
     int area = pR->getArea();
     int x = pR->x;
     int y = pR->y;
     int z = pR->z;
-    QList<int> collList;
     TArea * pA = mpRoomDB->getArea( area );
     if( !pA )
     {
-        QList<int> l;
-        return l;
+        return collList;
     }
-    for( int i=0; i< pA->rooms.size(); i++ )
+
+    QSetIterator<int> itRoom( pA->getAreaRooms() );
+    while( itRoom.hasNext() )
     {
-        pR = mpRoomDB->getRoom( pA->rooms[i] );
-        if( !pR ) continue;
+        int checkRoomId = itRoom.next();
+        pR = mpRoomDB->getRoom( checkRoomId );
+        if( !pR )
+        {
+            continue;
+        }
         if( pR->x == x && pR->y == y && pR->z == z )
         {
-            collList.push_back( pA->rooms[i] );
+            collList.push_back( checkRoomId );
         }
     }
 
@@ -949,24 +985,24 @@ bool TMap::serialize( QDataStream & ofs )
 {
 
     if( mSaveVersion != mVersion ) {
-        QString message = tr( "[ ALERT ]  - Saving map in a format {%1} that is different than the one it was\n"
-                                           "loaded as {%2}. This may be an issue if you want to share the resulting\n"
-                                           "map with others relying on the original format." )
+        QString message = tr( "[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
+                                          "loaded as {%2}. This may be an issue if you want to share the resulting\n"
+                                          "map with others relying on the original format." )
                           .arg( mSaveVersion )
                           .arg( mVersion );
         mpHost->mTelnet.postMessage( message );
     }
 
     if( mSaveVersion != mDefaultVersion ) {
-        QString message = tr( "[ WARN ]   - Saving map in a format {%1} that is different than the one\n"
-                                           "recommended {%2} baring in mind the build status of the source\n"
-                                           "code.  Development code versions may offer the chance to try\n"
-                                           "experimental features needing a revised format that could be\n"
-                                           "incompatible with existing release code versions.  Conversely\n"
-                                           "a release version may allow you to downgrade to save a map in\n"
-                                           "a format compatible with others using older versions of MUDLET\n"
-                                           "however some features may be crippled or non-operational for\n"
-                                           "this version of MUDLET." )
+        QString message = tr( "[ WARN ]  - Saving map in a format {%1} that is different than the one\n"
+                                          "recommended {%2} baring in mind the build status of the source\n"
+                                          "code.  Development code versions may offer the chance to try\n"
+                                          "experimental features needing a revised format that could be\n"
+                                          "incompatible with existing release code versions.  Conversely\n"
+                                          "a release version may allow you to downgrade to save a map in\n"
+                                          "a format compatible with others using older versions of MUDLET\n"
+                                          "however some features may be crippled or non-operational for\n"
+                                          "this version of MUDLET." )
                           .arg( mSaveVersion )
                           .arg( mDefaultVersion );
         mpHost->postMessage( message );
@@ -983,8 +1019,8 @@ bool TMap::serialize( QDataStream & ofs )
     // TODO: Remove when versions < 17 are not an option...
     else {
         if( ! mUserData.isEmpty() ) {
-            QString message = tr( "[ ALERT ]  - Map User data has been lost in saved map file.  Re-save in a\n"
-                                               "format of at least 17 to preserve it before quitting!" )
+            QString message = tr( "[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a\n"
+                                              "format of at least 17 to preserve it before quitting!" )
                                   .arg( mSaveVersion );
             mpHost->mTelnet.postMessage( message );
         }
@@ -1012,12 +1048,26 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pA->min_y;
         ofs << pA->min_z;
         ofs << pA->span;
-        ofs << pA->xmaxEbene;
-        ofs << pA->ymaxEbene;
-        ofs << pA->zmaxEbene;
-        ofs << pA->xminEbene;
-        ofs << pA->yminEbene;
-        ofs << pA->zminEbene;
+        if( mSaveVersion >= 17) {
+            ofs << pA->xmaxEbene;
+            ofs << pA->ymaxEbene;
+            ofs << pA->xminEbene;
+            ofs << pA->yminEbene;
+        }
+        else { // Recreate the pointless z{min|max}Ebene items
+            QMap<int, int> dummyMinMaxEbene;
+            QListIterator<int> itZ( pA->ebenen );
+            while( itZ.hasNext() ) {
+                int dummyEbenValue = itZ.next();
+                dummyMinMaxEbene.insert( dummyEbenValue, dummyEbenValue );
+            }
+            ofs << pA->xmaxEbene;
+            ofs << pA->ymaxEbene;
+            ofs << dummyMinMaxEbene;
+            ofs << pA->xminEbene;
+            ofs << pA->yminEbene;
+            ofs << dummyMinMaxEbene;
+        }
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
@@ -1043,9 +1093,9 @@ bool TMap::serialize( QDataStream & ofs )
             areaIds.append( QString::number( areasWithData.takeFirst() ) );
         } while( ! areasWithData.isEmpty() );
 
-        QString message = tr( "[ ALERT ]  - Area User data has been lost in saved map file.  Re-save in a\n"
-                                           "format of at least 17 to preserve it before quitting!\n"
-                                           "Areas Id affected: %1." )
+        QString message = tr( "[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
+                                          "format of at least 17 to preserve it before quitting!\n"
+                                          "Areas Id affected: %1." )
                               .arg( areaIds.join( tr( ", " ) ) ); // Translatable in case list separators are locale dependendent!
         mpHost->mTelnet.postMessage( message );
     }
@@ -1276,14 +1326,7 @@ bool TMap::restore(QString location)
                 ifs >> pA->rooms;
 // Can be useful when analysing suspect map files!
 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
-// This is not essential but can help when debugging - so the rooms are in
-// ascending order
-                if( pA->rooms.count() > 1 ) {
-                    qSort( pA->rooms.begin(), pA->rooms.end() );
-                }
-// Can be useful when analysing suspect map files!
 //                qDebug() << "Rooms:" << pA->rooms;
-
                 ifs >> pA->ebenen;
                 ifs >> pA->exits;
                 ifs >> pA->gridMode;
@@ -1294,12 +1337,21 @@ bool TMap::restore(QString location)
                 ifs >> pA->min_y;
                 ifs >> pA->min_z;
                 ifs >> pA->span;
-                ifs >> pA->xmaxEbene;
-                ifs >> pA->ymaxEbene;
-                ifs >> pA->zmaxEbene;
-                ifs >> pA->xminEbene;
-                ifs >> pA->yminEbene;
-                ifs >> pA->zminEbene;
+                if( mVersion >= 17 ) {
+                    ifs >> pA->xmaxEbene;
+                    ifs >> pA->ymaxEbene;
+                    ifs >> pA->xminEbene;
+                    ifs >> pA->yminEbene;
+                }
+                else {
+                    QMap<int, int> dummyMinMaxEbene;
+                    ifs >> pA->xmaxEbene;
+                    ifs >> pA->ymaxEbene;
+                    ifs >> dummyMinMaxEbene;
+                    ifs >> pA->xminEbene;
+                    ifs >> pA->yminEbene;
+                    ifs >> dummyMinMaxEbene;
+                }
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
                 ifs >> pA->zoneAreaRef;
@@ -1380,6 +1432,7 @@ bool TMap::restore(QString location)
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
+        qDebug() << "TMap::restore(...) loading time:" << _time.nsecsElapsed() * 1.0e-9 << "sec.";
         QString okMsg = tr( "[  OK  ]  - Sucessfully read map file, will now check some consistancy details." );
         mpHost->postMessage( okMsg );
         if( canRestore ) {

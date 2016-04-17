@@ -1925,7 +1925,7 @@ void mudlet::slot_mapper()
         return;
     }
 
-    QDockWidget * pDock = new QDockWidget("Mudlet Mapper");
+    QDockWidget * pDock = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
     pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
@@ -2015,7 +2015,6 @@ void mudlet::slot_notes()
 
 void mudlet::slot_irc()
 {
-//#ifdef Q_CC_GNU
     if( ! mpIRC )
     {
         mpIRC = new dlgIRC();
@@ -2026,7 +2025,6 @@ void mudlet::slot_irc()
 
     mpIRC->raise();
     mpIRC->show();
-//#endif
 }
 
 void mudlet::slot_reconnect()
@@ -2111,17 +2109,6 @@ void mudlet::startAutoLogin()
     }
 
 }
-/*
-QString mudlet::readProfileData( QString profile, QString item )
-{
-    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
-    file.open( QIODevice::ReadOnly );
-    QDataStream ifs( & file );
-    QString ret;
-    ifs >> ret;
-    file.close();
-    return ret;
-}*/
 
 void mudlet::doAutoLogin( QString & profile_name )
 {
@@ -2144,10 +2131,6 @@ void mudlet::doAutoLogin( QString & profile_name )
     QDir dir( folder );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
-    //for( int i=0;i<entries.size(); i++ )
-    //    qDebug()<<i<<"#"<<entries[i];
-//    LuaInterface * lI = pHost->getLuaInterface();
-//    lI->getVars( true );
     if( entries.size() > 0 )
     {
         QFile file(folder+"/"+entries[0]);
@@ -2166,39 +2149,6 @@ void mudlet::doAutoLogin( QString & profile_name )
     slot_connection_dlg_finnished( profile_name, 0 );
     enableToolbarButtons();
 }
-/*
-    QList<QString> hostList = HostManager::self()->getHostList();
-    for( int i=0; i<hostList.size(); i++ )
-    {
-        Host * pH = HostManager::self()->getHost( hostList[i] );
-        QString profile = pH->getName();
-        if( profile.size() < 1 )
-        {
-            HostManager::self()->deleteHost( profile );
-            continue;
-        }
-
-        QString item = "autologin";
-        QString val = readProfileData( profile, item );
-        if( val.toInt() == Qt::Checked )
-        {
-            qDebug()<<"----> Host:"<<pH->getName()<<" URL:"<<pH->getUrl()<<"Login:"<<pH->getLogin();
-            addConsoleForNewHost( pH );
-            pH->connectToServer();
-        }
-        else
-        {
-            // remove Hosts that don't have autologin defined from HostPool
-            qDebug() << "----> [ EXPIRED ] " << profile.toLatin1().data() << " Host ist no longer an autoloader. Due to user decision.";
-            HostManager::self()->deleteHost( profile );
-        }
-    }
-    if( hostList.size() < 1 )
-        qDebug() << "----> [ OK ] nothing to be done (no autologin profiles defined)";
-    else
-        qDebug() << "----> [ OK ] autologin finished";
-    qDebug()<<"[ AUTOLOGIN END ] currently loaded hosts after removal of non-autoloaders:"<<HostManager::self()->getHostList();
-}*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // these two callbacks are called from cTelnet::handleConnectedToServer()
@@ -2249,7 +2199,6 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
     pHost->mIsProfileLoadingSequence = false;
 
     //do modules here
-    //QMapIterator<QString, QStringList > it (pHost->mInstalledModules);
     QMapIterator<QString, int> it (pHost->mModulePriorities);
     QMap<int, QStringList> moduleOrder;
     while( it.hasNext() ){
@@ -2257,11 +2206,6 @@ void mudlet::slot_connection_dlg_finnished( QString profile, int historyVersion 
         QStringList moduleEntry = moduleOrder[it.value()];
         moduleEntry << it.key();
         moduleOrder[it.value()] = moduleEntry;
-        /*QStringList entry = it.value();
-        pHost->installPackage(entry[0],1);
-        //we repeat this step here b/c we use the same installPackage method for initial loading,
-        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-        pHost->mInstalledModules[it.key()] = entry;*/
     }
     QMapIterator<int, QStringList> it2 (moduleOrder);
     while (it2.hasNext()){
@@ -2310,11 +2254,6 @@ void mudlet::slot_multi_view()
 
 void mudlet::slot_stopAllTriggers()
 {
-    /*
-    foreach( TConsole * pC, mConsoleMap )
-    {
-        pC->mpHost->stopAllTriggers();
-    }*/
 }
 
 mudlet::~mudlet()

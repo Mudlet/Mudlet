@@ -528,9 +528,10 @@ void GLWidget::paintGL()
                 break;
             }
         }
-        for( int i=0; i<pArea->rooms.size(); i++ )
+        QSetIterator<int> itRoom( pArea->getAreaRooms() );
+        while( itRoom.hasNext() )
         {
-            TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
+            TRoom * pR = mpMap->mpRoomDB->getRoom(itRoom.next());
             if( !pR ) continue;
             float rx = static_cast<float>(pR->x);
             float ry = static_cast<float>(pR->y);
@@ -1307,10 +1308,12 @@ void GLWidget::paintGL()
         {
             break;
         }
-        for( int i=0; i<pArea->rooms.size(); i++ )
+        QSetIterator<int> itRoom( pArea->getAreaRooms() );
+        while( itRoom.hasNext() )
         {
             glDisable(GL_LIGHT1);
-            TRoom * pR = mpMap->mpRoomDB->getRoom( pArea->rooms[i] );
+            int currentRoomId = itRoom.next();
+            TRoom * pR = mpMap->mpRoomDB->getRoom( currentRoomId );
             if( !pR ) continue;
             float rx = static_cast<float>(pR->x);
             float ry = static_cast<float>(pR->y);
@@ -1337,7 +1340,7 @@ void GLWidget::paintGL()
                 glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(1.0, 0.0, 0.0, 1.0);
             }
-            else if( pArea->rooms[i] == mTarget )
+            else if( currentRoomId == mTarget )
             {
                 glDisable(GL_BLEND);
                 glEnable( GL_LIGHTING );
@@ -1384,7 +1387,7 @@ void GLWidget::paintGL()
                     glTranslatef( rx, ry, rz );
                 }
 
-                glLoadName( pArea->rooms[i] );
+                glLoadName( currentRoomId );
                 quads++;
                 glBegin( GL_QUADS );
                 glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1631,7 +1634,7 @@ void GLWidget::paintGL()
                 glTranslatef( rx, ry, rz );
             }
 
-            glLoadName( pArea->rooms[i] );
+            glLoadName( currentRoomId );
             quads++;
             glBegin( GL_QUADS );
             glNormal3f(0.57735, -0.57735, 0.57735);

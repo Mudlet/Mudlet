@@ -4505,12 +4505,15 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
         return 1;
     }
     lua_newtable(L);
-    const QList<int> areaRooms = pA->getAreaRooms();
-    for( int i=0; i<areaRooms.size(); i++ )
+    QSetIterator<int> itAreaRoom( pA->getAreaRooms() );
+    int i = -1;
+    while( itAreaRoom.hasNext() )
     {
-        int roomID = areaRooms.at( i );
-        lua_pushnumber( L, i );
-        lua_pushnumber( L, roomID );
+        lua_pushnumber( L, ++i );
+        // We should have started at 1 but past code had incorrectly started
+        // with a zero index and we must maintain compatibilty with code written
+        // for that
+        lua_pushnumber( L, itAreaRoom.next() );
         lua_settable(L, -3);
     }
     return 1;
