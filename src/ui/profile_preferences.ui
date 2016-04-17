@@ -1433,7 +1433,7 @@
           <string>Map files</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="4" column="0">
+          <item row="4" column="0" colspan="3">
            <widget class="QLabel" name="label_mapFileActionResult">
             <property name="font">
              <font>
