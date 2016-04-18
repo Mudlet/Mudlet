@@ -453,7 +453,7 @@ TArea * TRoomDB::getRawArea( int id, bool * isValid = 0 )
         if( isValid ) {
             *isValid = false;
         }
-        return nullptr;
+        return 0;
     }
 }
 
