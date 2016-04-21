@@ -43,9 +43,6 @@
 
 
 int maxRooms;
-int maxAreas;
-QMap<int,int> areaMap;
-//int module = 0;
 
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
@@ -149,9 +146,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             }
             else if( name() == "map" )
             {
-                maxAreas = 0;
                 maxRooms = 0;
-                areaMap.clear();
                 readMap();
                 mpHost->mpMap->audit();
             }

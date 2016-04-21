@@ -77,8 +77,8 @@ public:
     bool addRoom(int id, TRoom *pR, bool isMapLoading = false);
     int  getAreaID(TArea * pA);
     void restoreAreaMap( QDataStream & );
-    void restoreSingleArea( QDataStream &, int, TArea * );
-    void restoreSingleRoom( QDataStream &, int, TRoom * );
+    void restoreSingleArea( int, TArea * );
+    void restoreSingleRoom( int, TRoom * );
 
 
     QMap<QString,int> hashTable;
@@ -96,6 +96,7 @@ private:
     TMap * mpMap;
     QSet<int> * mpTempRoomDeletionSet; // Used during bulk room deletion
     QString mUnnamedAreaName;
+    QString mDefaultAreaName;
 
     friend class TRoom;//friend TRoom::~TRoom();
     //friend class TMap;//bool TMap::restore(QString location);

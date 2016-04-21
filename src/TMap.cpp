@@ -443,7 +443,7 @@ void TMap::audit()
                             QString msg = tr( "[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2." )
                                           .arg(areaID)
                                           .arg(labelIDList.at(i) );
-                            mpHost->postMessage(msg);
+                            postMessage(msg);
                             mapLabels[areaID][labelIDList.at(i)] = mapLabels[areaID][newID];
                             deleteMapLabel( areaID, newID );
                         }
@@ -451,7 +451,7 @@ void TMap::audit()
                             QString msg = tr( "[ WARN ] - CONVERTING: cannot convert old style label, areaID:%1 labelID:%2." )
                                           .arg(areaID)
                                           .arg(labelIDList.at(i));
-                            mpHost->postMessage(msg);
+                            postMessage(msg);
                         }
                     }
                     if (    ( l.size.width() >  std::numeric_limits<qreal>::max() )
@@ -1034,7 +1034,7 @@ bool TMap::serialize( QDataStream & ofs )
                                           "this version of MUDLET." )
                           .arg( mSaveVersion )
                           .arg( mDefaultVersion );
-        mpHost->postMessage( message );
+        postMessage( message );
     }
 
     ofs << mSaveVersion;
@@ -1225,7 +1225,7 @@ bool TMap::serialize( QDataStream & ofs )
     return true;
 }
 
-bool TMap::restore(QString location)
+bool TMap::restore( QString location )
 {
     qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:"
              << mpHost->getName()
@@ -1255,7 +1255,7 @@ bool TMap::restore(QString location)
         if( ! file.open( QFile::ReadOnly ) ) {
             QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
                              .arg( file.fileName() );
-            mpHost->postMessage( errMsg );
+            postMessage( errMsg );
             return false;
         }
 
@@ -1268,7 +1268,7 @@ bool TMap::restore(QString location)
                                                  "Mudlet can handle (%2)!" )
                                  .arg( mVersion )
                                  .arg( mDefaultVersion );
-                mpHost->postMessage( errMsg );
+                postMessage( errMsg );
                 QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a Map file saved in a\n"
                                                   "format that it CAN read.  As this Mudlet appears to be based on a\n"
                                                   "release version of the source code it is possible that you, or the\n"
@@ -1280,7 +1280,7 @@ bool TMap::restore(QString location)
                                                   "directory and selecting a file to load that is NOT the most recent one\n"
                                                   "(which is the one that is selected normally) though it is probable that\n"
                                                   "the stored location of the current map location will be wrong." );
-                mpHost->postMessage( infoMsg );
+                postMessage( infoMsg );
                 file.close();
                 return false;
             }
@@ -1292,7 +1292,7 @@ bool TMap::restore(QString location)
                                                      "Mudlet can handle (%2)!" )
                                      .arg( mVersion )
                                      .arg( mMaxVersion );
-                    mpHost->postMessage( errMsg );
+                    postMessage( errMsg );
                     QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a Map file saved in a\n"
                                                       "format that it CAN read.  Even though this Mudlet appears to be based on a\n"
                                                       "development version of the source code it is possible that you, or the\n"
@@ -1304,7 +1304,7 @@ bool TMap::restore(QString location)
                                                       "directory and selecting a file to load that is NOT the most recent one\n"
                                                       "(which is the one that is selected normally) though it is probable that\n"
                                                       "the stored location of the current map location will be wrong." );
-                    mpHost->postMessage( infoMsg );
+                    postMessage( infoMsg );
                     file.close();
                     return false;
                 }
@@ -1313,7 +1313,7 @@ bool TMap::restore(QString location)
                                                        "the default for this version of Mudlet (%2)!" )
                                      .arg( mVersion )
                                      .arg( mDefaultVersion );
-                    mpHost->postMessage( alertMsg );
+                    postMessage( alertMsg );
                     QString infoMsg = tr( "[ INFO ]  - You are using a new, possibly experimental, map file format which this\n"
                                                       "version of Mudlet CAN read.  This Mudlet appears to be based on a\n"
                                                       "development version of the source code so it is possible that you, or the\n"
@@ -1321,7 +1321,7 @@ bool TMap::restore(QString location)
                                                       "advanced version that has additional features that need a revised format;\n"
                                                       "beware that this file may not be usable by the current release version\n"
                                                       "of Mudlet that you or others with whom you might share it have!" );
-                    mpHost->postMessage( infoMsg );
+                    postMessage( infoMsg );
                     mSaveVersion = mVersion; // Make the save version default to the loaded one
                                              // this means that each session using a particular
                                              // map file version will continue to use it unless
@@ -1334,11 +1334,11 @@ bool TMap::restore(QString location)
                                                "this version of Mudlet may not gain enough information from\n"
                                                "it but it will try!" )
                                .arg( mVersion );
-            mpHost->postMessage( alertMsg );
+            postMessage( alertMsg );
             QString infoMsg = tr( "[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
                                               "There is so much data that it DOES NOT have that you could be\n"
                                               "be better off starting again..." );
-            mpHost->postMessage( infoMsg );
+            postMessage( infoMsg );
             canRestore = false;
             mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
         }
@@ -1347,7 +1347,7 @@ bool TMap::restore(QString location)
             QString infoMsg = tr( "[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait..." )
                                   .arg( mVersion )
                                   .arg( file.fileName() );
-            mpHost->postMessage( infoMsg );
+            postMessage( infoMsg );
             mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
         }
 
@@ -1418,11 +1418,19 @@ bool TMap::restore(QString location)
                 if( mVersion >= 17 ) {
                     ifs >> pA->mUserData;
                 }
-                mpRoomDB->restoreSingleArea( ifs, areaID, pA );
+                mpRoomDB->restoreSingleArea( areaID, pA );
             }
         }
 
-        if( mVersion >= 18 ) {
+        if( ! mpRoomDB->getAreaMap().keys().contains( -1 ) ) {
+            TArea * pDefaultA = new TArea( this, mpRoomDB );
+            mpRoomDB->restoreSingleArea( -1, pDefaultA );
+            QString defaultAreaInsertionMsg = tr( "[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
+                                                              "area) not found, adding reserved -1 Id." );
+            postMessage( defaultAreaInsertionMsg );
+        }
+
+            if( mVersion >= 18 ) {
             // In version 18 we changed to store the "userRoom" for each profile
             // so that when copied/shared between profiles they do not interfere
             // with each other's saved value
@@ -1480,7 +1488,7 @@ bool TMap::restore(QString location)
             ifs >> i;
             TRoom * pT = new TRoom(mpRoomDB);
             pT->restore( ifs, i, mVersion );
-            mpRoomDB->restoreSingleRoom( ifs, i, pT );
+            mpRoomDB->restoreSingleRoom( i, pT );
         }
 
         customEnvColors[257] = mpHost->mRed_2;
@@ -1503,7 +1511,7 @@ bool TMap::restore(QString location)
         QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, will now check\n"
                                         "some consistency details, please wait..." )
                             .arg( _time.nsecsElapsed() * 1.0e-9 );
-        mpHost->postMessage( okMsg );
+        postMessage( okMsg );
         if( canRestore ) {
             return true;
         }
@@ -1563,7 +1571,7 @@ const bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName
     if( ! file.open( QFile::ReadOnly ) ) {
         QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
                          .arg( file.fileName() );
-        mpHost->postMessage( errMsg );
+        postMessage( errMsg );
         return false;
     }
 
@@ -1577,7 +1585,7 @@ const bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName
     QString infoMsg = tr( "[ INFO ]  - Checking map file: \"%1\", format version:%2, please wait..." )
                       .arg( file.fileName() )
                       .arg( otherProfileVersion );
-    mpHost->postMessage( infoMsg );
+    postMessage( infoMsg );
 
     if( otherProfileVersion > mDefaultVersion ) {
         if( QByteArray( APP_BUILD ).isEmpty() ) {

@@ -38,6 +38,7 @@ TRoomDB::TRoomDB( TMap * pMap )
 : mpMap( pMap )
 , mpTempRoomDeletionSet( 0 )
 , mUnnamedAreaName( tr( "Unnamed Area" ) )
+, mDefaultAreaName( tr( "Default Area" ) )
 {
 }
 
@@ -955,6 +956,8 @@ void TRoomDB::clearMapDB()
         delete areaList.at(i);
     }
     assert( areas.size() == 0 );
+    // Must now reinsert areaId -1 name = "Default Area"
+    addArea( -1, mDefaultAreaName );
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
@@ -1102,14 +1105,22 @@ void TRoomDB::restoreAreaMap( QDataStream & ifs )
             mpMap->mpHost->postMessage( detailText );
         }
     }
+
+    if( ! areaNamesMap.contains( -1 ) ) {
+        areaNamesMap.insert( -1, mDefaultAreaName );
+        QString defaultAreaNameInsertionMsg = tr( "[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an\n"
+                                                              "area) not found, adding \"%1\" against the reserved -1 Id." )
+                                              .arg( mDefaultAreaName );
+        mpMap->mpHost->postMessage( defaultAreaNameInsertionMsg );
+    }
 }
 
-void TRoomDB::restoreSingleArea(QDataStream & ifs, int areaID, TArea * pA )
+void TRoomDB::restoreSingleArea( int areaID, TArea * pA )
 {
     areas[areaID] = pA;
 }
 
-void TRoomDB::restoreSingleRoom(QDataStream & ifs, int i, TRoom *pT)
+void TRoomDB::restoreSingleRoom( int i, TRoom * pT )
 {
-    addRoom(i, pT, true);
+    addRoom( i, pT, true);
 }
