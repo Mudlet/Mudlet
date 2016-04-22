@@ -7867,7 +7867,10 @@ int TLuaInterpreter::setDoor( lua_State * L )
                             .toUtf8().constData() );
             return 2;
         }
-        else if( ! pR->getOtherMap().values().contains( exitCmd ) ) {
+        else if( ! (   pR->getOtherMap().values().contains( exitCmd )
+                    || pR->getOtherMap().values().contains( QStringLiteral( "0%1" ).arg( exitCmd ) )
+                    || pR->getOtherMap().values().contains( QStringLiteral( "1%1" ).arg( exitCmd ) ) ) ) {
+
             // And NOT a special one either
             lua_pushnil( L );
             lua_pushstring( L, tr( "setDoor: bad argument #2 value (room with Id %1 does not have a special exit in direction \"%2\".)" )
