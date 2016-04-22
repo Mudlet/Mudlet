@@ -188,12 +188,25 @@ void TRoom::setExitWeight(const QString& cmd, int w )
 //
 // also: up, down, in, out or any unprefixed special exit command
 // all of which can be stored but aren't (yet?) showable on the 2D mapper
-void TRoom::setDoor(const QString& cmd, int doorStatus)
+const bool TRoom::setDoor( const QString & cmd, const int doorStatus )
 {
-    if( doorStatus > 0 && doorStatus <=3 )
-        doors[cmd] = doorStatus;
-    else if( doors.contains( cmd ) && doorStatus == 0 )
+    if( doorStatus > 0 && doorStatus <=3 ) {
+        if( doors.value( cmd, 0 ) != doorStatus ) {
+            // .value will return 0 if there ISN'T a door for this cmd
+            doors[cmd] = doorStatus;
+            return true; // As we have changed things
+        }
+        else {
+            return false; // Valid but ineffective
+        }
+    }
+    else if( doors.contains( cmd ) && ! doorStatus ) {
         doors.remove( cmd );
+        return true; // As we have changed things
+    }
+    else {
+        return false; // As we have not changed things
+    }
 }
 
 int TRoom::getDoor(const QString& cmd )
@@ -1263,8 +1276,11 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
         else {
             // If NOT we cannot have a door
             doors.remove( doorAndWeight );
-            doorsPool.remove( doorAndWeight );
         }
+        // We have handled whether we can have a door (if there IS a stub) or not (if not)
+        // so remove it from the check pool as we have handled it
+        doorsPool.remove( doorAndWeight );
+
         // Whether we do or not have a stub exit we cannot have a lock, custom
         // line or a weight - so remove them if they exist:
         exitLocks.removeAll( dirCode );
@@ -1298,6 +1314,12 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
                               .arg( auditKey );
         mpRoomDB->mpMap->postMessage( infoMsg );
         exitRoomId = -1;
+
+        if( ! exitStubs.contains( dirCode ) ) {
+            // Add the stub
+            exitStubs.append( dirCode );
+            exitStubsPool.remove( dirCode ); // Remove the stub in this direction from check pool as we have handled it
+        }
 
         exitLocks.removeAll( dirCode );
         exitWeights.remove( doorAndWeight );
