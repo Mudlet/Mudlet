@@ -8112,35 +8112,58 @@ int TLuaInterpreter::setDoor( lua_State * L )
     }
     else {
         exitCmd = QString::fromUtf8( lua_tostring( L, 2 ) );
-        if(    ( ( ! exitCmd.compare( QStringLiteral( "n" ) ) ) && ( pR->getExit( DIR_NORTH ) > 1 || pR->exitStubs.contains( DIR_NORTH ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "e" ) ) ) && pR->getExit( DIR_EAST ) > 1 || pR->exitStubs.contains( DIR_EAST ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "s" ) ) ) && pR->getExit( DIR_SOUTH ) > 1 || pR->exitStubs.contains( DIR_SOUTH ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "w" ) ) ) && pR->getExit( DIR_WEST ) > 1 || pR->exitStubs.contains( DIR_WEST ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "ne" ) ) ) && pR->getExit( DIR_NORTHEAST ) > 1 || pR->exitStubs.contains( DIR_NORTHEAST ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "se" ) ) ) && pR->getExit( DIR_SOUTHEAST ) > 1 || pR->exitStubs.contains( DIR_SOUTHEAST ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "sw" ) ) ) && pR->getExit( DIR_SOUTHWEST ) > 1 || pR->exitStubs.contains( DIR_SOUTHWEST ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "nw" ) ) ) && pR->getExit( DIR_NORTHWEST ) > 1 || pR->exitStubs.contains( DIR_NORTHWEST ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "up" ) ) ) && pR->getExit( DIR_UP ) > 1 || pR->exitStubs.contains( DIR_UP ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "down" ) ) ) && pR->getExit( DIR_DOWN ) > 1 || pR->exitStubs.contains( DIR_DOWN ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "in" ) ) ) && pR->getExit( DIR_IN ) > 1 || pR->exitStubs.contains( DIR_IN ) )
-            || ( ( ! exitCmd.compare( QStringLiteral( "out" ) ) ) && pR->getExit( DIR_OUT ) > 1 || pR->exitStubs.contains( DIR_OUT ) ) ) ) {
+        if(   exitCmd.compare(QStringLiteral(  "n"   ))
+           && exitCmd.compare(QStringLiteral(  "e"   ))
+           && exitCmd.compare(QStringLiteral(  "s"   ))
+           && exitCmd.compare(QStringLiteral(  "w"   ))
+           && exitCmd.compare(QStringLiteral(  "ne"  ))
+           && exitCmd.compare(QStringLiteral(  "se"  ))
+           && exitCmd.compare(QStringLiteral(  "sw"  ))
+           && exitCmd.compare(QStringLiteral(  "nw"  ))
+           && exitCmd.compare(QStringLiteral(  "up"  ))
+           && exitCmd.compare(QStringLiteral( "down" ))
+           && exitCmd.compare(QStringLiteral(  "in"  ))
+           && exitCmd.compare(QStringLiteral(  "out" )) ) {
 
-            lua_pushnil( L );
-            lua_pushstring( L, tr( "setDoor: bad argument #2 value (room with Id %1 does not have a normal exit or a stub exit in direction \"%2\".)" )
-                            .arg( roomId ).arg( exitCmd )
-                            .toUtf8().constData() );
-            return 2;
+            // One of the above WILL BE ZERO if the exitCmd is ONE of the above QStringLiterals
+            // So the above will be TRUE if NONE of above strings match - which
+            // means we must treat the exitCmd as a SPECIAL exit
+            if( ! (   pR->getOtherMap().values().contains( exitCmd )
+                                || pR->getOtherMap().values().contains( QStringLiteral( "0%1" ).arg( exitCmd ) )
+                                || pR->getOtherMap().values().contains( QStringLiteral( "1%1" ).arg( exitCmd ) ) ) ) {
+
+                        // And NOT a special one either
+                        lua_pushnil( L );
+                        lua_pushstring( L, tr( "setDoor: bad argument #2 value (room with Id %1 does not have a special exit in direction \"%2\".)" )
+                                        .arg( roomId ).arg( exitCmd )
+                                        .toUtf8().constData() );
+                        return 2;
+            }
+            // else IS a valid special exit - so fall out of if and continue
         }
-        else if( ! (   pR->getOtherMap().values().contains( exitCmd )
-                    || pR->getOtherMap().values().contains( QStringLiteral( "0%1" ).arg( exitCmd ) )
-                    || pR->getOtherMap().values().contains( QStringLiteral( "1%1" ).arg( exitCmd ) ) ) ) {
+        else {
+            // Is a normal exit so see if it is valid
+            if( ! (   ((! exitCmd.compare(QStringLiteral(  "n"   ))) && (pR->getExit(DIR_NORTH    )>0||pR->exitStubs.contains(DIR_NORTH    )))
+                   || ((! exitCmd.compare(QStringLiteral(  "e"   ))) && (pR->getExit(DIR_EAST     )>0||pR->exitStubs.contains(DIR_EAST     )))
+                   || ((! exitCmd.compare(QStringLiteral(  "s"   ))) && (pR->getExit(DIR_SOUTH    )>0||pR->exitStubs.contains(DIR_SOUTH    )))
+                   || ((! exitCmd.compare(QStringLiteral(  "w"   ))) && (pR->getExit(DIR_WEST     )>0||pR->exitStubs.contains(DIR_WEST     )))
+                   || ((! exitCmd.compare(QStringLiteral(  "ne"  ))) && (pR->getExit(DIR_NORTHEAST)>0||pR->exitStubs.contains(DIR_NORTHEAST)))
+                   || ((! exitCmd.compare(QStringLiteral(  "se"  ))) && (pR->getExit(DIR_SOUTHEAST)>0||pR->exitStubs.contains(DIR_SOUTHEAST)))
+                   || ((! exitCmd.compare(QStringLiteral(  "sw"  ))) && (pR->getExit(DIR_SOUTHWEST)>0||pR->exitStubs.contains(DIR_SOUTHWEST)))
+                   || ((! exitCmd.compare(QStringLiteral(  "nw"  ))) && (pR->getExit(DIR_NORTHWEST)>0||pR->exitStubs.contains(DIR_NORTHWEST)))
+                   || ((! exitCmd.compare(QStringLiteral(  "up"  ))) && (pR->getExit(DIR_UP       )>0||pR->exitStubs.contains(DIR_UP       )))
+                   || ((! exitCmd.compare(QStringLiteral( "down" ))) && (pR->getExit(DIR_DOWN     )>0||pR->exitStubs.contains(DIR_DOWN     )))
+                   || ((! exitCmd.compare(QStringLiteral(  "in"  ))) && (pR->getExit(DIR_IN       )>0||pR->exitStubs.contains(DIR_IN       )))
+                   || ((! exitCmd.compare(QStringLiteral(  "out" ))) && (pR->getExit(DIR_OUT      )>0||pR->exitStubs.contains(DIR_OUT      ))) ) ) {
 
-            // And NOT a special one either
-            lua_pushnil( L );
-            lua_pushstring( L, tr( "setDoor: bad argument #2 value (room with Id %1 does not have a special exit in direction \"%2\".)" )
-                            .arg( roomId ).arg( exitCmd )
-                            .toUtf8().constData() );
-            return 2;
+                // No there IS NOT a stub or real exit in the exitCmd direction
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "setDoor: bad argument #2 value (room with Id %1 does not have a normal exit or a stub exit in direction \"%2\".)" )
+                                .arg( roomId ).arg( exitCmd )
+                                .toUtf8().constData() );
+                return 2;
+            }
+            // else IS a valid stub or real normal exit -fall through to continue
         }
     }
 
@@ -8163,7 +8186,13 @@ int TLuaInterpreter::setDoor( lua_State * L )
         }
     }
 
-    lua_pushboolean( L, pR->setDoor( exitCmd, doorStatus ) );
+    bool result = pR->setDoor( exitCmd, doorStatus );
+    if( result ) {
+        if( pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap ) {
+            pHost->mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+    lua_pushboolean( L, result );
     return 1;
 }
 
