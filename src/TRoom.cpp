@@ -414,25 +414,13 @@ QHash<int, int> TRoom::getExits()
 
 void TRoom::setExitLock( int exit, bool state )
 {
-    if( ! state )
-    {
-        exitLocks.removeAll( exit );
-        return;
+    if( state ) {
+        if( ( ! exitLocks.contains( exit ) ) && ( exit >= DIR_NORTH && exit <= DIR_OUT ) ) {
+            exitLocks.push_back( exit );
+        }
     }
-    switch( exit )
-    {
-        case DIR_NORTH: exitLocks.push_back(DIR_NORTH); break;
-        case DIR_NORTHEAST: exitLocks.push_back(DIR_NORTHEAST); break;
-        case DIR_NORTHWEST: exitLocks.push_back(DIR_NORTHWEST); break;
-        case DIR_SOUTHEAST: exitLocks.push_back(DIR_SOUTHEAST); break;
-        case DIR_SOUTHWEST: exitLocks.push_back(DIR_SOUTHWEST); break;
-        case DIR_SOUTH: exitLocks.push_back(DIR_SOUTH); break;
-        case DIR_EAST: exitLocks.push_back(DIR_EAST); break;
-        case DIR_WEST: exitLocks.push_back(DIR_WEST); break;
-        case DIR_UP: exitLocks.push_back(DIR_UP); break;
-        case DIR_DOWN: exitLocks.push_back(DIR_DOWN); break;
-        case DIR_IN: exitLocks.push_back(DIR_IN); break;
-        case DIR_OUT: exitLocks.push_back(DIR_OUT); break;
+    else {
+        exitLocks.removeAll( exit );
     }
 }
 
@@ -1334,7 +1322,9 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
         customLinesArrowPool.remove( customLine );
     }
     else {
-        // either 0 or < -1 and not renumbered because the bad room Id DID NOT exist
+        // either 0 or < -1 and not renumbered because the bad room Id DID NOT
+        // exist, there could be a "double fault" in that there is also a stub
+        // exit, but that will be masked as we turn the exit into a stub anyhow.
         QString auditKey = QStringLiteral( "audit.made_stub_of_invalid_exit.%1" ).arg( dirCode );
         userData.insert( auditKey, QString::number( exitRoomId ) );
         QString infoMsg = tr( "[ INFO ]  - In room with Id: %1 exit \"%2\" that was to room with an invalid\n"
@@ -1346,18 +1336,40 @@ void TRoom::auditExit( int & exitRoomId,                    // Reference to wher
                               .arg( displayName )
                               .arg( exitRoomId )
                               .arg( auditKey );
-        mpRoomDB->mpMap->postMessage( infoMsg );
         exitRoomId = -1;
 
         if( ! exitStubs.contains( dirCode ) ) {
             // Add the stub
             exitStubs.append( dirCode );
-            exitStubsPool.remove( dirCode ); // Remove the stub in this direction from check pool as we have handled it
+        }
+        exitStubsPool.remove( dirCode ); // Remove the stub in this direction from check pool as we have handled it
+
+        if( exitLocks.contains( dirCode ) ) {
+            QString auditKeyLocked = QStringLiteral( "audit.invalid_exit.%1.isLocked" ).arg( dirCode );
+            userData.insert( auditKeyLocked, QStringLiteral( "true" ) );
+            infoMsg.append( tr( "\nIt was locked, this is recorded as user data with key:\n"
+                                "\"%1\"." )
+                            .arg( auditKeyLocked ) );
+            exitLocks.removeAll( dirCode );
         }
 
-        exitLocks.removeAll( dirCode );
-        exitWeights.remove( doorAndWeight );
-        customLines.remove( customLine );
+        if( exitWeights.contains( doorAndWeight ) ) {
+            QString auditKeyWeight = QStringLiteral( "audit.invalid_exit.%1.weight" ).arg( dirCode );
+            userData.insert( auditKeyWeight, QString::number( exitWeights.value( doorAndWeight ) ) );
+            infoMsg.append( tr( "\nIt had a weight, this is recorded as user data with key:\n"
+                                "\"%1\"." )
+                            .arg( auditKeyWeight ) );
+            exitWeights.remove( doorAndWeight );
+        }
+
+        mpRoomDB->mpMap->postMessage( infoMsg );
+
+        if( customLines.contains( customLine ) ) {
+            QString warnMsg = tr( "[ WARN ]  - There was a custom exit line associated with the invalid exit but\n"
+                                              "it has not been possible to salvage this, it has been lost!" );
+            mpRoomDB->mpMap->postMessage( warnMsg );
+            customLines.remove( customLine );
+        }
         customLinesColor.remove( customLine );
         customLinesStyle.remove( customLine );
         customLinesArrow.remove( customLine );

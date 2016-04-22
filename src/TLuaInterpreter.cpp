@@ -320,7 +320,7 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
             lua_pushstring( L, tr("raiseEvent: bad argument #%1 type (expected string, number, boolean, or nil, got %2)").arg(QString::number(i), luaL_typename(L,i)).toUtf8().constData() );
             lua_error( L );
             return 1;
-		}
+        }
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->raiseEvent( pE );
@@ -8131,7 +8131,10 @@ int TLuaInterpreter::setDoor( lua_State * L )
                             .toUtf8().constData() );
             return 2;
         }
-        else if( ! pR->getOtherMap().values().contains( exitCmd ) ) {
+        else if( ! (   pR->getOtherMap().values().contains( exitCmd )
+                    || pR->getOtherMap().values().contains( QStringLiteral( "0%1" ).arg( exitCmd ) )
+                    || pR->getOtherMap().values().contains( QStringLiteral( "1%1" ).arg( exitCmd ) ) ) ) {
+
             // And NOT a special one either
             lua_pushnil( L );
             lua_pushstring( L, tr( "setDoor: bad argument #2 value (room with Id %1 does not have a special exit in direction \"%2\".)" )
