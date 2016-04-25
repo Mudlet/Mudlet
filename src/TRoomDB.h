@@ -79,6 +79,7 @@ public:
     void restoreAreaMap( QDataStream & );
     void restoreSingleArea( int, TArea * );
     void restoreSingleRoom( int, TRoom * );
+    const QString   getDefaultAreaName() { return mDefaultAreaName; }
 
 
     QMap<QString,int> hashTable;

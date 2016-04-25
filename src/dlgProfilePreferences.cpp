@@ -325,6 +325,15 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
                 comboBox_mapFileSaveFormatVersion->setCurrentIndex( _indexForCurrentSaveFormat );
             }
         }
+        if( pHost->mpMap->mpMapper ) {
+            checkBox_showDefaultArea->show();
+            checkBox_showDefaultArea->setText( tr( "If checked (normal case) the \"%1\" IS shown in the map Area selection control." )
+                                               .arg( pHost->mpMap->mpRoomDB->getDefaultAreaName() ) );
+            checkBox_showDefaultArea->setChecked( pHost->mpMap->mpMapper->getDefaultAreaShown() );
+        }
+        else {
+            checkBox_showDefaultArea->hide();
+        }
     }
 }
 
@@ -1125,9 +1134,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEnableGMCP = mEnableGMCP->isChecked();
     pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
-    if( pHost->mpMap )
-        if( pHost->mpMap->mpMapper )
-            pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+    if( pHost->mpMap && pHost->mpMap->mpMapper ) {
+        pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+        pHost->mpMap->mpMapper->setDefaultAreaShown( checkBox_showDefaultArea->isChecked() );
+    }
     pHost->mBorderTopHeight = topBorderHeight->value();
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
