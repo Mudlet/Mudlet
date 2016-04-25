@@ -270,8 +270,6 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
         pushButton_chooseProfiles->setMenu( pMenu );
         connect(pMenu, SIGNAL(triggered(QAction *)), this, SLOT(slot_chooseProfilesChanged(QAction *)));
-        connect(this, SIGNAL(signal_otherProfilesToReloadMaps(QList<QString>)),
-                mudlet::self(), SLOT(slot_requestProfilesToReloadMaps(QList<QString>)));
 
         connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
 
@@ -1094,7 +1092,7 @@ void dlgProfilePreferences::copyMap()
     }
 
     // Finally, signal the other profiles to reload their maps:
-    emit signal_otherProfilesToReloadMaps( toProfilesRoomIdMap.keys() );
+    mudlet::self()->requestProfilesToReloadMaps( toProfilesRoomIdMap.keys() );
     // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
     // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
