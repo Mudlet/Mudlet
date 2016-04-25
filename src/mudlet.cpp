@@ -2440,7 +2440,8 @@ void mudlet::slot_statusBarMessageChanged( QString text )
     }
 }
 
-void mudlet::slot_requestProfilesToReloadMaps( QList<QString> affectedProfiles )
+// Originally a slot_ but it does not actually need to be - Slysven
+void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
 {
     emit signal_profileMapReloadRequested( affectedProfiles );
 }
