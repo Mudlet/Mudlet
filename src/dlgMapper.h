@@ -44,6 +44,9 @@ public:
         dlgMapper( QWidget *, Host *, TMap * );
         void downloadMap();
         void updateAreaComboBox();
+    void                setDefaultAreaShown( const bool );
+    const bool          getDefaultAreaShown() { return mShowDefaultArea; }
+
         TMap * mpMap;
         Host * mpHost;
         QNetworkAccessManager * mpDownloader;
@@ -65,6 +68,9 @@ public slots:
         void choseRoom( QListWidgetItem * );
         void slot_roomSize(int d);
         void slot_lineSize(int d);
+
+private:
+    bool                mShowDefaultArea;
 };
 
 #endif // MUDLET_DLGMAPPER_H

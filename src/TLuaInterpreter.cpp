@@ -11313,6 +11313,51 @@ int TLuaInterpreter::reloadModule( lua_State * L)
     return 0;
 }
 
+// Once a mapper has been created it will, by default, include the "Default
+// Area" associated with the reserved area Id -1 in the list of Areas shown in
+// the area selection widget.  This function will immediately hide that entry
+// if given a true argument and restore it if set to false.  The setting is NOT
+// saved and this function was created to address a specific need for that area
+// to not be immediately shown to users for one package writer who needed to
+// hide rooms until they have been "explored".  This setting is ALSO present on
+// the last "Special Options" tab of the "Profile Preferences" - although it is
+// hidden until there IS a mapper to apply the setting to.
+
+// Returns true on successfully setting the desired value or false if there is
+// (not yet) a map display to apply it to.  Also throws an Error or returned a
+// nil value - both with an accompied error string - if there are problems.
+int TLuaInterpreter::setDefaultAreaVisible( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setDefaultAreaVisible: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setDefaultAreaVisible: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    if( ! lua_isboolean( L, 1 ) ) {
+        lua_pushstring( L, tr( "setDefaultAreaVisible: bad argument #1 type (isToShowDefaultArea as boolean expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
+        lua_error( L );
+    }
+    else {
+        if( pHost->mpMap->mpMapper ) {
+            pHost->mpMap->mpMapper->setDefaultAreaShown( lua_toboolean( L, 1 ) );
+            lua_pushboolean( L, true );
+        }
+        else {
+            lua_pushboolean( L, false );
+        }
+    }
+    return 1;
+}
+
+
 int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
 {
     string event;
@@ -12740,6 +12785,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearAreaUserDataItem", TLuaInterpreter::clearAreaUserDataItem );
     lua_register( pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData );
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
+    lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
 
 
     luaopen_yajl(pGlobalLua);

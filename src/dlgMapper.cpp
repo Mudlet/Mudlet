@@ -43,6 +43,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 : QWidget( parent )
 , mpMap( pM )
 , mpHost( pH )
+, mShowDefaultArea( true )
 {
     setupUi(this);
 
@@ -159,6 +160,10 @@ void dlgMapper::updateAreaComboBox()
     QMap <QString, QString> _areaNames;
     while( itAreaNamesA.hasNext() ) {
         itAreaNamesA.next();
+        if( itAreaNamesA.key() == -1 && ! mShowDefaultArea ) {
+            continue; // Skip the default area from the listing if so directed
+        }
+
         uint deduplicate = 0;
         QString _name;
         do {
@@ -373,4 +378,12 @@ void dlgMapper::slot_info()
     mp2dMap->mShowInfo = showInfo->isChecked();
     mp2dMap->mpHost->mShowInfo = mp2dMap->mShowInfo;
     mp2dMap->update();
+}
+
+void dlgMapper::setDefaultAreaShown( bool state )
+{
+    if( mShowDefaultArea != state ) {
+        mShowDefaultArea = state;
+        updateAreaComboBox();
+    }
 }
