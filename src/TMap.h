@@ -107,6 +107,7 @@ public:
     void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
     void postMessage( const QString text );
+    void set3DViewCenter( const int, const int, const int, const int ); // Used by the 2D mapper to send view center coordinates to 3D one
 
 
     TRoomDB * mpRoomDB;

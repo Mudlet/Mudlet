@@ -1465,10 +1465,6 @@ void dlgProfilePreferences::loadMap()
         label_mapFileActionResult->setText( tr( "Could not load map from %1." ).arg( fileName ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
-    if( mpHost->mpMap && mpHost->mpMap->mpMapper )
-    {
-            mpHost->mpMap->mpMapper->updateAreaComboBox();
-    }
 }
 
 void dlgProfilePreferences::saveMap()

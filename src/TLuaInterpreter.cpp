@@ -10176,8 +10176,11 @@ int TLuaInterpreter::setGridMode( lua_State * L )
         {
             if( pHost->mpMap->mpMapper->mp2dMap )
             {
-                pHost->mpMap->mpMapper->mp2dMap->init();
-                cout << "NEW GRID MAP: init" << endl;
+// Not needed IMHO - Slysven
+//                pHost->mpMap->mpMapper->mp2dMap->init();
+//                cout << "NEW GRID MAP: init" << endl;
+// But this is:
+                pHost->mpMap->mpMapper->update();
             }
         }
     }

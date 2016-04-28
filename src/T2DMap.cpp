@@ -360,21 +360,47 @@ void T2DMap::shiftZdown()
 }
 
 
-void T2DMap::switchArea(QString name)
+void T2DMap::slot_switchArea(QString name)
 {
-    if( !mpMap ) return;
+    Host * pHost = mpHost;
+    if( !pHost || !mpMap )
+    {
+        return;
+    }
+
+    int playerRoomId = mpMap->mRoomIdHash.value( pHost->getName() );
+    TRoom * pPlayerRoom = mpMap->mpRoomDB->getRoom( playerRoomId );
+    int playerAreaId = -2; // Cannot be valid (but -1 can be)!
+    if( pPlayerRoom ) {
+        playerAreaId = pPlayerRoom->getArea();
+    }
+
     QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
     while( it.hasNext() )
     {
         it.next();
         int areaID = it.key();
+
         QString _n = it.value();
         TArea * pA = mpMap->mpRoomDB->getArea( areaID );
         if( name == _n && pA )
         {
+
             mAID = areaID;
             mShiftMode = true;
             pA->calcSpan();
+
+            if( playerAreaId != -1 && areaID == playerAreaId ) {
+                // We are switching back to the area that has the player in it
+                // recenter view on that room!
+                mOx = pPlayerRoom->x;
+                mOy = -pPlayerRoom->y;  // Map y coordinates are reversed on 2D map!
+                mOz = pPlayerRoom->z;
+                repaint();
+                mpMap->set3DViewCenter( mAID, mOx, -mOy, mOz ); // Pass the coordinates to the TMap instance to pass to the 3D mapper
+                return; // escape early
+            }
+
             bool isAValidRoomFound = false;
             if( ! pA->ebenen.contains(mOz) )
             {
@@ -383,22 +409,99 @@ void T2DMap::switchArea(QString name)
                 // mathmatical midpoint of all the rooms on the same
                 // z-coordinate.
                 QSetIterator<int> itRoom( pA->getAreaRooms() );
-                while( itRoom.hasNext() && !isAValidRoomFound )
+                QMap<int, int> roomsCountLevelMap; // key is z-coordinate, value is count of rooms on that level
+                while( itRoom.hasNext() )
                 {
                     int checkRoomId = itRoom.next();
                     TRoom * pR = mpMap->mpRoomDB->getRoom( checkRoomId );
                     if( pR )
                     {
-                        mOz = pR->z;
-                        int x_min = pA->xminEbene[mOz];
-                        int y_min = pA->yminEbene[mOz];
-                        int x_max = pA->xmaxEbene[mOz];
-                        int y_max = pA->ymaxEbene[mOz];
-                        mOx = x_min + ( abs( x_max - x_min ) / 2 );
-                        mOy = ( y_min + ( abs( y_max - y_min ) / 2 ) );
                         isAValidRoomFound = true;
+                        if( roomsCountLevelMap.contains( pR->z ) )
+                        {
+                            ++roomsCountLevelMap[ pR->z ];
+                        }
+                        else
+                        {
+                            roomsCountLevelMap[ pR->z ] = 1;
+                        }
                     }
                 }
+
+                if( isAValidRoomFound )
+                {
+                    QMapIterator<int, int> itRoomsCount( roomsCountLevelMap );
+                    itRoomsCount.toBack(); // Start at highest value and work down
+                    itRoomsCount.previous(); // This will be Okay as we KNOW there is at least one entry
+                    int maxRoomCountOnLevel = 0;
+                    int minLevelWithMaxRoomCount = itRoomsCount.key(); // Initalisation value, will get overwritten
+                    itRoomsCount.next(); // Return to the back so the previous() in the do loop works correctly
+                    do
+                    {
+                        itRoomsCount.previous();
+                        if( maxRoomCountOnLevel < itRoomsCount.value() )
+                        {
+                            maxRoomCountOnLevel = itRoomsCount.value();
+                            minLevelWithMaxRoomCount = itRoomsCount.key();
+                        }
+                    } while( itRoomsCount.hasPrevious() );
+
+                    // We now have lowest level with the highest number of rooms
+                    // Now find the geometry center of the rooms on THAT level
+                    // In a similar manner to the getCenterSelection() method
+                    itRoom.toFront();
+                    float mean_x = 0.0;
+                    float mean_y = 0.0;
+                    uint processedRoomCount = 0;
+                    QSet<TRoom *> pSRoom; // Hold on to relevent rooms for
+                                          // following step
+                    while( itRoom.hasNext() )
+                    {
+                        TRoom * pR = mpMap->mpRoomDB->getRoom( itRoom.next() );
+                        if( ! pR || pR->z != minLevelWithMaxRoomCount )
+                        {
+                            continue;
+                        }
+
+                        pSRoom.insert( pR );
+                        mean_x += (static_cast<float>(pR->x - mean_x)) / ++processedRoomCount;
+                        mean_y += (static_cast<float>(pR->y - mean_y)) / processedRoomCount;
+                    }
+
+                    // We now have the position that is the "centre" of the
+                    // rooms on this level - just need to find the room nearest
+                    // to that:
+                    QSetIterator<TRoom *> itpRoom( pSRoom );
+                    float closestSquareDistance = -1.0;
+                    TRoom * pClosestRoom = 0;
+                    while( itpRoom.hasNext() )
+                    {
+                        TRoom * pR = itpRoom.next();
+                        QVector2D meanToRoom( static_cast<float>(pR->x)-mean_x, static_cast<float>(pR->y)-mean_y);
+                        if( closestSquareDistance < -0.5 )
+                        {
+                            // Test for first time around loop - for initalisation
+                            // Don't use an equality to zero test, we are using floats so
+                            // need to allow for a little bit of fuzzzyness!
+                            closestSquareDistance = meanToRoom.lengthSquared();
+                            pClosestRoom = pR;
+                        }
+                        else
+                        {
+                            float currentRoomSquareDistance = meanToRoom.lengthSquared();
+                            if( closestSquareDistance > currentRoomSquareDistance  )
+                            {
+                                closestSquareDistance = currentRoomSquareDistance;
+                                pClosestRoom = pR;
+                            }
+                        }
+                    }
+
+                    mOx = pClosestRoom->x;
+                    mOy = - pClosestRoom->y; // Map y coordinates are reversed on 2D map!
+                    mOz = pClosestRoom->z;
+                }
+
                 if( ! isAValidRoomFound )
                 {
                     //no rooms, go to 0,0,0
@@ -409,15 +512,56 @@ void T2DMap::switchArea(QString name)
             }
             else
             {
-                int x_min = pA->xminEbene[mOz];
-                int y_min = pA->yminEbene[mOz];
-                int x_max = pA->xmaxEbene[mOz];
-                int y_max = pA->ymaxEbene[mOz];
-                mOx = x_min + ( abs( x_max - x_min ) / 2 );
-                mOy = ( y_min + ( abs( y_max - y_min ) / 2 ) );
-                mOz = 0;
+                // Else the selected area DOES have rooms on the same z-coordinate
+                // Now find the geometry center of the rooms on the given level
+                // In a similar manner to the getCenterSelection() method
+                float mean_x = 0.0;
+                float mean_y = 0.0;
+                uint processedRoomCount = 0;
+                QSet<TRoom *> pSRoom; // Hold on to relevent rooms for
+                                      // following step
+                QSetIterator<int> itRoom( pA->getAreaRooms() );
+                while( itRoom.hasNext() ) {
+                    TRoom * pR = mpMap->mpRoomDB->getRoom( itRoom.next() );
+                    if( ! pR || pR->z != mOz ) {
+                        continue;
+                    }
+
+                    pSRoom.insert( pR );
+                    mean_x += (static_cast<float>(pR->x - mean_x)) / ++processedRoomCount;
+                    mean_y += (static_cast<float>(pR->y - mean_y)) / processedRoomCount;
+                }
+
+                // We now have the position that is the "centre" of the
+                // rooms on this level - just need to find the room nearest
+                // to that:
+                QSetIterator<TRoom *> itpRoom( pSRoom );
+                float closestSquareDistance = -1.0;
+                TRoom * pClosestRoom = 0;
+                while( itpRoom.hasNext() ) {
+                    TRoom * pR = itpRoom.next();
+                    QVector2D meanToRoom( static_cast<float>(pR->x)-mean_x, static_cast<float>(pR->y)-mean_y);
+                    if( closestSquareDistance < -0.5 ) {
+                        // Test for first time around loop - for initalisation
+                        // Don't use an equality to zero test, we are using floats so
+                        // need to allow for a little bit of fuzzzyness!
+                        closestSquareDistance = meanToRoom.lengthSquared();
+                        pClosestRoom = pR;
+                    }
+                    else {
+                        float currentRoomSquareDistance = meanToRoom.lengthSquared();
+                        if( closestSquareDistance > currentRoomSquareDistance  ) {
+                            closestSquareDistance = currentRoomSquareDistance;
+                            pClosestRoom = pR;
+                        }
+                    }
+                }
+
+                mOx = pClosestRoom->x;
+                mOy = - pClosestRoom->y;  // Map y coordinates are reversed on 2D map!
             }
             repaint();
+            mpMap->set3DViewCenter( mAID, mOx, -mOy, mOz ); // Pass the coordinates to the TMap instance to pass to the 3D mapper
             return;
         }
     }
@@ -486,13 +630,14 @@ void T2DMap::paintEvent( QPaintEvent * e )
     }
     TArea * pAID;
     TRoom * pRID;
+    int playerArea = pPlayerRoom->getArea();
     if( (! __Pick && ! mShiftMode ) || mpMap->mNewMove )
     {
 
         mShiftMode = true;
         mpMap->mNewMove = false; // das ist nur hier von Interesse, weil es nur hier einen map editor gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich mit mNewRoom ein map update bei centerview()
 
-        if( !mpMap->mpRoomDB->getArea( pPlayerRoom->getArea() ) )
+        if( !mpMap->mpRoomDB->getArea( playerArea ) )
         {
             return;
         }
@@ -1861,6 +2006,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
         }
 
+        p.save(); // Save painter state
+        QFont f = p.font();
         TRoom * _prid = mpMap->mpRoomDB->getRoom( __rid );
         if( _prid )
         {
@@ -1882,16 +2029,44 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
 
             uint selectionSize = mMultiSelectionSet.size();
+            // Italicise the text if the current display area {mAID} is not the
+            // same as the displayed text information - which happens when NO
+            // room is selected AND the current area is NOT the one the player
+            // is in (to emphasis that the displayed data is {mostly} not about
+            // the CURRENTLY VISIBLE area)... make it bold if the player room IS
+            // in the displayed map
+
+            // If one or more rooms are selected - make the text slightly orange.
             switch( selectionSize )
             {
             case 0:
                 infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                if( playerArea != mAID ) {
+                    f.setItalic( true );
+                }
+                else {
+                    f.setBold( true );
+                }
                 break;
             case 1:
                 infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                f.setBold( true );
+                if( infoColor.lightness() > 127 ) {
+                    infoColor = QColor( 255, 223, 191 ); // Slightly orange white
+                }
+                else {
+                    infoColor = QColor( 96, 48, 0 ); // Dark, slightly orange grey
+                }
                 break;
             default:
                 infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)).arg(QString::number(selectionSize)) );
+                f.setBold( true );
+                if( infoColor.lightness() > 127 ) {
+                    infoColor = QColor( 255, 223, 191 ); // Slightly orange white
+                }
+                else {
+                    infoColor = QColor( 96, 48, 0 ); // Dark, slightly orange grey
+                }
                 break;
             }
         }
@@ -1918,7 +2093,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
         p.fillRect( mMapInfoRect, QColor(150,150,150,80) ); // Restore Grey translucent background, was useful for debugging!
         p.setPen( infoColor );
+        p.setFont( f );
         p.drawText( mMapInfoRect.left()+10, mMapInfoRect.top()+10, mMapInfoRect.width()-20, mMapInfoRect.height()-20, Qt::TextWordWrap|Qt::AlignLeft|Qt::AlignTop, infoText );
+        p.restore(); //forget about font size changing and bolding/italicisation
     }
 
     if( mHelpMsg.size() > 0 )
