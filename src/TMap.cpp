@@ -1903,3 +1903,9 @@ void TMap::postMessage( const QString text )
         }
     }
 }
+
+// Used by the 2D mapper to send view center coordinates to 3D one
+void TMap::set3DViewCenter( const int areaId, const int xPos, const int yPos, const int zPos )
+{
+    mpM->setViewCenter( areaId, xPos, yPos, zPos );
+}

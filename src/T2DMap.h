@@ -71,6 +71,7 @@ public:
     void     setRoomSize( double );
     void     setExitSize( double );
     void     createLabel( QRectF labelRect );
+
     TMap *   mpMap;
     QPointer<Host> mpHost;
     int      xzoom;
@@ -156,7 +157,7 @@ public slots:
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void switchArea(QString);
+    void slot_switchArea(QString);
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();

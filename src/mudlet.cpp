@@ -1874,13 +1874,16 @@ void mudlet::slot_mapper()
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
 
-    if( pHost->mpMap->mpRoomDB->getRoomIDList().size() < 1 )
+    if( pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
+        qDebug() << "mudlet::slot_mapper() - restore map case 4.";
         if( pHost->mpMap->restore( QString() ) ) {
             pHost->mpMap->audit();
+            pHost->mpMap->mpMapper->mp2dMap->init();
+            pHost->mpMap->mpMapper->updateAreaComboBox();
+            pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            pHost->mpMap->mpMapper->show();
         }
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->show();
     }
     else
     {

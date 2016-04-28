@@ -103,8 +103,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(shiftUp, SIGNAL(pressed()), glWidget, SLOT(shiftUp()));
     connect(shiftDown, SIGNAL(pressed()), glWidget, SLOT(shiftDown()));
     connect(showInfo, SIGNAL(clicked()), glWidget, SLOT(showInfo()));
-    connect(showArea, SIGNAL(activated(QString)), mp2dMap, SLOT(switchArea(QString)));
-    connect(showArea, SIGNAL(activated(QString)), glWidget, SLOT(showArea(QString)));
+    connect(showArea, SIGNAL(activated(QString)), mp2dMap, SLOT(slot_switchArea(QString)));
     connect(defaultView, SIGNAL(pressed()), glWidget, SLOT(defaultView()));
     connect(dim2,SIGNAL(pressed()), this, SLOT(show2dView()));
     connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
@@ -149,8 +148,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
-    qDebug()<<"dlgMapper constructor -> call T2DMap::init()";
-    mp2dMap->init();
+// Not needed as already explicitly called, IMHO - Slysven
+//    qDebug()<<"dlgMapper constructor -> call T2DMap::init()";
+//    mp2dMap->init();
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -271,9 +271,10 @@ void dlgMapper::replyFinished( QNetworkReply * reply )
     mpHost->mpMap->audit();
     glWidget->updateGL();
 
-    if( mpHost->mpMap )
-        if( mpHost->mpMap->mpMapper )
-            mpHost->mpMap->mpMapper->updateAreaComboBox();
+    updateAreaComboBox();
+    resetAreaComboBoxToPlayerRoomArea();
+    // Could possibly fail if the player room was not ALREADY set (XML maps
+    // do not have such a detail - at least not those from IRE MUDs)...!
 
     TEvent mapDownloadEvent;
     mapDownloadEvent.mArgumentList.append( "sysMapDownloadEvent" );
@@ -385,5 +386,34 @@ void dlgMapper::setDefaultAreaShown( bool state )
     if( mShowDefaultArea != state ) {
         mShowDefaultArea = state;
         updateAreaComboBox();
+    }
+}
+
+void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    TRoom * pR = mpMap->mpRoomDB->getRoom( mpMap->mRoomIdHash.value( pHost->getName() ) );
+    if( pR ) {
+        int playerRoomArea = pR->getArea();
+        TArea * pA = mpMap->mpRoomDB->getArea( playerRoomArea );
+        if( pA ) {
+            QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value( playerRoomArea );
+            if( ! areaName.isEmpty() ) {
+                showArea->setCurrentText( areaName );
+            }
+            else {
+                qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
+            }
+        }
+        else {
+            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area valid.";
+        }
+    }
+    else {
+        qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";
     }
 }

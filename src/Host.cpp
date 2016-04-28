@@ -170,12 +170,14 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
     mErrorLogFile.setFileName( logFileName );
     mErrorLogFile.open( QIODevice::Append );
     mErrorLogStream.setDevice( &mErrorLogFile );
-    // Do not try to load a map for the default_host dummy profile:
-    if( mHostName.compare( QStringLiteral( "default_host" ) ) ) {
-        if( mpMap->restore( QString() ) ) {
-            mpMap->audit();
-        }
-    }
+// Do not try to load ANY map here...
+// // Do not try to load a map for the default_host dummy profile:
+//    if( mHostName.compare( QStringLiteral( "default_host" ) ) ) {
+//        qDebug() << "Host::Host() - restore map case 1.";
+//        if( mpMap->restore( QString() ) ) {
+//            mpMap->audit();
+//        }
+//    }
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');

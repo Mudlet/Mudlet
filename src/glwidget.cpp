@@ -325,30 +325,16 @@ void GLWidget::initializeGL()
     is2DView = false;
 }
 
-void GLWidget::showArea(QString name)
+// Replaces setArea() - now fed the coordinates of the room choosen as the
+// view center in the area given from the set operation in the 2D Map
+void GLWidget::setViewCenter( int areaId, int xPos, int yPos, int zPos )
 {
-    if( !mpMap ) {
-        return;
-    }
-    QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
-    while( it.hasNext() )
-    {
-        it.next();
-        int areaID = it.key();
-        QString _n = it.value();
-        if( name == _n )
-        {
-            mAID = areaID;
-            mRID = mpMap->mRoomIdHash.value( mpMap->mpHost->getName() );
-            mShiftMode = true;
-            mOx = 0;
-            mOy = 0;
-            mOz = 0;
-            updateGL();
-            break;
-        }
-    }
-
+    mAID = areaId;
+    mShiftMode = true;
+    mOx = xPos;
+    mOy = yPos;
+    mOz = zPos;
+    updateGL();
 }
 
 void GLWidget::paintGL()

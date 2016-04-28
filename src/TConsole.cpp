@@ -1810,14 +1810,19 @@ bool TConsole::loadMap(const QString& location)
 
     mpHost->mpMap->mapClear();
 
+    qDebug() << "TConsole::loadMap() - restore map case 2.";
     if( mpHost->mpMap->restore( location ) ) {
         mpHost->mpMap->audit();
         mpHost->mpMap->mpMapper->mp2dMap->init();
-        mpHost->mpMap->mpMapper->show();
         mpHost->mpMap->mpMapper->updateAreaComboBox();
+        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        mpHost->mpMap->mpMapper->show();
         return true;
     }
     else {
+        mpHost->mpMap->mpMapper->mp2dMap->init();
+        mpHost->mpMap->mpMapper->updateAreaComboBox();
+        mpHost->mpMap->mpMapper->show();
         return false;
     }
 }
@@ -2471,8 +2476,12 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         mpMapper->mpHost = mpHost;
+        qDebug() << "TConsole::createMapper() - restore map case 3.";
         if( mpHost->mpMap->restore( QString() ) ) {
             mpHost->mpMap->audit();
+            mpMapper->mp2dMap->init();
+            mpMapper->updateAreaComboBox();
+            mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
 
         TEvent mapOpenEvent;
@@ -2482,7 +2491,6 @@ void TConsole::createMapper( int x, int y, int width, int height )
     }
     mpMapper->resize( width, height );
     mpMapper->move( x, y );
-    //mpMapper->mp2dMap->init();
     mpMapper->mp2dMap->gridMapSizeChange = true; //mapper size has changed, but only init grid map when necessary
     mpMapper->show();
 }
