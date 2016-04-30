@@ -155,6 +155,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 void dlgMapper::updateAreaComboBox()
 {
+    QString oldValue = showArea->currentText();  // Remember where we were
     QMapIterator<int, QString> itAreaNamesA( mpMap->mpRoomDB->getAreaNamesMap() );
     //insert sort them alphabetically (case INsensitive)
     QMap <QString, QString> _areaNames;
@@ -180,6 +181,7 @@ void dlgMapper::updateAreaComboBox()
         itAreaNamesB.next();
         showArea->addItem( itAreaNamesB.value() );
     }
+    showArea->setCurrentText( oldValue ); // Try and reset to previous value
 }
 
 void dlgMapper::slot_toggleShowRoomIDs(int s)
