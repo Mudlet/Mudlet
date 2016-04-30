@@ -25,6 +25,7 @@
 #include "T2DMap.h"
 
 
+#include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "Host.h"
 #include "TArea.h"
@@ -390,7 +391,7 @@ void T2DMap::slot_switchArea(QString name)
             mShiftMode = true;
             pA->calcSpan();
 
-            if( playerAreaId != -1 && areaID == playerAreaId ) {
+            if( areaID == playerAreaId ) {
                 // We are switching back to the area that has the player in it
                 // recenter view on that room!
                 mOx = pPlayerRoom->x;
@@ -2097,6 +2098,36 @@ void T2DMap::paintEvent( QPaintEvent * e )
         p.drawText( mMapInfoRect.left()+10, mMapInfoRect.top()+10, mMapInfoRect.width()-20, mMapInfoRect.height()-20, Qt::TextWordWrap|Qt::AlignLeft|Qt::AlignTop, infoText );
         p.restore(); //forget about font size changing and bolding/italicisation
     }
+
+    static bool isAreaWidgetValid = true; // Remember between uses
+    QFont _f =  mpMap->mpMapper->showArea->font();
+    if( isAreaWidgetValid ) {
+        if(     mAID == -1                                       // * the map being shown is the "default" area
+                && ! mpMap->mpMapper->getDefaultAreaShown() ) {  // * the area widget is not showing the "default" area
+
+            isAreaWidgetValid = false;                      // So the widget CANNOT indicate the correct area
+            // Set the area widget to indicate the area widget is NOT
+            // showing valid text - so make it italic and crossed out
+            _f.setItalic( true );
+            _f.setUnderline( true );
+            _f.setStrikeOut( true );
+            _f.setOverline( true );
+        }
+    }
+    else {
+        if( ! ( mAID == -1
+                && ! mpMap->mpMapper->getDefaultAreaShown() ) ) {
+
+            isAreaWidgetValid = true;                      // So the widget CAN now indicate the correct area
+            // Reset to normal
+            _f.setItalic( false );
+            _f.setUnderline( false );
+            _f.setStrikeOut( false );
+            _f.setOverline( false );
+        }
+    }
+
+    mpMap->mpMapper->showArea->setFont( _f );
 
     if( mHelpMsg.size() > 0 )
     {

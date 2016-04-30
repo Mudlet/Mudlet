@@ -1750,7 +1750,20 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
     if( pHost->mpMap && pHost->mpMap->mpMapper ) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+        bool isAreaWidgetInNeedOfResetting = false;
+        if(  ( ! pHost->mpMap->mpMapper->getDefaultAreaShown() )
+          && ( checkBox_showDefaultArea->isChecked() )
+          && ( pHost->mpMap->mpMapper->mp2dMap->mAID == -1 ) ) {
+            isAreaWidgetInNeedOfResetting = true;
+        }
+
         pHost->mpMap->mpMapper->setDefaultAreaShown( checkBox_showDefaultArea->isChecked() );
+        if( isAreaWidgetInNeedOfResetting ) {
+            // Corner case fixup:
+            pHost->mpMap->mpMapper->showArea->setCurrentText( pHost->mpMap->mpRoomDB->getDefaultAreaName() );
+        }
+        pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+        pHost->mpMap->mpMapper->update();
     }
     pHost->mBorderTopHeight = topBorderHeight->value();
     pHost->mBorderBottomHeight = bottomBorderHeight->value();

@@ -1151,37 +1151,52 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
 
 int TLuaInterpreter::centerview( lua_State * L )
 {
-    int roomid;
-    if( lua_isnumber( L, 1 ) || lua_isstring( L, 1 ) )
-    {
-        roomid = lua_tointeger( L, 1 );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "centerview: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
     }
-    else
-    {
-        lua_pushstring( L, "centerview: need a valid room ID" );
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "centerview: no map present or loaded!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    int roomId;
+    if( ! lua_isnumber( L, 1 ) ) {
+        lua_pushstring( L, tr( "centerview: bad argument #1 type (room Id as number required, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
+    else {
+        roomId = lua_tointeger( L, 1 );
+    }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap && pHost->mpMap->mpRoomDB->getRoom( roomid ) )
-    {
-        pHost->mpMap->mRoomIdHash[ pHost->getName() ] = roomid;
+    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    if( pR ) {
+        pHost->mpMap->mRoomIdHash[ pHost->getName() ] = roomId;
         pHost->mpMap->mNewMove = true;
-        if( pHost->mpMap->mpM )
-        {
+        if( pHost->mpMap->mpM ) {
             pHost->mpMap->mpM->update();
         }
-        if( pHost->mpMap->mpM )
-        {
+
+        if( pHost->mpMap->mpMapper->mp2dMap ) {
             pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
             pHost->mpMap->mpMapper->mp2dMap->update();
             pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
+            pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
-
+        lua_pushboolean( L, true );
+        return 1;
     }
-
-    return 0;
+    else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "centerview: bad argument #1 value (room Id %1 does not exist.)" )
+                        .arg( roomId ).toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::copy( lua_State * L )
@@ -7092,6 +7107,12 @@ int TLuaInterpreter::setAreaName( lua_State *L )
                             .arg( existingName ).toUtf8().constData() );
             return 2;
         }
+        else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( -1 ).contains( existingName ) ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (area name \"%1\" is reserved and protected - it cannot be changed)." )
+                            .arg( existingName ).toUtf8().constData() );
+            return 2;
+        }
     }
     else {
         lua_pushstring( L, tr( "setAreaName: bad argument #1 type (area Id as number or area name as string expected, got %1)." )
@@ -11349,8 +11370,25 @@ int TLuaInterpreter::setDefaultAreaVisible( lua_State * L )
         lua_error( L );
     }
     else {
+        bool isToShowDefaultArea = lua_toboolean( L, 1 );
         if( pHost->mpMap->mpMapper ) {
-            pHost->mpMap->mpMapper->setDefaultAreaShown( lua_toboolean( L, 1 ) );
+            // If we are reenabled the display of the default area
+            // AND the mapper was showing the default area
+            // the area widget will NOT be showing the correct area name afterwards
+            bool isAreaWidgetInNeedOfResetting = false;
+            if(  ( ! pHost->mpMap->mpMapper->getDefaultAreaShown() )
+              && ( isToShowDefaultArea )
+              && ( pHost->mpMap->mpMapper->mp2dMap->mAID == -1 ) ) {
+                isAreaWidgetInNeedOfResetting = true;
+            }
+
+            pHost->mpMap->mpMapper->setDefaultAreaShown( isToShowDefaultArea );
+            if( isAreaWidgetInNeedOfResetting ) {
+                // Corner case fixup:
+                pHost->mpMap->mpMapper->showArea->setCurrentText( pHost->mpMap->mpRoomDB->getDefaultAreaName() );
+            }
+            pHost->mpMap->mpMapper->mp2dMap->repaint();
+            pHost->mpMap->mpMapper->update();
             lua_pushboolean( L, true );
         }
         else {
