@@ -25,6 +25,7 @@
 
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
+#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -66,6 +67,7 @@ TMap::TMap( Host * pH )
                             // preference dialog.
 , mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
 , mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
+, mIsFileViewingRecommended( false )
 {
     mVersion = mDefaultVersion; // This is overwritten during a map restore and
                                 // is the loaded file version
@@ -116,9 +118,12 @@ TMap::~TMap()
 {
     delete mpRoomDB;
     if( ! mStoredMessages.isEmpty() ) {
-        qWarning( "TMap::~TMap() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
+        qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
+                   << "messages are:\n"
+                   << "------------";
         foreach(QString message, mStoredMessages) {
-                qWarning("%s\n------------", qPrintable( message ) );
+            qWarning() << message
+                       << "\n------------";
         }
     }
 }
@@ -418,8 +423,8 @@ void TMap::audit()
     // The old mpRoomDB->initAreasForOldMaps() was a subset of these checks
 
     QHash<int, int> roomRemapping; // These are populated by the auditRooms(...)
-    QHash<int, int> areaRemapping; // call and contain "Keys" of old Ids and
-                                   // "Values" of new Ids to use in their stead
+    QHash<int, int> areaRemapping; // call and contain "Keys" of old ids and
+                                   // "Values" of new ids to use in their stead
 
     if( mVersion <16 ) {
         // convert old style labels, wasn't made version conditional in past but
@@ -436,18 +441,26 @@ void TMap::audit()
                     if( l.pix.isNull() ) {
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
                         if( newID > -1 ) {
-                            QString msg = tr( "[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2." )
-                                          .arg(areaID)
-                                          .arg(labelIDList.at(i) );
-                            postMessage(msg);
+                            if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
+                                QString msg = tr( "[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2." )
+                                              .arg(areaID)
+                                              .arg(labelIDList.at(i) );
+                                postMessage(msg);
+                            }
+                            appendAreaErrorMsg( areaID, tr( "[ INFO ] - Converting old style label id: %1." )
+                                                            .arg( labelIDList.at(i) ) );
                             mapLabels[areaID][labelIDList.at(i)] = mapLabels[areaID][newID];
                             deleteMapLabel( areaID, newID );
                         }
                         else {
-                            QString msg = tr( "[ WARN ] - CONVERTING: cannot convert old style label, areaID:%1 labelID:%2." )
-                                          .arg(areaID)
-                                          .arg(labelIDList.at(i));
-                            postMessage(msg);
+                            if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
+                                QString msg = tr( "[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2." )
+                                              .arg(areaID)
+                                              .arg(labelIDList.at(i));
+                                postMessage(msg);
+                            }
+                            appendAreaErrorMsg( areaID, tr( "[ WARN ] - CONVERTING: cannot convert old style label with id: %1." )
+                                                            .arg( labelIDList.at(i) ) );
                         }
                     }
                     if (    ( l.size.width() >  std::numeric_limits<qreal>::max() )
@@ -481,6 +494,7 @@ void TMap::audit()
         QString infoMsg = tr( "[  OK  ]  - Auditing of map completed in %1 seconds. Enjoy your game..." )
                               .arg( _time.nsecsElapsed() * 1.0e-9 );
         postMessage( infoMsg );
+        appendErrorMsg( infoMsg );
     }
 }
 
@@ -992,7 +1006,7 @@ bool TMap::findPath( int from, int to )
             case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!" ) );        break;
             case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!" ) );      break;
             case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
-            default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from Id:" << previousRoomId << ", to Id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
+            default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
             }
             currentVertex = previousVertex;
             currentRoomId = previousRoomId;
@@ -1015,6 +1029,7 @@ bool TMap::serialize( QDataStream & ofs )
                                           "map with others relying on the original format." )
                           .arg( mSaveVersion )
                           .arg( mVersion );
+        appendErrorMsgWithNoLf( message, false );
         mpHost->mTelnet.postMessage( message );
     }
 
@@ -1030,6 +1045,7 @@ bool TMap::serialize( QDataStream & ofs )
                                           "this version of MUDLET." )
                           .arg( mSaveVersion )
                           .arg( mDefaultVersion );
+        appendErrorMsgWithNoLf( message, false );
         postMessage( message );
     }
 
@@ -1047,6 +1063,7 @@ bool TMap::serialize( QDataStream & ofs )
             QString message = tr( "[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a\n"
                                               "format of at least 17 to preserve it before quitting!" )
                                   .arg( mSaveVersion );
+            appendErrorMsgWithNoLf( message, false );
             mpHost->mTelnet.postMessage( message );
         }
     }
@@ -1122,12 +1139,15 @@ bool TMap::serialize( QDataStream & ofs )
         }
         QStringList areaIds;
         do {
-            areaIds.append( QString::number( areasWithData.takeFirst() ) );
+            int areaId = areasWithData.takeFirst();
+            areaIds.append( QString::number( areaId ) );
+            appendAreaErrorMsg( areaId, tr( "[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a\n"
+                                                        "format of at least 17 to preserve it before quitting!\n" ) );
         } while( ! areasWithData.isEmpty() );
 
         QString message = tr( "[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
                                           "format of at least 17 to preserve it before quitting!\n"
-                                          "Areas Id affected: %1." )
+                                          "Areas id affected: %1." )
                               .arg( areaIds.join( tr( ", " ) ) ); // Translatable in case list separators are locale dependendent!
         mpHost->mTelnet.postMessage( message );
     }
@@ -1246,6 +1266,7 @@ bool TMap::restore( QString location )
         if( ! file.open( QFile::ReadOnly ) ) {
             QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
                              .arg( file.fileName() );
+            appendErrorMsg( errMsg, false );
             postMessage( errMsg );
             return false;
         }
@@ -1258,9 +1279,11 @@ bool TMap::restore( QString location )
             if( QByteArray( APP_BUILD ).isEmpty() ) {
                 // This is a release version - should not support any map file versions higher that it was built for
                 QString errMsg = tr( "[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
-                                                 "Mudlet can handle (%2)!" )
+                                                 "Mudlet can handle (%2)!  The file is: \"%3\"." )
                                  .arg( mVersion )
-                                 .arg( mDefaultVersion );
+                                 .arg( mDefaultVersion )
+                                 .arg( file.fileName() );
+                appendErrorMsgWithNoLf( errMsg, false );
                 postMessage( errMsg );
                 QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a Map file saved in a\n"
                                                   "format that it CAN read.  As this Mudlet appears to be based on a\n"
@@ -1273,6 +1296,7 @@ bool TMap::restore( QString location )
                                                   "directory and selecting a file to load that is NOT the most recent one\n"
                                                   "(which is the one that is selected normally) though it is probable that\n"
                                                   "the stored location of the current map location will be wrong." );
+                appendErrorMsgWithNoLf( infoMsg, false );
                 postMessage( infoMsg );
                 file.close();
                 return false;
@@ -1282,9 +1306,11 @@ bool TMap::restore( QString location )
                 if( mVersion > mMaxVersion ) {
                     // Oh dear, can't handle THIS
                     QString errMsg = tr( "[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
-                                                     "Mudlet can handle (%2)!" )
+                                                     "Mudlet can handle (%2)!  The file is: \"%3\"." )
                                      .arg( mVersion )
-                                     .arg( mMaxVersion );
+                                     .arg( mMaxVersion )
+                                     .arg( file.fileName() );
+                    appendErrorMsgWithNoLf( errMsg );
                     postMessage( errMsg );
                     QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a Map file saved in a\n"
                                                       "format that it CAN read.  Even though this Mudlet appears to be based on a\n"
@@ -1297,6 +1323,7 @@ bool TMap::restore( QString location )
                                                       "directory and selecting a file to load that is NOT the most recent one\n"
                                                       "(which is the one that is selected normally) though it is probable that\n"
                                                       "the stored location of the current map location will be wrong." );
+                    appendErrorMsgWithNoLf( infoMsg );
                     postMessage( infoMsg );
                     file.close();
                     return false;
@@ -1306,6 +1333,7 @@ bool TMap::restore( QString location )
                                                        "the default for this version of Mudlet (%2)!" )
                                      .arg( mVersion )
                                      .arg( mDefaultVersion );
+                    appendErrorMsgWithNoLf( alertMsg );
                     postMessage( alertMsg );
                     QString infoMsg = tr( "[ INFO ]  - You are using a new, possibly experimental, map file format which this\n"
                                                       "version of Mudlet CAN read.  This Mudlet appears to be based on a\n"
@@ -1314,6 +1342,7 @@ bool TMap::restore( QString location )
                                                       "advanced version that has additional features that need a revised format;\n"
                                                       "beware that this file may not be usable by the current release version\n"
                                                       "of Mudlet that you or others with whom you might share it have!" );
+                    appendErrorMsgWithNoLf( infoMsg );
                     postMessage( infoMsg );
                     mSaveVersion = mVersion; // Make the save version default to the loaded one
                                              // this means that each session using a particular
@@ -1325,12 +1354,15 @@ bool TMap::restore( QString location )
         else if( mVersion < 4 ) {
             QString alertMsg = tr( "[ ALERT ] - Map file is really old, it's file format (%1) is so ancient that\n"
                                                "this version of Mudlet may not gain enough information from\n"
-                                               "it but it will try!" )
-                               .arg( mVersion );
+                                               "it but it will try!  The file is: \"%2\"." )
+                               .arg( mVersion )
+                               .arg( file.fileName() );
+            appendErrorMsgWithNoLf( alertMsg, false );
             postMessage( alertMsg );
             QString infoMsg = tr( "[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
                                               "There is so much data that it DOES NOT have that you could be\n"
                                               "be better off starting again..." );
+            appendErrorMsgWithNoLf( infoMsg, false );
             postMessage( infoMsg );
             canRestore = false;
             mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
@@ -1340,6 +1372,9 @@ bool TMap::restore( QString location )
             QString infoMsg = tr( "[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait..." )
                                   .arg( mVersion )
                                   .arg( file.fileName() );
+            appendErrorMsg( tr( "[ INFO ]  - Reading map (format version:%1) file: \"%2\"." )
+                                .arg( mVersion )
+                                .arg( file.fileName() ), false );
             postMessage( infoMsg );
             mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
         }
@@ -1419,8 +1454,11 @@ bool TMap::restore( QString location )
             TArea * pDefaultA = new TArea( this, mpRoomDB );
             mpRoomDB->restoreSingleArea( -1, pDefaultA );
             QString defaultAreaInsertionMsg = tr( "[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
-                                                              "area) not found, adding reserved -1 Id." );
-            postMessage( defaultAreaInsertionMsg );
+                                                              "area) not found, adding reserved -1 id." );
+            appendErrorMsgWithNoLf( defaultAreaInsertionMsg, false );
+            if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
+                postMessage( defaultAreaInsertionMsg );
+            }
         }
 
             if( mVersion >= 18 ) {
@@ -1501,10 +1539,12 @@ bool TMap::restore( QString location )
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, will now check\n"
-                                        "some consistency details, please wait..." )
+        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, checking some\n"
+                                        "consistency details..." )
                             .arg( _time.nsecsElapsed() * 1.0e-9 );
+
         postMessage( okMsg );
+        appendErrorMsgWithNoLf( okMsg );
         if( canRestore ) {
             return true;
         }
@@ -1564,6 +1604,7 @@ const bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName
     if( ! file.open( QFile::ReadOnly ) ) {
         QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
                          .arg( file.fileName() );
+        appendErrorMsg( errMsg, false );
         postMessage( errMsg );
         return false;
     }
@@ -1575,10 +1616,13 @@ const bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName
     QDataStream ifs( & file );
     ifs >> otherProfileVersion;
 
-    QString infoMsg = tr( "[ INFO ]  - Checking map file: \"%1\", format version:%2, please wait..." )
+    QString infoMsg = tr( "[ INFO ]  - Checking map file: \"%1\", format version:%2..." )
                       .arg( file.fileName() )
                       .arg( otherProfileVersion );
-    postMessage( infoMsg );
+    appendErrorMsg( infoMsg, false );
+    if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
+        postMessage( infoMsg );
+    }
 
     if( otherProfileVersion > mDefaultVersion ) {
         if( QByteArray( APP_BUILD ).isEmpty() ) {
@@ -1908,4 +1952,152 @@ void TMap::postMessage( const QString text )
 void TMap::set3DViewCenter( const int areaId, const int xPos, const int yPos, const int zPos )
 {
     mpM->setViewCenter( areaId, xPos, yPos, zPos );
+}
+
+void TMap::appendRoomErrorMsg( const int roomId, const QString msg, const bool isToSetFileViewingRecommended )
+{
+    mMapAuditRoomErrors[ roomId ].append( msg );
+    mIsFileViewingRecommended = isToSetFileViewingRecommended ? true : mIsFileViewingRecommended;
+}
+
+void TMap::appendAreaErrorMsg( const int areaId, const QString msg, const bool isToSetFileViewingRecommended )
+{
+    mMapAuditAreaErrors[ areaId ].append( msg );
+    mIsFileViewingRecommended = isToSetFileViewingRecommended ? true : mIsFileViewingRecommended;
+}
+
+void TMap::appendErrorMsg( const QString msg, const bool isToSetFileViewingRecommended )
+{
+    mMapAuditErrors.append( msg );
+    mIsFileViewingRecommended = isToSetFileViewingRecommended ? true : mIsFileViewingRecommended;
+}
+
+void TMap::appendErrorMsgWithNoLf( const QString msg, const bool isToSetFileViewingRecommended )
+{
+    QString text = msg;
+    text.replace( QChar::LineFeed, QChar::Space );
+    mMapAuditErrors.append( text );
+    mIsFileViewingRecommended = isToSetFileViewingRecommended ? true : mIsFileViewingRecommended;
+}
+
+const QString TMap::createFileHeaderLine( const QString title, const QChar fillChar )
+{
+    QString text;
+    if( title.length() <= 76 ) {
+        text = QStringLiteral( "%1 %2 %1\n" )
+                               .arg( QString( fillChar ).repeated( (78 - title.length()) / 2 ) )
+                               .arg( title );
+    }
+    else {
+        text = title;
+        text.append( QChar::LineFeed );
+    }
+    return text;
+}
+
+void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        qWarning() << "TMap::pushErrorMessagesToFile( ... ) ERROR: called with a NULL HOST pointer - something is wrong!";
+        return;
+    }
+
+    // Replacement storage locations:
+    QMap<int, QList<QString> >  mapAuditRoomErrors; // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
+    QMap<int, QList<QString> >  mapAuditAreaErrors; // As for the Room ones but with key as the area number
+    QList<QString>              mapAuditErrors;     // For the whole map
+    // Switch message storage locations to freeze them so we can dump them to
+    // file; according to Qt documentation "Swaps XXX other with this XXX. This
+    // operation is very fast and never fails."
+    mapAuditErrors.swap( mMapAuditErrors );
+    mapAuditAreaErrors.swap( mMapAuditAreaErrors );
+    mapAuditRoomErrors.swap( mMapAuditRoomErrors );
+
+    if(    mapAuditErrors.isEmpty()
+        && mapAuditAreaErrors.isEmpty()
+        && mapAuditRoomErrors.isEmpty()
+        && isACleanup ) {
+
+        mIsFileViewingRecommended = false;
+        return; // Nothing to do
+    }
+
+    pHost->mErrorLogStream << createFileHeaderLine( title, QLatin1Char( '#' ) );
+    pHost->mErrorLogStream << createFileHeaderLine( tr( "Map issues" ), QLatin1Char( '=' ) );
+    QListIterator<QString> itMapMsg( mapAuditErrors );
+    while( itMapMsg.hasNext() ) {
+        pHost->mErrorLogStream << itMapMsg.next() << QLatin1Char( '\n' );;
+    }
+
+    pHost->mErrorLogStream << createFileHeaderLine( tr( "Area issues" ), QLatin1Char( '=' ) );
+    QMapIterator<int, QList<QString> > itAreasMsg( mapAuditAreaErrors );
+    while( itAreasMsg.hasNext() ) {
+        itAreasMsg.next();
+        QString titleText;
+        if( ! mpRoomDB->getAreaNamesMap().value( itAreasMsg.key() ).isEmpty() ) {
+            titleText = tr( "Area id: %1 \"%2\"" )
+                            .arg( itAreasMsg.key() )
+                            .arg( mpRoomDB->getAreaNamesMap().value( itAreasMsg.key() ) );
+        }
+        else {
+            titleText = tr( "Area id: %1" ).arg( itAreasMsg.key() );
+        }
+        pHost->mErrorLogStream << createFileHeaderLine( titleText, QLatin1Char( '-' ) );
+        QListIterator<QString> itMapAreaMsg( itAreasMsg.value() );
+        while( itMapAreaMsg.hasNext() ) {
+            pHost->mErrorLogStream << itMapAreaMsg.next() << QLatin1Char( '\n' );
+        }
+    }
+
+    pHost->mErrorLogStream << createFileHeaderLine( tr( "Room issues" ), QLatin1Char( '=' ) );
+    QMapIterator<int, QList<QString> > itRoomsMsg( mapAuditRoomErrors );
+    while( itRoomsMsg.hasNext() ) {
+        itRoomsMsg.next();
+        QString titleText;
+        TRoom * pR = mpRoomDB->getRoom( itRoomsMsg.key() );
+        if( pR && ! pR->name.isEmpty() ) {
+            titleText = tr( "Room id: %1 \"%2\"" )
+                            .arg( itRoomsMsg.key() )
+                            .arg( pR->name );
+        }
+        else {
+            titleText = tr( "Room id: %1" ).arg( itRoomsMsg.key() );
+        }
+        pHost->mErrorLogStream << createFileHeaderLine( titleText, QLatin1Char( '-' ) );
+        QListIterator<QString> itMapRoomMsg( itRoomsMsg.value() );
+        while( itMapRoomMsg.hasNext() ) {
+            pHost->mErrorLogStream << itMapRoomMsg.next() << QLatin1Char( '\n' );;
+        }
+    }
+
+    pHost->mErrorLogStream << createFileHeaderLine( tr( "End of report" ), QLatin1Char( '#' ) );
+    pHost->mErrorLogStream.flush();
+    mapAuditErrors.clear();
+    mapAuditAreaErrors.clear();
+    mapAuditRoomErrors.clear();
+    if( mIsFileViewingRecommended && (! mudlet::self()->getAuditErrorsToConsoleEnabled() ) ) {
+        postMessage( tr( "[ ALERT ] - At least one thing was detected during that last map operation\n"
+                         "that it is recommended that you review the most recent report in the file:\n"
+                         "\"%1\"\n"
+                         "- look for the (last) report with the title:\n"
+                         "\"%2\"." )
+                         .arg( QStringLiteral( "%1/.config/mudlet/profiles/%2/log/errors.txt" )
+                                               .arg( QDir::homePath() )
+                                               .arg( mpHost->getName() ) )
+                         .arg( title ) );
+    }
+    else if( mIsFileViewingRecommended && mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
+        postMessage( tr( "[ INFO ]  - The equivalent to the above information about that last map\n"
+                         "operation has been saved for review as the most recent report in the file:\n"
+                         "\"%1\"\n"
+                         "- look for the (last) report with the title:\n"
+                         "\"%2\"." )
+                         .arg( QStringLiteral( "%1/.config/mudlet/profiles/%2/log/errors.txt" )
+                                               .arg( QDir::homePath() )
+                                               .arg( mpHost->getName() ) )
+                         .arg( title ) );
+    }
+
+    mIsFileViewingRecommended = false;
 }

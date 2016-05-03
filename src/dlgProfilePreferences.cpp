@@ -187,6 +187,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         comboBox_statusBarSetting->setCurrentIndex( _indexForStatusBarSetting );
     }
 
+    checkBox_reportMapIssuesOnScreen->setChecked( mudlet::self()->getAuditErrorsToConsoleEnabled() );
     Host * pHost = mpHost;
     if( pHost )
     {
@@ -839,6 +840,10 @@ void dlgProfilePreferences::loadMap()
     label_mapFileActionResult->setText( tr( "Loading map - please wait..." ) );
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
 
+    // Ensure the setting is already made as the loadMap(...) uses the set value
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
+    mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
+
     if ( mpHost->mpConsole->loadMap(fileName) )
     {
         label_mapFileActionResult->setText( tr( "Loaded map from %1." ).arg( fileName ) );
@@ -849,6 +854,8 @@ void dlgProfilePreferences::loadMap()
         label_mapFileActionResult->setText( tr( "Could not load map from %1." ).arg( fileName ) );
         QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
     }
+    // Restore setting immediately before we used it
+    mudlet::self()->setAuditErrorsToConsoleEnabled( savedOldAuditErrorsToConsoleEnabledSetting );
 }
 
 void dlgProfilePreferences::saveMap()
@@ -881,6 +888,11 @@ void dlgProfilePreferences::saveMap()
 #else
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
 #endif
+
+    // Ensure the setting is already made as the saveMap(...) uses the set value
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
+    mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
+
     if( pHost->mpConsole->saveMap(fileName) ) {
         label_mapFileActionResult->setText( tr( "Saved map to %1." ).arg( fileName ) );
     } else {
@@ -888,6 +900,7 @@ void dlgProfilePreferences::saveMap()
     }
     // Then restore prior version
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
+    mudlet::self()->setAuditErrorsToConsoleEnabled( savedOldAuditErrorsToConsoleEnabledSetting );
 
     QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
 }
@@ -954,6 +967,11 @@ void dlgProfilePreferences::copyMap()
     }
     // otherProfileCurrentRoomId will be -1 if tried and failed to get it from
     // current running profile, > 0 on sucess or 0 if not running as another profile
+
+    // Ensure the setting is already made as the value could be used in the
+    // code following after
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
+    mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
 
     // We now KNOW there are places where the destination profiles will/have
     // stored their maps - if we do not already know where the player is in the
@@ -1103,6 +1121,10 @@ void dlgProfilePreferences::copyMap()
     // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText( tr( "Map copied, now signalling other profiles to reload it." ) );
     QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
+
+    // CHECK: Race condition? We might be changing this whilst other profile
+    // are accessing it...
+    mudlet::self()->setAuditErrorsToConsoleEnabled( savedOldAuditErrorsToConsoleEnabledSetting );
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
@@ -1236,6 +1258,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
     mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
+    mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
     close();
 }
 

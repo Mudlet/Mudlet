@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1712,7 +1712,13 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
     case 2: closed->setChecked(true); break;
     case 3: locked->setChecked(true); break;
     default:
-        qWarning()<<"dlgRoomExits::initExit(...) in room Id("<<roomId<<") unexpected doors["<<doorAndWeightText<<"] value:"<<pR->getDoor( doorAndWeightText )<<"found for room!";
+        qWarning() << "dlgRoomExits::initExit(...) in room id("
+                   << roomId
+                   << ") unexpected doors["
+                   << doorAndWeightText
+                   << "] value:"
+                   << pR->getDoor( doorAndWeightText )
+                   << "found for room!";
     }
 
     TRoom * pExitR;
@@ -1720,7 +1726,11 @@ void dlgRoomExits::initExit( int roomId, int direction, int exitId, QLineEdit * 
         pExitR = mpHost->mpMap->mpRoomDB->getRoom( exitId );
         if( ! pExitR ) {
             // Recover from a missing exit room - not doing this was causing seg. faults
-            qWarning()<<"dlgRoomExits::initExit(...): Warning: missing exit to"<<exitId<<"in direction "<<exitText<<", resetting exit.";
+            qWarning() << "dlgRoomExits::initExit(...): Warning: missing exit to"
+                       << exitId
+                       << "in direction"
+                       << exitText
+                       << ", resetting exit.";
             exitId = -1;
         }
     }

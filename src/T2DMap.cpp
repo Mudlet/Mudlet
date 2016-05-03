@@ -3010,7 +3010,7 @@ void T2DMap::slot_customLineProperties()
                     }
                 }
                 if( ! isFound )
-                    qWarning("T2DMap::slot_customLineProperties() - WARNING: missing command \"%s\" from custom lines for room Id %i",
+                    qWarning("T2DMap::slot_customLineProperties() - WARNING: missing command \"%s\" from custom lines for room id %i",
                              qPrintable( exit ),
                              pR->getId() );
             }

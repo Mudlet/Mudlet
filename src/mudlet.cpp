@@ -113,6 +113,7 @@ mudlet::mudlet()
 , replayToolBar( 0 )
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
+, mIsToDisplayMapAuditErrorsToConsole( false )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -1682,6 +1683,7 @@ void mudlet::readSettings()
     // installations - if the user wants the status bar shown either all the
     // time or when it has something to show, they will have to enable that
     // themselves, but that only has to be done once! - Slysven
+    mIsToDisplayMapAuditErrorsToConsole = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
@@ -1734,6 +1736,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions) );
     settings.setValue("statusBarOptions", static_cast<int>(mStatusBarState) );
+    settings.setValue("reportMapIssuesToConsole", mIsToDisplayMapAuditErrorsToConsole );
 }
 
 void mudlet::connectToServer()
@@ -1876,7 +1879,9 @@ void mudlet::slot_mapper()
 
     if( pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
-        qDebug() << "mudlet::slot_mapper() - restore map case 4.";
+        qDebug() << "mudlet::slot_mapper() - restore map case 3.";
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(3) report" ), true );
+        QDateTime now( QDateTime::currentDateTime() );
         if( pHost->mpMap->restore( QString() ) ) {
             pHost->mpMap->audit();
             pHost->mpMap->mpMapper->mp2dMap->init();
@@ -1884,6 +1889,9 @@ void mudlet::slot_mapper()
             pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
             pHost->mpMap->mpMapper->show();
         }
+
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(3) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
+
     }
     else
     {

@@ -188,6 +188,9 @@ public:
                                 // to tell other profiles to reload the updated
                                 // maps (via signal_profileMapReloadRequested(...))
 
+    const bool                  getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
+    void                        setAuditErrorsToConsoleEnabled( const bool state ) { mIsToDisplayMapAuditErrorsToConsole = state; }
+
 
 public slots:
 
@@ -297,6 +300,8 @@ private:
 
    HostManager                   mHostManager;
    QStatusBar *                 mpMainStatusBar;
+
+   bool                         mIsToDisplayMapAuditErrorsToConsole;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)

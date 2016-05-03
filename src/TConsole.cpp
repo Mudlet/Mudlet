@@ -37,6 +37,7 @@
 #include "XMLexport.h"
 
 #include "pre_guard.h"
+#include <QDateTime>
 #include <QDir>
 #include <QMessageBox>
 #include <QLineEdit>
@@ -1803,28 +1804,40 @@ bool TConsole::loadMap(const QString& location)
         mudlet::self()->slot_mapper();
     }
 
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) {
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
         // And that failed so give up
         return false;
     }
 
-    mpHost->mpMap->mapClear();
+    pHost->mpMap->mapClear();
 
-    qDebug() << "TConsole::loadMap() - restore map case 2.";
-    if( mpHost->mpMap->restore( location ) ) {
-        mpHost->mpMap->audit();
-        mpHost->mpMap->mpMapper->mp2dMap->init();
-        mpHost->mpMap->mpMapper->updateAreaComboBox();
-        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        mpHost->mpMap->mpMapper->show();
-        return true;
+    qDebug() << "TConsole::loadMap() - restore map case 1.";
+    pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(1) report" ), true );
+    QDateTime now( QDateTime::currentDateTime() );
+
+    bool result = false;
+    if( pHost->mpMap->restore( location ) ) {
+        pHost->mpMap->audit();
+        pHost->mpMap->mpMapper->mp2dMap->init();
+        pHost->mpMap->mpMapper->updateAreaComboBox();
+        pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        pHost->mpMap->mpMapper->show();
+        result = true;
     }
     else {
-        mpHost->mpMap->mpMapper->mp2dMap->init();
-        mpHost->mpMap->mpMapper->updateAreaComboBox();
-        mpHost->mpMap->mpMapper->show();
-        return false;
+        pHost->mpMap->mpMapper->mp2dMap->init();
+        pHost->mpMap->mpMapper->updateAreaComboBox();
+        pHost->mpMap->mpMapper->show();
     }
+
+    if( location.isEmpty() ) {
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
+    }
+    else {
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
+    }
+
+    return result;
 }
 
 bool TConsole::deleteLine( int y )
@@ -2476,13 +2489,18 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         mpMapper->mpHost = mpHost;
-        qDebug() << "TConsole::createMapper() - restore map case 3.";
+        qDebug() << "TConsole::createMapper() - restore map case 2.";
+        mpHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(2) report" ), true );
+        QDateTime now( QDateTime::currentDateTime() );
+
         if( mpHost->mpMap->restore( QString() ) ) {
             mpHost->mpMap->audit();
             mpMapper->mp2dMap->init();
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
+
+        mpHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(2) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
 
         TEvent mapOpenEvent;
         mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
