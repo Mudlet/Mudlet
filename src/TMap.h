@@ -107,7 +107,18 @@ public:
     void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
     void postMessage( const QString text );
-    void set3DViewCenter( const int, const int, const int, const int ); // Used by the 2D mapper to send view center coordinates to 3D one
+    void set3DViewCenter( const int, const int, const int, const int );
+    // Used by the 2D mapper to send view center coordinates to 3D one
+
+    void appendRoomErrorMsg( const int, const QString, const bool isToSetFileViewingRecommended = false );
+    void appendAreaErrorMsg( const int, const QString, const bool isToSetFileViewingRecommended = false );
+    void appendErrorMsg( const QString, const bool isToSetFileViewingRecommended = false );
+    void appendErrorMsgWithNoLf( const QString, const bool isToSetFileViewingRecommended = false );
+    void pushErrorMessagesToFile( const QString, const bool isACleanup = false );
+    // If the argument is true does not write out any thing if there is no data
+    // to dump, intended to be used before an operation like a map load so that
+    // any messages previously recorded are not associated with a "fresh" batch
+    // from the operation.
 
 
     TRoomDB * mpRoomDB;
@@ -164,9 +175,17 @@ public:
                       // by mMinVersion and mMaxVersion.
 
     QMap<QString, QString> mUserData;
+    bool isToDisplayAuditErrorsToConsole;
 
 private:
-    QStringList mStoredMessages;
+    const QString                   createFileHeaderLine( const QString, const QChar );
+
+    QStringList                     mStoredMessages;
+
+    QMap<int, QList<QString> >      mMapAuditRoomErrors; // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
+    QMap<int, QList<QString> >      mMapAuditAreaErrors; // As for the Room ones but with key as the area number
+    QList<QString>                  mMapAuditErrors;     // For the whole map
+    bool                            mIsFileViewingRecommended; // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
 };
 
 #endif // MUDLET_TMAP_H
