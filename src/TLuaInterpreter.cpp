@@ -4288,7 +4288,7 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
                         .toUtf8().constData() );
         return 2;
     }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    else if( ! pHost->mpMap ) {
         lua_pushnil( L );
         lua_pushstring( L, tr( "searchRoomUserData: no map present or loaded!" )
                         .toUtf8().constData() );
@@ -4410,7 +4410,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
                         .toUtf8().constData() );
         return 2;
     }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    else if( ! pHost->mpMap ) {
         lua_pushnil( L );
         lua_pushstring( L, tr( "searchAreaUserData: no map present or loaded!" )
                         .toUtf8().constData() );
@@ -4445,6 +4445,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
     }
 
     lua_newtable(L);
+
     QMapIterator<int, TArea *> itArea( pHost->mpMap->mpRoomDB->getAreaMap() );
     // For best performance do the three different types of action in three
     // different branches each with a loop - rather than choosing a branch
