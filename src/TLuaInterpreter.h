@@ -398,6 +398,7 @@ public:
     static int clearAreaUserDataItem( lua_State * );
     static int clearMapUserData( lua_State * );
     static int clearMapUserDataItem( lua_State * );
+    static int setDefaultAreaVisible( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;

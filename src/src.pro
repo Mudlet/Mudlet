@@ -285,9 +285,12 @@ HEADERS += \
     irc/include/irc.h \
     irc/include/irccodecplugin.h \
     irc/include/irccommand.h \
+    irc/include/ircglobal.h \
     irc/include/ircmessage.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
+    irc/include/IrcGlobal \
+    irc/include/IrcSender \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \

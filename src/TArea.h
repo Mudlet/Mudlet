@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,28 +37,31 @@ class TRoomDB;
 
 class TArea
 {
+    Q_DECLARE_TR_FUNCTIONS(TArea) // Needed so we can use tr() even though TArea is NOT derived from QObject
+
     friend bool TMap::serialize( QDataStream & );
     friend bool TMap::restore( QString );
+    friend const bool TMap::retrieveMapFileStats( QString , QString *, int *, int *, int *, int * );
 
 public:
     TArea(TMap*, TRoomDB*);
     ~TArea();
     int getAreaID();
     void addRoom(int id);
-    const QList<int>& getAreaRooms() const { return rooms; }
+    const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return exits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int> > getAreaExitRoomData() const ;
     void calcSpan();
     void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
-    void removeRoom(int);
+    void removeRoom(int, bool isToDeferAreaRelatedRecalculations=false);
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int> > > koordinatenSystem();
 
 
-    QList<int> rooms;                       // rooms of this area
+    QSet<int> rooms;                        // rooms of this area
     QVector3D pos;                          // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x;
@@ -67,13 +70,15 @@ public:
     int max_x;
     int max_y;
     int max_z;
+    // Key = z-level, Value = the relevent x or y extreme:
     QMap<int, int> xminEbene;
     QMap<int, int> xmaxEbene;
     QMap<int, int> yminEbene;
     QMap<int, int> ymaxEbene;
-    QMap<int, int> zminEbene;
-    QMap<int, int> zmaxEbene;
-    QList<int> ebenen;
+// Pointless:
+//    QMap<int, int> zminEbene;
+//    QMap<int, int> zmaxEbene;
+    QList<int> ebenen; // The z-levels that ARE used, not guarenteed to be in order
     bool gridMode;
     bool isZone;
     int zoneAreaRef;
@@ -86,7 +91,7 @@ private:
     TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
     // QMap<int, TMapLabel> labelMap;
 
-
+    TMap * mpMap; // Supplied by C'tor and now needed to pass an error message upwards
     QMultiMap<int, QPair<int, int> > exits;
     // rooms that border on this area:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction

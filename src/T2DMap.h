@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +27,7 @@
 #include <QColor>
 #include <QPixmap>
 #include <QPointer>
+#include <QString>
 #include <QTreeWidget>
 #include <QWidget>
 #include "post_guard.h"
@@ -60,10 +62,16 @@ public:
     void     wheelEvent ( QWheelEvent * ) override;
     void     mouseMoveEvent( QMouseEvent * event ) override;
     void     mouseReleaseEvent(QMouseEvent * e ) override;
-    int      getTopLeftSelection();
+    bool     getCenterSelection();
+    // Was getTopLeft() which returned an index into mMultiSelectionList but that
+    // has been been changed to mMultiSelectionSet which cannot be accessed via
+    // an index in the same way - this function now sets
+    // mMultiSelectionHighlightRoomId and returns a (bool) on success or failure
+    // to do so.
     void     setRoomSize( double );
     void     setExitSize( double );
     void     createLabel( QRectF labelRect );
+
     TMap *   mpMap;
     QPointer<Host> mpHost;
     int      xzoom;
@@ -86,10 +94,12 @@ public:
     int      mChosenRoomColor;
     float    xspan;
     float    yspan;
-    bool     mMultiSelection;
+    bool     mMultiSelection;  // Flag that the "drag to select rectangle"
+                               // (mMultiRect) is active and is being *resized*
+                               // by dragging
     QRectF   mMultiRect;
     bool     mPopupMenu;
-    QList<int> mMultiSelectionList;
+    QSet<int> mMultiSelectionSet; // was mMultiSelectList
     QPoint   mOldMousePos;
     bool     mNewMoveAction;
     QRectF   mMapInfoRect;
@@ -147,7 +157,7 @@ public slots:
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void switchArea(QString);
+    void slot_switchArea(QString);
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();
@@ -181,7 +191,31 @@ public slots:
     void slot_cancelCustomLineDialog();
 
 private:
-    bool    mDialogLock;
+    void resizeMultiSelectionWidget();
+
+
+    bool mDialogLock;
+    int  mMultiSelectionHighlightRoomId;
+                                // When more than zero rooms are selected this
+                                // is either the first (only) room in the set
+                                // or if getCenterSelectionId() is used the
+                                // room that is selected - this is so that it
+                                // can be painted in yellow rather than orange
+                                // when more than one room is selected to
+                                // indicate the particular room that will be
+                                // modified or be the center of those
+                                // modifications. {for slot_spread(),
+                                // slot_shrink(), slot_setUserData() - if ever
+                                // implimented, slot_setExits(),
+                                // slot_movePosition(), etc.}
+
+    bool  mIsSelectionSorting;
+    bool  mIsSelectionSortByNames;
+    bool  mIsSelectionUsingNames;
+                                // Used to keep track of if sorting the multiple
+                                // room listing/selection widget, and by what,
+                                // as we now show room names (if present) as well.
+
 };
 
 #endif // MUDLET_T2DMAP_H

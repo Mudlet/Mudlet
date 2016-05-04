@@ -113,6 +113,7 @@ mudlet::mudlet()
 , replayToolBar( 0 )
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
+, mIsToDisplayMapAuditErrorsToConsole( false )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -1682,6 +1683,7 @@ void mudlet::readSettings()
     // installations - if the user wants the status bar shown either all the
     // time or when it has something to show, they will have to enable that
     // themselves, but that only has to be done once! - Slysven
+    mIsToDisplayMapAuditErrorsToConsole = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
@@ -1734,6 +1736,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions) );
     settings.setValue("statusBarOptions", static_cast<int>(mStatusBarState) );
+    settings.setValue("reportMapIssuesToConsole", mIsToDisplayMapAuditErrorsToConsole );
 }
 
 void mudlet::connectToServer()
@@ -1869,17 +1872,26 @@ void mudlet::slot_mapper()
         return;
     }
 
-    QDockWidget * pDock = new QDockWidget("Mudlet Mapper");
+    QDockWidget * pDock = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
     pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
 
-    if( pHost->mpMap->mpRoomDB->getRoomIDList().size() < 1 )
+    if( pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
-        pHost->mpMap->restore("");
-        pHost->mpMap->init( pHost );
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->show();
+        qDebug() << "mudlet::slot_mapper() - restore map case 3.";
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(3) report" ), true );
+        QDateTime now( QDateTime::currentDateTime() );
+        if( pHost->mpMap->restore( QString() ) ) {
+            pHost->mpMap->audit();
+            pHost->mpMap->mpMapper->mp2dMap->init();
+            pHost->mpMap->mpMapper->updateAreaComboBox();
+            pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            pHost->mpMap->mpMapper->show();
+        }
+
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(3) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
+
     }
     else
     {
@@ -2375,4 +2387,10 @@ void mudlet::slot_statusBarMessageChanged( QString text )
             mpMainStatusBar->hide();
         }
     }
+}
+
+// Originally a slot_ but it does not actually need to be - Slysven
+void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
+{
+    emit signal_profileMapReloadRequested( affectedProfiles );
 }

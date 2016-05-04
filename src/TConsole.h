@@ -291,6 +291,10 @@ public slots:
       void              slot_toggleReplayRecording();
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();
+    void                slot_reloadMap( QList<QString> );
+                        // Used by mudlet class as told by "Profile Preferences"
+                        // =>"Copy Map" in another profile to inform a list of
+                        // profiles - asynchronously - to load in an updated map
 
 };
 
