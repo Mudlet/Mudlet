@@ -179,6 +179,14 @@ public:
    Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
    StatusBarOptions             mStatusBarState;
 
+   void                         requestProfilesToReloadMaps( QList<QString> );
+                                // Used by a profile to tell the mudlet class
+                                // to tell other profiles to reload the updated
+                                // maps (via signal_profileMapReloadRequested(...))
+
+    const bool                  getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
+    void                        setAuditErrorsToConsoleEnabled( const bool state ) { mIsToDisplayMapAuditErrorsToConsole = state; }
+
 
 public slots:
 
@@ -228,6 +236,7 @@ protected:
 signals:
 
    void                         signal_editorTextOptionsChanged( QTextOption::Flags );
+   void                         signal_profileMapReloadRequested( QList<QString> );
 
 private slots:
 
@@ -282,6 +291,8 @@ private:
    QPushButton *                 moduleHelpButton;
 
    QStatusBar *                 mpMainStatusBar;
+
+   bool                         mIsToDisplayMapAuditErrorsToConsole;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)

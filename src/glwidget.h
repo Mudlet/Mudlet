@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,6 +40,7 @@ public:
     GLWidget(TMap * pM, QWidget *parent = 0);
     ~GLWidget();
     void wheelEvent( QWheelEvent * e );
+    void setViewCenter( int, int, int, int );
 
     bool is2DView;
 
@@ -63,7 +65,6 @@ public slots:
     void shiftRight();
     void shiftZup();
     void shiftZdown();
-    void showArea(QString);
     void setXRotation(int angle);
     void setYRotation(int angle);
     void setZRotation(int angle);

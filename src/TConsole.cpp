@@ -37,6 +37,7 @@
 #include "XMLexport.h"
 
 #include "pre_guard.h"
+#include <QDateTime>
 #include <QDir>
 #include <QMessageBox>
 #include <QLineEdit>
@@ -572,7 +573,22 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     layerCommandLine->setPalette( __pal );
 
     changeColors();
-
+    if( ! mIsSubConsole && ! mIsDebugConsole )
+    {
+        // During first use where mIsDebugConsole IS true mudlet::self() is null
+        // then - but we rely on that flag to avoid having to also test for a
+        // non-null mudlet::self() - the connect(...) will produce a debug
+        // message and not make THAT connection should it indeed be null but it
+        // is not fatal...
+        // So, this SHOULD be the main profile console - Slysven
+        connect( mudlet::self(),
+                 SIGNAL( signal_profileMapReloadRequested( QList<QString> ) ),
+                 this,
+                 SLOT( slot_reloadMap( QList<QString> ) ),
+                 Qt::UniqueConnection );
+        // For some odd reason the first seems to get connected twice - the
+        // last flag prevents multiple ones being made
+    }
 }
 
 void TConsole::setLabelStyleSheet( std::string & buf, std::string & sh )
@@ -1583,29 +1599,53 @@ bool TConsole::saveMap(QString location)
 
 bool TConsole::loadMap(QString location)
 {
-    if( !mpHost ) return false;
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper )
-    {
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
+        // in later software versions and is a weak pointer until used
+        // (I think - Slysven ?)
+        return false;
+    }
+
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // No map or map currently loaded - soi try and created them
         mudlet::self()->slot_mapper();
     }
-    if( !mpHost->mpMap || !mpHost->mpMap->mpMapper ) return false;
 
-    mpHost->mpMap->mapClear();
-
-    if ( mpHost->mpMap->restore(location) )
-    {
-        mpHost->mpMap->init( mpHost );
-        mpHost->mpMap->mpMapper->mp2dMap->init();
-        mpHost->mpMap->mpMapper->show();
-        if( mpHost->mpMap )
-            if( mpHost->mpMap->mpMapper )
-                mpHost->mpMap->mpMapper->updateAreaComboBox();
-        // previous selections stay, so we need to clear it
-        //mpHost->mpMap->mpMapper->mp2dMap->deselect();
-        return true;
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // And that failed so give up
+        return false;
     }
 
-    return false;
+    pHost->mpMap->mapClear();
+
+    qDebug() << "TConsole::loadMap() - restore map case 1.";
+    pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(1) report" ), true );
+    QDateTime now( QDateTime::currentDateTime() );
+
+    bool result = false;
+    if( pHost->mpMap->restore( location ) ) {
+        pHost->mpMap->audit();
+        pHost->mpMap->mpMapper->mp2dMap->init();
+        pHost->mpMap->mpMapper->updateAreaComboBox();
+        pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        pHost->mpMap->mpMapper->show();
+        result = true;
+    }
+    else {
+        pHost->mpMap->mpMapper->mp2dMap->init();
+        pHost->mpMap->mpMapper->updateAreaComboBox();
+        pHost->mpMap->mpMapper->show();
+    }
+
+    if( location.isEmpty() ) {
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
+    }
+    else {
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
+    }
+
+    return result;
 }
 
 bool TConsole::deleteLine( int y )
@@ -2261,8 +2301,18 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         mpMapper->mpHost = mpHost;
-        mpHost->mpMap->restore("");
-        mpHost->mpMap->init( mpHost );
+        qDebug() << "TConsole::createMapper() - restore map case 2.";
+        mpHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(2) report" ), true );
+        QDateTime now( QDateTime::currentDateTime() );
+
+        if( mpHost->mpMap->restore( QString() ) ) {
+            mpHost->mpMap->audit();
+            mpMapper->mp2dMap->init();
+            mpMapper->updateAreaComboBox();
+            mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        }
+
+        mpHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(2) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
 
         TEvent mapOpenEvent;
         mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
@@ -2271,7 +2321,6 @@ void TConsole::createMapper( int x, int y, int width, int height )
     }
     mpMapper->resize( width, height );
     mpMapper->move( x, y );
-    //mpMapper->mp2dMap->init();
     mpMapper->mp2dMap->gridMapSizeChange = true; //mapper size has changed, but only init grid map when necessary
     mpMapper->show();
 }
@@ -2659,4 +2708,35 @@ QSize TConsole::getMainWindowSize() const
     int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize( consoleSize.width()-toolbarWidth, consoleSize.height()-(commandLineHeight+toolbarHeight));
     return mainWindowSize;
+}
+
+void TConsole::slot_reloadMap( QList<QString> profilesList )
+{
+    Host * pHost = getHost();
+    if( ! pHost ) {
+        return;
+    }
+
+    QString ourName = pHost->getName();
+    if( ! profilesList.contains( ourName ) ) {
+        qDebug() << "TConsole::slot_reloadMap("
+                 << profilesList
+                 << ") request received but we:"
+                 << ourName
+                 << "are not mentioned - so we are ignoring it...!";
+        return;
+    }
+
+    QString infoMsg = tr( "[ INFO ]  - Map reload request received from system..." );
+    pHost->postMessage( infoMsg );
+
+    QString outcomeMsg;
+    if( loadMap( QString() ) ) {
+        outcomeMsg = tr( "[  OK  ]  - ... System Map reload request completed." );
+    }
+    else {
+        outcomeMsg = tr( "[ WARN ]  - ... System Map reload request failed." );
+    }
+
+    pHost->postMessage( outcomeMsg );
 }

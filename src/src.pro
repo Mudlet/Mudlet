@@ -289,6 +289,7 @@ HEADERS += \
     HostPool.h \
     irc/include/irc.h \
     irc/include/ircbuffer.h \
+    irc/include/ircglobal.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
     KeyUnit.h \

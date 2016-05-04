@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -43,9 +44,6 @@
 
 
 int maxRooms;
-int maxAreas;
-QMap<int,int> areaMap;
-//int module = 0;
 
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
@@ -149,11 +147,9 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             }
             else if( name() == "map" )
             {
-                maxAreas = 0;
                 maxRooms = 0;
-                areaMap.clear();
                 readMap();
-                mpHost->mpMap->init(mpHost);
+                mpHost->mpMap->audit();
             }
             else
             {
@@ -519,7 +515,8 @@ void XMLimport::readUnknownRoomElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN room element:name="<<name().toString();
+        qDebug() << "[ERROR]: UNKNOWN room element: name="
+                 << name().toString();
 
         if( isEndElement() )
         {

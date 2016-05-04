@@ -69,7 +69,8 @@ class TMap
     Q_DECLARE_TR_FUNCTIONS(TMap) // Needed so we can use tr() even though TMap is NOT derived from QObject
 
 public:
-    TMap( Host *);
+            TMap( Host *);
+           ~TMap();
     void mapClear();
     int createMapLabelID( int area );
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling );
@@ -90,7 +91,7 @@ public:
     void astHoehenAnpassung( int id, int );
     bool setExit( int from, int to, int dir );
     bool setRoomCoordinates( int id, int x, int y, int z );
-    void init(Host*);
+    void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!
     QList<int> detectRoomCollisions( int id );
     void solveRoomCollision( int id, int creationDirection, bool PCheck=true );
     void setRoom( int );
@@ -99,18 +100,34 @@ public:
     bool gotoRoom( int, int );
     void setView( float, float, float, float );
     bool serialize( QDataStream & );
-    bool restore(QString location);
+    bool restore( QString );
+    const bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
     void initGraph();
     void exportMapToDatabase();
     void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
+    void postMessage( const QString text );
+    void set3DViewCenter( const int, const int, const int, const int );
+    // Used by the 2D mapper to send view center coordinates to 3D one
+
+    void appendRoomErrorMsg( const int, const QString, const bool isToSetFileViewingRecommended = false );
+    void appendAreaErrorMsg( const int, const QString, const bool isToSetFileViewingRecommended = false );
+    void appendErrorMsg( const QString, const bool isToSetFileViewingRecommended = false );
+    void appendErrorMsgWithNoLf( const QString, const bool isToSetFileViewingRecommended = false );
+    void pushErrorMessagesToFile( const QString, const bool isACleanup = false );
+    // If the argument is true does not write out any thing if there is no data
+    // to dump, intended to be used before an operation like a map load so that
+    // any messages previously recorded are not associated with a "fresh" batch
+    // from the operation.
 
 
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
     QVector3D span;
     Host * mpHost;
-    int mRoomId;
+    // Was a single int mRoomId but that breaks things when maps are
+    // copied/shared between profiles - so now we track the profile name
+    QHash<QString, int> mRoomIdHash;
     bool m2DPanMode;
     bool mLeftDown;
     bool mRightDown;
@@ -158,6 +175,17 @@ public:
                       // by mMinVersion and mMaxVersion.
 
     QMap<QString, QString> mUserData;
+    bool isToDisplayAuditErrorsToConsole;
+
+private:
+    const QString                   createFileHeaderLine( const QString, const QChar );
+
+    QStringList                     mStoredMessages;
+
+    QMap<int, QList<QString> >      mMapAuditRoomErrors; // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
+    QMap<int, QList<QString> >      mMapAuditAreaErrors; // As for the Room ones but with key as the area number
+    QList<QString>                  mMapAuditErrors;     // For the whole map
+    bool                            mIsFileViewingRecommended; // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
 };
 
 #endif // MUDLET_TMAP_H

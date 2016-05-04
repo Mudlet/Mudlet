@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +23,8 @@
 #include "TArea.h"
 
 
+#include "Host.h"
+#include "TConsole.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 
@@ -53,6 +55,7 @@ TArea::TArea(TMap * map , TRoomDB * pRDB )
 , zoneAreaRef( 0 )
 , mpRoomDB( pRDB )
 , mIsDirty( false )
+, mpMap( map )
 {
 }
 
@@ -105,20 +108,23 @@ QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 QList<int> TArea::getRoomsByPosition( int x, int y, int z )
 {
     QList<int> dL;
-    for( int i=0; i<rooms.size(); i++ )
+    QSetIterator<int> itAreaRoom( rooms );
+    while( itAreaRoom.hasNext() )
     {
-        TRoom * pR = mpRoomDB->getRoom(rooms[i]);
+        int roomId = itAreaRoom.next();
+        TRoom * pR = mpRoomDB->getRoom(roomId);
         if( pR )
         {
-            int id = pR->getId();
-            int _x = pR->x;
-            int _y = pR->y;
-            int _z = pR->z;
-            if( _x == x && _y == y && _z == z )
+            if( pR->x == x && pR->y == y && pR->z == z )
             {
-                dL.push_back( id );
+                dL.push_back( roomId );
             }
         }
+    }
+    // Only used by TLuaInterpreter::getRoomsByPosition(), so might as well sort
+    // results
+    if( dL.size() > 1 ) {
+        std::sort( dL.begin(), dL.end() );
     }
     return dL;
 }
@@ -178,62 +184,62 @@ void TArea::determineAreaExitsOfRoom( int id )
     // The second term in the ifs below looks for exit room id in TArea
     // instance's own list of rooms which will fail (with a -1 if it is NOT in
     // the list and hence the area.
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTH);
         exits.insertMulti( id, p );
     }
     exitId = pR->getNortheast();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHEAST);
         exits.insertMulti( id, p );
     }
     exitId = pR->getEast();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_EAST);
         exits.insertMulti( id, p );
     }
     exitId = pR->getSoutheast();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHEAST);
         exits.insertMulti( id, p );
     }
     exitId = pR->getSouth();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTH);
         exits.insertMulti( id, p );
     }
     exitId = pR->getSouthwest();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHWEST);
         exits.insertMulti( id, p );
     }
     exitId = pR->getWest();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_WEST);
         exits.insertMulti( id, p );
     }
     exitId = pR->getNorthwest();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHWEST);
         exits.insertMulti( id, p );
     }
     exitId = pR->getUp();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_UP);
         exits.insertMulti( id, p );
     }
     exitId = pR->getDown();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_DOWN);
         exits.insertMulti( id, p );
     }
     exitId = pR->getIn();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_IN);
         exits.insertMulti( id, p );
     }
     exitId = pR->getOut();
-    if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+    if( exitId > 0 && !rooms.contains( exitId ) ) {
         QPair<int, int> p = QPair<int,int>(exitId, DIR_OUT);
         exits.insertMulti( id, p );
     }
@@ -258,70 +264,71 @@ void TArea::determineAreaExits()
     timer.start();
 
     exits.clear();
-    for( int i=0; i<rooms.size(); i++ ) {
-        TRoom * pR = mpRoomDB->getRoom(rooms[i]);
+    QSetIterator<int> itRoom( rooms );
+    while( itRoom.hasNext() ) {
+        int id = itRoom.next();
+        TRoom * pR = mpRoomDB->getRoom( id );
         if( ! pR ) {
             continue;
         }
 
-        int id = pR->getId();
         int exitId = pR->getNorth();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTH);
             exits.insertMulti( id, p );
         }
         exitId = pR->getNortheast();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHEAST);
             exits.insertMulti( id, p );
         }
         exitId = pR->getEast();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_EAST);
             exits.insertMulti( id, p );
         }
         exitId = pR->getSoutheast();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHEAST);
             exits.insertMulti( id, p );
         }
         exitId = pR->getSouth();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTH);
             exits.insertMulti( id, p );
         }
         exitId = pR->getSouthwest();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_SOUTHWEST);
             exits.insertMulti( id, p );
         }
         exitId = pR->getWest();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_WEST);
             exits.insertMulti( id, p );
         }
         exitId = pR->getNorthwest();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_NORTHWEST);
             exits.insertMulti( id, p );
         }
         exitId = pR->getUp();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_UP);
             exits.insertMulti( id, p );
         }
         exitId = pR->getDown();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_DOWN);
             exits.insertMulti( id, p );
         }
         exitId = pR->getIn();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_IN);
             exits.insertMulti( id, p );
         }
         exitId = pR->getOut();
-        if( exitId > 0 && rooms.indexOf( exitId ) < 0 ) {
+        if( exitId > 0 && !rooms.contains( exitId ) ) {
             QPair<int, int> p = QPair<int,int>(exitId, DIR_OUT);
             exits.insertMulti( id, p );
         }
@@ -367,7 +374,7 @@ void TArea::addRoom( int id )
     {
         if( !rooms.contains( id ) )
         {
-            rooms.append( id );
+            rooms.insert( id );
         }
         else
         {
@@ -376,7 +383,8 @@ void TArea::addRoom( int id )
     }
     else
     {
-        QString error = QString("roomID=%1 does not exist, can't set properties of non-existent rooms").arg(id);
+        QString error = tr( "roomID=%1 does not exist, can not set properties of a non-existent room!" ).arg( id );
+        mpMap->mpHost->mpConsole->printSystemMessage(error);
     }
 }
 
@@ -384,175 +392,151 @@ void TArea::calcSpan()
 {
     xminEbene.clear();
     yminEbene.clear();
-    zminEbene.clear();
     xmaxEbene.clear();
     ymaxEbene.clear();
-    zmaxEbene.clear();
-    if( rooms.size() > 0 )
-    {
-        int id = rooms[0];
+    ebenen.clear();
+
+    bool isFirstDone = false;
+    QSetIterator<int> itRoom( rooms );
+    while( itRoom.hasNext() ) {
+        int id = itRoom.next();
         TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) return;
-        min_x = pR->x;
-        max_x = min_x;
-        min_y = pR->y*-1;
-        max_y = min_y;
-        min_z = pR->z;
-        max_z = min_z;
+        if( !pR ) {
+            continue;
+        }
+
+        if( ! isFirstDone ) {
+            // Only do this initialization for the first valid room
+            min_x = pR->x;
+            max_x = min_x;
+            min_y = pR->y*-1;
+            max_y = min_y;
+            min_z = pR->z;
+            max_z = min_z;
+            ebenen.push_back( pR->z );
+            xminEbene.insert( pR->z, pR->x );
+            xmaxEbene.insert( pR->z, pR->x );
+            yminEbene.insert( pR->z, pR->y );
+            ymaxEbene.insert( pR->z, pR->y );
+            isFirstDone = true;
+            continue;
+        }
+        else {
+            // Already had one valid room so now must check more things
+
+            if( ! ebenen.contains( pR->z ) ) {
+                ebenen.push_back( pR->z );
+            }
+
+            if( ! xminEbene.contains( pR->z ) ) {
+                xminEbene.insert( pR->z, pR->x );
+            }
+            else if( pR->x < xminEbene.value( pR->z ) ) {
+                xminEbene.insert( pR->z, pR->x );
+            }
+
+            if( pR->x < min_x ) {
+                min_x = pR->x;
+            }
+
+            if( ! xmaxEbene.contains( pR->z ) ) {
+                xmaxEbene.insert( pR->z, pR->x );
+            }
+            else if( pR->x > xmaxEbene.value( pR->z ) ) {
+                xmaxEbene.insert( pR->z, pR->x );
+            }
+
+            if( pR->x > max_x ) {
+                max_x = pR->x;
+            }
+
+            if( ! yminEbene.contains( pR->z ) ) {
+                yminEbene.insert( pR->z, (-1*pR->y) );
+            }
+            else if( (-1*pR->y) < yminEbene.value( pR->z ) ) {
+                yminEbene.insert( pR->z, (-1*pR->y) );
+            }
+
+            if( (-1*pR->y) < min_y ) {
+                min_y = (-1*pR->y);
+            }
+
+            if( (-1*pR->y) > max_y ) {
+                max_y = (-1*pR->y);
+            }
+
+            if( ! ymaxEbene.contains( pR->z ) ) {
+                ymaxEbene.insert( pR->z, (-1*pR->y) );
+            }
+            else if( (-1*pR->y) > ymaxEbene.value( pR->z ) ) {
+                ymaxEbene.insert( pR->z, (-1*pR->y) );
+            }
+
+            if( pR->z < min_z ) {
+                min_z = pR->z;
+            }
+
+            if( pR->z > max_z ) {
+                max_z = pR->z;
+            }
+        }
     }
 
-    for( int i=0; i<rooms.size(); i++ )
-    {
-        int id = rooms[i];
-        TRoom * pR = mpRoomDB->getRoom( id );
-        if( !pR ) continue;
-        int _m_xmin = pR->x;
-        if( _m_xmin < min_x )
-            min_x = _m_xmin;
-        int _m_ymin = pR->y*-1;
-        if( _m_ymin < min_y )
-            min_y = _m_ymin;
-        int _m_zmin = pR->z;
-        if( _m_zmin < min_z )
-        {
-            min_z = _m_zmin;
-            if( ! ebenen.contains( _m_zmin ) )
-            {
-                ebenen.push_back( _m_zmin );
-            }
-        }
-        int _m_xmax = pR->x;
-        if( _m_xmax > max_x )
-            max_x = _m_xmax;
-        int _m_ymax = pR->y*-1;
-        if( _m_ymax > max_y )
-            max_y = _m_ymax;
-        int _m_zmax = pR->z;
-        if( _m_zmax > max_z )
-        {
-            max_z = _m_zmax;
-        }
-        // ebenenliste anlegen
-        if( ! ebenen.contains( _m_zmax ) )
-        {
-            ebenen.push_back( _m_zmax );
-        }
-    }
-
-    for( int k=0; k<ebenen.size(); k++ )
-    {
-        // For each of the (used) z-axis values that has been put into the list "ebenen"
-        int _min_x;
-        int _min_y;
-        int _min_z;
-        int _max_x;
-        int _max_y;
-        int _max_z;
-        bool minAndMaxsInitialized = false;
-
-        if( rooms.size() > 0 )
-        {
-            int id = rooms[0];
-            TRoom * pR = mpRoomDB->getRoom( id );
-            if( !pR )
-                continue;
-            _min_x = pR->x;
-            _max_x = _min_x;
-            _min_y = pR->y*-1;
-            _max_y = _min_y;
-            _min_z = pR->z;
-            _max_z = _min_z;
-            minAndMaxsInitialized = true;
-        }
-
-        for( int i=0; i<rooms.size(); i++ )
-        {
-            int id = rooms[i];
-            TRoom * pR = mpRoomDB->getRoom( id );
-            if( !pR )
-                continue;   // Not a valid room so ignore
-            if( pR->z != ebenen[k])
-                continue;   // Room is not on the z-axis value level that we currently are working with
-            if( ! minAndMaxsInitialized )
-            {  // Will get here if FIRST room (in rooms[]) was not a valid one
-                _min_x = pR->x;
-                _max_x = _min_x;
-                _min_y = pR->y*-1;
-                _max_y = _min_y;
-                _min_z = pR->z;
-                _max_z = _min_z;
-                minAndMaxsInitialized = true;
-            }
-            else
-            {
-                int _m = pR->x;
-                if( _m < _min_x )
-                    _min_x = _m;
-                if( _m > _max_x )
-                    _max_x = _m;
-
-                _m = pR->y*-1;
-                if( _m < _min_y )
-                   _min_y = _m;
-                if( _m > _max_y )
-                   _max_y = _m;
-
-                // This bit is pointless, we already known that pR->z will be the
-                // fixed z-axis value that ebenen[k] holds so _min_z and _max_z will
-                // also have that value.
-                _m = pR->z;
-                if( _m < _min_z )
-                   _min_z = _m;
-                if( _m > _max_z )
-                   _max_z = _m;
-            }
-        }
-        if( minAndMaxsInitialized )
-        {
-            xminEbene[ebenen[k]] = _min_x;
-            yminEbene[ebenen[k]] = _min_y;
-            zminEbene[ebenen[k]] = _min_z;
-            xmaxEbene[ebenen[k]] = _max_x;
-            ymaxEbene[ebenen[k]] = _max_y;
-            zmaxEbene[ebenen[k]] = _max_z;
-        }
+    if( ebenen.size() > 1 ) {
+        // Not essential but it makes debugging a bit clearer if they are sorted
+        // The {x|y}{min|max}Ebene are, by definition!
+        std::sort( ebenen.begin(), ebenen.end() );
     }
 }
 
-void TArea::removeRoom( int room )
+// Added a second argument to cut-out extremes recalculation if not required
+// Currently called from:
+// bool TRoom::setArea( int, bool )  -- the second arg there can be used for this
+// bool TRoomDB::__removeRoom( int ) -- automatically skipped for area deletion
+//                                      (when this would not be needed)
+void TArea::removeRoom( int room, bool isToDeferAreaRelatedRecalculations )
 {
     static double cumulativeMean = 0.0;
     static quint64 runCount = 0 ;
     QElapsedTimer timer;
     timer.start();
-//    TRoom * pR = mpRoomDB->getRoom( room );
-    rooms.removeOne( room );
+
+    bool isOnExtreme = false;  // Will use to flag whether some things have to
+                               // be recalcuated
+    if( rooms.contains(room) && ! isToDeferAreaRelatedRecalculations ) {
+        // just a check, if the area DOESN'T have the room then it is not wise
+        // to behave as if it did
+        TRoom * pR = mpRoomDB->getRoom( room );
+        if( pR ) {
+            // Now see if the room is on an extreme - if it the only room on a
+            // particular z-coordinate it will be on all four
+            if( xminEbene.contains( pR->z ) && xminEbene.value( pR->z ) >= pR->x ) {
+                isOnExtreme = true;
+            }
+            else if( xmaxEbene.contains( pR->z ) && xmaxEbene.value( pR->z ) <= pR->x ) {
+                isOnExtreme = true;
+            }
+            else if( yminEbene.contains( pR->z ) && yminEbene.value( pR->z ) >= (-1*pR->y) ) {
+                isOnExtreme = true;
+            }
+            else if( ymaxEbene.contains( pR->z ) && ymaxEbene.value( pR->z ) <= (-1*pR->y) ) {
+                isOnExtreme = true;
+            }
+            else if( min_x >= pR->x || min_y >= (-1*pR->y) || max_x <= pR->x || max_y <= (-1*pR->y) ) {
+                isOnExtreme = true;
+            }
+        }
+    }
+    rooms.remove( room );
     exits.remove( room );
+    if( isOnExtreme ) {
+        calcSpan();
+    }
     quint64 thisTime = timer.nsecsElapsed();
     cumulativeMean += ( ( (thisTime * 1.0e-9) - cumulativeMean) / ++runCount );
     if( runCount % 1000 == 0 ) {
         qDebug()<<"TArea::removeRoom(" << room << ") from Area took" << thisTime * 1.0e-9 << "sec. this time and after" << runCount << "times the average is" << cumulativeMean << "sec.";
     }
-//    int x = pR->x;
-//    int y = pR->y*-1;
-//    int z = pR->z;
-//    int xmin=x;int ymin=y;int zmin=z;
-//    int xmax=x;int ymax=y;int zmax=z;
-//    if ( xminEbene.contains(z) )
-//        xmin = xminEbene[z];
-//    if ( yminEbene.contains(z))
-//        ymin = yminEbene[z];
-//    if ( zminEbene.contains(z))
-//        zmin = zminEbene[z];
-//    if ( xmaxEbene.contains(z))
-//        xmax = xmaxEbene[z];
-//    if ( ymaxEbene.contains(z))
-//        ymax = ymaxEbene[z];
-//    if ( zmaxEbene.contains(z))
-//        zmax = zmaxEbene[z];
-//    if( xmin == x || xmax == x || ymax == y ||
-//        ymin == y || zmin == z || zmax == z)
-//        calcSpan();
 }
 
 // Reconstruct the area exit data in a format that actually makes sense - only

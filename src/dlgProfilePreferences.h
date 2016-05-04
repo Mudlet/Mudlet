@@ -41,8 +41,6 @@ public:
 
     int mFontSize;
 
-signals:
-
 
 public slots:
     void setFontSize();
@@ -96,6 +94,7 @@ public slots:
     void copyMap();
     void hideActionLabel();
     void slot_save_and_exit();
+    void slot_chooseProfilesChanged(QAction *);
 
 private slots:
     void slot_timeValueChanged(QTime);

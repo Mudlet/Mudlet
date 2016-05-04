@@ -169,9 +169,14 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
     }
     mErrorLogFile.setFileName( logFileName );
     mErrorLogFile.open( QIODevice::Append );
-    mErrorLogStream.setDevice( &mErrorLogFile );
-    mpMap->restore("");
-    mpMap->init( this );
+    mErrorLogStream.setDevice( &mErrorLogFile ); // This is NOW used (for map
+                                                 // file auditing and other issues)
+
+    // There was a map load attempt made here but it did not seem to be needed
+    // and it caused issues being doing in the constructor (some other classes
+    // were not fully initialised at this point) so it seemed sensible to remove
+    // it - Slysven
+
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');

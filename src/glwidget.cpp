@@ -325,42 +325,34 @@ void GLWidget::initializeGL()
     is2DView = false;
 }
 
-void GLWidget::showArea(QString name)
+// Replaces setArea() - now fed the coordinates of the room choosen as the
+// view center in the area given from the set operation in the 2D Map
+void GLWidget::setViewCenter( int areaId, int xPos, int yPos, int zPos )
 {
-    if( !mpMap ) return;
-    QMapIterator<int, QString> it( mpMap->mpRoomDB->getAreaNamesMap() );
-    while( it.hasNext() )
-    {
-        it.next();
-        int areaID = it.key();
-        QString _n = it.value();
-        if( name == _n )
-        {
-            mAID = areaID;
-            mRID = mpMap->mRoomId;//FIXME:
-            mShiftMode = true;
-            mOx = 0;
-            mOy = 0;
-            mOz = 0;
-            updateGL();
-            break;
-        }
-    }
-
+    mAID = areaId;
+    mShiftMode = true;
+    mOx = xPos;
+    mOy = yPos;
+    mOz = zPos;
+    updateGL();
 }
 
 void GLWidget::paintGL()
 {
-    if( ! mpMap ) return;
+    if( ! mpMap ) {
+        return;
+    }
     float px,py,pz;
-    if( mRID != mpMap->mRoomId && mShiftMode )  mShiftMode = false;
+    if( mRID != mpMap->mRoomIdHash.value( mpMap->mpHost->getName() ) && mShiftMode ) {
+        mShiftMode = false;
+    }
 
     int ox, oy, oz;
     if( ! mShiftMode )
     {
 
 
-        mRID = mpMap->mRoomId;
+        mRID = mpMap->mRoomIdHash.value( mpMap->mpHost->getName() );
         TRoom * pRID = mpMap->mpRoomDB->getRoom( mRID );
         if( !pRID  )
         {
@@ -528,9 +520,10 @@ void GLWidget::paintGL()
                 break;
             }
         }
-        for( int i=0; i<pArea->rooms.size(); i++ )
+        QSetIterator<int> itRoom( pArea->getAreaRooms() );
+        while( itRoom.hasNext() )
         {
-            TRoom * pR = mpMap->mpRoomDB->getRoom(pArea->rooms[i]);
+            TRoom * pR = mpMap->mpRoomDB->getRoom(itRoom.next());
             if( !pR ) continue;
             float rx = static_cast<float>(pR->x);
             float ry = static_cast<float>(pR->y);
@@ -1307,10 +1300,12 @@ void GLWidget::paintGL()
         {
             break;
         }
-        for( int i=0; i<pArea->rooms.size(); i++ )
+        QSetIterator<int> itRoom( pArea->getAreaRooms() );
+        while( itRoom.hasNext() )
         {
             glDisable(GL_LIGHT1);
-            TRoom * pR = mpMap->mpRoomDB->getRoom( pArea->rooms[i] );
+            int currentRoomId = itRoom.next();
+            TRoom * pR = mpMap->mpRoomDB->getRoom( currentRoomId );
             if( !pR ) continue;
             float rx = static_cast<float>(pR->x);
             float ry = static_cast<float>(pR->y);
@@ -1337,7 +1332,7 @@ void GLWidget::paintGL()
                 glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(1.0, 0.0, 0.0, 1.0);
             }
-            else if( pArea->rooms[i] == mTarget )
+            else if( currentRoomId == mTarget )
             {
                 glDisable(GL_BLEND);
                 glEnable( GL_LIGHTING );
@@ -1384,7 +1379,7 @@ void GLWidget::paintGL()
                     glTranslatef( rx, ry, rz );
                 }
 
-                glLoadName( pArea->rooms[i] );
+                glLoadName( currentRoomId );
                 quads++;
                 glBegin( GL_QUADS );
                 glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1631,7 +1626,7 @@ void GLWidget::paintGL()
                 glTranslatef( rx, ry, rz );
             }
 
-            glLoadName( pArea->rooms[i] );
+            glLoadName( currentRoomId );
             quads++;
             glBegin( GL_QUADS );
             glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1979,7 +1974,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
         if( mpMap->mpRoomDB->getRoom(mTarget) )
         {
             mpMap->mTargetID = mTarget;
-            if( mpMap->findPath( mpMap->mRoomId, mpMap->mTargetID) )
+            if( mpMap->findPath( mpMap->mRoomIdHash.value( mpMap->mpHost->getName() ), mpMap->mTargetID) )
             {
                mpMap->mpHost->startSpeedWalk();
             }
