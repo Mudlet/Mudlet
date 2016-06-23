@@ -223,7 +223,7 @@ void ScriptUnit::removeScript( TScript * pT )
 }
 
 
-qint64 ScriptUnit::getNewID()
+int ScriptUnit::getNewID()
 {
     return ++mMaxID;
 }

@@ -73,8 +73,8 @@ public:
     void             disableTimer();
     void             enableTimer(const QString & );
     void             disableTimer(const QString & );
-    void             enableTimer( qint64 );
-    void             disableTimer( qint64 );
+    void             enableTimer( int );
+    void             disableTimer( int );
     void             killTimer();
 
     bool             isOffsetTimer();
