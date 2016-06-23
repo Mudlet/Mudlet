@@ -50,7 +50,7 @@ public:
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
     void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    qint64                getNewID();
+    int                  getNewID();
     QString               getKeyName( int keyCode, int modifier );
     void                  setupKeyNames();
     void                  uninstall( QString );
@@ -69,7 +69,7 @@ private:
     Host *                mpHost;
     QMap<int, TKey *>     mKeyMap;
     std::list<TKey *>     mKeyRootNodeList;
-    qint64                mMaxID;
+    int                 mMaxID;
     bool                  mModuleMember;
     QMap<int, QString>    mKeys;
 

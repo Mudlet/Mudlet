@@ -57,7 +57,7 @@ public:
     void                  markCleanup( TTimer * );
     void                  doCleanup();
     QString               assembleReport();
-    qint64                getNewID();
+    int                     getNewID();
     void                  uninstall( QString );
     void                  _uninstall( TTimer * pChild, QString packageName );
 
@@ -80,7 +80,7 @@ private:
     Host *                mpHost;
     QMap<int, TTimer *>   mTimerMap;
     std::list<TTimer *>   mTimerRootNodeList;
-    qint64                mMaxID;
+    int                     mMaxID;
     bool                  mModuleMember;
     std::list<TTimer *>   mCleanupList;
 

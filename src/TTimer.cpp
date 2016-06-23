@@ -322,7 +322,7 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
 
 }
 
-void TTimer::enableTimer( qint64 id )
+void TTimer::enableTimer( int id )
 {
 
     if( mID == id )
@@ -358,7 +358,7 @@ void TTimer::enableTimer( qint64 id )
     }
 }
 
-void TTimer::disableTimer( qint64 id )
+void TTimer::disableTimer( int id )
 {
     if( mID == id )
     {

@@ -283,7 +283,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
 
 }
 
-qint64 TriggerUnit::getNewID()
+int TriggerUnit::getNewID()
 {
     return ++mMaxID;
 }

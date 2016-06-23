@@ -281,7 +281,7 @@ void ActionUnit::removeAction( TAction * pT )
 }
 
 
-qint64 ActionUnit::getNewID()
+int ActionUnit::getNewID()
 {
     return ++mMaxID;
 }
