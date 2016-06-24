@@ -321,6 +321,23 @@ IF((APPLE) AND (PKG_CONFIG_FOUND))
   ENDIF()
 ENDIF()
 
+IF((APPLE) AND (PKG_CONFIG_FOUND))
+  PKG_SEARCH_MODULE(PC_HUNSPELL hunspell libhunspell)
+  IF(PC_HUNSPELL_FOUND)
+    IF(PC_HUNSPELL_hunspell_FOUND)
+      MESSAGE(STATUS "Using pkg_config, found \"hunspell\" version: ${PC_HUNSPELL_hunspell_VERSION} with:")
+    ELSEIF(PC_HUNSPELL_libhunspell_FOUND)
+      MESSAGE(STATUS "Using pkg_config, found \"libzzip\" version: ${PC_HUNSPELL_libhunspell_VERSION} with:")
+    ELSE()
+      MESSAGE(STATUS "Using pkg_config, found Hunspell version: ${PC_HUNSPELL_VERSION} with:")
+    ENDIF()
+    MESSAGE(STATUS "  include directory(ies), HUNSPELL_INCLUDE_DIRS: ${PC_HUNSPELL_INCLUDE_DIRS} .")
+    MESSAGE(STATUS "  library(ies): HUNSPELL_LIBRARY_DIRS: ${PC_HUNSPELL_LIBRARY_DIRS}; HUNSPELL_LIBRARY_DIR: ${PC_HUNSPELL_LIBRARY_DIR}. ")
+  ELSEIF()
+    MESSAGE(WARNING "Using pkg_config, failed to find any version of Hunspell library!")
+  ENDIF()
+ENDIF()
+
 FIND_PACKAGE(Qt5Core REQUIRED)
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
@@ -345,7 +362,17 @@ ENDIF()
 FIND_PACKAGE(ZLIB REQUIRED)
 FIND_PACKAGE(PCRE REQUIRED)
 FIND_PACKAGE(YAJL REQUIRED)
-FIND_PACKAGE(HUNSPELL REQUIRED)
+
+# Fall back on original FIND_PACKAGE process on Apple if Package Config failed
+# Originally we did use that but it started to fail on Travis C.I. in June 2016
+# So we now try to use PackageConfig for MacOs platform
+IF(APPLE)
+  IF(NOT(PC_HUNSPELL_FOUND))
+    FIND_PACKAGE(HUNSPELL REQUIRED)
+  ENDIF()
+ELSE()
+  FIND_PACKAGE(HUNSPELL REQUIRED)
+ENDIF()
 
 SET(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
@@ -390,7 +417,6 @@ INCLUDE_DIRECTORIES(
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
-    ${HUNSPELL_INCLUDE_DIR}
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
@@ -434,7 +460,6 @@ TARGET_LINK_LIBRARIES(mudlet
     ${Qt5OpenGL_LIBRARIES}
     ${Qt5UiTools_LIBRARIES}
     ${Boost_LIBRARIES}
-    ${HUNSPELL_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${PCRE_LIBRARIES}
@@ -455,4 +480,10 @@ IF(APPLE)
   ELSE()
     TARGET_LINK_LIBRARIES(mudlet ${ZZIPLIB_LIBRARIES})
   ENDIF()
+ENDIF()
+
+IF(PC_HUNSPELL_FOUND)
+  TARGET_LINK_LIBRARIES(mudlet ${PC_HUNSPELL_LIBRARIES})
+ELSE()
+  TARGET_LINK_LIBRARIES(mudlet ${HUNSPELL_LIBRARIES})
 ENDIF()
