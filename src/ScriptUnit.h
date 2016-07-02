@@ -51,7 +51,7 @@ public:
     void                  stopAllTriggers();
     void                  uninstall( QString );
     void                  _uninstall( TScript * pChild, QString packageName );
-    qint64                getNewID();
+    int                     getNewID();
     QMutex                mScriptUnitLock;
     QList<TScript*>        uninstallList;
 
@@ -66,7 +66,7 @@ private:
     Host *                mpHost;
     QMap<int, TScript *>  mScriptMap;
     std::list<TScript *>  mScriptRootNodeList;
-    qint64                mMaxID;
+    int                     mMaxID;
 
 
 };

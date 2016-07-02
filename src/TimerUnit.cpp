@@ -403,7 +403,7 @@ bool TimerUnit::killTimer( QString & name )
     return false;
 }
 
-qint64 TimerUnit::getNewID()
+int TimerUnit::getNewID()
 {
     return ++mMaxID;
 }

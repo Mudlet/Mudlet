@@ -51,7 +51,7 @@ public:
     bool                  registerAction( TAction * pT );
     void                  unregisterAction( TAction * pT );
     void                  reParentAction( int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1 );
-    qint64                getNewID();
+    int                   getNewID();
     void                  uninstall( QString );
     void                  _uninstall( TAction * pChild, QString packageName );
     void                  updateToolbar();
@@ -78,7 +78,7 @@ private:
     Host *                mpHost;
     QMap<int, TAction *>  mActionMap;
     std::list<TAction *>  mActionRootNodeList;
-    qint64                mMaxID;
+    int                   mMaxID;
     TToolBar *            mpToolBar;
     TEasyButtonBar *      mpEasyButtonBar;
     bool                  mModuleMember;

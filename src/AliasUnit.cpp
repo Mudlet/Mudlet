@@ -258,7 +258,7 @@ void AliasUnit::removeAlias( TAlias * pT )
 }
 
 
-qint64 AliasUnit::getNewID()
+int AliasUnit::getNewID()
 {
     return ++mMaxID;
 }

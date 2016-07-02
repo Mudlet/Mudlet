@@ -130,7 +130,7 @@ public:
     bool            mModuleMasterFolder;
 private:
 
-    TAction(){};
+                    TAction(){}
     QString          mFuncName;
     bool                  mModuleMember;
 
