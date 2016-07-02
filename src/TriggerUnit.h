@@ -60,7 +60,7 @@ public:
     void                  reenableAllTriggers();
     QString               assembleReport();
     std::list<TTrigger *> mCleanupList;
-    qint64                getNewID();
+    int                     getNewID();
     QMultiMap<QString, TTrigger *> mLookupTable;
     QMutex                mTriggerUnitLock;
     void                  markCleanup( TTrigger * pT );
@@ -96,7 +96,7 @@ private:
     QPointer<Host>            mpHost;
     QMap<int, TTrigger *>     mTriggerMap;
     std::list<TTrigger *>     mTriggerRootNodeList;
-    qint64                    mMaxID;
+    int                     mMaxID;
     bool                  mModuleMember;
 
 

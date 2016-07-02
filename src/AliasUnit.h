@@ -59,13 +59,13 @@ public:
     void                            stopAllTriggers();
     void                            reenableAllTriggers();
     QString                         assembleReport();
-    std::list<TAlias *>             mCleanupList;
-    qint64                          getNewID();
-    QMultiMap<QString, TAlias *>    mLookupTable;
-    QMutex                          mAliasUnitLock;
+    int                             getNewID();
     void                            markCleanup( TAlias * pT );
     void                            doCleanup();
 
+    QMultiMap<QString, TAlias *>    mLookupTable;
+    std::list<TAlias *>             mCleanupList;
+    QMutex                          mAliasUnitLock;
     int                             statsAliasTotal;
     int                             statsTempAliass;
     int                             statsActiveAliass;
@@ -94,8 +94,8 @@ private:
     QPointer<Host>                  mpHost;
     QMap<int, TAlias *>             mAliasMap;
     std::list<TAlias *>             mAliasRootNodeList;
-    qint64                          mMaxID;
-    bool                  mModuleMember;
+    int                             mMaxID;
+    bool                            mModuleMember;
 };
 
 #endif // MUDLET_ALIASUNIT_H

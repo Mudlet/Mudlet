@@ -41,8 +41,8 @@ public:
     std::list<T *> *   getChildrenList();
     bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
     int                getChildCount()             { return mpMyChildrenList->size(); }
-    qint64             getID()                     { return mID; }
-    void               setID( qint64 id )          { mID=id; }
+    int                getID()                     { return mID; }
+    void               setID( int id )             { mID=id; }
     void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );
     bool               popChild( T * removeChild );
     void               setParent( T * parent );
@@ -58,7 +58,7 @@ public:
 
     T *                mpParent;
     std::list<T *> *   mpMyChildrenList;
-    qint64             mID;
+    int                mID;
     QString &          getError();
     void               setError( QString );
     bool               state();

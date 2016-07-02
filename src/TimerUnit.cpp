@@ -374,7 +374,7 @@ bool TimerUnit::killTimer(const QString & name )
     return false;
 }
 
-qint64 TimerUnit::getNewID()
+int TimerUnit::getNewID()
 {
     return ++mMaxID;
 }

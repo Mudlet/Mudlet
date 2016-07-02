@@ -266,7 +266,7 @@ void KeyUnit::removeKey( TKey * pT )
 }
 
 
-qint64 KeyUnit::getNewID()
+int KeyUnit::getNewID()
 {
     return ++mMaxID;
 }
