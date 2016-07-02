@@ -4313,7 +4313,7 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
     }
 
     QString key = QString();
-    QString value = QString(); //both of thses assigns a null value which is detectable different from the empty value
+    QString value = QString(); //both of these assigns a null value which is detectably different from the empty value
 
     if( lua_gettop( L ) ) {
         if( ! lua_isstring( L, 1 ) ) {
@@ -4388,16 +4388,15 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
             lua_settable( L, -3 );
         }
     }
-    else {
+    else { // Find all rooms where key and value match
         QSet<int> roomIdsSet;
-        while( itRoom.hasNext() ) { // Find all room with a particular key AND value
+        while( itRoom.hasNext() ) {
             itRoom.next();
 
-            if( ! value.compare( itRoom.value()->userData.value( key, QString() ), Qt::CaseSensitive ) ) {
-            // If the key is NOT present, .value() will return second argument
-            // which is a null QString which is NOT the same as an empty QString
-            // we CAN compare this to value as we have already specified that
-            // that is NOT null...
+            QString roomDataValue = itRoom.value()->userData.value( key, QString() );
+            if( ( ! roomDataValue.isNull() )
+             && ( ! value.compare( roomDataValue , Qt::CaseSensitive ) ) ) {
+
                 roomIdsSet.insert( itRoom.key() );
             }
         }
@@ -4435,7 +4434,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
     }
 
     QString key = QString();
-    QString value = QString(); //both of thses assigns a null value which is detectable different from the empty value
+    QString value = QString(); //both of these assigns a null value which is detectably different from the empty value
 
     if( lua_gettop( L ) ) {
         if( ! lua_isstring( L, 1 ) ) {
@@ -4512,14 +4511,13 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
     }
     else {
         QSet<int> areaIdsSet;
-        while( itArea.hasNext() ) { // Find all room with a particular key AND value
+        while( itArea.hasNext() ) { // Find all areas with a particular key AND value
             itArea.next();
 
-            if( ! value.compare( itArea.value()->mUserData.value( key, QString() ), Qt::CaseSensitive ) ) {
-            // If the key is NOT present, .value() will return second argument
-            // which is a null QString which is NOT the same as an empty QString
-            // we CAN compare this to value as we have already specified that
-            // that is NOT null...
+            QString areaDataValue = itArea.value()->mUserData.value( key, QString() );
+            if( ( ! areaDataValue.isNull() )
+            && ( ! value.compare( areaDataValue, Qt::CaseSensitive ) ) ) {
+
                 areaIdsSet.insert( itArea.key() );
             }
         }
