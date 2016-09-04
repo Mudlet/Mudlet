@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
+ *   Copyright (C) 2016 by Christer Oscarsson-christer.oscarsson@gmail.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -3746,6 +3747,28 @@ int TLuaInterpreter::getRoomIDbyHash( lua_State *L )
 
     return 1;
 }
+
+// int getCenterRoomID()
+// returns player room ID, or 0 if no such room
+int TLuaInterpreter::getCenterRoomID( lua_State *L )
+{
+    int roomID = 0;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
+    if( pHost && pHost->mpMap ) {
+        // get current room id
+        roomID = pHost->mpMap->mRoomIdHash[ pHost->getName() ];
+        // Make sure the room still exists
+        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomID);
+        if( ! pR ) {
+            roomID = 0;
+        }
+    }
+    lua_pushnumber( L, roomID );
+
+    return 1;
+}
+
 
 int TLuaInterpreter::solveRoomCollisions( lua_State *L )
 {
@@ -12873,6 +12896,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket );
     lua_register( pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash );
     lua_register( pGlobalLua, "getRoomIDbyHash", TLuaInterpreter::getRoomIDbyHash );
+    lua_register( pGlobalLua, "getCenterRoomID", TLuaInterpreter::getCenterRoomID );
     lua_register( pGlobalLua, "addAreaName", TLuaInterpreter::addAreaName );
     lua_register( pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName );
     lua_register( pGlobalLua, "deleteArea", TLuaInterpreter::deleteArea );
