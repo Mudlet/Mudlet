@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Christer Oscarsson-christer.oscarsson@gmail.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -175,6 +176,7 @@ public:
     static int addAreaName( lua_State *L );
     static int getRoomIDbyHash( lua_State *L );
     static int setRoomIDbyHash( lua_State *L );
+    static int getCenterRoomID( lua_State *L );
     static int sendSocket( lua_State * L );
     static int openUrl( lua_State * );
     static int getRoomsByPosition( lua_State * );
