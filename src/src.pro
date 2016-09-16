@@ -94,8 +94,7 @@ unix:!macx {
         -lyajl \
         -lGLU \
         -lzip \
-        -lz \
-        -lopengl32
+        -lz
     INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
