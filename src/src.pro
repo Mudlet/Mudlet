@@ -102,7 +102,7 @@ unix:!macx {
         -L"C:\\mingw32\\lib" \
         -llua \
         -lpcre \
-        -llibhunspell-1.3 \
+        -llibhunspell-1.4 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
