@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,40 +21,55 @@
 
 
 #include "TVar.h"
+#include <lua.h>  // Needed for LUA_TNONE in Constructors!
 
 
 TVar::TVar()
+: hidden( false )
+, kpointer( Q_NULLPTR )
+, vpointer( Q_NULLPTR )
+, saved( false )
+, reference( false )
+, parent( Q_NULLPTR )
+, name( QString() )
+, kType( LUA_TNONE )
+, value( QString() )
+, vType( LUA_TNONE )
+, nkType( LUA_TNONE )
+, nName( QString() )
 {
-    hidden = false;
-    name = "";
-    reference = false;
-    vpointer = 0;
-    kpointer = 0;
-    saved = false;
 }
 
-TVar::TVar(TVar * p)
+TVar::TVar( TVar * p )
+: hidden( false )
+, kpointer( Q_NULLPTR )
+, vpointer( Q_NULLPTR )
+, saved( false )
+, reference( false )
+, parent( p )
+, name( QString() )
+, kType( LUA_TNONE )
+, value( QString() )
+, vType( LUA_TNONE )
+, nkType( LUA_TNONE )
+, nName( QString() )
 {
-    parent = p;
-    hidden = false;
-    name = "";
-    reference = false;
-    vpointer = 0;
-    kpointer = 0;
-    saved = false;
 }
 
-TVar::TVar(TVar * p, QString kName, int kt, QString val, int vt){
-    parent = p;
-    name = kName;
-    kType = kt;
-    value = val;
-    vType = vt;
-    hidden = false;
-    reference = false;
-    vpointer = 0;
-    kpointer = 0;
-    saved = false;
+TVar::TVar( TVar * p, QString kName, int kt, QString val, int vt )
+: hidden( false )
+, kpointer( Q_NULLPTR )
+, vpointer( Q_NULLPTR )
+, saved( false )
+, reference( false )
+, parent( p )
+, name( kName )
+, kType( kt )
+, value( val )
+, vType( vt )
+, nkType( LUA_TNONE )
+, nName( QString() )
+{
 }
 
 void TVar::setReference(bool s){
@@ -106,9 +122,10 @@ int TVar::getValueType(){
     return vType;
 }
 
-void TVar::setNewName(QString n){
-    nName = n;
-}
+// Not Used:
+//void TVar::setNewName(QString n){
+//    nName = n;
+//}
 
 void TVar::setNewName(QString n, int t){
     nName = n;

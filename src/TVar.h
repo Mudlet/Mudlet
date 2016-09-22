@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +45,7 @@ public:
     bool    setName(QString);
     bool    setName(QString, int);
     void    setNewName(QString, int);
-    void    setNewName(QString);
+// Not used:    void    setNewName(QString);
     void    setReference(bool);
     QList<TVar *> getChildren(int);
     TVar *  getParent();
@@ -72,9 +73,7 @@ private:
     QString value;
     int     vType;
     int     nkType;
-    int     nvType;
     QString nName;
-    QString nValue;
 };
 
 #endif // MUDLET_TVAR_H
