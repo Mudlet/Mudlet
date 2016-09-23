@@ -50,7 +50,7 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
-QT += network opengl uitools multimedia
+QT += network opengl uitools multimedia gui
 
 # Leave the value of the following empty, line should be "BUILD =" without quotes
 # (it is NOT a Qt built-in variable) for a release build or, if you are
@@ -110,14 +110,16 @@ unix:!macx {
 } else:win32: {
     LIBS += -L"C:\\mudlet5_package" \
         -L"C:\\mingw32\\lib" \
-        -llua51 \
+        -llua \
         -lpcre \
-        -lhunspell \
-        -llibzip \
-        -lzlib \
-        -llibzip \
+        -llibhunspell-1.4 \
+        -lzip \                 # for dlgPackageExporter
+        -lz \                   # for ctelnet.cpp
         -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
-        -lyajl
+        -lyajl \
+        -lopengl32 \
+        -lglut \
+        -lglu32
     INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
         "C:\\mingw32\\include" \
         "c:\\mudlet_package_MINGW\\zlib-1.2.5" \

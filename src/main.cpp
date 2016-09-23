@@ -133,8 +133,13 @@ QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &acti
 
     if( (action) & ( 1 | 2) )
         return new QCoreApplication(argc, argv);  // Ah, we're gonna bail out early, just need a command-line application
-    else
+    else {
+#if defined (Q_OS_WIN32)        
+        // Force OpenGL use as we use some functions that aren't provided by Qt's OpenGL layer on Windows (QOpenGLFunctions)
+        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+#endif        
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
+    }
 }
 
 int main(int argc, char *argv[])
