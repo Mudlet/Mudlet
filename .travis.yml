@@ -1,5 +1,7 @@
 language: cpp
 os:
+# The previous default of osx_image: beta-xcode6.1 no longer works, certainly as of 2016-09-22! - SlySven
+osx_image: beta-xcode6.2
   - osx
   - linux
 compiler:
