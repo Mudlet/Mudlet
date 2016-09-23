@@ -1279,7 +1279,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
         LuaInterface * lI = mpHost->getLuaInterface();
         VarUnit * vu = lI->getVarUnit();
         TVar * base = vu->getBase();
-        QListIterator<TVar *> it(base->getChildren(0));
+        QListIterator<TVar *> it(base->getChildren(false));
         while( it.hasNext() )
         {
             TVar * var = it.next();
@@ -3922,7 +3922,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int value
     if ( valueType == LUA_TTABLE && cValueType != LUA_TTABLE )
     {
         //trying to change a table to something else
-        if ( ( var->getChildren(0) ).size() )
+        if ( var->getChildren(false).size() )
         {
             return 0;
         }
@@ -4548,12 +4548,13 @@ void dlgTriggerEditor::recurseVariablesDown( QTreeWidgetItem *pItem, QList< QTre
         recurseVariablesDown( pItem->child(i), list );
 }
 
-void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, int sort)
+void dlgTriggerEditor::recurseVariablesDown( TVar *var, QList< TVar * > & list, bool isSorted)
 {
     list.append( var );
-    QListIterator<TVar *> it(var->getChildren(sort));
-    while (it.hasNext())
-        recurseVariablesDown( it.next(), list, sort );
+    QListIterator<TVar *> it(var->getChildren(isSorted));
+    while (it.hasNext()) {
+        recurseVariablesDown( it.next(), list, isSorted );
+    }
 }
 
 void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem *pItem){
