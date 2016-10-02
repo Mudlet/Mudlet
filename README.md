@@ -4,7 +4,7 @@
 
 Mudlet is a quality MUD client, designed to take mudding to a new level.
 
-It’s a new breed of a client on the MUD scene – with an intuitive user interface, a specially designed scripting framework, and a very fast text display. Add to that cross-platform capability, an open-source development model, and you have a very likable MUD client.
+It’s a new breed of a client on the MUD scene – with an intuitive user interface, a specially designed scripting framework, and a very fast text display. That, along with cross-platform capability and an open-source development model results in a very likable MUD client.
 
 ## Easy to use client
 
@@ -16,7 +16,7 @@ Mudlet is designed to be very fast and efficient right from the start, and we’
 
 ## Powerful Scripting
 
-Mudlet will feature a scripting framework featuring Lua – a small, fast and efficient scripting language. While this certainly isn’t exactly a new innovation, at least we won’t be taking a step back by creating a home-made scripting language. Lua API doesn’t make use of pre-processing or necessitate a variable server either; the scripting context is shared by all aliases, triggers, scripts, keybindings, buttons and etc.
+Mudlet features a scripting framework using [Lua](https://www.lua.org/) – a small, fast and efficient scripting language. This allows Mudlet to leverage the existing community and large ecosystem of existing packages for Lua without th many drawbacks of creating a Mudlet specific scripting language. Best of all, the Lua API is seamlessly integrated in Mudlet and shared by all aliases, triggers, scripts, keybindings, buttons and other Mudlet components.
 
 ## Cross-Platform love
 
