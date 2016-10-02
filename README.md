@@ -16,7 +16,7 @@ Mudlet is designed to be very fast and efficient right from the start, and we’
 
 ## Powerful Scripting
 
-Mudlet features a scripting framework using [Lua](https://www.lua.org/) – a small, fast and efficient scripting language. This allows Mudlet to leverage the existing community and large ecosystem of existing packages for Lua without th many drawbacks of creating a Mudlet specific scripting language. Best of all, the Lua API is seamlessly integrated in Mudlet and shared by all aliases, triggers, scripts, keybindings, buttons and other Mudlet components.
+Mudlet features a scripting framework using [Lua](https://www.lua.org/) – a small, fast and efficient scripting language. This allows Mudlet to leverage the existing community and large ecosystem of existing packages for Lua without the many drawbacks of creating a Mudlet specific scripting language. Best of all, the Lua API is seamlessly integrated in Mudlet and shared by all aliases, triggers, scripts, keybindings, buttons and other Mudlet components.
 
 ## Cross-Platform love
 
