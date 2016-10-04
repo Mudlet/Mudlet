@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Christer Oscarsson-christer.oscarsson@gmail.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -77,7 +78,7 @@ void TForkedProcess::slotFinish() {
 }
 
 void TForkedProcess::slotReceivedData() {
-    if(canReadLine ()) {
+    while(canReadLine ()) {
         QByteArray line = readLine();
         // Call lua function by stored Reference
         lua_rawgeti(interpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
