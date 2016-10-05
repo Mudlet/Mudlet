@@ -100,12 +100,17 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         }
     }
 
-    if( pH->mUrl.toLower().contains("achaea.com") || pH->mUrl.toLower().contains("aetolia.com") || pH->mUrl.toLower().contains("imperian.com") || pH->mUrl.toLower().contains("midkemiaonline.com") || pH->mUrl.toLower().contains("lusternia.com") )
-    {
+    if( pH->mUrl.contains( QStringLiteral( "achaea.com" ), Qt::CaseInsensitive )
+     || pH->mUrl.contains( QStringLiteral( "aetolia.com" ), Qt::CaseInsensitive )
+     || pH->mUrl.contains( QStringLiteral( "imperian.com" ), Qt::CaseInsensitive )
+     || pH->mUrl.contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ) {
+
         downloadMapOptions->setVisible( true );
         connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
-    } else
+    }
+    else {
         downloadMapOptions->setVisible( false );
+    }
 
 
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
