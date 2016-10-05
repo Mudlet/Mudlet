@@ -106,7 +106,7 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
     mpFileDownloader = new QNetworkAccessManager( this );
-    connect(mpFileDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+    connect(mpFileDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(slot_replyFinished(QNetworkReply*)));
 
     initLuaGlobals();
 
@@ -136,35 +136,111 @@ lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
     return 0;
 }
 
-void TLuaInterpreter::replyFinished(QNetworkReply * reply )
+// Previous code didn't tell the Qt libraries when we had finished with a
+// QNetworkReply so all the data downloaded would be held in memory until the
+// profile was closed - importantly the documentation for the signal
+// QNetworkReply::finished() which is connected to this SLOT stresses that
+// delete() must NOT be called in this slot (it wasn't as it happens), but
+// deleteLater() - which is now done to free the reasources when appropriate...
+// - Slysven
+// The code now raises additional sysDownloadError Events on failure to process
+// the local file, the second argument is "failureToWriteLocalFile" and besides
+// the file to be written being the third argument (as multiple downloads are
+// supported) a fourth argument gives the local file problem, one of:
+// * "unableToOpenLocalFileForWriting"
+// * "unableToWriteLocalFile"
+// or a QFile::errorString() for the issue at hand
+// Upon success we now give an additional (third value) which gives the number
+// of bytes written into the downloaded file.
+void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
 {
-    if( ! downloadMap.contains(reply) ) return;
-    QString name = downloadMap[reply];
-    QFile file(name);
-    file.open( QFile::WriteOnly );
-    file.write( reply->readAll() );
-    file.flush();
-    file.close();
-
-    TEvent e;
-    if( reply->error() == 0 )
-    {
-        e.mArgumentList << "sysDownloadDone";
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e.mArgumentList << name;
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        qWarning() << "TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!";
+        return; // Uh, oh!
     }
-    else
-    {
-        e.mArgumentList << "sysDownloadError";
+
+    if( ! downloadMap.contains(reply) ) {
+        reply->deleteLater();
+        return;
+    }
+
+    QString localFileName = downloadMap.value( reply );
+    TEvent e;
+    if( reply->error() != QNetworkReply::NoError ) {
+        e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         e.mArgumentList << reply->errorString();
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e.mArgumentList << name;
+        e.mArgumentList << localFileName;
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-    }
 
-    mpHost->raiseEvent( e );
+        reply->deleteLater();
+        downloadMap.remove( reply );
+        pHost->raiseEvent( e );
+        return;
+    }
+    else { // reply IS ok...
+        QFile localFile( localFileName );
+        if( ! localFile.open( QFile::WriteOnly ) ) {
+            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << localFileName;
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << tr( "unableToOpenLocalFileForWriting", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+            reply->deleteLater();
+            downloadMap.remove( reply );
+            pHost->raiseEvent( e );
+            return;
+        }
+
+        qint64 bytesWritten = localFile.write( reply->readAll() );
+        if( bytesWritten == -1 ) {
+            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << localFileName;
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << tr( "unableToWriteLocalFile", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+            reply->deleteLater();
+            downloadMap.remove( reply );
+            pHost->raiseEvent( e );
+            return;
+        }
+
+        localFile.flush();
+
+        if( localFile.error() == QFile::NoError ) {
+            e.mArgumentList << "sysDownloadDone";
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << localFileName;
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << QString::number( bytesWritten );
+            e.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+        }
+        else {
+            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << localFileName;
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            e.mArgumentList << localFile.errorString();
+            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        }
+
+        localFile.close();
+        reply->deleteLater();
+        downloadMap.remove( reply );
+        pHost->raiseEvent( e );
+    }
 }
 
 void TLuaInterpreter::slotDeleteSender() {
@@ -9897,41 +9973,67 @@ int TLuaInterpreter::getAllMapUserData( lua_State * L )
 
 int TLuaInterpreter::downloadFile( lua_State * L )
 {
-    string path, url;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "downloadFile: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        path = lua_tostring( L, 1 );
-    }
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "downloadFile: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        url = lua_tostring( L, 2 );
-    }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString _url = url.c_str();
-    QString _path = path.c_str();
-    QNetworkRequest request = QNetworkRequest( QUrl( _url ) );
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "downloadFile: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString localFile;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "downloadFile: bad argument #1 type (local filename as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        localFile = QString::fromUtf8( lua_tostring( L, 1 ) );
+    }
+
+    QString urlString;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "downloadFile: bad argument #1 type (remote url as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else {
+        urlString = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    QUrl url = QUrl::fromUserInput( urlString );
+
+    if( ! url.isValid() ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "downloadFile: bad argument #2 value (url is not deemed valid), validation\n"
+                               "produced the following error message:\n%1." )
+                        .arg( url.errorString() )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest( url );
+    // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
+    request.setRawHeader( QByteArray( "User-Agent" ),
+                          QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
+                                      .arg( APP_VERSION )
+                                      .arg( APP_BUILD )
+                                      .toUtf8().constData() ) );
 #ifndef QT_NO_OPENSSL
-    if ( _path.contains("https") )
-    {
+    if( url.scheme() == QStringLiteral( "https" ) ) {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
         request.setSslConfiguration( config );
     }
 #endif
     QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
-    pHost->mLuaInterpreter.downloadMap[reply] = _path;
-    return 0;
+    pHost->mLuaInterpreter.downloadMap.insert( reply, localFile );
+    lua_pushboolean( L, true );
+    lua_pushstring( L, reply->url().toString().toUtf8().constData() ); // Returns the Url that was ACTUALLY used
+    return 2;
 
 }
 
