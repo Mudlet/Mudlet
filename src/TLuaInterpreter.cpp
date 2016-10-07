@@ -2043,30 +2043,42 @@ int TLuaInterpreter::setModulePriority( lua_State * L  ){
     return 0;
 }
 
+// Now identifies and handles XML map files...
 int TLuaInterpreter::loadMap( lua_State * L )
 {
-    string location="";
-    if( lua_gettop( L ) == 1 )
-    {
-        if( ! lua_isstring( L, 1 ) )
-        {
-            lua_pushstring( L, "loadMap: where do you want to load from?" );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "loadMap: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    QString location;
+    if( lua_gettop( L ) ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "loadMap: bad argument #1 type (Map pathFile as string is optional {loads last\n"
+                                   "stored map if ommitted}, got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
             lua_error( L );
             return 1;
         }
-        else
-        {
-            location = lua_tostring( L, 1 );
+        else {
+            location = QString::fromUtf8( lua_tostring( L, 1 ) );
         }
     }
-    QString _location( location.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool error = pHost->mpConsole->loadMap(_location);
+
+    bool error = false;
+    if( ! location.isEmpty() && location.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) ) {
+        error = pHost->mpConsole->importMap( location );
+    }
+    else {
+        error = pHost->mpConsole->loadMap( location );
+    }
     lua_pushboolean( L, error );
     return 1;
 }
-
-
 
 // enableTimer( sess, timer_name )
 int TLuaInterpreter::enableTimer( lua_State *L )

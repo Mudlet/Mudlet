@@ -43,24 +43,33 @@
 #include "post_guard.h"
 
 
-int maxRooms;
-
 XMLimport::XMLimport( Host * pH )
 : mpHost( pH )
+, mPackageName( QString() )
+, mpTrigger( Q_NULLPTR )
+, mpTimer( Q_NULLPTR )
+, mpAlias( Q_NULLPTR )
+, mpKey( Q_NULLPTR )
+, mpAction( Q_NULLPTR )
+, mpScript( Q_NULLPTR )
+, mpVar( Q_NULLPTR )
+, gotTrigger( false )
+, gotTimer( false )
+, gotAlias( false )
+, gotKey( false )
+, gotAction( false )
+, gotScript( false )
+, module( 0 )
+, mMaxRoomId( 0 )
+, mMaxAreaId( -1 )
 {
 }
 
-bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleFlag)
+bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleFlag )
 {
     mPackageName = packName;
     setDevice( device );
 
-    gotTrigger = false;
-    gotTimer = false;
-    gotAlias = false;
-    gotKey = false;
-    gotAction = false;
-    gotScript = false;
     module = moduleFlag;
 
     if( ! packName.isEmpty() )
@@ -147,7 +156,6 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             }
             else if( name() == "map" )
             {
-                maxRooms = 0;
                 readMap();
                 mpHost->mpMap->audit();
             }
@@ -320,6 +328,9 @@ void XMLimport::readVariablePackage()
 
 void XMLimport::readMap()
 {
+    QMultiHash<int, int> tempAreaRoomsHash; // Keys: area id, Values: a room id in that area
+    QMultiHash<int, int> tempRoomEntranceHash; // Keys: exit (destination of route) room id, Values: entrance (start of route) room id
+
     while( ! atEnd() )
     {
         readNext();
@@ -330,17 +341,45 @@ void XMLimport::readMap()
             if( name() == "areas" )
             {
                 mpHost->mpMap->mpRoomDB->clearMapDB();
+                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Area data..." ) );
+                mpHost->mpMap->reportProgressToProgressDialog( 0, 3 );
                 readAreas();
             }
             else if( name() == "rooms" )
             {
-                readRooms();
+                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data..." ) );
+                mpHost->mpMap->reportProgressToProgressDialog( 1, 3 );
+                readRooms( tempAreaRoomsHash, tempRoomEntranceHash );
             }
             else if( name() == "environments" )
             {
+                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Environment data..." ) );
+                mpHost->mpMap->reportProgressToProgressDialog( 2, 3 );
                 readEnvColors();
             }
+            mpHost->mpMap->reportProgressToProgressDialog( 3, 3 );
         }
+    }
+
+    mpHost->mpMap->reportStringToProgressDialog( tr( "Assigning Rooms to their Areas..." ) );
+    int roomTotal = tempAreaRoomsHash.count();
+    int currentRoomCount = 0;
+
+    mpHost->mpMap->mpRoomDB->entranceMap.swap( tempRoomEntranceHash ); // Very fast and does not fail...
+    QListIterator<int> itAreaWithRooms( tempAreaRoomsHash.uniqueKeys() );
+    while( itAreaWithRooms.hasNext() ) {
+        int areaId = itAreaWithRooms.next();
+        QSet<int> areaRoomsSet = tempAreaRoomsHash.values( areaId ).toSet();
+
+        if( ! mpHost->mpMap->mpRoomDB->areas.contains( areaId ) ) {
+            // It is known for map files to have rooms with area Ids that are not in the
+            // listed areas - this cures that:
+            mpHost->mpMap->mpRoomDB->addArea( areaId );
+        }
+
+        mpHost->mpMap->mpRoomDB->setAreaRooms( areaId, areaRoomsSet );
+        currentRoomCount += areaRoomsSet.count();
+        mpHost->mpMap->reportProgressToProgressDialog( currentRoomCount, roomTotal );
     }
 }
 
@@ -375,133 +414,206 @@ void XMLimport::readAreas()
         }
         if( name() == "area" )
         {
-            readAreaNames();
+            readArea();
         }
 
     }
 }
 
-void XMLimport::readAreaNames()
+void XMLimport::readArea()
 {
     int id = attributes().value("id").toString().toInt();
     QString name = attributes().value("name").toString();
     mpHost->mpMap->mpRoomDB->addArea( id, name );
 }
 
-void XMLimport::readRooms()
+void XMLimport::readRooms( QMultiHash<int, int> & areaRoomsHash, QMultiHash<int, int> & roomEntrancesHash )
 {
+
     while( ! atEnd() )
     {
         readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
 
-        if( isStartElement() )
+        if( Q_LIKELY( isStartElement() ) )
         {
-            if( name() == "room" )
+            if( Q_LIKELY( name() == QStringLiteral( "room" ) ) )
             {
-                readRoom();
+                readRoom( areaRoomsHash, roomEntrancesHash );
             }
-
             else
             {
                 readUnknownMapElement();
             }
         }
+        else if( isEndElement() )
+        {
+            break;
+        }
     }
 }
 
-
-void XMLimport::readRoom()
+// This is a CPU/Time hog...
+void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, QMultiHash<int, int> & entranceMultiHash )
 {
     TRoom * pT = new TRoom( mpHost->mpMap->mpRoomDB );
-    pT->id = attributes().value("id").toString().toInt();
-    pT->area = attributes().value("area").toString().toInt();
-    pT->name = attributes().value("title").toString();
-    pT->environment = attributes().value("environment").toString().toInt();
+    pT->id = attributes().value( QStringLiteral( "id" ) ).toString().toInt();
+    pT->area = attributes().value( QStringLiteral( "area" ) ).toString().toInt();
+    pT->name = attributes().value( QStringLiteral( "title" ) ).toString();
+    pT->environment = attributes().value( QStringLiteral( "environment" ) ).toString().toInt();
 
     while( ! atEnd() )
     {
         readNext();
 
-        if( name() == "" ) continue;
-        if( name() == "coord" )
+        if( Q_UNLIKELY( pT->id < 1 ) )
         {
-            if( attributes().value("x").toString() == "" ) continue;
-            pT->x = attributes().value("x").toString().toInt();
-            pT->y = attributes().value("y").toString().toInt();
-            pT->z = attributes().value("z").toString().toInt();
-            continue;
+            continue; // Skip further tests on exits as we'd have to throw away
+                      // this invalid room and it would mess up the entranceMultiHash
         }
-        else if( name() == "exit")
+        else if( Q_LIKELY( name() == QStringLiteral( "exit" ) ) )
         {
-            QString dir = attributes().value("direction").toString();
-            int e = attributes().value("target").toString().toInt();
-            if( dir == "" ) continue;
-            if( dir == "north" )
+            QString dir = attributes().value( QStringLiteral( "direction" ) ).toString();
+            int e = attributes().value( QStringLiteral( "target" ) ).toString().toInt();
+            if( dir.isEmpty() )
+            {
+                continue;
+            }
+            else if( dir == QStringLiteral( "north" ) )
             {
                 pT->north = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
             }
-            if( dir == "south" )
-            {
-                pT->south = e;
-            }
-            if( dir == "northwest" )
-            {
-                pT->northwest = e;
-            }
-            if( dir == "southwest" )
-            {
-                pT->southwest = e;
-            }
-            if( dir == "northeast" )
-            {
-                pT->northeast = e;
-            }
-            if( dir == "southeast" )
-            {
-                pT->southeast = e;
-            }
-            if( dir == "west" )
-            {
-                pT->west = e;
-            }
-            if( dir == "east" )
+            else if( dir == QStringLiteral( "east" ) )
             {
                 pT->east = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
             }
-            if( dir == "up" )
+            else if( dir == QStringLiteral( "south" ) )
+            {
+                pT->south = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else if( dir == QStringLiteral( "west" ) )
+            {
+                pT->west = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else if( dir == QStringLiteral( "up" ) )
             {
                 pT->up = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
             }
-            if( dir == "down" )
+            else if( dir == QStringLiteral( "down" ) )
             {
                 pT->down = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
             }
-            if( dir == "in" )
+            else if( dir == QStringLiteral( "northeast" ) )
+            {
+                pT->northeast = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else if( dir == QStringLiteral( "southwest" ) )
+            {
+                pT->southwest = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else if( dir == QStringLiteral( "southeast" ) )
+            {
+                pT->southeast = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else if( dir == QStringLiteral( "northwest" ) )
+            {
+                pT->northwest = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else if( dir == QStringLiteral( "in" ) )
             {
                 pT->in = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
             }
-            if( dir == "out" )
+            else if( dir == QStringLiteral( "out" ) )
             {
                 pT->out = e;
+                if( ! entranceMultiHash.contains( e, pT->id ) )
+                {
+                    entranceMultiHash.insert( e, pT->id );
+                }
+            }
+            else
+            {
+                // TODO: Handle Special Exits
             }
             continue;
         }
+        else if( name() == QStringLiteral( "coord" ) )
+        {
+            if( attributes().value("x").toString().isEmpty() )
+            {
+                continue;
+            }
+
+            pT->x = attributes().value( QStringLiteral( "x" ) ).toString().toInt();
+            pT->y = attributes().value( QStringLiteral( "y" ) ).toString().toInt();
+            pT->z = attributes().value( QStringLiteral( "z" ) ).toString().toInt();
+            continue;
+        }
+        else if( Q_UNLIKELY( name().isEmpty() ) )
+        {
+            continue;
+        }
+
         if( isEndElement() )
         {
             break;
         }
     }
-    if( pT->id != 0 )
+
+    if( pT->id > 0 )
     {
+        mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data [id: %1]..." ).arg( pT->id ) );
+        areamRoomMultiHash.insert( pT->area, pT->id );
         mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT );
-        maxRooms++;
+        mMaxRoomId = qMax( mMaxRoomId, pT->id ); //Wasn't used but now maintains max Room Id
     }
     else
+    {
         delete pT;
+    }
 }
 
 void XMLimport::readUnknownMapElement()
@@ -523,26 +635,27 @@ void XMLimport::readUnknownMapElement()
     }
 }
 
-void XMLimport::readUnknownRoomElement()
-{
-    while( ! atEnd() )
-    {
+// Not used:
+//void XMLimport::readUnknownRoomElement()
+//{
+//    while( ! atEnd() )
+//    {
 
-        readNext();
-        qDebug() << "[ERROR]: UNKNOWN room element: name="
-                 << name().toString();
+//        readNext();
+//        qDebug() << "[ERROR]: UNKNOWN room element: name="
+//                 << name().toString();
 
-        if( isEndElement() )
-        {
-            break;
-        }
+//        if( isEndElement() )
+//        {
+//            break;
+//        }
 
-        if( isStartElement() )
-        {
-            readRoom();
-        }
-    }
-}
+//        if( isStartElement() )
+//        {
+//            readRoom();
+//        }
+//    }
+//}
 
 
 

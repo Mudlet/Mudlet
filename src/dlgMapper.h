@@ -27,10 +27,7 @@
 #include "ui_mapper.h"
 #include <QDir>
 #include <QMainWindow>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QPointer>
-#include <QProgressDialog>
 #include "post_guard.h"
 
 
@@ -44,7 +41,6 @@ Q_OBJECT
 
 public:
         dlgMapper( QWidget *, Host *, TMap * );
-        void downloadMap();
         void updateAreaComboBox();
     void                setDefaultAreaShown( const bool );
     const bool          getDefaultAreaShown() { return mShowDefaultArea; }
@@ -52,9 +48,6 @@ public:
 
         TMap * mpMap;
         QPointer<Host> mpHost;
-        QNetworkAccessManager * mpDownloader;
-        QProgressDialog * mpProgressDialog;
-        QNetworkReply * mpReply;
 
 
 public slots:
@@ -64,9 +57,6 @@ public slots:
         void slot_toggleStrongHighlight( int v );
         void show2dView();
         void slot_togglePanel();
-        void setDownloadProgress( qint64, qint64 );
-        void cancel();
-        void replyFinished( QNetworkReply * );
         void goRoom();
         void choseRoom( QListWidgetItem * );
         void slot_roomSize(int d);

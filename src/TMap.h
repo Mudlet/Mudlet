@@ -29,6 +29,8 @@
 #include <QApplication>
 #include <QColor>
 #include <QMap>
+#include <QMutex>
+#include <QNetworkReply>
 #include <QPixmap>
 #include <QPointer>
 #include <QSizeF>
@@ -44,6 +46,9 @@ class TArea;
 class TRoom;
 class TRoomDB;
 class T2DMap;
+class QFile;
+class QNetworkAccessManager;
+class QProgressDialog;
 
 
 class TMapLabel
@@ -65,9 +70,10 @@ public:
 };
 
 
-class TMap
+class TMap : public QObject
 {
-    Q_DECLARE_TR_FUNCTIONS(TMap) // Needed so we can use tr() even though TMap is NOT derived from QObject
+    Q_OBJECT
+
 
 public:
     TMap( Host *);
@@ -121,6 +127,14 @@ public:
     // any messages previously recorded are not associated with a "fresh" batch
     // from the operation.
 
+    // Moved and revised from dlgMapper:
+    bool                            downloadMap( const QString * remoteUrl = Q_NULLPTR,  const QString * localFileName = Q_NULLPTR );
+    // Use progresss dialog for post-download operations:
+    void                            reportStringToProgressDialog( const QString );
+    void                            reportProgressToProgressDialog( const int, const int );
+    bool                            importMap( QFile & );
+    bool                            readXmlMapFile( QFile & );
+
 
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
@@ -149,7 +163,7 @@ public:
 
     QMap<QString, int> pixNameTable;
     QMap<int, QPixmap> pixTable;
-    typedef adjacency_list<listS, vecS, directedS, no_property, property<edge_weight_t, cost> > mygraph_t;
+    typedef adjacency_list<listS, vecS, directedS, no_property, boost::property<edge_weight_t, cost> > mygraph_t;
     typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
@@ -178,6 +192,14 @@ public:
     QMap<QString, QString> mUserData;
     bool isToDisplayAuditErrorsToConsole;
 
+public slots:
+    // Moved and revised from dlgMapper:
+    void                            slot_setDownloadProgress( qint64, qint64 );
+    void                            slot_downloadCancel();
+    void                            slot_downloadError( QNetworkReply::NetworkError );
+    void                            slot_replyFinished( QNetworkReply * );
+
+
 private:
     const QString                   createFileHeaderLine( const QString, const QChar );
 
@@ -187,6 +209,14 @@ private:
     QMap<int, QList<QString> >      mMapAuditAreaErrors; // As for the Room ones but with key as the area number
     QList<QString>                  mMapAuditErrors;     // For the whole map
     bool                            mIsFileViewingRecommended; // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
+
+    // Moved and revised from dlgMapper:
+    QNetworkAccessManager *         mpNetworkAccessManager;
+    QProgressDialog *               mpProgressDialog;
+    QNetworkReply *                 mpNetworkReply;
+    QString                         mLocalMapFileName;
+    int                             mExpectedFileSize;
+    QMutex                          mXmlImportMutex;
 };
 
 #endif // MUDLET_TMAP_H

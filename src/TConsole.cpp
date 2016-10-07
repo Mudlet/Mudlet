@@ -1762,6 +1762,8 @@ void TConsole::skipLine()
     }
 }
 
+// TODO: It may be worth considering moving the (now) three following methods
+// to the TMap class...?
 bool TConsole::saveMap(const QString& location)
 {
     QDir dir_map;
@@ -1800,7 +1802,7 @@ bool TConsole::loadMap(const QString& location)
     }
 
     if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
-        // No map or map currently loaded - soi try and created them
+        // No map or map currently loaded - so try and created them
         mudlet::self()->slot_mapper();
     }
 
@@ -1835,6 +1837,64 @@ bool TConsole::loadMap(const QString& location)
     }
     else {
         pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
+    }
+
+    return result;
+}
+
+// Used by TLuaInterpreter:loadMap() and dlgProfilePreferences for import/load
+// of files ending in ".xml"
+bool TConsole::importMap( const QString & location )
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
+        // in later software versions and is a weak pointer until used
+        // (I think - Slysven ?)
+        return false;
+    }
+
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // No map or map currently loaded - so try and created them
+        mudlet::self()->slot_mapper();
+    }
+
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // And that failed so give up
+        return false;
+    }
+
+
+    qDebug() << "TConsole::importingMap() - importing map case 1.";
+    pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map importing(1) report" ), true );
+    QDateTime now( QDateTime::currentDateTime() );
+
+    bool result = false;
+
+    QFileInfo fileInfo( location );
+    QFile file;
+    if( ! fileInfo.filePath().isEmpty() ) {
+        if( fileInfo.isRelative() ) {
+            // Resolve the name relative to the profile home directory:
+            file.setFileName( QDir::cleanPath( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                                                   .arg( QDir::homePath() )
+                                                   .arg( pHost->getName() )
+                                                   .arg( fileInfo.filePath() ) ) );
+        }
+        else {
+            file.setFileName( fileInfo.canonicalFilePath() );
+        }
+    }
+
+    if( file.open( QFile::ReadOnly | QFile::Text ) ) {
+
+        QString infoMsg = tr( "[ INFO ]  - Map located and opened, now parsing it..." );
+        pHost->postMessage( infoMsg );
+
+        result = pHost->mpMap->importMap( file );
+
+        file.close();
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
     }
 
     return result;

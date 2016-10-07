@@ -29,8 +29,10 @@
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
+#include "TEvent.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "XMLimport.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -39,6 +41,8 @@
 #include <QFileDialog>
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QNetworkAccessManager>
+#include <QProgressDialog>
 #include "post_guard.h"
 
 
@@ -68,6 +72,10 @@ TMap::TMap( Host * pH )
 , mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
 , mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
 , mIsFileViewingRecommended( false )
+, mpNetworkAccessManager( Q_NULLPTR )
+, mpProgressDialog( Q_NULLPTR )
+, mpNetworkReply( Q_NULLPTR )
+, mExpectedFileSize( 0 )
 {
     mVersion = mDefaultVersion; // This is overwritten during a map restore and
                                 // is the loaded file version
@@ -112,6 +120,14 @@ TMap::TMap( Host * pH )
     m2DPanMode = false;
     mLeftDown = false;
     mRightDown = false;
+
+    // According to Qt Docs we should really only have one of these
+    // (QNetworkAccessManager) for the whole application, but: each profile's
+    // TLuaInterpreter; each profile's ctelnet and now each profile's TMap
+    // (was dlgMapper) instance has one...!
+    mpNetworkAccessManager = new QNetworkAccessManager( this );
+
+    connect( mpNetworkAccessManager, SIGNAL( finished( QNetworkReply * ) ), this, SLOT( slot_replyFinished( QNetworkReply * ) ) );
 }
 
 TMap::~TMap()
@@ -1565,7 +1581,7 @@ bool TMap::restore( QString location )
             QPushButton *noButton = msgBox.addButton("Start my own", QMessageBox::ActionRole);
             msgBox.exec();
             if( msgBox.clickedButton() == yesButton ) {
-                mpMapper->downloadMap();
+                downloadMap();
             }
             else if( msgBox.clickedButton() == noButton ) {
                 ; //No-op to avoid unused "noButton"
@@ -2101,4 +2117,336 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
     }
 
     mIsFileViewingRecommended = false;
+}
+
+bool TMap::downloadMap( const QString * remoteUrl, const QString * localFileName )
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return false;
+    }
+
+    // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
+    if( ! mXmlImportMutex.tryLock( 0 ) ) {
+        QString warnMsg = QStringLiteral( "[ WARN ]  - Attempt made to download an XML map when one has already been\n"
+                                                      "requested or is being imported from a local file - wait for that\n"
+                                                      "operation to complete (if it cannot be canceled) before retrying!" );
+        postMessage( warnMsg );
+        return false;
+    }
+
+    // We have the mutex locked - MUST unlock it when done under ALL circumstances
+    QUrl url;
+
+    if( ! remoteUrl || remoteUrl->isEmpty() ) {
+        // TODO: Provide a per profile means to specify a "user settable" default Url...
+        url = QUrl::fromUserInput( QStringLiteral( "https://www.%1/maps/map.xml" ).arg( pHost->mUrl ) );
+    }
+    else {
+        url = QUrl::fromUserInput( *remoteUrl );
+    }
+
+    if( ! url.isValid() ) {
+        QString errMsg = QStringLiteral( "[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:\n"
+                                                     "%1\n"
+                                                     "and the error message (may contain technical details) was:"
+                                                     "\"%2\"." )
+                         .arg( url.toString() )
+                         .arg( url.errorString() );
+        postMessage( errMsg );
+        mXmlImportMutex.unlock();
+        return false;
+    }
+
+    if( ! localFileName || localFileName->isEmpty() ) {
+        mLocalMapFileName = QStringLiteral( "%1/.config/mudlet/profiles/%2/map.xml" )
+                            .arg( QDir::homePath() )
+                            .arg( pHost->getName() );
+    }
+    else {
+        mLocalMapFileName = *localFileName;
+    }
+
+    QNetworkRequest request = QNetworkRequest( url );
+    // This should prevent similar problems to those mentioned in:
+    // https://bugs.launchpad.net/mudlet/+bug/1366781 although the fix for THAT
+    // is elsewhere and is to be inserted separately to the changeset that
+    // placed this code here:
+    request.setRawHeader( QByteArray( "User-Agent" ),
+                          QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
+                                      .arg( APP_VERSION )
+                                      .arg( APP_BUILD )
+                                      .toUtf8().constData() ) );
+
+#ifndef QT_NO_OPENSSL
+    if( url.scheme() == QStringLiteral( "https" ) ) {
+        QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
+        request.setSslConfiguration( config );
+    }
+#endif
+
+    // Unfortunately we do not seem to get a file size from the IRE servers so
+    // estimate it from current figures + 10% as of now (2016/10) - using previous
+    // 4M that was used before for other cases:
+    mExpectedFileSize = 4000000;
+    if(      url.toString().contains( QStringLiteral( "achaea.com" ), Qt::CaseInsensitive ) ) {
+        mExpectedFileSize = qRound( 1.1f * 4706442 );
+    }
+    else if( url.toString().contains( QStringLiteral( "aetolia.com" ), Qt::CaseInsensitive ) ) {
+        mExpectedFileSize = qRound( 1.1f * 5695407 );
+    }
+    else if( url.toString().contains( QStringLiteral( "imperian.com" ), Qt::CaseInsensitive ) ) {
+        mExpectedFileSize = qRound( 1.1f * 4997166 );
+    }
+    else if( url.toString().contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ) {
+        mExpectedFileSize = qRound( 1.1f * 4842063 );
+    }
+// Midkemia is due for deletion in another pending PR!
+//    else if( url.toString().contains( QStringLiteral( "midkemiaonline.com" ), Qt::CaseInsensitive ) ) {
+//        mExpectedFileSize = qRound( 1.1f * 2600241 );
+//    }
+
+    QString infoMsg = tr( "[ INFO ]  - Map download initiated, please wait..." );
+    postMessage( infoMsg );
+    qApp->processEvents();
+    // Attempts to ensure INFO message gets shown before download is initiated!
+
+    mpNetworkReply = mpNetworkAccessManager->get( QNetworkRequest( QUrl( url ) ) );
+    // Using zero for both min and max values should cause the bar to oscillate
+    // until the first update
+    mpProgressDialog = new QProgressDialog( tr( "Downloading XML map file for use in %1..." ).arg( pHost->getName() ), tr( "Abort" ), 0, 0 );
+    mpProgressDialog->setWindowTitle( tr( "Map download" ) );
+    mpProgressDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_map_download.png" ) ) );
+    mpProgressDialog->setMinimumWidth( 300 );
+    mpProgressDialog->setAutoClose( false );
+    mpProgressDialog->setAutoReset( false );
+    mpProgressDialog->setMinimumDuration( 0 ); // Normally waits for 4 seconds before showing
+
+    connect(mpNetworkReply, SIGNAL( downloadProgress( qint64, qint64 ) ), this, SLOT( slot_setDownloadProgress( qint64, qint64 ) ) );
+// Not used:    connect(mpNetworkReply, SIGNAL( readyRead() ), this, SLOT( slot_readyRead() ) );
+    connect(mpNetworkReply, SIGNAL( error(QNetworkReply::NetworkError) ), this, SLOT( slot_downloadError( QNetworkReply::NetworkError ) ) );
+// Not used:    connect(mpNetworkReply, SIGNAL( sslErrors( QList<QSslError> ) ), this, SLOT( slot_sslErrors( QList<QSslError> ) ) );
+    connect(mpProgressDialog, SIGNAL( canceled() ), this, SLOT( slot_downloadCancel() ) );
+
+    mpProgressDialog->show();
+}
+
+// Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
+// both via TConsole::importMap( QFile & ) - it is intended to prevent
+// readXmlMapFile( QFile & ) from being used more than once at a time and to
+// prevent the above callers from using that when a map download is in progress!
+bool TMap::importMap( QFile & file )
+{
+    if( ! mXmlImportMutex.tryLock( 0 ) ) {
+        QString warnMsg = QStringLiteral( "[ WARN ]  - Attempt made to import an XML map when one is already being\n"
+                                                      "downloaded or is being imported from a local file - wait for that\n"
+                                                      "operation to complete (if it cannot be canceled) before retrying!" );
+        postMessage( warnMsg );
+        return false;
+    }
+    // We have the mutex and MUST unlock it when we are done
+
+    bool result = readXmlMapFile( file );
+
+    // Finally release the lock on the XMLimporter
+    mXmlImportMutex.unlock();
+
+    return result;
+}
+
+bool TMap::readXmlMapFile( QFile & file )
+{
+    Host * pHost = mpHost;
+    bool isLocalImport = false;
+    if( ! pHost ) {
+        return false;
+    }
+
+    if( ! mpProgressDialog ) {
+        // This is the local import case - which has not got a progress dialog
+        // until now:
+        isLocalImport = true;
+        mpProgressDialog = new QProgressDialog( tr( "Importing XML map file for use in %1..." ).arg( pHost->getName() ), QString(), 0, 0 );
+        mpProgressDialog->setWindowTitle( tr( "Map import" ) );
+        mpProgressDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_map_download.png" ) ) );
+        mpProgressDialog->setMinimumWidth( 300 );
+        mpProgressDialog->setAutoClose( false );
+        mpProgressDialog->setAutoReset( false );
+        mpProgressDialog->setMinimumDuration( 0 ); // Normally waits for 4 seconds before showing
+    }
+    else {
+        ; // This is the download file case which is a no-op
+    }
+
+    // It is NOW safe to delete the map as we are in a position to load one
+    mapClear();
+
+    XMLimport reader( pHost );
+    bool result = reader.importPackage( & file );
+
+    // probably not needed for the download but might be
+    // needed for local file case:
+    mpMapper->mp2dMap->init();
+    // No need to call audit() as XMLimport::importPackage() does it!
+    // audit() produces the successful ending [ OK ] message...!
+    mpMapper->updateAreaComboBox();
+    if( result ) {
+        mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    }
+
+    if( isLocalImport ) {
+        // clean-up
+        mpProgressDialog->deleteLater();
+        mpProgressDialog = 0;
+    }
+    mpMapper->show();
+
+    return result;
+}
+
+void TMap::slot_setDownloadProgress( qint64 got, qint64 tot )
+{
+    if( ! mpProgressDialog ) {
+        return;
+    }
+
+    if( ! mpProgressDialog->maximum() ) {
+        // First call, range has not been set;
+        mpProgressDialog->setRange( 0, mExpectedFileSize );
+    }
+    else if( mpProgressDialog->maximum() != static_cast<int>( tot ) ) {
+        mpProgressDialog->setRange( 0, static_cast<int>(tot) );
+    }
+
+    mpProgressDialog->setValue( static_cast<int>( got ) );
+}
+
+void TMap::slot_downloadCancel()
+{
+    QString alertMsg = tr( "[ ALERT ] - Map download was canceled, on user's request." );
+    postMessage( alertMsg );
+    if( mpProgressDialog ) {
+        mpProgressDialog->deleteLater();
+        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+    }
+    if( mpNetworkReply ) {
+        mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
+    }
+}
+
+void TMap::slot_downloadError( QNetworkReply::NetworkError error )
+{
+    if( ! mpNetworkReply ) {
+        return;
+    }
+
+    if( error != QNetworkReply::OperationCanceledError ) {
+        // No point in reporting Cancel as that is handled elsewhere
+        QString errMsg = tr( "[ ERROR ] - Map download encountered an error:\n%1." ).arg( mpNetworkReply->errorString() );
+        postMessage( errMsg );
+    }
+}
+
+void TMap::slot_replyFinished( QNetworkReply * reply )
+{
+    if( reply != mpNetworkReply ) {
+        qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
+    }
+
+    if( reply->error() != QNetworkReply::NoError ) {
+        QString alertMsg = tr( "[ ALERT ] - Map download failed, error reported was:\n%1.").arg( reply->errorString() );
+        postMessage( alertMsg );
+    }
+    else {
+        QFile file( mLocalMapFileName );
+        if( ! file.open( QFile::WriteOnly ) ) {
+            QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg( mLocalMapFileName );
+            postMessage( alertMsg );
+        }
+        else {
+            if( file.write( reply->readAll() ) == -1 ) {
+                QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg( mLocalMapFileName );
+                postMessage( alertMsg );
+            }
+            else {
+                file.flush();
+                file.close();
+
+                if( file.open(QFile::ReadOnly | QFile::Text) ) {
+
+                    QString infoMsg = tr(    "[ INFO ]  - ... map downloaded and stored, now parsing it..." );
+                    postMessage( infoMsg );
+
+                    Host * pHost = mpHost;
+                    if( ! pHost ) {
+                        qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
+                        mXmlImportMutex.unlock();
+                        return;
+                    }
+
+                    // Since the download is complete but we do not offer to
+                    // cancel the required post-processing we should now hide
+                    // the cancel/abort button:
+                    mpProgressDialog->setCancelButton( Q_NULLPTR );
+
+                    // The action to parse the XML file has been refactored to
+                    // a separate method so that it can be shared with the
+                    // direct importation of a local copy of a map file.
+
+                    if( readXmlMapFile( file ) ) {
+                        TEvent mapDownloadEvent;
+                        mapDownloadEvent.mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
+                        mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+                        pHost->raiseEvent( mapDownloadEvent );
+                    }
+                    else {
+                        // Failure in parse file...
+                        QString alertMsg = tr( "[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg( mLocalMapFileName );
+                        postMessage( alertMsg );
+                    }
+                    file.close();
+                }
+                else {
+                    QString alertMsg = tr( "[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg( mLocalMapFileName );
+                    postMessage( alertMsg );
+                }
+            }
+        }
+    }
+    reply->deleteLater();
+    mpNetworkReply = Q_NULLPTR;
+
+    // We don't delete the progress dialog until here as we now use it to inform
+    // about post-download operations
+
+    mpProgressDialog->deleteLater();
+    mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+
+    mLocalMapFileName.clear();
+    mExpectedFileSize = 0;
+
+    // We have finished with the XMLimporter so must release the lock on it
+    mXmlImportMutex.unlock();
+}
+
+void TMap::reportStringToProgressDialog( const QString text )
+{
+    if( mpProgressDialog ) {
+        mpProgressDialog->setLabelText( text );
+        // Needed to make the changed text show, it does increase the overall
+        // time a little but as the main usage is when parsing XML room data
+        // and that can take MORE THAN A MINUTE the activity is essential to
+        // inform the user that something IS happening...
+        qApp->processEvents();
+    }
+}
+
+void TMap::reportProgressToProgressDialog( const int current, const int maximum )
+{
+    if( mpProgressDialog ) {
+        if( mpProgressDialog->maximum() != maximum  ) {
+            mpProgressDialog->setMaximum( maximum );
+        }
+        mpProgressDialog->setValue( current );
+    }
 }
