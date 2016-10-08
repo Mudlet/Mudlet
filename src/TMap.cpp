@@ -43,6 +43,7 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QSslConfiguration>
 #include "post_guard.h"
 
 
@@ -2119,11 +2120,11 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
     mIsFileViewingRecommended = false;
 }
 
-bool TMap::downloadMap( const QString * remoteUrl, const QString * localFileName )
+void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName )
 {
     Host * pHost = mpHost;
     if( ! pHost ) {
-        return false;
+        return;
     }
 
     // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
@@ -2132,7 +2133,7 @@ bool TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
                                                       "requested or is being imported from a local file - wait for that\n"
                                                       "operation to complete (if it cannot be canceled) before retrying!" );
         postMessage( warnMsg );
-        return false;
+        return;
     }
 
     // We have the mutex locked - MUST unlock it when done under ALL circumstances
@@ -2155,7 +2156,7 @@ bool TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
                          .arg( url.errorString() );
         postMessage( errMsg );
         mXmlImportMutex.unlock();
-        return false;
+        return;
     }
 
     if( ! localFileName || localFileName->isEmpty() ) {
