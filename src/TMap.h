@@ -108,7 +108,7 @@ public:
     void setView( float, float, float, float );
     bool serialize( QDataStream & );
     bool restore( QString );
-    const bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
+    bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
     void initGraph();
     void exportMapToDatabase();
     void importMapFromDatabase();

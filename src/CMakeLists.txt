@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         #
+#    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -154,6 +154,7 @@ SET(mudlet_MOC_HDRS
     THighlighter.h
     TLabel.h
     TLuaInterpreter.h
+    TMap.h
     TSplitter.h
     TTextEdit.h
     TToolBar.h
@@ -182,7 +183,6 @@ SET(mudlet_HDRS
     TFlipButton.h
     TimerUnit.h
     TKey.h
-    TMap.h
     TMatchState.h
     Tree.h
     TriggerUnit.h
