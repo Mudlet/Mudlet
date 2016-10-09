@@ -50,8 +50,14 @@
 TMap::TMap( Host * pH )
 : mpRoomDB( new TRoomDB( this ) )
 , mpHost( pH )
-, mpM( 0 )
-, mpMapper( 0 )
+, m2DPanMode( false )
+, mLeftDown( false )
+, mRightDown( false )
+, m2DPanXStart( 0.0f )
+, m2DPanYStart( 0.0f )
+, mTargetID( 0 )
+, mpM( Q_NULLPTR )
+, mpMapper( Q_NULLPTR )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
 , mDefaultVersion( 16 )      // <== replaces CURRENT_MAP_VERSION
@@ -65,11 +71,6 @@ TMap::TMap( Host * pH )
                             // is/was QList<int> in prior versions
                             // + TMap::mRoomIdHash as QHash<QString, int> needs 18, is/was
                             // a single mRoomId in prior versions
-, mSaveVersion( mDefaultVersion ) // This needs to be set (for when writing new
-                            // map files) as it triggers some version features
-                            // that NEED a new map file format to be usable, it
-                            // can be changed by control in last tab of profile
-                            // preference dialog.
 , mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
 , mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
 , mIsFileViewingRecommended( false )
@@ -78,6 +79,12 @@ TMap::TMap( Host * pH )
 , mpNetworkReply( Q_NULLPTR )
 , mExpectedFileSize( 0 )
 {
+    mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
+                                    // It needs to be set (for when writing new
+                                    // map files) as it triggers some version features
+                                    // that NEED a new map file format to be usable, it
+                                    // can be changed by control in last tab of profile
+                                    // preference dialog.
     mVersion = mDefaultVersion; // This is overwritten during a map restore and
                                 // is the loaded file version
     customEnvColors[257] = mpHost->mRed_2;
@@ -118,9 +125,6 @@ TMap::TMap( Host * pH )
     reverseDirections[10] = 9;
     reverseDirections[11] = 12;
     reverseDirections[12] = 11;
-    m2DPanMode = false;
-    mLeftDown = false;
-    mRightDown = false;
 
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -148,12 +152,42 @@ TMap::~TMap()
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();
-    mRoomIdHash.clear();
-    pixNameTable.clear();
-    pixTable.clear();
     envColors.clear();
+    mRoomIdHash.clear();
+    mTargetID = 0;
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
     customEnvColors.clear();
+    // Need to restore the default colours:
+    customEnvColors[257] = mpHost->mRed_2;
+    customEnvColors[258] = mpHost->mGreen_2;
+    customEnvColors[259] = mpHost->mYellow_2;
+    customEnvColors[260] = mpHost->mBlue_2;
+    customEnvColors[261] = mpHost->mMagenta_2;
+    customEnvColors[262] = mpHost->mCyan_2;
+    customEnvColors[263] = mpHost->mWhite_2;
+    customEnvColors[264] = mpHost->mBlack_2;
+    customEnvColors[265] = mpHost->mLightRed_2;
+    customEnvColors[266] = mpHost->mLightGreen_2;
+    customEnvColors[267] = mpHost->mLightYellow_2;
+    customEnvColors[268] = mpHost->mLightBlue_2;
+    customEnvColors[269] = mpHost->mLightMagenta_2;
+    customEnvColors[270] = mpHost->mLightCyan_2;
+    customEnvColors[271] = mpHost->mLightWhite_2;
+    customEnvColors[272] = mpHost->mLightBlack_2;
+    roomidToIndex.clear();
+// Not used:    pixNameTable.clear();
+// Not used:    pixTable.clear();
+    edgeHash.clear();
+    locations.clear();
+    mMapGraphNeedsUpdate = true;
+    mNewMove = true;
     mapLabels.clear();
+    mVersion = mDefaultVersion;
+    mUserData.clear();
+    // mSaveVersion is not reset - so that any new Mudlet map file saves are to
+    // whatever version was previously set/deduced
 }
 
 void TMap::logError( QString & msg )
@@ -167,19 +201,20 @@ void TMap::logError( QString & msg )
     }
 }
 
-void TMap::exportMapToDatabase()
-{
-    QString dbName = QFileDialog::getSaveFileName( 0, "Chose db file name." );
-    QString script = QString("exportMapToDatabse([[%1]])").arg(dbName);
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-}
+// Not used:
+//void TMap::exportMapToDatabase()
+//{
+//    QString dbName = QFileDialog::getSaveFileName( 0, "Chose db file name." );
+//    QString script = QString("exportMapToDatabse([[%1]])").arg(dbName);
+//    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+//}
 
-void TMap::importMapFromDatabase()
-{
-    QString dbName = QFileDialog::getOpenFileName( 0, "Chose db file name." );
-    QString script = QString("importMapFromDatabase([[%1]])").arg(dbName);
-    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-}
+//void TMap::importMapFromDatabase()
+//{
+//    QString dbName = QFileDialog::getOpenFileName( 0, "Chose db file name." );
+//    QString script = QString("importMapFromDatabase([[%1]])").arg(dbName);
+//    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+//}
 
 bool TMap::setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations )
 {
@@ -566,29 +601,30 @@ QList<int> TMap::detectRoomCollisions( int id )
     return collList;
 }
 
-void TMap::astBreitenAnpassung( int id, int id2 )
-{
-}
+// Not used:
+//void TMap::astBreitenAnpassung( int id, int id2 )
+//{
+//}
 
-void TMap::astHoehenAnpassung( int id, int id2 )
-{
-}
+//void TMap::astHoehenAnpassung( int id, int id2 )
+//{
+//}
 
-void TMap::getConnectedNodesGreaterThanX( int id, int min )
-{
-}
+//void TMap::getConnectedNodesGreaterThanX( int id, int min )
+//{
+//}
 
-void TMap::getConnectedNodesSmallerThanX( int id, int min )
-{
-}
+//void TMap::getConnectedNodesSmallerThanX( int id, int min )
+//{
+//}
 
-void TMap::getConnectedNodesGreaterThanY( int id, int min )
-{
-}
+//void TMap::getConnectedNodesGreaterThanY( int id, int min )
+//{
+//}
 
-void TMap::getConnectedNodesSmallerThanY( int id, int min )
-{
-}
+//void TMap::getConnectedNodesSmallerThanY( int id, int min )
+//{
+//}
 
 bool TMap::gotoRoom( int r )
 {

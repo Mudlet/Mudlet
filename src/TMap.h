@@ -90,12 +90,12 @@ public:
     int createNewRoomID( int minimumId = 1 );
     void logError(QString &msg);
     void tidyMap( int area );
-    void getConnectedNodesGreaterThanX( int id, int x );
-    void getConnectedNodesSmallerThanX( int id, int x );
-    void getConnectedNodesGreaterThanY( int id, int x );
-    void getConnectedNodesSmallerThanY( int id, int x );
-    void astBreitenAnpassung( int id, int );
-    void astHoehenAnpassung( int id, int );
+// Not used:    void getConnectedNodesGreaterThanX( int id, int x );
+// Not used:    void getConnectedNodesSmallerThanX( int id, int x );
+// Not used:    void getConnectedNodesGreaterThanY( int id, int x );
+// Not used:    void getConnectedNodesSmallerThanY( int id, int x );
+// Not used:    void astBreitenAnpassung( int id, int );
+// Not used:    void astHoehenAnpassung( int id, int );
     bool setExit( int from, int to, int dir );
     bool setRoomCoordinates( int id, int x, int y, int z );
     void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!
@@ -110,8 +110,8 @@ public:
     bool restore( QString );
     bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
     void initGraph();
-    void exportMapToDatabase();
-    void importMapFromDatabase();
+// Not used:    void exportMapToDatabase();
+// Not used:    void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
     void postMessage( const QString text );
     void set3DViewCenter( const int, const int, const int, const int );
@@ -141,7 +141,7 @@ public:
 
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
-    QVector3D span;
+// Not used:    QVector3D span;
     QPointer<Host> mpHost;
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -151,7 +151,7 @@ public:
     bool mRightDown;
     float m2DPanXStart;
     float m2DPanYStart;
-    int mViewArea;
+// Not used:    int mViewArea;
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
@@ -164,8 +164,8 @@ public:
     QMap<int, int> roomidToIndex;
     // QMap<int, int> indexToRoomid;
 
-    QMap<QString, int> pixNameTable;
-    QMap<int, QPixmap> pixTable;
+// Not used:    QMap<QString, int> pixNameTable;
+// Not used:    QMap<int, QPixmap> pixTable;
     typedef adjacency_list<listS, vecS, directedS, no_property, boost::property<edge_weight_t, cost> > mygraph_t;
     typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
@@ -193,7 +193,6 @@ public:
                       // by mMinVersion and mMaxVersion.
 
     QMap<QString, QString> mUserData;
-    bool isToDisplayAuditErrorsToConsole;
 
 public slots:
     // Moved and revised from dlgMapper:
