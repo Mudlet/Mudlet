@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,6 +26,7 @@
 #include "pre_guard.h"
 #include <QLabel>
 #include <QString>
+#include "TEvent.h"
 #include "post_guard.h"
 
 class Host;
@@ -39,10 +41,40 @@ Q_OBJECT
 
 public:
 
-                  TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mScript = func; mpParameters = args; }
-void              setEnter( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mEnter = func; mEnterParams = args; }
-void              setLeave( Host * pHost, QString & func, TEvent * args ){ mpHost = pHost; mLeave = func; mLeaveParams = args; }
+                  TLabel( QWidget * pW = Q_NULLPTR );
+
+void              setScript( Host * pHost, QString & func, TEvent * args )
+                  {
+                      mpHost = pHost;
+                      mScript = func;
+                      mParameters.mArgumentList = args->mArgumentList;
+                      mParameters.mArgumentTypeList = args->mArgumentTypeList;
+                      mParameters.mArgumentList.detach();
+                      mParameters.mArgumentTypeList.detach();
+                      // Must take a local copy of these as the caller's TEvent
+                      // that args point to is likely an automatic
+                      // (Stack allocated) instance that will not persist as
+                      // long as this label...
+                  }
+
+void              setEnter( Host * pHost, QString & func, TEvent * args )
+                  {   mpHost = pHost;
+                      mEnter = func;
+                      mEnterParams.mArgumentList = args->mArgumentList;
+                      mEnterParams.mArgumentTypeList = args->mArgumentTypeList;
+                      mEnterParams.mArgumentList.detach();
+                      mEnterParams.mArgumentTypeList.detach();
+                  }
+
+void              setLeave( Host * pHost, QString & func, TEvent * args )
+                  {   mpHost = pHost;
+                      mLeave = func;
+                      mLeaveParams.mArgumentList = args->mArgumentList;
+                      mLeaveParams.mArgumentTypeList = args->mArgumentTypeList;
+                      mLeaveParams.mArgumentList.detach();
+                      mLeaveParams.mArgumentTypeList.detach();
+                  }
+
 void              mousePressEvent( QMouseEvent *  );
 void              leaveEvent(QEvent *);
 void              enterEvent(QEvent *);
@@ -51,9 +83,9 @@ Host *            mpHost;
 QString           mScript;
 QString           mEnter;
 QString           mLeave;
-TEvent *          mpParameters;
-TEvent *          mLeaveParams;
-TEvent *          mEnterParams;
+TEvent            mParameters;
+TEvent            mLeaveParams;
+TEvent            mEnterParams;
 bool              mouseInside;
 };
 
