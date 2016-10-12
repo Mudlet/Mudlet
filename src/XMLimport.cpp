@@ -329,7 +329,6 @@ void XMLimport::readVariablePackage()
 void XMLimport::readMap()
 {
     QMultiHash<int, int> tempAreaRoomsHash; // Keys: area id, Values: a room id in that area
-    QMultiHash<int, int> tempRoomEntranceHash; // Keys: exit (destination of route) room id, Values: entrance (start of route) room id
 
     while( ! atEnd() )
     {
@@ -349,7 +348,7 @@ void XMLimport::readMap()
             {
                 mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 1, 3 );
-                readRooms( tempAreaRoomsHash, tempRoomEntranceHash );
+                readRooms( tempAreaRoomsHash );
             }
             else if( name() == "environments" )
             {
@@ -365,7 +364,6 @@ void XMLimport::readMap()
     int roomTotal = tempAreaRoomsHash.count();
     int currentRoomCount = 0;
 
-    mpHost->mpMap->mpRoomDB->entranceMap.swap( tempRoomEntranceHash ); // Very fast and does not fail...
     QListIterator<int> itAreaWithRooms( tempAreaRoomsHash.uniqueKeys() );
     while( itAreaWithRooms.hasNext() ) {
         int areaId = itAreaWithRooms.next();
@@ -427,9 +425,10 @@ void XMLimport::readArea()
     mpHost->mpMap->mpRoomDB->addArea( id, name );
 }
 
-void XMLimport::readRooms( QMultiHash<int, int> & areaRoomsHash, QMultiHash<int, int> & roomEntrancesHash )
+void XMLimport::readRooms( QMultiHash<int, int> & areaRoomsHash )
 {
 
+    unsigned int roomCount = 0;
     while( ! atEnd() )
     {
         readNext();
@@ -438,7 +437,7 @@ void XMLimport::readRooms( QMultiHash<int, int> & areaRoomsHash, QMultiHash<int,
         {
             if( Q_LIKELY( name() == QStringLiteral( "room" ) ) )
             {
-                readRoom( areaRoomsHash, roomEntrancesHash );
+                readRoom( areaRoomsHash, &roomCount );
             }
             else
             {
@@ -452,8 +451,9 @@ void XMLimport::readRooms( QMultiHash<int, int> & areaRoomsHash, QMultiHash<int,
     }
 }
 
-// This is a CPU/Time hog...
-void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, QMultiHash<int, int> & entranceMultiHash )
+// This is a CPU/Time hog without the non-default (true) third argument to
+// TRoomDB::addRoom(...)
+void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, unsigned int * roomCount )
 {
     TRoom * pT = new TRoom( mpHost->mpMap->mpRoomDB );
     pT->id = attributes().value( QStringLiteral( "id" ) ).toString().toInt();
@@ -481,98 +481,50 @@ void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, QMultiHash<
             else if( dir == QStringLiteral( "north" ) )
             {
                 pT->north = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "east" ) )
             {
                 pT->east = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "south" ) )
             {
                 pT->south = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "west" ) )
             {
                 pT->west = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "up" ) )
             {
                 pT->up = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "down" ) )
             {
                 pT->down = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "northeast" ) )
             {
                 pT->northeast = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "southwest" ) )
             {
                 pT->southwest = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "southeast" ) )
             {
                 pT->southeast = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "northwest" ) )
             {
                 pT->northwest = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "in" ) )
             {
                 pT->in = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else if( dir == QStringLiteral( "out" ) )
             {
                 pT->out = e;
-                if( ! entranceMultiHash.contains( e, pT->id ) )
-                {
-                    entranceMultiHash.insert( e, pT->id );
-                }
             }
             else
             {
@@ -605,9 +557,14 @@ void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, QMultiHash<
 
     if( pT->id > 0 )
     {
-        mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data [id: %1]..." ).arg( pT->id ) );
+        if( ( ++( *roomCount ) % 100 == 0 ) )
+        {
+            mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data [count: %1]..." ).arg( *roomCount ) );
+        }
         areamRoomMultiHash.insert( pT->area, pT->id );
-        mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT );
+        // We are loading a map so can make some optimisation by setting the
+        // third argument as true:
+        mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT, true );
         mMaxRoomId = qMax( mMaxRoomId, pT->id ); //Wasn't used but now maintains max Room Id
     }
     else

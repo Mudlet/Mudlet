@@ -2351,7 +2351,9 @@ void TMap::slot_setDownloadProgress( qint64 got, qint64 tot )
         // First call, range has not been set;
         mpProgressDialog->setRange( 0, mExpectedFileSize );
     }
-    else if( mpProgressDialog->maximum() != static_cast<int>( tot ) ) {
+    else if( tot != -1 && mpProgressDialog->maximum() != static_cast<int>( tot ) ) {
+        // tot will stuck at -1 when we do not know how big the download is
+        // which seems to be the case for the IRE MUDS - *sigh* - Slysven
         mpProgressDialog->setRange( 0, static_cast<int>(tot) );
     }
 
@@ -2390,11 +2392,17 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if( reply->error() != QNetworkReply::NoError ) {
-        QString alertMsg = tr( "[ ALERT ] - Map download failed, error reported was:\n%1.").arg( reply->errorString() );
-        postMessage( alertMsg );
+    if(  reply->error() != QNetworkReply::NoError ) {
+        if( reply->error() != QNetworkReply::OperationCanceledError ) {
+            // Don't post an error for the cancel case - it has already been done
+            QString alertMsg = tr( "[ ALERT ] - Map download failed, error reported was:\n%1.").arg( reply->errorString() );
+            postMessage( alertMsg );
+        }
+        // else was QNetworkReply::OperationCanceledError and we already handle
+        // THAT in slot_downloadCancel()
     }
     else {
+        // The QNetworkReply is Ok here:
         QFile file( mLocalMapFileName );
         if( ! file.open( QFile::WriteOnly ) ) {
             QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg( mLocalMapFileName );

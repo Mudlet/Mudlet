@@ -65,8 +65,8 @@ private:
     void      readVariablePackage();
     void      readUnknownMapElement();
     void      readMap();
-    void      readRoom( QMultiHash<int, int> &, QMultiHash<int, int> & );
-    void      readRooms( QMultiHash<int, int> &, QMultiHash<int, int> & );
+    void      readRoom( QMultiHash<int, int> &, unsigned int * );
+    void      readRooms( QMultiHash<int, int> & );
     void      readEnvColor();
     void      readEnvColors();
     void      readArea();
