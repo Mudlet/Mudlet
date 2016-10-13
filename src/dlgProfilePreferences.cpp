@@ -1430,9 +1430,17 @@ void dlgProfilePreferences::setColorLightWhite2()
 
 void dlgProfilePreferences::downloadMap()
 {
-    if( ! mpHost->mpMap->mpMapper ) mudlet::self()->slot_mapper();
+    Host * pHost = mpHost;
+    if( ! pHost )
+    {
+        return;
+    }
+    if( ! pHost->mpMap->mpMapper ) {
+        // CHECK: What happens if we are NOT the current profile anymore?
+        mudlet::self()->createMapper( false );
+    }
 
-    mpHost->mpMap->mpMapper->downloadMap();
+    pHost->mpMap->downloadMap();
 }
 
 void dlgProfilePreferences::loadMap()
@@ -1446,30 +1454,42 @@ void dlgProfilePreferences::loadMap()
     QString fileName = QFileDialog::getOpenFileName(this,
                                                     tr( "Load Mudlet map" ),
                                                     QDir::homePath(),
-                                                    tr( "Mudlet map (*.dat);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!" ) );
-    if( fileName.isEmpty() )
-    {
+                                                    tr( "Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!" ) );
+    if( fileName.isEmpty() ) {
         return;
     }
 
     label_mapFileActionResult->show();
-    label_mapFileActionResult->setText( tr( "Loading map - please wait..." ) );
-    qApp->processEvents(); // Needed to make the above message show up when loading big maps
 
     // Ensure the setting is already made as the loadMap(...) uses the set value
     bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
     mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
 
-    if ( mpHost->mpConsole->loadMap(fileName) )
-    {
-        label_mapFileActionResult->setText( tr( "Loaded map from %1." ).arg( fileName ) );
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    if( fileName.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) ) {
+        label_mapFileActionResult->setText( tr( "Importing map - please wait..." ) );
+        qApp->processEvents(); // Needed to make the above message show up when loading big maps
+
+        if ( mpHost->mpConsole->importMap(fileName) ) {
+            label_mapFileActionResult->setText( tr( "Imported map from %1." ).arg( fileName ) );
+        }
+        else {
+            label_mapFileActionResult->setText( tr( "Could not import map from %1." ).arg( fileName ) );
+        }
     }
-    else
-    {
-        label_mapFileActionResult->setText( tr( "Could not load map from %1." ).arg( fileName ) );
-        QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+    else {
+        label_mapFileActionResult->setText( tr( "Loading map - please wait..." ) );
+        qApp->processEvents(); // Needed to make the above message show up when loading big maps
+
+
+        if ( mpHost->mpConsole->loadMap(fileName) ) {
+            label_mapFileActionResult->setText( tr( "Loaded map from %1." ).arg( fileName ) );
+        }
+        else {
+            label_mapFileActionResult->setText( tr( "Could not load map from %1." ).arg( fileName ) );
+        }
     }
+    QTimer::singleShot(10*1000, this, SLOT(hideActionLabel()));
+
     // Restore setting immediately before we used it
     mudlet::self()->setAuditErrorsToConsoleEnabled( savedOldAuditErrorsToConsoleEnabledSetting );
 }

@@ -173,6 +173,7 @@ SET(mudlet_MOC_HDRS
     THighlighter.h
     TLabel.h
     TLuaInterpreter.h
+    TMap.h
     TSplitter.h
     TTextEdit.h
     TToolBar.h
@@ -201,7 +202,6 @@ SET(mudlet_HDRS
     TFlipButton.h
     TimerUnit.h
     TKey.h
-    TMap.h
     TMatchState.h
     Tree.h
     TriggerUnit.h

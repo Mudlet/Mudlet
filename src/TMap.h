@@ -29,6 +29,8 @@
 #include <QApplication>
 #include <QColor>
 #include <QMap>
+#include <QMutex>
+#include <QNetworkReply>
 #include <QPixmap>
 #include <QSizeF>
 #include <QVector3D>
@@ -43,6 +45,9 @@ class TArea;
 class TRoom;
 class TRoomDB;
 class T2DMap;
+class QFile;
+class QNetworkAccessManager;
+class QProgressDialog;
 
 
 class TMapLabel
@@ -64,9 +69,9 @@ public:
 };
 
 
-class TMap
+class TMap : public QObject
 {
-    Q_DECLARE_TR_FUNCTIONS(TMap) // Needed so we can use tr() even though TMap is NOT derived from QObject
+    Q_OBJECT
 
 public:
             TMap( Host *);
@@ -83,12 +88,12 @@ public:
     int createNewRoomID( int minimumId = 1 );
     void logError(QString &msg);
     void tidyMap( int area );
-    void getConnectedNodesGreaterThanX( int id, int x );
-    void getConnectedNodesSmallerThanX( int id, int x );
-    void getConnectedNodesGreaterThanY( int id, int x );
-    void getConnectedNodesSmallerThanY( int id, int x );
-    void astBreitenAnpassung( int id, int );
-    void astHoehenAnpassung( int id, int );
+// Not used:    void getConnectedNodesGreaterThanX( int id, int x );
+// Not used:    void getConnectedNodesSmallerThanX( int id, int x );
+// Not used:    void getConnectedNodesGreaterThanY( int id, int x );
+// Not used:    void getConnectedNodesSmallerThanY( int id, int x );
+// Not used:    void astBreitenAnpassung( int id, int );
+// Not used:    void astHoehenAnpassung( int id, int );
     bool setExit( int from, int to, int dir );
     bool setRoomCoordinates( int id, int x, int y, int z );
     void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!
@@ -101,10 +106,10 @@ public:
     void setView( float, float, float, float );
     bool serialize( QDataStream & );
     bool restore( QString );
-    const bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
+    bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
     void initGraph();
-    void exportMapToDatabase();
-    void importMapFromDatabase();
+// Not used:    void exportMapToDatabase();
+// Not used:    void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
     void postMessage( const QString text );
     void set3DViewCenter( const int, const int, const int, const int );
@@ -120,10 +125,21 @@ public:
     // any messages previously recorded are not associated with a "fresh" batch
     // from the operation.
 
+    // Moved and revised from dlgMapper:
+    void                            downloadMap( const QString * remoteUrl = Q_NULLPTR,  const QString * localFileName = Q_NULLPTR );
+    // Also uses readXmlMapFile(...) but for local files:
+    bool                            importMap( QFile &, QString * errMsg = Q_NULLPTR );
+    // Used at end of downloadMap(...) OR as part of importMap(...) but not by
+    // both at the same time thanks to mXmlImportMutex
+    bool                            readXmlMapFile( QFile &, QString * errMsg = Q_NULLPTR );
+    // Use progresss dialog for post-download operations:
+    void                            reportStringToProgressDialog( const QString );
+    void                            reportProgressToProgressDialog( const int, const int );
+
 
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
-    QVector3D span;
+// Not used:    QVector3D span;
     Host * mpHost;
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -133,7 +149,7 @@ public:
     bool mRightDown;
     float m2DPanXStart;
     float m2DPanYStart;
-    int mViewArea;
+// Not used:    int mViewArea;
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
@@ -146,8 +162,8 @@ public:
     QMap<int, int> roomidToIndex;
     // QMap<int, int> indexToRoomid;
 
-    QMap<QString, int> pixNameTable;
-    QMap<int, QPixmap> pixTable;
+// Not used:        QMap<QString, int> pixNameTable;
+// Not used:        QMap<int, QPixmap> pixTable;
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost> > mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
@@ -175,7 +191,15 @@ public:
                       // by mMinVersion and mMaxVersion.
 
     QMap<QString, QString> mUserData;
-    bool isToDisplayAuditErrorsToConsole;
+
+
+public slots:
+    // Moved and revised from dlgMapper:
+    void                            slot_setDownloadProgress( qint64, qint64 );
+    void                            slot_downloadCancel();
+    void                            slot_downloadError( QNetworkReply::NetworkError );
+    void                            slot_replyFinished( QNetworkReply * );
+
 
 private:
     const QString                   createFileHeaderLine( const QString, const QChar );
@@ -186,6 +210,14 @@ private:
     QMap<int, QList<QString> >      mMapAuditAreaErrors; // As for the Room ones but with key as the area number
     QList<QString>                  mMapAuditErrors;     // For the whole map
     bool                            mIsFileViewingRecommended; // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
+
+    // Moved and revised from dlgMapper:
+    QNetworkAccessManager *         mpNetworkAccessManager;
+    QProgressDialog *               mpProgressDialog;
+    QNetworkReply *                 mpNetworkReply;
+    QString                         mLocalMapFileName;
+    int                             mExpectedFileSize;
+    QMutex                          mXmlImportMutex;
 };
 
 #endif // MUDLET_TMAP_H
