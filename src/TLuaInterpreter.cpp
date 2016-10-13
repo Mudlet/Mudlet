@@ -2058,7 +2058,7 @@ int TLuaInterpreter::loadMap( lua_State * L )
     if( lua_gettop( L ) ) {
         if( ! lua_isstring( L, 1 ) ) {
             lua_pushstring( L, tr( "loadMap: bad argument #1 type (Map pathFile as string is optional {loads last\n"
-                                   "stored map if ommitted}, got %1!)" )
+                                   "stored map if omitted}, got %1!)" )
                             .arg( luaL_typename( L, 1 ) )
                             .toUtf8().constData() );
             lua_error( L );
@@ -2082,8 +2082,10 @@ int TLuaInterpreter::loadMap( lua_State * L )
                 lua_pushstring( L, errMsg.toUtf8().constData() );
                 return 2;
             }
+            else {
+                return 1;
+            }
         }
-
     }
     else {
         isOk = pHost->mpConsole->loadMap( location );

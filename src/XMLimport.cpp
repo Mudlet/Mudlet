@@ -340,19 +340,19 @@ void XMLimport::readMap()
             if( name() == "areas" )
             {
                 mpHost->mpMap->mpRoomDB->clearMapDB();
-                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Area data..." ) );
+                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing area data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 0, 3 );
                 readAreas();
             }
             else if( name() == "rooms" )
             {
-                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data..." ) );
+                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing room data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 1, 3 );
                 readRooms( tempAreaRoomsHash );
             }
             else if( name() == "environments" )
             {
-                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Environment data..." ) );
+                mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing environment data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 2, 3 );
                 readEnvColors();
             }
@@ -360,7 +360,7 @@ void XMLimport::readMap()
         }
     }
 
-    mpHost->mpMap->reportStringToProgressDialog( tr( "Assigning Rooms to their Areas..." ) );
+    mpHost->mpMap->reportStringToProgressDialog( tr( "Assigning rooms to their areas..." ) );
     int roomTotal = tempAreaRoomsHash.count();
     int currentRoomCount = 0;
 
@@ -559,7 +559,7 @@ void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, unsigned in
     {
         if( ( ++( *roomCount ) % 100 == 0 ) )
         {
-            mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing Room data [count: %1]..." ).arg( *roomCount ) );
+            mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing room data [count: %1]..." ).arg( *roomCount ) );
         }
         areamRoomMultiHash.insert( pT->area, pT->id );
         // We are loading a map so can make some optimisation by setting the
