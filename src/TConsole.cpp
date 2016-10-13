@@ -1762,6 +1762,8 @@ void TConsole::skipLine()
     }
 }
 
+// TODO: It may be worth considering moving the (now) three following methods
+// to the TMap class...?
 bool TConsole::saveMap(const QString& location)
 {
     QDir dir_map;
@@ -1800,8 +1802,10 @@ bool TConsole::loadMap(const QString& location)
     }
 
     if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
-        // No map or map currently loaded - soi try and created them
-        mudlet::self()->slot_mapper();
+        // No map or map currently loaded - so try and created mapper
+        // but don't load a map here by default, we do that below and it may not
+        // be the default map anyhow
+        mudlet::self()->createMapper( false );
     }
 
     if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
@@ -1835,6 +1839,114 @@ bool TConsole::loadMap(const QString& location)
     }
     else {
         pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
+    }
+
+    return result;
+}
+
+// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
+// of files ending in ".xml"
+// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
+// it requires in the event of an error (it should be written in a structure
+// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
+// should be used to suppress the writing of error messages direct to the
+// console - if possible!
+bool TConsole::importMap( const QString & location, QString * errMsg )
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
+        // in later software versions and is a weak pointer until used
+        // (I think - Slysven ?)
+        if( errMsg ) {
+            *errMsg = tr( "loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!" );
+        }
+        return false;
+    }
+
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // No map or mapper currently loaded/present - so try and create mapper
+        mudlet::self()->createMapper( false );
+    }
+
+    if( ! pHost->mpMap || ! pHost->mpMap->mpMapper ) {
+        // And that failed so give up
+        if( errMsg ) {
+            *errMsg = tr( "loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!" );
+        }
+        return false;
+    }
+
+    // Dump any outstanding map errors from past activities that had not yet
+    // been logged...
+    qDebug() << "TConsole::importingMap() - importing map case 1.";
+    pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map importing(1) report" ), true );
+    QDateTime now( QDateTime::currentDateTime() );
+
+    bool result = false;
+
+    QFileInfo fileInfo( location );
+    QString filePathNameString;
+    if( ! fileInfo.filePath().isEmpty() ) {
+        if( fileInfo.isRelative() ) {
+            // Resolve the name relative to the profile home directory:
+            filePathNameString = QDir::cleanPath( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                                                  .arg( QDir::homePath() )
+                                                  .arg( pHost->getName() )
+                                                  .arg( fileInfo.filePath() ) );
+        }
+        else {
+            if( fileInfo.exists() ) {
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
+            }
+            else {
+                filePathNameString = fileInfo.absoluteFilePath();
+            }
+        }
+    }
+
+    QFile file( filePathNameString );
+    if( ! file.exists() ) {
+        if( ! errMsg ) {
+            QString infoMsg = tr( "[ ERROR ]  - Map file not found, path and name used was:\n"
+                                               "%1." )
+                              .arg( filePathNameString );
+            pHost->postMessage( infoMsg );
+        }
+        else {
+            // error message for lua loadMap()
+            *errMsg = tr( "loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" was not found)." )
+                     .arg( filePathNameString );
+        }
+        return false;
+    }
+
+    if( file.open( QFile::ReadOnly | QFile::Text ) ) {
+
+        if( ! errMsg ) {
+            QString infoMsg = tr( "[ INFO ]  - Map file located and opened, now parsing it..." );
+            pHost->postMessage( infoMsg );
+        }
+
+        result = pHost->mpMap->importMap( file, errMsg );
+
+        file.close();
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ) );
+    }
+    else {
+        if( ! errMsg ) {
+            QString infoMsg = tr( "[ INFO ]  - Map file located but it could not opened, please check permissions on:"
+                                  "\"%1\"." )
+                              .arg( filePathNameString );
+            pHost->postMessage( infoMsg );
+        }
+        else {
+            *errMsg = tr( "loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" could not be opened for reading)." )
+                     .arg( filePathNameString );
+        }
+        return false;
     }
 
     return result;

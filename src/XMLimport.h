@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,7 +24,9 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QMap>
+#include <QMultiHash>
 #include <QPointer>
 #include <QXmlStreamReader>
 #include "post_guard.h"
@@ -40,11 +43,12 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
+    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
 
 public:
               XMLimport( Host * );
 
-    bool      importPackage( QIODevice *device, QString packageName="", int module=0);
+    bool      importPackage( QIODevice *device, QString packageName = QString(), int moduleFlag = 0 );
 
 private:
 
@@ -57,20 +61,20 @@ private:
     void      readAliasPackage();
     void      readActionPackage();
     void      readScriptPackage();
-    void      readRooms();
     void      readKeyPackage();
     void      readVariablePackage();
     void      readUnknownMapElement();
     void      readMap();
-    void      readRoom();
+    void      readRoom( QMultiHash<int, int> &, unsigned int * );
+    void      readRooms( QMultiHash<int, int> & );
     void      readEnvColor();
     void      readEnvColors();
-    void      readAreaNames();
+    void      readArea();
     void      readAreas();
     void      readHelpPackage();
 
     void      readUnknownHostElement();
-    void      readUnknownRoomElement();
+// Not used: void      readUnknownRoomElement();
     void      readUnknownTriggerElement();
     void      readUnknownTimerElement();
     void      readUnknownAliasElement();
@@ -112,6 +116,9 @@ private:
     bool gotAction;
     bool gotScript;
     int  module;
+
+    int         mMaxRoomId;
+    int         mMaxAreaId; // Could be useful when iterating through map data
 };
 
 #endif // MUDLET_XMLEXPORT_H

@@ -1011,7 +1011,7 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
                 while( itExtraRoom.hasNext() ) {
                     int extraRoomId = itExtraRoom.next();
                     roomList.append( QString::number( extraRoomId ) );
-                    mpMap->appendRoomErrorMsg( extraRoomId, tr( "[ INFO ]  - This room was claimed by id: %1, but it does not belong there."
+                    mpMap->appendRoomErrorMsg( extraRoomId, tr( "[ INFO ]  - This room was claimed by area id: %1, but it does not belong there."
                                                                 "  The area has been updated to not include this room." )
                                                                 .arg( itArea.key() ), true );
                 }
@@ -1237,4 +1237,21 @@ void TRoomDB::restoreSingleArea( int areaID, TArea * pA )
 void TRoomDB::restoreSingleRoom( int i, TRoom * pT )
 {
     addRoom( i, pT, true);
+}
+
+// Used by XMLimport to fix TArea::rooms data after import
+void TRoomDB::setAreaRooms( const int areaId, const QSet<int> & roomIds )
+{
+    TArea * pA = areas.value( areaId );
+    if( ! pA ) {
+        qWarning() << "TRoomDB::setAreaRooms(" << areaId << ", ... ) ERROR - Non-existant area Id given...!";
+        return;
+    }
+
+    QSetIterator<int> itAreaRoom( roomIds );
+    while( itAreaRoom.hasNext() ) {
+        pA->addRoom( itAreaRoom.next() );
+    }
+
+    pA->calcSpan(); // The area extents will need recalculation after adding the rooms
 }

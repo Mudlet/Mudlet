@@ -89,6 +89,7 @@ private:
     TRoomDB(){}
     int createNewAreaID();
     bool __removeRoom( int id );
+    void    setAreaRooms( const int, const QSet<int> & ); // Used by XMLImport to fix rooms data after import
 
     QHash<int, TRoom *> rooms;
     QMultiHash<int, int> entranceMap; // key is exit target, value is exit source
@@ -103,6 +104,7 @@ private:
     //friend class TMap;//bool TMap::restore(QString location);
     //friend bool TMap::serialize(QDataStream &);
     friend class XMLexport;
+    friend class XMLimport;
 };
 
 #endif // MUDLET_TROOMDB_H
