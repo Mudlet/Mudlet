@@ -190,6 +190,7 @@ public:
 
     const bool                  getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
     void                        setAuditErrorsToConsoleEnabled( const bool state ) { mIsToDisplayMapAuditErrorsToConsole = state; }
+    void                        createMapper( bool isToLoadDefaultMapFile = true );
 
 
 public slots:

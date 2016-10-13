@@ -813,7 +813,8 @@ void dlgProfilePreferences::downloadMap()
         return;
     }
     if( ! mpHost->mpMap->mpMapper ) {
-        mudlet::self()->slot_mapper();
+        // CHECK: What happens if we are NOT the current profile anymore?
+        mudlet::self()->createMapper( false );
     }
 
     mpHost->mpMap->downloadMap();

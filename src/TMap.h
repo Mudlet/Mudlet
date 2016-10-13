@@ -130,10 +130,10 @@ public:
     // Moved and revised from dlgMapper:
     void                            downloadMap( const QString * remoteUrl = Q_NULLPTR,  const QString * localFileName = Q_NULLPTR );
     // Also uses readXmlMapFile(...) but for local files:
-    bool                            importMap( QFile & );
+    bool                            importMap( QFile &, QString * errMsg = Q_NULLPTR );
     // Used at end of downloadMap(...) OR as part of importMap(...) but not by
     // both at the same time thanks to mXmlImportMutex
-    bool                            readXmlMapFile( QFile & );
+    bool                            readXmlMapFile( QFile &, QString * errMsg = Q_NULLPTR );
     // Use progresss dialog for post-download operations:
     void                            reportStringToProgressDialog( const QString );
     void                            reportProgressToProgressDialog( const int, const int );

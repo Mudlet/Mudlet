@@ -1011,7 +1011,7 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
                 while( itExtraRoom.hasNext() ) {
                     int extraRoomId = itExtraRoom.next();
                     roomList.append( QString::number( extraRoomId ) );
-                    mpMap->appendRoomErrorMsg( extraRoomId, tr( "[ INFO ]  - This room was claimed by id: %1, but it does not belong there."
+                    mpMap->appendRoomErrorMsg( extraRoomId, tr( "[ INFO ]  - This room was claimed by area id: %1, but it does not belong there."
                                                                 "  The area has been updated to not include this room." )
                                                                 .arg( itArea.key() ), true );
                 }

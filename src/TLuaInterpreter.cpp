@@ -2069,14 +2069,26 @@ int TLuaInterpreter::loadMap( lua_State * L )
         }
     }
 
-    bool error = false;
+    bool isOk = false;
     if( ! location.isEmpty() && location.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) ) {
-        error = pHost->mpConsole->importMap( location );
+        QString errMsg;
+        isOk = pHost->mpConsole->importMap( location, & errMsg );
+        if( ! isOk ) {
+            // A false was returned which indicates an error, convert it to a nil
+            lua_pushnil( L );
+            // And add the expected error message, is to be structured in a
+            // compatible manner
+            if( ! errMsg.isEmpty() ) {
+                lua_pushstring( L, errMsg.toUtf8().constData() );
+                return 2;
+            }
+        }
+
     }
     else {
-        error = pHost->mpConsole->loadMap( location );
+        isOk = pHost->mpConsole->loadMap( location );
     }
-    lua_pushboolean( L, error );
+    lua_pushboolean( L, isOk );
     return 1;
 }
 

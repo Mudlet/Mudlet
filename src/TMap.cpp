@@ -469,7 +469,7 @@ void TMap::audit()
     _time.start();
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr( "[ INFO ]  - ...auditing of map starting..." );
+        QString infoMsg = tr( "[ INFO ]  - Auditing of a loaded/imported/downloaded map starting..." );
         postMessage( infoMsg );
     }
 
@@ -544,7 +544,7 @@ void TMap::audit()
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed in %1 seconds. Enjoy your game..." )
+        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed, in %1 seconds. Enjoy your game..." )
                               .arg( _time.nsecsElapsed() * 1.0e-9 );
         postMessage( infoMsg );
         appendErrorMsg( infoMsg );
@@ -2272,18 +2272,27 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
 // both via TConsole::importMap( QFile & ) - it is intended to prevent
 // readXmlMapFile( QFile & ) from being used more than once at a time and to
 // prevent the above callers from using that when a map download is in progress!
-bool TMap::importMap( QFile & file )
+// errMsg if, non-null is for a suitable structured error message to return to
+// the TLuaInterpreter::loadFile(...) usage and is also needed to suppress the
+// error message to the console
+bool TMap::importMap( QFile & file, QString * errMsg )
 {
     if( ! mXmlImportMutex.tryLock( 0 ) ) {
-        QString warnMsg = QStringLiteral( "[ WARN ]  - Attempt made to import an XML map when one is already being\n"
-                                                      "downloaded or is being imported from a local file - wait for that\n"
-                                                      "operation to complete (if it cannot be canceled) before retrying!" );
-        postMessage( warnMsg );
+        if( errMsg ) {
+            *errMsg = tr( "loadMap: unable to perform request, a map is already being downloaded or\n"
+                          "imported at user request." );
+        }
+        else {
+            QString warnMsg = QStringLiteral( "[ WARN ]  - Attempt made to import an XML map when one is already being\n"
+                                                          "downloaded or is being imported from a local file - wait for that\n"
+                                                          "operation to complete (if it cannot be canceled) before retrying!" );
+            postMessage( warnMsg );
+        }
         return false;
     }
     // We have the mutex and MUST unlock it when we are done
 
-    bool result = readXmlMapFile( file );
+    bool result = readXmlMapFile( file, errMsg );
 
     // Finally release the lock on the XMLimporter
     mXmlImportMutex.unlock();
@@ -2291,7 +2300,7 @@ bool TMap::importMap( QFile & file )
     return result;
 }
 
-bool TMap::readXmlMapFile( QFile & file )
+bool TMap::readXmlMapFile( QFile & file, QString * errMsg )
 {
     Host * pHost = mpHost;
     bool isLocalImport = false;
@@ -2329,6 +2338,13 @@ bool TMap::readXmlMapFile( QFile & file )
     mpMapper->updateAreaComboBox();
     if( result ) {
         mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    }
+    else {
+        // Failed...
+        if( errMsg ) {
+            * errMsg = tr( "loadMap: failure to import XML map file, further information may be available\n"
+                           "in main console!" );
+        }
     }
 
     if( isLocalImport ) {

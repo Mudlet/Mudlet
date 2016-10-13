@@ -1861,6 +1861,15 @@ void mudlet::slot_show_help_dialog_irc()
 
 void mudlet::slot_mapper()
 {
+    createMapper( true );
+}
+
+// Needed to extract into a separate method from slot_mapper() so that we can
+// use it WITHOUT loading a file - at least for the TConsole::importMap(...)
+// case that may need to create a map widget before it loads/imports a
+// non-default (last saved map in profile's map directory.
+void mudlet::createMapper( bool isToLoadDefaultMapFile )
+{
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
     if( pHost->mpMap->mpMapper )
@@ -1877,7 +1886,7 @@ void mudlet::slot_mapper()
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
 
-    if( pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
+    if( isToLoadDefaultMapFile && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
         qDebug() << "mudlet::slot_mapper() - restore map case 3.";
         pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(3) report" ), true );

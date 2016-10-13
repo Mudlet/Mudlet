@@ -176,7 +176,7 @@ public:
       void              selectCurrentLine();
       bool              saveMap(const QString& location);
       bool              loadMap(const QString& location);
-      bool              importMap(const QString& location);
+      bool              importMap(const QString& location, QString *errMsg = Q_NULLPTR );
       QString           logger_translate( QString & );
       void              logger_set_text_properties(const QString& );
       QString           assemble_html_font_specs();
