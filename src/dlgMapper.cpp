@@ -25,7 +25,6 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TEvent.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -115,8 +114,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setXRotation(int)));
     connect(yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setYRotation(int)));
     connect(zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setZRotation(int)));
-    mpDownloader = new QNetworkAccessManager( this );
-    connect(mpDownloader, SIGNAL(finished(QNetworkReply*)),this, SLOT(replyFinished(QNetworkReply*)));
     connect(showRoomIDs, SIGNAL(stateChanged(int)), this, SLOT(slot_toggleShowRoomIDs(int)));
     QFont mapperFont = QFont( mpHost->mDisplayFont.family() );
     if( mpHost->mNoAntiAlias )
@@ -214,74 +211,6 @@ void dlgMapper::show2dView()
         d3buttons->setVisible(true);
     else
         d3buttons->setVisible(false);
-
-}
-
-void dlgMapper::downloadMap()
-{
-    QString url = mpHost->mUrl;
-    url.prepend("http://www.");
-    url.append("/maps/map.xml");
-    //qDebug()<<"DOWNLOADING:"<<url;
-    mpReply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
-    mpProgressDialog = new QProgressDialog("Downloading the map ...", "Abort", 0, 4000000);
-    connect(mpReply, SIGNAL(downloadProgress( qint64, qint64 )), this, SLOT(setDownloadProgress(qint64,qint64)));
-    connect(mpProgressDialog, SIGNAL(canceled()), this, SLOT(cancel()));
-    mpProgressDialog->show();
-}
-
-void dlgMapper::setDownloadProgress( qint64 got, qint64 tot )
-{
-    mpProgressDialog->setRange(0, static_cast<int>(tot) );
-    mpProgressDialog->setValue(static_cast<int>(got));
-}
-
-void dlgMapper::cancel()
-{
-    qDebug()<<"download was cancalled";
-    mpProgressDialog->close();
-    mpReply->abort();
-    glWidget->updateGL();
-}
-
-#include "XMLimport.h"
-
-void dlgMapper::replyFinished( QNetworkReply * reply )
-{
-    //qDebug()<<"download complete!";
-    mpProgressDialog->close();
-
-    QString name = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/map.xml";
-    QFile file(name);
-    file.open( QFile::WriteOnly );
-    file.write( reply->readAll() );
-    file.flush();
-    file.close();
-
-    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-    {
-        QMessageBox::warning(this, tr("Import Map Package:"),
-                             tr("Cannot read file %1:\n%2.")
-                             .arg(name)
-                             .arg(file.errorString()));
-        return;
-    }
-
-    XMLimport reader( mpHost );
-    reader.importPackage( & file );
-
-    mpHost->mpMap->audit();
-    glWidget->updateGL();
-
-    updateAreaComboBox();
-    resetAreaComboBoxToPlayerRoomArea();
-    // Could possibly fail if the player room was not ALREADY set (XML maps
-    // do not have such a detail - at least not those from IRE MUDs)...!
-
-    TEvent mapDownloadEvent;
-    mapDownloadEvent.mArgumentList.append( "sysMapDownloadEvent" );
-    mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent( & mapDownloadEvent );
 
 }
 
