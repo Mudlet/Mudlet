@@ -431,7 +431,7 @@ signals:
 
 public slots:
 
-    void replyFinished(QNetworkReply * reply );
+    void slot_replyFinished( QNetworkReply * );
     void slotOpenUserWindow( int, const QString& );
     void slotEchoUserWindow( int, const QString&, const QString& );
     void slotClearUserWindow( int, const QString& );
