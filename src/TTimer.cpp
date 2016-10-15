@@ -238,19 +238,6 @@ void TTimer::execute()
         return;
     }
 
-    if( mudlet::debugMode
-     && mpTimer->interval() > mpHost->mTimerDebugOutputSuppressionInterval ) {
-        // Second term is to suppress execution debug output from short interval timers
-        TDebug( QColor(Qt::darkYellow), QColor(Qt::darkBlue) ) << "\n[TIMER EXECUTES]: "
-                                                               << mName
-                                                               << " fired. Executing command="
-                                                               << mCommand
-                                                               << " and executing script:"
-                                                               << mScript
-                                                               << "\n"
-                                                               >> 0;
-    }
-
     if( mIsTempTimer ) {
         if( mScript.isEmpty() ) {
             mpHost->mLuaInterpreter.call_luafunction( this );
