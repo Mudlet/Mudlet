@@ -1607,15 +1607,14 @@ bool TMap::restore( QString location )
     if( ! canRestore || entries.size() == 0 ) {
         QMessageBox msgBox;
 
-        if(    mpHost->mUrl.toLower().contains( "achaea.com" )
-            || mpHost->mUrl.toLower().contains( "aetolia.com" )
-            || mpHost->mUrl.toLower().contains( "imperian.com" )
-            || mpHost->mUrl.toLower().contains( "midkemiaonline.com" )
-            || mpHost->mUrl.toLower().contains( "lusternia.com" ) ) {
+        if( mpHost->mUrl.contains( QStringLiteral( "achaea.com" ), Qt::CaseInsensitive )
+         || mpHost->mUrl.contains( QStringLiteral( "aetolia.com" ), Qt::CaseInsensitive )
+         || mpHost->mUrl.contains( QStringLiteral( "imperian.com" ), Qt::CaseInsensitive )
+         || mpHost->mUrl.contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ) {
 
-            msgBox.setText("No map found. Would you like to download the map or start your own?");
-            QPushButton *yesButton = msgBox.addButton("Download the map", QMessageBox::ActionRole);
-            QPushButton *noButton = msgBox.addButton("Start my own", QMessageBox::ActionRole);
+            msgBox.setText( tr( "No map found. Would you like to download the map or start your own?" ) );
+            QPushButton *yesButton = msgBox.addButton( tr( "Download the map" ), QMessageBox::ActionRole );
+            QPushButton *noButton = msgBox.addButton( tr( "Start my own" ), QMessageBox::ActionRole );
             msgBox.exec();
             if( msgBox.clickedButton() == yesButton ) {
                 downloadMap();
