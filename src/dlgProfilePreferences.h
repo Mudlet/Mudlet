@@ -96,9 +96,6 @@ public slots:
     void slot_save_and_exit();
     void slot_chooseProfilesChanged(QAction *);
 
-private slots:
-    void slot_timeValueChanged(QTime);
-
 private:
     void setColors();
     Host * mpHost;

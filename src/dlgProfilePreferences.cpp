@@ -334,16 +334,6 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
             ignore = ignore.append(it.next());
         doubleclick_ignore_lineedit->setText( ignore );
 
-        timeEdit_timerDebugOutputMinimumInterval->setTime( QTime( 0, 0, 0, 1).addMSecs( pHost->mTimerDebugOutputSuppressionInterval - 1 ) );
-        // The above funky setting method is because a zero time is INVALID
-        // and since Qt 5.0-ish adding any value to an invalid time still leaves
-        // the time as "invalid".
-        timeEdit_timerDebugOutputMinimumInterval->setCurrentSection( QDateTimeEdit::SecondSection );
-        // Added so that the control is initially set to edit seconds (was
-        // defaulting to first shown which was hours which is not the most
-        // likely that the user would want to use)!
-        connect(timeEdit_timerDebugOutputMinimumInterval, SIGNAL(timeChanged(QTime)), this, SLOT(slot_timeValueChanged(QTime)));
-
         // FIXME: Check this each time that it is appropriate for THIS build version
         comboBox_mapFileSaveFormatVersion->clear();
         // Add default version:
@@ -1462,14 +1452,6 @@ void dlgProfilePreferences::slot_save_and_exit()
     for(int i=0;i<lIgnore.size();i++){
         pHost->mDoubleClickIgnore.insert(lIgnore.at(i));
     }
-    QTime _midnight( 0, 0, 0, 1 );
-    // zero time is NOT valid and QTime::msecsTo( const QTime & other ) returns
-    // 0 if EITHER time is invalid
-    pHost->mTimerDebugOutputSuppressionInterval = _midnight.msecsTo( timeEdit_timerDebugOutputMinimumInterval->time() ) - 1;
-    if( pHost->mTimerDebugOutputSuppressionInterval < 0 ) {
-        // Clean up if the control IS at zero, so the msecTo() fails and returns 0
-        pHost->mTimerDebugOutputSuppressionInterval = 0;
-    }
 
 #if QT_VERSION >= 0x050200
     mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->currentData().toInt() );
@@ -1518,27 +1500,6 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
     close();
-}
-
-// Needed to fixup the jump from zero (special "show all") to a non-zero time
-// value always jumping to the most significant section (Hours) when for our
-// purposes we would like it to be Seconds!
-void dlgProfilePreferences::slot_timeValueChanged(QTime newTime)
-{
-    static QTime oldTime = QTime( 0, 0, 0, 0);
-
-    // Has the value changed?
-    if( oldTime != newTime ) {
-        // Yes - was the old time zero (the special case "show all")?
-        if( oldTime == QTime( 0, 0, 0, 0 ) && newTime == QTime( 1, 0, 0, 0) ) {
-            // Yes - then set the section to be the seconds one:
-            timeEdit_timerDebugOutputMinimumInterval->setCurrentSection( QDateTimeEdit::SecondSection );
-            // And fix the fact that the +1 has already been applied but to the
-            // hours and not the seconds:
-            timeEdit_timerDebugOutputMinimumInterval->setTime( QTime( 0, 0, 1, 0 ) );
-        }
-        oldTime = newTime;
-    }
 }
 
 void dlgProfilePreferences::slot_chooseProfilesChanged( QAction * _action )
