@@ -1023,7 +1023,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( QStringLiteral( ":/icons/wotmud_120_30.png" ) );
+    mi = QIcon( QPixmap( QStringLiteral( ":/icons/wotmudicon.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);
     muds.clear();
 
