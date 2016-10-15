@@ -100,273 +100,118 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         }
     }
 
-    if( pH->mUrl.toLower().contains("achaea.com") || pH->mUrl.toLower().contains("aetolia.com") || pH->mUrl.toLower().contains("imperian.com") || pH->mUrl.toLower().contains("midkemiaonline.com") || pH->mUrl.toLower().contains("lusternia.com") )
-    {
+    if( pH->mUrl.contains( QStringLiteral( "achaea.com" ), Qt::CaseInsensitive )
+     || pH->mUrl.contains( QStringLiteral( "aetolia.com" ), Qt::CaseInsensitive )
+     || pH->mUrl.contains( QStringLiteral( "imperian.com" ), Qt::CaseInsensitive )
+     || pH->mUrl.contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ) {
+
         downloadMapOptions->setVisible( true );
         connect(buttonDownloadMap, SIGNAL(clicked()), this, SLOT(downloadMap()));
-    } else
+    }
+    else {
         downloadMapOptions->setVisible( false );
+    }
 
 
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
-    connect(pushButton_black, SIGNAL(clicked()), this, SLOT(setColorBlack()));
-    QPalette palette;
-    QString styleSheet;
-    QColor color;
 
-    color = mpHost->mCommandLineFgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_command_line_foreground_color->setStyleSheet( styleSheet );
+    pushButton_command_line_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandLineFgColor.name() ) );
+    pushButton_command_line_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandLineBgColor.name() ) );
+
+                            pushButton_black->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlack.name() ) );
+                           pushButton_Lblack->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlack.name() ) );
+                            pushButton_green->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mGreen.name() ) );
+                           pushButton_Lgreen->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightGreen.name() ) );
+                              pushButton_red->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mRed.name() ) );
+                             pushButton_Lred->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightRed.name() ) );
+                             pushButton_blue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlue.name() ) );
+                            pushButton_Lblue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlue.name() ) );
+                           pushButton_yellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mYellow.name() ) );
+                          pushButton_Lyellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightYellow.name() ) );
+                             pushButton_cyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCyan.name() ) );
+                            pushButton_Lcyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightCyan.name() ) );
+                          pushButton_magenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mMagenta.name() ) );
+                         pushButton_Lmagenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightMagenta.name() ) );
+                            pushButton_white->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mWhite.name() ) );
+                           pushButton_Lwhite->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightWhite.name() ) );
+
+                 pushButton_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mFgColor.name() ) );
+                 pushButton_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBgColor.name() ) );
+         pushButton_command_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandFgColor.name() ) );
+         pushButton_command_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandBgColor.name() ) );
+
     connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
-
-    color = mpHost->mCommandLineBgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_command_line_background_color->setStyleSheet( styleSheet );
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
-    color = mpHost->mBlack;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_black->setStyleSheet( styleSheet );
+    connect(pushButton_black                        , SIGNAL(clicked()), this, SLOT(setColorBlack()));
+    connect(pushButton_Lblack                       , SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
+    connect(pushButton_green                        , SIGNAL(clicked()), this, SLOT(setColorGreen()));
+    connect(pushButton_Lgreen                       , SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+    connect(pushButton_red                          , SIGNAL(clicked()), this, SLOT(setColorRed()));
+    connect(pushButton_Lred                         , SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+    connect(pushButton_blue                         , SIGNAL(clicked()), this, SLOT(setColorBlue()));
+    connect(pushButton_Lblue                        , SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+    connect(pushButton_yellow                       , SIGNAL(clicked()), this, SLOT(setColorYellow()));
+    connect(pushButton_Lyellow                      , SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+    connect(pushButton_cyan                         , SIGNAL(clicked()), this, SLOT(setColorCyan()));
+    connect(pushButton_Lcyan                        , SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+    connect(pushButton_magenta                      , SIGNAL(clicked()), this, SLOT(setColorMagenta()));
+    connect(pushButton_Lmagenta                     , SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    connect(pushButton_white                        , SIGNAL(clicked()), this, SLOT(setColorWhite()));
+    connect(pushButton_Lwhite                       , SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
 
-    connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
-    color = mpHost->mLightBlack;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblack->setStyleSheet( styleSheet );
-
-    connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
-    color = mpHost->mGreen;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_green->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
-    color = mpHost->mLightGreen;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lgreen->setStyleSheet( styleSheet );
-
-    connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
-    color = mpHost->mRed;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_red->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
-    color = mpHost->mLightRed;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lred->setStyleSheet( styleSheet );
-
-    connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
-    color = mpHost->mBlue;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_blue->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
-    color = mpHost->mLightBlue;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblue->setStyleSheet( styleSheet );
-
-    connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
-    color = mpHost->mYellow;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_yellow->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
-    color = mpHost->mLightYellow;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lyellow->setStyleSheet( styleSheet );
-
-    connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
-    color = mpHost->mCyan;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_cyan->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
-    color = mpHost->mLightCyan;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lcyan->setStyleSheet( styleSheet );
-
-    connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
-    color = mpHost->mMagenta;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_magenta->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
-    color = mpHost->mLightMagenta;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lmagenta->setStyleSheet( styleSheet );
-
-    connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
-    color = mpHost->mWhite;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_white->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
-    color = mpHost->mLightWhite;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lwhite->setStyleSheet( styleSheet );
-    connect(pushButton_foreground_color, SIGNAL(clicked()), this, SLOT(setFgColor()));
-    color = mpHost->mFgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_foreground_color->setStyleSheet( styleSheet );
-    connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
-    color = mpHost->mBgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_background_color->setStyleSheet( styleSheet );
-
-
-
-    connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
-    color = mpHost->mCommandFgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_command_foreground_color->setStyleSheet( styleSheet );
-
-
-    connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
-    color = mpHost->mCommandBgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_command_background_color->setStyleSheet( styleSheet );
-
-
-
+    connect(pushButton_foreground_color             , SIGNAL(clicked()), this, SLOT(setFgColor()));
+    connect(pushButton_background_color             , SIGNAL(clicked()), this, SLOT(setBgColor()));
+    connect(pushButton_command_foreground_color     , SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
+    connect(pushButton_command_background_color     , SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
 
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
+
     connect(fontComboBox, SIGNAL( currentFontChanged( const QFont & ) ), this, SLOT(setDisplayFont()));
     QStringList sizeList;
     for( int i=1; i<40; i++ ) sizeList << QString::number(i);
     fontSize->insertItems( 1, sizeList );
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
-//    connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
-//    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
-//    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
 
+               pushButton_black_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlack_2.name() ) );
+              pushButton_Lblack_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlack_2.name() ) );
+               pushButton_green_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mGreen_2.name() ) );
+              pushButton_Lgreen_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightGreen_2.name() ) );
+                 pushButton_red_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mRed_2.name() ) );
+                pushButton_Lred_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightRed_2.name() ) );
+                pushButton_blue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlue_2.name() ) );
+               pushButton_Lblue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlue_2.name() ) );
+              pushButton_yellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mYellow_2.name() ) );
+             pushButton_Lyellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightYellow_2.name() ) );
+                pushButton_cyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCyan_2.name() ) );
+               pushButton_Lcyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightCyan_2.name() ) );
+             pushButton_magenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mMagenta_2.name() ) );
+            pushButton_Lmagenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightMagenta_2.name() ) );
+               pushButton_white_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mWhite_2.name() ) );
+              pushButton_Lwhite_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightWhite_2.name() ) );
 
+    pushButton_foreground_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mFgColor_2.name() ) );
+    pushButton_background_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBgColor_2.name() ) );
 
-    color = mpHost->mBlack_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_black_2->setStyleSheet( styleSheet );
-    connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
+    connect(pushButton_black_2           , SIGNAL(clicked()), this, SLOT(setColorBlack2()));
+    connect(pushButton_Lblack_2          , SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
+    connect(pushButton_green_2           , SIGNAL(clicked()), this, SLOT(setColorGreen2()));
+    connect(pushButton_Lgreen_2          , SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
+    connect(pushButton_red_2             , SIGNAL(clicked()), this, SLOT(setColorRed2()));
+    connect(pushButton_Lred_2            , SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
+    connect(pushButton_blue_2            , SIGNAL(clicked()), this, SLOT(setColorBlue2()));
+    connect(pushButton_Lblue_2           , SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
+    connect(pushButton_yellow_2          , SIGNAL(clicked()), this, SLOT(setColorYellow2()));
+    connect(pushButton_Lyellow_2         , SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
+    connect(pushButton_cyan_2            , SIGNAL(clicked()), this, SLOT(setColorCyan2()));
+    connect(pushButton_Lcyan_2           , SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
+    connect(pushButton_magenta_2         , SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
+    connect(pushButton_Lmagenta_2        , SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
+    connect(pushButton_white_2           , SIGNAL(clicked()), this, SLOT(setColorWhite2()));
+    connect(pushButton_Lwhite_2          , SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
 
-    connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
-    color = mpHost->mLightBlack_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblack_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_green_2, SIGNAL(clicked()), this, SLOT(setColorGreen2()));
-    color = mpHost->mGreen_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_green_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lgreen_2, SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
-    color = mpHost->mLightGreen_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lgreen_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_red_2, SIGNAL(clicked()), this, SLOT(setColorRed2()));
-    color = mpHost->mRed_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_red_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lred_2, SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
-    color = mpHost->mLightRed_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lred_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_blue_2, SIGNAL(clicked()), this, SLOT(setColorBlue2()));
-    color = mpHost->mBlue_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_blue_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lblue_2, SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
-    color = mpHost->mLightBlue_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblue_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_yellow_2, SIGNAL(clicked()), this, SLOT(setColorYellow2()));
-    color = mpHost->mYellow_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_yellow_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lyellow_2, SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
-    color = mpHost->mLightYellow_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lyellow_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_cyan_2, SIGNAL(clicked()), this, SLOT(setColorCyan2()));
-    color = mpHost->mCyan_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_cyan_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lcyan_2, SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
-    color = mpHost->mLightCyan_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lcyan_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_magenta_2, SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
-    color = mpHost->mMagenta_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_magenta_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lmagenta_2, SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
-    color = mpHost->mLightMagenta_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lmagenta_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_white_2, SIGNAL(clicked()), this, SLOT(setColorWhite2()));
-    color = mpHost->mWhite_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_white_2->setStyleSheet( styleSheet );
-
-    connect(pushButton_Lwhite_2, SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
-    color = mpHost->mLightWhite_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lwhite_2->setStyleSheet( styleSheet );
     connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
-    color = mpHost->mFgColor_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_foreground_color_2->setStyleSheet( styleSheet );
     connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
-    color = mpHost->mBgColor_2;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_background_color_2->setStyleSheet( styleSheet );
-
 
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
@@ -543,144 +388,28 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 void dlgProfilePreferences::setColors()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
 
-    QString styleSheet;
-    QPalette palette;
-    QColor color;
-    color = pHost->mFgColor;
-    palette.setColor( QPalette::Button, color );
-    pushButton_foreground_color->setPalette( palette );
-    color = mpHost->mFgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_foreground_color->setStyleSheet( styleSheet );
-
-    color = pHost->mBgColor;
-    palette.setColor( QPalette::Button, color );
-    pushButton_background_color->setPalette( palette );
-    color = mpHost->mBgColor;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_background_color->setStyleSheet( styleSheet );
-
-    color = pHost->mBlack;
-    palette.setColor( QPalette::Button, color );
-    pushButton_black->setPalette( palette );
-    color = mpHost->mBlack;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_black->setStyleSheet( styleSheet );
-
-    color = pHost->mLightBlack;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lblack->setPalette( palette );
-    color = mpHost->mLightBlack;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblack->setStyleSheet( styleSheet );
-
-    color = pHost->mRed;
-    palette.setColor( QPalette::Button, color );
-    pushButton_red->setPalette( palette );
-    color = mpHost->mRed;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_red->setStyleSheet( styleSheet );
-
-    color = pHost->mLightRed;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lred->setPalette( palette );
-    color = mpHost->mLightRed;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lred->setStyleSheet( styleSheet );
-
-    color = pHost->mGreen;
-    palette.setColor( QPalette::Button, color );
-    pushButton_green->setPalette( palette );
-    color = mpHost->mGreen;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_green->setStyleSheet( styleSheet );
-
-    color = pHost->mLightGreen;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lgreen->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lgreen->setStyleSheet( styleSheet );
-
-    color = pHost->mBlue;
-    palette.setColor( QPalette::Button, color );
-    pushButton_blue->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_blue->setStyleSheet( styleSheet );
-
-
-    color = pHost->mLightBlue;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lblue->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblue->setStyleSheet( styleSheet );
-
-    color = pHost->mYellow;
-    palette.setColor( QPalette::Button, color );
-    pushButton_yellow->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_yellow->setStyleSheet( styleSheet );
-
-    color = pHost->mLightYellow;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lyellow->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lyellow->setStyleSheet( styleSheet );
-
-    color = pHost->mCyan;
-    palette.setColor( QPalette::Button, color );
-    pushButton_cyan->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_cyan->setStyleSheet( styleSheet );
-
-    color = pHost->mLightCyan;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lcyan->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lcyan->setStyleSheet( styleSheet );
-
-    color = pHost->mMagenta;
-    palette.setColor( QPalette::Button, color );
-    pushButton_magenta->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_magenta->setStyleSheet( styleSheet );
-
-    color = pHost->mLightMagenta;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lmagenta->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lmagenta->setStyleSheet( styleSheet );
-
-    color = pHost->mWhite;
-    palette.setColor( QPalette::Button, color );
-    pushButton_white->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_white->setStyleSheet( styleSheet );
-
-    color = pHost->mLightWhite;
-    palette.setColor( QPalette::Button, color );
-    pushButton_Lwhite->setPalette( palette );
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lwhite->setStyleSheet( styleSheet );
+    pushButton_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mFgColor.name() ) );
+    pushButton_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mBgColor.name() ) );
+               pushButton_black->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mBlack.name() ) );
+              pushButton_Lblack->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightBlack.name() ) );
+                 pushButton_red->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mRed.name() ) );
+                pushButton_Lred->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightRed.name() ) );
+               pushButton_green->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mGreen.name() ) );
+              pushButton_Lgreen->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightGreen.name() ) );
+                pushButton_blue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mBlue.name() ) );
+               pushButton_Lblue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightBlue.name() ) );
+              pushButton_yellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mYellow.name() ) );
+             pushButton_Lyellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightYellow.name() ) );
+                pushButton_cyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mCyan.name() ) );
+               pushButton_Lcyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightCyan.name() ) );
+             pushButton_magenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mMagenta.name() ) );
+            pushButton_Lmagenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightMagenta.name() ) );
+               pushButton_white->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mWhite.name() ) );
+              pushButton_Lwhite->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightWhite.name() ) );
 }
 
 void dlgProfilePreferences::resetColors()
@@ -716,113 +445,103 @@ void dlgProfilePreferences::resetColors()
 void dlgProfilePreferences::setFgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mFgColor, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_foreground_color->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mFgColor = color;
-        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-        color = mpHost->mFgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_foreground_color->setStyleSheet( styleSheet );
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+
+        pushButton_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setBgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mBgColor, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_background_color->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mBgColor = color;
-        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-        color = mpHost->mBgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_background_color->setStyleSheet( styleSheet );
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setCommandFgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mCommandFgColor, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_command_foreground_color->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mCommandFgColor = color;
-        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-        color = mpHost->mCommandFgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_command_foreground_color->setStyleSheet( styleSheet );
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setCommandLineFgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mCommandLineFgColor, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_command_line_foreground_color->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mCommandLineFgColor = color;
-        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-        color = mpHost->mCommandLineFgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_command_line_foreground_color->setStyleSheet( styleSheet );
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_line_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setCommandLineBgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mCommandLineBgColor, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_command_line_background_color->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mCommandLineBgColor = color;
-        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-        color = mpHost->mCommandLineBgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_command_line_background_color->setStyleSheet( styleSheet );
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_line_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setCommandBgColor()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mCommandBgColor, this );
     if ( color.isValid() )
     {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_command_background_color->setPalette( palette );
         pHost->mCommandBgColor = color;
-        if( mudlet::self()->mConsoleMap.contains( pHost ) ) mudlet::self()->mConsoleMap[pHost]->changeColors();
-        color = mpHost->mCommandBgColor;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_command_background_color->setStyleSheet( styleSheet );
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
@@ -863,301 +582,249 @@ void dlgProfilePreferences::setCommandLineFont()
 void dlgProfilePreferences::setColorBlack()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mBlack, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_black->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mBlack = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_black->setStyleSheet( styleSheet );
+        pushButton_black->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorLightBlack()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightBlack, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lblack->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightBlack = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lblack->setStyleSheet( styleSheet );
+        pushButton_Lblack->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorRed()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mRed, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_red->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mRed = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_red->setStyleSheet( styleSheet );
+        pushButton_red->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorLightRed()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightRed, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lred->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightRed = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lred->setStyleSheet( styleSheet );
+        pushButton_Lred->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorGreen()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mGreen, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_green->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mGreen = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_green->setStyleSheet( styleSheet );
+        pushButton_green->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
+
 void dlgProfilePreferences::setColorLightGreen()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightGreen, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lgreen->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightGreen = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lgreen->setStyleSheet( styleSheet );
+        pushButton_Lgreen->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorBlue()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mBlue, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_blue->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mBlue = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_blue->setStyleSheet( styleSheet );
+        pushButton_blue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
+
 void dlgProfilePreferences::setColorLightBlue()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightBlue, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lblue->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightBlue = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lblue->setStyleSheet( styleSheet );
+        pushButton_Lblue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorYellow()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mYellow, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_yellow->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mYellow = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_yellow->setStyleSheet( styleSheet );
+        pushButton_yellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
+
 void dlgProfilePreferences::setColorLightYellow()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightYellow, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lyellow->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightYellow = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lyellow->setStyleSheet( styleSheet );
+        pushButton_Lyellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorCyan()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mCyan, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_cyan->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mCyan = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_cyan->setStyleSheet( styleSheet );
+        pushButton_cyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightCyan()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightCyan, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lcyan->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightCyan = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lcyan->setStyleSheet( styleSheet );
+        pushButton_Lcyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorMagenta()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mMagenta, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_magenta->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mMagenta = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_magenta->setStyleSheet( styleSheet );
+        pushButton_magenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightMagenta()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightMagenta, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lmagenta->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightMagenta = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lmagenta->setStyleSheet( styleSheet );
+        pushButton_Lmagenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorWhite()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mWhite, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_white->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mWhite = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_white->setStyleSheet( styleSheet );
+        pushButton_white->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
+
 void dlgProfilePreferences::setColorLightWhite()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightWhite, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lwhite->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightWhite = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lwhite->setStyleSheet( styleSheet );
+        pushButton_Lwhite->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setFgColor2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mFgColor_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_foreground_color_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mFgColor_2 = color;
-        color = mpHost->mFgColor_2;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_foreground_color_2->setStyleSheet( styleSheet );
+        pushButton_foreground_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setBgColor2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mBgColor_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_background_color_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mBgColor_2 = color;
-        color = mpHost->mBgColor_2;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_background_color_2->setStyleSheet( styleSheet );
+        pushButton_background_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
@@ -1165,266 +832,219 @@ void dlgProfilePreferences::setBgColor2()
 void dlgProfilePreferences::setColorBlack2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mBlack_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_black_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mBlack_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_black_2->setStyleSheet( styleSheet );
+        pushButton_black_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorLightBlack2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightBlack_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lblack_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightBlack_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lblack_2->setStyleSheet( styleSheet );
+        pushButton_Lblack_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorRed2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mRed_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_red_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mRed_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_red_2->setStyleSheet( styleSheet );
+        pushButton_red_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorLightRed2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightRed_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lred_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightRed_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lred_2->setStyleSheet( styleSheet );
+        pushButton_Lred_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorGreen2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mGreen_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_green_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mGreen_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_green_2->setStyleSheet( styleSheet );
+        pushButton_green_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightGreen2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightGreen_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lgreen_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightGreen_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lgreen_2->setStyleSheet( styleSheet );
+        pushButton_Lgreen_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorBlue2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mBlue_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_blue_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mBlue_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_blue_2->setStyleSheet( styleSheet );
+        pushButton_blue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
+
 void dlgProfilePreferences::setColorLightBlue2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightBlue_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lblue_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightBlue_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lblue_2->setStyleSheet( styleSheet );
+        pushButton_Lblue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorYellow2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mYellow_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_yellow_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mYellow_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_yellow_2->setStyleSheet( styleSheet );
+        pushButton_yellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightYellow2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightYellow_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lyellow_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightYellow_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lyellow_2->setStyleSheet( styleSheet );
+        pushButton_Lyellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorCyan2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mCyan_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_cyan_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mCyan_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_cyan_2->setStyleSheet( styleSheet );
+        pushButton_cyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightCyan2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightCyan_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lcyan_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightCyan_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lcyan_2->setStyleSheet( styleSheet );
+        pushButton_Lcyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorMagenta2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mMagenta_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_magenta_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mMagenta_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_magenta_2->setStyleSheet( styleSheet );
+        pushButton_magenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightMagenta2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightMagenta_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lmagenta_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightMagenta_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lmagenta_2->setStyleSheet( styleSheet );
+        pushButton_Lmagenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 
 void dlgProfilePreferences::setColorWhite2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mWhite_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_white_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mWhite_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_white_2->setStyleSheet( styleSheet );
+        pushButton_white_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 void dlgProfilePreferences::setColorLightWhite2()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
+
     QColor color = QColorDialog::getColor( pHost->mLightWhite_2, this );
-    if ( color.isValid() )
-    {
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        pushButton_Lwhite_2->setPalette( palette );
+    if( color.isValid() ) {
         pHost->mLightWhite_2 = color;
-        palette.setColor( QPalette::Button, color );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-        pushButton_Lwhite_2->setStyleSheet( styleSheet );
+        pushButton_Lwhite_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
     }
 }
 

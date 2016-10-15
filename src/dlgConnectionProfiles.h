@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -76,15 +77,11 @@ private:
     bool validPort;
     bool validateConnect();
 
-    QString            mOrigin;
-    QString            mUnsavedProfileName;
     QStringList        mProfileList;
-    bool               mEditOK;
     QPalette           mRegularPalette;
     QPalette           mOKPalette;
     QPalette           mErrorPalette;
     QPalette           mReadOnlyPalette;
-    QString            mCurrentProfileEditName;
     QPushButton *      connect_button;
     QLineEdit *        delete_profile_lineedit;
     QPushButton *      delete_button;
