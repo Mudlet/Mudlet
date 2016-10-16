@@ -106,9 +106,6 @@ public slots:
 
     void hideActionLabel();
 
-private slots:
-    void slot_timeValueChanged(QTime);
-
 private:
     void setColors();
     void setColor(QPushButton* b, QColor& c);
