@@ -154,7 +154,6 @@ Host::Host( int port, QString hostname, QString login, QString pass, int id )
 , mCommandLineBgColor( QColor(  0,  0,  0) )
 , mFORCE_MXP_NEGOTIATION_OFF( false )
 , mHaveMapperScript( false )
-, mTimerDebugOutputSuppressionInterval( 10 * 1000 ) // 10 seconds was suggested
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface = new LuaInterface(this);

@@ -1983,47 +1983,6 @@
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
           <item row="0" column="0">
-           <widget class="QLabel" name="label_timerDebugOutputMinimumInterval">
-            <property name="text">
-             <string>Minimum interval for a Timer to show execution output in debug window:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QTimeEdit" name="timeEdit_timerDebugOutputMinimumInterval">
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When a Timer fires and the Debugging console or the Editor Error are showing, the code for the timer is displayed as it is executed. For Timers of a short duration this output can obscure the output from less frequent Timers or other elements in a user or package item.  This control will attempt to reduce the &lt;i&gt;spam&lt;/i&gt; by hiding the code for Timers for an interval less than the specified interval - a line will still be shown for each timer firing but not all the output.  By default this is set for a &lt;i&gt;10 second&lt;/i&gt; period but it can be reduced to zero to show all output - the control will display &amp;quot;&lt;i&gt;Show all&lt;/i&gt;&amp;quot; in that case.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="buttonSymbols">
-             <enum>QAbstractSpinBox::PlusMinus</enum>
-            </property>
-            <property name="specialValueText">
-             <string>show all</string>
-            </property>
-            <property name="accelerated">
-             <bool>true</bool>
-            </property>
-            <property name="showGroupSeparator" stdset="0">
-             <bool>true</bool>
-            </property>
-            <property name="currentSection">
-             <enum>QDateTimeEdit::HourSection</enum>
-            </property>
-            <property name="displayFormat">
-             <string notr="true">h:mm:ss.zzz</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
            <widget class="QLabel" name="label_mapFileSaveFormatVersion">
             <property name="text">
              <string>Override map file format version:</string>
@@ -2033,7 +1992,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="0" column="1">
            <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
             <property name="maximumSize">
              <size>
@@ -2057,7 +2016,7 @@
             </item>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="text">
              <string>Show (-1) area {this message should have been overwritten by initialisation code - report if not!}</string>
