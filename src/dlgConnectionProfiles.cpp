@@ -380,7 +380,7 @@ void dlgConnectionProfiles::slot_save_name()
         }
 
         // code stolen from fillout_form, should be moved to its own function
-        QFont font( QStringLiteral( "Bitstream Vera Sans Mono" ), 8, QFont::Normal );
+        QFont font( QStringLiteral( "Bitstream Vera Sans Mono" ), 1, QFont::Normal );
         // Some uses of QFont have a third argument such as QFont::Helvetica or
         // QFont::Courier but that is not a valid value for that argument - it
         // is a font weight and typically only QFont::Normal or QFont::Bold is
@@ -878,9 +878,13 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     profiles_tree_widget->setIconSize(QSize(120,30));
-    QFont font(QStringLiteral("Bitstream Vera Sans Mono"),8);
-    // Previously setting the size to 1 does not HIDE the text so restore the
-    // display of the name beneath the Icon
+    QFont font( QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal );
+    // This (and setting the font color to white on a white background for an
+    // unselected widget) is a hack that minimises - but does not remove the
+    // QString assigned as the "name" of the QListWidgetItem in the constructor
+    // we use - unfortunately we currently need that text programmatically at
+    // present to identify each item - more work is needed, and is plausable, to
+    // completely resolve this. -Slysven
     QString muds;
     QListWidgetItem * pM;
     QIcon mi;
