@@ -339,7 +339,7 @@ void dlgConnectionProfiles::slot_save_name()
     if( pItem )
     {
         QString currentProfileEditName = pItem->text();
-        int row = mProfileList.indexOf( currentProfileEditName );
+        int row = mProfileList.indexOf( currentProfileEditName ); // This returns -1 if currentProfileEditName not present!
         if( ( row >= 0 ) && ( row < mProfileList.size() ) )
         {
             mProfileList[row] = newProfileName;
@@ -402,7 +402,7 @@ void dlgConnectionProfiles::slot_save_name()
         quint8 i3 = (i*hash)%255;
         quint8 i4 = (3*hash)%255;
         quint8 i5 = (hash)%255;
-        quint8 i6 = (hash/(i+1))%255; // Under some corner cases i might be 0
+        quint8 i6 = (hash/(i+2))%255; // Under some corner cases i might be -1 or 0
         shade.setColorAt( 1, QColor(i1, i2, i3,255) );
         shade.setColorAt( 0, QColor(i4, i5, i6,255) );
 
@@ -1076,7 +1076,7 @@ void dlgConnectionProfiles::fillout_form()
         quint8 i3 = (i*hash)%255;
         quint8 i4 = (3*hash)%255;
         quint8 i5 = (hash)%255;
-        quint8 i6 = (hash/(i+1))%255; // Under some corner cases i might be 0
+        quint8 i6 = (hash/(i+2))%255; // In the other place where this is used i might be -1 or 0
         shade.setColorAt( 1, QColor(i1, i2, i3,255) );
         shade.setColorAt( 0, QColor(i4, i5, i6,255) );
         QPainter pt(&pb);
