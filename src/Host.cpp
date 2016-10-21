@@ -628,21 +628,26 @@ void Host::unregisterEventHandler(const QString & name, TScript * pScript )
 
 void Host::raiseEvent( const TEvent & pE )
 {
-    if( pE.mArgumentList.size() < 1 ) return;
-    if( mEventHandlerMap.contains( pE.mArgumentList[0] ) )
+    if( pE.mArgumentList.isEmpty() )
     {
-        QList<TScript *> scriptList = mEventHandlerMap[pE.mArgumentList[0]];
-        for( int i=0; i<scriptList.size(); i++ )
+        return;
+    }
+
+    if( mEventHandlerMap.contains( pE.mArgumentList.at( 0 ) ) )
+    {
+        QList<TScript *> scriptList = mEventHandlerMap.value( pE.mArgumentList.at( 0 ) );
+        for( int i=0, total = scriptList.size(); i<total; ++i )
         {
             scriptList[i]->callEventHandler( pE );
         }
     }
-    if( mAnonymousEventHandlerFunctions.contains( pE.mArgumentList[0] ) )
+
+    if( mAnonymousEventHandlerFunctions.contains( pE.mArgumentList.at( 0 ) ) )
     {
-        QStringList funList = mAnonymousEventHandlerFunctions[pE.mArgumentList[0]];
-        for( int i=0; i<funList.size(); i++ )
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value( pE.mArgumentList.at( 0 ) );
+        for( int i=0, total = functionsList.size(); i<total; ++i )
         {
-            mLuaInterpreter.callEventHandler( funList[i], pE );
+            mLuaInterpreter.callEventHandler( functionsList.at( i ), pE );
         }
     }
 }

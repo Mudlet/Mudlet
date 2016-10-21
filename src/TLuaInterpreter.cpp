@@ -371,41 +371,120 @@ int TLuaInterpreter::denyCurrentSend( lua_State * L )
 
 int TLuaInterpreter::raiseEvent( lua_State * L )
 {
-    TEvent pE;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "raiseEvent: ERROR: NULL Host pointer!" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    TEvent event;
 
     int n = lua_gettop( L );
-    for( int i=1; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+    for( int i=1; i<=n; i++) {
+        if( lua_isnumber( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        else if( lua_isstring( L, i ) ) {
+            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         }
-        else if( lua_isboolean( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_toboolean( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        else if( lua_isboolean( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
         }
-        else if( lua_isnil( L, i ) )
-        {
-            pE.mArgumentList.append( QString() );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        else if( lua_isnil( L, i ) ) {
+            event.mArgumentList.append( QString() );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
         }
-        else
-        {
-            lua_pushstring( L, tr("raiseEvent: bad argument #%1 type (expected string, number, boolean, or nil, got %2)").arg(QString::number(i), luaL_typename(L,i)).toUtf8().constData() );
+        else {
+            lua_pushstring( L, tr( "raiseEvent: bad argument #%1 type (string, number, boolean, or nil\n"
+                                   "expected, got a %2!)" )
+                            .arg( i )
+                            .arg( luaL_typename( L, i ) )
+                            .toUtf8().constData() );
             lua_error( L );
             return 1;
         }
     }
+
+    pHost->raiseEvent( event );
+    lua_pushnumber( L, n ); // Return number of supplied arguments put out.
+
+    return 1;
+}
+
+int TLuaInterpreter::getProfileName( lua_State * L )
+{
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->raiseEvent( pE );
-    return 0;
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getProfileName: ERROR: NULL Host pointer!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    lua_pushstring( L, pHost->getName().toUtf8().constData() );
+    return 1;
+}
+
+int TLuaInterpreter::raiseInterProfileEvent( lua_State * L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "raiseInterProfileEvent: ERROR: NULL Host pointer!" ).toUtf8().constData() );
+        return 2;
+    }
+
+    TEvent event;
+    event.mArgumentList.append( QStringLiteral( "sysInterProfileEvent" ) );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    event.mArgumentList.append( pHost->getName() );
+    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+
+    int n = lua_gettop( L );
+    if( ! n ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "raiseInterProfileEvent: missing at least one argument (a string, number, boolean, or nil\n"
+                               "expected, got nothing!)" )
+                        .toUtf8().constData() );
+        return 2;
+    }
+
+    for( int i=1; i<=n; i++) {
+        if( lua_isnumber( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) ) {
+            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+        else if( lua_isboolean( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        }
+        else if( lua_isnil( L, i ) ) {
+            event.mArgumentList.append( QString() );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else {
+            lua_pushstring( L, tr( "raiseInterProfileEvent: bad argument type #%1 (boolean, number, string or nil\n"
+                                   "expected, got a %2!)" )
+                            .arg( i )
+                            .arg( luaL_typename( L, i ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    mudlet::self()->getHostManager()->postInterHostEvent( pHost, event );
+    lua_pushnumber( L, n ); // Return number of supplied arguments put out.
+
+    return 1;
 }
 
 int TLuaInterpreter::resetProfile( lua_State * L )
@@ -12568,62 +12647,63 @@ bool TLuaInterpreter::callMulti(const QString & function, const QString & mName 
 }
 
 
-bool TLuaInterpreter::callEventHandler(const QString & function, const TEvent & pE )
+bool TLuaInterpreter::callEventHandler( const QString & function, const TEvent & pE )
 {
-    if( function.isEmpty() )
-        return false;
-    lua_State * L = pGlobalLua;
-    int error = luaL_dostring(L, QString("return " + function).toLatin1().data());
-    if( error != 0 )
-    {
-        string e;
-        if( lua_isstring( L, 1 ) )
-        {
-            e = "Lua error:";
-            e += lua_tostring( L, 1 );
-        }
-        QString _n = "event handler function";
-        logError( e, _n, function );
+    if( function.isEmpty() ) {
         return false;
     }
-    for( int i=0; i<pE.mArgumentList.size(); i++ )
-    {
-        if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
-        {
-            lua_pushnumber( L, pE.mArgumentList[i].toDouble() );
+
+    lua_State * L = pGlobalLua;
+
+    int error = luaL_dostring( L, QStringLiteral( "return %1" ).arg( function ).toUtf8().constData() );
+    if( error ) {
+        string err;
+        if( lua_isstring( L, 1 ) ) {
+            err = "Lua error:";
+            err += lua_tostring( L, 1 );
         }
-        else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
-        {
-            lua_pushboolean( L, pE.mArgumentList[i].toInt() );
-        }
-        else if( pE.mArgumentTypeList[i] == ARGUMENT_TYPE_NIL )
-        {
+        QString name = "event handler function";
+        logError( err, name, function );
+        return false;
+    }
+
+    for( int i=0; i<pE.mArgumentList.size(); i++ ) {
+        switch( pE.mArgumentTypeList.at(i) ) {
+        case ARGUMENT_TYPE_NUMBER:  lua_pushnumber( L, pE.mArgumentList.at(i).toDouble() );                     break;
+        case ARGUMENT_TYPE_STRING:  lua_pushstring( L, pE.mArgumentList.at(i).toUtf8().constData() );           break;
+        case ARGUMENT_TYPE_BOOLEAN: lua_pushboolean( L, pE.mArgumentList.at(i).toInt() );                       break;
+        case ARGUMENT_TYPE_NIL:     lua_pushnil( L );                                                           break;
+        default:
+            qWarning( "TLuaInterpreter::callEventHandler(\"%s\", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.",
+                      function.toUtf8().constData(),
+                      pE.mArgumentTypeList.at(i), i );
             lua_pushnil( L );
         }
-        else
-        {
-            lua_pushstring( L, pE.mArgumentList[i].toLatin1().data() );
-        }
     }
-    error = lua_pcall( L, pE.mArgumentList.size(), LUA_MULTRET, 0 );
-    if( error != 0 )
-    {
-        string e = "";
-        if(lua_isstring( L, -1) )
-        {
-            e+=lua_tostring( L, -1 );
-        }
-        QString _n = "event handler function";
-        logError( e, _n, function );
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: ERROR running script "<< function << " (" << function <<") ERROR: "<<e.c_str()<<"\n">>0;}
-    }
-    lua_pop( L, lua_gettop( L ) );
-    if( error == 0 )
-        return true;
-    else
-        return false;
-}
 
+    error = lua_pcall( L, pE.mArgumentList.size(), LUA_MULTRET, 0 );
+    if( error ) {
+        string err = "";
+        if(lua_isstring( L, -1) ) {
+            err += lua_tostring( L, -1 );
+        }
+        QString name = "event handler function";
+        logError( err, name, function );
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA: ERROR running script "
+                                                         << function
+                                                         << " ("
+                                                         << function
+                                                         << ")\nError: "
+                                                         << QString::fromUtf8( err.c_str() )
+                                                         << "\n"
+                                                         >> 0;
+        }
+    }
+
+    lua_pop( L, lua_gettop( L ) );
+    return ! error;
+}
 
 void TLuaInterpreter::set_lua_table(const QString & tableName, QStringList & variableList )
 {
@@ -13076,6 +13156,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData );
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
     lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
+    lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
+    lua_register( pGlobalLua, "raiseInterProfileEvent", TLuaInterpreter::raiseInterProfileEvent );
 
 
     luaopen_yajl(pGlobalLua);

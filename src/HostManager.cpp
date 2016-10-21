@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -107,9 +108,11 @@ QStringList HostManager::getHostList()
     QMutexLocker locker(& mPoolLock);
 
     QStringList strlist;
-    QList<QString> hostList = mHostPool.keys();
-    if( hostList.size() > 0 )
+    const QList<QString> hostList = mHostPool.keys();
+    if( ! hostList.isEmpty() ) {
         strlist << hostList;
+    }
+
     return strlist;
 }
 
@@ -128,6 +131,58 @@ void HostManager::postIrcMessage( QString a, QString b, QString c )
     for( int i=0; i<hostList.size(); i++ )
     {
         hostList[i]->postIrcMessage( a, b, c );
+    }
+}
+
+// The slightly convoluted way we step through the list of hosts is so that we
+// send out the events to the other hosts in a predictable and consistant order
+// and so that no one host gets an unfair advantage when emitting events. The
+// sending profile host gets the event LAST so it knows that all other profiles
+// have received it before it does.
+void HostManager::postInterHostEvent( const Host * pHost, const TEvent & event )
+{
+    if( ! pHost ) {
+        return;
+    }
+
+    QMutexLocker locker(& mPoolLock);
+
+    QList<QSharedPointer<Host> > hostList = mHostPool.values();
+    int i = 0;
+    QList<int> beforeSendingHost;
+    int sendingHost = -1;
+    QList<int> afterSendingHost;
+    while( i < hostList.size() ) {
+        if( hostList.at(i) && hostList.at(i) != pHost ) {
+            beforeSendingHost.append( i++ );
+        }
+        else if( hostList.at(i) && hostList.at(i) == pHost ) {
+            sendingHost = i++;
+            break;
+        }
+        else {
+            i++;
+        }
+    }
+    while( i < hostList.size() ) {
+        if( hostList.at(i) && hostList.at(i) != pHost ) {
+            afterSendingHost.append( i );
+        }
+        i++;
+    }
+
+    QList<int> allValidHosts;
+    allValidHosts = afterSendingHost;
+    allValidHosts.append( beforeSendingHost );
+    if( sendingHost >= 0 ) {
+        allValidHosts.append( sendingHost );
+    }
+    else {
+        qWarning( "HostManager::postInterHostEvent(...) Warning: That's weird, the source of the event does not seem to exist any more!" );
+    }
+
+    for( int j = 0, total = allValidHosts.size(); j < total; ++j ) {
+        hostList.at( allValidHosts.at( j ) )->raiseEvent( event );
     }
 }
 
