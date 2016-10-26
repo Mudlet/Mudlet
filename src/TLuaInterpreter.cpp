@@ -9397,6 +9397,17 @@ int TLuaInterpreter::getRoomEnv( lua_State * L )
     return 0;
 }
 
+// Past code returned an empty string if room or user data item with given key
+// didn't exist - to enable the more modern behaviour that produces a
+// nil + error message (recommended) in those cases a third (boolean)true is
+// required. This "correct" behaviour being non-default is to retain backwards
+// compatibility with existing scripts/packages that expect an empty string,
+// even though the past code would allow the user to assign such an empty string
+// against a key which cannot be distinguished in such circumstances.
+// This fix is specific to the Room User Data as the need for it was introduced
+// at the same time as Area and Map User Data was added but they were not
+// documented until later and their Wiki entries did/will not mention returning
+// an empty string in the cases of no room with id or no key with given name.
 int TLuaInterpreter::getRoomUserData( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -9437,13 +9448,34 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
         key = QString::fromUtf8( lua_tostring( L, 2 ) );
     }
 
+    bool isBackwardCompatibilityRequired = true;
+    if( lua_gettop( L ) > 2 ) {
+        if( ! lua_isboolean( L, 3 ) ) {
+            lua_pushstring( L, tr( "getRoomUserData: bad argument #3 (enableFullErrorReporting as boolean {default\n"
+                                   "= false} is optional, got %1!)" )
+                            .arg( luaL_typename( L, 3 ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            isBackwardCompatibilityRequired = ! lua_toboolean( L, 3 );
+        }
+    }
+
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getRoomUserData: bad argument #1 value (number %1 is not a valid room id)." )
-                        .arg(roomId)
-                        .toUtf8().constData() );
-        return 2;
+        if( isBackwardCompatibilityRequired ) {
+            lua_pushstring( L, QString().toUtf8().constData() );
+            return 1;
+        }
+        else {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "getRoomUserData: bad argument #1 value (number %1 is not a valid room id)." )
+                            .arg( roomId )
+                            .toUtf8().constData() );
+            return 2;
+        }
     }
     else {
         if( pR->userData.contains( key ) ) {
@@ -9451,12 +9483,18 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
             return 1;
         }
         else {
-            lua_pushnil( L );
-            lua_pushstring( L, tr( "getRoomUserData: bad argument #2 value (no user data with key:\"%1\" in room with id: %2)." )
-                            .arg( key )
-                            .arg(roomId)
-                            .toUtf8().constData() );
-            return 2;
+            if( isBackwardCompatibilityRequired ) {
+                lua_pushstring( L, QString().toUtf8().constData() );
+                return 1;
+            }
+            else {
+                lua_pushnil( L );
+                lua_pushstring( L, tr( "getRoomUserData: bad argument #2 value (no user data with key:\"%1\" in room with id: %2)." )
+                                .arg( key )
+                                .arg( roomId )
+                                .toUtf8().constData() );
+                return 2;
+            }
         }
     }
 }
