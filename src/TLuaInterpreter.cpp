@@ -5800,6 +5800,20 @@ int TLuaInterpreter::getMainWindowSize( lua_State *L )
     return 2;
 }
 
+int TLuaInterpreter::getMousePosition( lua_State *L )
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    //QSize mainWindowSize = pHost->mpConsole->getMainWindowSize();
+    //QPoint pos = widget->mapFromGlobal(QCursor::pos());
+    QPoint pos = pHost->mpConsole->mapFromGlobal(QCursor::pos());
+    //QPoint pos = QCursor::pos();
+
+    lua_pushnumber( L, pos.x() );
+    lua_pushnumber( L, pos.y() );
+
+    return 2;
+}
+
 // tempTimer(int session, float seconds, string function to call, string name) // one shot timer.
 int TLuaInterpreter::tempTimer( lua_State *L )
 {
@@ -12915,6 +12929,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow );
     lua_register( pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat );
     lua_register( pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize );
+    lua_register( pGlobalLua, "getMousePosition", TLuaInterpreter::getMousePosition );
     lua_register( pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine );
     lua_register( pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize );
     lua_register( pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine );
