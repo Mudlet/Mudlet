@@ -5803,10 +5803,7 @@ int TLuaInterpreter::getMainWindowSize( lua_State *L )
 int TLuaInterpreter::getMousePosition( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    //QSize mainWindowSize = pHost->mpConsole->getMainWindowSize();
-    //QPoint pos = widget->mapFromGlobal(QCursor::pos());
     QPoint pos = pHost->mpConsole->mapFromGlobal(QCursor::pos());
-    //QPoint pos = QCursor::pos();
 
     lua_pushnumber( L, pos.x() );
     lua_pushnumber( L, pos.y() );
