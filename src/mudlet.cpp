@@ -653,13 +653,6 @@ void mudlet::slot_install_package()
     packageList->addItems( pH->mInstalledPackages );
 }
 
-void mudlet::showUnzipProgress(const QString& txt )
-{
-    Host * pH = getActiveHost();
-    if( ! pH ) return;
-    pH->showUnpackingProgress( txt );
-}
-
 void mudlet::slot_uninstall_package()
 {
     Host * pH = getActiveHost();

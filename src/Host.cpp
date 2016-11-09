@@ -35,6 +35,7 @@
 #include "XMLimport.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QtUiTools>
 #include <QDir>
 #include <QMessageBox>
@@ -144,7 +145,6 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
 , mModuleSaveBlock(false)
-, mpUnzipDialog        ( 0 )
 , mLineSize            ( 5.0 )
 , mRoomSize            ( 0.5 )
 , mServerGUI_Package_version( -1 )
@@ -764,21 +764,12 @@ bool Host::closingDown()
     return shutdown;
 }
 
-// this is called by the Lua function unzip() defined in LuaGlobal.lua
-void Host::showUnpackingProgress( QString  txt )
-{
-    return;
-    if( ! mpUnzipDialog ) return;
-    QStringList l;
-    l << txt;
-    packageList->addItems( l );
-    packageList->scrollToBottom();
-    packageList->update();
-    QApplication::sendPostedEvents();
-}
-
 bool Host::installPackage(const QString& fileName, int module )
 {
+    // As the pointed to dialog is only used now WITHIN this method and this
+    // method can be re-entered, it is best to use a local rather than a class
+    // pointer just in case we accidently reenter this method in the future.
+    QDialog * pUnzipDialog = Q_NULLPTR;
 
 //     Module notes:
 //     For the module install, a module flag of 0 is a package, a flag
@@ -839,27 +830,19 @@ bool Host::installPackage(const QString& fileName, int module )
         QUiLoader loader;
         QFile file(":/ui/package_manager_unpack.ui");
         file.open(QFile::ReadOnly);
-        mpUnzipDialog = dynamic_cast<QDialog *>(loader.load( &file, 0 ) );
+        pUnzipDialog = dynamic_cast<QDialog *>(loader.load( &file, 0 ) );
         file.close();
-        if( ! mpUnzipDialog ) return false;
-        QString _title = QString("Unpacking package: %1").arg(fileName);
-        mpUnzipDialog->setWindowTitle( _title );
-        mpUnzipDialog->show();
-        mpUnzipDialog->raise();
-        QApplication::sendPostedEvents();
+        if( ! pUnzipDialog ) return false;
 
-        // At the moment, QuaZip is for Windows only - OSX and Linux use LuaZip as it is more commonly available
-        // In the future, QuaZip will be the preferred option with LuaZip as a fallback
-//        #ifndef Q_OS_WIN
-//            QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
-//            mLuaInterpreter.compileAndExecuteScript( _script );
-//        #else
-            //JlCompress::extractDir(fileName, _dest );
+        pUnzipDialog->setWindowTitle( tr( "Unpacking package: %1" ).arg( fileName ) );
+        pUnzipDialog->show();
+        pUnzipDialog->raise();
+        qApp->processEvents();
+
         int err = 0;
         //from: https://gist.github.com/mobius/1759816
         struct zip_stat zs;
         struct zip_file *zf;
-//        int fd;
         long long sum;
         char buf[100];
         zip* archive = zip_open( fileName.toStdString().c_str(), 0, &err);
@@ -867,6 +850,11 @@ bool Host::installPackage(const QString& fileName, int module )
         {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: Tell user error
+            if ( pUnzipDialog )
+            {
+                pUnzipDialog->deleteLater();
+                pUnzipDialog = Q_NULLPTR;
+            }
             return false;
         }
         for (int i=0;i<zip_get_num_entries( archive, 0 );i++ )
@@ -895,6 +883,11 @@ bool Host::installPackage(const QString& fileName, int module )
                         zip_error_get( archive, &err, &sep);
                         zip_error_to_str(buf, sizeof(buf), err, errno);
                         //FIXME: report error to user
+                        if ( pUnzipDialog )
+                        {
+                            pUnzipDialog->deleteLater();
+                            pUnzipDialog = Q_NULLPTR;
+                        }
                         return false;
                     }
                     QFile fd(_dest+QString(zs.name));
@@ -902,6 +895,11 @@ bool Host::installPackage(const QString& fileName, int module )
                     if ( !fd.isOpen() )
                     {
                         //FIXME: report error to user qDebug()<<"error opening"<<_dest+QString(zs.name);
+                        if ( pUnzipDialog )
+                        {
+                            pUnzipDialog->deleteLater();
+                            pUnzipDialog = Q_NULLPTR;
+                        }
                         return false;
                     }
                     sum = 0;
@@ -912,6 +910,11 @@ bool Host::installPackage(const QString& fileName, int module )
                         if ( len < 0 )
                         {
                             //FIXME: report error to user qDebug()<<"zip_fread error"<<len;
+                            if ( pUnzipDialog )
+                            {
+                                pUnzipDialog->deleteLater();
+                                pUnzipDialog = Q_NULLPTR;
+                            }
                             return false;
                         }
                         fd.write( buf, len );
@@ -922,16 +925,24 @@ bool Host::installPackage(const QString& fileName, int module )
                 }
             }
         }
+
         err = zip_close( archive );
-        if ( err != 0 ){
+        if ( err ) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to user qDebug()<<"close file error"<<buf;
+            if ( pUnzipDialog )
+            {
+                pUnzipDialog->deleteLater();
+                pUnzipDialog = Q_NULLPTR;
+            }
             return false;
         }
-//        #endif
-        QString xmlPath = _dest+packageName+".xml";
-        mpUnzipDialog->close();
-        mpUnzipDialog = 0;
+
+        if ( pUnzipDialog )
+        {
+            pUnzipDialog->deleteLater();
+            pUnzipDialog = Q_NULLPTR;
+        }
 
         // requirements for zip packages:
         // - packages must be compressed in zip format
@@ -1077,6 +1088,9 @@ bool Host::removeDir( const QString& dirName, const QString& originalPath )
     return result;
 }
 
+// This may be called by installPackage(...) in that case however it will have
+// module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
+// again - Slysven
 bool Host::uninstallPackage(const QString& packageName, int module)
 {
 

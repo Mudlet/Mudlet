@@ -301,8 +301,8 @@ public:
     QStringList        mActiveModules;
     bool               mModuleSaveBlock;
 
-    void               showUnpackingProgress( QString  txt );
-    QDialog *          mpUnzipDialog;
+    // There was a QDialog *          mpUnzipDialog; but to avoid issues of
+    // reentrancy it needed to be made local to the method that used it.
     QPushButton *      uninstallButton;
     QListWidget *      packageList;
     QListWidget *                 moduleList;
