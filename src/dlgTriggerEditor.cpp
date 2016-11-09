@@ -3205,16 +3205,6 @@ void dlgTriggerEditor::addScript( bool isFolder )
     slot_scripts_selected( treeWidget_scripts->currentItem() );
 }
 
-void dlgTriggerEditor::slot_saveVarAfterEdit()
-{
-    return saveVar();
-}
-
-void dlgTriggerEditor::slot_saveTriggerAfterEdit()
-{
-    return saveTrigger();
-}
-
 void dlgTriggerEditor::saveTrigger()
 {
     QTime t;
@@ -3376,11 +3366,6 @@ void dlgTriggerEditor::saveTrigger()
     }
 }
 
-void dlgTriggerEditor::slot_saveTimerAfterEdit()
-{
-    return saveTimer();
-}
-
 void dlgTriggerEditor::saveTimer()
 {
     QTreeWidgetItem * pItem = mCurrentTimer;
@@ -3470,12 +3455,6 @@ void dlgTriggerEditor::saveTimer()
 
         }
     }
-}
-
-
-void dlgTriggerEditor::slot_saveAliasAfterEdit()
-{
-    return saveAlias();
 }
 
 void dlgTriggerEditor::saveAlias()
@@ -3606,12 +3585,6 @@ void dlgTriggerEditor::saveAlias()
     }
 }
 
-void dlgTriggerEditor::slot_saveActionAfterEdit()
-{
-    return saveAction();
-
-}
-
 void dlgTriggerEditor::saveAction()
 {
     QTreeWidgetItem * pItem = mCurrentAction;
@@ -3724,12 +3697,6 @@ void dlgTriggerEditor::saveAction()
     mudlet::self()->processEventLoopHack();
 }
 
-
-void dlgTriggerEditor::slot_saveScriptAfterEdit()
-{
-    return saveScript();
-}
-
 void dlgTriggerEditor::saveScript()
 {
     QTreeWidgetItem * pItem = mCurrentScript;
@@ -3831,12 +3798,6 @@ void dlgTriggerEditor::saveScript()
             }
         }
     }
-}
-
-
-void dlgTriggerEditor::slot_saveKeyAfterEdit()
-{
-    return saveKey();
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int valueType)
@@ -6345,30 +6306,31 @@ void dlgTriggerEditor::slot_save_edit()
     switch( mCurrentView )
     {
         case cmTriggerView:
-            slot_saveTriggerAfterEdit();
+            saveTrigger();
             break;
         case cmTimerView:
-            slot_saveTimerAfterEdit();
+            saveTimer();
             break;
         case cmAliasView:
-            slot_saveAliasAfterEdit();
+            saveAlias();
             break;
         case cmScriptView:
-            slot_saveScriptAfterEdit();
+            saveScript();
             break;
         case cmActionView:
-            slot_saveActionAfterEdit();
+            saveAction();
             break;
         case cmKeysView:
-            slot_saveKeyAfterEdit();
+            saveKey();
             break;
         case cmVarsView:
-            slot_saveVarAfterEdit();
+            saveVar();
             break;
         default: qWarning()<<"ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
     };
 
-    mpHost->serialize();
+// There was a mpHost->serialize() call here, but that code was
+// "short-circuited" and returned without doing anything;
 }
 
 void dlgTriggerEditor::slot_add_new()

@@ -116,7 +116,6 @@ public:
     void               startSpeedWalk();
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
-    bool               serialize();
     void               saveModules(int);
     void               reloadModule(const QString& moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }

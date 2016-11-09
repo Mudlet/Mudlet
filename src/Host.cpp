@@ -703,60 +703,6 @@ void Host::connectToServer()
     mTelnet.connectIt( mUrl, mPort );
 }
 
-bool Host::serialize()
-{
-    return false;
-    if( ! mSaveProfileOnExit )
-    {
-        return true;
-    }
-    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-    QDir dir_xml;
-    if( ! dir_xml.exists( directory_xml ) )
-    {
-        dir_xml.mkpath( directory_xml );
-    }
-    QDir dir_map;
-    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/map";
-    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-    if( ! dir_map.exists( directory_map ) )
-    {
-        dir_map.mkpath( directory_map );
-    }
-
-    QFile file_xml( filename_xml );
-    if ( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        modulesToWrite.clear();
-        XMLexport writer( this );
-        writer.exportHost( & file_xml );
-        file_xml.close();
-        saveModules(0);
-    }
-    else
-    {
-        QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-    }
-
-    if( mpMap->mpRoomDB->size() > 10 )
-    {
-        QFile file_map( filename_map );
-        if ( file_map.open( QIODevice::WriteOnly ) )
-        {
-            QDataStream out( & file_map );
-            mpMap->serialize( out );
-            file_map.close();
-        }
-        else
-        {
-            QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-        }
-    }
-    return true;
-}
-
-
 bool Host::closingDown()
 {
     QMutexLocker locker(& mLock);
