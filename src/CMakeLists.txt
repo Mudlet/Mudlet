@@ -92,7 +92,6 @@ SET(mudlet_SRCS
     TTimer.cpp
     TToolBar.cpp
     TTreeWidget.cpp
-    TTreeWidgetItem.cpp
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
@@ -210,7 +209,6 @@ SET(mudlet_HDRS
     TScript.h
     TSplitterHandle.h
     TTimer.h
-    TTreeWidgetItem.h
     TTrigger.h
     TVar.h
     VarUnit.h
