@@ -5803,6 +5803,12 @@ int TLuaInterpreter::getMainWindowSize( lua_State *L )
 int TLuaInterpreter::getMousePosition( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "getMousePosition: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        return 2;
+    }
+    
     QPoint pos = pHost->mpConsole->mapFromGlobal(QCursor::pos());
 
     lua_pushnumber( L, pos.x() );
