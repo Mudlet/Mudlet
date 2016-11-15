@@ -237,6 +237,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
     writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
     writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
+    writeAttribute( "mEchoLuaErrors", pT->mEchoLuaErrors ? "yes" : "no" );
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.

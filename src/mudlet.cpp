@@ -2375,6 +2375,14 @@ void mudlet::setEditorTextoptions( const bool isTabsAndSpacesToBeShown, const bo
     emit signal_editorTextOptionsChanged( mEditorTextOptions );
 }
 
+void mudlet::setEchoLuaErrors( const bool isEchoLuaErrorsEnabled )
+{
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+    
+    pHost->mEchoLuaErrors = isEchoLuaErrorsEnabled;
+}
+
 void mudlet::slot_statusBarMessageChanged( QString text )
 {
     if( mStatusBarState & statusBarAutoShown ) {

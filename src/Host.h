@@ -161,6 +161,7 @@ public:
     bool               mAllowToSendCommand;
     bool               mAutoClearCommandLineAfterSend;
     bool               mBlockScriptCompile;
+    bool               mEchoLuaErrors; 
     int                mBorderBottomHeight;
     int                mBorderLeftWidth;
     int                mBorderRightWidth;

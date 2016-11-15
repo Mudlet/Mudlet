@@ -69,6 +69,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
     enableSpellCheck->setChecked( pH->mEnableSpellCheck );
+    checkBox_echoLuaErrors->setChecked( pH->mEchoLuaErrors );
     checkBox_showSpacesAndTabs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces );
     checkBox_showLineFeedsAndParagraphs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators );
 
@@ -1258,6 +1259,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
     mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
+    mudlet::self()->setEchoLuaErrors( checkBox_echoLuaErrors->isChecked() );
     close();
 }
 

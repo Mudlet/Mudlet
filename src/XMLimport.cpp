@@ -922,6 +922,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
     pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
     pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
+    pT->mEchoLuaErrors = ( attributes().value("mEchoLuaErrors") == "yes" );
     pT->mIsNextLogFileInHtmlFormat = ( attributes().value("mRawStreamDump") == "yes" );
     pT->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
     pT->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );

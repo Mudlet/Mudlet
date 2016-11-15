@@ -12494,7 +12494,14 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(green, black, s2 );
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3 );
     }
-
+    
+    if( mpHost->mpConsole && mpHost->mEchoLuaErrors )
+    {
+    	  blue = QColor(80,80,255);
+        mpHost->mpConsole->printDebug(blue, black, QString("[ ERROR ] - ") );
+        mpHost->mpConsole->printDebug(green, black, s2 );
+        mpHost->mpConsole->printDebug(red, black, s3 );
+    }
 }
 
 bool TLuaInterpreter::callConditionFunction( std::string & function, const QString & mName )
