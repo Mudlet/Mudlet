@@ -98,14 +98,7 @@ const QString msgInfoAddKey = "To add a new key binding <b>1.</b> add a new key 
 const QString msgInfoAddVar = "Add a new variable (can be a string, integer, boolean -- delete a variable to set it to nil).";
 
 dlgTriggerEditor::dlgTriggerEditor( Host * pH )
-: mCurrentAlias( 0 )
-, mCurrentTrigger( 0 )
-, mCurrentTimer( 0 )
-, mCurrentAction( 0 )
-, mCurrentScript( 0 )
-, mCurrentKey( 0 )
-, mCurrentVar( 0 )
-, mpCurrentActionItem( 0 )
+: mpCurrentActionItem( 0 )
 , mpCurrentKeyItem( 0 )
 , mpCurrentTimerItem( 0 )
 , mpCurrentScriptItem( 0 )
@@ -1671,13 +1664,13 @@ void dlgTriggerEditor::slot_addAction()
 
 void dlgTriggerEditor::slot_addVar()
 {
-    if (mCurrentVar)
+    if (mpCurrentVarItem)
         addVar(false); //add normal action
 }
 
 void dlgTriggerEditor::slot_addVarGroup()
 {
-    if (mCurrentVar)
+    if (mpCurrentVarItem)
         addVar(true);
 }
 
@@ -1750,7 +1743,7 @@ void dlgTriggerEditor::slot_deleteAlias()
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteAlias() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mCurrentAlias = 0;
+    mpCurrentAliasItem = 0;
 }
 
 void dlgTriggerEditor::slot_deleteAction()
@@ -1770,15 +1763,15 @@ void dlgTriggerEditor::slot_deleteAction()
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteAction() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mCurrentAction = 0;
+    mpCurrentActionItem = 0;
     mpHost->getActionUnit()->updateToolbar();
 }
 
 void dlgTriggerEditor::slot_deleteVar()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_variables->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_variables->currentItem();
     if( ! pItem ) return;
-    QTreeWidgetItem * pParent = (QTreeWidgetItem *)pItem->parent();
+    QTreeWidgetItem * pParent = pItem->parent();
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * var = vu->getWVar( pItem );
@@ -1799,7 +1792,7 @@ void dlgTriggerEditor::slot_deleteVar()
     {
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteAction() child to be deleted doesnt have a parent";
     }
-    mCurrentVar = 0;
+    mpCurrentVarItem = 0;
 }
 
 void dlgTriggerEditor::slot_deleteScript()
@@ -1819,7 +1812,7 @@ void dlgTriggerEditor::slot_deleteScript()
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteScript() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mCurrentScript = 0;
+    mpCurrentScriptItem = 0;
 }
 
 void dlgTriggerEditor::slot_deleteKey()
@@ -1840,7 +1833,7 @@ void dlgTriggerEditor::slot_deleteKey()
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteScript() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mCurrentKey = 0;
+    mpCurrentKeyItem = 0;
 }
 
 void dlgTriggerEditor::slot_deleteTrigger()
@@ -1861,7 +1854,7 @@ void dlgTriggerEditor::slot_deleteTrigger()
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteTrigger() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mCurrentTrigger = 0;
+    mpCurrentTriggerItem = 0;
 }
 
 void dlgTriggerEditor::slot_deleteTimer()
@@ -1884,13 +1877,13 @@ void dlgTriggerEditor::slot_deleteTimer()
         qDebug()<<"ERROR: dlgTriggerEditor::slot_deleteTimer() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mCurrentTimer = 0;
+    mpCurrentTimerItem = 0;
 }
 
 
 void dlgTriggerEditor::slot_trigger_toggle_active()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_triggers->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_triggers->currentItem();
     if( ! pItem ) return;
     QIcon icon;
 
@@ -2087,7 +2080,7 @@ void dlgTriggerEditor::children_icon_triggers( QTreeWidgetItem * pWidgetItemPare
 
 void dlgTriggerEditor::slot_timer_toggle_active()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_timers->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_timers->currentItem();
     if( ! pItem ) return;
     QIcon icon;
 
@@ -2172,7 +2165,7 @@ void dlgTriggerEditor::slot_timer_toggle_active()
 
 void dlgTriggerEditor::slot_alias_toggle_active()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_aliases->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_aliases->currentItem();
     if( ! pItem ) return;
     QIcon icon;
 
@@ -2308,7 +2301,7 @@ void dlgTriggerEditor::children_icon_alias( QTreeWidgetItem * pWidgetItemParent 
 
 void dlgTriggerEditor::slot_script_toggle_active()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_scripts->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_scripts->currentItem();
     if( ! pItem ) return;
     QIcon icon;
 
@@ -2359,7 +2352,7 @@ void dlgTriggerEditor::slot_script_toggle_active()
 
 void dlgTriggerEditor::slot_action_toggle_active()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_actions->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_actions->currentItem();
     if( ! pItem ) return;
     QIcon icon;
 
@@ -2411,7 +2404,7 @@ void dlgTriggerEditor::slot_action_toggle_active()
 
 void dlgTriggerEditor::slot_key_toggle_active()
 {
-    QTreeWidgetItem * pItem = (QTreeWidgetItem *)treeWidget_keys->currentItem();
+    QTreeWidgetItem * pItem = treeWidget_keys->currentItem();
     if( ! pItem ) return;
     QIcon icon;
 
@@ -2556,7 +2549,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_triggers->currentItem();
+    QTreeWidgetItem * pParent = treeWidget_triggers->currentItem();
     QTreeWidgetItem * pNewItem = 0;
     TTrigger * pT = 0;
 
@@ -2644,7 +2637,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
 
     treeWidget_triggers->setCurrentItem( pNewItem );
-    mCurrentTrigger = pNewItem;
+    mpCurrentTriggerItem = pNewItem;
     showInfo( msgInfoAddTrigger );
     slot_trigger_selected( treeWidget_triggers->currentItem() );
 }
@@ -2663,7 +2656,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_timers->currentItem();
+    QTreeWidgetItem * pParent = treeWidget_timers->currentItem();
     QTreeWidgetItem * pNewItem = 0;
     TTimer * pT = 0;
 
@@ -2738,7 +2731,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     mpTimersMainArea->lineEdit_command->clear();
     mpSourceEditor->clear();
     treeWidget_timers->setCurrentItem( pNewItem );
-    mCurrentTimer = pNewItem;
+    mpCurrentTimerItem = pNewItem;
     showInfo( msgInfoAddTimer );
     slot_timer_selected( treeWidget_timers->currentItem() );
 }
@@ -2768,7 +2761,7 @@ void dlgTriggerEditor::addVar( bool isFolder )
     }
     QStringList nameL;
     nameL << name;
-    QTreeWidgetItem * cItem = (QTreeWidgetItem*)treeWidget_variables->currentItem();
+    QTreeWidgetItem * cItem = treeWidget_variables->currentItem();
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * cVar = vu->getWVar( cItem );
@@ -2811,9 +2804,9 @@ void dlgTriggerEditor::addVar( bool isFolder )
     if (newItem)
     {
         treeWidget_variables->setCurrentItem( newItem );
-        mCurrentVar = (QTreeWidgetItem*)newItem;
+        mpCurrentVarItem = newItem;
         showInfo( msgInfoAddVar );
-        slot_var_selected( (QTreeWidgetItem*)treeWidget_variables->currentItem() );
+        slot_var_selected( treeWidget_variables->currentItem() );
     }
 }
 
@@ -2827,7 +2820,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_keys->currentItem();
+    QTreeWidgetItem * pParent = treeWidget_keys->currentItem();
     QTreeWidgetItem * pNewItem = 0;
     TKey * pT = 0;
 
@@ -2902,7 +2895,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
     mpSourceEditor->clear();
     treeWidget_keys->setCurrentItem( pNewItem );
-    mCurrentKey = pNewItem;
+    mpCurrentKeyItem = pNewItem;
     showInfo( msgInfoAddKey );
     slot_key_selected( treeWidget_keys->currentItem() );
 }
@@ -2920,7 +2913,7 @@ void dlgTriggerEditor::addAlias( bool isFolder )
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_aliases->currentItem();
+    QTreeWidgetItem * pParent = treeWidget_aliases->currentItem();
     QTreeWidgetItem * pNewItem = 0;
     TAlias * pT = 0;
 
@@ -3001,7 +2994,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
     treeWidget_aliases->setCurrentItem( pNewItem );
-    mCurrentAlias = pNewItem;
+    mpCurrentAliasItem = pNewItem;
     showInfo(msgInfoAddAlias);
     slot_alias_selected( treeWidget_aliases->currentItem() );
 }
@@ -3018,7 +3011,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_actions->currentItem();
+    QTreeWidgetItem * pParent = treeWidget_actions->currentItem();
     QTreeWidgetItem * pNewItem = 0;
     TAction * pT = 0;
 
@@ -3105,7 +3098,6 @@ void dlgTriggerEditor::addAction( bool isFolder )
 
     treeWidget_actions->setCurrentItem( pNewItem );
     mpCurrentActionItem = pNewItem;
-    mCurrentAction = pNewItem;
     showInfo( msgInfoAddButton );
     slot_action_selected( treeWidget_actions->currentItem() );
 }
@@ -3127,7 +3119,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = (QTreeWidgetItem*)treeWidget_scripts->currentItem();
+    QTreeWidgetItem * pParent = treeWidget_scripts->currentItem();
     QTreeWidgetItem * pNewItem = 0;
     TScript * pT = 0;
 
@@ -3200,7 +3192,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
     mpSourceEditor->setPlainText( script );
-    mCurrentScript = pNewItem;
+    mpCurrentScriptItem = pNewItem;
     treeWidget_scripts->setCurrentItem( pNewItem );
     slot_scripts_selected( treeWidget_scripts->currentItem() );
 }
@@ -3219,7 +3211,7 @@ void dlgTriggerEditor::saveTrigger()
 {
     QTime t;
     t.start();
-    QTreeWidgetItem * pItem = mCurrentTrigger;
+    QTreeWidgetItem * pItem = mpCurrentTriggerItem;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
@@ -3383,7 +3375,7 @@ void dlgTriggerEditor::slot_saveTimerAfterEdit()
 
 void dlgTriggerEditor::saveTimer()
 {
-    QTreeWidgetItem * pItem = mCurrentTimer;
+    QTreeWidgetItem * pItem = mpCurrentTimerItem;
     if( ! pItem ) return;
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditor->toPlainText();
@@ -3480,7 +3472,7 @@ void dlgTriggerEditor::slot_saveAliasAfterEdit()
 
 void dlgTriggerEditor::saveAlias()
 {
-    QTreeWidgetItem * pItem = mCurrentAlias;
+    QTreeWidgetItem * pItem = mpCurrentAliasItem;
     if( ! pItem )
     {
         return;
@@ -3614,7 +3606,7 @@ void dlgTriggerEditor::slot_saveActionAfterEdit()
 
 void dlgTriggerEditor::saveAction()
 {
-    QTreeWidgetItem * pItem = mCurrentAction;
+    QTreeWidgetItem * pItem = mpCurrentActionItem;
     if( ! pItem ) return;
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
@@ -3732,7 +3724,7 @@ void dlgTriggerEditor::slot_saveScriptAfterEdit()
 
 void dlgTriggerEditor::saveScript()
 {
-    QTreeWidgetItem * pItem = mCurrentScript;
+    QTreeWidgetItem * pItem = mpCurrentScriptItem;
     if( ! pItem ) return;
 
     QString old_name;
@@ -3882,10 +3874,10 @@ void dlgTriggerEditor::saveVar()
     // we add a new variable
     // we switch away from a variable (so we are saving the old variable)
 
-    if (!mCurrentVar)
+    if (!mpCurrentVarItem)
         return;
-    QTreeWidgetItem * pItem = (QTreeWidgetItem*)mCurrentVar;
-    if (!pItem || !pItem->parent() )
+    QTreeWidgetItem * pItem = mpCurrentVarItem;
+    if (!pItem->parent())
         return;
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
@@ -3944,7 +3936,7 @@ void dlgTriggerEditor::saveVar()
             vu->addTreeItem( pItem, var );
             vu->removeTempVar( pItem );
             pItem->setText( 0, newName );
-            mCurrentVar = 0;
+            mpCurrentVarItem = 0;
         }
         else if ( var )
         {
@@ -3990,7 +3982,7 @@ void dlgTriggerEditor::saveVar()
                     if ( ( var->getValueType() != LUA_TTABLE && change&0x2 ) || newVar )
                         lI->setValue( var );
                     pItem->setText( 0, newName );
-                    mCurrentVar = 0;
+                    mpCurrentVarItem = 0;
                 }
                 else
                     var->clearNewName();
@@ -4010,7 +4002,7 @@ void dlgTriggerEditor::saveVar()
             vu->addVariable(var);
             vu->addTreeItem( pItem, var );
             pItem->setText( 0, newName );
-            mCurrentVar = 0;
+            mpCurrentVarItem = 0;
         }
         else if ( var )
         {
@@ -4051,7 +4043,7 @@ void dlgTriggerEditor::saveVar()
                 if ( change&0x2 || newVar )
                     lI->setValue( var );
                 pItem->setText( 0, newName );
-                mCurrentVar = 0;
+                mpCurrentVarItem = 0;
             }
         }
     }
@@ -4090,7 +4082,7 @@ void dlgTriggerEditor::saveVar()
 
 void dlgTriggerEditor::saveKey()
 {
-    QTreeWidgetItem * pItem = mCurrentKey;
+    QTreeWidgetItem * pItem = mpCurrentKeyItem;
     if( ! pItem ) return;
 
     QString name = mpKeysMainArea->lineEdit_name->text();
@@ -4236,10 +4228,10 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current trigger before switching to the new one
-    if ( pItem != mCurrentTrigger )
+    if ( pItem != mpCurrentTriggerItem )
         saveTrigger();
 
-    mCurrentTrigger = pItem;
+    mpCurrentTriggerItem = pItem;
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
@@ -4249,7 +4241,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
-    if( pItem == 0 ) return;
+
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( ID );
     if( pT )
@@ -4390,10 +4382,10 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current alias before switching to the new one
-    if ( pItem != mCurrentAlias )
+    if ( pItem != mpCurrentAliasItem )
         saveAlias();
 
-    mCurrentAlias = pItem;
+    mpCurrentAliasItem = pItem;
     mpAliasMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
@@ -4402,10 +4394,6 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpAliasMainArea->substitution->clear();
     mpSourceEditor->setPlainText( "" );
 
-    if( pItem == 0 )
-    {
-        return;
-    }
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAlias * pT = mpHost->getAliasUnit()->getAlias(ID);
@@ -4434,10 +4422,10 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current key before switching to the new one
-    if ( pItem != mCurrentKey )
+    if ( pItem != mpCurrentKeyItem )
         saveKey();
 
-    mCurrentKey = pItem;
+    mpCurrentKeyItem = pItem;
     mpKeysMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
@@ -4445,10 +4433,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
     mpSourceEditor->setPlainText( "" );
-    if( pItem == 0 )
-    {
-        return;
-    }
+
     mpKeysMainArea->lineEdit_key->setText( pItem->text(0) );
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TKey * pT = mpHost->getKeyUnit()->getKey(ID);
@@ -4467,7 +4452,8 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     }
 }
 
-void dlgTriggerEditor::recurseVariablesUp( QTreeWidgetItem *pItem, QList< QTreeWidgetItem * > & list)
+// This should not modify the contents of what pItem points at:
+void dlgTriggerEditor::recurseVariablesUp( QTreeWidgetItem * const pItem, QList< QTreeWidgetItem * > & list)
 {
     QTreeWidgetItem * pParent = pItem->parent();
     if ( pParent && pParent != mpVarBaseItem )
@@ -4477,7 +4463,8 @@ void dlgTriggerEditor::recurseVariablesUp( QTreeWidgetItem *pItem, QList< QTreeW
     }
 }
 
-void dlgTriggerEditor::recurseVariablesDown( QTreeWidgetItem *pItem, QList< QTreeWidgetItem * > & list)
+// This should not modify the contents of what pItem points at:
+void dlgTriggerEditor::recurseVariablesDown( QTreeWidgetItem * const pItem, QList< QTreeWidgetItem * > & list)
 {
     list.append( pItem );
     for(int i=0;i<pItem->childCount();++i)
@@ -4562,7 +4549,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current variable before switching to the new one
-    if ( pItem != mCurrentVar )
+    if ( pItem != mpCurrentVarItem )
         saveVar();
 
     mChangingVar = true;
@@ -4572,11 +4559,11 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         LuaInterface * lI = mpHost->getLuaInterface();
         VarUnit * vu = lI->getVarUnit();
-        TVar * var = vu->getWVar(pItem);
+        TVar * var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
         if ( var )
             vu->addSavedVar( var );
         QList< QTreeWidgetItem * > list;
-        recurseVariablesUp( pItem, list );
+        recurseVariablesUp( pItem, list ); // This does NOT modify pItem or what it points at
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
@@ -4585,7 +4572,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
                 vu->addSavedVar( v );
         }
         list.clear();
-        recurseVariablesDown( pItem, list );
+        recurseVariablesDown( pItem, list ); // This does NOT modify pItem or what it points at
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
@@ -4598,11 +4585,11 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         LuaInterface * lI = mpHost->getLuaInterface();
         VarUnit * vu = lI->getVarUnit();
-        TVar * var = vu->getWVar(pItem);
+        TVar * var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
         if ( var )
             vu->removeSavedVar( var );
         QList< QTreeWidgetItem * > list;
-        recurseVariablesUp( pItem, list );
+        recurseVariablesUp( pItem, list ); // This does NOT modify pItem or what it points at
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
@@ -4612,7 +4599,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
             }
         }
         list.clear();
-        recurseVariablesDown( pItem, list );
+        recurseVariablesDown( pItem, list ); // This does NOT modify pItem or what it points at
         for(int i=0;i<list.size();i++)
         {
             TVar * v = vu->getWVar( list[i] );
@@ -4624,13 +4611,15 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     }
     mpVarsMainArea->show();
 
-    mCurrentVar = pItem;
-    if( (pItem == 0) || (column != 0) )
+    mpCurrentVarItem = pItem; //remember what has been clicked to save it
+    // There was repeated test for pItem being null here but we have NOT altered
+    // it since the start of the function where it was already tested for not
+    // being zero so we don't need to retest it! - Slysven
+    if( column )
     {
         mChangingVar = false;
         return;
     }
-    mpCurrentVarItem = pItem; //remember what has been clicked to save it
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     TVar * var = vu->getWVar(pItem);
@@ -4726,10 +4715,9 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current action before switching to the new one
-    if ( pItem != mCurrentAction )
+    if ( pItem != mpCurrentActionItem )
         saveAction();
 
-    mCurrentAction = pItem;
     mpActionsMainArea->show();
     mpSourceEditor->show();
 
@@ -4741,10 +4729,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
     mpActionsMainArea->buttonColumns->clear();
     mpActionsMainArea->css->clear();
-    if( pItem == 0 )
-    {
-        return;
-    }
+
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
@@ -4786,20 +4771,17 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current script before switching to the new one
-    if ( pItem != mCurrentScript )
+    if ( pItem != mpCurrentScriptItem )
         saveScript();
 
-    mCurrentScript = pItem;
+    mpCurrentScriptItem = pItem;
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpSourceEditor->setPlainText( "" );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
-    if( pItem == 0 )
-    {
-        return;
-    }
+
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
     mpScriptsMainArea->lineEdit_scripts_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
@@ -4827,10 +4809,10 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     if( ! pItem ) return;
 
     // save the current timer before switching to the new one
-    if ( pItem != mCurrentTimer )
+    if ( pItem != mpCurrentTimerItem )
         saveTimer();
 
-    mCurrentTimer = pItem;
+    mpCurrentTimerItem = pItem;
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
@@ -4841,10 +4823,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpTimersMainArea->timeEdit_minutes->clear();
     mpTimersMainArea->timeEdit_seconds->clear();
     mpTimersMainArea->timeEdit_msecs->clear();
-    if( pItem == 0 )
-    {
-        return;
-    }
+
     mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TTimer * pT = mpHost->getTimerUnit()->getTimer( ID );
@@ -4886,18 +4865,18 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
 void dlgTriggerEditor::fillout_form()
 {
     mCurrentView = 0;
-    mCurrentTrigger = 0;
-    mCurrentAlias = 0;
-    mCurrentKey = 0;
-    mCurrentAction = 0;
-    mCurrentScript = 0;
-    mCurrentTimer = 0;
-    mCurrentVar = 0;
+    mpCurrentTriggerItem = 0;
+    mpCurrentAliasItem = 0;
+    mpCurrentKeyItem = 0;
+    mpCurrentActionItem = 0;
+    mpCurrentScriptItem = 0;
+    mpCurrentTimerItem = 0;
+    mpCurrentVarItem = 0;
 
     mNeedUpdateData = false;
     QStringList sL;
     sL << "Triggers";
-    mpTriggerBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL );
+    mpTriggerBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL );
     mpTriggerBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon;
     mainIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-wizard.png" ) ), QIcon::Normal, QIcon::Off );
@@ -4917,7 +4896,7 @@ void dlgTriggerEditor::fillout_form()
         QIcon icon;
         if( pT->hasChildren() )
         {
-            expand_child_triggers( pT, (QTreeWidgetItem*)pItem );
+            expand_child_triggers( pT, pItem );
         }
         if( pT->state() )
         {
@@ -5022,7 +5001,7 @@ void dlgTriggerEditor::fillout_form()
 
     QStringList sL2;
     sL2 << "Timers";
-    mpTimerBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL2 );
+    mpTimerBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL2 );
     mpTimerBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon2;
     mainIcon2.addPixmap( QPixmap( QStringLiteral( ":/icons/chronometer.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5044,7 +5023,7 @@ void dlgTriggerEditor::fillout_form()
         QIcon icon;
         if( pT->hasChildren() )
         {
-            expand_child_timers( pT, (QTreeWidgetItem*)pItem );
+            expand_child_timers( pT, pItem );
         }
         if( pT->state() )
         {
@@ -5110,7 +5089,7 @@ void dlgTriggerEditor::fillout_form()
 
     QStringList sL3;
     sL3 << "Scripts";
-    mpScriptsBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL3 );
+    mpScriptsBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL3 );
     mpScriptsBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon3;
     mainIcon3.addPixmap( QPixmap( QStringLiteral( ":/icons/accessories-text-editor.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5132,7 +5111,7 @@ void dlgTriggerEditor::fillout_form()
         QIcon icon;
         if( pT->hasChildren() )
         {
-            expand_child_scripts( pT, (QTreeWidgetItem*)pItem );
+            expand_child_scripts( pT, pItem );
         }
         if( pT->state() )
         {
@@ -5183,7 +5162,7 @@ void dlgTriggerEditor::fillout_form()
 
     QStringList sL4;
     sL4 << "Aliases - Input Triggers";
-    mpAliasBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL4 );
+    mpAliasBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL4 );
     mpAliasBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon4;
     mainIcon4.addPixmap( QPixmap( QStringLiteral( ":/icons/system-users.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5204,7 +5183,7 @@ void dlgTriggerEditor::fillout_form()
         QIcon icon;
         if( pT->hasChildren() )
         {
-            expand_child_alias( pT, (QTreeWidgetItem*)pItem );
+            expand_child_alias( pT, pItem );
         }
         if( pT->state() )
         {
@@ -5283,7 +5262,7 @@ void dlgTriggerEditor::fillout_form()
 
     QStringList sL5;
     sL5 << "Buttons";
-    mpActionBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL5 );
+    mpActionBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL5 );
     mpActionBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon5;
     mainIcon5.addPixmap( QPixmap( QStringLiteral( ":/icons/bookmarks.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5304,7 +5283,7 @@ void dlgTriggerEditor::fillout_form()
         QIcon icon;
         if( pT->hasChildren() )
         {
-            expand_child_action( pT, (QTreeWidgetItem*)pItem );
+            expand_child_action( pT, pItem );
         }
         if( pT->state() )
         {
@@ -5380,7 +5359,7 @@ void dlgTriggerEditor::fillout_form()
 
     QStringList sL6;
     sL6 << "Action Key Bindings";
-    mpKeyBaseItem = new QTreeWidgetItem( (QTreeWidgetItem*)0, sL6 );
+    mpKeyBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL6 );
     mpKeyBaseItem->setBackground(0,QColor(255,254,215,255));
     QIcon mainIcon6;
     mainIcon6.addPixmap( QPixmap( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5401,7 +5380,7 @@ void dlgTriggerEditor::fillout_form()
         QIcon icon;
         if( pT->hasChildren() )
         {
-            expand_child_key( pT, (QTreeWidgetItem*)pItem );
+            expand_child_key( pT, pItem );
         }
         if( pT->state() )
         {
@@ -5491,7 +5470,7 @@ void dlgTriggerEditor::repopulateVars()
     mainIcon5.addPixmap( QPixmap( QStringLiteral( ":/icons/variables.png" ) ), QIcon::Normal, QIcon::Off );
     mpVarBaseItem->setIcon( 0, mainIcon5 );
     treeWidget_variables->clear();
-    mCurrentVar = 0;
+    mpCurrentVarItem = 0;
     treeWidget_variables->insertTopLevelItem( 0, mpVarBaseItem );
     mpVarBaseItem->setExpanded( true );
     LuaInterface * lI = mpHost->getLuaInterface();
@@ -6012,27 +5991,27 @@ void dlgTriggerEditor::focusInEvent( QFocusEvent * pE )
 
     if( ! mCurrentView )
     {
-        mCurrentTrigger = 0;
-        mCurrentAlias = 0;
-        mCurrentKey = 0;
-        mCurrentAction = 0;
-        mCurrentScript = 0;
-        mCurrentTimer = 0;
+        mpCurrentTriggerItem = 0;
+        mpCurrentAliasItem = 0;
+        mpCurrentKeyItem = 0;
+        mpCurrentActionItem = 0;
+        mpCurrentScriptItem = 0;
+        mpCurrentTimerItem = 0;
         return;
     }
 
-    if( mCurrentTrigger )
-        mCurrentTrigger->setSelected( true );
-    if( mCurrentTimer )
-        mCurrentTimer->setSelected( true );
-    if( mCurrentAlias )
-        mCurrentAlias->setSelected( true );
-    if( mCurrentScript )
-        mCurrentScript->setSelected( true );
-    if( mCurrentAction )
-        mCurrentAction->setSelected( true );
-    if( mCurrentKey )
-        mCurrentKey->setSelected( true );
+    if( mpCurrentTriggerItem )
+        mpCurrentTriggerItem->setSelected( true );
+    if( mpCurrentTimerItem )
+        mpCurrentTimerItem->setSelected( true );
+    if( mpCurrentAliasItem )
+        mpCurrentAliasItem->setSelected( true );
+    if( mpCurrentScriptItem )
+        mpCurrentScriptItem->setSelected( true );
+    if( mpCurrentActionItem )
+        mpCurrentActionItem->setSelected( true );
+    if( mpCurrentKeyItem )
+        mpCurrentKeyItem->setSelected( true );
 }
 
 void dlgTriggerEditor::focusOutEvent( QFocusEvent * pE )
@@ -6194,7 +6173,7 @@ void dlgTriggerEditor::slot_show_vars( )
 {
     changeView( cmVarsView );
     repopulateVars();
-    mCurrentVar = 0;
+    mpCurrentVarItem = 0;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
     if ( showHiddenVars )
@@ -6207,7 +6186,7 @@ void dlgTriggerEditor::slot_show_vars( )
         if( pI->childCount() > 0 )
         {
             mpVarsMainArea->show();
-            slot_var_selected( (QTreeWidgetItem*)treeWidget_variables->currentItem() );
+            slot_var_selected( treeWidget_variables->currentItem() );
         }
         else
         {
@@ -6227,7 +6206,7 @@ void dlgTriggerEditor::show_vars( )
 {
     //no repopulation of variables
     changeView( cmVarsView );
-    mCurrentVar = 0;
+    mpCurrentVarItem = 0;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
     if ( showHiddenVars )
@@ -6240,7 +6219,7 @@ void dlgTriggerEditor::show_vars( )
         if( pI->childCount() > 0 )
         {
             mpVarsMainArea->show();
-            slot_var_selected( (QTreeWidgetItem*)treeWidget_variables->currentItem() );
+            slot_var_selected( treeWidget_variables->currentItem() );
         }
         else
         {
@@ -6932,12 +6911,12 @@ void dlgTriggerEditor::slot_import()
 
     fillout_form();
 
-    mCurrentTrigger = 0;
-    mCurrentTimer = 0;
-    mCurrentAlias = 0;
-    mCurrentScript = 0;
-    mCurrentAction = 0;
-    mCurrentKey = 0;
+    mpCurrentTriggerItem = 0;
+    mpCurrentTimerItem = 0;
+    mpCurrentAliasItem = 0;
+    mpCurrentScriptItem = 0;
+    mpCurrentActionItem = 0;
+    mpCurrentKeyItem = 0;
 
     slot_show_triggers();
 }
@@ -6975,12 +6954,12 @@ void dlgTriggerEditor::doCleanReset()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
     fillout_form();
-    mCurrentTrigger = 0;
-    mCurrentTimer = 0;
-    mCurrentAlias = 0;
-    mCurrentScript = 0;
-    mCurrentAction = 0;
-    mCurrentKey = 0;
+    mpCurrentTriggerItem = 0;
+    mpCurrentTimerItem = 0;
+    mpCurrentAliasItem = 0;
+    mpCurrentScriptItem = 0;
+    mpCurrentActionItem = 0;
+    mpCurrentKeyItem = 0;
     slot_show_triggers();
 }
 
@@ -7101,7 +7080,7 @@ void dlgTriggerEditor::slot_chose_action_icon()
 
 void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
 {
-    QTreeWidgetItem * pItem = mCurrentTrigger;
+    QTreeWidgetItem * pItem = mpCurrentTriggerItem;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
@@ -7118,7 +7097,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
 
 void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 {
-    QTreeWidgetItem * pItem = mCurrentTrigger;
+    QTreeWidgetItem * pItem = mpCurrentTriggerItem;
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
@@ -7143,7 +7122,7 @@ void dlgTriggerEditor::slot_soundTrigger()
 
 void dlgTriggerEditor::slot_color_trigger_fg()
 {
-    QTreeWidgetItem * pItem = mCurrentTrigger;
+    QTreeWidgetItem * pItem = mpCurrentTriggerItem;
     if( ! pItem )
     {
         return;
@@ -7195,7 +7174,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 
 void dlgTriggerEditor::slot_color_trigger_bg()
 {
-    QTreeWidgetItem * pItem = mCurrentTrigger;
+    QTreeWidgetItem * pItem = mpCurrentTriggerItem;
     if( ! pItem )
     {
         return;
