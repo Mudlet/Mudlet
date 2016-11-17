@@ -60,6 +60,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mAllowToSendCommand( true )
 , mAutoClearCommandLineAfterSend( false )
 , mBlockScriptCompile( true )
+, mEchoLuaErrors( false )
 , mBorderBottomHeight( 0 )
 , mBorderLeftWidth( 0 )
 , mBorderRightWidth( 0 )
