@@ -3277,7 +3277,7 @@ void dlgTriggerEditor::saveTrigger()
             }
             else if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -3388,7 +3388,7 @@ void dlgTriggerEditor::saveTimer()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -3495,7 +3495,7 @@ void dlgTriggerEditor::saveAlias()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -3615,7 +3615,7 @@ void dlgTriggerEditor::saveAction()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder ) // module folder
                 {
                     if( pT->isActive() )
                     {
@@ -3717,7 +3717,7 @@ void dlgTriggerEditor::saveScript()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -4060,7 +4060,7 @@ void dlgTriggerEditor::saveKey()
             QIcon icon;
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -4879,7 +4879,7 @@ void dlgTriggerEditor::fillout_form()
         }
         if( pT->state() )
         {
-            if( pT->isFilterChain() )
+            if( pT->isFilterChain() ) // By definition cannot be a module folder
             {
                 if( pT->isActive() )
                 {
@@ -4906,7 +4906,7 @@ void dlgTriggerEditor::fillout_form()
             }
             else if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -5008,7 +5008,7 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -5098,7 +5098,7 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -5172,7 +5172,7 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -5272,7 +5272,7 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder ) // This is a module folder
                 {
                     if( pT->isActive() )
                     {
@@ -5283,7 +5283,7 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ( ! pT->getParent() ) || ( ! pT->getParent()->mModuleMasterFolder ) ) // This hasn't got a parent, or it has and that is a module folder = this is toolbar
+                else if( ( ! pT->getParent() ) || pT->getParent()->mModuleMasterFolder ) // This hasn't got a parent, or it has and that is a module folder = this is toolbar
                 {
                     if( pT->isActive() )
                     {
@@ -5358,7 +5358,7 @@ void dlgTriggerEditor::fillout_form()
         {
             if( pT->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( pT->mModuleMasterFolder )
                 {
                     if( pT->isActive() )
                     {
@@ -5802,7 +5802,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
         }
         if( pT->state() )
         {
-            if( ! pT->getParent()->mPackageName.isEmpty() )
+            if( pT->getParent()->mModuleMasterFolder ) // Parent is a module = this must be a toolbar
             {
                 if( pT->isActive() )
                 {
@@ -5813,7 +5813,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
             }
-            else if( pT->isFolder() )
+            else if( pT->isFolder() ) // As this is a child and parent is NOT a module folder then parent must be a toolbar = this must be a menu
             {
                 if( pT->isActive() )
                 {
