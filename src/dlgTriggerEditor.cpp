@@ -3341,46 +3341,60 @@ void dlgTriggerEditor::addScript( bool isFolder )
 
 void dlgTriggerEditor::saveTrigger()
 {
-    QTime t;
-    t.start();
     QTreeWidgetItem * pItem = mpCurrentTriggerItem;
-    if( ! pItem ) return;
-    if( ! pItem->parent() ) return;
 
-    QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
-    QString command = mpTriggersMainArea->trigger_command->text();
-    bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
+    if( ! pItem )
+    {
+        return;
+    }
+
+    if( ! pItem->parent() )
+    {
+        return;
+    }
+
     QStringList regexList;
     QList<int> regexPropertyList;
-    for( int i=0; i<50; i++ )
+    for( int i = 0; i < 50; ++i )
     {
-        QString pattern = mTriggerPatternEdit[i]->lineEdit->text();
-        if( pattern.size() < 1 ) continue;
-        regexList << pattern;
-        int _type = mTriggerPatternEdit[i]->patternType->currentIndex();
-        if( _type == 0 ) regexPropertyList << REGEX_SUBSTRING;
-        else if( _type == 1 ) regexPropertyList << REGEX_PERL;
-        else if( _type == 2 ) regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
-        else if( _type == 3 ) regexPropertyList << REGEX_EXACT_MATCH;
-        else if( _type == 4 ) regexPropertyList << REGEX_LUA_CODE;
-        else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
-        else if( _type == 6 ) regexPropertyList << REGEX_COLOR_PATTERN;
-    }
-    QString script = mpSourceEditor->toPlainText();
-
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
-        if( pT )
+        QString pattern = mTriggerPatternEdit.at( i )->lineEdit->text();
+        if( pattern.isEmpty() )
         {
-            QString old_name = pT->getName();
+            continue;
+        }
+
+        int patternType = mTriggerPatternEdit.at( i )->patternType->currentIndex();
+        // Now only insert both parts into their Lists if both valid
+        switch( patternType )
+        {
+        case 0: regexList << pattern; regexPropertyList << REGEX_SUBSTRING;                 break;
+        case 1: regexList << pattern; regexPropertyList << REGEX_PERL;                      break;
+        case 2: regexList << pattern; regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;   break;
+        case 3: regexList << pattern; regexPropertyList << REGEX_EXACT_MATCH;               break;
+        case 4: regexList << pattern; regexPropertyList << REGEX_LUA_CODE;                  break;
+        case 5: regexList << pattern; regexPropertyList << REGEX_LINE_SPACER;               break;
+        case 6: regexList << pattern; regexPropertyList << REGEX_COLOR_PATTERN;             break;
+        default:
+            qWarning() << "dlgTriggerEditor::saveTrigger() ERROR - invalid regex type found:" << patternType;
+        }
+    }
+
+    int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
+    TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
+    if( pT )
+    {
+        QString old_name = pT->getName();
+
+        if( ! pT->mModuleMasterFolder )
+        {
+            QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
             pT->setName( name );
-            pT->setCommand( command );
+            pItem->setText( 0, name );
+            pT->setCommand( mpTriggersMainArea->trigger_command->text() );
             pT->setRegexCodeList( regexList, regexPropertyList );
 
-            pT->setScript( script );
-            pT->setIsMultiline( isMultiline );
+            pT->setScript( mpSourceEditor->toPlainText() );
+            pT->setIsMultiline( mpTriggersMainArea->checkBox_multlinetrigger->isChecked() );
             pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
             pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
             pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
@@ -3388,158 +3402,157 @@ void dlgTriggerEditor::saveTrigger()
             pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
             pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
 
-            QPalette FgColorPalette;
-            QPalette BgColorPalette;
-            FgColorPalette = mpTriggersMainArea->pushButtonFgColor->palette();
-            BgColorPalette = mpTriggersMainArea->pushButtonBgColor->palette();
+            QPalette FgColorPalette( mpTriggersMainArea->pushButtonFgColor->palette() );
+            QPalette BgColorPalette( mpTriggersMainArea->pushButtonBgColor->palette() );
             QColor fgColor = FgColorPalette.color( QPalette::Button );
             QColor bgColor = BgColorPalette.color( QPalette::Button );
             pT->setFgColor( fgColor );
             pT->setBgColor( bgColor );
             pT->setIsColorizerTrigger( mpTriggersMainArea->colorizerTrigger->isChecked() );
-            QIcon icon;
-            if( pT->isFilterChain() )
-            {
-                if( pT->isActive() )
-                {
-                    if( pT->ancestorsActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-grey.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else
-                {
-                    if( pT->ancestorsActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-grey-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-            }
-            else if( pT->isFolder() )
-            {
-                if( pT->mModuleMasterFolder )
-                {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( pT->isActive() )
-                {
-                    if( pT->ancestorsActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else
-                {
-                    if( pT->ancestorsActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-            }
-            else
-            {
-                if( pT->isActive() )
-                {
-                    if( pT->ancestorsActive() )
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
-                    else
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
-                }
-                else
-                {
-                    if( pT->ancestorsActive() )
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
-                    else
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox-grey.png" ) ), QIcon::Normal, QIcon::Off );
-                }
-            }
-            if( pT->state() )
-            {
-                if( old_name == "New Trigger" || old_name == "New Trigger Group" )
-                {
-                    QIcon _icon;
-                    if( pT->isFolder() )
-                    {
-                        _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    pItem->setIcon( 0, _icon );
-                    pItem->setText( 0, name );
-                    pT->setIsActive( true );
-                }
-                else
-                {
-                    pItem->setIcon( 0, icon);
-                    pItem->setText( 0, name );
-                }
-            }
-            else
-            {
-                QIcon iconError;
-                pItem->setText( 0, name );
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pT->setIsActive( false );
+        }
 
+        QIcon icon;
+        if( pT->isFilterChain() )
+        {
+            if( pT->isActive() )
+            {
+                if( pT->ancestorsActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+            else
+            {
+                if( pT->ancestorsActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-grey-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
             }
         }
-    }
-    else
-    {
-        showError("Error: No item selected! Which item do you want to save?");
+        else if( pT->isFolder() )
+        {
+            if( pT->mModuleMasterFolder )
+            {
+                if( pT->isActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+            else if( pT->isActive() )
+            {
+                if( pT->ancestorsActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+            else
+            {
+                if( pT->ancestorsActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+        }
+        else
+        {
+            if( pT->isActive() )
+            {
+                if( pT->ancestorsActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+            else
+            {
+                if( pT->ancestorsActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+        }
+
+        if( pT->state() )
+        {
+            if( ! ( old_name.compare( tr( "New Trigger" ) ) && old_name.compare( tr( "New Trigger Group" ) ) ) )
+            {
+                if( pT->isFolder() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+
+                pT->setIsActive( true );
+            }
+
+        }
+        else
+        {
+            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+            pT->setIsActive( false );
+        }
+
+        pItem->setIcon( 0, icon);
     }
 }
 
 void dlgTriggerEditor::saveTimer()
 {
     QTreeWidgetItem * pItem = mpCurrentTimerItem;
-    if( ! pItem ) return;
-    QString name = mpTimersMainArea->lineEdit_timer_name->text();
-    QString script = mpSourceEditor->toPlainText();
+    if( ! pItem )
+    {
+        return;
+    }
 
     if( pItem )
     {
-        int timerID = pItem->data(0, Qt::UserRole).toInt();
+        int timerID = pItem->data( 0, Qt::UserRole ).toInt();
         TTimer * pT = mpHost->getTimerUnit()->getTimer( timerID );
         if( pT )
         {
-            pT->setName( name );
-            QString command = mpTimersMainArea->lineEdit_command->text();
-            int hours = mpTimersMainArea->timeEdit_hours->time().hour();
-            int minutes = mpTimersMainArea->timeEdit_minutes->time().minute();
-            int secs = mpTimersMainArea->timeEdit_seconds->time().second();
-            int msecs = mpTimersMainArea->timeEdit_msecs->time().msec();
-            QTime time(hours,minutes,secs,msecs);
-            pT->setTime( time );
-            pT->setCommand( command );
-            pT->setName( name );
-            pT->setScript( script );
+            if( ! pT->mModuleMasterFolder )
+            {
+                QString name = mpTimersMainArea->lineEdit_timer_name->text();
+                pItem->setText( 0, name );
+                pT->setName( name );
+                QTime time( mpTimersMainArea->timeEdit_hours->time().hour(),
+                            mpTimersMainArea->timeEdit_minutes->time().minute(),
+                            mpTimersMainArea->timeEdit_seconds->time().second(),
+                            mpTimersMainArea->timeEdit_msecs->time().msec() );
+                pT->setTime( time );
+                pT->setCommand( mpTimersMainArea->lineEdit_command->text() );
+                pT->setScript( mpSourceEditor->toPlainText() );
+            }
 
             QIcon icon;
             if( pT->isFolder() )
@@ -3589,20 +3602,13 @@ void dlgTriggerEditor::saveTimer()
 
             }
 
-            if( pT->state() )
+            if( ! pT->state() )
             {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
-            }
-            else
-            {
-                QIcon iconError;
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pItem->setText( 0, name );
-
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+                pT->setIsActive( false );
             }
 
+            pItem->setIcon( 0, icon );
         }
     }
 }
@@ -3615,40 +3621,47 @@ void dlgTriggerEditor::saveAlias()
         return;
     }
 
-    QString name = mpAliasMainArea->lineEdit_alias_name->text();
-    QString regex = mpAliasMainArea->pattern_textedit->text();
-    if( (name.size() < 1) || (name=="New Alias") )
-    {
-        name = regex;
-    }
-    QString substitution = mpAliasMainArea->substitution->text();
-    //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
-    QRegExp rx(regex);
-    if ( !regex.isEmpty() && rx.indexIn(substitution) != -1 )
-    {
-        //we have a loop
-        QIcon iconError;
-        iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-        pItem->setIcon( 0, iconError );
-        pItem->setText( 0, name );
-        showError(QString( "Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever." )
-                  .arg(name));
-        return;
-    }
-    QString script = mpSourceEditor->toPlainText();
     if( pItem )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
         TAlias * pT = mpHost->getAliasUnit()->getAlias( triggerID );
         if( pT )
         {
-            QString old_name = pT->getName();
-            pT->setName( name );
-            pT->setCommand( substitution );
-            pT->setRegexCode( regex );
-            pT->setScript( script );
 
             QIcon icon;
+            QString old_name = pT->getName();
+
+            if( ! pT->mModuleMasterFolder )
+            {
+                QString name = mpAliasMainArea->lineEdit_alias_name->text();
+                QString regex = mpAliasMainArea->pattern_textedit->text();
+                if( name.isEmpty() || ! name.compare( tr( "New Alias" ) ) )
+                {
+                    name = regex;
+                }
+
+                QString substitution = mpAliasMainArea->substitution->text();
+                //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
+                QRegExp rx( regex );
+                if ( !regex.isEmpty() && rx.indexIn( substitution ) != -1 )
+                {
+                    //we have a loop
+                    pItem->setText( 0, name );
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+                    pItem->setIcon( 0, icon );
+                    showError( tr( "<p>Alias <em>%1</em> would cause an infinite loop -it's substitution matches it's own pattern so it will call itself endlessly and cause this profile (at least) to hang!</p>"
+                                   "<p>Mudlet will try to stop it being saved so it cannot cause this to happen but you should fix this now to prevent it from crashing by accident." )
+                               .arg( name ) );
+                    return;
+                }
+
+                pItem->setText( 0, name );
+                pT->setName( name );
+                pT->setCommand( substitution );
+                pT->setRegexCode( regex );
+                pT->setScript( mpSourceEditor->toPlainText() );
+            }
+
             if( pT->isFolder() )
             {
                 if( pT->mModuleMasterFolder )
@@ -3697,40 +3710,42 @@ void dlgTriggerEditor::saveAlias()
 
             if( pT->state() )
             {
-                if( old_name == "New Alias" )
+                if( old_name.compare( tr( "New Alias" ) ) )
                 {
-                    QIcon _icon;
                     if( pT->isFolder() )
                     {
                         if( pT->ancestorsActive() )
-                            _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-violet.png" ) ), QIcon::Normal, QIcon::Off );
+                        {
+                            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-violet.png" ) ), QIcon::Normal, QIcon::Off );
+                        }
                         else
-                            _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                        {
+                            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                        }
                     }
                     else
                     {
                         if( pT->ancestorsActive() )
-                            _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+                        {
+                            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+                        }
                         else
-                            _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
+                        {
+                            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
+                        }
                     }
-                    pItem->setIcon( 0, _icon );
-                    pItem->setText( 0, name );
+
                     pT->setIsActive( true );
                 }
-                else
-                {
-                    pItem->setIcon( 0, icon);
-                    pItem->setText( 0, name );
-                }
+
             }
             else
             {
-                QIcon iconError;
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pItem->setText( 0, name );
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+                pT->setIsActive( false );
             }
+
+            pItem->setIcon( 0, icon );
         }
     }
 }
@@ -3738,36 +3753,43 @@ void dlgTriggerEditor::saveAlias()
 void dlgTriggerEditor::saveAction()
 {
     QTreeWidgetItem * pItem = mpCurrentActionItem;
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
-    QString name = mpActionsMainArea->lineEdit_action_name->text();
-    QString icon = mpActionsMainArea->lineEdit_action_icon->text();
-    QString script = mpSourceEditor->toPlainText();
-    int rotation = mpActionsMainArea->buttonRotation->currentIndex();
-    int columns = mpActionsMainArea->buttonColumns->text().toInt();
-    bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
-    // bottom location is no longer supported i.e. location = 1 = 0 = location top
-    int location = mpActionsMainArea->comboBox_location->currentIndex();
-    if( location > 0 ) location++;
-
-    int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
     if( pItem )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
         TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
         if( pT )
         {
-            pT->setName( name );
-            pT->setIcon( icon );
-            pT->setScript( script );
-            pT->setIsPushDownButton( isChecked );
-            pT->mLocation = location;
-            pT->mOrientation = orientation;
+            // Even the module master folder can be activated or deactivated
+            // but DO NOT modify ANY details (specifically the name) for that
+            // except the icon used in the editor display.
             pT->setIsActive( pT->shouldBeActive() );
-            pT->setButtonRotation( rotation );
-            pT->setButtonColumns( columns );
-            pT->mUseCustomLayout = false;
-            pT->css = mpActionsMainArea->css->toPlainText();
+
+            if( ! pT->mModuleMasterFolder )
+            {
+                pT->setName( mpActionsMainArea->lineEdit_action_name->text() );
+                pT->setIcon( mpActionsMainArea->lineEdit_action_icon->text() );
+                pT->setScript( mpSourceEditor->toPlainText() );
+                pT->setIsPushDownButton( mpActionsMainArea->checkBox_pushdownbutton->isChecked() );
+
+                // bottom location is no longer supported i.e. location = 1 = 0 = location top
+                int location = mpActionsMainArea->comboBox_location->currentIndex();
+                if( location > 0 )
+                {
+                    location++;
+                }
+                pT->mLocation = location;
+                pT->mOrientation = mpActionsMainArea->comboBox_orientation->currentIndex();
+                pT->setButtonRotation( mpActionsMainArea->buttonRotation->currentIndex() );
+                pT->setButtonColumns( mpActionsMainArea->buttonColumns->text().toInt() );
+                pT->mUseCustomLayout = false;
+                pT->css = mpActionsMainArea->css->toPlainText();
+            }
+
             QIcon icon;
             if( pT->isFolder() )
             {
@@ -3817,21 +3839,16 @@ void dlgTriggerEditor::saveAction()
                 }
             }
 
-            if( pT->state() )
+            if( ! pT->state() )
             {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+                pT->setIsActive( false );
+            }
 
-            }
-            else
-            {
-                QIcon iconError;
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pItem->setText( 0, name );
-            }
+            pItem->setIcon( 0, icon );
         }
     }
+
     mpHost->getActionUnit()->updateToolbar();
     mudlet::self()->processEventLoopHack();
 }
@@ -3839,37 +3856,48 @@ void dlgTriggerEditor::saveAction()
 void dlgTriggerEditor::saveScript()
 {
     QTreeWidgetItem * pItem = mpCurrentScriptItem;
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     QString old_name;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
-    QString script = mpSourceEditor->toPlainText();
     mpScriptsMainAreaEditHandlerItem = 0;
     QList<QListWidgetItem*> itemList;
-    for( int i=0; i<mpScriptsMainArea->listWidget_registered_event_handlers->count(); i++ )
+    for( int i = 0, total = mpScriptsMainArea->listWidget_registered_event_handlers->count(); i < total; ++i )
     {
         QListWidgetItem * pItem = mpScriptsMainArea->listWidget_registered_event_handlers->item(i);
         itemList << pItem;
     }
+
     QStringList handlerList;
-    for( int i=0; i<itemList.size(); i++ )
+    for( int i = 0, total = itemList.size(); i < total; ++i )
     {
-        if( itemList[i]->text().size() < 1 ) continue;
-        handlerList << itemList[i]->text();
+        if( itemList.at( i )->text().isEmpty() )
+        {
+            continue;
+        }
+
+        handlerList << itemList.at( i )->text();
     }
 
     if( pItem )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
         TScript * pT = mpHost->getScriptUnit()->getScript( triggerID );
         if( pT )
         {
             old_name = pT->getName();
-            pT->setName( name );
-            pT->setEventHandlerList( handlerList );
-            pT->setScript( script );
+            if( ! pT->mModuleMasterFolder )
+            {
+                pItem->setText( 0, name );
+                pT->setName( name );
+                pT->setEventHandlerList( handlerList );
+                pT->setScript( mpSourceEditor->toPlainText() );
+                pT->compile();
+            }
 
-            pT->compile();
             QIcon icon;
             if( pT->isFolder() )
             {
@@ -3909,34 +3937,28 @@ void dlgTriggerEditor::saveScript()
 
             if( pT->state() )
             {
-                if( old_name == "New Script" || old_name == "New Script Group" )
+                if( ! ( old_name.compare( tr( "New Script" ) ) && old_name.compare( tr( "New Script Group" ) ) ) )
                 {
-                    QIcon _icon;
                     if( pT->isFolder() )
                     {
-                        _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-orange.png" ) ), QIcon::Normal, QIcon::Off );
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-orange.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                     else
                     {
-                        _icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
-                    pItem->setIcon( 0, _icon );
-                    pItem->setText( 0, name );
+
                     pT->setIsActive( true );
                 }
-                else
-                {
-                    pItem->setIcon( 0, icon);
-                    pItem->setText( 0, name );
-                }
+
             }
             else
             {
-                QIcon iconError;
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pItem->setText( 0, name );
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+                pT->setIsActive( false );
             }
+
+            pItem->setIcon( 0, icon );
         }
     }
 }
@@ -4193,14 +4215,11 @@ void dlgTriggerEditor::saveVar()
 void dlgTriggerEditor::saveKey()
 {
     QTreeWidgetItem * pItem = mpCurrentKeyItem;
-    if( ! pItem ) return;
-
-    QString name = mpKeysMainArea->lineEdit_name->text();
-    if( name.size() < 1 )
+    if( ! pItem )
     {
-        name = mpKeysMainArea->lineEdit_key->text();
+        return;
     }
-    QString command = mpKeysMainArea->lineEdit_command->text();
+
     QString script = mpSourceEditor->toPlainText();
     if( pItem )
     {
@@ -4208,10 +4227,21 @@ void dlgTriggerEditor::saveKey()
         TKey * pT = mpHost->getKeyUnit()->getKey( triggerID );
         if( pT )
         {
-            pItem->setText(0,name );
-            pT->setName( name );
-            pT->setCommand( command );
-            pT->setScript( script );
+            // Even the module master folder can be activated or deactivated
+            // but DO NOT modify ANY details (specifically the name) for that
+            // except the icon used in the editor display.
+            if( ! pT->mModuleMasterFolder )
+            {
+                QString name = mpKeysMainArea->lineEdit_name->text();
+                if( name.isEmpty() )
+                {
+                    name = mpKeysMainArea->lineEdit_key->text();
+                }
+                pItem->setText( 0, name );
+                pT->setName( name );
+                pT->setCommand( mpKeysMainArea->lineEdit_command->text() );
+                pT->setScript( script );
+            }
 
             QIcon icon;
             if( pT->isFolder() )
@@ -4276,19 +4306,13 @@ void dlgTriggerEditor::saveKey()
                 }
             }
 
-            if( pT->state() )
+            if( ! pT->state() )
             {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+                pT->setIsActive( false );
+            }
 
-            }
-            else
-            {
-                QIcon iconError;
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pItem->setText( 0, name );
-            }
+            pItem->setIcon( 0, icon );
         }
     }
 }
@@ -4351,230 +4375,296 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
 {
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     // save the current trigger before switching to the new one
-    if ( pItem != mpCurrentTriggerItem )
+    if( pItem != mpCurrentTriggerItem )
+    {
         saveTrigger();
+    }
 
     mpCurrentTriggerItem = pItem;
-    mpTriggersMainArea->show();
-    mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
-    mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditor->setPlainText( "" );
-    mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
-    mpTriggersMainArea->perlSlashGOption->setChecked( false );
-    mpTriggersMainArea->filterTrigger->setChecked( false );
-    mpTriggersMainArea->spinBox_linemargin->setValue( 1 );
 
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( ID );
     if( pT )
     {
-        QStringList patternList = pT->getRegexCodeList();
-        QList<int> propertyList = pT->getRegexCodePropertyList();
-
-        if( patternList.size() != propertyList.size() ) return;
-
-        for( int i=0; i<patternList.size(); i++ )
+        if( pT->mModuleMasterFolder )
         {
-            if( i >= 50 ) break; //pattern liste ist momentan auf 50 begrenzt
-            if( i >= pT->mColorPatternList.size() )
-            {
-                break;
-            }
-            dlgTriggerPatternEdit * pItem = mTriggerPatternEdit[i];
-            QComboBox * pBox = pItem->patternType;
-            QPalette palette;
-            switch( propertyList[i] )
-            {
-            case REGEX_SUBSTRING:
-                palette.setColor( QPalette::Text, QColor(0,0,0) );
-                pBox->setCurrentIndex( 0 );
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
-                break;
-            case REGEX_PERL:
-                palette.setColor( QPalette::Text, QColor(0,0,255) );
-                pBox->setCurrentIndex( 1 );
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
-                break;
-            case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                palette.setColor( QPalette::Text, QColor(195,0,0) );
-                pBox->setCurrentIndex( 2 );
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
-                break;
-            case REGEX_EXACT_MATCH:
-                palette.setColor( QPalette::Text, QColor(0,195,0) );
-                pBox->setCurrentIndex( 3 );
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
-                break;
-            case REGEX_LUA_CODE:
-                palette.setColor( QPalette::Text, QColor(0,155,155) );
-                pBox->setCurrentIndex( 4 );
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
-                break;
-            case REGEX_LINE_SPACER:
-                palette.setColor( QPalette::Text, QColor(137,0,205) );
-                pBox->setCurrentIndex( 5 );
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
-                break;
-            case REGEX_COLOR_PATTERN:
-                palette.setColor( QPalette::Text, QColor(100,100,100) );
-                pBox->setCurrentIndex( 6 );
-                pItem->fgB->show();
-                pItem->bgB->show();
-                pItem->lineEdit->hide();
-                QPalette fgPal;
-                QPalette bgPal;
-                if( ! pT->mColorPatternList[i] ) break;
-                QColor fgC = QColor(pT->mColorPatternList[i]->fgR,
-                                    pT->mColorPatternList[i]->fgG,
-                                    pT->mColorPatternList[i]->fgB);
-                fgPal.setColor( QPalette::Button, fgC );
-                QString fgstyleSheet = QString("QPushButton{background-color:")+fgC.name()+QString(";}");
-                QColor bgC = QColor(pT->mColorPatternList[i]->bgR,
-                                    pT->mColorPatternList[i]->bgG,
-                                    pT->mColorPatternList[i]->bgB);
-                bgPal.setColor( QPalette::Button, bgC );
-                QString bgstyleSheet = QString("QPushButton{background-color:")+bgC.name()+QString(";}");
-                pItem->fgB->setStyleSheet( fgstyleSheet );
-                pItem->bgB->setStyleSheet( bgstyleSheet );
-                break;
-            }
-
-            pItem->lineEdit->setPalette( palette );
-            pItem->lineEdit->setText( patternList[i] );
+            mpTriggersMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the triggers, filter-chains and groups of triggers that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+                      .arg( pT->getName() ) );
         }
-        for( int i=patternList.size(); i<50; i++)
+        else
         {
-            mTriggerPatternEdit[i]->lineEdit->clear();
-            if( mTriggerPatternEdit[i]->lineEdit->isHidden() )
+            mpTriggersMainArea->show();
+            mpSourceEditorArea->show();
+            mpSystemMessageArea->hide();
+
+            // CHECK: Consider storing regex as QPair<QString, int>?
+            QStringList patternList = pT->getRegexCodeList();
+            QList<int> propertyList = pT->getRegexCodePropertyList();
+
+            if( patternList.size() != propertyList.size() )
             {
-                mTriggerPatternEdit[i]->lineEdit->show();
+                qWarning() << "dlgTriggerEditor::slot_trigger_selected( QTreeWidgetItem * ) ERROR: mis-match in count of regexs:"
+                           << patternList.count()
+                           << "and count of their property types:"
+                           << propertyList.count();
+                return;
             }
-            mTriggerPatternEdit[i]->fgB->hide();
-            mTriggerPatternEdit[i]->bgB->hide();
-            mTriggerPatternEdit[i]->patternType->setCurrentIndex(0);
+
+            for( int i=0, total = patternList.size(); i < total; ++i )
+            {
+                if( i >= 50 )
+                {
+                    break; //pattern liste ist momentan auf 50 begrenzt
+                }
+
+                if( i >= pT->mColorPatternList.size() )
+                {
+                    break;
+                }
+
+                dlgTriggerPatternEdit * pTriggerPatternItem = mTriggerPatternEdit.at( i );
+                QComboBox * pBox = pTriggerPatternItem->patternType;
+                QPalette palette;
+                switch( propertyList.at( i ) )
+                {
+                case REGEX_SUBSTRING:
+                    palette.setColor( QPalette::Text, QColor( Qt::black ) );
+                    pBox->setCurrentIndex( 0 );
+                    pTriggerPatternItem->fgB->hide();
+                    pTriggerPatternItem->bgB->hide();
+                    pTriggerPatternItem->lineEdit->show();
+                    break;
+                case REGEX_PERL:
+                    palette.setColor( QPalette::Text, QColor( Qt::blue ) );
+                    pBox->setCurrentIndex( 1 );
+                    pTriggerPatternItem->fgB->hide();
+                    pTriggerPatternItem->bgB->hide();
+                    pTriggerPatternItem->lineEdit->show();
+                    break;
+                case REGEX_BEGIN_OF_LINE_SUBSTRING:
+                    palette.setColor( QPalette::Text, QColor( 195, 0, 0 ) );
+                    pBox->setCurrentIndex( 2 );
+                    pTriggerPatternItem->fgB->hide();
+                    pTriggerPatternItem->bgB->hide();
+                    pTriggerPatternItem->lineEdit->show();
+                    break;
+                case REGEX_EXACT_MATCH:
+                    palette.setColor( QPalette::Text, QColor( 0, 195, 0 ) );
+                    pBox->setCurrentIndex( 3 );
+                    pTriggerPatternItem->fgB->hide();
+                    pTriggerPatternItem->bgB->hide();
+                    pTriggerPatternItem->lineEdit->show();
+                    break;
+                case REGEX_LUA_CODE:
+                    palette.setColor( QPalette::Text, QColor( 0, 155, 155 ) );
+                    pBox->setCurrentIndex( 4 );
+                    pTriggerPatternItem->fgB->hide();
+                    pTriggerPatternItem->bgB->hide();
+                    pTriggerPatternItem->lineEdit->show();
+                    break;
+                case REGEX_LINE_SPACER:
+                    palette.setColor( QPalette::Text, QColor( 137, 0, 205 ) );
+                    pBox->setCurrentIndex( 5 );
+                    pTriggerPatternItem->fgB->hide();
+                    pTriggerPatternItem->bgB->hide();
+                    pTriggerPatternItem->lineEdit->show();
+                    break;
+                case REGEX_COLOR_PATTERN:
+                    palette.setColor( QPalette::Text, QColor( 100, 100, 100 ) );
+                    pBox->setCurrentIndex( 6 );
+                    pTriggerPatternItem->fgB->show();
+                    pTriggerPatternItem->bgB->show();
+                    pTriggerPatternItem->lineEdit->hide();
+
+                    if( ! pT->mColorPatternList.at( i ) )
+                    {
+                        break;
+                    }
+
+                    QColor fgC = QColor( pT->mColorPatternList.at( i )->fgR,
+                                         pT->mColorPatternList.at( i )->fgG,
+                                         pT->mColorPatternList.at( i )->fgB );
+                    pTriggerPatternItem->fgB->setStyleSheet( QStringLiteral( "QPushButton{background-color:%1;}" ).arg( fgC.name() ) );
+
+                    QColor bgC = QColor( pT->mColorPatternList.at( i )->bgR,
+                                         pT->mColorPatternList.at( i )->bgG,
+                                         pT->mColorPatternList.at( i )->bgB );
+                    pTriggerPatternItem->bgB->setStyleSheet( QStringLiteral( "QPushButton{background-color:%1;}" ).arg( bgC.name() ) );
+                    break;
+                }
+
+                pTriggerPatternItem->lineEdit->setPalette( palette ); // Colours the comboBox option according to its selection
+                pTriggerPatternItem->lineEdit->setText( patternList.at( i ) );
+            }
+
+            // Clear the remainder (if any) of the 50 lines of patterns
+            for( int i = patternList.size(); i < 50; ++i )
+            {
+                mTriggerPatternEdit.at( i )->lineEdit->clear();
+                if( mTriggerPatternEdit.at( i )->lineEdit->isHidden() )
+                {
+                    mTriggerPatternEdit.at( i )->lineEdit->show();
+                }
+                mTriggerPatternEdit.at( i )->fgB->hide();
+                mTriggerPatternEdit.at( i )->bgB->hide();
+                mTriggerPatternEdit.at( i )->patternType->setCurrentIndex( 0 );
+            }
+
+            mpTriggersMainArea->lineEdit_trigger_name->setText( pT->getName() );
+            mpTriggersMainArea->trigger_command->setText( pT->getCommand() );
+            mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
+            mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
+            mpTriggersMainArea->filterTrigger->setChecked( pT->mFilterTrigger );
+            mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
+            mpTriggersMainArea->spinBox_stayOpen->setValue( pT->mStayOpen );
+            mpTriggersMainArea->soundTrigger->setChecked( pT->mSoundTrigger );
+            mpTriggersMainArea->lineEdit_soundFile->setText( pT->mSoundFile );
+
+//            QColor fgColor = pT->getFgColor();
+//            QColor bgColor = pT->getBgColor();
+//            QPalette FgColorPalette;
+//            QPalette BgColorPalette;
+//            FgColorPalette.setColor( QPalette::Button, fgColor );
+//            BgColorPalette.setColor( QPalette::Button, bgColor );
+            mpTriggersMainArea->pushButtonFgColor->setStyleSheet( QStringLiteral( "QPushButton{background-color:%1;}" ).arg( pT->getFgColor().name() ) );
+            mpTriggersMainArea->pushButtonBgColor->setStyleSheet( QStringLiteral( "QPushButton{background-color:%1;}" ).arg( pT->getBgColor().name() ) );
+//            mpTriggersMainArea->pushButtonFgColor->setPalette( FgColorPalette );
+//            mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
+            mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
+
+            mpSourceEditor->setPlainText( pT->getScript() );
+
+            if( ! pT->state() )
+            {
+                showError( pT->getError() );
+            }
         }
-        QString command = pT->getCommand();
-        mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
-        mpTriggersMainArea->trigger_command->setText( command );
-        mpTriggersMainArea->checkBox_multlinetrigger->setChecked( pT->isMultiline() );
-        mpTriggersMainArea->perlSlashGOption->setChecked( pT->mPerlSlashGOption );
-        mpTriggersMainArea->filterTrigger->setChecked( pT->mFilterTrigger );
-        mpTriggersMainArea->spinBox_linemargin->setValue( pT->getConditionLineDelta() );
-        mpTriggersMainArea->spinBox_stayOpen->setValue( pT->mStayOpen );
-        mpTriggersMainArea->soundTrigger->setChecked( pT->mSoundTrigger );
-        mpTriggersMainArea->lineEdit_soundFile->setText( pT->mSoundFile );
-        QPalette pal = palette();
-        QColor color =  pal.color( QPalette::Button );
-        QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-
-        QColor fgColor = pT->getFgColor();
-        QColor bgColor = pT->getBgColor();
-        QPalette FgColorPalette;
-        QPalette BgColorPalette;
-        FgColorPalette.setColor( QPalette::Button, fgColor );
-        BgColorPalette.setColor( QPalette::Button, bgColor );
-        QString FgColorStyleSheet = QString("QPushButton{background-color:")+fgColor.name()+QString(";}");
-        QString BgColorStyleSheet = QString("QPushButton{background-color:")+bgColor.name()+QString(";}");
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet( FgColorStyleSheet );
-        mpTriggersMainArea->pushButtonBgColor->setStyleSheet( BgColorStyleSheet );
-        mpTriggersMainArea->pushButtonFgColor->setPalette( FgColorPalette );
-        mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
-        mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
-        QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
-
-        if( ! pT->state() ) showError( pT->getError() );
+    }
+    else
+    {
+        showInfo( msgInfoAddTrigger );
+        mpTriggersMainArea->hide();
+        mpSourceEditorArea->hide();
+        mpSystemMessageArea->show();
     }
 }
 
 void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
 {
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     // save the current alias before switching to the new one
-    if ( pItem != mpCurrentAliasItem )
+    if( pItem != mpCurrentAliasItem )
+    {
         saveAlias();
+    }
 
     mpCurrentAliasItem = pItem;
-    mpAliasMainArea->show();
-    mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
-    mpAliasMainArea->lineEdit_alias_name->clear();
-    mpAliasMainArea->pattern_textedit->clear();
-    mpAliasMainArea->substitution->clear();
-    mpSourceEditor->setPlainText( "" );
 
-    mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAlias * pT = mpHost->getAliasUnit()->getAlias(ID);
     if( pT )
     {
-        QString pattern = pT->getRegexCode();
-        QString command = pT->getCommand();
-        QString name = pT->getName();
+        if( pT->mModuleMasterFolder )
+        {
+            mpAliasMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the aliases and groups of aliases that the module contains." )
+                      .arg( pT->getName() ) );
+        }
+        else
+        {
+            mpAliasMainArea->show();
+            mpSourceEditorArea->show();
+            mpSystemMessageArea->hide();
 
-        mpAliasMainArea->pattern_textedit->clear();
-        mpAliasMainArea->substitution->clear();
-        mpAliasMainArea->lineEdit_alias_name->clear();
+            mpAliasMainArea->pattern_textedit->setText( pT->getRegexCode() );
+            mpAliasMainArea->substitution->setText( pT->getCommand() );
+            mpAliasMainArea->lineEdit_alias_name->setText( pT->getName() );
 
-        mpAliasMainArea->pattern_textedit->setText( pattern );
-        mpAliasMainArea->substitution->setText( command );
-        mpAliasMainArea->lineEdit_alias_name->setText( name );
+            mpSourceEditor->setPlainText( pT->getScript() );
 
-        QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
-        if( ! pT->state() ) showError( pT->getError() );
+            if( ! pT->state() )
+            {
+                showError( pT->getError() );
+            }
+        }
+    }
+    else
+    {
+        showInfo( msgInfoAddAlias );
+        mpAliasMainArea->hide();
+        mpSourceEditorArea->hide();
+        mpSystemMessageArea->show();
     }
 }
 
 void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
 {
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     // save the current key before switching to the new one
-    if ( pItem != mpCurrentKeyItem )
+    if( pItem != mpCurrentKeyItem )
+    {
         saveKey();
+    }
 
     mpCurrentKeyItem = pItem;
-    mpKeysMainArea->show();
-    mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
-    mpKeysMainArea->lineEdit_command->clear();
-    mpKeysMainArea->lineEdit_key->clear();
-    mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditor->setPlainText( "" );
 
-    mpKeysMainArea->lineEdit_key->setText( pItem->text(0) );
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TKey * pT = mpHost->getKeyUnit()->getKey(ID);
     if( pT )
     {
-        QString command = pT->getCommand();
-        QString name = pT->getName();
-        mpKeysMainArea->lineEdit_command->clear();
-        mpKeysMainArea->lineEdit_command->setText( command );
-        mpKeysMainArea->lineEdit_name->setText( name );
-        QString keyName = mpHost->getKeyUnit()->getKeyName( pT->getKeyCode(), pT->getKeyModifiers() );
-        mpKeysMainArea->lineEdit_key->setText( keyName );
-        QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
-        if( ! pT->state() ) showError( pT->getError() );
+        if( pT->mModuleMasterFolder )
+        {
+            mpKeysMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the keys and groups of keys that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+                      .arg( pT->getName() ) );
+        }
+        else
+        {
+            mpKeysMainArea->show();
+            mpSourceEditorArea->show();
+            mpSystemMessageArea->hide();
+
+            mpKeysMainArea->lineEdit_command->setText( pT->getCommand() );
+            mpKeysMainArea->lineEdit_name->setText( pT->getName() );
+
+            QString keyName = mpHost->getKeyUnit()->getKeyName( pT->getKeyCode(), pT->getKeyModifiers() );
+            mpKeysMainArea->lineEdit_key->setText( keyName );
+
+            mpSourceEditor->setPlainText( pT->getScript() );
+
+            if( ! pT->state() )
+            {
+                showError( pT->getError() );
+            }
+        }
+    }
+    else
+    {
+        showInfo( msgInfoAddKey );
+        mpKeysMainArea->hide();
+        mpSourceEditorArea->hide();
+        mpSystemMessageArea->show();
     }
 }
 
@@ -4845,154 +4935,211 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 
     // save the current action before switching to the new one
     if ( pItem != mpCurrentActionItem )
+    {
         saveAction();
-
-    mpActionsMainArea->show();
-    mpSourceEditor->show();
-
-    mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
-
-    mpActionsMainArea->lineEdit_action_icon->clear();
-    mpActionsMainArea->lineEdit_action_name->clear();
-    mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
-    mpActionsMainArea->buttonColumns->clear();
-    mpActionsMainArea->css->clear();
+    }
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
-    int ID = pItem->data(0,Qt::UserRole).toInt();
+
+    int ID = pItem->data(0,Qt::UserRole).toInt(); // Will be zero for the root node (the one that says "Buttons")
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
     if( pT )
     {
-        mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
-        mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
-        mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
-        mpSourceEditor->setPlainText( pT->getScript() );
-        // location = 1 = location = bottom is no longer supported
-        int location = pT->mLocation;
-        if( location > 0 )
+        if( pT->mModuleMasterFolder )
         {
-            location--;
-        }
-        mpActionsMainArea->comboBox_location->setCurrentIndex( location );
-        mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
-        QColor color = pT->getButtonColor();
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
-        mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
-        mpActionsMainArea->css->clear();
-        mpActionsMainArea->css->setPlainText( pT->css );
-        if( ! pT->getParent() )
-        {
-            mpActionsMainArea->groupBox_toolBar->show();
-            mpActionsMainArea->groupBox_appearance->hide();
+            mpActionsMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the buttons, and groups of buttons as menus and toolbars that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+                      .arg( pT->getName() ) );
         }
         else
         {
-            mpActionsMainArea->groupBox_toolBar->hide();
-            mpActionsMainArea->groupBox_appearance->show();
+            mpActionsMainArea->show();
+            mpSourceEditorArea->show();
+            mpSystemMessageArea->hide();
+
+            // Common details
+            mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
+            mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() ); // Alert: this is actually a groupbox !
+            mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
+            mpActionsMainArea->css->setPlainText( pT->css );
+            mpSourceEditor->setPlainText( pT->getScript() );
+
+            // Toolbar details:
+            // location = 1 = location = bottom is no longer supported
+            int location = pT->mLocation;
+            if( location > 0 )
+            {
+                location--;
+            }
+            mpActionsMainArea->comboBox_location->setCurrentIndex( location );
+            mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
+            mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
+
+            // Menu/Button details:
+// No longer relevant
+//            QColor color = pT->getButtonColor();
+//            QPalette palette;
+//            palette.setColor( QPalette::Button, color );
+            mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
+
+            // TODO: Return command(s) entries, including the "up" command for push-down buttons
+            // TODO: Allow entry of Icon file name and display it
+            // TODO: Return custom layout controls (code for it is still in place elsewhere and could be in old saves
+            if( ( ! pT->getParent() ) || ( pT->getParent()->mModuleMasterFolder ) )
+            {
+                // Does not have a parent or the parent is a module folder = this is a Toolbar
+                mpActionsMainArea->groupBox_toolBar->show();
+                mpActionsMainArea->groupBox_appearance->hide();
+                // TODO: Disable push-down buttons - they do not make sense as something that is a toolbar
+            }
+            else if( pT->isFolder() )
+            {
+                // Has a parent and this is a folder = this is a Menu
+                mpActionsMainArea->groupBox_toolBar->hide();
+                mpActionsMainArea->groupBox_appearance->show();
+                // TODO: Disable push-down buttons - they do not make sense on something that is a menu
+            }
+            else
+            {
+                // This is a button - currently do the same actions as menus but likely to deviate in future
+                mpActionsMainArea->groupBox_toolBar->hide();
+                mpActionsMainArea->groupBox_appearance->show();
+            }
+
+            if( ! pT->state() )
+            {
+                showError( pT->getError() );
+            }
         }
-        if( ! pT->state() )
-        {
-            showError( pT->getError() );
-        }
+    }
+    else
+    {
+        showInfo( msgInfoAddButton );
+        mpActionsMainArea->hide();
+        mpSourceEditorArea->hide();
+        mpSystemMessageArea->show();
     }
 }
 
 
 void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
 {
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     // save the current script before switching to the new one
-    if ( pItem != mpCurrentScriptItem )
+    if( pItem != mpCurrentScriptItem )
+    {
         saveScript();
+    }
 
     mpCurrentScriptItem = pItem;
-    mpScriptsMainArea->show();
-    mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
-    mpScriptsMainArea->lineEdit_scripts_name->clear();
-    mpScriptsMainArea->listWidget_registered_event_handlers->clear();
 
-    mpScriptsMainArea->listWidget_registered_event_handlers->clear();
-    mpScriptsMainArea->lineEdit_scripts_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TScript * pT = mpHost->getScriptUnit()->getScript(ID);
     if( pT )
     {
-        QString name = pT->getName();
-        QStringList eventHandlerList = pT->getEventHandlerList();
-        for( int i=0; i<eventHandlerList.size(); i++ )
+        if( pT->mModuleMasterFolder )
         {
-            QListWidgetItem * pItem = new QListWidgetItem( mpScriptsMainArea->listWidget_registered_event_handlers );
-            pItem->setText( eventHandlerList[i] );
-            mpScriptsMainArea->listWidget_registered_event_handlers->addItem( pItem );
+            mpScriptsMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the scripts, and groups of scripts that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+                      .arg( pT->getName() ) );
         }
-        mpScriptsMainArea->lineEdit_scripts_name->clear();
-        QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
-        mpScriptsMainArea->lineEdit_scripts_name->setText( name );
-        if( ! pT->state() ) showError( pT->getError() );
+        else
+        {
+            mpScriptsMainArea->show();
+            mpSourceEditorArea->show();
+            mpSystemMessageArea->hide();
+
+            mpScriptsMainArea->lineEdit_scripts_name->setText( pT->getName() );
+            mpScriptsMainArea->listWidget_registered_event_handlers->clear();
+            mpSourceEditor->setPlainText( pT->getScript() );
+
+            QStringList eventHandlerList = pT->getEventHandlerList();
+            for( int i = 0; i < eventHandlerList.size(); i++ )
+            {
+                QListWidgetItem * pListItem = new QListWidgetItem( mpScriptsMainArea->listWidget_registered_event_handlers );
+                pListItem->setText( eventHandlerList.at( i ) );
+                mpScriptsMainArea->listWidget_registered_event_handlers->addItem( pListItem );
+            }
+
+            if( ! pT->state() )
+            {
+                showError( pT->getError() );
+            }
+        }
+    }
+    else
+    {
+        showInfo( msgInfoAddScript );
+        mpScriptsMainArea->hide();
+        mpSourceEditorArea->hide();
+        mpSystemMessageArea->show();
     }
 }
 
 void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
 {
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     // save the current timer before switching to the new one
-    if ( pItem != mpCurrentTimerItem )
+    if( pItem != mpCurrentTimerItem )
+    {
         saveTimer();
+    }
 
     mpCurrentTimerItem = pItem;
-    mpTimersMainArea->show();
-    mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
-    mpTimersMainArea->lineEdit_command->clear();
-    mpTimersMainArea->lineEdit_timer_name->clear();
-    mpTimersMainArea->timeEdit_hours->clear();
-    mpTimersMainArea->timeEdit_minutes->clear();
-    mpTimersMainArea->timeEdit_seconds->clear();
-    mpTimersMainArea->timeEdit_msecs->clear();
 
-    mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
     TTimer * pT = mpHost->getTimerUnit()->getTimer( ID );
     if( pT )
     {
-        if( pT->getParent() )
-            qDebug()<<"[STATUS]: timer ID="<<pT->getID()<<" name="<<pT->getName()<<" mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->shouldBeActive()<<" parent="<<pT->getParent()->getName();
+        if( pT->mModuleMasterFolder )
+        {
+            mpTimersMainArea->hide();
+            mpSourceEditorArea->hide();
+            mpSystemMessageArea->show();
+            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the timers, offset-timers and groups of timers that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+                      .arg( pT->getName() ) );
+        }
         else
-            qDebug()<<"[STATUS]: timer ID="<<pT->getID()<<" name="<<pT->getName()<<"> mActive = "<<pT->isActive()<<" mUserActiveState="<<pT->shouldBeActive()<<" parent=0";
-        QString command = pT->getCommand();
-        QString name = pT->getName();
-        mpTimersMainArea->lineEdit_command->setText( command );
-        mpTimersMainArea->lineEdit_timer_name->setText( name );
-        QTime time = pT->getTime();
-        int hours = time.hour();
-        int minutes = time.minute();
-        int secs = time.second();
-        int msecs = time.msec();
+        {
+            mpTimersMainArea->show();
+            mpSourceEditorArea->show();
+            mpSystemMessageArea->hide();
 
-        QTime t2(hours,0,0,0);
-        mpTimersMainArea->timeEdit_hours->setTime(t2);
+            mpTimersMainArea->lineEdit_command->setText( pT->getCommand() );
+            mpTimersMainArea->lineEdit_timer_name->setText( pT->getName() );
 
-        QTime t3(0,minutes,0,0);
-        mpTimersMainArea->timeEdit_minutes->setTime(t3);
+            QTime time = pT->getTime();
+            mpTimersMainArea->timeEdit_hours->setTime(   QTime( time.hour(), 0, 0, 0 ) );
+            mpTimersMainArea->timeEdit_minutes->setTime( QTime( 0, time.minute(), 0, 0 ) );
+            mpTimersMainArea->timeEdit_seconds->setTime( QTime( 0, 0, time.second(), 0 ) );
+            mpTimersMainArea->timeEdit_msecs->setTime(   QTime( 0, 0, 0, time.msec() ) );
 
-        QTime t4(0,0,secs);
-        mpTimersMainArea->timeEdit_seconds->setTime(t4);
+            mpSourceEditor->setPlainText( pT->getScript() );
 
-        QTime t5(0,0,0,msecs);
-        mpTimersMainArea->timeEdit_msecs->setTime(t5);
-
-        QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
-        if( ! pT->state() ) showError( pT->getError() );
+            if( ! pT->state() )
+            {
+                showError( pT->getError() );
+            }
+        }
+    }
+    else
+    {
+        showInfo( msgInfoAddTimer );
+        mpTimersMainArea->hide();
+        mpSourceEditorArea->hide();
+        mpSystemMessageArea->show();
     }
 }
 
