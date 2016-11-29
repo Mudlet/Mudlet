@@ -189,6 +189,11 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
    {
        TAction * pChild = *it;
 
+       if( ! ( pChild->ancestorsActive() && pChild->isActive() ) ) {
+           // Do NOT include inactive buttons/menus
+           continue;
+       }
+
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
@@ -246,7 +251,11 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
        TAction * pChild = *it;
-       if( ! pChild->isActive() ) continue;
+       if( ! ( pChild->ancestorsActive() && pChild->isActive() ) ) {
+           // Do NOT include inactive buttons/menus
+           continue;
+       }
+
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );

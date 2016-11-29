@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -225,7 +226,7 @@ bool ActionUnit::registerAction( TAction * pT )
 void ActionUnit::unregisterAction( TAction * pT )
 {
     if( ! pT ) return;
-    if( pT->getParent() && pT->getParent()->mPackageName.isEmpty() )
+    if( pT->getParent() && ! pT->getParent()->mModuleMasterFolder )
     {
         removeAction( pT );
         updateToolbar();
@@ -233,7 +234,7 @@ void ActionUnit::unregisterAction( TAction * pT )
     }
     else
     {
-        if( pT->mpEasyButtonBar && pT->mPackageName.isEmpty() )
+        if( pT->mpEasyButtonBar && ! pT->mModuleMasterFolder )
         {
             if( pT->mLocation == 0 ) mpHost->mpConsole->mpTopToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
             if( pT->mLocation == 2 ) mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
@@ -482,7 +483,7 @@ void ActionUnit::hideToolBar(const QString & name )
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
 {
     pTB->clear();
-    if( ( pA->mLocation != 4 ) || ( ! pA->isActive() ) )
+    if( pA->mLocation != 4 || ! ( pA->isActive() && pA->ancestorsActive() ) )
     {
         pTB->setFloating( false );
         mudlet::self()->removeDockWidget( pTB );
@@ -547,7 +548,8 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
 {
     pTB->clear();
     if( pA->mLocation == 4 ) return; //floating toolbars are handled differently
-    if( ! pA->isActive() )
+
+    if( ! ( pA->isActive() && pA->ancestorsActive() ) )
     {
         pTB->hide();
         return;
