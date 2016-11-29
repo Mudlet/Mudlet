@@ -56,8 +56,8 @@ public:
     void                  uninstall(const QString& );
     void                  _uninstall( TAction * pChild, const QString& packageName );
     void                  updateToolbar();
-    std::list<TToolBar *> getToolBarList();
-    std::list<TEasyButtonBar *> getEasyButtonBarList();
+    void                  updateToolBarList();
+    void                  updateEasyButtonBarList();
     TAction *             getHeadAction( TToolBar * );
     TAction *             getHeadAction( TEasyButtonBar * );
     void                  processDataStream(const QString & );
