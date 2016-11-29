@@ -108,26 +108,18 @@ unix:!macx {
     INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
-    LIBS += -L"C:\\mudlet5_package" \
-        -L"C:\\mingw32\\lib" \
-        -llua \
-        -lpcre \
+    LIBS += -L"C:\\mingw32\\lib" \
+        -L"C:\\mingw32\\bin" \
+        -llua51 \
+        -lpcre-1 \
         -llibhunspell-1.4 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
-        -L"C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\lib" \
         -lyajl \
         -lopengl32 \
         -lglut \
         -lglu32
-    INCLUDEPATH += "c:\\mudlet_package_MINGW\\Lua_src\\include" \
-        "C:\\mingw32\\include" \
-        "c:\\mudlet_package_MINGW\\zlib-1.2.5" \
-        "C:\\mudlet5_package\\boost_1_54_0" \
-        "c:\\mudlet_package_MINGW\\pcre-8.0-lib\\include" \
-        "C:\\mudlet5_package\\yajl-master\\yajl-2.0.5\\include" \
-        "C:\\mudlet5_package\\libzip-0.11.1\\lib" \
-        "C:\\mudlet_package_MINGW\\hunspell-1.3.1\\src"
+    INCLUDEPATH += "C:\\mingw32\\include" 
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
