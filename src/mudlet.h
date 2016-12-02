@@ -148,7 +148,7 @@ public:
    void                          doAutoLogin( QString & );
    void                          deselect( Host * pHost, QString & name );
    void                          stopSounds();
-   void                          playSound( QString s );
+   void                          playSound( QString s, int );
    QTime                         mReplayTime;
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
@@ -158,6 +158,9 @@ public:
    Host *                        mpCurrentActiveHost;
    bool                          mAutolog;
    QString                       mIrcNick;
+   
+   QList<QMediaPlayer *>		 MusicBoxList;
+   
    QMediaPlayer *                mpMusicBox1;
    QMediaPlayer *                mpMusicBox2;
    QMediaPlayer *                mpMusicBox3;
