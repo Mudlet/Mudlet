@@ -1100,7 +1100,7 @@ bool Host::installPackage(const QString& fileName, int module )
         {
             QStringList moduleEntry;
             moduleEntry << fileName;
-            moduleEntry << moduleEntry << QStringLiteral( "0" );
+            moduleEntry << QStringLiteral( "0" );
             mInstalledModules[packageName] = moduleEntry;
             mActiveModules.append(packageName);
         }
