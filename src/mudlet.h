@@ -100,6 +100,7 @@ public:
    bool                          setBackgroundImage( Host *, const QString & name, QString & path );
    bool                          setTextFormat( Host *, const QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, const QString &, const QString &, const TEvent & );
+   bool                          setLabelReleaseCallback( Host *, const QString &, const QString &, const TEvent & );
    bool                          setLabelOnEnter( Host *, const QString &, const QString &, const TEvent & );
    bool                          setLabelOnLeave( Host *, const QString &, const QString &, const TEvent & );
    bool                          moveWindow( Host *, const QString & name, int, int );

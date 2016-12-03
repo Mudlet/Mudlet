@@ -306,6 +306,7 @@ public:
     static int setBackgroundColor( lua_State * );
     static int createButton( lua_State * );
     static int setLabelClickCallback( lua_State * );
+    static int setLabelReleaseCallback( lua_State * );
     static int setLabelOnEnter( lua_State * );
     static int setLabelOnLeave( lua_State * );
     static int getMainWindowSize( lua_State * );
