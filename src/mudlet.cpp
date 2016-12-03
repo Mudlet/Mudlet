@@ -395,6 +395,12 @@ mudlet::mudlet()
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
+/*
+    mpMusicBox1 = new QMediaPlayer(this);
+    mpMusicBox2 = new QMediaPlayer(this);
+    mpMusicBox3 = new QMediaPlayer(this);
+    mpMusicBox4 = new QMediaPlayer(this);
+*/
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
