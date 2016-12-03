@@ -1408,7 +1408,7 @@ void TTrigger::execute()
 {
     if( mSoundTrigger )
     {
-        mudlet::self()->playSound( mSoundFile, 100 );
+        mudlet::self()->playSound( mSoundFile );
     }
     if( mCommand.size() > 0 )
     {

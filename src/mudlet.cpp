@@ -59,6 +59,7 @@
 #include <QtUiTools/quiloader.h>
 #include "post_guard.h"
 
+
 using namespace std;
 
 bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
@@ -395,12 +396,11 @@ mudlet::mudlet()
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
-/*
+
     mpMusicBox1 = new QMediaPlayer(this);
     mpMusicBox2 = new QMediaPlayer(this);
     mpMusicBox3 = new QMediaPlayer(this);
     mpMusicBox4 = new QMediaPlayer(this);
-*/
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
@@ -2399,40 +2399,35 @@ void mudlet::slot_replaySpeedDown()
 
 void mudlet::stopSounds()
 {
-	QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
-
-	while( itMusicBox.hasNext() ) {
-		itMusicBox.next()->stop();
-	} 
+    mpMusicBox1->stop();
+    mpMusicBox2->stop();
+    mpMusicBox3->stop();
+    mpMusicBox4->stop();
 }
 
-void mudlet::playSound( QString s, int soundVolume )
+void mudlet::playSound( QString s )
 {
-	QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
-	QMediaPlayer * pPlayer=0;
-	
-	/* find first available inactive QMediaPlayer */
-	while( itMusicBox.hasNext() ) {
-		QMediaPlayer * pTestPlayer=itMusicBox.next();
-	
-		if ( pTestPlayer->state() != QMediaPlayer::PlayingState &&
-			 pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia )
-		{
-			pPlayer=pTestPlayer;
-			break;
-		}
-	}
-
-	/* no available QMediaPlayer, create a new one */
-	if (!pPlayer) {
-		pPlayer = new QMediaPlayer(this);
-		MusicBoxList.append(pPlayer);	
-	}
-
-	/* set values and play the sound */
-	pPlayer->setMedia( QUrl::fromLocalFile( s ) );
-	pPlayer->setVolume(soundVolume);
-	pPlayer->play();
+    if( mpMusicBox1->state() != QMediaPlayer::PlayingState )
+    {
+        mpMusicBox1->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox1->play();
+    }
+    else if( mpMusicBox2->state() != QMediaPlayer::PlayingState )
+    {
+        mpMusicBox2->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox2->play();
+    }
+    else if( mpMusicBox3->state() != QMediaPlayer::PlayingState )
+    {
+        mpMusicBox3->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox3->play();
+    }
+    else
+    {
+        mpMusicBox4->stop();
+        mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
+        mpMusicBox4->play();
+    }
 }
 
 void mudlet::setEditorTextoptions( const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown )

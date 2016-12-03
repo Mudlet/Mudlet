@@ -5112,15 +5112,6 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-
-	int soundVolume;
-    if( lua_isnumber( L, 2 ) ) {
-		soundVolume = lua_tointeger( L, 2 );	
-    }
-    else {
-		soundVolume=100;
-    }
-
     QString sound = luaSendText.c_str();
     //QSound::play( QString( luaSendText.c_str() ) );
     if( QDir::homePath().contains('\\') )
@@ -5131,7 +5122,7 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         sound.replace('\\', "/");
     }
-    mudlet::self()->playSound( sound, soundVolume );
+    mudlet::self()->playSound( sound );
     return 0;
 }
 
