@@ -43,17 +43,21 @@ public:
 
                   TLabel( QWidget * pW=0 );
 void              setScript( Host * pHost, const QString & func, const TEvent & args );
+void              setRelease( Host * pHost, const QString & func, const TEvent & args );
 void              setEnter( Host * pHost, const QString & func, const TEvent & args );
 void              setLeave( Host * pHost, const QString & func, const TEvent & args );
 void              mousePressEvent( QMouseEvent *  ) override;
+void              mouseReleaseEvent( QMouseEvent *  ) override;
 void              leaveEvent(QEvent *) override;
 void              enterEvent(QEvent *) override;
 
 QPointer<Host>    mpHost;
 QString           mScript;
+QString           mRelease;
 QString           mEnter;
 QString           mLeave;
 TEvent            mpParameters;
+TEvent            mrParameters;
 TEvent            mLeaveParams;
 TEvent            mEnterParams;
 bool              mouseInside;

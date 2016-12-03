@@ -45,6 +45,13 @@ void TLabel::setScript( Host * pHost, const QString & func, const TEvent & args 
     mpParameters = args;
 }
 
+void TLabel::setRelease( Host * pHost, const QString & func, const TEvent & args )
+{
+    mpHost = pHost;
+    mRelease = func;
+    mrParameters = args;
+}
+
 void TLabel::setEnter( Host * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
@@ -72,6 +79,21 @@ void TLabel::mousePressEvent( QMouseEvent * event )
     }
 
     QWidget::mousePressEvent( event );
+}
+
+void TLabel::mouseReleaseEvent( QMouseEvent * event )
+{
+    if( event->button() == Qt::LeftButton )
+    {
+        if( mpHost )
+        {
+            mpHost->getLuaInterpreter()->callEventHandler( mRelease, mrParameters );
+        }
+        event->accept();
+        return;
+    }
+
+    QWidget::mouseReleaseEvent( event );
 }
 
 void TLabel::leaveEvent( QEvent * event )
