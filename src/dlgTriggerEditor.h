@@ -103,8 +103,8 @@ public:
     bool                        showHiddenVars;
     TConsole *                  mpErrorConsole;
     void                        changeView( int );
-    void                        recurseVariablesUp( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
-    void                        recurseVariablesDown( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesUp( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, bool );
     void                        show_vars( );
 
@@ -235,13 +235,6 @@ private:
     void                        exportAction( QFile & );
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
-    QTreeWidgetItem *           mCurrentAlias;
-    QTreeWidgetItem *           mCurrentTrigger;
-    QTreeWidgetItem *           mCurrentTimer;
-    QTreeWidgetItem *           mCurrentAction;
-    QTreeWidgetItem *           mCurrentScript;
-    QTreeWidgetItem *           mCurrentKey;
-    QTreeWidgetItem *           mCurrentVar;
 
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;
