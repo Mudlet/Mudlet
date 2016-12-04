@@ -38,18 +38,18 @@ TLabel::TLabel( QWidget * pW )
 
 QString nothing = "";
 
-void TLabel::setScript( Host * pHost, const QString & func, const TEvent & args )
+void TLabel::setClick( Host * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
-    mScript = func;
-    mpParameters = args;
+    mClick = func;
+    mClickParams = args;
 }
 
 void TLabel::setRelease( Host * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
     mRelease = func;
-    mrParameters = args;
+    mReleaseParams = args;
 }
 
 void TLabel::setEnter( Host * pHost, const QString & func, const TEvent & args )
@@ -72,7 +72,7 @@ void TLabel::mousePressEvent( QMouseEvent * event )
     {
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mScript, mpParameters );
+            mpHost->getLuaInterpreter()->callEventHandler( mClick, mClickParams );
         }
         event->accept();
         return;
@@ -87,7 +87,7 @@ void TLabel::mouseReleaseEvent( QMouseEvent * event )
     {
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mRelease, mrParameters );
+            mpHost->getLuaInterpreter()->callEventHandler( mRelease, mReleaseParams );
         }
         event->accept();
         return;

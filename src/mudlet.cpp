@@ -1257,7 +1257,7 @@ bool mudlet::setLabelClickCallback( Host * pHost, const QString & name, const QS
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
     {
-        labelMap[name]->setScript( pHost, func, pA );
+        labelMap[name]->setClick( pHost, func, pA );
         return true;
     }
     else
