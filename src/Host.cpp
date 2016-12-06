@@ -802,15 +802,14 @@ bool Host::installPackage(const QString& fileName, int module )
                 pLabel->setText( tr( "Unpacking package:\n\"%1\"\nplease wait..." ).arg( packageName ) );
             }
         }
+        pUnzipDialog->hide(); // Must hide to change WindowModality
         pUnzipDialog->setWindowTitle( tr( "Unpacking" ) );
-        pUnzipDialog->hide();
         pUnzipDialog->setWindowModality( Qt::ApplicationModal );
         pUnzipDialog->show();
         qApp->processEvents();
         pUnzipDialog->raise();
-        pUnzipDialog->show(); // Must do this to ensure modality is applied
-        pUnzipDialog->update();
-        qApp->processEvents(); // Try to ensure we are on top of any other dialogs
+        pUnzipDialog->repaint(); // Force a redraw
+        qApp->processEvents(); // Try to ensure we are on top of any other dialogs and freshly drawn
 
         int err = 0;
         //from: https://gist.github.com/mobius/1759816
