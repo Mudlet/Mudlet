@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1407,8 +1408,8 @@ bool TTrigger::compileScript()
 void TTrigger::execute()
 {
     if( mSoundTrigger )
-    {
-        mudlet::self()->playSound( mSoundFile );
+    {	/* eventually something should be added to the gui to change sound volumes. 100=full volume */
+        mudlet::self()->playSound( mSoundFile, 100 );
     }
     if( mCommand.size() > 0 )
     {
