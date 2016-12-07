@@ -243,7 +243,6 @@ SOURCES += \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
-    TTreeWidgetItem.cpp \
     TTrigger.cpp \
     TVar.cpp \
     VarUnit.cpp \
@@ -330,7 +329,6 @@ HEADERS += \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
-    TTreeWidgetItem.h \
     TTrigger.h \
     TVar.h \
     VarUnit.h \
