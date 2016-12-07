@@ -138,7 +138,6 @@ public:
    QIcon *                       testicon;
    bool                          mShowMenuBar;
    bool                          mShowToolbar;
-   void                          setEchoLuaErrors( const bool );
    bool                          isGoingDown() { return mIsGoingDown; }
    int                           mMainIconSize;
    int                           mTEFolderIconSize;

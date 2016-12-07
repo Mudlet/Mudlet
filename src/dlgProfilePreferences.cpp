@@ -1260,7 +1260,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
     mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
-    mudlet::self()->setEchoLuaErrors( checkBox_echoLuaErrors->isChecked() );
+    pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
     close();
 }
 
