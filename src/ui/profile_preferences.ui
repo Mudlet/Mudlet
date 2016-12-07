@@ -772,10 +772,10 @@
           <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_echoLuaErrors">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Echo Lua Errors</string>
+             <string>Echo Lua errors to the main console</string>
             </property>
            </widget>
           </item>

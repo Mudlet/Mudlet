@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12505,6 +12506,7 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
+    QString msg = QString("[  LUA  ] - Lua error: \nObject: <%1> Function: <%2>\nError: <%3>").arg(name).arg(function).arg(e.c_str());
     if( mpHost->mpEditorDialog )
     {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1 );
@@ -12514,10 +12516,7 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     
     if( mpHost->mpConsole && mpHost->mEchoLuaErrors )
     {
-    	  blue = QColor(80,80,255);
-        mpHost->mpConsole->printDebug(blue, black, QString("[ ERROR ] - ") );
-        mpHost->mpConsole->printDebug(green, black, s2 );
-        mpHost->mpConsole->printDebug(red, black, s3 );
+        mpHost->postMessage( msg );
     }
 }
 
