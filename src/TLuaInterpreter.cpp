@@ -5080,23 +5080,14 @@ int TLuaInterpreter::setAppStyleSheet( lua_State *L )
     return 0;
 }
 
-// this is an internal only function used by the package system
+// this was an internal only function used by the package system, but it was
+// inactive and has been removed
 int TLuaInterpreter::showUnzipProgress( lua_State * L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "showUnzipProgress: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    QString txt = luaSendText.c_str();
-    mudlet::self()->showUnzipProgress( txt );
-    return 0;
+    lua_pushnil( L );
+    lua_pushstring( L, tr( "showUnzipProgress: removed command, this function is now inactive and does nothing!" )
+                    .toUtf8().constData() );
+    return 2;
 }
 
 int TLuaInterpreter::playSoundFile( lua_State * L )

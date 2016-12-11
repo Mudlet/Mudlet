@@ -114,7 +114,6 @@ public slots:
     void                        slot_toggleHiddenVar( bool );
     void                        slot_addVar();
     void                        slot_addVarGroup();
-    void                        slot_saveVarAfterEdit();
     void                        slot_deleteVar();
     void                        slot_var_selected( QTreeWidgetItem * );
     void                        slot_var_changed( QTreeWidgetItem * );
@@ -131,12 +130,6 @@ public slots:
     void                        slot_import();
     void                        slot_viewStatsAction();
     void                        slot_debug_mode();
-    void                        slot_saveTriggerAfterEdit();
-    void                        slot_saveTimerAfterEdit();
-    void                        slot_saveScriptAfterEdit();
-    void                        slot_saveAliasAfterEdit();
-    void                        slot_saveActionAfterEdit();
-    void                        slot_saveKeyAfterEdit();
     void                        slot_show_timers();
     void                        slot_show_triggers();
     void                        slot_show_scripts();
