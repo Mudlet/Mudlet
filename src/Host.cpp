@@ -36,6 +36,7 @@
 #include "XMLimport.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QtUiTools>
 #include <QDir>
 #include <QMessageBox>
@@ -146,7 +147,6 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
 , mModuleSaveBlock(false)
-, mpUnzipDialog        ( 0 )
 , mLineSize            ( 5.0 )
 , mRoomSize            ( 0.5 )
 , mServerGUI_Package_version( -1 )
@@ -705,60 +705,6 @@ void Host::connectToServer()
     mTelnet.connectIt( mUrl, mPort );
 }
 
-bool Host::serialize()
-{
-    return false;
-    if( ! mSaveProfileOnExit )
-    {
-        return true;
-    }
-    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-    QDir dir_xml;
-    if( ! dir_xml.exists( directory_xml ) )
-    {
-        dir_xml.mkpath( directory_xml );
-    }
-    QDir dir_map;
-    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/map";
-    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-    if( ! dir_map.exists( directory_map ) )
-    {
-        dir_map.mkpath( directory_map );
-    }
-
-    QFile file_xml( filename_xml );
-    if ( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        modulesToWrite.clear();
-        XMLexport writer( this );
-        writer.exportHost( & file_xml );
-        file_xml.close();
-        saveModules(0);
-    }
-    else
-    {
-        QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-    }
-
-    if( mpMap->mpRoomDB->size() > 10 )
-    {
-        QFile file_map( filename_map );
-        if ( file_map.open( QIODevice::WriteOnly ) )
-        {
-            QDataStream out( & file_map );
-            mpMap->serialize( out );
-            file_map.close();
-        }
-        else
-        {
-            QMessageBox::critical( 0, "Profile Save Failed", "Failed to save "+mHostName+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-        }
-    }
-    return true;
-}
-
-
 bool Host::closingDown()
 {
     QMutexLocker locker(& mLock);
@@ -766,21 +712,12 @@ bool Host::closingDown()
     return shutdown;
 }
 
-// this is called by the Lua function unzip() defined in LuaGlobal.lua
-void Host::showUnpackingProgress( QString  txt )
-{
-    return;
-    if( ! mpUnzipDialog ) return;
-    QStringList l;
-    l << txt;
-    packageList->addItems( l );
-    packageList->scrollToBottom();
-    packageList->update();
-    QApplication::sendPostedEvents();
-}
-
 bool Host::installPackage(const QString& fileName, int module )
 {
+    // As the pointed to dialog is only used now WITHIN this method and this
+    // method can be re-entered, it is best to use a local rather than a class
+    // pointer just in case we accidently reenter this method in the future.
+    QDialog * pUnzipDialog = Q_NULLPTR;
 
 //     Module notes:
 //     For the module install, a module flag of 0 is a package, a flag
@@ -790,21 +727,24 @@ bool Host::installPackage(const QString& fileName, int module )
 //     a script.  This separation is necessary to be able to reuse code
 //     while avoiding infinite loops from script installations.
 
-    if( fileName.isEmpty() ) return false;
+    if( fileName.isEmpty() )
+    {
+        return false;
+    }
 
     QFile file(fileName);
     if( ! file.open(QFile::ReadOnly | QFile::Text) )
     {
         return false;
     }
-    QString packageName = fileName.section("/", -1);
-    packageName.replace( ".zip" , "" );
-    packageName.replace( "trigger", "" );
-    packageName.replace( "xml", "" );
-    packageName.replace( ".mpackage" , "" );
-    packageName.replace( '/' , "" );
-    packageName.replace( '\\' , "" );
-    packageName.replace( '.' , "" );
+
+    QString packageName = fileName.section( QStringLiteral( "/" ), -1 );
+    packageName.remove( QStringLiteral( ".trigger" ), Qt::CaseInsensitive );
+    packageName.remove( QStringLiteral( ".xml" ), Qt::CaseInsensitive );
+    packageName.remove( QStringLiteral( ".zip" ), Qt::CaseInsensitive );
+    packageName.remove( QStringLiteral( ".mpackage" ), Qt::CaseInsensitive );
+    packageName.remove( QLatin1Char( '\\' ) );
+    packageName.remove( QLatin1Char( '.' ) );
     if ( module )
     {
         if( (module == 2) && (mActiveModules.contains( packageName ) ))
@@ -829,111 +769,259 @@ bool Host::installPackage(const QString& fileName, int module )
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
-    if( fileName.endsWith(".zip") || fileName.endsWith(".mpackage") )
+    if(  fileName.endsWith( QStringLiteral( ".zip" ), Qt::CaseInsensitive )
+      || fileName.endsWith( QStringLiteral( ".mpackage"), Qt::CaseInsensitive ) )
     {
-        QString _home = QDir::homePath();
-        _home.append( "/.config/mudlet/profiles/" );
-        _home.append( getName() );
-        QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
-        QDir _tmpDir;
-        _tmpDir.mkpath(_dest);
+        QString _home = QStringLiteral( "%1/.config/mudlet/profiles/%2" )
+                        .arg( QDir::homePath() )
+                        .arg( getName() );
+        QString _dest = QStringLiteral( "%1/%2/" )
+                        .arg( _home )
+                        .arg( packageName );
+        QDir _tmpDir( _home ); // home directory for the PROFILE
+        _tmpDir.mkpath( _dest );
+        // TODO: report failure to create destination folder for package/module in profile
 
-        QUiLoader loader;
-        QFile file(":/ui/package_manager_unpack.ui");
-        file.open(QFile::ReadOnly);
-        mpUnzipDialog = dynamic_cast<QDialog *>(loader.load( &file, 0 ) );
-        file.close();
-        if( ! mpUnzipDialog ) return false;
-        QString _title = QString("Unpacking package: %1").arg(fileName);
-        mpUnzipDialog->setWindowTitle( _title );
-        mpUnzipDialog->show();
-        mpUnzipDialog->raise();
-        QApplication::sendPostedEvents();
+        QUiLoader loader( this );
+        QFile uiFile( QStringLiteral( ":/ui/package_manager_unpack.ui" ) );
+        uiFile.open(QFile::ReadOnly);
+        pUnzipDialog = dynamic_cast<QDialog *>(loader.load( &uiFile, 0 ) );
+        uiFile.close();
+        if( ! pUnzipDialog )
+        {
+            return false;
+        }
 
-        // At the moment, QuaZip is for Windows only - OSX and Linux use LuaZip as it is more commonly available
-        // In the future, QuaZip will be the preferred option with LuaZip as a fallback
-//        #ifndef Q_OS_WIN
-//            QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
-//            mLuaInterpreter.compileAndExecuteScript( _script );
-//        #else
-            //JlCompress::extractDir(fileName, _dest );
+        QLabel * pLabel = pUnzipDialog->findChild<QLabel*>( QStringLiteral( "label" ) );
+        if( pLabel )
+        {
+            if( module )
+            {
+                pLabel->setText( tr( "Unpacking module:\n\"%1\"\nplease wait..." ).arg( packageName ) );
+            }
+            else
+            {
+                pLabel->setText( tr( "Unpacking package:\n\"%1\"\nplease wait..." ).arg( packageName ) );
+            }
+        }
+        pUnzipDialog->hide(); // Must hide to change WindowModality
+        pUnzipDialog->setWindowTitle( tr( "Unpacking" ) );
+        pUnzipDialog->setWindowModality( Qt::ApplicationModal );
+        pUnzipDialog->show();
+        qApp->processEvents();
+        pUnzipDialog->raise();
+        pUnzipDialog->repaint(); // Force a redraw
+        qApp->processEvents(); // Try to ensure we are on top of any other dialogs and freshly drawn
+
         int err = 0;
         //from: https://gist.github.com/mobius/1759816
         struct zip_stat zs;
         struct zip_file *zf;
-//        int fd;
-        long long sum;
-        char buf[100];
+        zip_uint64_t bytesRead = 0;
+        char buf[4096]; // Was 100 but that seems unduely stingy...!
         zip* archive = zip_open( fileName.toStdString().c_str(), 0, &err);
         if ( err != 0 )
         {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: Tell user error
+            if ( pUnzipDialog )
+            {
+                pUnzipDialog->deleteLater();
+                pUnzipDialog = Q_NULLPTR;
+            }
             return false;
         }
-        for (int i=0;i<zip_get_num_entries( archive, 0 );i++ )
+
+        // We now scan for directories first, and gather needed ones first, not
+        // just relying on (zero length) archive entries ending in '/' as some
+        // (possibly broken) archive building libraries seem to forget to
+        // include them.
+        QMap<QString, QString> directoriesNeededMap;
+        //   Key is: relative path stored in archive
+        // Value is: absolute path needed when extracting files
+        for ( zip_int64_t i = 0, total = zip_get_num_entries( archive, 0 ); i < total; ++i )
         {
-            int zsi = zip_stat_index( archive, i, 0, &zs );
-            if( zsi == 0 )
+            if ( ! zip_stat_index( archive, static_cast<zip_uint64_t>( i ), 0, &zs )  )
             {
-                if ( zs.name[strlen( zs.name )-1] == '/' )
+                QString entryInArchive( QString::fromUtf8( zs.name ) );
+                QString pathInArchive( entryInArchive.section( QLatin1Literal( "/" ), 0, -2 ) );
+                // TODO: We are supposed to validate the fields (except the
+                // "valid" one itself) in zs before using them:
+                // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
+                if ( entryInArchive.endsWith( QLatin1Char( '/' ) ) )
                 {
-                    QDir dir = QDir( _dest );
-                    if ( !dir.exists( zs.name ) )
-                    {
-                        if ( dir.mkdir( zs.name ) == false )
-                        {
-                            //FIXME: report error to user
-                            //qDebug()<<"error creating subdirectory: "<<QString(zs.name);
-                        }
+//                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a DIRECTORY...!";
+                    if ( ! directoriesNeededMap.contains( pathInArchive ) ) {
+                        QString pathInProfile( QStringLiteral( "%1/%2" )
+                                               .arg( packageName )
+                                               .arg( pathInArchive ) );
+                        directoriesNeededMap.insert( pathInArchive, pathInProfile );
+//                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
                     }
+//                    else
+//                    {
+//                        qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
+//                    }
                 }
                 else
                 {
-                    zf = zip_fopen_index( archive, i, 0 );
-                    if ( !zf )
-                    {
-                        int sep = 0;
-                        zip_error_get( archive, &err, &sep);
-                        zip_error_to_str(buf, sizeof(buf), err, errno);
-                        //FIXME: report error to user
-                        return false;
+//                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a FILE...!";
+                    // Extract needed path from name for archives that do NOT
+                    // explicitly list directories
+                    if( ! pathInArchive.isEmpty() && ! directoriesNeededMap.contains( pathInArchive ) ) {
+                        QString pathInProfile( QStringLiteral( "%1/%2" )
+                                               .arg( packageName )
+                                               .arg( pathInArchive ) );
+                        directoriesNeededMap.insert( pathInArchive, pathInProfile );
+//                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
                     }
-                    QFile fd(_dest+QString(zs.name));
-                    fd.open(QIODevice::ReadWrite|QIODevice::Truncate);
-                    if ( !fd.isOpen() )
-                    {
-                        //FIXME: report error to user qDebug()<<"error opening"<<_dest+QString(zs.name);
-                        return false;
-                    }
-                    sum = 0;
-                    //HEIKO: comparison between signed and unsigned
-                    while( static_cast<zip_uint64_t>(sum) != zs.size )
-                    {
-                        int len = zip_fread( zf, buf, 100 );
-                        if ( len < 0 )
-                        {
-                            //FIXME: report error to user qDebug()<<"zip_fread error"<<len;
-                            return false;
-                        }
-                        fd.write( buf, len );
-                        sum += len;
-                    }
-                    fd.close();
-                    zip_fclose( zf );
+//                    else
+//                    {
+//                        qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
+//                    }
                 }
             }
+            else
+            {
+                // TODO: Report failure to obtain an archive entry to parse
+            }
         }
+
+        // Now create the needed directories:
+        QMapIterator<QString, QString> itPath( directoriesNeededMap );
+        while( itPath.hasNext() )
+        {
+            itPath.next();
+//            qDebug() << "Host::installPackage(...)    INFO testing for presence of:"
+//                     << itPath.value()
+//                     << "relative to:"
+//                     << _home;
+            if( ! _tmpDir.exists( itPath.value() ) )
+            {
+                if( ! _tmpDir.mkpath( itPath.value() ) )
+                {
+                    // TODO: report failure to create needed sub-directory
+                    // within package destination directory in profile directory
+
+                    zip_close( archive );
+                    if( pUnzipDialog ) {
+                        pUnzipDialog->deleteLater();
+                        pUnzipDialog = Q_NULLPTR;
+                        // Previously we forgot to close the dialog if we aborted
+                    }
+                    return false; // Abort reading rest of archive
+                }
+                _tmpDir.refresh();
+            }
+        }
+
+        // Now extract the files
+        for ( zip_int64_t i = 0, total = zip_get_num_entries( archive, 0 ); i < total; ++i )
+        {
+            // No need to check return value as we've already done it first time
+            zip_stat_index( archive, static_cast<zip_uint64_t>( i ), 0, &zs );
+            QString entryInArchive( QString::fromUtf8( zs.name ) );
+            if ( ! entryInArchive.endsWith( QLatin1Char( '/' ) ) )
+            {
+                // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
+                zf = zip_fopen_index( archive, static_cast<zip_uint64_t>( i ), 0 );
+                if ( !zf )
+                {
+                    int sep = 0;
+                    zip_error_get( archive, &err, &sep );
+                    zip_error_to_str(buf, sizeof(buf), err, errno);
+                    // FIXME: report error to user, zip_error_to_str(...) is
+                    // already deprecated, if not obsoleted...! - Slysven
+                    zip_close( archive );
+                    if ( pUnzipDialog )
+                    {
+                        pUnzipDialog->deleteLater();
+                        pUnzipDialog = Q_NULLPTR;
+                    }
+                    return false;
+                }
+
+                QFile fd( QStringLiteral( "%1%2" )
+                          .arg( _dest )
+                          .arg( entryInArchive ) );
+
+                if ( !fd.open( QIODevice::ReadWrite|QIODevice::Truncate ) )
+                {
+                    //FIXME: report error to user
+                    qDebug() << "Host::installPackage("
+                             << fileName
+                             << ","
+                             << module
+                             << ")\n    ERROR opening:"
+                             << QStringLiteral( "%1%2" ).arg( _dest ).arg( entryInArchive )
+                             << "!\n    Reported error was:"
+                             << fd.errorString();
+                    zip_fclose( zf );
+                    zip_close( archive );
+                    if ( pUnzipDialog )
+                    {
+                        pUnzipDialog->deleteLater();
+                        pUnzipDialog = Q_NULLPTR;
+                    }
+                    return false;
+                }
+
+                bytesRead = 0;
+                zip_uint64_t bytesExpected = zs.size;
+                while( bytesRead < bytesExpected && fd.error() == QFileDevice::NoError )
+                {
+                    zip_int64_t len = zip_fread( zf, buf, sizeof( buf ) );
+                    if ( len < 0 )
+                    {
+                        //FIXME: report error to user qDebug()<<"zip_fread error"<<len;
+                        fd.close();
+                        zip_fclose( zf );
+                        zip_close( archive );
+                        if ( pUnzipDialog )
+                        {
+                            pUnzipDialog->deleteLater();
+                            pUnzipDialog = Q_NULLPTR;
+                        }
+                        return false;
+                    }
+
+                    if( fd.write( buf, len ) == -1 )
+                    {
+                        // TODO: Report failure to write data to actual file
+                        fd.close();
+                        zip_fclose( zf );
+                        zip_close( archive );
+                        if ( pUnzipDialog )
+                        {
+                            pUnzipDialog->deleteLater();
+                            pUnzipDialog = Q_NULLPTR;
+                        }
+                        return false;
+                    }
+                    bytesRead += static_cast<zip_uint64_t>( len );
+                }
+                fd.close();
+                zip_fclose( zf );
+            }
+        }
+
         err = zip_close( archive );
-        if ( err != 0 ){
+        if ( err ) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to user qDebug()<<"close file error"<<buf;
+            if ( pUnzipDialog )
+            {
+                pUnzipDialog->deleteLater();
+                pUnzipDialog = Q_NULLPTR;
+            }
             return false;
         }
-//        #endif
-        QString xmlPath = _dest+packageName+".xml";
-        mpUnzipDialog->close();
-        mpUnzipDialog = 0;
+
+        if ( pUnzipDialog )
+        {
+            pUnzipDialog->deleteLater();
+            pUnzipDialog = Q_NULLPTR;
+        }
 
         // requirements for zip packages:
         // - packages must be compressed in zip format
@@ -944,10 +1032,10 @@ bool Host::installPackage(const QString& fileName, int module )
         QDir _dir( _dest );
         // before we start importing xmls in, see if the config.lua manifest file exists
         // - if it does, update the packageName from it
-        if (_dir.exists("config.lua"))
+        if ( _dir.exists( QStringLiteral( "config.lua" ) ) )
         {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig(_dir.absoluteFilePath("config.lua"), packageName);
+            readPackageConfig( _dir.absoluteFilePath( QStringLiteral( "config.lua" ) ), packageName );
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module)
             {
@@ -966,12 +1054,12 @@ bool Host::installPackage(const QString& fileName, int module )
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath(QString( "%1/%2/").arg( _home ).arg( packageName ));
+            QString newpath( QStringLiteral( "%1/%2/" ).arg( _home ).arg( packageName ));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir( newpath );
         }
         QStringList _filterList;
-        _filterList << "*.xml" << "*.trigger";
+        _filterList << QStringLiteral( "*.xml" ) << QStringLiteral( "*.trigger" );
         QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
         for( int i=0; i<entries.size(); i++ )
         {
@@ -985,12 +1073,14 @@ bool Host::installPackage(const QString& fileName, int module )
             {
                 QStringList moduleEntry;
                 moduleEntry << fileName;
-                moduleEntry << "0";
-                mInstalledModules[packageName] = moduleEntry;//.append( packageName );
+                moduleEntry << QStringLiteral( "0" );
+                mInstalledModules[packageName] = moduleEntry;
                 mActiveModules.append(packageName);
             }
             else
+            {
                 mInstalledPackages.append( packageName );
+            }
             reader.importPackage( & file2, packageName, module);
             setName( profileName );
             setLogin( login );
@@ -1011,12 +1101,14 @@ bool Host::installPackage(const QString& fileName, int module )
         {
             QStringList moduleEntry;
             moduleEntry << fileName;
-            moduleEntry << "0";
-            mInstalledModules[packageName] = moduleEntry;//.append( packageName );
+            moduleEntry << QStringLiteral( "0" );
+            mInstalledModules[packageName] = moduleEntry;
             mActiveModules.append(packageName);
         }
         else
+        {
             mInstalledPackages.append( packageName );
+        }
         reader.importPackage( & file2, packageName, module);
         setName( profileName );
         setLogin( login );
@@ -1079,6 +1171,9 @@ bool Host::removeDir( const QString& dirName, const QString& originalPath )
     return result;
 }
 
+// This may be called by installPackage(...) in that case however it will have
+// module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
+// again - Slysven
 bool Host::uninstallPackage(const QString& packageName, int module)
 {
 
