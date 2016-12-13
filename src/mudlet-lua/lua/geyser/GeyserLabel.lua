@@ -77,8 +77,17 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setClickCallback (func, ...)
    setLabelClickCallback(self.name, func, ...)
-   self.callback = func
-   self.args = {...}
+   self.clickCallback = func
+   self.clickArgs = {...}
+end
+
+--- Sets a callback to be used a mouse click is released over this label.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setReleaseCallback (func, ...)
+   setLabelReleaseCallback(self.name, func, ...)
+   self.releaseCallback = func
+   self.releaseArgs = {...}
 end
 
 --- Sets a callback to be used when the mouse passes over this label.
@@ -403,13 +412,23 @@ function Geyser.Label:new (cons, container)
      --echo("setting callback to doNestClick")
      setLabelClickCallback(me.name, "doNestClick", me.name)
    end
-   if me.callback then
-      if type(me.args) == "" then
-         me:setClickCallback(me.callback, me.args)
-      elseif type(me.args) == "table" then
-         me:setClickCallback(me.callback, unpack(me.args))
+   if me.clickCallback then
+      if type(me.clickArgs) == "" then
+         me:setClickCallback(me.clickCallback, me.clickArgs)
+      elseif type(me.clickArgs) == "table" then
+         me:setClickCallback(me.clickCallback, unpack(me.clickArgs))
       else
-         me:setClickCallback(me.callback)
+         me:setClickCallback(me.clickCallback)
+      end
+   end
+   
+   if me.releaseCallback then
+      if type(me.releaseArgs) == "" then
+         me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
+      elseif type(me.releaseArgs) == "table" then
+         me:setReleaseCallback(me.releaseCallback, unpack(me.releaseArgs))
+      else
+         me:setReleaseCallback(me.releaseCallback)
       end
    end
    
@@ -475,13 +494,21 @@ function Geyser.Label:addChild(cons, container)
         setLabelOnEnter(me.name, "doNestEnter", me.name)
         setLabelOnLeave(me.name, "doNestLeave", me.name)
     end
-    if me.callback then
-       me:setClickCallback(me.callback, me.args)
+    if me.clickCallback then
+       me:setClickCallback(me.clickCallback, me.clickArgs)
     else
         --used in instances where an element only meant to serve as
         --a nest container is clicked on.  Without this, we get
         --seg faults
         me:setClickCallback("fakeFunction")
+    end
+    if me.releaseCallback then
+       me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
+    else
+        --used in instances where an element only meant to serve as
+        --a nest container is released over.  Without this, we get
+        --seg faults
+        me:setreleaseCallback("fakeFunction")
     end
     me.flyDir = flyDir
     me.layoutDir =layoutDir
