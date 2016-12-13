@@ -28,7 +28,7 @@
 #include "pre_guard.h"
 #include <QList>
 #include <QMap>
-#include <QMutex>
+#include <QReadWriteLock>
 #include <QString>
 #include <QStringList>
 #include "post_guard.h"
@@ -41,24 +41,23 @@ class HostManager
 {
 public:
 
-                       HostManager() : mpActiveHost() {}
+                       HostManager()
+                       /* : mpActiveHost() - Not needed */ {}
     Host *             getHost( QString hostname );
     QStringList        getHostList();
-    QList<QString>     getHostNameList();
-    Host *             getFirstHost();
+// Not Used:    QList<QString>     getHostNameList();
+// Not Used:    Host *             getFirstHost();
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
-    bool               renameHost( QString );
-    Host *             getHostFromHostID( int id );
+// Not Used:    bool               renameHost( QString );
+// Not Used:    Host *             getHostFromHostID( int id );
     void               postIrcMessage(QString, QString, QString );
     void               postInterHostEvent( const Host *, const TEvent & );
 
 private:
-    int createNewHostID();
-
-    QMutex              mPoolLock;
+    QReadWriteLock      mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
     QMap<QString, QSharedPointer<Host> > mHostPool;
-    Host *              mpActiveHost;
+// Not Used:    Host *             mpActiveHost;
 
 };
 

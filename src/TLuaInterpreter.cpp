@@ -91,17 +91,17 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 {
     pGlobalLua = 0;
 
-    connect(this, SIGNAL(signalEchoMessage(int, QString)), this, SLOT(slotEchoMessage(int, QString)));
-    connect(this, SIGNAL(signalNewCommand(int, QString)), this, SLOT(slotNewCommand(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalEchoMessage(int, QString)), this, SLOT(slotEchoMessage(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalNewCommand(int, QString)), this, SLOT(slotNewCommand(int, QString)));
 
-    connect(this, SIGNAL(signalOpenUserWindow(int, QString)), this, SLOT(slotOpenUserWindow(int, QString)));
-    connect(this, SIGNAL(signalEchoUserWindow(int, QString, QString)), this, SLOT(slotEchoUserWindow(int, QString, QString)));
-    connect(this, SIGNAL(signalEnableTimer(int, QString)), this, SLOT(slotEnableTimer(int, QString)));
-    connect(this, SIGNAL(signalDisableTimer(int, QString)), this, SLOT(slotDisableTimer(int, QString)));
-    connect(this, SIGNAL(signalClearUserWindow(int, QString)), this, SLOT(slotClearUserWindow(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalOpenUserWindow(int, QString)), this, SLOT(slotOpenUserWindow(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalEchoUserWindow(int, QString, QString)), this, SLOT(slotEchoUserWindow(int, QString, QString)));
+// Not Used:    connect(this, SIGNAL(signalEnableTimer(int, QString)), this, SLOT(slotEnableTimer(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalDisableTimer(int, QString)), this, SLOT(slotDisableTimer(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalClearUserWindow(int, QString)), this, SLOT(slotClearUserWindow(int, QString)));
 
-    connect(this, SIGNAL(signalTempTimer(int, double, QString, QString)), this, SLOT(slotTempTimer(int, double, QString, QString)));
-    connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int, QString)));
+// Not Used:    connect(this, SIGNAL(signalTempTimer(int, double, QString, QString)), this, SLOT(slotTempTimer(int, double, QString, QString)));
+// Not Used:    connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int, QString)));
 
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
@@ -118,23 +118,24 @@ TLuaInterpreter::~TLuaInterpreter()
     lua_close(pGlobalLua);
 }
 
-lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
-{
-    switch( unit )
-    {
-    case 1:
-        return pGlobalLua;
-    case 2:
-        return pGlobalLua;
-    case 3:
-        return pGlobalLua;
-    case 4:
-        return pGlobalLua;
-    case 5:
-        return pGlobalLua;
-    };
-    return 0;
-}
+// Not Used:
+//lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
+//{
+//    switch( unit )
+//    {
+//    case 1:
+//        return pGlobalLua;
+//    case 2:
+//        return pGlobalLua;
+//    case 3:
+//        return pGlobalLua;
+//    case 4:
+//        return pGlobalLua;
+//    case 5:
+//        return pGlobalLua;
+//    };
+//    return 0;
+//}
 
 // Previous code didn't tell the Qt libraries when we had finished with a
 // QNetworkReply so all the data downloaded would be held in memory until the
@@ -429,12 +430,12 @@ int TLuaInterpreter::getProfileName( lua_State * L )
     return 1;
 }
 
-int TLuaInterpreter::raiseInterProfileEvent( lua_State * L )
+int TLuaInterpreter::sendGlobalEvent( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "raiseInterProfileEvent: ERROR: NULL Host pointer!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "sendGlobalEvent: ERROR: NULL Host pointer!" ).toUtf8().constData() );
         return 2;
     }
 
@@ -447,7 +448,7 @@ int TLuaInterpreter::raiseInterProfileEvent( lua_State * L )
     int n = lua_gettop( L );
     if( ! n ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "raiseInterProfileEvent: missing at least one argument (a string, number, boolean, or nil\n"
+        lua_pushstring( L, tr( "sendGlobalEvent: missing at least one argument (a string, number, boolean, or nil\n"
                                "expected, got nothing!)" )
                         .toUtf8().constData() );
         return 2;
@@ -471,7 +472,7 @@ int TLuaInterpreter::raiseInterProfileEvent( lua_State * L )
             event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
         }
         else {
-            lua_pushstring( L, tr( "raiseInterProfileEvent: bad argument type #%1 (boolean, number, string or nil\n"
+            lua_pushstring( L, tr( "sendGlobalEvent: bad argument type #%1 (boolean, number, string or nil\n"
                                    "expected, got a %2!)" )
                             .arg( i )
                             .arg( luaL_typename( L, i ) )
@@ -12778,30 +12779,30 @@ int TLuaInterpreter::check_for_mappingscript()
     return r;
 }
 
+// Not Used:
+//void TLuaInterpreter::threadLuaInterpreterExec( string code )
+//{
+//    /* cout << "TLuaMainThread::threadLuaInterpreterExec(code) executing following code:" << endl;
+//     cout << "--------------------------------------------snip<" <<endl;
+//     cout << code << endl;
+//     cout << ">snip--------------------------------------------" <<endl;*/
+//     lua_State * L = pGlobalLua;
+//     int error = luaL_dostring(L,code.c_str());
+//     QString n;
+//     if( error != 0 )
+//     {
+//        string e = "no error message available from Lua";
+//        if( lua_isstring( L, 1 ) )
+//        {
+//            e = "Lua error:";
+//            e += lua_tostring( L, 1 );
+//        }
+//        emit signalEchoMessage( mHostID, QString( e.c_str() ) );
+//        qDebug()<< "LUA_ERROR:"<<e.c_str();
+//     }
 
-void TLuaInterpreter::threadLuaInterpreterExec( string code )
-{
-    /* cout << "TLuaMainThread::threadLuaInterpreterExec(code) executing following code:" << endl;
-     cout << "--------------------------------------------snip<" <<endl;
-     cout << code << endl;
-     cout << ">snip--------------------------------------------" <<endl;*/
-     lua_State * L = pGlobalLua;
-     int error = luaL_dostring(L,code.c_str());
-     QString n;
-     if( error != 0 )
-     {
-        string e = "no error message available from Lua";
-        if( lua_isstring( L, 1 ) )
-        {
-            e = "Lua error:";
-            e += lua_tostring( L, 1 );
-        }
-        emit signalEchoMessage( mHostID, QString( e.c_str() ) );
-        qDebug()<< "LUA_ERROR:"<<e.c_str();
-     }
-
-     cout << "cRunningScript::threadLuaInterpreterExec() done" << endl;
-}
+//     cout << "cRunningScript::threadLuaInterpreterExec() done" << endl;
+//}
 
 
 
@@ -13157,7 +13158,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
     lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
-    lua_register( pGlobalLua, "raiseInterProfileEvent", TLuaInterpreter::raiseInterProfileEvent );
+    lua_register( pGlobalLua, "sendGlobalEvent", TLuaInterpreter::sendGlobalEvent );
 
 
     luaopen_yajl(pGlobalLua);
@@ -13349,64 +13350,72 @@ void TLuaInterpreter::loadGlobal()
     }
 }
 
-void TLuaInterpreter::slotEchoMessage(int hostID, const QString& msg)
-{
-    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-    mudlet::self()->print( pHost, msg );
-}
+// Not Used:
+//void TLuaInterpreter::slotEchoMessage(int hostID, const QString& msg)
+//{
+//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
+//    mudlet::self()->print( pHost, msg );
+//}
 
+// Not Used:
+//void TLuaInterpreter::slotNewCommand(int hostID, const QString& cmd)
+//{
+//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
+//    pHost->send( cmd );
+//}
 
-void TLuaInterpreter::slotNewCommand(int hostID, const QString& cmd)
-{
-    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-    pHost->send( cmd );
-}
+// Not Used:
+//void TLuaInterpreter::slotOpenUserWindow(int hostID, const QString& windowName )
+//{
+//}
 
-void TLuaInterpreter::slotOpenUserWindow(int hostID, const QString& windowName )
-{
-}
+// Not Used:
+//void TLuaInterpreter::slotClearUserWindow(int hostID, const QString& windowName )
+//{
+//}
 
-void TLuaInterpreter::slotClearUserWindow(int hostID, const QString& windowName )
-{
-}
+// Not Used:
+//void TLuaInterpreter::slotEnableTimer(int hostID, const QString& windowName )
+//{
+//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
+//    pHost->enableTimer( windowName );
+//}
 
-void TLuaInterpreter::slotEnableTimer(int hostID, const QString& windowName )
-{
-    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-    pHost->enableTimer( windowName );
-}
+// Not Used:
+//void TLuaInterpreter::slotDisableTimer(int hostID, const QString& windowName )
+//{
+//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
+//    pHost->disableTimer( windowName );
+//}
 
-void TLuaInterpreter::slotDisableTimer(int hostID, const QString& windowName )
-{
-    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-    pHost->disableTimer( windowName );
-}
+// Not Used:
+//void TLuaInterpreter::slotReplace(int hostID, const QString& text)
+//{
+//}
 
-void TLuaInterpreter::slotReplace(int hostID, const QString& text)
-{
-}
+// Not Used:
+//void TLuaInterpreter::slotEchoUserWindow(int hostID, const QString& windowName, const QString& text )
+//{
+//}
 
-void TLuaInterpreter::slotEchoUserWindow(int hostID, const QString& windowName, const QString& text )
-{
-}
-
-void TLuaInterpreter::slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName )
-{
-    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-    QTime time(0,0,0,0);
-    int msec = static_cast<int>(timeout * 1000);
-    QTime time2 = time.addMSecs( msec );
-    TTimer * pT;
-    pT = new TTimer( timerName, time2, pHost );
-    pT->setName( timerName );
-    pT->setTime( time2 );
-    //qDebug()<<"setting time of tempTimer to "<<time2.minute()<<":"<<time2.second()<<":"<<time2.msec()<<" timeout="<<timeout;
-    pT->setScript( function );
-    pT->setIsFolder( false );
-    pT->setIsActive( true );
-    pT->setIsTempTimer( true );
-    pT->registerTimer();
-}
+// Not Used:
+//void TLuaInterpreter::slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName )
+//{
+//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
+//    QTime time(0,0,0,0);
+//    int msec = static_cast<int>(timeout * 1000);
+//    QTime time2 = time.addMSecs( msec );
+//    TTimer * pT;
+//    pT = new TTimer( timerName, time2, pHost );
+//    pT->setName( timerName );
+//    pT->setTime( time2 );
+//    //qDebug()<<"setting time of tempTimer to "<<time2.minute()<<":"<<time2.second()<<":"<<time2.msec()<<" timeout="<<timeout;
+//    pT->setScript( function );
+//    pT->setIsFolder( false );
+//    pT->setIsActive( true );
+//    pT->setIsTempTimer( true );
+//    pT->registerTimer();
+//}
 
 int TLuaInterpreter::startPermTimer(const QString & name, const QString & parent, double timeout, const QString & function )
 {
