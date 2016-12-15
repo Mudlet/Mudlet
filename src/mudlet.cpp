@@ -2424,10 +2424,10 @@ void mudlet::playSound( QString s, int soundVolume )
         pPlayer = new QMediaPlayer(this);
 
         if (!pPlayer) {
-            /* if (should) be impossible to ever reach this */
-            Host * pH = getActiveHost();
+             Host * pH = getActiveHost();
             
             if (pH) {
+                /* if (should) be impossible to ever reach this */
                 pH->postMessage( "\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n" );    
             }
             
