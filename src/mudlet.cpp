@@ -2334,49 +2334,50 @@ void mudlet::slot_replaySpeedDown()
 /* loop through and stop all sounds */
 void mudlet::stopSounds()
 {
-	QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
-	
-	while( itMusicBox.hasNext() ) {
-		itMusicBox.next()->stop();
-	}
+    QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
+    
+    while( itMusicBox.hasNext() ) {
+        itMusicBox.next()->stop();
+    }
 }
 
 void mudlet::playSound( QString s, int soundVolume )
 {
-	QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
-	QMediaPlayer * pPlayer=0;
-	
-	/* find first available inactive QMediaPlayer */
-	while( itMusicBox.hasNext() ) {
-		QMediaPlayer * pTestPlayer=itMusicBox.next();
-		
-		if ( pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia ) {
-			pPlayer=pTestPlayer;
-			break;
-		}
-	}
+    QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
+    QMediaPlayer * pPlayer=0;
+    
+    /* find first available inactive QMediaPlayer */
+    while( itMusicBox.hasNext() ) {
+        QMediaPlayer * pTestPlayer=itMusicBox.next();
+        
+        if ( pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia ) {
+            pPlayer=pTestPlayer;
+            break;
+        }
+    }
 
-	/* no available QMediaPlayer, create a new one */
-	if (!pPlayer) {
-		pPlayer = new QMediaPlayer(this);
+    /* no available QMediaPlayer, create a new one */
+    if (!pPlayer) {
+        pPlayer = new QMediaPlayer(this);
 
-		if (!pPlayer) {
-			Host * pH = getActiveHost();
-			
-			if (pH) {
-				pH->postMessage( "\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n" );	
-			}
-			
-			return;
-		}
+        if (!pPlayer) {
+            /* It (should) be impossible to ever reach this */
+            Host * pH = getActiveHost();
+            
+            if (pH) {
+                pH->postMessage( "\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n" );    
+            }
+            
+            return;
+        }
 
-		MusicBoxList.append(pPlayer);
-	}
+        MusicBoxList.append(pPlayer);
+    }
 
-	/* set volume and play sound */
-	pPlayer->setMedia( QUrl::fromLocalFile( s ) );
-	pPlayer->setVolume(soundVolume);
-	pPlayer->play();
+    /* set volume and play sound */
+    pPlayer->setMedia( QUrl::fromLocalFile( s ) );
+    pPlayer->setVolume(soundVolume);
+    pPlayer->play();
 }
 
 void mudlet::setEditorTextoptions( const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown )

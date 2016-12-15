@@ -1343,7 +1343,7 @@ bool TTrigger::compileScript()
 void TTrigger::execute()
 {
     if( mSoundTrigger )
-    {	/* eventually something should be added to the gui to change sound volumes. 100=full volume */
+    {   /* eventually something should be added to the gui to change sound volumes. 100=full volume */
         mudlet::self()->playSound( mSoundFile, 100 );
     }
     if( mCommand.size() > 0 )

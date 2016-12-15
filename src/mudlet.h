@@ -77,8 +77,8 @@ public:
    void                          printSystemMessage( Host * pH, const QString & s );
    void                          print( Host *, const QString & );
    void                          addConsoleForNewHost( Host * pH );
-   void							 disableToolbarButtons();
-   void							 enableToolbarButtons();
+   void                          disableToolbarButtons();
+   void                          enableToolbarButtons();
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * );
    void                          unregisterTimer( QTimer * );
