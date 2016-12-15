@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -237,6 +238,7 @@ bool XMLexport::writeHost( Host * pT )
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pT->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
     writeAttribute( "mUSE_UNIX_EOL", pT->mUSE_UNIX_EOL ? "yes" : "no" );
     writeAttribute( "mNoAntiAlias", pT->mNoAntiAlias ? "yes" : "no" );
+    writeAttribute( "mEchoLuaErrors", pT->mEchoLuaErrors ? "yes" : "no" );
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.
