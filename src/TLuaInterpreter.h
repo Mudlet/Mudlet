@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -306,6 +307,7 @@ public:
     static int setBackgroundColor( lua_State * );
     static int createButton( lua_State * );
     static int setLabelClickCallback( lua_State * );
+    static int setLabelReleaseCallback( lua_State * );
     static int setLabelOnEnter( lua_State * );
     static int setLabelOnLeave( lua_State * );
     static int getMainWindowSize( lua_State * );
