@@ -1251,7 +1251,19 @@ bool mudlet::setLabelClickCallback( Host * pHost, const QString & name, const QS
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
     {
-        labelMap[name]->setScript( pHost, func, pA );
+        labelMap[name]->setClick( pHost, func, pA );
+        return true;
+    }
+    else
+        return false;
+}
+
+bool mudlet::setLabelReleaseCallback( Host * pHost, const QString & name, const QString & func, const TEvent & pA )
+{
+    QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
+    if( labelMap.contains( name ) )
+    {
+        labelMap[name]->setRelease( pHost, func, pA );
         return true;
     }
     else

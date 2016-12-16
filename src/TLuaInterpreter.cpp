@@ -3209,6 +3209,56 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string luaName="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 2 );
+    }
+
+    TEvent pE;
+
+    int n = lua_gettop( L );
+    for( int i=3; i<=n; i++)
+    {
+        if( lua_isnumber( L, i ) )
+        {
+            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
+            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) )
+        {
+            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
+            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    QString name(luaName.c_str());
+    mudlet::self()->setLabelReleaseCallback( pHost, text, name, pE );
+
+    return 0;
+}
+
 int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 {
     string luaSendText="";
@@ -12924,6 +12974,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor );
     lua_register( pGlobalLua, "createButton", TLuaInterpreter::createButton );
     lua_register( pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback );
+    lua_register( pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback );
     lua_register( pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter );
     lua_register( pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave );
     lua_register( pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow );
