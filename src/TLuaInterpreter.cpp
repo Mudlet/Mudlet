@@ -12549,7 +12549,7 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     QString s3 = QString("         <%1>\n").arg(e.c_str());
     QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
     if( mpHost->mpConsole->buffer.size() > 0 )
-        if( mpHost->mpConsole->buffer.lineBuffer.at( mpHost->mpConsole->buffer.lineBuffer.size() - 1 ) != "" )
+        if( !mpHost->mpConsole->buffer.lineBuffer.at( mpHost->mpConsole->buffer.lineBuffer.size() - 1 ).isEmpty() )
           mpHost->postMessage("\n");
 
     if( mpHost->mpEditorDialog )
