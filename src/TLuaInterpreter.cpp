@@ -431,9 +431,10 @@ int TLuaInterpreter::getProfileName( lua_State * L )
 }
 
 // raiseGlobalEvent( "eventName", ...optional arguments... )
-// eventName is manditory and should be a string, further arguements of t
-// sends an event to OTHER but not this profile (for internal events use
-// raiseEvent(...) instead.
+// sends an event to OTHER but not THIS profile {for internal events use
+// raiseEvent(...) instead!}
+// eventName is mandatory and should be a string though could be what further
+// arguments can be, i.e. strings, numbers, booleans or nils.
 int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -9841,7 +9842,7 @@ int TLuaInterpreter::setAreaUserData( lua_State * L )
 }
 
 // Derived from setRoomUserData(...)
-// But as there is only one instance there is only two arguements, key and value
+// But as there is only one instance there is only two arguments, key and value
 int TLuaInterpreter::setMapUserData( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
