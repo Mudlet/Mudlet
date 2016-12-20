@@ -430,60 +430,85 @@ int TLuaInterpreter::getProfileName( lua_State * L )
     return 1;
 }
 
-int TLuaInterpreter::sendGlobalEvent( lua_State * L )
+// raiseGlobalEvent( "eventName", ...optional arguments... )
+// eventName is manditory and should be a string, further arguements of t
+// sends an event to OTHER but not this profile (for internal events use
+// raiseEvent(...) instead.
+int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "sendGlobalEvent: ERROR: NULL Host pointer!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "raiseGlobalEvent: ERROR: NULL Host pointer!" ).toUtf8().constData() );
         return 2;
     }
 
-    TEvent event;
-    event.mArgumentList.append( QStringLiteral( "sysInterProfileEvent" ) );
-    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    event.mArgumentList.append( pHost->getName() );
-    event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
 
     int n = lua_gettop( L );
     if( ! n ) {
         lua_pushnil( L );
-        lua_pushstring( L, tr( "sendGlobalEvent: missing at least one argument (a string, number, boolean, or nil\n"
-                               "expected, got nothing!)" )
+        lua_pushstring( L, tr( "raiseGlobalEvent: missing argument #1 (eventName as, probably, a string expected!)" )
                         .toUtf8().constData() );
         return 2;
     }
 
+    TEvent event;
+
     for( int i=1; i<=n; i++) {
-        if( lua_isnumber( L, i ) ) {
-            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
-            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) ) {
-            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+        if( i==2 ) {
+            // It was agreed to make the second argument always be the name of
+            // sending profile - but the first argument which is the event "name"
+            // can be anything the sending profile wants - as per the
+            // raiseEvent( "eventName", ...other optional arguments... )
+            //
+            // This will, of course, break any existing handlers in the receiving
+            // profile that has been configured to handle an event with the same
+            // name but only from within the same profile and which is not
+            // expecting an extra string argument in the second position.
+            //
+            // The sending profile of the event does not receive the event if
+            // sent via this command but if the same eventName is to be used for
+            // an event within a profile and to other profiles it is safest to
+            // insert a string like "local" or "self" or the profile name from
+            // getProfileName() as the second argument after the eventName so
+            // the handler can tell it is handling a local event from
+            // raiseEvent(...) and not one from another profile! - Slysven
+            event.mArgumentList.append( pHost->getName() );
             event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         }
-        else if( lua_isboolean( L, i ) ) {
-            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
-            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
-        }
-        else if( lua_isnil( L, i ) ) {
-            event.mArgumentList.append( QString() );
-            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
-        }
         else {
-            lua_pushstring( L, tr( "sendGlobalEvent: bad argument type #%1 (boolean, number, string or nil\n"
-                                   "expected, got a %2!)" )
-                            .arg( i )
-                            .arg( luaL_typename( L, i ) )
-                            .toUtf8().constData() );
-            lua_error( L );
-            return 1;
+            // Need to take one from the index for all but the first argument:
+            int j = (i == 1 ? 1 : i-1);
+            if( lua_isnumber( L, j ) ) {
+                event.mArgumentList.append( QString::number( lua_tonumber( L, j ) ) );
+                event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+            }
+            else if( lua_isstring( L, j ) ) {
+                event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, j ) ) );
+                event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+            }
+            else if( lua_isboolean( L, j ) ) {
+                event.mArgumentList.append( QString::number( lua_toboolean( L, j ) ) );
+                event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+            }
+            else if( lua_isnil( L, j ) ) {
+                event.mArgumentList.append( QString() );
+                event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+            }
+            else {
+                lua_pushstring( L, tr( "raiseGlobalEvent: bad argument type #%1 (boolean, number, string or nil\n"
+                                       "expected, got a %2!)" )
+                                .arg( i )
+                                .arg( luaL_typename( L, j ) )
+                                .toUtf8().constData() );
+                lua_error( L );
+                return 1;
+            }
         }
     }
 
     mudlet::self()->getHostManager()->postInterHostEvent( pHost, event );
-    lua_pushnumber( L, n ); // Return number of supplied arguments put out.
+    lua_pushnumber( L, n ); // Return number of supplied arguments put out, which is one less than the handler will receive!
 
     return 1;
 }
@@ -13158,7 +13183,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
     lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
-    lua_register( pGlobalLua, "sendGlobalEvent", TLuaInterpreter::sendGlobalEvent );
+    lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
 
 
     luaopen_yajl(pGlobalLua);

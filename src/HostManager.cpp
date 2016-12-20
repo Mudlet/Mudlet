@@ -174,8 +174,7 @@ void HostManager::postIrcMessage( QString a, QString b, QString c )
 // The slightly convoluted way we step through the list of hosts is so that we
 // send out the events to the other hosts in a predictable and consistant order
 // and so that no one host gets an unfair advantage when emitting events. The
-// sending profile host gets the event LAST so it knows that all other profiles
-// have received it before it does.
+// sending profile host does NOT get the event!
 void HostManager::postInterHostEvent( const Host * pHost, const TEvent & event )
 {
     if( ! pHost ) {
@@ -186,7 +185,7 @@ void HostManager::postInterHostEvent( const Host * pHost, const TEvent & event )
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     const QList<QSharedPointer<Host> > hostList = mHostPool.values();
     mPoolReadWriteLock.unlock();
-    qDebug() << "HostManager::postInterHostEvent(...) INFO: ...got read access and sending Event to" << hostList.count() << "Hosts.";
+    qDebug() << "HostManager::postInterHostEvent(...) INFO: ...got read access and sending Event to" << hostList.count() - 1 << "Hosts.";
 
     int i = 0;
     QList<int> beforeSendingHost;
@@ -214,12 +213,6 @@ void HostManager::postInterHostEvent( const Host * pHost, const TEvent & event )
     QList<int> allValidHosts;
     allValidHosts = afterSendingHost;
     allValidHosts.append( beforeSendingHost );
-    if( sendingHost >= 0 ) {
-        allValidHosts.append( sendingHost );
-    }
-    else {
-        qWarning() << "HostManager::postInterHostEvent(...) Warning: That's weird, the source of the event does not seem to exist any more!";
-    }
 
     for( int j = 0, total = allValidHosts.size(); j < total; ++j ) {
         hostList.at( allValidHosts.at( j ) )->raiseEvent( event );

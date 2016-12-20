@@ -400,7 +400,7 @@ public:
     static int clearMapUserDataItem( lua_State * );
     static int setDefaultAreaVisible( lua_State * );
     static int getProfileName( lua_State * );
-    static int sendGlobalEvent( lua_State * );
+    static int raiseGlobalEvent( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;
