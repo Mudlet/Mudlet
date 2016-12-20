@@ -86,6 +86,9 @@ public:
     void                        children_icon_triggers( QTreeWidgetItem * pWidgetItemParent );
     void                        children_icon_alias( QTreeWidgetItem * pWidgetItemParent );
     void                        children_icon_key( QTreeWidgetItem * pWidgetItemParent );
+    void                        children_icon_timer( QTreeWidgetItem * pWidgetItemParent );
+    void                        children_icon_script( QTreeWidgetItem * pWidgetItemParent );
+    void                        children_icon_action( QTreeWidgetItem * pWidgetItemParent );
     void                        doCleanReset();
     void                        addVar( bool );
     int                         canRecast( QTreeWidgetItem *, int, int );
@@ -100,7 +103,13 @@ public:
     void                        recurseVariablesUp( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, bool );
-    void                        show_vars( );
+    void                        show_vars( const bool );
+    void                        action_toggle_active();
+    void                        alias_toggle_active();
+    void                        key_toggle_active();
+    void                        script_toggle_active();
+    void                        timer_toggle_active();
+    void                        trigger_toggle_active();
 
 
 public slots:
@@ -157,12 +166,6 @@ public slots:
     void                        slot_addKey();
     void                        slot_addKeyGroup();
     void                        slot_toggle_active();
-    void                        slot_trigger_toggle_active();
-    void                        slot_action_toggle_active();
-    void                        slot_timer_toggle_active();
-    void                        slot_alias_toggle_active();
-    void                        slot_script_toggle_active();
-    void                        slot_key_toggle_active();
     void                        slot_search_triggers( const QString s );
     void                        slot_item_selected_search_list(QTreeWidgetItem*, int);
     void                        slot_delete_item();

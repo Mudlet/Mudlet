@@ -112,7 +112,9 @@
         <file>icons/mudlet_map_download.png</file>
         <file>icons/mudlet_notepad.png</file>
         <file>icons/mudlet_room_exits.png</file>
+        <file>icons/offsettimer-off-grey.png</file>
         <file>icons/offsettimer-off.png</file>
+        <file>icons/offsettimer-on-grey.png</file>
         <file>icons/offsettimer-on.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/preferences-desktop-keyboard.png</file>
