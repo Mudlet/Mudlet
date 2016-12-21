@@ -3,7 +3,6 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
- *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -5114,8 +5113,7 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         sound.replace('\\', "/");
     }
-    /* if no volume provided, substitute 100 (maximum) */
-    mudlet::self()->playSound( sound, lua_isnumber(L, 2) ? lua_tointeger(L, 2) : 100 );
+    mudlet::self()->playSound( sound );
     return 0;
 }
 
