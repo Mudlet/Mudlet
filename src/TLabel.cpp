@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,11 +39,18 @@ TLabel::TLabel( QWidget * pW )
 
 QString nothing = "";
 
-void TLabel::setScript( Host * pHost, const QString & func, const TEvent & args )
+void TLabel::setClick( Host * pHost, const QString & func, const TEvent & args )
 {
     mpHost = pHost;
-    mScript = func;
-    mpParameters = args;
+    mClick = func;
+    mClickParams = args;
+}
+
+void TLabel::setRelease( Host * pHost, const QString & func, const TEvent & args )
+{
+    mpHost = pHost;
+    mRelease = func;
+    mReleaseParams = args;
 }
 
 void TLabel::setEnter( Host * pHost, const QString & func, const TEvent & args )
@@ -65,13 +73,28 @@ void TLabel::mousePressEvent( QMouseEvent * event )
     {
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mScript, mpParameters );
+            mpHost->getLuaInterpreter()->callEventHandler( mClick, mClickParams );
         }
         event->accept();
         return;
     }
 
     QWidget::mousePressEvent( event );
+}
+
+void TLabel::mouseReleaseEvent( QMouseEvent * event )
+{
+    if( event->button() == Qt::LeftButton )
+    {
+        if( mpHost )
+        {
+            mpHost->getLuaInterpreter()->callEventHandler( mRelease, mReleaseParams );
+        }
+        event->accept();
+        return;
+    }
+
+    QWidget::mouseReleaseEvent( event );
 }
 
 void TLabel::leaveEvent( QEvent * event )

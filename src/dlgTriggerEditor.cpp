@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -338,7 +339,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( showSearchAreaAction, SIGNAL(triggered()), this, SLOT( slot_show_search_area()));
 
     QAction * saveAction = new QAction( QIcon( QStringLiteral( ":/icons/document-save-as.png" ) ), tr("Save Item"), this);
-    //saveAction->setShortcut(tr("Ctrl+S"));
+    saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
 
@@ -361,6 +362,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     QAction * profileSaveAction = new QAction( QIcon ( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
     profileSaveAction->setEnabled( true );
+    profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     profileSaveAction->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
     profileSaveAction->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
 
@@ -3197,16 +3199,6 @@ void dlgTriggerEditor::addScript( bool isFolder )
     slot_scripts_selected( treeWidget_scripts->currentItem() );
 }
 
-void dlgTriggerEditor::slot_saveVarAfterEdit()
-{
-    return saveVar();
-}
-
-void dlgTriggerEditor::slot_saveTriggerAfterEdit()
-{
-    return saveTrigger();
-}
-
 void dlgTriggerEditor::saveTrigger()
 {
     QTime t;
@@ -3368,11 +3360,6 @@ void dlgTriggerEditor::saveTrigger()
     }
 }
 
-void dlgTriggerEditor::slot_saveTimerAfterEdit()
-{
-    return saveTimer();
-}
-
 void dlgTriggerEditor::saveTimer()
 {
     QTreeWidgetItem * pItem = mpCurrentTimerItem;
@@ -3462,12 +3449,6 @@ void dlgTriggerEditor::saveTimer()
 
         }
     }
-}
-
-
-void dlgTriggerEditor::slot_saveAliasAfterEdit()
-{
-    return saveAlias();
 }
 
 void dlgTriggerEditor::saveAlias()
@@ -3598,12 +3579,6 @@ void dlgTriggerEditor::saveAlias()
     }
 }
 
-void dlgTriggerEditor::slot_saveActionAfterEdit()
-{
-    return saveAction();
-
-}
-
 void dlgTriggerEditor::saveAction()
 {
     QTreeWidgetItem * pItem = mpCurrentActionItem;
@@ -3716,12 +3691,6 @@ void dlgTriggerEditor::saveAction()
     mudlet::self()->processEventLoopHack();
 }
 
-
-void dlgTriggerEditor::slot_saveScriptAfterEdit()
-{
-    return saveScript();
-}
-
 void dlgTriggerEditor::saveScript()
 {
     QTreeWidgetItem * pItem = mpCurrentScriptItem;
@@ -3823,12 +3792,6 @@ void dlgTriggerEditor::saveScript()
             }
         }
     }
-}
-
-
-void dlgTriggerEditor::slot_saveKeyAfterEdit()
-{
-    return saveKey();
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem * pItem, int nameType, int valueType)
@@ -6324,30 +6287,31 @@ void dlgTriggerEditor::slot_save_edit()
     switch( mCurrentView )
     {
         case cmTriggerView:
-            slot_saveTriggerAfterEdit();
+            saveTrigger();
             break;
         case cmTimerView:
-            slot_saveTimerAfterEdit();
+            saveTimer();
             break;
         case cmAliasView:
-            slot_saveAliasAfterEdit();
+            saveAlias();
             break;
         case cmScriptView:
-            slot_saveScriptAfterEdit();
+            saveScript();
             break;
         case cmActionView:
-            slot_saveActionAfterEdit();
+            saveAction();
             break;
         case cmKeysView:
-            slot_saveKeyAfterEdit();
+            saveKey();
             break;
         case cmVarsView:
-            slot_saveVarAfterEdit();
+            saveVar();
             break;
         default: qWarning()<<"ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
     };
 
-    mpHost->serialize();
+// There was a mpHost->serialize() call here, but that code was
+// "short-circuited" and returned without doing anything;
 }
 
 void dlgTriggerEditor::slot_add_new()
@@ -7021,10 +6985,18 @@ bool dlgTriggerEditor::event( QEvent * event )
         if( event->type() == QEvent::KeyPress )
         {
             QKeyEvent * ke = static_cast<QKeyEvent *>( event );
+            QList<QAction *> actionList = toolBar->actions();
             switch( ke->key() )
             {
                 case 0x01000000:
                     mIsGrabKey = false;
+                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+                        if ( actionList.at(i)->text() == "Save Item" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+S"));
+                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                        }
+                    }
                     ke->accept();
                     return true;
                 case 0x01000020:
@@ -7036,6 +7008,13 @@ bool dlgTriggerEditor::event( QEvent * event )
                 default:
                     grab_key_callback( ke->key(), ke->modifiers() );
                     mIsGrabKey = false;
+                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+                        if ( actionList.at(i)->text() == "Save Item" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+S"));
+                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                        }
+                    }
                     ke->accept();
                     return true;
             }
@@ -7048,6 +7027,14 @@ bool dlgTriggerEditor::event( QEvent * event )
 void dlgTriggerEditor::slot_grab_key()
 {
     mIsGrabKey = true;
+    QList<QAction *> actionList = toolBar->actions();
+    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+        if ( actionList.at(i)->text() == "Save Item" ) {
+            actionList[i]->setShortcut(tr(""));
+        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+            actionList[i]->setShortcut(tr(""));
+        }
+    }
 }
 
 void dlgTriggerEditor::grab_key_callback( int key, int modifier )

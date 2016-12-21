@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -922,6 +923,7 @@ void XMLimport::readHostPackage( Host * pT )
     pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
     pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
     pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
+    pT->mEchoLuaErrors = ( attributes().value("mEchoLuaErrors") == "yes" );
     pT->mIsNextLogFileInHtmlFormat = ( attributes().value("mRawStreamDump") == "yes" );
     pT->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
     pT->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );

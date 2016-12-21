@@ -4,6 +4,7 @@
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1341,6 +1342,21 @@ void cTelnet::postMessage( QString msg )
                 }
                 if( body.size() )
                     mpHost->mpConsole->print( body.join('\n').append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+            }
+            else if( prefix.contains("LUA") )
+            {
+                mpHost->mpConsole->print( prefix, 80, 160, 255, 0, 0, 0 ); // Blue on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 200, 50, 0, 0, 0 );  // Green on black
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified( temp.length() + prefixLength );
+                }
+                if( body.size() > 0 )
+                {
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), 200, 50, 50, 0, 0, 0 );  // Red on black
+                }
             }
             else if( prefix.contains("WARN") )
             {

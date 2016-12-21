@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -116,7 +117,6 @@ public:
     void               startSpeedWalk();
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
-    bool               serialize();
     void               saveModules(int);
     void               reloadModule(const QString& moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }
@@ -161,6 +161,7 @@ public:
     bool               mAllowToSendCommand;
     bool               mAutoClearCommandLineAfterSend;
     bool               mBlockScriptCompile;
+    bool               mEchoLuaErrors; 
     int                mBorderBottomHeight;
     int                mBorderLeftWidth;
     int                mBorderRightWidth;
@@ -301,8 +302,8 @@ public:
     QStringList        mActiveModules;
     bool               mModuleSaveBlock;
 
-    void               showUnpackingProgress( QString  txt );
-    QDialog *          mpUnzipDialog;
+    // There was a QDialog *          mpUnzipDialog; but to avoid issues of
+    // reentrancy it needed to be made local to the method that used it.
     QPushButton *      uninstallButton;
     QListWidget *      packageList;
     QListWidget *                 moduleList;

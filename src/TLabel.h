@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,18 +43,22 @@ Q_OBJECT
 public:
 
                   TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, const QString & func, const TEvent & args );
+void              setClick( Host * pHost, const QString & func, const TEvent & args );
+void              setRelease( Host * pHost, const QString & func, const TEvent & args );
 void              setEnter( Host * pHost, const QString & func, const TEvent & args );
 void              setLeave( Host * pHost, const QString & func, const TEvent & args );
 void              mousePressEvent( QMouseEvent *  ) override;
+void              mouseReleaseEvent( QMouseEvent *  ) override;
 void              leaveEvent(QEvent *) override;
 void              enterEvent(QEvent *) override;
 
 QPointer<Host>    mpHost;
-QString           mScript;
+QString           mClick;
+QString           mRelease;
 QString           mEnter;
 QString           mLeave;
-TEvent            mpParameters;
+TEvent            mClickParams;
+TEvent            mReleaseParams;
 TEvent            mLeaveParams;
 TEvent            mEnterParams;
 bool              mouseInside;

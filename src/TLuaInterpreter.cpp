@@ -4,6 +4,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -3209,6 +3210,56 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
     return 0;
 }
 
+int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    string luaName="";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 2 );
+    }
+
+    TEvent pE;
+
+    int n = lua_gettop( L );
+    for( int i=3; i<=n; i++)
+    {
+        if( lua_isnumber( L, i ) )
+        {
+            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
+            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) )
+        {
+            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
+            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    QString name(luaName.c_str());
+    mudlet::self()->setLabelReleaseCallback( pHost, text, name, pE );
+
+    return 0;
+}
+
 int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 {
     string luaSendText="";
@@ -5059,23 +5110,14 @@ int TLuaInterpreter::setAppStyleSheet( lua_State *L )
     return 0;
 }
 
-// this is an internal only function used by the package system
+// this was an internal only function used by the package system, but it was
+// inactive and has been removed
 int TLuaInterpreter::showUnzipProgress( lua_State * L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "showUnzipProgress: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    QString txt = luaSendText.c_str();
-    mudlet::self()->showUnzipProgress( txt );
-    return 0;
+    lua_pushnil( L );
+    lua_pushstring( L, tr( "showUnzipProgress: removed command, this function is now inactive and does nothing!" )
+                    .toUtf8().constData() );
+    return 2;
 }
 
 int TLuaInterpreter::playSoundFile( lua_State * L )
@@ -12508,13 +12550,18 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
+    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
     if( mpHost->mpEditorDialog )
     {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1 );
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(green, black, s2 );
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3 );
     }
-
+    
+    if( mpHost->mpConsole && mpHost->mEchoLuaErrors )
+    {
+        mpHost->postMessage( msg );
+    }
 }
 
 bool TLuaInterpreter::callConditionFunction( std::string & function, const QString & mName )
@@ -12930,6 +12977,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor );
     lua_register( pGlobalLua, "createButton", TLuaInterpreter::createButton );
     lua_register( pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback );
+    lua_register( pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback );
     lua_register( pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter );
     lua_register( pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave );
     lua_register( pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow );
