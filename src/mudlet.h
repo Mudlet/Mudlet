@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -100,6 +101,7 @@ public:
    bool                          setBackgroundImage( Host *, const QString & name, QString & path );
    bool                          setTextFormat( Host *, const QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, const QString &, const QString &, const TEvent & );
+   bool                          setLabelReleaseCallback( Host *, const QString &, const QString &, const TEvent & );
    bool                          setLabelOnEnter( Host *, const QString &, const QString &, const TEvent & );
    bool                          setLabelOnLeave( Host *, const QString &, const QString &, const TEvent & );
    bool                          moveWindow( Host *, const QString & name, int, int );

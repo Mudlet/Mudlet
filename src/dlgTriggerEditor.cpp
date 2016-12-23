@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -6984,10 +6985,18 @@ bool dlgTriggerEditor::event( QEvent * event )
         if( event->type() == QEvent::KeyPress )
         {
             QKeyEvent * ke = static_cast<QKeyEvent *>( event );
+            QList<QAction *> actionList = toolBar->actions();
             switch( ke->key() )
             {
                 case 0x01000000:
                     mIsGrabKey = false;
+                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+                        if ( actionList.at(i)->text() == "Save Item" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+S"));
+                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                        }
+                    }
                     ke->accept();
                     return true;
                 case 0x01000020:
@@ -6999,6 +7008,13 @@ bool dlgTriggerEditor::event( QEvent * event )
                 default:
                     grab_key_callback( ke->key(), ke->modifiers() );
                     mIsGrabKey = false;
+                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+                        if ( actionList.at(i)->text() == "Save Item" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+S"));
+                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                        }
+                    }
                     ke->accept();
                     return true;
             }
@@ -7011,6 +7027,14 @@ bool dlgTriggerEditor::event( QEvent * event )
 void dlgTriggerEditor::slot_grab_key()
 {
     mIsGrabKey = true;
+    QList<QAction *> actionList = toolBar->actions();
+    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+        if ( actionList.at(i)->text() == "Save Item" ) {
+            actionList[i]->setShortcut(tr(""));
+        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+            actionList[i]->setShortcut(tr(""));
+        }
+    }
 }
 
 void dlgTriggerEditor::grab_key_callback( int key, int modifier )

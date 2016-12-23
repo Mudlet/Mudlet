@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -61,6 +62,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mAllowToSendCommand( true )
 , mAutoClearCommandLineAfterSend( false )
 , mBlockScriptCompile( true )
+, mEchoLuaErrors( false )
 , mBorderBottomHeight( 0 )
 , mBorderLeftWidth( 0 )
 , mBorderRightWidth( 0 )
