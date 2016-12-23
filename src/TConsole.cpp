@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -140,7 +141,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         {
             mIsSubConsole = false;
             mMainFrameTopHeight = mpHost->mBorderTopHeight;
-            mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
+            mMainFrameBottomHeight = mpHost->mBorderBottomHeight; 
             mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
             mMainFrameRightWidth = mpHost->mBorderRightWidth;
             mCommandBgColor = mpHost->mCommandBgColor;
@@ -2679,6 +2680,48 @@ bool TConsole::setBackgroundColor(const QString & name, int r, int g, int b, int
     else
         return false;
 
+}
+
+bool TConsole::raiseWindow(const QString & name )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->raise();
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->raise();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TConsole::lowerWindow(const QString & name )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->lower();
+        mpHost->mpConsole->lower();
+        console->lower();
+        console2->lower();
+        splitter->lower();
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->lower();
+        mpHost->mpConsole->lower();
+        console->lower();
+        console2->lower();
+        splitter->lower();
+        return true;
+    }
+    else
+        return false;
 }
 
 bool TConsole::showWindow(const QString & name )

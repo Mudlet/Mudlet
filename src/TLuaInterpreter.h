@@ -290,6 +290,8 @@ public:
     static int getNetworkLatency( lua_State * );
     static int appendBuffer( lua_State * );
     static int createBuffer( lua_State * );
+    static int raiseWindow( lua_State * );
+    static int lowerWindow( lua_State * );
     static int showUserWindow( lua_State * );
     static int hideUserWindow( lua_State * );
     static int closeUserWindow( lua_State * );
