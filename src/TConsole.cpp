@@ -141,7 +141,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
         {
             mIsSubConsole = false;
             mMainFrameTopHeight = mpHost->mBorderTopHeight;
-            mMainFrameBottomHeight = mpHost->mBorderBottomHeight; 
+            mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
             mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
             mMainFrameRightWidth = mpHost->mBorderRightWidth;
             mCommandBgColor = mpHost->mCommandBgColor;
@@ -2705,19 +2705,15 @@ bool TConsole::lowerWindow(const QString & name )
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         mSubConsoleMap[key]->lower();
-        mpHost->mpConsole->lower();
-        console->lower();
-        console2->lower();
-        splitter->lower();
+        QList<QWidget *> widgets = mSubConsoleMap[key]->parentWidget()->findChildren<QWidget *>();
+        widgets[1]->lower();
         return true;
     }
     else if( mLabelMap.find( key ) != mLabelMap.end() )
     {
         mLabelMap[key]->lower();
-        mpHost->mpConsole->lower();
-        console->lower();
-        console2->lower();
-        splitter->lower();
+        QList<QWidget *> widgets = mLabelMap[key]->parentWidget()->findChildren<QWidget *>();
+        widgets[1]->lower();
         return true;
     }
     else
