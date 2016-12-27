@@ -2705,15 +2705,13 @@ bool TConsole::lowerWindow(const QString & name )
     if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
     {
         mSubConsoleMap[key]->lower();
-        QList<QWidget *> widgets = mSubConsoleMap[key]->parentWidget()->findChildren<QWidget *>();
-        widgets[1]->lower();
+        mpMainDisplay->lower();
         return true;
     }
     else if( mLabelMap.find( key ) != mLabelMap.end() )
     {
         mLabelMap[key]->lower();
-        QList<QWidget *> widgets = mLabelMap[key]->parentWidget()->findChildren<QWidget *>();
-        widgets[1]->lower();
+        mpMainDisplay->lower();
         return true;
     }
     else
