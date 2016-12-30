@@ -993,13 +993,49 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
         }
     }
     x = ( event->x() / mFontWidth ) - timeOffset;
-    if( ( x < 0 ) || ( y < 0 ) || ( y > (int) mpBuffer->size()-1 ) )
+    if( ( y < 0 ) || ( y > (int) mpBuffer->size()-1 ) )
     {
         return;
     }
 
     QPoint PC( x, y );
+    
+    if( mCtrlSelecting )
+    {
+        int oldAY = mPA.y();
+        int oldBY = mPB.y();
+        if( PC.y() == mDragStartY ){
+          mPA.setY( PC.y() );
+          mPB.setY( PC.y() );
+        } else if( PC.y() < mDragStartY ){
+          mPA.setY( PC.y() );
+          mPB.setY( mDragStartY );
+        } else if( PC.y() > mDragStartY ){
+          mPA.setY( mDragStartY );
+          mPB.setY( PC.y() );
+        }
+        
+        if( oldAY < mPA.y() ){
+          for( int y = oldAY; y < mPA.y(); y++ ){
+            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
+              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            }
+          }
+        }
+        if( oldBY > mPB.y() ){
+          for( int y = mPB.y()+1; y <= oldBY; y++ ){
+            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
+              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            }
+          }
+        }
+        
+        mPA.setX( 0 );
+        mPB.setX( static_cast<int>(mpBuffer->buffer[mPB.y()].size())-1 );
 
+        highlight();
+        return;
+    }
     if( ( mPA.y() == mPB.y() ) && ( mPA.x() > mPB.x() ) )
     {
         swap( mPA, mPB );
@@ -1099,7 +1135,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
 }
 
 
-void TTextEdit::contextMenuEvent ( QContextMenuEvent * event )
+void TTextEdit::contextMenuEvent( QContextMenuEvent * event )
 {
     event->accept();
     return;
@@ -1151,9 +1187,13 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     }
     if( event->button() == Qt::LeftButton )
     {
+        if( QGuiApplication::queryKeyboardModifiers().testFlag(Qt::ControlModifier) ) {
+          mCtrlSelecting = true;
+        }
         int x = event->x() / mFontWidth;
         if( mShowTimeStamps )
         {
+            if( x < 13 ) mCtrlSelecting = true;
             x -= 13;
         }
         int y = ( event->y() / mFontHeight ) + imageTopLine();
@@ -1207,7 +1247,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
             if ( xind > 0 ||
                  mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at( xind ) ) )
                 mPA.setX ( xind+1 );
-            else
+            else if ( xind > 0 )
                 mPA.setX ( xind );
             mPA.setY ( yind );
             highlight();
@@ -1222,9 +1262,18 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
             {
                 return;
             }
-            mPA.setX( x );
-            mPA.setY( y );
-            mPB = mPA;
+            if( mCtrlSelecting ) {
+                mPA.setX( 0 );
+                mPA.setY( y );
+                mPB.setX( static_cast<int>(mpBuffer->buffer[y].size())-1 );
+                mPB.setY( y );
+                mDragStartY = y;
+                highlight();
+            } else {
+                mPA.setX( x );
+                mPA.setY( y );
+                mPB = mPA;
+            }
             event->accept();
             return;
         }
@@ -1478,6 +1527,7 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
     if( event->button() == Qt::LeftButton )
     {
         mMouseTracking = false;
+        mCtrlSelecting = false;
     }
     if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
     {
@@ -1527,7 +1577,7 @@ void TTextEdit::resizeEvent( QResizeEvent * event )
     QWidget::resizeEvent( event );
 }
 
-void TTextEdit::wheelEvent ( QWheelEvent * e )
+void TTextEdit::wheelEvent( QWheelEvent * e )
 {
     int k = 3;
     if( e->delta() < 0 )

@@ -141,6 +141,8 @@ private:
     int               mLastRenderBottom;
     int               mLeftMargin;
     bool              mMouseTracking;
+    bool              mCtrlSelecting;
+    int               mDragStartY;
     int               mOldScrollPos;
     QPoint            mP_aussen;
     QPoint            mPA;
