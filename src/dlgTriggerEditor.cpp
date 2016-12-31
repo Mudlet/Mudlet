@@ -5052,7 +5052,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
             mpTriggersMainArea->hide();
             mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
-            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the triggers, filter-chains and groups of triggers that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+            showInfo( tr( "This item cannot be edited or dragged to a new position as it represents the module <i>%1</i> and holds all the triggers, filter-chains and groups of triggers that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
                       .arg( pT->getName() ) );
         }
         else
@@ -5245,7 +5245,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
             mpAliasMainArea->hide();
             mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
-            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the aliases and groups of aliases that the module contains." )
+            showInfo( tr( "This item cannot be edited or dragged to a new position as it represents the module <i>%1</i> and holds all the aliases and groups of aliases that the module contains." )
                       .arg( pT->getName() ) );
         }
         else
@@ -5308,7 +5308,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
             mpKeysMainArea->hide();
             mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
-            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the keys and groups of keys that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+            showInfo( tr( "This item cannot be edited or dragged to a new position as it represents the module <i>%1</i> and holds all the keys and groups of keys that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
                       .arg( pT->getName() ) );
         }
         else
@@ -5631,7 +5631,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
             mpActionsMainArea->hide();
             mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
-            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the buttons, and groups of buttons as menus and toolbars that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+            showInfo( tr( "This item cannot be edited or dragged to a new position as it represents the module <i>%1</i> and holds all the buttons, and groups of buttons as menus and toolbars that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
                       .arg( pT->getName() ) );
         }
         else
@@ -5738,7 +5738,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
             mpScriptsMainArea->hide();
             mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
-            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the scripts, and groups of scripts that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+            showInfo( tr( "This item cannot be edited or dragged to a new position as it represents the module <i>%1</i> and holds all the scripts, and groups of scripts that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
                       .arg( pT->getName() ) );
         }
         else
@@ -5807,7 +5807,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
             mpTimersMainArea->hide();
             mpSourceEditorArea->hide();
             mpSystemMessageArea->show();
-            showInfo( tr( "This item cannot be edited as it represents the module <i>%1</i> and holds all the timers, offset-timers and groups of timers that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
+            showInfo( tr( "This item cannot be edited or dragged to a new position as it represents the module <i>%1</i> and holds all the timers, offset-timers and groups of timers that the module contains. It can be activated/deactived to turn on/off all the items that are inside the module and items can be dragged in and out of it as they can for other elements in the tree." )
                       .arg( pT->getName() ) );
         }
         else
@@ -5859,21 +5859,28 @@ void dlgTriggerEditor::fillout_form()
     sL << "Triggers";
     mpTriggerBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL );
     mpTriggerBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon;
-    mainIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-wizard.png" ) ), QIcon::Normal, QIcon::Off );
-    mpTriggerBaseItem->setIcon( 0, mainIcon );
+    mpTriggerBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/tools-wizard.png" ) ) ) );
     treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
     list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for(auto it=baseNodeList.begin(); it!=baseNodeList.end(); it++ )
     {
         TTrigger * pT = *it;
-        if( pT->isTempTrigger() ) continue;
-        QString s = pT->getName();
+        if( pT->isTempTrigger() )
+        {
+            continue;
+        }
+
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpTriggerBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpTriggerBaseItem->addChild( pItem );
+
+        if( pT->mModuleMasterFolder )
+        {
+            // Lock the Item so it cannot be dragged to another position in tree
+            pItem->setFlags( pItem->flags() & ~(Qt::ItemIsDragEnabled) );
+        }
 
         if( pT->hasChildren() )
         {
@@ -5983,9 +5990,7 @@ void dlgTriggerEditor::fillout_form()
     sL2 << "Timers";
     mpTimerBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL2 );
     mpTimerBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon2;
-    mainIcon2.addPixmap( QPixmap( QStringLiteral( ":/icons/chronometer.png" ) ), QIcon::Normal, QIcon::Off );
-    mpTimerBaseItem->setIcon( 0, mainIcon2 );
+    mpTimerBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/chronometer.png" ) ) ) );
     treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
     mpTriggerBaseItem->setExpanded( true );
     list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
@@ -5993,13 +5998,22 @@ void dlgTriggerEditor::fillout_form()
     for( list<TTimer *>::iterator it = baseNodeList_timers.begin(); it!=baseNodeList_timers.end(); it++ )
     {
         TTimer * pT = *it;
-        if( pT->isTempTimer() ) continue;
-        QString s = pT->getName();
+        if( pT->isTempTimer() )
+        {
+            continue;
+        }
+
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpTimerBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpTimerBaseItem->addChild( pItem );
+
+        if( pT->mModuleMasterFolder )
+        {
+            // Lock the Item so it cannot be dragged to another position in tree
+            pItem->setFlags( pItem->flags() & ~(Qt::ItemIsDragEnabled) );
+        }
 
         if( pT->hasChildren() )
         {
@@ -6115,9 +6129,7 @@ void dlgTriggerEditor::fillout_form()
     sL3 << "Scripts";
     mpScriptsBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL3 );
     mpScriptsBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon3;
-    mainIcon3.addPixmap( QPixmap( QStringLiteral( ":/icons/accessories-text-editor.png" ) ), QIcon::Normal, QIcon::Off );
-    mpScriptsBaseItem->setIcon( 0, mainIcon3 );
+    mpScriptsBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/accessories-text-editor.png" ) ) ) );
     treeWidget_scripts->insertTopLevelItem( 0, mpScriptsBaseItem );
     mpScriptsBaseItem->setExpanded( true );
     list<TScript *> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
@@ -6125,13 +6137,17 @@ void dlgTriggerEditor::fillout_form()
     for( list<TScript *>::iterator it = baseNodeList_scripts.begin(); it!=baseNodeList_scripts.end(); it++ )
     {
         TScript * pT = *it;
-        QString s = pT->getName();
-
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpScriptsBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpScriptsBaseItem->addChild( pItem );
+
+        if( pT->mModuleMasterFolder )
+        {
+            // Lock the Item so it cannot be dragged to another position in tree
+            pItem->setFlags( pItem->flags() & ~(Qt::ItemIsDragEnabled) );
+        }
 
         if( pT->hasChildren() )
         {
@@ -6218,9 +6234,7 @@ void dlgTriggerEditor::fillout_form()
     sL4 << "Aliases - Input Triggers";
     mpAliasBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL4 );
     mpAliasBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon4;
-    mainIcon4.addPixmap( QPixmap( QStringLiteral( ":/icons/system-users.png" ) ), QIcon::Normal, QIcon::Off );
-    mpAliasBaseItem->setIcon( 0, mainIcon4 );
+    mpAliasBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/system-users.png" ) ) ) );
     treeWidget_aliases->insertTopLevelItem( 0, mpAliasBaseItem );
     mpAliasBaseItem->setExpanded( true );
     list<TAlias *> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
@@ -6228,12 +6242,17 @@ void dlgTriggerEditor::fillout_form()
     for( list<TAlias *>::iterator it = baseNodeList_alias.begin(); it!=baseNodeList_alias.end(); it++ )
     {
         TAlias * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpAliasBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpAliasBaseItem->addChild( pItem );
+
+        if( pT->mModuleMasterFolder )
+        {
+            // Lock the Item so it cannot be dragged to another position in tree
+            pItem->setFlags( pItem->flags() & ~(Qt::ItemIsDragEnabled) );
+        }
 
         if( pT->hasChildren() )
         {
@@ -6318,9 +6337,7 @@ void dlgTriggerEditor::fillout_form()
     sL5 << "Buttons";
     mpActionBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL5 );
     mpActionBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon5;
-    mainIcon5.addPixmap( QPixmap( QStringLiteral( ":/icons/bookmarks.png" ) ), QIcon::Normal, QIcon::Off );
-    mpActionBaseItem->setIcon( 0, mainIcon5 );
+    mpActionBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/bookmarks.png" ) ) ) );
     treeWidget_actions->insertTopLevelItem( 0, mpActionBaseItem );
     mpActionBaseItem->setExpanded( true );
     list<TAction *> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
@@ -6328,12 +6345,17 @@ void dlgTriggerEditor::fillout_form()
     for( list<TAction *>::iterator it = baseNodeList_action.begin(); it!=baseNodeList_action.end(); it++ )
     {
         TAction * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpActionBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant( pT->getID() ) );
         mpActionBaseItem->addChild( pItem );
+
+        if( pT->mModuleMasterFolder )
+        {
+            // Lock the Item so it cannot be dragged to another position in tree
+            pItem->setFlags( pItem->flags() & ~(Qt::ItemIsDragEnabled) );
+        }
 
         if( pT->hasChildren() )
         {
@@ -6446,9 +6468,7 @@ void dlgTriggerEditor::fillout_form()
     sL6 << "Action Key Bindings";
     mpKeyBaseItem = new QTreeWidgetItem( static_cast<QTreeWidgetItem *>(0), sL6 );
     mpKeyBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon6;
-    mainIcon6.addPixmap( QPixmap( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), QIcon::Normal, QIcon::Off );
-    mpKeyBaseItem->setIcon( 0, mainIcon6 );
+    mpKeyBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ) ) );
     treeWidget_keys->insertTopLevelItem( 0, mpKeyBaseItem );
     mpKeyBaseItem->setExpanded( true );
     list<TKey *> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
@@ -6456,12 +6476,17 @@ void dlgTriggerEditor::fillout_form()
     for( list<TKey *>::iterator it = baseNodeList_key.begin(); it!=baseNodeList_key.end(); it++ )
     {
         TKey * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( mpKeyBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpKeyBaseItem->addChild( pItem );
+
+        if( pT->mModuleMasterFolder )
+        {
+            // Lock the Item so it cannot be dragged to another position in tree
+            pItem->setFlags( pItem->flags() & ~(Qt::ItemIsDragEnabled) );
+        }
 
         if( pT->hasChildren() )
         {
@@ -6551,9 +6576,7 @@ void dlgTriggerEditor::repopulateVars()
     mpVarBaseItem = new QTreeWidgetItem( sL7 );
     mpVarBaseItem->setTextAlignment( 0, Qt::AlignLeft|Qt::AlignVCenter );
     mpVarBaseItem->setBackground(0,QColor(255,254,215,255));
-    QIcon mainIcon5;
-    mainIcon5.addPixmap( QPixmap( QStringLiteral( ":/icons/variables.png" ) ), QIcon::Normal, QIcon::Off );
-    mpVarBaseItem->setIcon( 0, mainIcon5 );
+    mpVarBaseItem->setIcon( 0, QIcon( QPixmap( QStringLiteral( ":/icons/variables.png" ) ) ) );
     treeWidget_variables->clear();
     mpCurrentVarItem = 0;
     treeWidget_variables->insertTopLevelItem( 0, mpVarBaseItem );
@@ -6572,9 +6595,8 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
     for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TTrigger * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
@@ -6682,9 +6704,8 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
     for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TKey * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
@@ -6765,9 +6786,8 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
     for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TScript * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
@@ -6819,9 +6839,8 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
     for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TAlias * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
@@ -6901,9 +6920,8 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
     for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TAction * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
@@ -7009,9 +7027,8 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
     for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TTimer * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
