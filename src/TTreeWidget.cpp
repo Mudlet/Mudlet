@@ -41,13 +41,7 @@ TTreeWidget::TTreeWidget( QWidget * pW )
 , mpHost( Q_NULLPTR )
 , mOldParentID( 0 )
 , mChildID( 0 ) // This was NOT being initialised!
-, mIsTriggerTree( false )
-, mIsAliasTree( false )
-, mIsScriptTree( false )
-, mIsTimerTree( false )
-, mIsKeyTree( false )
-, mIsVarTree( false )
-, mIsActionTree( false )
+, mItemType( UnknownType )
 , mClickedItem( QModelIndex() ) // Seems to be used to detect double-clicking, this was NOT being initialised!
 {
     setSelectionMode( QAbstractItemView::SingleSelection );
@@ -57,77 +51,6 @@ TTreeWidget::TTreeWidget( QWidget * pW )
     setDropIndicatorShown( true );
     viewport()->setAcceptDrops( true );
     setDragDropMode( QAbstractItemView::InternalMove );
-}
-
-void TTreeWidget::setIsAliasTree()
-{
-    mIsAliasTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsVarTree()
-{
-    mIsVarTree = true;
-    mIsAliasTree = false;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsTriggerTree()
-{
-    mIsTriggerTree = true;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsActionTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsKeyTree = false;
-    mIsActionTree = true;
-}
-
-void TTreeWidget::setIsKeyTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = true;
-}
-
-void TTreeWidget::setIsTimerTree()
-{
-    mIsTimerTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsScriptTree()
-{
-    mIsScriptTree = true;
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
 }
 
 void TTreeWidget::setHost( Host * pH )
@@ -145,7 +68,7 @@ void TTreeWidget::getAllChildren( QTreeWidgetItem *pItem, QList< QTreeWidgetItem
 void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if( mIsVarTree && indexClicked.isValid() && mClickedItem == indexClicked )
+    if( ( getType() & VariableType ) && indexClicked.isValid() && mClickedItem == indexClicked )
     {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
@@ -185,7 +108,7 @@ void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
 void TTreeWidget::mousePressEvent( QMouseEvent *event )
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if( mIsVarTree && indexClicked.isValid() )
+    if( ( getType() & VariableType ) && indexClicked.isValid() )
     {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
@@ -258,31 +181,23 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         }
 
         int newParentID = parent.data( Qt::UserRole ).toInt();
-        // Only ONE of the following booleans should be true, can use a test for
-        // this to also enable switch selection of the right action:
-        quint8 treeType =   ( mIsActionTree ? 0x01 : 0 )
-                          + ( mIsAliasTree ? 0x02 : 0 )
-                          + ( mIsKeyTree ? 0x04 : 0 )
-                          + ( mIsScriptTree ? 0x08 : 0 )
-                          + ( mIsTimerTree ? 0x10 : 0 )
-                          + ( mIsTriggerTree ? 0x20 : 0 );
 
-        switch( treeType )
+        switch( getType() )
         {
-        case 0x01: // Action
+        case ActionType:
             mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             mpHost->getActionUnit()->updateToolbar();
             break;
-        case 0x02: // Alias
+        case AliasType:
             mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             break;
-        case 0x04: // Key
+        case KeyType:
             mpHost->getKeyUnit()->reParentKey( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             break;
-        case 0x08:
+        case ScriptType:
             mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             break;
-        case 0x10: // Timer
+        case TimerType:
             { // Code must be in braces to confine scope of icon and pTChild to this case...!
                 mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
                 TTimer * pTChild = mpHost->getTimerUnit()->getTimer( mChildID );
@@ -366,11 +281,13 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                 }
             }
             break;
-        case 0x20: // Trigger
+        case TriggerType:
             mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
             break;
+        case VariableType:
+            // Variables should fall through into default case:
         default:
-            qWarning() << "TTreeWidget::rowsInserted( const QModelIndex &, int, int ) ERROR - Invalid combination of tree-type values detected:" << treeType;
+            qWarning() << "TTreeWidget::rowsInserted( const QModelIndex &, int, int ) ERROR - Invalid tree-type detected:" << getType();
         }
 
         mChildID = 0;
@@ -414,7 +331,7 @@ void TTreeWidget::dropEvent(QDropEvent *event)
         }
     }
 
-    if ( mIsVarTree )
+    if( getType() & VariableType )
     {
         LuaInterface * lI = mpHost->getLuaInterface();        
         if ( ! lI->validMove( pItem ) )

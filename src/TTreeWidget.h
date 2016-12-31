@@ -47,29 +47,36 @@ public:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void setHost( Host * pH );
-    void setIsScriptTree();
-    void setIsTimerTree();
-    void setIsTriggerTree();
-    void setIsAliasTree();
-    void setIsActionTree();
-    void setIsVarTree();
-    void setIsKeyTree();
+
+    enum ItemTypeFlag {
+        UnknownType = 0x0,   // For initialastion purposes
+        ActionType = 0x1,
+        AliasType = 0x2,
+        KeyType = 0x4,
+        ScriptType = 0x8,
+        TimerType = 0x10,
+        TriggerType = 0x20,
+        VariableType = 0x40
+    };
+
+    Q_DECLARE_FLAGS(ItemType, ItemTypeFlag)
+
+    void setType( const ItemType itemType ) { mItemType = itemType; }
+    ItemType getType() const { return mItemType; }
     void beginInsertRows( const QModelIndex & parent, int first, int last );
     void getAllChildren( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
+
 
 private:
     bool mIsDropAction;
     QPointer<Host> mpHost;
     int mOldParentID;
     int mChildID;
-    bool mIsTriggerTree;
-    bool mIsAliasTree;
-    bool mIsScriptTree;
-    bool mIsTimerTree;
-    bool mIsKeyTree;
-    bool mIsVarTree;
-    bool mIsActionTree;
+
+    ItemType mItemType; // This detail was being carries inside a series of booleans of form: mIsXXXTree!
     QModelIndex mClickedItem;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(TTreeWidget::ItemType)
 
 #endif // MUDLET_TTREEWIDGET_H
