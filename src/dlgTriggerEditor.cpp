@@ -3936,46 +3936,49 @@ void dlgTriggerEditor::saveTrigger()
     TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
     if( pT )
     {
+        QString old_name = pT->getName();
+
+        if( ! pT->mModuleMasterFolder )
+        {
+            QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
+            pT->setName( name );
+            pItem->setText( 0, name );
+            pT->setCommand( mpTriggersMainArea->trigger_command->text() );
+            pT->setRegexCodeList( regexList, regexPropertyList );
+
+            // This causes the script to be evaluated and sets the value that is
+            // returned by pT->state() - it must be done to update the saved
+            // value for the trigger:
+            pT->setScript( mpSourceEditor->toPlainText() );
+            pT->setIsMultiline( mpTriggersMainArea->checkBox_multlinetrigger->isChecked() );
+            pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
+            pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
+            pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
+            pT->mStayOpen = mpTriggersMainArea->spinBox_stayOpen->value();
+            pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
+            pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
+
+            QPalette FgColorPalette( mpTriggersMainArea->pushButtonFgColor->palette() );
+            QPalette BgColorPalette( mpTriggersMainArea->pushButtonBgColor->palette() );
+            QColor fgColor = FgColorPalette.color( QPalette::Button );
+            QColor bgColor = BgColorPalette.color( QPalette::Button );
+            pT->setFgColor( fgColor );
+            pT->setBgColor( bgColor );
+            pT->setIsColorizerTrigger( mpTriggersMainArea->colorizerTrigger->isChecked() );
+
+            // If this is a New Trigger or Group (the name before saving is
+            // "New Trigger" or "New Trigger Group") then automagically
+            // enable it for the user...
+            if( ! (  old_name.compare( tr( "New Trigger", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) )
+                  && old_name.compare( tr( "New Trigger Group", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) ) ) )
+            {
+                pT->setIsActive( true );
+            }
+        }
+
         QIcon icon;
         if( pT->state() )
         {
-            QString old_name = pT->getName();
-
-            if( ! pT->mModuleMasterFolder )
-            {
-                QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
-                pT->setName( name );
-                pItem->setText( 0, name );
-                pT->setCommand( mpTriggersMainArea->trigger_command->text() );
-                pT->setRegexCodeList( regexList, regexPropertyList );
-
-                pT->setScript( mpSourceEditor->toPlainText() );
-                pT->setIsMultiline( mpTriggersMainArea->checkBox_multlinetrigger->isChecked() );
-                pT->mPerlSlashGOption = mpTriggersMainArea->perlSlashGOption->isChecked();
-                pT->mFilterTrigger = mpTriggersMainArea->filterTrigger->isChecked();
-                pT->setConditionLineDelta( mpTriggersMainArea->spinBox_linemargin->value() );
-                pT->mStayOpen = mpTriggersMainArea->spinBox_stayOpen->value();
-                pT->mSoundTrigger = mpTriggersMainArea->soundTrigger->isChecked();
-                pT->setSound( mpTriggersMainArea->lineEdit_soundFile->text() );
-
-                QPalette FgColorPalette( mpTriggersMainArea->pushButtonFgColor->palette() );
-                QPalette BgColorPalette( mpTriggersMainArea->pushButtonBgColor->palette() );
-                QColor fgColor = FgColorPalette.color( QPalette::Button );
-                QColor bgColor = BgColorPalette.color( QPalette::Button );
-                pT->setFgColor( fgColor );
-                pT->setBgColor( bgColor );
-                pT->setIsColorizerTrigger( mpTriggersMainArea->colorizerTrigger->isChecked() );
-
-                // If this is a New Trigger or Group (the name before saving is
-                // "New Trigger" or "New Trigger Group") then automagically
-                // enable it for the user...
-                if( ! (  old_name.compare( tr( "New Trigger", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) )
-                      && old_name.compare( tr( "New Trigger Group", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) ) ) )
-                {
-                    pT->setIsActive( true );
-                }
-            }
-
             if( pT->isFilterChain() )
             {
                 if( pT->isActive() )
@@ -4513,25 +4516,29 @@ void dlgTriggerEditor::saveScript()
         TScript * pT = mpHost->getScriptUnit()->getScript( triggerID );
         if( pT )
         {
+            old_name = pT->getName();
+            if( ! pT->mModuleMasterFolder )
+            {
+                pItem->setText( 0, name );
+                pT->setName( name );
+                pT->setEventHandlerList( handlerList );
+
+                // This causes the script to be evaluated and sets the value that is
+                // returned by pT->state() - it must be done to update the saved
+                // value for the trigger:
+                pT->setScript( mpSourceEditor->toPlainText() );
+                pT->compile();
+
+                if( ! (  old_name.compare( tr( "New Script", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) )
+                      && old_name.compare( tr( "New Script Group", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) ) ) )
+                {
+                    pT->setIsActive( true );
+                }
+            }
+
             QIcon icon;
             if( pT->state() )
             {
-                old_name = pT->getName();
-                if( ! pT->mModuleMasterFolder )
-                {
-                    pItem->setText( 0, name );
-                    pT->setName( name );
-                    pT->setEventHandlerList( handlerList );
-                    pT->setScript( mpSourceEditor->toPlainText() );
-                    pT->compile();
-
-                    if( ! (  old_name.compare( tr( "New Script", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) )
-                          && old_name.compare( tr( "New Script Group", "This string is used programmatically, ensure all uses have same translation (2 of 2)" ) ) ) )
-                    {
-                        pT->setIsActive( true );
-                    }
-                }
-
                 if( pT->isFolder() )
                 {
                     if( pT->mModuleMasterFolder )
