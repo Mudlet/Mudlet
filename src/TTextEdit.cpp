@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -983,18 +983,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
     {
         mpConsole->scrollDown( 3 );
     }
-
-    int timeOffset = 0;
-    y = ( event->y() / mFontHeight ) + imageTopLine();
-    if( mShowTimeStamps )
-    {
-        if( mpBuffer->timeBuffer.size() > y )
-        {
-            timeOffset = 13;
-        }
-    }
-    x = ( event->x() / mFontWidth ) - timeOffset;
-    if( ( y < 0 ) || ( y > (int) mpBuffer->size()-1 ) )
+    if( ( y > (int) mpBuffer->size()-1 ) )
     {
         return;
     }
@@ -1006,14 +995,14 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
         int oldAY = mPA.y();
         int oldBY = mPB.y();
         if( PC.y() == mDragStartY ){
-          mPA.setY( PC.y() );
-          mPB.setY( PC.y() );
+            mPA.setY( PC.y() );
+            mPB.setY( PC.y() );
         } else if( PC.y() < mDragStartY ){
-          mPA.setY( PC.y() );
-          mPB.setY( mDragStartY );
+            mPA.setY( PC.y() );
+            mPB.setY( mDragStartY );
         } else if( PC.y() > mDragStartY ){
-          mPA.setY( mDragStartY );
-          mPB.setY( PC.y() );
+            mPA.setY( mDragStartY );
+            mPB.setY( PC.y() );
         }
         
         if( oldAY < mPA.y() ){
@@ -1024,11 +1013,11 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
           }
         }
         if( oldBY > mPB.y() ){
-          for( int y = mPB.y()+1; y <= oldBY; y++ ){
-            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            for( int y = mPB.y()+1; y <= oldBY; y++ ){
+                for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
+                    mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                }
             }
-          }
         }
         
         mPA.setX( 0 );
@@ -1189,12 +1178,14 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     if( event->button() == Qt::LeftButton )
     {
         if( QGuiApplication::queryKeyboardModifiers().testFlag(Qt::ControlModifier) ) {
-          mCtrlSelecting = true;
+            mCtrlSelecting = true;
         }
         int x = event->x() / mFontWidth;
         if( mShowTimeStamps )
         {
-            if( x < 13 ) mCtrlSelecting = true;
+            if( x < 13 ) {
+                mCtrlSelecting = true;
+            }
             x -= 13;
         }
         int y = ( event->y() / mFontHeight ) + imageTopLine();
