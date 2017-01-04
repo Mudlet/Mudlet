@@ -1177,7 +1177,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     }
     if( event->button() == Qt::LeftButton )
     {
-        if( QGuiApplication::queryKeyboardModifiers().testFlag(Qt::ControlModifier) ) {
+        if( event->modifiers() & Qt::ControlModifier ) {
             mCtrlSelecting = true;
         }
         int x = event->x() / mFontWidth;
@@ -1239,8 +1239,8 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
             if ( xind > 0 ||
                  mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at( xind ) ) )
                 mPA.setX ( xind+1 );
-            else if ( xind > 0 )
-                mPA.setX ( xind );
+            else
+                mPA.setX ( qMax( 0, xind ) );
             mPA.setY ( yind );
             highlight();
             event->accept();
