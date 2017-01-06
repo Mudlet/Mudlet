@@ -3581,7 +3581,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
 int TLuaInterpreter::raiseWindow( lua_State *L )
 {
-    QString windowName = "";
+    QString windowName;
     if( ! lua_isstring( L, 1 ) )
     {
         lua_pushstring( L, "raiseWindow: wrong argument type" );
@@ -3590,7 +3590,7 @@ int TLuaInterpreter::raiseWindow( lua_State *L )
     }
     else
     {
-        windowName = lua_tostring( L, 1 );
+        windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_pushboolean( L, pHost->mpConsole->raiseWindow( windowName ));
@@ -3599,7 +3599,7 @@ int TLuaInterpreter::raiseWindow( lua_State *L )
 
 int TLuaInterpreter::lowerWindow( lua_State *L )
 {
-    QString windowName = "";
+    QString windowName;
     if( ! lua_isstring( L, 1 ) )
     {
         lua_pushstring( L, "lowerWindow: wrong argument type" );
@@ -3608,7 +3608,7 @@ int TLuaInterpreter::lowerWindow( lua_State *L )
     }
     else
     {
-        windowName = lua_tostring( L, 1 );
+        windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_pushboolean( L, pHost->mpConsole->lowerWindow( windowName ));
