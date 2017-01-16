@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QStringList>
 #include <QDebug>
+#include <QtMath>
 #include "post_guard.h"
 
 
@@ -62,10 +63,12 @@ XMLimport::XMLimport( Host * pH )
 , module( 0 )
 , mMaxRoomId( 0 )
 , mMaxAreaId( -1 )
+, mVersionMajor( 0 ) // 0 to 255
+, mVersionMinor( 0 ) // 0 to 999 for 3 digit decimal value
 {
 }
 
-bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleFlag )
+bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleFlag, QString * pVersionString )
 {
     mPackageName = packName;
     setDevice( device );
@@ -150,8 +153,47 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
 
         if( isStartElement() )
         {
-            if( name() == "MudletPackage" )// && attributes().value("version") == "1.0")
+            if( name() == QStringLiteral( "MudletPackage" ) )
             {
+                QString versionString;
+                if( attributes().hasAttribute( QStringLiteral( "version" ) ) ) {
+                    versionString = attributes().value( QStringLiteral( "version" ) ).toString();
+                    if( ! versionString.isEmpty() ) {
+                        bool isOk = false;
+                        float versionNumber = versionString.toFloat( &isOk );
+                        if( isOk ) {
+                            mVersionMajor = qFloor( versionNumber );
+                            mVersionMinor = qRound( 1000.0 * versionNumber ) - ( 1000 * mVersionMajor );
+                        }
+                        if( pVersionString ) {
+                            *pVersionString = versionString;
+                        }
+                    }
+                }
+
+                if( ( mVersionMajor > 1 )
+                 || ( mVersionMajor == 1 && mVersionMinor ) ) {
+
+                    // Non-previous default of "1.0" encountered
+                    // since we currently haven't coded anything for
+                    // higher then moan, but do not stop, processing
+                    QString moanMsg = tr( "[ ALERT ] - detected file being read is a later version (%1) than this version\n"
+                                                      "of Mudlet expects!  It is possible that further issues may be found\n"
+                                                      "or it may still load and work properly, this is merely an advisory\n"
+                                                      "message!" )
+                                      .arg( versionString );
+                    mpHost->postMessage( moanMsg );
+                }
+                else if( !( mVersionMajor || mVersionMinor ) ) {
+
+                    // No version string in Xml data - also moan
+                    QString moanMsg = tr( "[ ALERT ] - detected file being read has no version data whereas this version\n"
+                                                      "of Mudlet expects a marking of 1.000!  This is merely an advisory\n"
+                                                      "message coming about because this detail is now checked in case\n"
+                                                      "changes are made in the future that would cause problems for then\n"
+                                                      "older forms such as this current instance of the Mudlet application." );
+                    mpHost->postMessage( moanMsg );
+                }
                 readPackage();
             }
             else if( name() == "map" )
@@ -2123,4 +2165,11 @@ void XMLimport::readIntegerList( QList<int> & list )
             }
         }
     }
+}
+
+// This will be a string representation of a decimal float with three places of
+// decimals
+void XMLimport::getVersionString( QString & versionString )
+{
+    versionString = QString::number( static_cast<float>( mVersionMajor + 1000.0f * mVersionMinor ), 'f', 3 );
 }
