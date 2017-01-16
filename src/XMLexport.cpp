@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,6 +37,10 @@
 
 
 using namespace std;
+
+const QString XMLexport::scmMudletXmlVersionString = QString::number( 1.0f, 'f', 3 );
+// Previously hardcode to "1.0" and not tested/used, now uses three decimal
+// places, can be "0.000" to "255.999"
 
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
@@ -94,13 +99,14 @@ XMLexport::XMLexport( TKey * pT )
     setAutoFormatting(true);
 }
 
-bool XMLexport::writeModuleXML( QIODevice * device, QString moduleName){
+bool XMLexport::writeModuleXML( QIODevice * device, QString moduleName)
+{
     setDevice(device);
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "TriggerPackage" );
     Host * pT = mpHost;
@@ -216,7 +222,7 @@ bool XMLexport::exportHost( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "HostPackage" );
     writeHost( mpHost );
@@ -495,7 +501,7 @@ bool XMLexport::exportGenericPackage( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeGenericPackage( mpHost );
 
@@ -578,7 +584,7 @@ bool XMLexport::exportTrigger( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "TriggerPackage" );
     writeTrigger( mpTrigger );
@@ -663,7 +669,7 @@ bool XMLexport::exportAlias( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "AliasPackage" );
     writeAlias( mpAlias );
@@ -717,7 +723,7 @@ bool XMLexport::exportAction( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "ActionPackage" );
     writeAction( mpAction );
@@ -787,7 +793,7 @@ bool XMLexport::exportTimer( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "TimerPackage" );
     writeTimer( mpTimer );
@@ -844,7 +850,7 @@ bool XMLexport::exportScript( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "ScriptPackage" );
     writeScript( mpScript );
@@ -904,7 +910,7 @@ bool XMLexport::exportKey( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute( QStringLiteral( "version" ), scmMudletXmlVersionString );
 
     writeStartElement( "KeyPackage" );
     writeKey( mpKey );
