@@ -2175,5 +2175,5 @@ void XMLimport::readIntegerList( QList<int> & list )
 // decimals
 void XMLimport::getVersionString( QString & versionString )
 {
-    versionString = QString::number( static_cast<float>( mVersionMajor + 1000.0f * mVersionMinor ), 'f', 3 );
+    versionString = QString::number( ( mVersionMajor * 1000 + mVersionMinor ) / 1000.0, 'f', 3 );
 }
