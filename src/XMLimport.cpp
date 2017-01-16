@@ -42,8 +42,11 @@
 // clang-format: on
 #include <QDebug>
 #include <QStringList>
+#if QT_VERSION > 0x050002
 #include <QtMath>
-// clang-format: off
+#else
+#include <QtCore/qmath.h>
+#endif
 #include "post_guard.h"
 // clang-format: on
 
