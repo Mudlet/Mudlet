@@ -41,7 +41,11 @@
 #include "pre_guard.h"
 #include <QStringList>
 #include <QDebug>
+#if QT_VERSION > 0x050002
 #include <QtMath>
+#else
+#include <QtCore/qmath.h>
+#endif
 #include "post_guard.h"
 
 
