@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -2679,6 +2680,42 @@ bool TConsole::setBackgroundColor(const QString & name, int r, int g, int b, int
     else
         return false;
 
+}
+
+bool TConsole::raiseWindow(const QString & name )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->raise();
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->raise();
+        return true;
+    }
+    else
+        return false;
+}
+
+bool TConsole::lowerWindow(const QString & name )
+{
+    std::string key = name.toLatin1().data();
+    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
+    {
+        mSubConsoleMap[key]->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    else if( mLabelMap.find( key ) != mLabelMap.end() )
+    {
+        mLabelMap[key]->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    else
+        return false;
 }
 
 bool TConsole::showWindow(const QString & name )

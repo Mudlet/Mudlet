@@ -3579,6 +3579,42 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     return 1;
 }
 
+int TLuaInterpreter::raiseWindow( lua_State *L )
+{
+    QString windowName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "raiseWindow: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushboolean( L, pHost->mpConsole->raiseWindow( windowName ));
+    return 1;
+}
+
+int TLuaInterpreter::lowerWindow( lua_State *L )
+{
+    QString windowName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "lowerWindow: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    lua_pushboolean( L, pHost->mpConsole->lowerWindow( windowName ));
+    return 1;
+}
+
 int TLuaInterpreter::showUserWindow( lua_State *L )
 {
     string luaSendText="";
@@ -12959,6 +12995,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
     lua_register( pGlobalLua, "createMiniConsole", TLuaInterpreter::createMiniConsole );
     lua_register( pGlobalLua, "createLabel", TLuaInterpreter::createLabel );
+    lua_register( pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow );
+    lua_register( pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow );
     lua_register( pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow );
     lua_register( pGlobalLua, "showWindow", TLuaInterpreter::showUserWindow );
     lua_register( pGlobalLua, "createBuffer", TLuaInterpreter::createBuffer );
