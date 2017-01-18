@@ -978,7 +978,7 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
     {
         mpConsole->scrollUp( 3 );
     }
-    if( event->y() > height()-10 )
+    if( event->y() >= height()-10 )
     {
         mpConsole->scrollDown( 3 );
     }
