@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -73,10 +73,10 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
 
     module = moduleFlag;
 
-    if( ! packName.isEmpty() )
-    {
+    if( ! packName.isEmpty() ) {
+
         mpKey = new TKey( 0, mpHost );
-        if (module){
+        if( module ) {
             mpKey->mModuleMasterFolder=true;
             mpKey->mModuleMember=true;
         }
@@ -86,7 +86,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpKey->setIsFolder( true );
 
         mpTrigger = new TTrigger( 0, mpHost );
-        if (module){
+        if( module ) {
             mpTrigger->mModuleMasterFolder=true;
             mpTrigger->mModuleMember=true;
         }
@@ -96,32 +96,30 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpTrigger->setIsFolder( true );
 
         mpTimer = new TTimer( 0, mpHost );
-        mpTimer->setIsFolder( true );
-
-        if (module){
+        if( module ) {
             mpTimer->mModuleMasterFolder=true;
             mpTimer->mModuleMember=true;
         }
-
         mpTimer->setPackageName( mPackageName );
-        mpTimer->setName( mPackageName );
         mpTimer->setIsActive( true );
+        mpTimer->setName( mPackageName );
+        mpTimer->setIsFolder( true );
+
 
         mpAlias = new TAlias( 0, mpHost );
-        if (module){
+        if( module ) {
             mpAlias->mModuleMasterFolder=true;
             mpAlias->mModuleMember=true;
         }
         mpAlias->setPackageName( mPackageName );
-        mpAlias->setName( mPackageName );
-        mpAlias->setIsFolder( true );
-        QString _nothing = "";
-        mpAlias->setScript(_nothing);
-        mpAlias->setRegexCode("");
         mpAlias->setIsActive( true );
+        mpAlias->setName( mPackageName );
+        mpAlias->setScript( QString() );
+        mpAlias->setRegexCode( QString() );
+        mpAlias->setIsFolder( true );
 
         mpAction = new TAction( 0, mpHost );
-        if (module){
+        if( module ) {
             mpAction->mModuleMasterFolder=true;
             mpAction->mModuleMember=true;
         }
@@ -129,8 +127,9 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpAction->setIsActive( true );
         mpAction->setName( mPackageName );
         mpAction->setIsFolder( true );
+
         mpScript = new TScript( 0, mpHost );
-        if (module){
+        if( module ) {
             mpScript->mModuleMasterFolder=true;
             mpScript->mModuleMember=true;
         }
@@ -138,6 +137,7 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpScript->setIsActive( true );
         mpScript->setName( mPackageName );
         mpScript->setIsFolder( true );
+
         mpHost->getTriggerUnit()->registerTrigger( mpTrigger );
         mpHost->getTimerUnit()->registerTimer( mpTimer );
         mpHost->getAliasUnit()->registerAlias( mpAlias );
@@ -145,122 +145,101 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpHost->getKeyUnit()->registerKey( mpKey );
         mpHost->getScriptUnit()->registerScript( mpScript );
     }
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
         readNext();
 
-        if( isStartElement() )
-        {
-            if( name() == "MudletPackage" )
-            {
+        if( isStartElement() ) {
+            if( name() == "MudletPackage" ) {
                 readPackage();
             }
-            else if( name() == "map" )
-            {
+            else if( name() == "map" ) {
                 readMap();
                 mpHost->mpMap->audit();
             }
-            else
-            {
-                qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
+            else {
+                qDebug().nospace() << "XMLimport::importPackage(...) ERROR: unrecognised element with name: "
+                                   << name().toString()
+                                   << "and content: "
+                                   << text().toString();
             }
         }
     }
 
-    if( gotTimer && ! packName.isEmpty() )
-    {
-        mpTimer->setIsActive( true );
-        mpTimer->enableTimer( mpTimer->getID() );
-    }
 
-    if( gotAlias && ! packName.isEmpty() )
-    {
-        mpAlias->setIsActive( true );
-    }
+    if( ! packName.isEmpty() ) {
+        if( ! gotTrigger ) {
+             mpHost->getTriggerUnit()->unregisterTrigger( mpTrigger );
+             delete mpTrigger;
+        }
 
-    if( gotAction && ! packName.isEmpty() )
-    {
-        mpHost->getActionUnit()->updateToolbar();
-    }
-
-    if( ! packName.isEmpty())
-    {
-       if( ! gotTrigger )
-       {
-            mpHost->getTriggerUnit()->unregisterTrigger( mpTrigger );
-            delete mpTrigger;
-       }
-       if( ! gotTimer )
-       {
+        if( gotTimer ) { // packName is NOT empty for modules...!
+            mpTimer->setIsActive( true );
+            mpTimer->enableTimer( mpTimer->getID() );
+        }
+        else {
             mpHost->getTimerUnit()->unregisterTimer( mpTimer );
             delete mpTimer;
-       }
-       if( ! gotAlias )
-       {
+        }
+
+        if( gotAlias ) {
+            mpAlias->setIsActive( true );
+        }
+        else {
             mpHost->getAliasUnit()->unregisterAlias( mpAlias );
             delete mpAlias;
-       }
-       if( ! gotAction )
-       {
+        }
+
+        if( gotAction ) {
+            mpHost->getActionUnit()->updateToolbar();
+        }
+        else {
             mpHost->getActionUnit()->unregisterAction( mpAction );
             delete mpAction;
-       }
-       if( ! gotKey )
-       {
-            mpHost->getKeyUnit()->unregisterKey( mpKey );
-            delete mpKey;
-       }
-       if( ! gotScript )
-       {
-            mpHost->getScriptUnit()->unregisterScript( mpScript );
-            delete mpScript;
-       }
+        }
+
+        if( ! gotKey ) {
+             mpHost->getKeyUnit()->unregisterKey( mpKey );
+             delete mpKey;
+        }
+
+        if( ! gotScript ) {
+             mpHost->getScriptUnit()->unregisterScript( mpScript );
+             delete mpScript;
+        }
     }
+
     return ! error();
 }
 
 void XMLimport::readVariableGroup( TVar *pParent )
 {
-    TVar * var;
-    if( pParent )
-    {
-        var = new TVar( pParent );
-    }
-    else
-    {
-        var = new TVar( );
-    }
-
+    TVar * var = new TVar( pParent );
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     QString keyName, value;
     int keyType = 0;
     int valueType;
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
+        if( isEndElement() ) {
+            break;
+        }
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isStartElement() ) {
+            if( name() == "name" ) {
                 keyName = readElementText();
                 continue;
             }
-
-            else if( name() == "value")
-            {
+            else if( name() == "value" ) {
                 value = readElementText();
                 continue;
             }
-            else if( name() == "keyType" )
-            {
+            else if( name() == "keyType" ) {
                 keyType = readElementText().toInt() ;
                 continue;
             }
-            else if ( name() == "valueType" )
-            {
+            else if ( name() == "valueType" ) {
                 valueType = readElementText().toInt();
                 var->setName( keyName, keyType );
                 var->setValue( value, valueType );
@@ -268,12 +247,7 @@ void XMLimport::readVariableGroup( TVar *pParent )
                 lI->setValue( var );
                 continue;
             }
-            else if( name() == "VariableGroup" )
-            {
-                readVariableGroup( var );
-            }
-            else if( name() == "Variable" )
-            {
+            else if( name() == "VariableGroup" || name() == "Variable" ) {
                 readVariableGroup( var );
             }
         }
@@ -284,15 +258,14 @@ void XMLimport::readHiddenVariables()
 {
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
+        if( isEndElement() ) {
+            break;
+        }
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isStartElement() ) {
+            if( name() == "name" ) {
                 QString var = readElementText();
                 vu->addHidden( var );
                 continue;
@@ -306,22 +279,14 @@ void XMLimport::readVariablePackage()
     LuaInterface * lI = mpHost->getLuaInterface();
     VarUnit * vu = lI->getVarUnit();
     mpVar = vu->getBase();
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( isStartElement() )
-        {
-            if( name() == "VariableGroup" )
-            {
+        if( isStartElement() ) {
+            if( name() == "VariableGroup" || name() == "Variable" ) {
                 readVariableGroup( mpVar );
             }
-            else if( name() == "Variable" )
-            {
-                readVariableGroup( mpVar );
-            }
-            else if ( name() == "HiddenVariables")
-            {
-                readHiddenVariables( );
+            else if( name() == "HiddenVariables" ) {
+                readHiddenVariables();
             }
         }
     }
@@ -331,28 +296,23 @@ void XMLimport::readMap()
 {
     QMultiHash<int, int> tempAreaRoomsHash; // Keys: area id, Values: a room id in that area
 
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
 
-            if( name() == "areas" )
-            {
+            if( name() == "areas" ) {
                 mpHost->mpMap->mpRoomDB->clearMapDB();
                 mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing area data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 0, 3 );
                 readAreas();
             }
-            else if( name() == "rooms" )
-            {
+            else if( name() == "rooms" ) {
                 mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing room data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 1, 3 );
                 readRooms( tempAreaRoomsHash );
             }
-            else if( name() == "environments" )
-            {
+            else if( name() == "environments" ) {
                 mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing environment data..." ) );
                 mpHost->mpMap->reportProgressToProgressDialog( 2, 3 );
                 readEnvColors();
@@ -384,11 +344,10 @@ void XMLimport::readMap()
 
 void XMLimport::readEnvColors()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( name() == "environment" )
-        {
+
+        if( name() == "environment" ) {
             readEnvColor();
         }
     }
@@ -397,22 +356,20 @@ void XMLimport::readEnvColors()
 void XMLimport::readEnvColor()
 {
 
-    int id = attributes().value("id").toString().toInt();
-    int color = attributes().value("color").toString().toInt();
+    int id = attributes().value( "id" ).toString().toInt();
+    int color = attributes().value( "color" ).toString().toInt();
     mpHost->mpMap->envColors[id] = color;
 }
 
 void XMLimport::readAreas()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( name() == "areas")
-        {
+
+        if( name() == "areas" ) {
             break;
         }
-        if( name() == "area" )
-        {
+        else if( name() == "area" ) {
             readArea();
         }
 
@@ -421,8 +378,8 @@ void XMLimport::readAreas()
 
 void XMLimport::readArea()
 {
-    int id = attributes().value("id").toString().toInt();
-    QString name = attributes().value("name").toString();
+    int id = attributes().value( "id" ).toString().toInt();
+    QString name = attributes().value( "name" ).toString();
     mpHost->mpMap->mpRoomDB->addArea( id, name );
 }
 
@@ -430,23 +387,19 @@ void XMLimport::readRooms( QMultiHash<int, int> & areaRoomsHash )
 {
 
     unsigned int roomCount = 0;
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
 
-        if( Q_LIKELY( isStartElement() ) )
-        {
-            if( Q_LIKELY( name() == QStringLiteral( "room" ) ) )
-            {
+        if( Q_LIKELY( isStartElement() ) ) {
+            if( Q_LIKELY( name() == QStringLiteral( "room" ) ) ) {
                 readRoom( areaRoomsHash, &roomCount );
             }
-            else
-            {
+            else {
                 readUnknownMapElement();
             }
+
         }
-        else if( isEndElement() )
-        {
+        else if( isEndElement() ) {
             break;
         }
     }
@@ -462,104 +415,81 @@ void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, unsigned in
     pT->name = attributes().value( QStringLiteral( "title" ) ).toString();
     pT->environment = attributes().value( QStringLiteral( "environment" ) ).toString().toInt();
 
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
 
-        if( Q_UNLIKELY( pT->id < 1 ) )
-        {
+        if( Q_UNLIKELY( pT->id < 1 ) ) {
             continue; // Skip further tests on exits as we'd have to throw away
                       // this invalid room and it would mess up the entranceMultiHash
         }
-        else if( Q_LIKELY( name() == QStringLiteral( "exit" ) ) )
-        {
+        else if( Q_LIKELY( name() == QStringLiteral( "exit" ) ) ) {
             QString dir = attributes().value( QStringLiteral( "direction" ) ).toString();
             int e = attributes().value( QStringLiteral( "target" ) ).toString().toInt();
-            if( dir.isEmpty() )
-            {
+            if( dir.isEmpty() ) {
                 continue;
             }
-            else if( dir == QStringLiteral( "north" ) )
-            {
+            else if( dir == QStringLiteral( "north" ) ) {
                 pT->north = e;
             }
-            else if( dir == QStringLiteral( "east" ) )
-            {
+            else if( dir == QStringLiteral( "east" ) ) {
                 pT->east = e;
             }
-            else if( dir == QStringLiteral( "south" ) )
-            {
+            else if( dir == QStringLiteral( "south" ) ) {
                 pT->south = e;
             }
-            else if( dir == QStringLiteral( "west" ) )
-            {
+            else if( dir == QStringLiteral( "west" ) ) {
                 pT->west = e;
             }
-            else if( dir == QStringLiteral( "up" ) )
-            {
+            else if( dir == QStringLiteral( "up" ) ) {
                 pT->up = e;
             }
-            else if( dir == QStringLiteral( "down" ) )
-            {
+            else if( dir == QStringLiteral( "down" ) ) {
                 pT->down = e;
             }
-            else if( dir == QStringLiteral( "northeast" ) )
-            {
+            else if( dir == QStringLiteral( "northeast" ) ) {
                 pT->northeast = e;
             }
-            else if( dir == QStringLiteral( "southwest" ) )
-            {
+            else if( dir == QStringLiteral( "southwest" ) ) {
                 pT->southwest = e;
             }
-            else if( dir == QStringLiteral( "southeast" ) )
-            {
+            else if( dir == QStringLiteral( "southeast" ) ) {
                 pT->southeast = e;
             }
-            else if( dir == QStringLiteral( "northwest" ) )
-            {
+            else if( dir == QStringLiteral( "northwest" ) ) {
                 pT->northwest = e;
             }
-            else if( dir == QStringLiteral( "in" ) )
-            {
+            else if( dir == QStringLiteral( "in" ) ) {
                 pT->in = e;
             }
-            else if( dir == QStringLiteral( "out" ) )
-            {
+            else if( dir == QStringLiteral( "out" ) ) {
                 pT->out = e;
             }
-            else
-            {
+            else {
                 // TODO: Handle Special Exits
             }
-            continue;
         }
-        else if( name() == QStringLiteral( "coord" ) )
-        {
-            if( attributes().value("x").toString().isEmpty() )
-            {
+        else if( name() == QStringLiteral( "coord" ) ) {
+
+            if( attributes().value( "x" ).toString().isEmpty() ) {
                 continue;
             }
 
             pT->x = attributes().value( QStringLiteral( "x" ) ).toString().toInt();
             pT->y = attributes().value( QStringLiteral( "y" ) ).toString().toInt();
             pT->z = attributes().value( QStringLiteral( "z" ) ).toString().toInt();
-            continue;
         }
-        else if( Q_UNLIKELY( name().isEmpty() ) )
-        {
+        else if( Q_UNLIKELY( name().isEmpty() ) ) {
+
             continue;
         }
 
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
     }
 
-    if( pT->id > 0 )
-    {
-        if( ( ++( *roomCount ) % 100 == 0 ) )
-        {
+    if( pT->id > 0 ) {
+        if( ( ++( *roomCount ) % 100 == 0 ) ) {
             mpHost->mpMap->reportStringToProgressDialog( tr( "Parsing room data [count: %1]..." ).arg( *roomCount ) );
         }
         areamRoomMultiHash.insert( pT->area, pT->id );
@@ -568,153 +498,103 @@ void XMLimport::readRoom( QMultiHash<int, int> & areamRoomMultiHash, unsigned in
         mpHost->mpMap->mpRoomDB->addRoom( pT->id, pT, true );
         mMaxRoomId = qMax( mMaxRoomId, pT->id ); //Wasn't used but now maintains max Room Id
     }
-    else
-    {
+    else {
         delete pT;
     }
 }
 
 void XMLimport::readUnknownMapElement()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
 
         readNext();
 
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
+        else if( isStartElement() ) {
             readMap();
         }
     }
 }
 
-// Not used:
-//void XMLimport::readUnknownRoomElement()
-//{
-//    while( ! atEnd() )
-//    {
-
-//        readNext();
-//        qDebug() << "[ERROR]: UNKNOWN room element: name="
-//                 << name().toString();
-
-//        if( isEndElement() )
-//        {
-//            break;
-//        }
-
-//        if( isStartElement() )
-//        {
-//            readRoom();
-//        }
-//    }
-//}
-
-
-
 void XMLimport::readPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() )
-        {
+
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
-            if( name() == "HostPackage" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "HostPackage" ) {
                 readHostPackage();
-                continue;
             }
-            if( name() == "TriggerPackage" )
-            {
+            else if( name() == "TriggerPackage" ) {
                 readTriggerPackage();
-                continue;
             }
-            else if( name() == "TimerPackage" )
-            {
+            else if( name() == "TimerPackage" ) {
                 readTimerPackage();
-                continue;
             }
-            else if( name() == "AliasPackage" )
-            {
+            else if( name() == "AliasPackage" ) {
                 readAliasPackage();
-                continue;
             }
-            else if( name() == "ActionPackage" )
-            {
+            else if( name() == "ActionPackage" ) {
                 readActionPackage();
-                continue;
             }
-            else if( name() == "ScriptPackage" )
-            {
+            else if( name() == "ScriptPackage" ) {
                 readScriptPackage();
-                continue;
             }
-            else if( name() == "KeyPackage" )
-            {
+            else if( name() == "KeyPackage" ) {
                 readKeyPackage();
-                continue;
             }
-            else if(name() == "HelpPackage"){
+            else if(name() == "HelpPackage" ) {
                 readHelpPackage();
-                continue;
             }
-            else if( name() == "VariablePackage" )
-            {
+            else if( name() == "VariablePackage" ) {
                 readVariablePackage();
             }
-            else
-            {
+            else {
                 readUnknownPackage();
             }
         }
     }
 }
 
-void XMLimport::readHelpPackage(){
-    while( ! atEnd() )
-    {
+void XMLimport::readHelpPackage()
+{
+
+    while( ! atEnd() ) {
         readNext();
-        if(isEndElement())
-        {
+
+        if( isEndElement() ) {
             break;
         }
-        if( isStartElement() )
-        {
-            if( name() == "helpURL" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "helpURL" ) {
                 QString contents = readElementText();
-                mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
-                continue;
+                mpHost->moduleHelp[mPackageName].insert( "helpURL", contents );
             }
         }
     }
 }
 
-
 void XMLimport::readUnknownPackage()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN readUnknownPackage() Package Element:"<<name().toString()<<"text:"<<text().toString();
-        if( isEndElement() )
-        {
+        qDebug().nospace() << "XMLimport::readUnknownPackage(): Error: UNKNOWN Package Element name: "
+                           << name().toString()
+                           << "content: "
+                           << text().toString();
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readPackage();
         }
     }
@@ -722,40 +602,41 @@ void XMLimport::readUnknownPackage()
 
 void XMLimport::readUnknownHostElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Host Package Element:name="<<name().toString()<<"text:"<<text().toString();
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Host Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
 
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readHostPackage( mpHost );
         }
     }
 }
 
-
 void XMLimport::readUnknownTriggerElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Trigger Package Element:name="<<name().toString()<<"text:"<<text().toString();
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Trigger Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
 
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readTriggerPackage();
         }
     }
@@ -763,17 +644,20 @@ void XMLimport::readUnknownTriggerElement()
 
 void XMLimport::readUnknownTimerElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        if( isEndElement() )
-        {
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Timer Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readTimerPackage();
         }
     }
@@ -781,17 +665,20 @@ void XMLimport::readUnknownTimerElement()
 
 void XMLimport::readUnknownAliasElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        if( isEndElement() )
-        {
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Alias Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readAliasPackage();
         }
     }
@@ -799,17 +686,20 @@ void XMLimport::readUnknownAliasElement()
 
 void XMLimport::readUnknownActionElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        if( isEndElement() )
-        {
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Action Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readActionPackage();
         }
     }
@@ -817,17 +707,20 @@ void XMLimport::readUnknownActionElement()
 
 void XMLimport::readUnknownScriptElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        if( isEndElement() )
-        {
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Script Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readScriptPackage();
         }
     }
@@ -835,79 +728,38 @@ void XMLimport::readUnknownScriptElement()
 
 void XMLimport::readUnknownKeyElement()
 {
-    while( ! atEnd() )
-    {
+
+    while( ! atEnd() ) {
 
         readNext();
-        if( isEndElement() )
-        {
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() Error: UNKNOWN Key Package Element, name: "
+                           << name().toString()
+                           << " content: "
+                           << text().toString();
+
+        if( isEndElement() ) {
             break;
         }
 
-        if( isStartElement() )
-        {
+        if( isStartElement() ) {
             readKeyPackage();
-        }
-    }
-}
-
-
-
-void XMLimport::readTriggerPackage()
-{
-    while( ! atEnd() )
-    {
-        readNext();
-        if( isEndElement() )
-        {
-            break;
-        }
-
-        if( isStartElement() )
-        {
-            if( name() == "TriggerGroup" )
-            {
-                gotTrigger = true;
-                if( mPackageName.isEmpty() )
-                    readTriggerGroup(0);
-                else
-                    readTriggerGroup(mpTrigger);
-            }
-            else if( name() == "Trigger" )
-            {
-                gotTrigger = true;
-                if( mPackageName.isEmpty() )
-                    readTriggerGroup(0);
-                else
-                    readTriggerGroup(mpTrigger);
-            }
-            else
-            {
-                readUnknownTriggerElement();
-            }
         }
     }
 }
 
 void XMLimport::readHostPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
-            if( name() == "Host" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "Host" ) {
                 readHostPackage( mpHost );
             }
-
-            else
-            {
+            else {
                 readUnknownHostElement();
             }
         }
@@ -916,535 +768,392 @@ void XMLimport::readHostPackage()
 
 void XMLimport::readHostPackage( Host * pT )
 {
-    pT->mAutoClearCommandLineAfterSend = ( attributes().value("autoClearCommandLineAfterSend") == "yes" );
-    pT->mDisableAutoCompletion = ( attributes().value("disableAutoCompletion") == "yes" );
-    pT->mPrintCommand = ( attributes().value("printCommand") == "yes" );
-    pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
-    pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
-    pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
-    pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
-    pT->mEchoLuaErrors = ( attributes().value("mEchoLuaErrors") == "yes" );
-    pT->mIsNextLogFileInHtmlFormat = ( attributes().value("mRawStreamDump") == "yes" );
-    pT->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
-    pT->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );
-    pT->mFORCE_GA_OFF = ( attributes().value("mFORCE_GA_OFF") == "yes" );
-    pT->mFORCE_SAVE_ON_EXIT = ( attributes().value("mFORCE_SAVE_ON_EXIT") == "yes" );
-    pT->mEnableGMCP = ( attributes().value("mEnableGMCP") == "yes" );
-    pT->mEnableMSDP = ( attributes().value("mEnableMSDP") == "yes" );
-    pT->mMapStrongHighlight = ( attributes().value("mMapStrongHighlight") == "yes" );
-    pT->mLogStatus = ( attributes().value("mLogStatus") == "yes" );
-    pT->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );
-    pT->mShowInfo = ( attributes().value("mShowInfo") == "yes" );
-    pT->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
-    pT->mMapperUseAntiAlias = ( attributes().value("mMapperUseAntiAlias") == "yes" );
-    pT->mFORCE_MXP_NEGOTIATION_OFF = ( attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes" );
-    pT->mRoomSize = attributes().value("mRoomSize").toString().toInt();
-    if (!pT->mRoomSize)
-        pT->mRoomSize=3;
-    pT->mLineSize = attributes().value("mLineSize").toString().toInt();
-    if (!pT->mLineSize)
-        pT->mLineSize=1;
-    pT->mBubbleMode = ( attributes().value("mBubbleMode") == "yes" );
-    pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
-    pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
-    pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
-    QStringRef ignore = attributes().value("mDoubleClickIgnore");
-    for(int i=0;i<ignore.size();i++)
+    pT->mAutoClearCommandLineAfterSend = ( attributes().value( "autoClearCommandLineAfterSend" ) == "yes" );
+    pT->mDisableAutoCompletion = ( attributes().value( "disableAutoCompletion" ) == "yes" );
+    pT->mPrintCommand = ( attributes().value( "printCommand" ) == "yes" );
+    pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value( "USE_IRE_DRIVER_BUGFIX" ) == "yes" );
+    pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value( "mUSE_FORCE_LF_AFTER_PROMPT" ) == "yes" );
+    pT->mUSE_UNIX_EOL = ( attributes().value( "mUSE_UNIX_EOL" ) == "yes" );
+    pT->mNoAntiAlias = ( attributes().value( "mNoAntiAlias" ) == "yes" );
+    pT->mEchoLuaErrors = ( attributes().value( "mEchoLuaErrors" ) == "yes" );
+    pT->mIsNextLogFileInHtmlFormat = ( attributes().value( "mRawStreamDump" ) == "yes" );
+    pT->mAlertOnNewData = ( attributes().value( "mAlertOnNewData" ) == "yes" );
+    pT->mFORCE_NO_COMPRESSION = ( attributes().value( "mFORCE_NO_COMPRESSION" ) == "yes" );
+    pT->mFORCE_GA_OFF = ( attributes().value( "mFORCE_GA_OFF" ) == "yes" );
+    pT->mFORCE_SAVE_ON_EXIT = ( attributes().value( "mFORCE_SAVE_ON_EXIT" ) == "yes" );
+    pT->mEnableGMCP = ( attributes().value( "mEnableGMCP" ) == "yes" );
+    pT->mEnableMSDP = ( attributes().value( "mEnableMSDP" ) == "yes" );
+    pT->mMapStrongHighlight = ( attributes().value( "mMapStrongHighlight" ) == "yes" );
+    pT->mLogStatus = ( attributes().value( "mLogStatus" ) == "yes" );
+    pT->mEnableSpellCheck = ( attributes().value( "mEnableSpellCheck" ) == "yes" );
+    pT->mShowInfo = ( attributes().value( "mShowInfo" ) == "yes" );
+    pT->mAcceptServerGUI = ( attributes().value( "mAcceptServerGUI" ) == "yes" );
+    pT->mMapperUseAntiAlias = ( attributes().value( "mMapperUseAntiAlias" ) == "yes" );
+    pT->mFORCE_MXP_NEGOTIATION_OFF = ( attributes().value( "mFORCE_MXP_NEGOTIATION_OFF" ) == "yes" );
+    pT->mRoomSize = attributes().value( "mRoomSize" ).toString().toFloat();
+    if( ! pT->mRoomSize ) {
+        pT->mRoomSize= 0.5f; // Same value as is in Host class initalizer list
+    }
+    pT->mLineSize = attributes().value( "mLineSize" ).toString().toFloat();
+    if( !pT->mLineSize ) {
+        pT->mLineSize= 1.0f; // Same value as is in Host class initalizer list
+    }
+    pT->mBubbleMode = ( attributes().value( "mBubbleMode" ) == "yes" );
+    pT->mShowRoomID = ( attributes().value( "mShowRoomIDs" ) == "yes" );
+    pT->mShowPanel = ( attributes().value( "mShowPanel" ) == "yes" );
+    pT->mHaveMapperScript = ( attributes().value( "mHaveMapperScript" ) == "yes" );
+    QStringRef ignore = attributes().value( "mDoubleClickIgnore" );
+    for( int i = 0, total = ignore.size(); i < total; ++i ) {
         pT->mDoubleClickIgnore.insert( ignore.at( i ) );
+    }
 
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->mHostName = readElementText();
-                continue;
             }
-            else if( name() == "mInstalledModules")
-            {
+            else if( name() == "mInstalledModules" ) {
+
                 QMap<QString, QStringList> entry;
-                readMapList(entry);
-                QMapIterator<QString, QStringList> it(entry);
-                while (it.hasNext()){
+
+                readModulesDetailsMap( entry );
+
+                QMapIterator<QString, QStringList> it( entry );
+                while( it.hasNext() ) {
                     it.next();
                     QStringList moduleList;
                     QStringList entryList = it.value();
-                    moduleList << entryList[0];
-                    moduleList << entryList[1];
+                    moduleList << entryList.at(0);
+                    moduleList << entryList.at(1);
                     pT->mInstalledModules[it.key()] = moduleList;
-                    pT->mModulePriorities[it.key()] = entryList[2].toInt();
-
+                    pT->mModulePriorities[it.key()] = entryList.at(2).toInt();
                 }
-                continue;
             }
-            else if( name() == "mInstalledPackages")
-            {
+            else if( name() == "mInstalledPackages" ) {
                 readStringList( pT->mInstalledPackages );
-                continue;
             }
-            else if( name() =="url" )
-            {
+            else if( name() =="url" ) {
                 pT->mUrl = readElementText();
-                continue;
             }
-            else if( name() =="serverPackageName" )
-            {
+            else if( name() =="serverPackageName" ) {
                 pT->mServerGUI_Package_name = readElementText();
-                continue;
             }
-            else if( name() == "serverPackageVersion")
-            {
+            else if( name() == "serverPackageVersion" ) {
                 pT->mServerGUI_Package_version = readElementText().toInt();
-                continue;
             }
-            else if( name() == "port")
-            {
+            else if( name() == "port" ) {
                 pT->mPort = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderTopHeight")
-            {
+            else if( name() == "borderTopHeight" ) {
                 pT->mBorderTopHeight = readElementText().toInt();
-                continue;
             }
-            else if( name() == "commandLineMinimumHeight")
-            {
+            else if( name() == "commandLineMinimumHeight" ) {
                 pT->commandLineMinimumHeight = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderBottomHeight")
-            {
+            else if( name() == "borderBottomHeight" ) {
                 pT->mBorderBottomHeight = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderLeftWidth")
-            {
+            else if( name() == "borderLeftWidth" ) {
                 pT->mBorderLeftWidth = readElementText().toInt();
-                continue;
             }
-            else if( name() == "borderRightWidth")
-            {
+            else if( name() == "borderRightWidth" ) {
                 pT->mBorderRightWidth = readElementText().toInt();
-                continue;
             }
-            else if( name() == "wrapAt")
-            {
+            else if( name() == "wrapAt" ) {
                 pT->mWrapAt = readElementText().toInt();
-                continue;
             }
-            else if( name() == "wrapIndentCount" )
-            {
+            else if( name() == "wrapIndentCount" ) {
                 pT->mWrapIndentCount = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mCommandSeparator" )
-            {
+            else if( name() == "mCommandSeparator" ) {
                 pT->mCommandSeparator = readElementText();
-                continue;
             }
-            else if( name() == "mCommandLineFgColor")
-            {
+            else if( name() == "mCommandLineFgColor" ) {
                 pT->mCommandLineFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCommandLineBgColor")
-            {
+            else if( name() == "mCommandLineBgColor" ) {
                 pT->mCommandLineBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mFgColor")
-            {
+            else if( name() == "mFgColor" ) {
                 pT->mFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBgColor")
-            {
+            else if( name() == "mBgColor" ) {
                 pT->mBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCommandFgColor")
-            {
+            else if( name() == "mCommandFgColor" ) {
                 pT->mCommandFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCommandBgColor")
-            {
+            else if( name() == "mCommandBgColor" ) {
                 pT->mCommandBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlack")
-            {
+            else if( name() == "mBlack" ) {
                 pT->mBlack.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlack")
-            {
+            else if( name() == "mLightBlack" ) {
                 pT->mLightBlack.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mRed")
-            {
+            else if( name() == "mRed" ) {
                 pT->mRed.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightRed")
-            {
+            else if( name() == "mLightRed" ) {
                 pT->mLightRed.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlue")
-            {
+            else if( name() == "mBlue" ) {
                 pT->mBlue.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlue")
-            {
+            else if( name() == "mLightBlue" ) {
                 pT->mLightBlue.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mGreen")
-            {
+            else if( name() == "mGreen" ) {
                 pT->mGreen.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightGreen")
-            {
+            else if( name() == "mLightGreen" ) {
                 pT->mLightGreen.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mYellow")
-            {
+            else if( name() == "mYellow" ) {
                 pT->mYellow.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightYellow")
-            {
+            else if( name() == "mLightYellow" ) {
                 pT->mLightYellow.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCyan")
-            {
+            else if( name() == "mCyan" ) {
                 pT->mCyan.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightCyan")
-            {
+            else if( name() == "mLightCyan" ) {
                 pT->mLightCyan.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mMagenta")
-            {
+            else if( name() == "mMagenta" ) {
                 pT->mMagenta.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightMagenta")
-            {
+            else if( name() == "mLightMagenta" ) {
                 pT->mLightMagenta.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mWhite")
-            {
+            else if( name() == "mWhite" ) {
                 pT->mWhite.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightWhite")
-            {
+            else if( name() == "mLightWhite" ) {
                 pT->mLightWhite.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mDisplayFont")
-            {
+            else if( name() == "mDisplayFont" ) {
                 pT->mDisplayFont.fromString( readElementText() );
                 pT->mDisplayFont.setFixedPitch( true );
-                continue;
             }
-            else if( name() == "mCommandLineFont")
-            {
+            else if( name() == "mCommandLineFont" ) {
                 pT->mCommandLineFont.fromString( readElementText() );
-                continue;
             }
-            else if( name() == "mFgColor2")
-            {
+            else if( name() == "commandSeperator" ) {
+                // TODO: Ignore this misspelled duplicate, can remove it if we
+                // check the Xml format version and revise it under something
+                // > 1.0 in the future.
+                Q_UNUSED( readElementText() );
+            }
+            else if( name() == "mFgColor2" ) {
                 pT->mFgColor_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBgColor2")
-            {
+            else if( name() == "mBgColor2" ) {
                 pT->mBgColor_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlack2")
-            {
+            else if( name() == "mBlack2" ) {
                 pT->mBlack_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlack2")
-            {
+            else if( name() == "mLightBlack2" ) {
                 pT->mLightBlack_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mRed2")
-            {
+            else if( name() == "mRed2" ) {
                 pT->mRed_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightRed2")
-            {
+            else if( name() == "mLightRed2" ) {
                 pT->mLightRed_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBlue2")
-            {
+            else if( name() == "mBlue2" ) {
                 pT->mBlue_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightBlue2")
-            {
+            else if( name() == "mLightBlue2" ) {
                 pT->mLightBlue_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mGreen2")
-            {
+            else if( name() == "mGreen2" ) {
                 pT->mGreen_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightGreen2")
-            {
+            else if( name() == "mLightGreen2" ) {
                 pT->mLightGreen_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mYellow2")
-            {
+            else if( name() == "mYellow2" ) {
                 pT->mYellow_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightYellow2")
-            {
+            else if( name() == "mLightYellow2" ) {
                 pT->mLightYellow_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mCyan2")
-            {
+            else if( name() == "mCyan2" ) {
                 pT->mCyan_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightCyan2")
-            {
+            else if( name() == "mLightCyan2" ) {
                 pT->mLightCyan_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mMagenta2")
-            {
+            else if( name() == "mMagenta2" ) {
                 pT->mMagenta_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightMagenta2")
-            {
+            else if( name() == "mLightMagenta2" ) {
                 pT->mLightMagenta_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mWhite2")
-            {
+            else if( name() == "mWhite2" ) {
                 pT->mWhite_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mLightWhite2")
-            {
+            else if( name() == "mLightWhite2" ) {
                 pT->mLightWhite_2.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mSpellDic")
-            {
+            else if( name() == "mSpellDic" ) {
                 pT->mSpellDic = readElementText();
-                continue;
             }
-            else if( name() == "mRoomSize" )
-            {
-                pT->mRoomSize = readElementText().toDouble();
+            else if( name() == "mLineSize" || name() == "mRoomSize" ) {
+                Q_UNUSED( readElementText() );
+                // TODO: This and mLineSize can be dropped when we add Xml format
+                // version checking and update the format as these are duplicates
+                // of attributes that were incorrected read in the parent
+                // <Host ...> element as integers {they are stored as decimals
+                // but for the first one at least it is a decimal number n,
+                // where 0.1 <= n <= 1.1 so was being read as "0" for all but
+                // the greatest 2 values where it was read as "1"!}
             }
-            else if( name() == "mLineSize" )
-            {
-                pT->mLineSize = readElementText().toDouble();
-            }
-            else
-            {
+            else {
                 readUnknownHostElement();
             }
         }
     }
 }
 
+void XMLimport::readTriggerPackage()
+{
+    while( ! atEnd() ) {
+
+        readNext();
+        if( isEndElement() ) {
+            break;
+        }
+
+        if( isStartElement() ) {
+            if( name() == "TriggerGroup" || name() == "Trigger" ) {
+                gotTrigger = true;
+                readTriggerGroup( mPackageName.isEmpty() ? 0 : mpTrigger );
+            }
+            else {
+                readUnknownTriggerElement();
+            }
+        }
+    }
+}
 
 void XMLimport::readTriggerGroup( TTrigger * pParent )
 {
-    TTrigger * pT;
-    if( pParent )
-    {
-        pT = new TTrigger( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TTrigger( 0, mpHost );
-    }
-    if (module){
+    TTrigger * pT = new TTrigger( pParent, mpHost );
+
+    if( module ) {
         pT->mModuleMember = true;
     }
 
     mpHost->getTriggerUnit()->registerTrigger( pT );
 
-    pT->setIsActive( (attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    pT->mIsTempTrigger = ( attributes().value("isTempTrigger") == "yes" );
-    pT->mIsMultiline = ( attributes().value("isMultiline") == "yes" );
-    pT->mPerlSlashGOption = ( attributes().value("isPerlSlashGOption") == "yes" );
-    pT->mIsColorizerTrigger = ( attributes().value("isColorizerTrigger") == "yes" );
-    pT->mFilterTrigger = ( attributes().value("isFilterTrigger") == "yes" );
-    pT->mSoundTrigger = ( attributes().value("isSoundTrigger") == "yes" );
-    pT->mColorTrigger = ( attributes().value("isColorTrigger") == "yes" );
-    pT->mColorTriggerBg = ( attributes().value("isColorTriggerBg") == "yes" );
-    pT->mColorTriggerFg = ( attributes().value("isColorTriggerFg") == "yes" );
+    pT->setIsActive( attributes().value( "isActive" ) == "yes" );
+    pT->mIsFolder = ( attributes().value( "isFolder" ) == "yes" );
+    pT->mIsTempTrigger = ( attributes().value( "isTempTrigger" ) == "yes" );
+    pT->mIsMultiline = ( attributes().value( "isMultiline" ) == "yes" );
+    pT->mPerlSlashGOption = ( attributes().value( "isPerlSlashGOption" ) == "yes" );
+    pT->mIsColorizerTrigger = ( attributes().value( "isColorizerTrigger" ) == "yes" );
+    pT->mFilterTrigger = ( attributes().value( "isFilterTrigger" ) == "yes" );
+    pT->mSoundTrigger = ( attributes().value( "isSoundTrigger" ) == "yes" );
+    pT->mColorTrigger = ( attributes().value( "isColorTrigger" ) == "yes" );
+    pT->mColorTriggerBg = ( attributes().value( "isColorTriggerBg" ) == "yes" );
+    pT->mColorTriggerFg = ( attributes().value( "isColorTriggerFg" ) == "yes" );
 
-    while( ! atEnd() )
-    {
+    QString tempScript;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
-
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->setName( readElementText() );
-                continue;
             }
-
-            else if( name() == "script")
-            {
-                pT->mScript = readElementText();
-                continue;
+            else if( name() == "script" ) {
+                tempScript = readElementText();
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == "packageName" ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "triggerType" )
-            {
+            else if( name() == "triggerType" ) {
                 pT->mTriggerType = readElementText().toInt();
-                continue;
             }
-            else if( name() == "conditonLineDelta" )
-            {
+            else if( name() == "conditonLineDelta" ) {
                 pT->mConditionLineDelta = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mStayOpen" )
-            {
+            else if( name() == "mStayOpen" ) {
                 pT->mStayOpen = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mCommand" )
-            {
+            else if( name() == "mCommand" ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-
-            else if( name() == "mFgColor")
-            {
+            else if( name() == "mFgColor" ) {
                 pT->mFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mBgColor")
-            {
+            else if( name() == "mBgColor" ) {
                 pT->mBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "colorTriggerFgColor")
-            {
+            else if( name() == "colorTriggerFgColor" ) {
                 pT->mColorTriggerFgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "colorTriggerBgColor")
-            {
+            else if( name() == "colorTriggerBgColor" ) {
                 pT->mColorTriggerBgColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "mSoundFile" )
-            {
+            else if( name() == "mSoundFile" ) {
                 pT->mSoundFile = readElementText();
-                continue;
             }
-            else if( name() == "regexCodeList")
-            {
+            else if( name() == "regexCodeList" ) {
                 readStringList( pT->mRegexCodeList );
-                continue;
             }
-            else if( name() == "regexCodePropertyList" )
-            {
+            else if( name() == "regexCodePropertyList" ) {
                 readIntegerList( pT->mRegexCodePropertyList );
                 continue;
             }
-
-            else if( name() == "TriggerGroup" )
-            {
+            else if( name() == "TriggerGroup" || name() == "Trigger" ) {
                 readTriggerGroup( pT );
             }
-            else if( name() == "Trigger" )
-            {
-                readTriggerGroup( pT );
-            }
-            else
-            {
+            else {
                 readUnknownTriggerElement();
             }
         }
     }
 
-    if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) )
-    {
-        qDebug()<<"IMPORT: ERROR: cant initialize pattern list for trigger "<<pT->getName();
+    if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) ) {
+        qDebug().nospace() << "XMLimport::readTriggerGroup(...): Error: can not initialize pattern list for trigger: "
+                           << pT->getName();
     }
-    QString script = pT->mScript;
-    if( ! pT->setScript( script ) )
-    {
-        qDebug()<<"IMPORT: ERROR: trigger script "<< pT->getName()<<" does not compile";
+
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readTriggerGroup(...): Error: can not compile trigger script for: "
+                           << pT->getName();
     }
 }
 
 void XMLimport::readTimerPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
-            if( name() == "TimerGroup" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "TimerGroup" || name() == "Timer" ) {
                 gotTimer = true;
-                if( mPackageName.isEmpty() )
-                    readTimerGroup(0);
-                else
-                    readTimerGroup(mpTimer);
+                readTimerGroup( mPackageName.isEmpty() ? 0 : mpTimer );
             }
-            else if( name() == "Timer" )
-            {
-                gotTimer = true;
-                if( mPackageName.isEmpty() )
-                    readTimerGroup(0);
-                else
-                    readTimerGroup(mpTimer);
-            }
-            else
-            {
+            else {
                 readUnknownTimerElement();
             }
         }
@@ -1453,124 +1162,78 @@ void XMLimport::readTimerPackage()
 
 void XMLimport::readTimerGroup( TTimer * pParent )
 {
-    TTimer * pT;
+    TTimer * pT = new TTimer( pParent, mpHost );
 
-    QTime _time(10,0,0,0);
-
-    if( pParent )
-    {
-        pT = new TTimer( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TTimer( 0, mpHost );
-    }
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    pT->mIsTempTimer = ( attributes().value("isTempTimer") == "yes" );
+    pT->mIsFolder = ( attributes().value( "isFolder" ) == "yes" );
+    pT->mIsTempTimer = ( attributes().value( "isTempTimer" ) == "yes" );
 
     mpHost->getTimerUnit()->registerTimer( pT );
-    pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
+    pT->setShouldBeActive( ( attributes().value( "isActive" ) == "yes" ) );
 
-    if (module)
+    if( module ) {
         pT->mModuleMember = true;
+    }
 
-    while( ! atEnd() )
-    {
+    QString tempScript;
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
-
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->setName( readElementText() );
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == "packageName" ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
-                QString script = readElementText();
-                pT->setScript( script );
-                continue;
+            else if( name() == "script" ) {
+                tempScript = readElementText();
             }
-            else if( name() == "command")
-            {
+            else if( name() == "command" ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-            else if( name() == "time")
-            {
-                QString timeString = readElementText();
-                QTime time = QTime::fromString( timeString, "hh:mm:ss.zzz" );
-                pT->setTime( time );
-                continue;
+            else if( name() == "time" ) {
+                pT->setTime( QTime::fromString( readElementText(), "hh:mm:ss.zzz" ) );
             }
-            else if( name() == "TimerGroup" )
-            {
+            else if( name() == "TimerGroup" || name() == "Timer" ) {
                 readTimerGroup( pT );
             }
-            else if( name() == "Timer" )
-            {
-                readTimerGroup( pT );
-            }
-            else
-            {
+            else {
                 readUnknownTimerElement();
             }
         }
     }
 
-
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readTimerGroup(...): Error: can not compile timer script for: "
+                           << pT->getName();
+    }
 
     mudlet::self()->registerTimer( pT, pT->mpTimer );
 
-    if( ! pT->mpParent && pT->shouldBeActive() )
-    {
+    if( ! pT->mpParent && pT->shouldBeActive() ) {
         pT->setIsActive( true );
         pT->enableTimer( pT->getID() );
-    }
-    else
-    {
     }
 
 }
 
 void XMLimport::readAliasPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
-            if( name() == "AliasGroup" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "AliasGroup" || name() == "Alias" ) {
                 gotAlias = true;
-                if( mPackageName.isEmpty() )
-                    readAliasGroup(0);
-                else
-                    readAliasGroup(mpAlias);
-
+                readAliasGroup( mPackageName.isEmpty() ? 0 : mpAlias );
             }
-            else if( name() == "Alias" )
-            {
-                gotAlias = true;
-                if( mPackageName.isEmpty() )
-                    readAliasGroup(0);
-                else
-                    readAliasGroup(mpAlias);
-            }
-            else
-            {
+            else {
                 readUnknownAliasElement();
             }
         }
@@ -1579,102 +1242,68 @@ void XMLimport::readAliasPackage()
 
 void XMLimport::readAliasGroup( TAlias * pParent )
 {
-    TAlias * pT;
-    if( pParent )
-    {
-        pT = new TAlias( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TAlias( 0, mpHost );
-    }
+    TAlias * pT = new TAlias( pParent, mpHost );
 
     mpHost->getAliasUnit()->registerAlias( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    if (module)
+    pT->setIsActive( attributes().value( "isActive" ) == "yes" );
+    pT->mIsFolder = ( attributes().value( "isFolder" ) == "yes" );
+    if( module ) {
         pT->mModuleMember = true;
+    }
 
-    while( ! atEnd() )
-    {
+    QString tempScript;
+    while( ! atEnd() ) {
         readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->setName( readElementText() );
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == "packageName" ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
-                QString script = readElementText();
-                pT->setScript( script );
-                continue;
+            else if( name() == "script" ) {
+                tempScript = readElementText();
             }
-            else if( name() == "command")
-            {
+            else if( name() == "command" ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-            else if( name() == "regex")
-            {
+            else if( name() == "regex" ) {
                 pT->setRegexCode( readElementText() );
-                continue;
             }
-            else if( name() == "AliasGroup" )
-            {
+            else if( name() == "AliasGroup" || name() == "Alias" ) {
                 readAliasGroup( pT );
             }
-            else if( name() == "Alias" )
-            {
-                readAliasGroup( pT );
-            }
-            else
-            {
+            else {
                 readUnknownAliasElement();
             }
         }
     }
 
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readAliasGroup(...): Error: can not compile timer script for: "
+                           << pT->getName();
+    }
 
 }
 
 void XMLimport::readActionPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-        if( isStartElement() )
-        {
-            if( name() == "ActionGroup" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "ActionGroup" || name() == "Action" ) {
                 gotAction = true;
-                if( mPackageName.isEmpty() )
-                    readActionGroup(0);
-                else
-                    readActionGroup(mpAction);
+                readActionGroup( mPackageName.isEmpty() ? 0 : mpAction );
             }
-            else if( name() == "Action" )
-            {
-                gotAction = true;
-                if( mPackageName.isEmpty() )
-                    readActionGroup(0);
-                else
-                    readActionGroup(mpAction);
-            }
-            else
-            {
+            else {
                 readUnknownActionElement();
             }
         }
@@ -1683,168 +1312,108 @@ void XMLimport::readActionPackage()
 
 void XMLimport::readActionGroup( TAction * pParent )
 {
-    TAction * pT;
-    if( pParent )
-    {
-        pT = new TAction( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TAction( 0, mpHost );
-    }
-    mpHost->getActionUnit()->registerAction( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    pT->mIsPushDownButton = ( attributes().value("isPushButton") == "yes" );
-    pT->mButtonFlat = ( attributes().value("isFlatButton") == "yes" );
-    pT->mUseCustomLayout = ( attributes().value("useCustomLayout") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    TAction * pT = new TAction( pParent, mpHost );
 
+    pT->mIsFolder = ( attributes().value( "isFolder" ) == "yes" );
+    pT->mIsPushDownButton = ( attributes().value( "isPushButton" ) == "yes" );
+    pT->mButtonFlat = ( attributes().value( "isFlatButton" ) == "yes" );
+    pT->mUseCustomLayout = ( attributes().value( "useCustomLayout" ) == "yes" );
+    mpHost->getActionUnit()->registerAction( pT );
+    pT->setIsActive( attributes().value( "isActive" ) == "yes" );
+
+    if( module ) {
+        pT->mModuleMember = true;
+    }
+
+    QString tempScript;
     while( ! atEnd() )
     {
+
         readNext();
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->mName = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == "packageName" ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
-                QString script = readElementText();
-                pT->setScript( script );
-                continue;
+            else if( name() == "script" ) {
+                tempScript = readElementText();
             }
-            else if( name() == "css")
-            {
+            else if( name() == "css" ) {
                 pT->css = readElementText();
-                continue;
             }
-            else if( name() == "commandButtonUp")
-            {
+            else if( name() == "commandButtonUp" ) {
                 pT->mCommandButtonUp = readElementText();
-                continue;
             }
-            else if( name() == "commandButtonDown")
-            {
+            else if( name() == "commandButtonDown" ) {
                 pT->mCommandButtonDown = readElementText();
-                continue;
             }
-            else if( name() == "icon")
-            {
+            else if( name() == "icon" ) {
                 pT->mIcon = readElementText();
-                continue;
             }
-            else if( name() == "orientation")
-            {
+            else if( name() == "orientation" ) {
                 pT->mOrientation = readElementText().toInt();
-                continue;
             }
-            else if( name() == "location")
-            {
+            else if( name() == "location" ) {
                 pT->mLocation = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "buttonRotation")
-            {
+            else if( name() == "buttonRotation" ) {
                 pT->mButtonRotation = readElementText().toInt();
-                continue;
             }
-            else if( name() == "sizeX")
-            {
+            else if( name() == "sizeX" ) {
                 pT->mSizeX = readElementText().toInt();
-                continue;
             }
-            else if( name() == "sizeY")
-            {
+            else if( name() == "sizeY" ) {
                 pT->mSizeY = readElementText().toInt();
-                continue;
             }
-            else if( name() == "mButtonState")
-            {
+            else if( name() == "mButtonState" ) {
                 pT->mButtonState = readElementText().toInt();
-                continue;
             }
-            else if( name() == "buttonColor")
-            {
+            else if( name() == "buttonColor" ) {
                 pT->mButtonColor.setNamedColor( readElementText() );
-                continue;
             }
-            else if( name() == "buttonColumn")
-            {
+            else if( name() == "buttonColumn" ) {
                 pT->mButtonColumns = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "posX")
-            {
+            else if( name() == "posX" ) {
                 pT->mPosX = readElementText().toInt();
-                continue;
             }
-            else if( name() == "posY")
-            {
+            else if( name() == "posY" ) {
                 pT->mPosY = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "ActionGroup" )
-            {
+            else if( name() == "ActionGroup" || name() == "Action" ) {
                 readActionGroup( pT );
             }
-            else if( name() == "Action" )
-            {
-                readActionGroup( pT );
-            }
-            else
-            {
+            else {
                 readUnknownActionElement();
             }
         }
     }
 
-
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readActionGroup(...): Error: can not compile trigger script for: "
+                           << pT->getName();
+    }
 }
 
 void XMLimport::readScriptPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
-            if( name() == "ScriptGroup" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "ScriptGroup" || name() == "Script" ) {
                 gotScript = true;
-                if( mPackageName.isEmpty() )
-                    readScriptGroup(0);
-                else
-                    readScriptGroup(mpScript);
+                readScriptGroup( mPackageName.isEmpty() ? 0 : mpScript );
             }
-            else if( name() == "Script" )
-            {
-                gotScript = true;
-                if( mPackageName.isEmpty() )
-                    readScriptGroup(0);
-                else
-                    readScriptGroup(mpScript);
-            }
-            else
-            {
+            else {
                 readUnknownScriptElement();
             }
         }
@@ -1853,97 +1422,67 @@ void XMLimport::readScriptPackage()
 
 void XMLimport::readScriptGroup( TScript * pParent )
 {
-    TScript * pT;
-    if( pParent )
-    {
-        pT = new TScript( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TScript( 0, mpHost );
-    }
-    mpHost->getScriptUnit()->registerScript( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    TScript * pT = new TScript( pParent, mpHost );
 
+    pT->mIsFolder = ( attributes().value( "isFolder" ) == "yes" );
+    mpHost->getScriptUnit()->registerScript( pT );
+    pT->setIsActive( attributes().value( "isActive" ) == "yes" );
+
+    if( module ) {
+        pT->mModuleMember = true;
+    }
+
+    QString tempScript;
     while( ! atEnd() )
     {
-        readNext();
-        if( isEndElement() ) break;
 
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        readNext();
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->mName = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == "packageName" ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
-                QString script = readElementText();
-                pT->setScript( script );
-                continue;
+            else if( name() == "script" ) {
+                tempScript = readElementText();
             }
-            else if( name() == "eventHandlerList")
-            {
+            else if( name() == "eventHandlerList" ) {
                 readStringList( pT->mEventHandlerList );
                 pT->setEventHandlerList( pT->mEventHandlerList );
-                continue;
             }
-            else if( name() == "ScriptGroup" )
-            {
+            else if( name() == "ScriptGroup" || name() == "Script" ) {
                 readScriptGroup( pT );
             }
-            else if( name() == "Script" )
-            {
-                readScriptGroup( pT );
-            }
-            else
-            {
+            else {
                 readUnknownScriptElement();
             }
         }
+    }
+
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readScriptGroup(...): Error: can not compile trigger script for: "
+                           << pT->getName();
     }
 }
 
 void XMLimport::readKeyPackage()
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
-        if( isEndElement() )
-        {
+        if( isEndElement() ) {
             break;
         }
-
-        if( isStartElement() )
-        {
-            if( name() == "KeyGroup" )
-            {
+        else if( isStartElement() ) {
+            if( name() == "KeyGroup" || name() == "Key" ) {
                 gotKey = true;
-                if( mPackageName.isEmpty() )
-                    readKeyGroup(0);
-                else
-                    readKeyGroup(mpKey);
-
+                readKeyGroup( mPackageName.isEmpty() ? 0 : mpKey );
             }
-            else if( name() == "Key" )
-            {
-                gotKey = true;
-                if( mPackageName.isEmpty() )
-                    readKeyGroup(0);
-                else
-                    readKeyGroup(mpKey);
-            }
-            else
-            {
+            else {
                 readUnknownKeyElement();
             }
         }
@@ -1952,130 +1491,106 @@ void XMLimport::readKeyPackage()
 
 void XMLimport::readKeyGroup( TKey * pParent )
 {
-    TKey * pT;
-    if( pParent )
-    {
-        pT = new TKey( pParent, mpHost );
-    }
-    else
-    {
-        pT = new TKey( 0, mpHost );
-    }
-    mpHost->getKeyUnit()->registerKey( pT );
-    pT->setIsActive( ( attributes().value("isActive") == "yes" ) );
-    pT->mIsFolder = ( attributes().value("isFolder") == "yes" );
-    if (module)
-        pT->mModuleMember = true;
+    TKey * pT = new TKey( pParent, mpHost );
 
+    pT->mIsFolder = ( attributes().value( "isFolder" ) == "yes" );
+    mpHost->getKeyUnit()->registerKey( pT );
+    pT->setIsActive( attributes().value( "isActive" ) == "yes" );
+
+    if( module ) {
+        pT->mModuleMember = true;
+    }
+
+    QString tempScript;
     while( ! atEnd() )
     {
+
         readNext();
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "name" )
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "name" ) {
                 pT->mName = readElementText();
-                continue;
             }
-            else if( name() == "packageName")
-            {
+            else if( name() == "packageName" ) {
                 pT->mPackageName = readElementText();
-                continue;
             }
-            else if( name() == "script")
-            {
-                QString script = readElementText();
-                pT->setScript( script );
-                continue;
+            else if( name() == "script" ) {
+                tempScript = readElementText();
             }
-            else if( name() == "command")
-            {
+            else if( name() == "command" ) {
                 pT->mCommand = readElementText();
-                continue;
             }
-            else if( name() == "keyCode" )
-            {
+            else if( name() == "keyCode" ) {
                 pT->mKeyCode = readElementText().toInt();
-                continue;
             }
-            else if( name() == "keyModifier" )
-            {
+            else if( name() == "keyModifier" ) {
                 pT->mKeyModifier = readElementText().toInt();
-                continue;
             }
-
-            else if( name() == "KeyGroup" )
-            {
+            else if( name() == "KeyGroup" || name() == "Key" ) {
                 readKeyGroup( pT );
             }
-            else if( name() == "Key" )
-            {
-                readKeyGroup( pT );
-            }
-            else
-            {
+            else {
                 readUnknownKeyElement();
             }
         }
     }
+
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readKeyGroup(...): Error: can not compile trigger script for: "
+                           << pT->getName();
+    }
 }
 
-void XMLimport::readMapList( QMap<QString, QStringList> & map)
+void XMLimport::readModulesDetailsMap( QMap<QString, QStringList> & pMap )
 {
     QString key;
     QStringList entry;
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
 
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "key")
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "key" ) {
                 key = readElementText();
             }
-            else if (name() == "filepath"){
-                entry << readElementText();
-                //map[key] = readElementText();
-            }
-            else if (name() == "globalSave"){
+            else if( name() == "filepath" ) {
                 entry << readElementText();
             }
-            else if (name() == "priority"){
+            else if( name() == "globalSave" ) {
                 entry << readElementText();
-                map[key] = entry;
+            }
+            else if( name() == "priority" ) {
+                // The last expected detail for the entry - so store this completed entry into the QMap
+                entry << readElementText();
+                pMap[key] = entry;
                 entry.clear();
-
             }
-            else
-            {
+            else {
                 readUnknownHostElement();
             }
         }
     }
 }
 
-
 void XMLimport::readStringList( QStringList & list )
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
 
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "string")
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "string" ) {
                 list << readElementText();
             }
-            else
-            {
+            else {
                 readUnknownTriggerElement();
             }
         }
@@ -2084,30 +1599,28 @@ void XMLimport::readStringList( QStringList & list )
 
 void XMLimport::readIntegerList( QList<int> & list )
 {
-    while( ! atEnd() )
-    {
+    while( ! atEnd() ) {
+
         readNext();
 
-        if( isEndElement() ) break;
-
-        if( isStartElement() )
-        {
-            if( name() == "integer")
-            {
+        if( isEndElement() ) {
+            break;
+        }
+        else if( isStartElement() ) {
+            if( name() == "integer" ) {
+                QString numberText = readElementText();
                 bool ok = false;
-                int num;
-                num = readElementText().toInt( &ok, 10 );
-                if( ok )
-                {
+                int num = numberText.toInt( &ok, 10 );
+                if( ! numberText.isEmpty() && ok ) {
                     list << num;
                 }
-                else
-                {
-                    qFatal("FATAL ERROR: reading package property list contained invalid elements");
+                else {
+                    qWarning().nospace() << "XMLimport::readIntegerList(...) Error: unable to convert: "
+                                         << numberText
+                                         << "when reading package property list - this is an in invalid element!";
                 }
             }
-            else
-            {
+            else {
                 readUnknownTriggerElement();
             }
         }

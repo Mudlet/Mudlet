@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -74,7 +74,6 @@ private:
     void      readHelpPackage();
 
     void      readUnknownHostElement();
-// Not used: void      readUnknownRoomElement();
     void      readUnknownTriggerElement();
     void      readUnknownTimerElement();
     void      readUnknownAliasElement();
@@ -95,8 +94,7 @@ private:
 
     void      readStringList( QStringList & );
     void      readIntegerList( QList<int> & );
-    void      readMapList( QMap<QString, QStringList> & );
-    //void      readMapList( QMap<QString, QString> &);
+    void      readModulesDetailsMap( QMap<QString, QStringList> & );
 
     QPointer<Host> mpHost;
     QString   mPackageName;
