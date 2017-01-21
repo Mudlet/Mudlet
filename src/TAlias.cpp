@@ -352,7 +352,7 @@ void TAlias::compile()
     }
 }
 
-bool TAlias::setScript( QString & script )
+bool TAlias::setScript( const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;

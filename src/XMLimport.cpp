@@ -114,9 +114,8 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
         mpAlias->setPackageName( mPackageName );
         mpAlias->setName( mPackageName );
         mpAlias->setIsFolder( true );
-        QString _nothing = "";
-        mpAlias->setScript(_nothing);
-        mpAlias->setRegexCode("");
+        mpAlias->setScript( QString() );
+        mpAlias->setRegexCode( QString() );
         mpAlias->setIsActive( true );
 
         mpAction = new TAction( 0, mpHost );
@@ -161,7 +160,10 @@ bool XMLimport::importPackage( QIODevice * device, QString packName, int moduleF
             }
             else
             {
-                qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
+                qDebug().nospace() << "XMLimport::importPackage(...) ERROR: unrecognised element with name: "
+                                   << name().toString()
+                                   << " and content: "
+                                   << text().toString();
             }
         }
     }
@@ -580,30 +582,6 @@ void XMLimport::readUnknownMapElement()
     }
 }
 
-// Not used:
-//void XMLimport::readUnknownRoomElement()
-//{
-//    while( ! atEnd() )
-//    {
-
-//        readNext();
-//        qDebug() << "[ERROR]: UNKNOWN room element: name="
-//                 << name().toString();
-
-//        if( isEndElement() )
-//        {
-//            break;
-//        }
-
-//        if( isStartElement() )
-//        {
-//            readRoom();
-//        }
-//    }
-//}
-
-
-
 void XMLimport::readPackage()
 {
     while( ! atEnd() )
@@ -694,7 +672,11 @@ void XMLimport::readUnknownPackage()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN readUnknownPackage() Package Element:"<<name().toString()<<"text:"<<text().toString();
+        qDebug().nospace() << "XMLimport::readUnknownPackage(): ERROR: UNKNOWN Package Element name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
+
         if( isEndElement() )
         {
             break;
@@ -713,7 +695,10 @@ void XMLimport::readUnknownHostElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Host Package Element:name="<<name().toString()<<"text:"<<text().toString();
+        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN Host Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
 
         if( isEndElement() )
         {
@@ -734,7 +719,10 @@ void XMLimport::readUnknownTriggerElement()
     {
 
         readNext();
-        qDebug()<<"[ERROR]: UNKNOWN Trigger Package Element:name="<<name().toString()<<"text:"<<text().toString();
+        qDebug().nospace() << "XMLimport::readUnknownTriggerElement() ERROR: UNKNOWN Trigger Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
 
         if( isEndElement() )
         {
@@ -754,6 +742,11 @@ void XMLimport::readUnknownTimerElement()
     {
 
         readNext();
+        qDebug().nospace() << "XMLimport::readUnknownTimerElement() ERROR: UNKNOWN Timer Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
+
         if( isEndElement() )
         {
             break;
@@ -772,6 +765,11 @@ void XMLimport::readUnknownAliasElement()
     {
 
         readNext();
+        qDebug().nospace() << "XMLimport::readUnknownAliasElement() ERROR: UNKNOWN Alias Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
+
         if( isEndElement() )
         {
             break;
@@ -790,6 +788,11 @@ void XMLimport::readUnknownActionElement()
     {
 
         readNext();
+        qDebug().nospace() << "XMLimport::readUnknownActionElement() ERROR: UNKNOWN Action Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
+
         if( isEndElement() )
         {
             break;
@@ -808,6 +811,11 @@ void XMLimport::readUnknownScriptElement()
     {
 
         readNext();
+        qDebug().nospace() << "XMLimport::readUnknownScriptElement() ERROR: UNKNOWN Script Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
+
         if( isEndElement() )
         {
             break;
@@ -826,6 +834,11 @@ void XMLimport::readUnknownKeyElement()
     {
 
         readNext();
+        qDebug().nospace() << "XMLimport::readUnknownKeyElement() ERROR: UNKNOWN Key Package Element, name: "
+                           << name().toString()
+                           << " and content: "
+                           << text().toString();
+
         if( isEndElement() )
         {
             break;
@@ -901,42 +914,46 @@ void XMLimport::readHostPackage()
     }
 }
 
-void XMLimport::readHostPackage( Host * pT )
+void XMLimport::readHostPackage( Host * pHost )
 {
-    pT->mAutoClearCommandLineAfterSend = ( attributes().value("autoClearCommandLineAfterSend") == "yes" );
-    pT->mDisableAutoCompletion = ( attributes().value("disableAutoCompletion") == "yes" );
-    pT->mPrintCommand = ( attributes().value("printCommand") == "yes" );
-    pT->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
-    pT->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
-    pT->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
-    pT->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
-    pT->mIsNextLogFileInHtmlFormat = ( attributes().value("mRawStreamDump") == "yes" );
-    pT->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
-    pT->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );
-    pT->mFORCE_GA_OFF = ( attributes().value("mFORCE_GA_OFF") == "yes" );
-    pT->mFORCE_SAVE_ON_EXIT = ( attributes().value("mFORCE_SAVE_ON_EXIT") == "yes" );
-    pT->mEnableGMCP = ( attributes().value("mEnableGMCP") == "yes" );
-    pT->mEnableMSDP = ( attributes().value("mEnableMSDP") == "yes" );
-    pT->mMapStrongHighlight = ( attributes().value("mMapStrongHighlight") == "yes" );
-    pT->mLogStatus = ( attributes().value("mLogStatus") == "yes" );
-    pT->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );
-    pT->mShowInfo = ( attributes().value("mShowInfo") == "yes" );
-    pT->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
-    pT->mMapperUseAntiAlias = ( attributes().value("mMapperUseAntiAlias") == "yes" );
-    pT->mFORCE_MXP_NEGOTIATION_OFF = ( attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes" );
-    pT->mRoomSize = attributes().value("mRoomSize").toString().toInt();
-    if (!pT->mRoomSize)
-        pT->mRoomSize=3;
-    pT->mLineSize = attributes().value("mLineSize").toString().toInt();
-    if (!pT->mLineSize)
-        pT->mLineSize=1;
-    pT->mBubbleMode = ( attributes().value("mBubbleMode") == "yes" );
-    pT->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
-    pT->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
-    pT->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
+    pHost->mAutoClearCommandLineAfterSend = ( attributes().value("autoClearCommandLineAfterSend") == "yes" );
+    pHost->mDisableAutoCompletion = ( attributes().value("disableAutoCompletion") == "yes" );
+    pHost->mPrintCommand = ( attributes().value("printCommand") == "yes" );
+    pHost->set_USE_IRE_DRIVER_BUGFIX( attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes" );
+    pHost->mUSE_FORCE_LF_AFTER_PROMPT = ( attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes" );
+    pHost->mUSE_UNIX_EOL = ( attributes().value("mUSE_UNIX_EOL") == "yes" );
+    pHost->mNoAntiAlias = ( attributes().value("mNoAntiAlias") == "yes" );
+    pHost->mIsNextLogFileInHtmlFormat = ( attributes().value("mRawStreamDump") == "yes" );
+    pHost->mAlertOnNewData = ( attributes().value("mAlertOnNewData") == "yes" );
+    pHost->mFORCE_NO_COMPRESSION = ( attributes().value("mFORCE_NO_COMPRESSION") == "yes" );
+    pHost->mFORCE_GA_OFF = ( attributes().value("mFORCE_GA_OFF") == "yes" );
+    pHost->mFORCE_SAVE_ON_EXIT = ( attributes().value("mFORCE_SAVE_ON_EXIT") == "yes" );
+    pHost->mEnableGMCP = ( attributes().value("mEnableGMCP") == "yes" );
+    pHost->mEnableMSDP = ( attributes().value("mEnableMSDP") == "yes" );
+    pHost->mMapStrongHighlight = ( attributes().value("mMapStrongHighlight") == "yes" );
+    pHost->mLogStatus = ( attributes().value("mLogStatus") == "yes" );
+    pHost->mEnableSpellCheck = ( attributes().value("mEnableSpellCheck") == "yes" );
+    pHost->mShowInfo = ( attributes().value("mShowInfo") == "yes" );
+    pHost->mAcceptServerGUI = ( attributes().value("mAcceptServerGUI") == "yes" );
+    pHost->mMapperUseAntiAlias = ( attributes().value("mMapperUseAntiAlias") == "yes" );
+    pHost->mFORCE_MXP_NEGOTIATION_OFF = ( attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes" );
+    pHost->mRoomSize = attributes().value("mRoomSize").toString().toFloat();
+    if( qFuzzyCompare( 1.0 + pHost->mRoomSize, 1.0 ) ) {
+        // The value is a float/double and the prior code using "== 0" is a BAD
+        // THING to do with non-integer number types!
+        pHost->mRoomSize= 0.5f; // Same value as is in Host class initalizer list
+    }
+    pHost->mLineSize = attributes().value("mLineSize").toString().toFloat();
+    if( qFuzzyCompare( 1.0 + pHost->mLineSize, 1.0 ) ) {
+        pHost->mLineSize= 1.0f; // Same value as is in Host class initalizer list
+    }
+    pHost->mBubbleMode = ( attributes().value("mBubbleMode") == "yes" );
+    pHost->mShowRoomID = ( attributes().value("mShowRoomIDs") == "yes" );
+    pHost->mShowPanel = ( attributes().value("mShowPanel") == "yes" );
+    pHost->mHaveMapperScript = ( attributes().value("mHaveMapperScript") == "yes");
     QStringRef ignore = attributes().value("mDoubleClickIgnore");
     for(int i=0;i<ignore.size();i++)
-        pT->mDoubleClickIgnore.insert( ignore.at( i ) );
+        pHost->mDoubleClickIgnore.insert( ignore.at( i ) );
 
     while( ! atEnd() )
     {
@@ -947,13 +964,13 @@ void XMLimport::readHostPackage( Host * pT )
         {
             if( name() == "name" )
             {
-                pT->mHostName = readElementText();
+                pHost->mHostName = readElementText();
                 continue;
             }
             else if( name() == "mInstalledModules")
             {
                 QMap<QString, QStringList> entry;
-                readMapList(entry);
+                readModulesDetailsMap(entry);
                 QMapIterator<QString, QStringList> it(entry);
                 while (it.hasNext()){
                     it.next();
@@ -961,303 +978,311 @@ void XMLimport::readHostPackage( Host * pT )
                     QStringList entryList = it.value();
                     moduleList << entryList[0];
                     moduleList << entryList[1];
-                    pT->mInstalledModules[it.key()] = moduleList;
-                    pT->mModulePriorities[it.key()] = entryList[2].toInt();
+                    pHost->mInstalledModules[it.key()] = moduleList;
+                    pHost->mModulePriorities[it.key()] = entryList[2].toInt();
 
                 }
-                //readMapList( pT->mInstalledModules );
                 continue;
             }
             else if( name() == "mInstalledPackages")
             {
-                readStringList( pT->mInstalledPackages );
+                readStringList( pHost->mInstalledPackages );
                 continue;
             }
             else if( name() =="url" )
             {
-                pT->mUrl = readElementText();
+                pHost->mUrl = readElementText();
                 continue;
             }
             else if( name() =="serverPackageName" )
             {
-                pT->mServerGUI_Package_name = readElementText();
+                pHost->mServerGUI_Package_name = readElementText();
                 continue;
             }
             else if( name() == "serverPackageVersion")
             {
-                pT->mServerGUI_Package_version = readElementText().toInt();
+                pHost->mServerGUI_Package_version = readElementText().toInt();
                 continue;
             }
             else if( name() == "port")
             {
-                pT->mPort = readElementText().toInt();
+                pHost->mPort = readElementText().toInt();
                 continue;
             }
             else if( name() == "borderTopHeight")
             {
-                pT->mBorderTopHeight = readElementText().toInt();
+                pHost->mBorderTopHeight = readElementText().toInt();
                 continue;
             }
             else if( name() == "commandLineMinimumHeight")
             {
-                pT->commandLineMinimumHeight = readElementText().toInt();
+                pHost->commandLineMinimumHeight = readElementText().toInt();
                 continue;
             }
             else if( name() == "borderBottomHeight")
             {
-                pT->mBorderBottomHeight = readElementText().toInt();
+                pHost->mBorderBottomHeight = readElementText().toInt();
                 continue;
             }
             else if( name() == "borderLeftWidth")
             {
-                pT->mBorderLeftWidth = readElementText().toInt();
+                pHost->mBorderLeftWidth = readElementText().toInt();
                 continue;
             }
             else if( name() == "borderRightWidth")
             {
-                pT->mBorderRightWidth = readElementText().toInt();
+                pHost->mBorderRightWidth = readElementText().toInt();
                 continue;
             }
             else if( name() == "wrapAt")
             {
-                pT->mWrapAt = readElementText().toInt();
+                pHost->mWrapAt = readElementText().toInt();
                 continue;
             }
             else if( name() == "wrapIndentCount" )
             {
-                pT->mWrapIndentCount = readElementText().toInt();
+                pHost->mWrapIndentCount = readElementText().toInt();
                 continue;
             }
             else if( name() == "mCommandSeparator" )
             {
-                pT->mCommandSeparator = readElementText();
+                pHost->mCommandSeparator = readElementText();
                 continue;
             }
             else if( name() == "mCommandLineFgColor")
             {
-                pT->mCommandLineFgColor.setNamedColor( readElementText() );
+                pHost->mCommandLineFgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mCommandLineBgColor")
             {
-                pT->mCommandLineBgColor.setNamedColor( readElementText() );
+                pHost->mCommandLineBgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mFgColor")
             {
-                pT->mFgColor.setNamedColor( readElementText() );
+                pHost->mFgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mBgColor")
             {
-                pT->mBgColor.setNamedColor( readElementText() );
+                pHost->mBgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mCommandFgColor")
             {
-                pT->mCommandFgColor.setNamedColor( readElementText() );
+                pHost->mCommandFgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mCommandBgColor")
             {
-                pT->mCommandBgColor.setNamedColor( readElementText() );
+                pHost->mCommandBgColor.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mBlack")
             {
-                pT->mBlack.setNamedColor( readElementText() );
+                pHost->mBlack.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightBlack")
             {
-                pT->mLightBlack.setNamedColor( readElementText() );
+                pHost->mLightBlack.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mRed")
             {
-                pT->mRed.setNamedColor( readElementText() );
+                pHost->mRed.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightRed")
             {
-                pT->mLightRed.setNamedColor( readElementText() );
+                pHost->mLightRed.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mBlue")
             {
-                pT->mBlue.setNamedColor( readElementText() );
+                pHost->mBlue.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightBlue")
             {
-                pT->mLightBlue.setNamedColor( readElementText() );
+                pHost->mLightBlue.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mGreen")
             {
-                pT->mGreen.setNamedColor( readElementText() );
+                pHost->mGreen.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightGreen")
             {
-                pT->mLightGreen.setNamedColor( readElementText() );
+                pHost->mLightGreen.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mYellow")
             {
-                pT->mYellow.setNamedColor( readElementText() );
+                pHost->mYellow.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightYellow")
             {
-                pT->mLightYellow.setNamedColor( readElementText() );
+                pHost->mLightYellow.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mCyan")
             {
-                pT->mCyan.setNamedColor( readElementText() );
+                pHost->mCyan.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightCyan")
             {
-                pT->mLightCyan.setNamedColor( readElementText() );
+                pHost->mLightCyan.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mMagenta")
             {
-                pT->mMagenta.setNamedColor( readElementText() );
+                pHost->mMagenta.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightMagenta")
             {
-                pT->mLightMagenta.setNamedColor( readElementText() );
+                pHost->mLightMagenta.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mWhite")
             {
-                pT->mWhite.setNamedColor( readElementText() );
+                pHost->mWhite.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightWhite")
             {
-                pT->mLightWhite.setNamedColor( readElementText() );
+                pHost->mLightWhite.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mDisplayFont")
             {
-                pT->mDisplayFont.fromString( readElementText() );
-                pT->mDisplayFont.setFixedPitch( true );
-//                pT->mDisplayFont.setWordSpacing( 0 );
-//                pT->mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
+                pHost->mDisplayFont.fromString( readElementText() );
+                pHost->mDisplayFont.setFixedPitch( true );
                 continue;
             }
             else if( name() == "mCommandLineFont")
             {
-                pT->mCommandLineFont.fromString( readElementText() );
+                pHost->mCommandLineFont.fromString( readElementText() );
                 continue;
+            }
+            else if( name() == "commandSeperator" ) {
+                // Ignore this misspelled duplicate, it has been removed from
+                // the Xml format but will appear in older files and trip the
+                // QDebug() error reporting associated with the following
+                // readUnknownHostElement() for "anything not otherwise parsed"
+                Q_UNUSED( readElementText() );
             }
             else if( name() == "mFgColor2")
             {
-                pT->mFgColor_2.setNamedColor( readElementText() );
+                pHost->mFgColor_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mBgColor2")
             {
-                pT->mBgColor_2.setNamedColor( readElementText() );
+                pHost->mBgColor_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mBlack2")
             {
-                pT->mBlack_2.setNamedColor( readElementText() );
+                pHost->mBlack_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightBlack2")
             {
-                pT->mLightBlack_2.setNamedColor( readElementText() );
+                pHost->mLightBlack_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mRed2")
             {
-                pT->mRed_2.setNamedColor( readElementText() );
+                pHost->mRed_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightRed2")
             {
-                pT->mLightRed_2.setNamedColor( readElementText() );
+                pHost->mLightRed_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mBlue2")
             {
-                pT->mBlue_2.setNamedColor( readElementText() );
+                pHost->mBlue_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightBlue2")
             {
-                pT->mLightBlue_2.setNamedColor( readElementText() );
+                pHost->mLightBlue_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mGreen2")
             {
-                pT->mGreen_2.setNamedColor( readElementText() );
+                pHost->mGreen_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightGreen2")
             {
-                pT->mLightGreen_2.setNamedColor( readElementText() );
+                pHost->mLightGreen_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mYellow2")
             {
-                pT->mYellow_2.setNamedColor( readElementText() );
+                pHost->mYellow_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightYellow2")
             {
-                pT->mLightYellow_2.setNamedColor( readElementText() );
+                pHost->mLightYellow_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mCyan2")
             {
-                pT->mCyan_2.setNamedColor( readElementText() );
+                pHost->mCyan_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightCyan2")
             {
-                pT->mLightCyan_2.setNamedColor( readElementText() );
+                pHost->mLightCyan_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mMagenta2")
             {
-                pT->mMagenta_2.setNamedColor( readElementText() );
+                pHost->mMagenta_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightMagenta2")
             {
-                pT->mLightMagenta_2.setNamedColor( readElementText() );
+                pHost->mLightMagenta_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mWhite2")
             {
-                pT->mWhite_2.setNamedColor( readElementText() );
+                pHost->mWhite_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mLightWhite2")
             {
-                pT->mLightWhite_2.setNamedColor( readElementText() );
+                pHost->mLightWhite_2.setNamedColor( readElementText() );
                 continue;
             }
             else if( name() == "mSpellDic")
             {
-                pT->mSpellDic = readElementText();
+                pHost->mSpellDic = readElementText();
                 continue;
             }
-            else if( name() == "mRoomSize" )
-            {
-                pT->mRoomSize = readElementText().toDouble();
-            }
-            else if( name() == "mLineSize" )
-            {
-                pT->mLineSize = readElementText().toDouble();
+            else if( name() == "mLineSize" || name() == "mRoomSize" ) {
+                // These two have been dropped from the Xml format as these are
+                // duplicates of attributes that were being incorrected read in
+                // the parent <Host ...> element as integers {they are stored as
+                // decimals but for the first one at least, it is a decimal
+                // number n, where 0.1 <= n <= 1.1 so was being read as "0" for
+                // all but the greatest 2 values where it was read as "1"!}
+                // We still check for them so that we avoid falling into the
+                // QDebug() error reporting associated with the following
+                // readUnknownHostElement() for "anything not otherwise parsed"
+                Q_UNUSED( readElementText() );
             }
             else
             {
@@ -1297,6 +1322,7 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
     pT->mColorTriggerBg = ( attributes().value("isColorTriggerBg") == "yes" );
     pT->mColorTriggerFg = ( attributes().value("isColorTriggerFg") == "yes" );
 
+    QString tempScript;
     while( ! atEnd() )
     {
         readNext();
@@ -1311,11 +1337,8 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 pT->setName( readElementText() );
                 continue;
             }
-
-            else if( name() == "script")
-            {
-                pT->mScript = readElementText();
-                continue;
+            else if( name() == "script") {
+                tempScript = readElementText();
             }
             else if( name() == "packageName")
             {
@@ -1368,6 +1391,10 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
                 pT->mSoundFile = readElementText();
                 continue;
             }
+            // The next two ought to be combined into a single element in the
+            // next revision - sample code for "RegexCode" elements inside a
+            // "RegexList" container (with a "size" attribute) is commented out
+            // in the XMLexporter class.
             else if( name() == "regexCodeList")
             {
                 readStringList( pT->mRegexCodeList );
@@ -1375,10 +1402,19 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
             }
             else if( name() == "regexCodePropertyList" )
             {
-                readIntegerList( pT->mRegexCodePropertyList );
+                readIntegerList( pT->mRegexCodePropertyList, pT->getName() );
+                if( Q_UNLIKELY( pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count() ) )
+                {
+                    qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: mis-match in regexCode details for Trigger: "
+                                         << pT->getName()
+                                         << " there were "
+                                         << pT->mRegexCodeList.count()
+                                         << " 'regexCodeList' sub-elements and "
+                                         << pT->mRegexCodePropertyList.count()
+                                         << " 'regexCodePropertyList' sub-elements so something is broken!";
+                }
                 continue;
             }
-
             else if( name() == "TriggerGroup" )
             {
                 readTriggerGroup( pT );
@@ -1394,14 +1430,14 @@ void XMLimport::readTriggerGroup( TTrigger * pParent )
         }
     }
 
-    if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) )
-    {
-        qDebug()<<"IMPORT: ERROR: cant initialize pattern list for trigger "<<pT->getName();
+    if( ! pT->setRegexCodeList( pT->mRegexCodeList, pT->mRegexCodePropertyList ) ) {
+        qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not initialize pattern list for trigger: "
+                           << pT->getName();
     }
-    QString script = pT->mScript;
-    if( ! pT->setScript( script ) )
-    {
-        qDebug()<<"IMPORT: ERROR: trigger script "<< pT->getName()<<" does not compile";
+
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not compile trigger's script for: "
+                           << pT->getName();
     }
 }
 
@@ -1445,8 +1481,6 @@ void XMLimport::readTimerGroup( TTimer * pParent )
 {
     TTimer * pT;
 
-    QTime _time(10,0,0,0);
-
     if( pParent )
     {
         pT = new TTimer( pParent, mpHost );
@@ -1461,12 +1495,10 @@ void XMLimport::readTimerGroup( TTimer * pParent )
     mpHost->getTimerUnit()->registerTimer( pT );
     pT->setShouldBeActive( ( attributes().value("isActive") == "yes" ) );
 
-// N/U:     bool isOffsetTimer = ( attributes().value("isOffsetTimer") == "yes" );
-
-
     if (module)
         pT->mModuleMember = true;
 
+    QString tempScript;
     while( ! atEnd() )
     {
         readNext();
@@ -1487,8 +1519,7 @@ void XMLimport::readTimerGroup( TTimer * pParent )
             }
             else if( name() == "script")
             {
-                QString script = readElementText();
-                pT->setScript( script );
+                tempScript = readElementText();
                 continue;
             }
             else if( name() == "command")
@@ -1518,35 +1549,17 @@ void XMLimport::readTimerGroup( TTimer * pParent )
         }
     }
 
-
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not compile timer's script for: "
+                           << pT->getName();
+    }
 
     mudlet::self()->registerTimer( pT, pT->mpTimer );
 
-    //if( ( ! isOffsetTimer ) && ( ! pT->isFolder() ) && ( pT->shouldBeActive() ) )
     if( ! pT->mpParent && pT->shouldBeActive() )
     {
         pT->setIsActive( true );
         pT->enableTimer( pT->getID() );
-//        if( pT->canBeUnlocked( 0 ) )
-//        {
-//            if( pT->activate() )
-//            {
-//                pT->mpTimer->start();
-//            }
-//            else
-//            {
-//                pT->deactivate();
-//                pT->mpTimer->stop();
-//            }
-//        }
-    }
-    else
-    {
-//        qDebug()<<"NOT enabling Timer name:"<<pT->getName();
-        //pT->disableTimer( pT->getID() );
-        //pT->deactivate();
-        //pT->mpTimer->stop();
-        //pT->setIsActive( pT->shouldBeActive() );
     }
 
 }
@@ -1606,6 +1619,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
     if (module)
         pT->mModuleMember = true;
 
+    QString tempScript;
     while( ! atEnd() )
     {
         readNext();
@@ -1625,8 +1639,7 @@ void XMLimport::readAliasGroup( TAlias * pParent )
             }
             else if( name() == "script")
             {
-                QString script = readElementText();
-                pT->setScript( script );
+                tempScript = readElementText();
                 continue;
             }
             else if( name() == "command")
@@ -1654,7 +1667,10 @@ void XMLimport::readAliasGroup( TAlias * pParent )
         }
     }
 
-
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not compile alias's script for: "
+                           << pT->getName();
+    }
 }
 
 void XMLimport::readActionPackage()
@@ -1712,6 +1728,7 @@ void XMLimport::readActionGroup( TAction * pParent )
     if (module)
         pT->mModuleMember = true;
 
+    QString tempScript;
     while( ! atEnd() )
     {
         readNext();
@@ -1731,8 +1748,7 @@ void XMLimport::readActionGroup( TAction * pParent )
             }
             else if( name() == "script")
             {
-                QString script = readElementText();
-                pT->setScript( script );
+                tempScript = readElementText();
                 continue;
             }
             else if( name() == "css")
@@ -1823,7 +1839,10 @@ void XMLimport::readActionGroup( TAction * pParent )
         }
     }
 
-
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not compile action's script for: "
+                           << pT->getName();
+    }
 }
 
 void XMLimport::readScriptPackage()
@@ -1879,6 +1898,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
     if (module)
         pT->mModuleMember = true;
 
+    QString tempScript;
     while( ! atEnd() )
     {
         readNext();
@@ -1898,8 +1918,7 @@ void XMLimport::readScriptGroup( TScript * pParent )
             }
             else if( name() == "script")
             {
-                QString script = readElementText();
-                pT->setScript( script );
+                tempScript = readElementText();
                 continue;
             }
             else if( name() == "eventHandlerList")
@@ -1921,6 +1940,11 @@ void XMLimport::readScriptGroup( TScript * pParent )
                 readUnknownScriptElement();
             }
         }
+    }
+
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's script for: "
+                           << pT->getName();
     }
 }
 
@@ -1978,6 +2002,7 @@ void XMLimport::readKeyGroup( TKey * pParent )
     if (module)
         pT->mModuleMember = true;
 
+    QString tempScript;
     while( ! atEnd() )
     {
         readNext();
@@ -1997,8 +2022,7 @@ void XMLimport::readKeyGroup( TKey * pParent )
             }
             else if( name() == "script")
             {
-                QString script = readElementText();
-                pT->setScript( script );
+                tempScript = readElementText();
                 continue;
             }
             else if( name() == "command")
@@ -2031,9 +2055,14 @@ void XMLimport::readKeyGroup( TKey * pParent )
             }
         }
     }
+
+    if( ! pT->setScript( tempScript ) ) {
+        qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not compile key's script for: "
+                           << pT->getName();
+    }
 }
 
-void XMLimport::readMapList( QMap<QString, QStringList> & map)
+void XMLimport::readModulesDetailsMap( QMap<QString, QStringList> & map )
 {
     QString key;
     QStringList entry;
@@ -2093,7 +2122,7 @@ void XMLimport::readStringList( QStringList & list )
     }
 }
 
-void XMLimport::readIntegerList( QList<int> & list )
+void XMLimport::readIntegerList( QList<int> & list, const QString & parentName )
 {
     while( ! atEnd() )
     {
@@ -2105,16 +2134,21 @@ void XMLimport::readIntegerList( QList<int> & list )
         {
             if( name() == "integer")
             {
+                QString numberText = readElementText();
                 bool ok = false;
-                int num;
-                num = readElementText().toInt( &ok, 10 );
-                if( ok )
+                int num = numberText.toInt( &ok, 10 );
+                if( Q_LIKELY( ! numberText.isEmpty() && ok ) )
                 {
                     list << num;
                 }
                 else
                 {
-                    qFatal("FATAL ERROR: reading package property list contained invalid elements");
+                    // Using qFatal() seems a little, erm, fatalistic but
+                    // it seems no lesser one will always be detectable on the
+                    // RELEASE version on Windows? - Slysven
+                    qFatal( "XMLimport::readIntegerList(...) ERROR: unable to convert: \"%1\" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element!",
+                            numberText.toUtf8().constData(),
+                            parentName.toUtf8().constData() );
                 }
             }
             else

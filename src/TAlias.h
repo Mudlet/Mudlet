@@ -47,7 +47,7 @@ public:
     bool             compileScript();
     void             execute();
     QString          getScript()                     { return mScript; }
-    bool             setScript( QString & script );
+    bool             setScript( const QString & script );
     QString          getRegexCode()                  { return mRegexCode; }
     void             setRegexCode( QString );
     void             setCommand( QString command )   { mCommand = command; }

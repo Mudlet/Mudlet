@@ -7058,7 +7058,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                             .arg(file.errorString()));
        return;
     }
-    XMLexport writer( mpHost, true );//just export a generic package without host element
+    XMLexport writer( mpHost ); //just export a generic package without host element
     writer.exportGenericPackage( & file );
     file.close();
 }

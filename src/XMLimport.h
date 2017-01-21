@@ -73,7 +73,7 @@ private:
     void      readHelpPackage();
 
     void      readUnknownHostElement();
-// Not used: void      readUnknownRoomElement();
+
 
     void      readUnknownTriggerElement();
     void      readUnknownTimerElement();
@@ -94,9 +94,8 @@ private:
 
 
     void      readStringList( QStringList & );
-    void      readIntegerList( QList<int> & );
-    void      readMapList( QMap<QString, QStringList> & );
-    //void      readMapList( QMap<QString, QString> &);
+    void      readIntegerList( QList<int> &, const QString &  );
+    void      readModulesDetailsMap( QMap<QString, QStringList> & );
 
     Host *    mpHost;
     QString   mPackageName;
