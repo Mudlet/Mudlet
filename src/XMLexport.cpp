@@ -403,9 +403,12 @@ bool XMLexport::writeHost( Host * pHost )
     {
         TTrigger * pChildTrigger = *it1;
         if( ! pChildTrigger || pChildTrigger->mModuleMember) continue;
-        if( ! pChildTrigger->isTempHostrigger())
+        if( ! pChildTrigger->isTempTrigger())
         {
-            ret = writeTrigger( pChildTrigger );
+            if( ! writeTrigger( pChildTrigger ) )
+            {
+                ret = false;
+            }
         }
     }
     writeEndElement(); //end trigger package tag
@@ -416,9 +419,12 @@ bool XMLexport::writeHost( Host * pHost )
     {
         TTimer * pChildTimer = *it2;
         if (pChildTimer->mModuleMember) continue;
-        if( ! pChildTimer->isTempHostimer())
+        if( ! pChildTimer->isTempTimer())
         {
-            ret = writeTimer( pChildTimer );
+            if( ! writeTimer( pChildTimer ) )
+            {
+                ret = false;
+            }
         }
     }
     writeEndElement();
@@ -431,7 +437,10 @@ bool XMLexport::writeHost( Host * pHost )
         if (pChildAlias->mModuleMember) continue;
         if( ! pChildAlias->isTempAlias())
         {
-            ret = writeAlias( pChildAlias );
+            if( ! writeAlias( pChildAlias ) )
+            {
+                ret = false;
+            }
         }
     }
     writeEndElement();
@@ -442,7 +451,10 @@ bool XMLexport::writeHost( Host * pHost )
     {
         TAction * pChildAction = *it4;
         if (pChildAction->mModuleMember) continue;
-        ret = writeAction( pChildAction );
+        if( ! writeAction( pChildAction ) )
+        {
+            ret = false;
+        }
     }
     writeEndElement();
 
@@ -452,7 +464,10 @@ bool XMLexport::writeHost( Host * pHost )
     {
         TScript * pChildScript = *it5;
         if (pChildScript->mModuleMember) continue;
-        ret = writeScript( pChildScript );
+        if( ! writeScript( pChildScript ) )
+        {
+            ret = false;
+        }
     }
     writeEndElement();
 
@@ -462,7 +477,10 @@ bool XMLexport::writeHost( Host * pHost )
     {
         TKey * pChildKey = *it6;
         if (pChildKey->mModuleMember) continue;
-        ret = writeKey( pChildKey );
+        if( ! writeKey( pChildKey ) )
+        {
+            ret = false;
+        }
     }
     writeEndElement();
 
@@ -489,7 +507,10 @@ bool XMLexport::writeHost( Host * pHost )
         while( it7.hasNext() )
         {
             TVar * var = it7.next();
-            writeVariable( var, lI, vu );
+            if( ! writeVariable( var, lI, vu ) )
+            {
+                ret = false;
+            }
         }
     }
     writeEndElement();
@@ -558,9 +579,12 @@ bool XMLexport::writeGenericPackage( Host * pHost )
     {
         TTrigger * pChildTrigger = *it1;
         if( ! pChildTrigger ) continue;
-        if( ! pChildTrigger->isTrigger())
+        if( ! pChildTrigger->isTempTrigger())
         {
-            ret = writeTrigger( pChildTrigger );
+            if( ! writeTrigger( pChildTrigger ) )
+            {
+                ret = false;
+            }
         }
     }
     writeEndElement(); //end trigger package tag
@@ -570,9 +594,12 @@ bool XMLexport::writeGenericPackage( Host * pHost )
     for( ItTimerUnit it2 = pHost->mTimerUnit.mTimerRootNodeList.begin(); it2 != pHost->mTimerUnit.mTimerRootNodeList.end(); it2++)
     {
         TTimer * pChildTimer = *it2;
-        if( ! pChildTimer->isTimer())
+        if( ! pChildTimer->isTempTimer())
         {
-            ret = writeTimer( pChildTimer );
+            if( ! writeTimer( pChildTimer ) )
+            {
+                ret = false;
+            }
         }
     }
     writeEndElement();
@@ -584,7 +611,10 @@ bool XMLexport::writeGenericPackage( Host * pHost )
         TAlias * pChildAlias = *it3;
         if( ! pChildAlias->isTempAlias())
         {
-            ret = writeAlias( pChildAlias );
+            if( ! writeAlias( pChildAlias ) )
+            {
+                ret =false;
+            }
         }
     }
     writeEndElement();
@@ -594,7 +624,10 @@ bool XMLexport::writeGenericPackage( Host * pHost )
     for( ItActionUnit it4 = pHost->mActionUnit.mActionRootNodeList.begin(); it4 != pHost->mActionUnit.mActionRootNodeList.end(); it4++)
     {
         TAction * pChildAction = *it4;
-            ret = writeAction( pChildAction );
+        if( ! writeAction( pChildAction ) )
+        {
+            ret = false;
+        }
     }
     writeEndElement();
 
@@ -603,7 +636,10 @@ bool XMLexport::writeGenericPackage( Host * pHost )
     for( ItScriptUnit it5 = pHost->mScriptUnit.mScriptRootNodeList.begin(); it5 != pHost->mScriptUnit.mScriptRootNodeList.end(); it5++)
     {
         TScript * pChildScript = *it5;
-            ret = writeScript( pChildScript );
+        if( ! writeScript( pChildScript ) )
+        {
+            ret = false;
+        }
     }
     writeEndElement();
 
@@ -612,7 +648,10 @@ bool XMLexport::writeGenericPackage( Host * pHost )
     for( ItKeyUnit it6 = pHost->mKeyUnit.mKeyRootNodeList.begin(); it6 != pHost->mKeyUnit.mKeyRootNodeList.end(); it6++)
     {
         TKey * pChildKey = *it6;
-            ret = writeKey( pChildKey );
+        if( ! writeKey( pChildKey ) )
+        {
+            ret = false;
+        }
     }
     writeEndElement();
 
