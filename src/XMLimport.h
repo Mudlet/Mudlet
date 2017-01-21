@@ -93,7 +93,7 @@ private:
 
 
     void      readStringList( QStringList & );
-    void      readIntegerList( QList<int> & );
+    void      readIntegerList( QList<int> &, const QString &  );
     void      readModulesDetailsMap( QMap<QString, QStringList> & );
 
     QPointer<Host> mpHost;

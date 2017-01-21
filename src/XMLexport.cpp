@@ -459,8 +459,12 @@ bool XMLexport::writeHost( Host * pHost )
         writeTextElement( "mWhite2", pHost->mWhite_2.name() );
         writeTextElement( "mLightWhite2", pHost->mLightWhite_2.name() );
         writeTextElement( "mSpellDic", pHost->mSpellDic );
-        writeTextElement( "mLineSize", QString::number(pHost->mLineSize, 'f', 1) ); // TODO: Consider removing these sub-elements that duplicate the same
-        writeTextElement( "mRoomSize", QString::number(pHost->mRoomSize, 'f', 1) ); // attributes - which WERE bugged - when we update the XML format
+        // TODO: Consider removing these sub-elements that duplicate the same
+        // attributes - which WERE bugged - when we update the XML format, must leave
+        // them in place for now even though we no longer use them for compatibility
+        // with older version of Mudlet
+        writeTextElement( "mLineSize", QString::number(pHost->mLineSize, 'f', 1) );
+        writeTextElement( "mRoomSize", QString::number(pHost->mRoomSize, 'f', 1) );
 
         writeEndElement(); // </Host>
     }
@@ -788,11 +792,11 @@ bool XMLexport::writeTrigger( TTrigger * pT )
             writeTextElement( "colorTriggerBgColor", pT->mColorTriggerBgColor.name() );
 
             // TODO: The next bit could be revised for a new - not BACKWARD COMPATIBLE form:
-            // elementCount = qMin( pTt->mRegexCodeList.size(), pT->mRegexCodePropertyList.size() ):
+            // int elementCount = qMin( pTt->mRegexCodeList.size(), pT->mRegexCodePropertyList.size() ):
             // writeStartElement( "RegexList" );
             // writeAttribute( "size", QString::number( elementCount ) );
             // for( int i = 0; i < elementCount; ++i ) {
-            //     writeEmptyElement( "regexCode" );
+            //     writeEmptyElement( "RegexCode" );
             //     writeAttribute( "name", pT->mRegexCodeList.at(i) );
             //     writeAttribute( "type", pT->mRegexCodePropertyList.at(i) );
             // }
