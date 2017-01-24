@@ -611,7 +611,7 @@ function handleWindowResizeEvent()
 end
 
 
-
+-- NOTE: NOW ALL CASES ARE HANDLED IN MUDLET CORE
 --- Clears the current selection in the main window or miniConsole window. <br/>
 --- (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.)
 ---
@@ -623,9 +623,9 @@ end
 ---   <pre>
 ---   deselect("myMiniConsole")
 ---   </pre>
-function deselect()
-	selectString("", 1)
-end
+--function deselect()
+--	selectString("", 1)
+--end
 
 
 
