@@ -90,6 +90,7 @@ public:
     bool call_luafunction( void * );
     bool compile(const QString & );
     bool compile(const QString & code, QString & error );
+    bool compile(const QString & code, QString & error, const QString & name );
     bool compileScript(const QString & );
     void setAtcpTable(const QString &, const QString & );
     void setGMCPTable(QString &, const QString & );

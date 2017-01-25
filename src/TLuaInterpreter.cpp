@@ -12029,6 +12029,7 @@ bool TLuaInterpreter::compile(const QString & code, QString & errorMsg )
     }
 
     int error = luaL_dostring( L, code.toLatin1().data() );
+
     QString n;
     if( error != 0 )
     {
@@ -12051,6 +12052,41 @@ bool TLuaInterpreter::compile(const QString & code, QString & errorMsg )
     if( error == 0 ) return true;
     else return false;
 }
+
+bool TLuaInterpreter::compile(const QString & code, QString & errorMsg, const QString & name)
+{
+    lua_State * L = pGlobalLua;
+    if( ! L )
+    {
+        qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return false;
+    }
+
+    int error = (luaL_loadbuffer( L, code.toLatin1().data(), strlen(code.toLatin1().data()), name.toLatin1().data() ) || lua_pcall(L, 0, 0, 0));
+
+    QString n;
+    if( error != 0 )
+    {
+        string e = "Lua syntax error:";
+        if( lua_isstring( L, 1 ) )
+        {
+            e.append( lua_tostring( L, 1 ) );
+        }
+        errorMsg = "<b><font color='blue'>";
+        errorMsg.append( e.c_str() );
+        errorMsg.append("</b></font>");
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"\n "<<e.c_str()<<"\n">>0;}
+    }
+    else
+    {
+        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"\nLUA: code compiled without errors. OK\n" >> 0;}
+    }
+    lua_pop( L, lua_gettop( L ) );
+
+    if( error == 0 ) return true;
+    else return false;
+}
+
 
 void TLuaInterpreter::setMultiCaptureGroups( const std::list< std::list<std::string> > & captureList,
                                              const std::list< std::list<int> > & posList )

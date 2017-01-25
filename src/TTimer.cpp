@@ -209,7 +209,7 @@ bool TTimer::compileScript()
     mFuncName = QString("Timer")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpHost->mLuaInterpreter.compile( code, error ) )
+    if( mpHost->mLuaInterpreter.compile( code, error, getName() ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;

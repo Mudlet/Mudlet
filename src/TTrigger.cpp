@@ -1325,7 +1325,7 @@ bool TTrigger::compileScript()
     mFuncName = QString("Trigger")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error ) )
+    if( mpLua->compile( code, error, getName() ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
