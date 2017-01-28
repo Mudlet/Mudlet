@@ -374,10 +374,10 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "raiseEvent: ERROR: NULL Host pointer!" )
+        lua_pushstring( L, tr( "raiseEvent: NULL Host pointer - something is wrong!" )
                         .toUtf8().constData() );
-        return 2;
+        lua_error( L );
+        return 1;
     }
 
     TEvent event;
@@ -412,9 +412,8 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
     }
 
     pHost->raiseEvent( event );
-    lua_pushnumber( L, n ); // Return number of supplied arguments put out.
 
-    return 1;
+    return 0;
 }
 
 int TLuaInterpreter::getProfileName( lua_State * L )
@@ -439,11 +438,11 @@ int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "raiseGlobalEvent: ERROR: NULL Host pointer!" ).toUtf8().constData() );
-        return 2;
+        lua_pushstring( L, tr( "raiseGlobalEvent: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
     }
-
 
     int n = lua_gettop( L );
     if( ! n ) {
@@ -494,9 +493,8 @@ int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
 
     mudlet::self()->getHostManager()->postInterHostEvent( pHost, event );
-    lua_pushnumber( L, n ); // Return number of supplied arguments put out, which is one less than the handler will receive!
 
-    return 1;
+    return 0;
 }
 
 int TLuaInterpreter::resetProfile( lua_State * L )
