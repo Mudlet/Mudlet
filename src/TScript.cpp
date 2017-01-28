@@ -137,7 +137,7 @@ bool TScript::setScript(const QString & script )
 bool TScript::compileScript()
 {
     QString error;
-    if( mpHost->mLuaInterpreter.compile( mScript, error, getName() ) )
+    if( mpHost->mLuaInterpreter.compile( mScript, error, QString("Script: ") + getName() ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;

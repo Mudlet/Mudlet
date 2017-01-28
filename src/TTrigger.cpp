@@ -200,7 +200,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              funcName = func.str();
              QString code = QString("function ")+funcName.c_str()+QString("()\n")+regexList[i]+QString("\nend\n");
              QString error;
-             if( ! mpLua->compile( code, error ) )
+             if( ! mpLua->compile( code, error, QString::fromStdString(funcName) ) )
              {
                  setError( QString("pattern type Lua condition function '")+regexList[i]+QString("' failed to compile.")+error);
                  state = false;
@@ -1325,7 +1325,7 @@ bool TTrigger::compileScript()
     mFuncName = QString("Trigger")+QString::number( mID );
     QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpLua->compile( code, error, getName() ) )
+    if( mpLua->compile( code, error, QString("Trigger: ") + getName() ) )
     {
         mNeedsToBeCompiled = false;
         mOK_code = true;
