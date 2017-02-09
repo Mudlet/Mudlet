@@ -13,242 +13,352 @@ gaugesTable = {}
 
 
 --- The <i>color_table table</i> holds definition of color names. These are intended to be
---- used in conjunction with fg() and bg() colorizer functions.
----
---- @see showColors
---- @see bg
---- @see fg
----
---- @class function
---- @name color_table
+-- used in conjunction with fg() and bg() colorizer functions.
+-- Mudlet's original table - going back a few years - differs from the
+-- "standard" which can be found at https://www.w3.org/TR/SVG11/types.html#ColorKeywords
+-- Mudlet has additional colours not in the standard:
+-- "light_goldenrod", "light_slate_blue", "navy_blue" and "violet_red"
+-- Mudlet is missing some colours:
+-- "aqua", "fuchsia", "dark_blue", "dark_cyan", "dark_gray"/"dark_grey",
+-- "dark_magenta", "dark_red", "indigo", "light_green", "olive", "silver",
+-- "teal", "violet_red"
+-- Also Mudlet redefines:
+-- "gray"/"grey", "green", "maroon" and "purple"
+-- All of the above also implies the Camel Case equivalents; in summary:
+--  Colour               Mudlet            Web Standard
+--  aqua                                     0, 255, 255
+--  fuchsia                                255,   0, 255
+--  dark_blue                                0,   0, 139
+--  dark_gray/dark_grey                    169, 169, 169
+--  dark_magenta                           139,   0, 139
+--  dark_red                               139,   0,   0
+--  gray/grey            190, 190, 190     128, 128, 128
+--  green                  0, 255,   0       0, 128,   0
+--  indigo                                  75,   0, 130
+--  light_goldrod        238, 221, 130
+--  light_slate_blue     132, 112, 255
+--  light_green                            144, 238, 144
+--  maroon               176,  48,  96     128,   0,   0
+--  navy_blue              0,   0, 128
+--  olive                                  128, 128,   0
+--  purple               160,  32, 240     128,   0, 128
+--  silver                                 192, 192, 192
+--  teal                                     0, 128, 128
+--  violet_red                             208,  32, 240
+-- @see showColors
+-- @see bg
+-- @see fg
+-- @see forceWebColorsTable
+-- @class function
+-- @name color_table
 color_table = {
-	snow                  = {255, 250, 250},
-	ghost_white           = {248, 248, 255},
-	GhostWhite            = {248, 248, 255},
-	white_smoke           = {245, 245, 245},
-	WhiteSmoke            = {245, 245, 245},
-	gainsboro             = {220, 220, 220},
-	floral_white          = {255, 250, 240},
-	FloralWhite           = {255, 250, 240},
-	old_lace              = {253, 245, 230},
-	OldLace               = {253, 245, 230},
-	linen                 = {250, 240, 230},
-	antique_white         = {250, 235, 215},
-	AntiqueWhite          = {250, 235, 215},
-	papaya_whip           = {255, 239, 213},
-	PapayaWhip            = {255, 239, 213},
-	blanched_almond       = {255, 235, 205},
-	BlanchedAlmond        = {255, 235, 205},
-	bisque                = {255, 228, 196},
-	peach_puff            = {255, 218, 185},
-	PeachPuff             = {255, 218, 185},
-	navajo_white          = {255, 222, 173},
-	NavajoWhite           = {255, 222, 173},
-	moccasin              = {255, 228, 181},
-	cornsilk              = {255, 248, 220},
-	ivory                 = {255, 255, 240},
-	lemon_chiffon         = {255, 250, 205},
-	LemonChiffon          = {255, 250, 205},
-	seashell              = {255, 245, 238},
-	honeydew              = {240, 255, 240},
-	mint_cream            = {245, 255, 250},
-	MintCream             = {245, 255, 250},
-	azure                 = {240, 255, 255},
 	alice_blue            = {240, 248, 255},
 	AliceBlue             = {240, 248, 255},
-	lavender              = {230, 230, 250},
-	lavender_blush        = {255, 240, 245},
-	LavenderBlush         = {255, 240, 245},
-	misty_rose            = {255, 228, 225},
-	MistyRose             = {255, 228, 225},
-	white                 = {255, 255, 255},
+	antique_white         = {250, 235, 215},
+	AntiqueWhite          = {250, 235, 215},
+	aquamarine            = {127, 255, 212},
+	azure                 = {240, 255, 255},
+	beige                 = {245, 245, 220},
+	bisque                = {255, 228, 196},
 	black                 = {0, 0, 0},
+	blanched_almond       = {255, 235, 205},
+	BlanchedAlmond        = {255, 235, 205},
+	blue                  = {0, 0, 255},
+	blue_violet           = {138, 43, 226},
+	BlueViolet            = {138, 43, 226},
+	brown                 = {165, 42, 42},
+	burlywood             = {222, 184, 135},
+	cadet_blue            = {95, 158, 160},
+	CadetBlue             = {95, 158, 160},
+	chartreuse            = {127, 255, 0},
+	chocolate             = {210, 105, 30},
+	coral                 = {255, 127, 80},
+	cornflower_blue       = {100, 149, 237},
+	CornflowerBlue        = {100, 149, 237},
+	cornsilk              = {255, 248, 220},
+	cyan                  = {0, 255, 255},
+	dark_goldenrod        = {184, 134, 11},
+	DarkGoldenrod         = {184, 134, 11},
+	dark_green            = {0, 100, 0},
+	DarkGreen             = {0, 100, 0},
+	dark_khaki            = {189, 183, 107},
+	DarkKhaki             = {189, 183, 107},
+	dark_olive_green      = {85, 107, 47},
+	DarkOliveGreen        = {85, 107, 47},
+	dark_orange           = {255, 140, 0},
+	DarkOrange            = {255, 140, 0},
+	dark_orchid           = {153, 50, 204},
+	DarkOrchid            = {153, 50, 204},
+	dark_salmon           = {233, 150, 122},
+	DarkSalmon            = {233, 150, 122},
+	dark_slate_blue       = {72, 61, 139},
+	dark_sea_green        = {143, 188, 143},
+	DarkSeaGreen          = {143, 188, 143},
+	DarkSlateBlue         = {72, 61, 139},
 	dark_slate_gray       = {47, 79, 79},
 	DarkSlateGray         = {47, 79, 79},
 	dark_slate_grey       = {47, 79, 79},
 	DarkSlateGrey         = {47, 79, 79},
+	dark_turquoise        = {0, 206, 209},
+	DarkTurquoise         = {0, 206, 209},
+	dark_violet           = {148, 0, 211},
+	DarkViolet            = {148, 0, 211},
+	deep_pink             = {255, 20, 147},
+	DeepPink              = {255, 20, 147},
+	deep_sky_blue         = {0, 191, 255},
+	DeepSkyBlue           = {0, 191, 255},
+	dodger_blue           = {30, 144, 255},
+	DodgerBlue            = {30, 144, 255},
 	dim_gray              = {105, 105, 105},
 	DimGray               = {105, 105, 105},
 	dim_grey              = {105, 105, 105},
 	DimGrey               = {105, 105, 105},
-	slate_gray            = {112, 128, 144},
-	SlateGray             = {112, 128, 144},
-	slate_grey            = {112, 128, 144},
-	SlateGrey             = {112, 128, 144},
+	firebrick             = {178, 34, 34},
+	floral_white          = {255, 250, 240},
+	FloralWhite           = {255, 250, 240},
+	forest_green          = {34, 139, 34},
+	ForestGreen           = {34, 139, 34},
+	gainsboro             = {220, 220, 220},
+	ghost_white           = {248, 248, 255},
+	GhostWhite            = {248, 248, 255},
+	gold                  = {255, 215, 0},
+	goldenrod             = {218, 165, 32},
+	gray                  = {190, 190, 190},
+	grey                  = {190, 190, 190},
+	green                 = {0, 255, 0},
+	green_yellow          = {173, 255, 47},
+	GreenYellow           = {173, 255, 47},
+	honeydew              = {240, 255, 240},
+	hot_pink              = {255, 105, 180},
+	HotPink               = {255, 105, 180},
+	indian_red            = {205, 92, 92},
+	IndianRed             = {205, 92, 92},
+	khaki                 = {240, 230, 140},
+	ivory                 = {255, 255, 240},
+	lavender              = {230, 230, 250},
+	lavender_blush        = {255, 240, 245},
+	LavenderBlush         = {255, 240, 245},
+	lawn_green            = {124, 252, 0},
+	LawnGreen             = {124, 252, 0},
+	lemon_chiffon         = {255, 250, 205},
+	LemonChiffon          = {255, 250, 205},
+	light_blue            = {173, 216, 230},
+	LightBlue             = {173, 216, 230},
+	light_coral           = {240, 128, 128},
+	LightCoral            = {240, 128, 128},
+	light_cyan            = {224, 255, 255},
+	LightCyan             = {224, 255, 255},
+	light_goldenrod       = {238, 221, 130},
+	LightGoldenrod        = {238, 221, 130},
+	light_goldenrod_yellow= {250, 250, 210},
+	LightGoldenrodYellow  = {250, 250, 210},
+	light_gray            = {211, 211, 211},
+	LightGray             = {211, 211, 211},
+	light_grey            = {211, 211, 211},
+	LightGrey             = {211, 211, 211},
+	light_pink            = {255, 182, 193},
+	LightPink             = {255, 182, 193},
+	light_salmon          = {255, 160, 122},
+	LightSalmon           = {255, 160, 122},
+	light_sea_green       = {32, 178, 170},
+	LightSeaGreen         = {32, 178, 170},
+	light_sky_blue        = {135, 206, 250},
+	LightSkyBlue          = {135, 206, 250},
+	light_slate_blue      = {132, 112, 255},
+	LightSlateBlue        = {132, 112, 255},
 	light_slate_gray      = {119, 136, 153},
 	LightSlateGray        = {119, 136, 153},
 	light_slate_grey      = {119, 136, 153},
 	LightSlateGrey        = {119, 136, 153},
-	gray                  = {190, 190, 190},
-	grey                  = {190, 190, 190},
-	light_grey            = {211, 211, 211},
-	LightGrey             = {211, 211, 211},
-	light_gray            = {211, 211, 211},
-	LightGray             = {211, 211, 211},
+	light_steel_blue      = {176, 196, 222},
+	LightSteelBlue        = {176, 196, 222},
+	light_yellow          = {255, 255, 224},
+	LightYellow           = {255, 255, 224},
+	lime_green            = {50, 205, 50},
+	LimeGreen             = {50, 205, 50},
+	linen                 = {250, 240, 230},
+	magenta               = {255, 0, 255},
+	maroon                = {176, 48, 96},
+	medium_aquamarine     = {102, 205, 170},
+	MediumAquamarine      = {102, 205, 170},
+	medium_blue           = {0, 0, 205},
+	MediumBlue            = {0, 0, 205},
+	medium_orchid         = {186, 85, 211},
+	MediumOrchid          = {186, 85, 211},
+	medium_purple         = {147, 112, 219},
+	MediumPurple          = {147, 112, 219},
+	medium_sea_green      = {60, 179, 113},
+	MediumSeaGreen        = {60, 179, 113},
+	medium_slate_blue     = {123, 104, 238},
+	MediumSlateBlue       = {123, 104, 238},
+	medium_spring_green   = {0, 250, 154},
+	MediumSpringGreen     = {0, 250, 154},
+	medium_turquoise      = {72, 209, 204},
+	MediumTurquoise       = {72, 209, 204},
+	medium_violet_red     = {199, 21, 133},
+	MediumVioletRed       = {199, 21, 133},
 	midnight_blue         = {25, 25, 112},
 	MidnightBlue          = {25, 25, 112},
+	mint_cream            = {245, 255, 250},
+	MintCream             = {245, 255, 250},
+	misty_rose            = {255, 228, 225},
+	MistyRose             = {255, 228, 225},
+	moccasin              = {255, 228, 181},
+	navajo_white          = {255, 222, 173},
+	NavajoWhite           = {255, 222, 173},
 	navy                  = {0, 0, 128},
 	navy_blue             = {0, 0, 128},
 	NavyBlue              = {0, 0, 128},
-	cornflower_blue       = {100, 149, 237},
-	CornflowerBlue        = {100, 149, 237},
-	dark_slate_blue       = {72, 61, 139},
-	DarkSlateBlue         = {72, 61, 139},
-	slate_blue            = {106, 90, 205},
-	SlateBlue             = {106, 90, 205},
-	medium_slate_blue     = {123, 104, 238},
-	MediumSlateBlue       = {123, 104, 238},
-	light_slate_blue      = {132, 112, 255},
-	LightSlateBlue        = {132, 112, 255},
-	medium_blue           = {0, 0, 205},
-	MediumBlue            = {0, 0, 205},
-	royal_blue            = {65, 105, 225},
-	RoyalBlue             = {65, 105, 225},
-	blue                  = {0, 0, 255},
-	dodger_blue           = {30, 144, 255},
-	DodgerBlue            = {30, 144, 255},
-	deep_sky_blue         = {0, 191, 255},
-	DeepSkyBlue           = {0, 191, 255},
-	sky_blue              = {135, 206, 235},
-	SkyBlue               = {135, 206, 235},
-	light_sky_blue        = {135, 206, 250},
-	LightSkyBlue          = {135, 206, 250},
-	steel_blue            = {70, 130, 180},
-	SteelBlue             = {70, 130, 180},
-	light_steel_blue      = {176, 196, 222},
-	LightSteelBlue        = {176, 196, 222},
-	light_blue            = {173, 216, 230},
-	LightBlue             = {173, 216, 230},
-	powder_blue           = {176, 224, 230},
-	PowderBlue            = {176, 224, 230},
-	pale_turquoise        = {175, 238, 238},
-	PaleTurquoise         = {175, 238, 238},
-	dark_turquoise        = {0, 206, 209},
-	DarkTurquoise         = {0, 206, 209},
-	medium_turquoise      = {72, 209, 204},
-	MediumTurquoise       = {72, 209, 204},
-	turquoise             = {64, 224, 208},
-	cyan                  = {0, 255, 255},
-	light_cyan            = {224, 255, 255},
-	LightCyan             = {224, 255, 255},
-	cadet_blue            = {95, 158, 160},
-	CadetBlue             = {95, 158, 160},
-	medium_aquamarine     = {102, 205, 170},
-	MediumAquamarine      = {102, 205, 170},
-	aquamarine            = {127, 255, 212},
-	dark_green            = {0, 100, 0},
-	DarkGreen             = {0, 100, 0},
-	dark_olive_green      = {85, 107, 47},
-	DarkOliveGreen        = {85, 107, 47},
-	dark_sea_green        = {143, 188, 143},
-	DarkSeaGreen          = {143, 188, 143},
-	sea_green             = {46, 139, 87},
-	SeaGreen              = {46, 139, 87},
-	medium_sea_green      = {60, 179, 113},
-	MediumSeaGreen        = {60, 179, 113},
-	light_sea_green       = {32, 178, 170},
-	LightSeaGreen         = {32, 178, 170},
-	pale_green            = {152, 251, 152},
-	PaleGreen             = {152, 251, 152},
-	spring_green          = {0, 255, 127},
-	SpringGreen           = {0, 255, 127},
-	lawn_green            = {124, 252, 0},
-	LawnGreen             = {124, 252, 0},
-	green                 = {0, 255, 0},
-	chartreuse            = {127, 255, 0},
-	medium_spring_green   = {0, 250, 154},
-	MediumSpringGreen     = {0, 250, 154},
-	green_yellow          = {173, 255, 47},
-	GreenYellow           = {173, 255, 47},
-	lime_green            = {50, 205, 50},
-	LimeGreen             = {50, 205, 50},
-	yellow_green          = {154, 205, 50},
-	YellowGreen           = {154, 205, 50},
-	forest_green          = {34, 139, 34},
-	ForestGreen           = {34, 139, 34},
+	old_lace              = {253, 245, 230},
+	OldLace               = {253, 245, 230},
 	olive_drab            = {107, 142, 35},
 	OliveDrab             = {107, 142, 35},
-	dark_khaki            = {189, 183, 107},
-	DarkKhaki             = {189, 183, 107},
-	khaki                 = {240, 230, 140},
-	pale_goldenrod        = {238, 232, 170},
-	PaleGoldenrod         = {238, 232, 170},
-	light_goldenrod_yellow= {250, 250, 210},
-	LightGoldenrodYellow  = {250, 250, 210},
-	light_yellow          = {255, 255, 224},
-	LightYellow           = {255, 255, 224},
-	yellow                = {255, 255, 0},
-	gold                  = {255, 215, 0},
-	light_goldenrod       = {238, 221, 130},
-	LightGoldenrod        = {238, 221, 130},
-	goldenrod             = {218, 165, 32},
-	dark_goldenrod        = {184, 134, 11},
-	DarkGoldenrod         = {184, 134, 11},
-	rosy_brown            = {188, 143, 143},
-	RosyBrown             = {188, 143, 143},
-	indian_red            = {205, 92, 92},
-	IndianRed             = {205, 92, 92},
-	saddle_brown          = {139, 69, 19},
-	SaddleBrown           = {139, 69, 19},
-	sienna                = {160, 82, 45},
-	peru                  = {205, 133, 63},
-	burlywood             = {222, 184, 135},
-	beige                 = {245, 245, 220},
-	wheat                 = {245, 222, 179},
-	sandy_brown           = {244, 164, 96},
-	SandyBrown            = {244, 164, 96},
-	tan                   = {210, 180, 140},
-	chocolate             = {210, 105, 30},
-	firebrick             = {178, 34, 34},
-	brown                 = {165, 42, 42},
-	dark_salmon           = {233, 150, 122},
-	DarkSalmon            = {233, 150, 122},
-	salmon                = {250, 128, 114},
-	light_salmon          = {255, 160, 122},
-	LightSalmon           = {255, 160, 122},
 	orange                = {255, 165, 0},
-	dark_orange           = {255, 140, 0},
-	DarkOrange            = {255, 140, 0},
-	coral                 = {255, 127, 80},
-	light_coral           = {240, 128, 128},
-	LightCoral            = {240, 128, 128},
-	tomato                = {255, 99, 71},
 	orange_red            = {255, 69, 0},
 	OrangeRed             = {255, 69, 0},
-	red                   = {255, 0, 0},
-	hot_pink              = {255, 105, 180},
-	HotPink               = {255, 105, 180},
-	deep_pink             = {255, 20, 147},
-	DeepPink              = {255, 20, 147},
-	pink                  = {255, 192, 203},
-	light_pink            = {255, 182, 193},
-	LightPink             = {255, 182, 193},
+	orchid                = {218, 112, 214},
+	pale_goldenrod        = {238, 232, 170},
+	PaleGoldenrod         = {238, 232, 170},
+	pale_green            = {152, 251, 152},
+	PaleGreen             = {152, 251, 152},
+	pale_turquoise        = {175, 238, 238},
+	PaleTurquoise         = {175, 238, 238},
 	pale_violet_red       = {219, 112, 147},
 	PaleVioletRed         = {219, 112, 147},
-	maroon                = {176, 48, 96},
-	medium_violet_red     = {199, 21, 133},
-	MediumVioletRed       = {199, 21, 133},
+	papaya_whip           = {255, 239, 213},
+	PapayaWhip            = {255, 239, 213},
+	peach_puff            = {255, 218, 185},
+	PeachPuff             = {255, 218, 185},
+	peru                  = {205, 133, 63},
+	pink                  = {255, 192, 203},
+	plum                  = {221, 160, 221},
+	powder_blue           = {176, 224, 230},
+	PowderBlue            = {176, 224, 230},
+	purple                = {160, 32, 240},
+	royal_blue            = {65, 105, 225},
+	RoyalBlue             = {65, 105, 225},
+	red                   = {255, 0, 0},
+	rosy_brown            = {188, 143, 143},
+	RosyBrown             = {188, 143, 143},
+	saddle_brown          = {139, 69, 19},
+	SaddleBrown           = {139, 69, 19},
+	salmon                = {250, 128, 114},
+	sandy_brown           = {244, 164, 96},
+	SandyBrown            = {244, 164, 96},
+	sea_green             = {46, 139, 87},
+	SeaGreen              = {46, 139, 87},
+	seashell              = {255, 245, 238},
+	sienna                = {160, 82, 45},
+	sky_blue              = {135, 206, 235},
+	SkyBlue               = {135, 206, 235},
+	slate_blue            = {106, 90, 205},
+	SlateBlue             = {106, 90, 205},
+	slate_gray            = {112, 128, 144},
+	SlateGray             = {112, 128, 144},
+	slate_grey            = {112, 128, 144},
+	SlateGrey             = {112, 128, 144},
+	snow                  = {255, 250, 250},
+	steel_blue            = {70, 130, 180},
+	SteelBlue             = {70, 130, 180},
+	spring_green          = {0, 255, 127},
+	SpringGreen           = {0, 255, 127},
+	tan                   = {210, 180, 140},
+	thistle               = {216, 191, 216},
+	tomato                = {255, 99, 71},
+	turquoise             = {64, 224, 208},
 	violet_red            = {208, 32, 144},
 	VioletRed             = {208, 32, 144},
-	magenta               = {255, 0, 255},
 	violet                = {238, 130, 238},
-	plum                  = {221, 160, 221},
-	orchid                = {218, 112, 214},
-	medium_orchid         = {186, 85, 211},
-	MediumOrchid          = {186, 85, 211},
-	dark_orchid           = {153, 50, 204},
-	DarkOrchid            = {153, 50, 204},
-	dark_violet           = {148, 0, 211},
-	DarkViolet            = {148, 0, 211},
-	blue_violet           = {138, 43, 226},
-	BlueViolet            = {138, 43, 226},
-	purple                = {160, 32, 240},
-	medium_purple         = {147, 112, 219},
-	MediumPurple          = {147, 112, 219},
-	thistle               = {216, 191, 216}
+	wheat                 = {245, 222, 179},
+	white                 = {255, 255, 255},
+	white_smoke           = {245, 245, 245},
+	WhiteSmoke            = {245, 245, 245},
+	yellow                = {255, 255, 0},
+	yellow_green          = {154, 205, 50},
+	YellowGreen           = {154, 205, 50}
 }
 
 
+--- This command allows the use of a "Web Standard" colour table which is
+--  slightly different from the table used by Mudlet in the past.
+--  @param setting true to use the Web Standard colors of: https://www.w3.org/TR/SVG11/types.html#ColorKeywords or false to use the past Mudlet defined ones.
+function forceWebColorsTable(setting)
+	if setting ~= nil then
+		if setting == true then
+			color_table["aqua"] = {0, 255, 255}
+			color_table["fuchsia"] = {255, 0, 255}
+			color_table["dark_blue"] = {0, 0, 139}
+			color_table["dark_cyan"] = {0, 139, 139}
+			color_table["dark_gray"] = {169, 169, 169}
+			color_table["dark_grey"] = {169, 169, 169}
+			color_table["dark_magenta"] = {139, 0, 139}
+			color_table["dark_red"] = {139, 0, 0}
+			color_table["gray"] = {128, 128, 128}
+			color_table["green"] = {0, 128, 0}
+			color_table["grey"] = {128, 128, 128}
+			color_table["indigo"] = {75, 0, 130}
+			color_table["lime"]= {0, 255, 0}
+			color_table["light_goldenrod"] = nil
+			color_table["light_green"] = {144, 238, 144}
+			color_table["light_slate_blue"] = nil
+			color_table["maroon"] = {128, 0, 0}
+			color_table["navy_blue"] = nil
+			color_table["olive"] = {128, 128, 0}
+			color_table["purple"] = {128, 0, 128}
+			color_table["silver"] = {192, 192, 192}
+			color_table["teal"] = {0, 128, 128}
+			color_table["violet_red"] = nil
+			color_table["DarkBlue"] = {0, 0, 139}
+			color_table["DarkCyan"] = {0, 139, 139}
+			color_table["DarkGray"] = {169, 169, 169}
+			color_table["DarkGrey"] = {169, 169, 169}
+			color_table["DarkMagenta"] = {139, 0, 139}
+			color_table["DarkRed"] = {139, 0, 0}
+			color_table["LightGoldenrod"] = nil
+			color_table["LightGreen"] = {144, 238, 144}
+			color_table["LightSlateBlue"] = nil
+			color_table["NavyBlue"] = nil
+			color_table["VioletRed"] = nil
+		elseif setting == false then
+			color_table["aqua"] = nil
+			color_table["cyan"] = {0, 255, 255}
+			color_table["fuchsia"] = nil
+			color_table["dark_blue"] = nil
+			color_table["dark_cyan"] = nil
+			color_table["dark_gray"] = nil
+			color_table["dark_grey"] = nil
+			color_table["dark_magenta"] = nil
+			color_table["dark_red"] = nil
+			color_table["gray"] = {190, 190, 190}
+			color_table["green"] = {0, 255, 0}
+			color_table["grey"] = {190, 190, 190}
+			color_table["indigo"] = nil
+			color_table["light_goldenrod"] = {238, 221, 130}
+			color_table["light_green"] = nil
+			color_table["light_slate_blue"] = {132, 112, 255}
+			color_table["lime"] = nil
+			color_table["magenta"] = {255, 0, 255}
+			color_table["maroon"] = {176, 48, 96}
+			color_table["navy_blue"] = {0, 0, 128}
+			color_table["olive"] = nil
+			color_table["purple"] = {160, 32, 240}
+			color_table["silver"] = nil
+			color_table["teal"] = nil
+			color_table["violet_red"] = {208, 32, 144}
+			color_table["DarkBlue"] = nil
+			color_table["DarkCyan"] = nil
+			color_table["DarkGray"] = nil
+			color_table["DarkGrey"] = nil
+			color_table["DarkMagenta"] = nil
+			color_table["DarkRed"] = nil
+			color_table["LightGoldenrod"] = {238, 221, 130}
+			color_table["LightGreen"] = nil
+			color_table["LightSlateBlue"] = {132, 112, 255}
+			color_table["NavyBlue"] = {0, 0, 128}
+			color_table["VioletRed"] = {208, 32, 144}
+		end
+	end
+end
 
 --- Move a custom gauge.
 ---
@@ -734,7 +844,26 @@ function showColors(...)
    for k,v in pairs(color_table) do
       if k:lower():find(search) then
          local fgc
-         local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
+         local red, green, blue
+         -- local luminosity = (0.2126 * ((v[1]/255)^2.2)) + (0.7152 * ((v[2]/255)^2.2)) + (0.0722 * ((v[3]/255)^2.2))
+         -- The above formula was wrong, according to https://www.w3.org/TR/WCAG20/#relativeluminancedef
+         -- it should be:
+         if v[1] < 11 then
+             red = v[1]/(255 * 12.92)
+         else
+             red = ((0.055 + v[1]/255)/1.055)^2.4
+         end
+         if v[2] < 11 then
+             green = v[2]/(255 * 12.92)
+         else
+             green = ((0.055 + v[2]/255)/1.055)^2.4
+         end
+         if v[3] < 11 then
+             blue = v[3]/(255 * 12.92)
+         else
+             blue = ((0.055 + v[3]/255)/1.055)^2.4
+         end
+         local luminosity = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue)
          if luminosity > 0.5 then
             fgc = "black"
          else
