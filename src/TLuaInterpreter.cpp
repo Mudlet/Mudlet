@@ -446,10 +446,10 @@ int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
 
     int n = lua_gettop( L );
     if( ! n ) {
-        lua_pushnil( L );
         lua_pushstring( L, tr( "raiseGlobalEvent: missing argument #1 (eventName as, probably, a string expected!)" )
                         .toUtf8().constData() );
-        return 2;
+        lua_error( L );
+        return 1;
     }
 
     TEvent event;
