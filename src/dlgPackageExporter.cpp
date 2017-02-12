@@ -338,22 +338,24 @@ void dlgPackageExporter::slot_addFiles(){
     QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
 }
 
-void dlgPackageExporter::slot_browse_button(){
-    QFileDialog dialog(this);
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
-    dialog.setViewMode(QFileDialog::Detail);
-    QString fileName;
-    if (dialog.exec()) {
-        fileName = dialog.selectedFiles().first();
+// Not Used - otherwise might need to tweak search for *.xml to ensure it worked
+// on MacOS:
+//void dlgPackageExporter::slot_browse_button(){
+//    QFileDialog dialog(this);
+//    dialog.setFileMode(QFileDialog::AnyFile);
+//    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
+//    dialog.setViewMode(QFileDialog::Detail);
+//    QString fileName;
+//    if (dialog.exec()) {
+//        fileName = dialog.selectedFiles().first();
 
-        if (!fileName.endsWith(".xml"))
-            fileName.append(".xml");
+//        if (!fileName.endsWith(".xml"))
+//            fileName.append(".xml");
 
-        ui->filePath->setText(fileName);
-        exportButton->setDisabled(false);
-    }
-}
+//        ui->filePath->setText(fileName);
+//        exportButton->setDisabled(false);
+//    }
+//}
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig){
     list<TTrigger *> * childList = trig->getChildrenList();
