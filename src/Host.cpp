@@ -215,7 +215,9 @@ void Host::saveModules(int sync)
         QString tempDir;
         QString zipName;
         zip * zipFile = 0;
-        if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
+        // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
+        if(  filename_xml.endsWith( QStringLiteral( "mpackage" ), Qt::CaseInsensitive )
+          || filename_xml.endsWith( QStringLiteral( "zip" ), Qt::CaseInsensitive ) )
         {
             tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
             filename_xml = tempDir + "/" + moduleName + ".xml";
