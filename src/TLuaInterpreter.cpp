@@ -11988,7 +11988,7 @@ bool TLuaInterpreter::compileScript(const QString & code )
     else return false;
 }
 
-bool TLuaInterpreter::compile(const QString & code )
+bool TLuaInterpreter::compile(const QString & code, QString & errorMsg, const QString & name)
 {
     lua_State * L = pGlobalLua;
     if( ! L )
@@ -11997,38 +11997,8 @@ bool TLuaInterpreter::compile(const QString & code )
         return false;
     }
 
-    int error = luaL_dostring( L, code.toLatin1().data() );
-    QString n;
-    if( error != 0 )
-    {
-        string e = "no error message available from Lua";
-        if( lua_isstring( L, 1 ) )
-        {
-            e = "Lua error:";
-            e+=lua_tostring( L, 1 );
-        }
-        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"LUA: code did not compile: ERROR:"<<e.c_str()<<"\n">>0;}
-    }
-    else
-    {
-        if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"LUA: code compiled without errors. OK\n" >> 0;}
-    }
-    lua_pop( L, lua_gettop( L ) );
+    int error = (luaL_loadbuffer( L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), name.toUtf8().constData() ) || lua_pcall(L, 0, 0, 0));
 
-    if( error == 0 ) return true;
-    else return false;
-}
-
-bool TLuaInterpreter::compile(const QString & code, QString & errorMsg )
-{
-    lua_State * L = pGlobalLua;
-    if( ! L )
-    {
-        qDebug()<< "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
-
-    int error = luaL_dostring( L, code.toLatin1().data() );
     QString n;
     if( error != 0 )
     {
