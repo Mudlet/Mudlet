@@ -715,19 +715,27 @@ void mudlet::slot_close_profile()
     {
         if( mConsoleMap.contains( mpCurrentActiveHost ) )
         {
-            QString name = mpCurrentActiveHost->getName();
             Host * pH = mpCurrentActiveHost;
-            mpCurrentActiveHost->mpEditorDialog->close();
-            mConsoleMap[mpCurrentActiveHost]->close();
-            if( mTabMap.contains( pH->getName() ) )
+            if( pH )
             {
-                mpTabBar->removeTab( mpTabBar->currentIndex() );
-                mConsoleMap.remove( pH );
-                getHostManager()->deleteHost( pH->getName() );
-                mTabMap.remove( pH->getName() );
+                QString name = pH->getName();
+                mpCurrentActiveHost->mpEditorDialog->close();
+                mConsoleMap[ pH ]->close();
+                if( mTabMap.contains( name ) )
+                {
+                    mpTabBar->removeTab( mpTabBar->currentIndex() );
+                    mConsoleMap.remove( pH );
+                    getHostManager()->deleteHost( name );
+                    mTabMap.remove( name );
+                }
+                mpCurrentActiveHost = Q_NULLPTR;
             }
-            if( !mpCurrentActiveHost ) disableToolbarButtons();
         }
+
+    }
+    else
+    {
+        disableToolbarButtons();
     }
 }
 
