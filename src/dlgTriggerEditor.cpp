@@ -6723,11 +6723,16 @@ void dlgTriggerEditor::slot_export()
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"),
                                                     QDir::currentPath(),
                                                     tr("Mudlet packages (*.xml)"));
-    if(fileName.isEmpty()) return;
-
-    if ( !fileName.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) )
+    if( fileName.isEmpty() )
     {
-        fileName.append(".xml");
+        return;
+    }
+
+    // Must be case insensitive to work on MacOS platforms, possibly a cause of
+    // https://bugs.launchpad.net/mudlet/+bug/1417234
+    if( ! fileName.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) )
+    {
+        fileName.append( QStringLiteral( ".xml" ) );
     }
 
 
@@ -6957,11 +6962,16 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                                                     QDir::homePath(),
                                                     tr("trigger files (*.trigger *.xml)"));
 
-    if(fileName.isEmpty()) return;
-
-    if ( !fileName.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) )
+    if( fileName.isEmpty() )
     {
-        fileName.append(".xml");
+        return;
+    }
+    // Must be case insensitive to work on MacOS platforms, possibly a cause of
+    // https://bugs.launchpad.net/mudlet/+bug/1417234
+    if(  ! fileName.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive )
+      && ! fileName.endsWith( QStringLiteral( ".trigger" ), Qt::CaseInsensitive ) )
+    {
+        fileName.append( QStringLiteral( ".xml" ) );
     }
 
     QFile file(fileName);
