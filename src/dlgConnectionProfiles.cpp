@@ -636,7 +636,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         if( profile_name == QStringLiteral( "Slothmud" ) )
             val = QStringLiteral( "slothmud.org" );
         if( profile_name == QStringLiteral( "WoTMUD" ) )
-            val = QStringLiteral( "wotmud.org" );
+            val = QStringLiteral( "game.wotmud.org" );
     }
     host_name_entry->setText( val );
 
