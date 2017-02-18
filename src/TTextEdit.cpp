@@ -1655,7 +1655,7 @@ int TTextEdit::bufferScrollUp( int lines )
 
 int TTextEdit::bufferScrollDown( int lines )
 {
-    if( ( mpBuffer->mCursorY + lines ) < (int)(mpBuffer->size()-1 - mScreenHeight) )
+    if( ( mpBuffer->mCursorY + lines ) < (int)(mpBuffer->size()) )
     {
         if( mpBuffer->mCursorY + lines < mScreenHeight + lines )
         {
@@ -1674,11 +1674,31 @@ int TTextEdit::bufferScrollDown( int lines )
 
         return lines;
     }
-    else
+    else if( mpBuffer->mCursorY >= (int)(mpBuffer->size()-1) )
     {
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
         return 0;
+    }
+    else
+    {
+        lines = (int)(mpBuffer->size()-1) - mpBuffer->mCursorY;
+        if( mpBuffer->mCursorY + lines < mScreenHeight + lines )
+        {
+            mpBuffer->mCursorY = mScreenHeight+lines;
+            if( mpBuffer->mCursorY > (int)(mpBuffer->size()-1 ) )
+            {
+                mpBuffer->mCursorY = mpBuffer->size()-1;
+                mIsTailMode = true;
+            }
+        }
+        else
+        {
+            mpBuffer->mCursorY += lines;
+            mIsTailMode = false;
+        }
+
+        return lines;
     }
 }
