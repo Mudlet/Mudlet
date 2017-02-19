@@ -544,8 +544,8 @@ void TMap::audit()
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed, in %1 seconds. Enjoy your game..." )
-                              .arg( _time.nsecsElapsed() * 1.0e-9 );
+        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed (%1s). Enjoy your game..." )
+                              .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
         postMessage( infoMsg );
         appendErrorMsg( infoMsg );
     }
@@ -1593,9 +1593,9 @@ bool TMap::restore( QString location )
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, checking some\n"
+        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
                                         "consistency details..." )
-                            .arg( _time.nsecsElapsed() * 1.0e-9 );
+                            .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
 
         postMessage( okMsg );
         appendErrorMsgWithNoLf( okMsg );
