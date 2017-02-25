@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
             std::cout << "                       and will make the application wait until a debugger"  << std::endl;
             std::cout << "                       connects to it." << std::endl;
             std::cout << std::endl;
-            std::cout << "Report bugs to: <http://launchpad.mudlet.org/>" << std::endl;
-            std::cout << "pkg home page: <http://mudlet.sourceforge.net/>, also see <http://www.mudlet.org/>"<< std::endl;
+            std::cout << "Report bugs to: <https://bugs.launchpad.net/mudlet/+filebug>" << std::endl;
+            std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
         }
         return 0;
     }
