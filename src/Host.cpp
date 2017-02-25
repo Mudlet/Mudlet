@@ -150,6 +150,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mRoomSize            ( 0.5 )
 , mBubbleMode          ( false )
 , mShowRoomID          ( false )
+, mMapperUseAntiAlias  ( true )
 , mServerGUI_Package_version( -1 )
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
