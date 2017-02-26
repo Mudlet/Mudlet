@@ -45,16 +45,18 @@ class TTrigger;
 class TVar;
 
 
-class XMLimport : public QXmlStreamReader {
-    Q_DECLARE_TR_FUNCTIONS( XMLimport ) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
+class XMLimport : public QXmlStreamReader
+{
+    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
 
 public:
-    XMLimport( Host * );
-    bool importPackage( QIODevice * device, QString packageName = QString(), int moduleFlag = 0 );
+    XMLimport(Host*);
+    bool importPackage(QIODevice* device, QString packageName = QString(), int moduleFlag = 0);
 
 private:
     void readPackage();
     void readUnknownPackage();
+
     void readHostPackage();
     void readTriggerPackage();
     void readTimerPackage();
@@ -65,13 +67,14 @@ private:
     void readVariablePackage();
     void readUnknownMapElement();
     void readMap();
-    void readRoom( QMultiHash<int, int> &, unsigned int * );
-    void readRooms( QMultiHash<int, int> & );
+    void readRoom(QMultiHash<int, int>&, unsigned int*);
+    void readRooms(QMultiHash<int, int>&);
     void readEnvColor();
     void readEnvColors();
     void readArea();
     void readAreas();
     void readHelpPackage();
+
     void readUnknownHostElement();
     void readUnknownTriggerElement();
     void readUnknownTimerElement();
@@ -79,37 +82,39 @@ private:
     void readUnknownActionElement();
     void readUnknownScriptElement();
     void readUnknownKeyElement();
-    void readHostPackage( Host * );
-    void readTriggerGroup( TTrigger * );
-    void readTimerGroup( TTimer * );
-    void readAliasGroup( TAlias * );
-    void readActionGroup( TAction * );
-    void readScriptGroup( TScript * );
-    void readKeyGroup( TKey * );
-    void readVariableGroup( TVar * );
+
+    void readHostPackage(Host*);
+    void readTriggerGroup(TTrigger*);
+    void readTimerGroup(TTimer*);
+    void readAliasGroup(TAlias*);
+    void readActionGroup(TAction*);
+    void readScriptGroup(TScript*);
+    void readKeyGroup(TKey*);
+    void readVariableGroup(TVar*);
     void readHiddenVariables();
-    void readStringList( QStringList & );
-    void readIntegerList( QList<int> &, const QString & );
-    void readModulesDetailsMap( QMap<QString, QStringList> & );
+
+    void readStringList(QStringList&);
+    void readIntegerList(QList<int>&, const QString&);
+    void readModulesDetailsMap(QMap<QString, QStringList>&);
 
     QPointer<Host> mpHost;
-    QString        mPackageName;
-    TTrigger *     mpTrigger;
-    TTimer *       mpTimer;
-    TAlias *       mpAlias;
-    TKey *         mpKey;
-    TAction *      mpAction;
-    TScript *      mpScript;
-    TVar *         mpVar;
-    bool           gotTrigger;
-    bool           gotTimer;
-    bool           gotAlias;
-    bool           gotKey;
-    bool           gotAction;
-    bool           gotScript;
-    int            module;
-    int            mMaxRoomId;
-    int            mMaxAreaId; // Could be useful when iterating through map data
+    QString mPackageName;
+    TTrigger* mpTrigger;
+    TTimer* mpTimer;
+    TAlias* mpAlias;
+    TKey* mpKey;
+    TAction* mpAction;
+    TScript* mpScript;
+    TVar* mpVar;
+    bool gotTrigger;
+    bool gotTimer;
+    bool gotAlias;
+    bool gotKey;
+    bool gotAction;
+    bool gotScript;
+    int module;
+    int mMaxRoomId;
+    int mMaxAreaId; // Could be useful when iterating through map data
 };
 
 #endif // MUDLET_XMLEXPORT_H

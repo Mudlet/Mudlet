@@ -18,14 +18,14 @@ Standard: Cpp03
 DisableFormat: false
 
 # line length
-ColumnLimit: 120 # revisit when tuning.
+ColumnLimit: 200 # revisit when tuning.
 
 # indentation
 IndentWidth: 4
 UseTab: Never
 TabWidth: 8
 AccessModifierOffset: -4
-ConstructorInitializerIndentWidth: 0
+ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 IndentCaseLabels: false
 IndentWrappedFunctionNames: false
@@ -36,7 +36,7 @@ AlwaysBreakAfterDefinitionReturnType: false
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true
 BreakBeforeBinaryOperators: true
-BreakBeforeBraces: Stroustrup
+BreakBeforeBraces: Linux
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
@@ -51,17 +51,15 @@ SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
-SpacesInParentheses: true
-SpacesInSquareBrackets: true
+SpacesInParentheses: false
 
 # parameters
 AllowAllParametersOfDeclarationOnNextLine: true
 BinPackParameters: false
-BinPackArguments: false
 
 # pointers
 DerivePointerAlignment: false
-PointerAlignment: Middle
+PointerAlignment: Left
 
 # braces
 Cpp11BracedListStyle: false
@@ -71,12 +69,10 @@ AllowShortBlocksOnASingleLine: false # revisit
 AllowShortFunctionsOnASingleLine: Inline # revisit
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: true
 
 # alignment
 AlignEscapedNewlinesLeft: false
 AlignTrailingComments: true
-AlignConsecutiveDeclarations: true
 
 # penalties (revisit)
 PenaltyBreakBeforeFirstCallParameter: 19
