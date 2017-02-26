@@ -1488,7 +1488,7 @@ int mudlet::selectSection( Host * pHost, const QString & name, int f, int t )
         return -1;
 }
 
-// Added a return value to indicate whether the give windows name was found
+// Added a return value to indicate whether the given windows name was found
 bool mudlet::deselect( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];

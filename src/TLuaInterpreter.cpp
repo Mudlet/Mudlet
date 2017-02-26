@@ -437,7 +437,7 @@ int TLuaInterpreter::selectString( lua_State * L )
     QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
     if( lua_gettop( L ) > 2 ) {
         if( ! lua_isstring( L, s ) ) {
-            lua_pushstring( L, tr( "selectString: bad argument %1 type (window name as string, is optional {defaults"
+            lua_pushstring( L, tr( "selectString: bad argument #%1 type (window name as string, is optional {defaults"
                                    "to \"main\" if omitted}, got %2!)" )
                             .arg( s )
                             .arg( luaL_typename( L, s ) )
@@ -459,7 +459,7 @@ int TLuaInterpreter::selectString( lua_State * L )
 
     QString searchText;
     if( ! lua_isstring( L, s ) ) {
-        lua_pushstring( L, tr( "selectString: bad argument %1 type (text to search for as string expected, got %2!)" )
+        lua_pushstring( L, tr( "selectString: bad argument #%1 type (text to select as string expected, got %2!)" )
                         .arg( s )
                         .arg( luaL_typename( L, s ) )
                         .toUtf8().constData() );
@@ -474,7 +474,7 @@ int TLuaInterpreter::selectString( lua_State * L )
 
     qint64 numOfMatch = 0;
     if( ! lua_isnumber( L, s ) ) {
-        lua_pushstring( L, tr( "selectString: bad argument %1 type (match number as number expected, got %2!)" )
+        lua_pushstring( L, tr( "selectString: bad argument #%1 type (match count as number {1 for first} expected, got %2!)" )
                         .arg( s )
                         .arg( luaL_typename( L, s ) )
                         .toUtf8().constData() );
@@ -5112,11 +5112,11 @@ int TLuaInterpreter::deselect( lua_State *L )
     return 1;
 }
 
-int TLuaInterpreter::reset( lua_State *L )
+int TLuaInterpreter::resetFormat( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
-        lua_pushstring( L, tr( "reset: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_pushstring( L, tr( "resetFormat: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -5124,7 +5124,7 @@ int TLuaInterpreter::reset( lua_State *L )
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if( lua_gettop( L ) > 0 ) {
         if( ! lua_isstring( L, 1 ) ) {
-            lua_pushstring( L, tr( "reset: bad argument #1 type (window name as string, is optional {defaults"
+            lua_pushstring( L, tr( "resetFormat: bad argument #1 type (window name as string, is optional {defaults"
                                    "to \"main\" if omitted}, got %1!)" )
                             .arg( luaL_typename( L, 1 ) )
                             .toUtf8().constData() );
@@ -13047,7 +13047,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "debugc", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
-    lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::reset );
+    lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::resetFormat );
     lua_register( pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd );
     lua_register( pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber );
     lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );
