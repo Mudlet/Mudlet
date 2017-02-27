@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -48,7 +48,7 @@ class XMLimport : public QXmlStreamReader
 public:
               XMLimport( Host * );
 
-    bool      importPackage( QIODevice *device, QString packageName = QString(), int moduleFlag = 0 );
+    bool      importPackage( QIODevice *device, QString packageName = QString(), int moduleFlag = 0, QString * pVersionString = Q_NULLPTR );
 
 private:
 
@@ -96,7 +96,9 @@ private:
     void      readStringList( QStringList & );
     void      readIntegerList( QList<int> & );
     void      readMapList( QMap<QString, QStringList> & );
-    //void      readMapList( QMap<QString, QString> &);
+
+    void        getVersionString( QString & );
+
 
     QPointer<Host> mpHost;
     QString   mPackageName;
@@ -119,6 +121,8 @@ private:
 
     int         mMaxRoomId;
     int         mMaxAreaId; // Could be useful when iterating through map data
+    quint8      mVersionMajor;
+    quint16     mVersionMinor; // Cannot be a quint6 as that only allows x.255 for the decimal
 };
 
 #endif // MUDLET_XMLEXPORT_H
