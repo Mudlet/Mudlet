@@ -654,6 +654,14 @@ void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 void dlgTriggerEditor::readSettings()
 {
     QSettings settings("mudlet", "Mudlet 1.0");
+
+    //Check if loaded. Otherwise, try to load from Mudlet directory instead of mudlet.
+    if(settings.value("pos") == 0)
+    {
+        QSettings settings("Mudlet","Mudlet 1.0");
+    }
+
+
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize( size );
