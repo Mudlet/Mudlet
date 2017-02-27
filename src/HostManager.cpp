@@ -91,7 +91,7 @@ bool HostManager::addHost( QString hostname, QString port, QString login, QStrin
     }
 
     int portnumber = 23;
-    if( ! port.isEmpty() && port.toInt() > 0 && port.toInt() << 65536 )
+    if( ! port.isEmpty() && port.toInt() > 0 && port.toInt() < 65536 )
     {
         portnumber = port.toInt();
     }
