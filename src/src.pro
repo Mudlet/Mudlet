@@ -462,4 +462,5 @@ DISTFILES += \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
-    ../cmake/FindZIP.cmake
+    ../cmake/FindZIP.cmake \
+    .clang-format
