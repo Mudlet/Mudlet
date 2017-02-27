@@ -507,62 +507,80 @@ int TLuaInterpreter::resetProfile( lua_State * L )
 
 
 // cursorPositionInLine = select( text ) if not found -1
-int TLuaInterpreter::select( lua_State * L )
+// Was called select but that may clash with the Lua built-in command with the
+// same name
+// selectString( [windowName], text, number_of_match )
+// Will now consider an EMPTY window name or the literal "main" as being the
+// same as an omitted windowName - i.e. is the main console window.
+int TLuaInterpreter::selectString( lua_State * L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring( L, tr( "selectString: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+
     int s = 1;
-    int n = lua_gettop( L );
-    string a1;
-    if( n > 2 )
-    {
-        if( ! lua_isstring( L, s ) )
-        {
-            lua_pushstring( L, "select: wrong argument type" );
-          lua_error( L );
-          return 1;
+    QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
+    if( lua_gettop( L ) > 2 ) {
+        if( ! lua_isstring( L, s ) ) {
+            lua_pushstring( L, tr( "selectString: bad argument #%1 type (window name as string, is optional {defaults"
+                                   "to \"main\" if omitted}, got %2!)" )
+                            .arg( s )
+                            .arg( luaL_typename( L, s ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
         }
-        else
-        {
-            a1 = lua_tostring( L, s );
+        else {
+            // We cannot yet properly handle non-ASCII windows names but we will eventually!
+            windowName = QString::fromUtf8( lua_tostring( L, s ) );
+            if( ! windowName.compare( tr( "main" ), Qt::CaseSensitive ) ) {
+                // This matches the identifier for the main window - so make it
+                // appear so by emptying it...
+                windowName = QString();
+            }
             s++;
         }
     }
-    string luaSendText="";
-    if( ! lua_isstring( L, s ) )
-    {
-        lua_pushstring( L, "select: wrong argument type" );
+
+    QString searchText;
+    if( ! lua_isstring( L, s ) ) {
+        lua_pushstring( L, tr( "selectString: bad argument #%1 type (text to select as string expected, got %2!)" )
+                        .arg( s )
+                        .arg( luaL_typename( L, s ) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        luaSendText = lua_tostring( L, s );
+    else {
+        searchText = QString::fromUtf8( lua_tostring( L, s ) );
+        // CHECK: Do we need to qualify this for a non-blank string?
         s++;
     }
-    int luaNumOfMatch;
-    if( ! lua_isnumber( L, s ) )
-    {
-        lua_pushstring( L, "select: wrong argument type" );
+
+    qint64 numOfMatch = 0;
+    if( ! lua_isnumber( L, s ) ) {
+        lua_pushstring( L, tr( "selectString: bad argument #%1 type (match count as number {1 for first} expected, got %2!)" )
+                        .arg( s )
+                        .arg( luaL_typename( L, s ) )
+                        .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
-    else
-    {
-        luaNumOfMatch = lua_tointeger( L, s );
+    else {
+        numOfMatch = lua_tointeger( L, s );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( n == 2 )
-    {
-        int pos = pHost->mpConsole->select( QString( luaSendText.c_str() ), luaNumOfMatch );
-        lua_pushnumber( L, pos );
-        return 1;
+
+    if( windowName.isEmpty() ) {
+        lua_pushnumber( L, pHost->mpConsole->select( searchText, numOfMatch ) );
     }
-    else
-    {
-        QString _name(a1.c_str());
-        int pos = mudlet::self()->selectString( pHost, _name, QString( luaSendText.c_str() ), luaNumOfMatch );
-        lua_pushnumber( L, pos );
-        return 1;
+    else {
+        lua_pushnumber( L, mudlet::self()->selectString( pHost, windowName, searchText, numOfMatch ) );
     }
+    return 1;
 }
 
 int TLuaInterpreter::selectCurrentLine( lua_State * L )
@@ -5144,44 +5162,84 @@ int TLuaInterpreter::getPath( lua_State *L )
 
 int TLuaInterpreter::deselect( lua_State *L )
 {
-    string luaWindowName="";
-    if( lua_isstring( L, 1 ) )
-    {
-        luaWindowName = lua_tostring( L, 1 );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring( L, tr( "deselect: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString name = luaWindowName.c_str();
-    if( luaWindowName.size() < 1 || luaWindowName == "main" )
-    {
+    QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "deselect: bad argument #1 type (window name as string, is optional {defaults"
+                                   "to \"main\" if omitted}, got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            // We cannot yet properly handle non-ASCII windows names but we will eventually!
+            windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
+            if( ! windowName.compare( tr( "main" ), Qt::CaseSensitive ) ) {
+                // This matches the identifier for the main window - so make it
+                // appear so by emptying it...
+                windowName = QString();
+            }
+        }
+    }
+
+    if( windowName.isEmpty() ) {
         pHost->mpConsole->deselect();
+        lua_pushboolean( L, true );
     }
-    else
-    {
-        mudlet::self()->deselect( pHost, name );
+    else {
+        lua_pushboolean( L, mudlet::self()->deselect( pHost, windowName ) );
     }
-    return 0;
+
+    return 1;
 }
 
-int TLuaInterpreter::reset( lua_State *L )
+int TLuaInterpreter::resetFormat( lua_State *L )
 {
-    string luaWindowName="";
-    if( lua_isstring( L, 1 ) )
-    {
-        luaWindowName = lua_tostring( L, 1 );
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring( L, tr( "resetFormat: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
+        lua_error( L );
+        return 1;
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString name = luaWindowName.c_str();
-    if( luaWindowName.size() < 1 || luaWindowName == "main" )
-    {
+    QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
+    if( lua_gettop( L ) > 0 ) {
+        if( ! lua_isstring( L, 1 ) ) {
+            lua_pushstring( L, tr( "resetFormat: bad argument #1 type (window name as string, is optional {defaults"
+                                   "to \"main\" if omitted}, got %1!)" )
+                            .arg( luaL_typename( L, 1 ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else {
+            // We cannot yet properly handle non-ASCII windows names but we will eventually!
+            windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
+            if( ! windowName.compare( tr( "main" ), Qt::CaseSensitive ) ) {
+                // This matches the identifier for the main window - so make it
+                // appear so by emptying it...
+                windowName = QString();
+            }
+        }
+    }
+
+    if( windowName.isEmpty() ) {
         pHost->mpConsole->reset();
+        lua_pushboolean( L, true );
     }
-    else
-    {
-        mudlet::self()->resetFormat( pHost, name );
+    else {
+        lua_pushboolean( L, mudlet::self()->resetFormat( pHost, windowName ) );
     }
-    return 0;
+
+    return 1;
 }
 
 int TLuaInterpreter::hasFocus( lua_State *L )
@@ -13011,7 +13069,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "wait", TLuaInterpreter::Wait );
     lua_register( pGlobalLua, "expandAlias", TLuaInterpreter::Send );
     lua_register( pGlobalLua, "echo", TLuaInterpreter::Echo );
-    lua_register( pGlobalLua, "selectString", TLuaInterpreter::select );
+    lua_register( pGlobalLua, "selectString", TLuaInterpreter::selectString );
     lua_register( pGlobalLua, "selectSection", TLuaInterpreter::selectSection );
     lua_register( pGlobalLua, "replace", TLuaInterpreter::replace );
     lua_register( pGlobalLua, "setBgColor", TLuaInterpreter::setBgColor );
@@ -13053,7 +13111,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "debugc", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
-    lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::reset );
+    lua_register( pGlobalLua, "resetFormat", TLuaInterpreter::resetFormat );
     lua_register( pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd );
     lua_register( pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber );
     lua_register( pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency );

@@ -152,7 +152,7 @@ public:
    bool                          moduleTableVisible();
    bool                          mWindowMinimized;
    void                          doAutoLogin( const QString & );
-   void                          deselect( Host * pHost, const QString & name );
+   bool                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
    QTime                         mReplayTime;

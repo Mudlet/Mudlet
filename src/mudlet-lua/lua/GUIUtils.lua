@@ -611,24 +611,6 @@ function handleWindowResizeEvent()
 end
 
 
-
---- Clears the current selection in the main window or miniConsole window. <br/>
---- (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.)
----
---- @usage Clear selection in main window.
----   <pre>
----   deselect()
----   </pre>
---- @usage Clear selection in myMiniConsole window.
----   <pre>
----   deselect("myMiniConsole")
----   </pre>
-function deselect()
-	selectString("", 1)
-end
-
-
-
 --- Sets current background color to a named color.
 ---
 --- @usage Set background color to magenta.

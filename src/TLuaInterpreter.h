@@ -232,7 +232,7 @@ public:
     static int Send( lua_State * L );
     static int sendRaw( lua_State * L );
     static int Echo( lua_State * L );
-    static int select( lua_State * L );
+    static int selectString( lua_State * L ); // Was select but I think it clashes with the Lua command with that name
     static int getMainConsoleWidth( lua_State * L );
     static int selectSection( lua_State * L );
     static int replace( lua_State * L );
@@ -283,7 +283,7 @@ public:
     static int debug( lua_State * L );
     static int setWindowWrap( lua_State * );
     static int setWindowWrapIndent( lua_State * );
-    static int reset( lua_State * );
+    static int resetFormat( lua_State * );
     static int moveCursorEnd( lua_State * );
     static int getLastLineNumber( lua_State * );
     static int getNetworkLatency( lua_State * );
