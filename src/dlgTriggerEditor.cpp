@@ -653,7 +653,7 @@ void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 
 void dlgTriggerEditor::readSettings()
 {
-    QSettings settings("Mudlet", "Mudlet 1.0");
+    QSettings settings("mudlet", "Mudlet 1.0");
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize( size );
@@ -662,7 +662,7 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    QSettings settings("Mudlet", "Mudlet 1.0");
+    QSettings settings("mudlet", "Mudlet 1.0");
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
 }
