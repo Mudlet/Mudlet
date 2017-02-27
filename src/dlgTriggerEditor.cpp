@@ -655,7 +655,11 @@ void dlgTriggerEditor::readSettings()
 {
     QSettings settings("mudlet", "Mudlet 1.0");
 
-    //For compatibility with older settings, if no config is loaded from the config directory "mudlet", we try to load from the config directory "Mudlet".
+    /*In case sensitive environments, two different config directories 
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+    For compatibility with older settings, if no config is loaded 
+    from the config directory "mudlet", we try to load from the config 
+    directory "Mudlet".*/
     if(settings.value("pos") == 0)
     {
         QSettings settings("Mudlet","Mudlet 1.0");
