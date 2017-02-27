@@ -1687,6 +1687,13 @@ void mudlet::closeEvent(QCloseEvent *event)
 void mudlet::readSettings()
 {
     QSettings settings("mudlet", "Mudlet 1.0");
+    
+    //Check if loaded. Otherwise, try to load from Mudlet directory instead of mudlet.
+    if(settings.value("pos") == 0)
+    {
+        QSettings settings("Mudlet","Mudlet 1.0");
+    }
+    
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
