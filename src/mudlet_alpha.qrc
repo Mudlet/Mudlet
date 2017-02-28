@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
+        <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file>3k-mapper.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>
@@ -89,12 +90,12 @@
         <file>icons/import.png</file>
         <file>icons/internet-telephony.png</file>
         <file>icons/list-add_small.png</file>
-        <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file>icons/lusternia_120_30.png</file>
         <file>icons/media-optical.png</file>
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>
+        <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
         <file>icons/mudlet_configure.png</file>
         <file>icons/mudlet_custom_exit.png</file>
