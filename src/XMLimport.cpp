@@ -36,14 +36,14 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-// clang-format off
+// clang-format: off
 #include "pre_guard.h"
-// clang-format on
+// clang-format: on
 #include <QDebug>
 #include <QStringList>
-// clang-format off
-#include "pre_guard.h"
-// clang-format on
+// clang-format: off
+#include "post_guard.h"
+// clang-format: on
 
 XMLimport::XMLimport(Host* pH)
     : mpHost(pH)
