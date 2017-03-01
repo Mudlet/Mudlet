@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -179,6 +180,7 @@ public slots:
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
     void                        slot_grab_key();
+    void                        slot_grab_button();
     bool                        event( QEvent * event ) override;
     void                        grab_key_callback( int key, int modifier );
     void                        slot_profileSaveAction();

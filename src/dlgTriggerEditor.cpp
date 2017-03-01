@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +27,7 @@
 
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
+#include "dlgButtonSelect.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
@@ -59,6 +60,7 @@
 #include <QTextDocument>
 #include <QTextOption>
 #include <QToolBar>
+#include <QDebug>
 #include "post_guard.h"
 
 
@@ -160,6 +162,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpKeysMainArea->setSizePolicy( sizePolicy8 );
     pVB1->addWidget( mpKeysMainArea );
     connect(mpKeysMainArea->pushButton_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
+    connect(mpKeysMainArea->pushButton_grabButton, SIGNAL(pressed()), this, SLOT(slot_grab_button()));
 
     mpVarsMainArea = new dlgVarsMainArea( mainArea );
     mpVarsMainArea->setSizePolicy( sizePolicy8 );
@@ -7045,6 +7048,28 @@ void dlgTriggerEditor::slot_grab_key()
             actionList[i]->setShortcut(tr(""));
         }
     }
+}
+
+void dlgTriggerEditor::slot_grab_button()
+{
+    if( ! mpHost ) return;
+    //dlgButtonSelect * bDlg = new dlgButtonSelect( this, mpHost );
+    dlgButtonSelect * pDlg = new dlgButtonSelect( this );
+//    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
+    if( ! pDlg ) return;
+    pDlg->setModal( true );
+    pDlg->setWindowModality( Qt::ApplicationModal );
+    //pDlg->show();
+    pDlg->exec();
+    /*    mIsGrabKey = true;
+    QList<QAction *> actionList = toolBar->actions();
+    for(int i = 0, total = actionList.size(); i < total; ++i ) {
+        if ( actionList.at(i)->text() == "Save Item" ) {
+            actionList[i]->setShortcut(tr(""));
+        } else if ( actionList.at(i)->text() == "Save Profile" ) {
+            actionList[i]->setShortcut(tr(""));
+        }
+    }*/
 }
 
 void dlgTriggerEditor::grab_key_callback( int key, int modifier )

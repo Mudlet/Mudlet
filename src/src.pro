@@ -50,7 +50,7 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
-QT += network opengl uitools multimedia gui
+QT += network opengl uitools multimedia gui gamepad
 
 # Leave the value of the following empty, line should be "BUILD =" without quotes
 # (it is NOT a Qt built-in variable) for a release build or, if you are
@@ -239,7 +239,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    dlgButtonSelect.cpp
 
 !msvc:SOURCES += lua_yajl.c
 msvc:SOURCES += lua_yajl.cpp
@@ -325,7 +326,8 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h
+    XMLimport.h \
+    dlgButtonSelect.h
 
 macx:HEADERS += luazip.h
 
@@ -352,7 +354,8 @@ FORMS += \
     ui/triggers_main_area.ui \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
-    ui/vars_main_area.ui
+    ui/vars_main_area.ui \
+    ui/button_select.ui
 
 
 RESOURCES = mudlet_alpha.qrc
