@@ -218,10 +218,10 @@ end
 --- @return "linux", "mac" or "windows" string
 function getOS()
 	if string.char(getMudletHomeDir():byte()) == "/" then
-		if string.find(os.getenv("HOME"), "home") == 2 then
-			return "linux"
-		else
+		if io.exists("/Applications") then
 			return "mac"
+		else
+			return "linux"
 		end
 	else
 		return "windows"
