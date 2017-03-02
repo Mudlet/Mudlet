@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 // clang-format on
 #include <QDebug>
+#include <QBuffer>
 #include <QStringList>
 // clang-format off
 #include "pre_guard.h"
@@ -202,6 +203,64 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
     }
 
     return !error();
+}
+
+bool XMLimport::importFromClipboard( )
+{
+    QString xml;
+    QClipboard *cb = QApplication::clipboard();
+
+    xml = cb->text(QClipboard::Clipboard);
+            //setText( xml, QClipboard::Clipboard );
+
+    QByteArray ba = xml.toUtf8();
+    QBuffer xmlBuffer( &ba );
+
+    setDevice( &xmlBuffer );
+    xmlBuffer.open(QIODevice::ReadOnly);
+
+    //setDevice() reader.importPackage( & file2, packageName );
+    //QXmlStreamReader xmlReader( xml );
+
+    while( ! atEnd() )
+    {
+        readNext();
+
+        if( isStartElement() )
+        {
+            if( name() == "MudletPackage" )
+            {
+                readPackage();
+            }
+            else if( name() == "map" )
+            {
+                readMap();
+                mpHost->mpMap->audit();
+            }
+            else
+            {
+                qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
+            }
+        }
+    }
+
+    if( gotTimer )
+    {
+        mpTimer->setIsActive( true );
+        mpTimer->enableTimer( mpTimer->getID() );
+    }
+
+    if( gotAlias )
+    {
+        mpAlias->setIsActive( true );
+    }
+
+    if( gotAction )
+    {
+        mpHost->getActionUnit()->updateToolbar();
+    }
+
+    return ! error();
 }
 
 void XMLimport::readVariableGroup(TVar* pParent)

@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -79,6 +80,20 @@ public:
     bool            exportAction( TAction * );
     bool            exportScript( TScript * );
     bool            exportKey( TKey * );
+
+    bool            exportToClipboard( TTrigger * );
+    bool            exportToClipboard( TTimer * );
+    bool            exportToClipboard( TAlias * );
+    bool            exportToClipboard( TAction * );
+    bool            exportToClipboard( TScript * );
+    bool            exportToClipboard( TKey * );
+
+/*    bool            exportTriggerToClipboard( TTrigger * );
+    bool            exportTimerToClipboard( TTimer * );
+    bool            exportAliasToClipboard( TAlias * );
+    bool            exportActionToClipboard( TAction * );
+    bool            exportScriptToClipboard( TScript * );
+    bool            exportKeyToClipboard( TKey * );*/
 
 private:
     QPointer<Host>  mpHost;

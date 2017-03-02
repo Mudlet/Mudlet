@@ -463,4 +463,6 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    .clang-format
+    .clang-format \
+    ../../../../Desktop/copy.png \
+    ../../../../Desktop/paste.png

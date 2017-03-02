@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -173,6 +174,8 @@ public slots:
     void                        slot_deleteAction();
     void                        slot_deleteKey();
     void                        slot_save_edit();
+    void                        slot_copy_xml();
+    void                        slot_paste_xml();
     void                        slot_chose_action_icon();
     void                        slot_show_search_area();
     void                        slot_script_main_area_delete_handler();
@@ -221,6 +224,15 @@ private:
     void                        exportAction( QFile & );
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
+
+    void                        exportTriggerToClipboard( );
+    void                        exportTimerToClipboard( );
+    void                        exportAliasToClipboard( );
+    void                        exportActionToClipboard( );
+    void                        exportScriptToClipboard( );
+    void                        exportKeyToClipboard( );
+
+    void                        importFromClipboard( );
 
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;

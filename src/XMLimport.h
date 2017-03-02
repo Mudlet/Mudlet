@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,6 +32,7 @@
 #include <QMultiHash>
 #include <QPointer>
 #include <QXmlStreamReader>
+#include <QClipboard>
 // clang-format off
 #include "post_guard.h"
 // clang-format on
@@ -52,6 +54,7 @@ class XMLimport : public QXmlStreamReader
 public:
     XMLimport(Host*);
     bool importPackage(QIODevice* device, QString packageName = QString(), int moduleFlag = 0);
+    bool importFromClipboard();
 
 private:
     void readPackage();
