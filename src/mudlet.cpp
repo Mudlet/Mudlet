@@ -1213,18 +1213,16 @@ bool mudlet::setConsoleBufferSize( Host * pHost, const QString & name, int x1, i
         return false;
 }
 
-
-
 bool mudlet::resetFormat( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) )
-    {
+    if( dockWindowConsoleMap.contains( name ) ) {
         dockWindowConsoleMap[name]->reset();
         return true;
     }
-    else
+    else {
         return false;
+    }
 }
 
 bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
@@ -1504,13 +1502,17 @@ int mudlet::selectSection( Host * pHost, const QString & name, int f, int t )
         return -1;
 }
 
-void mudlet::deselect( Host * pHost, const QString & name )
+// Added a return value to indicate whether the given windows name was found
+bool mudlet::deselect( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) )
-    {
+    if( dockWindowConsoleMap.contains( name ) ) {
         TConsole * pC = dockWindowConsoleMap[name];
         pC->deselect();
+        return true;
+    }
+    else {
+        return false;
     }
 }
 

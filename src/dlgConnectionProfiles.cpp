@@ -607,6 +607,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
     QString val = readProfileData( profile, QStringLiteral( "url" ) );
     if( val.isEmpty() )
     {
+        // Host to connect to, see below for port
         if( profile_name == QStringLiteral( "Avalon.de" ) )
             val = QStringLiteral( "avalon.mud.de" );
         if( profile_name == QStringLiteral( "God Wars II" ) )
@@ -637,12 +638,16 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = QStringLiteral( "slothmud.org" );
         if( profile_name == QStringLiteral( "WoTMUD" ) )
             val = QStringLiteral( "game.wotmud.org" );
+        if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+            val = QStringLiteral( "midnightsun2.org" );
+
     }
     host_name_entry->setText( val );
 
     val = readProfileData( profile, QStringLiteral( "port" ) );
     if( val.isEmpty() )
     {
+        // Port to connect to
         if( profile_name == QStringLiteral( "Avalon.de" ) )
             val = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "God Wars II" ) )
@@ -673,6 +678,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
             val = QStringLiteral( "6101" );
         if( profile_name == QStringLiteral( "WoTMUD" ) )
             val = QStringLiteral( "2224" );
+        if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+            val = QStringLiteral( "3000" );
     }
     port_entry->setText( val );
 
@@ -711,6 +718,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
                   "Wander around in any of the towns from the books such as Caemlyn, Tar Valon or Tear, or start your adventure in the Two Rivers area, not YET the home of the Dragon Reborn.\n"
                   "Will you join one of the Clans working for the triumph of the Light over the creatures and minions of the Dark One; or will you be one of the returning invaders in the South West, descendants of Artur Hawkwing's long-thought lost Armies; or just maybe you are skilled enough to be a hideous Trolloc, creature of the Dark, who like Humans - but only as a source of sustenance.\n"
                   "Very definitely a Player Verses Player (PvP) world but with strong Role Playing (RP) too; nowhere is totally safe but some parts are much more dangerous than others - once you enter you may never leave..." );
+    else if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+        val = tr( "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong sense of community." );
     else
         val = readProfileData( profile, QStringLiteral( "description" ) );
     mud_description_textedit->clear();
@@ -750,6 +759,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         if( profile_name == QStringLiteral( "WoTMUD" ) )
             val = QStringLiteral( "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
                                   "<center><a href='http://www.wotmod.org/'>Forums</a></center>" );
+        if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+            val = QStringLiteral( "<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>" );
     }
     website_entry->setText( val );
 
@@ -1031,6 +1042,15 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
+    muds = QStringLiteral( "Midnight Sun 2" );
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( QPixmap( QStringLiteral( ":/icons/midnightsun2.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
+    pM->setIcon(mi);
+    muds.clear();
+
     QDateTime test_date;
     QListWidgetItem * toselect = Q_NULLPTR;
 
@@ -1058,6 +1078,7 @@ void dlgConnectionProfiles::fillout_form()
          || ( ! mProfileList.at(i).compare( QStringLiteral( "ZombieMUD" ), Qt::CaseInsensitive ) )
          || ( ! mProfileList.at(i).compare( QStringLiteral( "3Scapes" ), Qt::CaseInsensitive ) )
          || ( ! mProfileList.at(i).compare( QStringLiteral( "3Kingdoms" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Midnight Sun 2" ), Qt::CaseInsensitive ) )
          || ( ! mProfileList.at(i).compare( QStringLiteral( "WoTMUD" ), Qt::CaseInsensitive ) ) ) {
 
             continue;
