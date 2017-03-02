@@ -1180,9 +1180,9 @@ void XMLimport::readAliasPackage()
                 } else {
                     readAliasGroup(mpAlias);
                 }
+            } else {
+                readUnknownAliasElement();
             }
-        } else {
-            readUnknownAliasElement();
         }
     }
 }
