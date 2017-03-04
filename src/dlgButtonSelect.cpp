@@ -48,9 +48,9 @@ dlgButtonSelect::dlgButtonSelect(QWidget * parent)
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadButtonPressEvent()), this, SLOT(slot_gamepadButtonPress()));
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadButtonReleaseEvent()), this, SLOT(slot_gamepadButtonRelease()));
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadAxisEvent()), this, SLOT(slot_gamepadAxisEvent()));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadButtonPressEvent(int, QGamepadManager::GamepadButton, double)), this, SLOT(slot_gamepadButtonPress(int, QGamepadManager::GamepadButton, double)));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadButtonReleaseEvent(int, QGamepadManager::GamepadButton)), this, SLOT(slot_gamepadButtonRelease(int, QGamepadManager::GamepadButton)));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double)), this, SLOT(slot_gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double)));
 
     connect(pressRadio, SIGNAL(pressed()), this, SLOT(slot_pressRadioPressed()));
     connect(releaseRadio, SIGNAL(pressed()), this, SLOT(slot_releaseRadioPressed()));

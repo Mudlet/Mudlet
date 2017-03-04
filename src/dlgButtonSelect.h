@@ -40,12 +40,11 @@ public:
 signals:
 
 public slots:
-
-private slots:
     void                            slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void                            slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
     void                            slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 
+private slots:
     void                            slot_pressRadioPressed();
     void                            slot_releaseRadioPressed();
 
