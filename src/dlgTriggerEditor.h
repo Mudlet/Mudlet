@@ -180,7 +180,11 @@ public slots:
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
     void                        slot_grab_key();
+
+#ifdef QT_GAMEPAD_LIB
     void                        slot_grab_button();
+#endif
+
     bool                        event( QEvent * event ) override;
     void                        grab_key_callback( int key, int modifier );
     void                        slot_profileSaveAction();

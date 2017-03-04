@@ -27,7 +27,9 @@
 
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
-#include "dlgButtonSelect.h"
+#ifdef QT_GAMEPAD_LIB
+  #include "dlgButtonSelect.h"
+#endif
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
@@ -162,7 +164,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpKeysMainArea->setSizePolicy( sizePolicy8 );
     pVB1->addWidget( mpKeysMainArea );
     connect(mpKeysMainArea->pushButton_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
+
+#ifdef QT_GAMEPAD_LIB
     connect(mpKeysMainArea->pushButton_grabButton, SIGNAL(pressed()), this, SLOT(slot_grab_button()));
+#else
+    mpKeysMainArea->pushButton_grabButton->hide();
+#endif
 
     mpVarsMainArea = new dlgVarsMainArea( mainArea );
     mpVarsMainArea->setSizePolicy( sizePolicy8 );
@@ -7050,27 +7057,20 @@ void dlgTriggerEditor::slot_grab_key()
     }
 }
 
+#ifdef QT_GAMEPAD_LIB
+
 void dlgTriggerEditor::slot_grab_button()
 {
     if( ! mpHost ) return;
-    //dlgButtonSelect * bDlg = new dlgButtonSelect( this, mpHost );
+
     dlgButtonSelect * pDlg = new dlgButtonSelect( this );
-//    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
     if( ! pDlg ) return;
     pDlg->setModal( true );
     pDlg->setWindowModality( Qt::ApplicationModal );
-    //pDlg->show();
     pDlg->exec();
-    /*    mIsGrabKey = true;
-    QList<QAction *> actionList = toolBar->actions();
-    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-        if ( actionList.at(i)->text() == "Save Item" ) {
-            actionList[i]->setShortcut(tr(""));
-        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-            actionList[i]->setShortcut(tr(""));
-        }
-    }*/
 }
+
+#endif
 
 void dlgTriggerEditor::grab_key_callback( int key, int modifier )
 {

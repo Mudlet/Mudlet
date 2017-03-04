@@ -392,12 +392,13 @@ mudlet::mudlet()
     else {
         mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
     }
-
+#ifdef QT_GAMEPAD_LIB
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, slot_gamepadButtonRelease);
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, slot_gamepadConnected);
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, slot_gamepadDisconnected);
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, slot_gamepadAxisEvent);
+#endif
 }
 
 HostManager * mudlet::getHostManager()
@@ -2426,6 +2427,8 @@ void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
     emit signal_profileMapReloadRequested( affectedProfiles );
 }
 
+#ifdef QT_GAMEPAD_LIB
+
 void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value)
 {
     Host * pH = getActiveHost();
@@ -2495,3 +2498,5 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     pH->raiseEvent( event );
 }
+
+#endif

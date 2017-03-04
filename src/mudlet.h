@@ -36,7 +36,9 @@
 #include <QQueue>
 #include <QTime>
 #include <QTextOption>
-#include <QGamepad>
+#ifdef QT_GAMEPAD_LIB
+  #include <QGamepad>
+#endif
 #include "post_guard.h"
 
 #include <assert.h>
@@ -261,11 +263,13 @@ private slots:
    void                          show_variable_dialog();
    void                          show_options_dialog();
    void                         slot_statusBarMessageChanged( QString );
+#ifdef QT_GAMEPAD_LIB
    void                          slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
    void                          slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
    void                          slot_gamepadConnected(int deviceId);
    void                          slot_gamepadDisconnected(int deviceId);
    void                          slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
+#endif
 
 private:
 
