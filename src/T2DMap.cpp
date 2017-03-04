@@ -96,8 +96,8 @@ T2DMap::T2DMap(QWidget * parent)
     connect(&mMultiSelectionListWidget, SIGNAL(itemSelectionChanged()), this, SLOT(slot_roomSelectionChanged()));
     mMoveLabel = false;
     mLabelHilite = false;
-    xzoom = 30;
-    yzoom = 30;
+    xzoom = 20;
+    yzoom = 20;
     gzoom = 20;
     mPick = false;
     mTarget = 0;

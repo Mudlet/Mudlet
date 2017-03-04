@@ -723,7 +723,7 @@ void XMLimport::readHostPackage(Host* pHost)
     }
     pHost->mLineSize = attributes().value("mLineSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
-        pHost->mLineSize = 1.0; // Same value as is in Host class initalizer list
+        pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
     }
     pHost->mBubbleMode = (attributes().value("mBubbleMode") == "yes");
     pHost->mShowRoomID = (attributes().value("mShowRoomIDs") == "yes");
