@@ -582,7 +582,7 @@ describe("Tests DB.lua functions", function()
     it("should correctly combine a query for a specific item.",
     function()
       db:add(mydb.sheet, { name = "Kenanung", city = "Mhaldor", id = 6 })
-      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet, 
+      local res = db:fetch(mydb.sheet, db:query_by_example(mydb.sheet,
                     {name = "Keneanung", city = "Hashan" }))
       local exp_res = { test_data[4] }
       assert.are.equal(#exp_res, #res)
@@ -596,7 +596,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests, if the aggregate function works as intended",
   function()
-    
+
     before_each(function()
       mydb = db:create("mydb",
         {
@@ -624,7 +624,7 @@ describe("Tests DB.lua functions", function()
       mydb = nil
       test_data = nil
     end)
-    
+
     it("should successfully sum all counts up.",
     function()
       local total = db:aggregate(mydb.sheet.count, "total")
@@ -634,7 +634,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total, total)
     end)
-  
+
     it("should successfully calculate the average of all numbers.",
     function()
       local avg = db:aggregate(mydb.sheet.count, "avg")
@@ -645,7 +645,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total / count, avg)
     end)
-      
+
     it("should successfully calculate the minimum value of the numbers.",
     function()
       local min = db:aggregate(mydb.sheet.count, "min")
@@ -657,7 +657,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_min, min)
     end)
-      
+
     it("should successfully calculate the minimum value of the names.",
     function()
       local min = db:aggregate(mydb.sheet.name, "min")
@@ -669,7 +669,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_min, min)
     end)
-      
+
     it("should successfully calculate the maximum value of the numbers.",
     function()
       local max = db:aggregate(mydb.sheet.count, "max")
@@ -681,7 +681,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_max, max)
     end)
-      
+
     it("should successfully calculate the maximum value of the names.",
     function()
       local max = db:aggregate(mydb.sheet.name, "max")
@@ -693,13 +693,13 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_max, max)
     end)
-     
+
     it("should successfully calculate the count of the names.",
     function()
       local count = db:aggregate(mydb.sheet.name, "count")
       assert.is.same(#test_data, count)
     end)
-     
+
     it("should successfully sum all counts greater than 11 up.",
     function()
       local total = db:aggregate(mydb.sheet.count, "total",
@@ -712,7 +712,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total, total)
     end)
-  
+
     it("should successfully calculate the average of all numbers greater than"
     .. "11.",
     function()
@@ -727,7 +727,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total / count, avg)
     end)
-      
+
     it("should successfully calculate the minimum value of the numbers greater"
     .. " than 11.",
     function()
@@ -743,7 +743,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_min, min)
     end)
-      
+
     it("should successfully calculate the minimum value of the names with count"
     .. " greater than 11.",
     function()
@@ -759,7 +759,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_min, min)
     end)
-      
+
     it("should successfully calculate the maximum value of the numbers greater "
     .. "than 11.",
     function()
@@ -775,7 +775,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_max, max)
     end)
-      
+
     it("should successfully calculate the maximum value of the names with count greater "
     .. "than 11.",
     function()
@@ -791,7 +791,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_max, max)
     end)
-     
+
     it("should successfully calculate the count of the names with count greater than 11.",
     function()
       local count = db:aggregate(mydb.sheet.name, "count",
@@ -804,7 +804,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_count, count)
     end)
-    
+
     it("should successfully sum all unique counts up.",
     function()
       local total = db:aggregate(mydb.sheet.count, "total", nil, true)
@@ -818,7 +818,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total, total)
     end)
-  
+
     it("should successfully calculate the average of all unique numbers.",
     function()
       local avg = db:aggregate(mydb.sheet.count, "avg", nil, true)
@@ -847,7 +847,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_count, count)
     end)
-     
+
     it("should successfully sum all unique counts greater than 11 up.",
     function()
       local total = db:aggregate(mydb.sheet.count, "total",
@@ -862,7 +862,7 @@ describe("Tests DB.lua functions", function()
       end
       assert.is.same(exp_total, total)
     end)
-  
+
     it("should successfully calculate the average of all unique numbers greater than"
     .. " 11.",
     function()
@@ -893,7 +893,7 @@ describe("Tests DB.lua functions", function()
         end
       end
       assert.is.same(exp_count, count)
-    end)       
+    end)
   end)
 
 end)

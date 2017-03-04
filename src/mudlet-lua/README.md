@@ -1,4 +1,4 @@
-This project contains all Mudlet lua code (lua folder).
+This is the source of truth for Mudlet lua code ([mudlet-lua](https://github.com/Mudlet/Mudlet/tree/development/src/mudlet-lua) folder).
 
 Project structure:
 ------------------
