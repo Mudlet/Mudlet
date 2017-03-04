@@ -18,7 +18,7 @@
     <ActionPackage/>
     <ScriptPackage>
         <Script isActive="yes" isFolder="no">
-            <name>deleteOldProfiles</name>
+            <name>deleteOldProfiles script</name>
             <packageName></packageName>
             <script>function deleteOldProfiles(keepdays_arg, delete_maps)
 
