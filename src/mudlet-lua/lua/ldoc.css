@@ -188,7 +188,6 @@ table.index td { text-align: left; vertical-align: top; }
 #content {
     margin-left: 14em;
     padding: 1em;
-    width: 700px;
     border-left: 2px solid #cccccc;
     border-right: 2px solid #cccccc;
     background-color: #ffffff;
@@ -233,20 +232,20 @@ table.index td { text-align: left; vertical-align: top; }
     }
 }
 
-table.module_list {
+table.geyser_list {
     border-width: 1px;
     border-style: solid;
     border-color: #cccccc;
     border-collapse: collapse;
 }
-table.module_list td {
+table.geyser_list td {
     border-width: 1px;
     padding: 3px;
     border-style: solid;
     border-color: #cccccc;
 }
-table.module_list td.name { background-color: #f0f0f0; min-width: 200px; }
-table.module_list td.summary { width: 100%; }
+table.geyser_list td.name { background-color: #f0f0f0; min-width: 200px; }
+table.geyser_list td.summary { width: 100%; }
 
 
 table.function_list {
