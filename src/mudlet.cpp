@@ -393,11 +393,11 @@ mudlet::mudlet()
         mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
     }
 #ifdef QT_GAMEPAD_LIB
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadButtonPressEvent), this, SLOT(slot_gamepadButtonPress));
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadButtonReleaseEvent), this, SLOT(slot_gamepadButtonRelease));
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadConnected), this, SLOT(slot_gamepadConnected));
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadDisconnected), this, SLOT(slot_gamepadDisconnected));
-    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadAxisEvent), this, SLOT(slot_gamepadAxisEvent));
+    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadButtonPressEvent()), this, SLOT(slot_gamepadButtonPress()));
+    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadButtonReleaseEvent()), this, SLOT(slot_gamepadButtonRelease()));
+    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadConnected()), this, SLOT(slot_gamepadConnected()));
+    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadDisconnected()), this, SLOT(slot_gamepadDisconnected()));
+    connect(QGamepadManager::instance(), SIGNAL(QGamepadManager::gamepadAxisEvent()), this, SLOT(slot_gamepadAxisEvent()));
 #endif
 }
 
