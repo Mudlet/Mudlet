@@ -134,6 +134,11 @@ QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &acti
     if( (action) & ( 1 | 2) )
         return new QCoreApplication(argc, argv);  // Ah, we're gonna bail out early, just need a command-line application
     else {
+#if defined (Q_OS_MACOS)
+        // Workaround for horrible mac rendering issues once the mapper widget is open
+        // see https://bugreports.qt.io/browse/QTBUG-41257
+        QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#endif
 #if defined (Q_OS_WIN32)        
         // Force OpenGL use as we use some functions that aren't provided by Qt's OpenGL layer on Windows (QOpenGLFunctions)
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
