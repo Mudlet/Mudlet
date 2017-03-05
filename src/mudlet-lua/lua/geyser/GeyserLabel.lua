@@ -111,9 +111,15 @@ function Geyser.Label:getWindow(label)
         if v.name == label then
             return v
         end
-    end
-end
 
+        -- 030517 the below searchs down one level
+	for key,val in pairs(v.windowList) do
+           if val.name == label then
+              return val
+           end
+        end
+     end
+end
 
 --- closes all nested labels
 function closeAllLevels()
