@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -273,6 +274,8 @@ void TAlias::setRegexCode(const QString& code )
     if( re == NULL )
     {
         mOK_init = false;
+        QString errorString = tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." ).arg( error );
+        setError( errorString );
     }
     else
     {
