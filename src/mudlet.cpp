@@ -1686,13 +1686,14 @@ void mudlet::closeEvent(QCloseEvent *event)
 
 void mudlet::readSettings()
 {
-    QSettings settings("mudlet", "Mudlet 1.0");
+    QSettings settings("mudlet", "Mudlet");
     
     /*In case sensitive environments, two different config directories 
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+    Furthermore, we skip the version from the application name to follow the convention.
     For compatibility with older settings, if no config is loaded 
-    from the config directory "mudlet", we try to load from the config 
-    directory "Mudlet".*/
+    from the config directory "mudlet", application "Mudlet", we try to load from the config 
+    directory "Mudlet", application "Mudlet 1.0". */
     if(settings.value("pos") == 0)
     {
         QSettings settings("Mudlet","Mudlet 1.0");
@@ -1753,7 +1754,10 @@ void mudlet::setIcoSize( int s )
 
 void mudlet::writeSettings()
 {
-    QSettings settings("mudlet", "Mudlet 1.0");
+    /*In case sensitive environments, two different config directories 
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
+    Furthermore, we skip the version from the application name to follow the convention.*/
+    QSettings settings("mudlet", "Mudlet");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mMainIconSize);
