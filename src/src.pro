@@ -436,7 +436,7 @@ win32: {
 
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
-    QMAKE_TARGET_DESCRIPTION = "A cross-platform, open source, and super fast MUD client with scripting in Lua"
+    QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
