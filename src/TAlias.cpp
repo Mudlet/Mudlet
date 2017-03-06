@@ -265,8 +265,13 @@ static void pcre_deleter(pcre* pointer)
 void TAlias::setRegexCode(const QString& code )
 {
     mRegexCode = code;
+    compileRegex();
+}
+
+void TAlias::compileRegex()
+{
     const char *error;
-    const QByteArray& local8Bit = code.toLocal8Bit();
+    const QByteArray& local8Bit = mRegexCode.toLocal8Bit(); // TODO: add PCRE_UTF8 to options in pcre_compile() below and change to mRegexCode.toUft8()
     int erroffset;
 
     QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, NULL), pcre_deleter);
@@ -274,12 +279,30 @@ void TAlias::setRegexCode(const QString& code )
     if( re == NULL )
     {
         mOK_init = false;
-        QString errorString = tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." ).arg( error );
-        setError( errorString );
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "REGEX ERROR: failed to compile, reason:\n"
+                                                         << error
+                                                         << "\n"
+                                                         >> 0;
+            TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
+                                                        << mRegexCode
+                                                        << "\"\n"
+                                                        >> 0;
+        }
+        setError( tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." )
+                  .arg( error ) );
     }
     else
     {
         mOK_init = true;
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::darkGreen) ) << "REGEX OK: successful compilation of:\n"
+                                                               >> 0;
+            TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "\""
+                                                        << mRegexCode
+                                                        << "\"\n"
+                                                        >> 0;
+        }
     }
 
     mpRegex = re;
@@ -300,9 +323,22 @@ void TAlias::compileAll()
     mNeedsToBeCompiled = true;
     if( ! compileScript() )
     {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA ERROR: when compiling script of alias:"
+                                                         << mName
+                                                         << "\n"
+                                                         >> 0;
+        }
         mOK_code = false;
     }
+    else
+    {
+        TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA OK: when compiling script of alias:"
+                                                     << mName
+                                                     << "\n"
+                                                     >> 0;
+    }
+    compileRegex(); // Effectively will repost the error if there was a problem in the regex
     for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAlias * pChild = *it;
@@ -310,22 +346,23 @@ void TAlias::compileAll()
     }
 }
 
-void TAlias::compile()
-{
-    if( mNeedsToBeCompiled )
-    {
-        if( ! compileScript() )
-        {
-            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
-            mOK_code = false;
-        }
-    }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TAlias * pChild = *it;
-        pChild->compile();
-    }
-}
+// Not used - so commented out rather than updating error/success messages
+//void TAlias::compile()
+//{
+//    if( mNeedsToBeCompiled )
+//    {
+//        if( ! compileScript() )
+//        {
+//            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
+//            mOK_code = false;
+//        }
+//    }
+//    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+//    {
+//        TAlias * pChild = *it;
+//        pChild->compile();
+//    }
+//}
 
 bool TAlias::setScript(const QString & script )
 {

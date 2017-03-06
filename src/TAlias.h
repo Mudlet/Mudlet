@@ -49,9 +49,10 @@ public:
                      TAlias( TAlias * parent, Host * pHost );
                      TAlias(const QString& name, Host * pHost );
     void             compileAll();
+    void            compileRegex();
     QString          getName()                       { return mName; }
     void             setName(const QString& name );
-    void             compile();
+// Not Used:    void             compile();
     bool             compileScript();
     void             execute();
     QString          getScript()                     { return mScript; }
@@ -69,7 +70,7 @@ public:
 
 
 
-                     TAlias(){};
+                     TAlias(){}
     QString          mName;
     QString          mCommand;
     QString          mRegexCode;
