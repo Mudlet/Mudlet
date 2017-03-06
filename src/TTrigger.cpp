@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -174,14 +175,23 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                &erroffset,
                                0 );
 
-            if (re == 0)
+            if (!re)
             {
                 if( mudlet::debugMode )
                 {
-                    TDebug(QColor(Qt::white),QColor(Qt::red))<<"REGEX COMPILE ERROR:">>0;
-                    TDebug(QColor(Qt::red),QColor(Qt::gray))<<pattern<<"\n">>0;
+                    TDebug( QColor(Qt::white), QColor(Qt::red) ) << "REGEX ERROR: failed to compile, reason:\n"
+                                                                 << error
+                                                                 << "\n"
+                                                                 >> 0;
+                    TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
+                                                                << pattern
+                                                                << "\"\n"
+                                                                >> 0;
                 }
-                setError( QString( "Pattern '" )+QString(pattern)+QString( "' failed to compile. Correct the pattern.") );
+                setError( tr( "Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\"." )
+                          .arg( i )
+                          .arg( pattern )
+                          .arg( error ) );
                 state = false;
                 //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
@@ -189,27 +199,56 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             {
                 if( mudlet::debugMode )
                 {
-                    TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"[OK]: REGEX_COMPILE OK\n">>0;
+                    TDebug( QColor(Qt::white), QColor(Qt::darkGreen) ) << "REGEX OK: successful compilation of:\n"
+                                                                       >> 0;
+                    TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "\""
+                                                                << pattern
+                                                                << "\"\n"
+                                                                >> 0;
                 }
             }
             mRegexMap[i] = re;
             mTriggerContainsPerlRegex = true;
         }
-        if( propertyList[i] == REGEX_LUA_CODE )
+
+        if( propertyList.at(i) == REGEX_LUA_CODE )
         {
              std::string funcName;
              std::stringstream func;
              func << "trigger" << mID << "condition" << i;
              funcName = func.str();
-             QString code = QString("function ")+funcName.c_str()+QString("()\n")+regexList[i]+QString("\nend\n");
+             QString code = QStringLiteral("function %1()\n%2\nend\n").arg( funcName.c_str() ).arg( regexList[i] );
              QString error;
              if( ! mpLua->compile( code, error ) )
              {
-                 setError( QString("pattern type Lua condition function '")+regexList[i]+QString("' failed to compile.")+error);
+                 setError( tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.")
+                           .arg( i )
+                           .arg( regexList.at( i ) )
+                           .arg( error ) );
                  state = false;
+                 if( mudlet::debugMode )
+                 {
+                     TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA ERROR: failed to compile, reason:\n"
+                                                                  << error
+                                                                  << "\n"
+                                                                  >> 0;
+                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in lua condition function: \""
+                                                                 << regexList.at( i )
+                                                                 << "\"\n"
+                                                                 >> 0;
+                 }
              }
              else
              {
+                 if( mudlet::debugMode )
+                 {
+                     TDebug( QColor(Qt::white), QColor(Qt::darkGreen) ) << "LUA OK: successful compilation of:\n"
+                                                                        >> 0;
+                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "lua condition function: \""
+                                                                 << regexList.at( i )
+                                                                 << "\"\n"
+                                                                 >> 0;
+                 }
                  mLuaConditionMap[i] = funcName;
              }
         }
