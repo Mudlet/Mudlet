@@ -1888,7 +1888,7 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
     }
     if(dirType>12 || dirType < 1)
     {
-        lua_pushstring( L, "setExitStub: dirType must be between 1 and 10" );
+        lua_pushstring( L, "setExitStub: dirType must be between 1 and 12" );
         lua_error( L );
         return 1;
     }
