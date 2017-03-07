@@ -34,7 +34,8 @@ install:
 - 7z -oopenssl-1.0.2k e openssl-1.0.2k-i386-win32.zip
 - 7z -oC: x x32-4.8.1-release-posix-dwarf-rev5.7z
 - 7z -oC:\mingw32 x msys+7za+wget+svn+git+mercurial+cvs-rev13.7z
-- 7z x luarocks-2.4.0-win32.zip\n7z x luazip.zip\n7z e boost_1_60_0.tar.gz
+- 7z x luarocks-2.4.0-win32.zip
+- 7z x luazip.zip\n7z e boost_1_60_0.tar.gz
 - 7z x boost_1_60_0.tar
 - 7z x luawinmake.zip
 - XCOPY /S /I /Q boost_1_60_0\boost C:\mingw32\include\boost
@@ -124,48 +125,47 @@ cache:
 - C:\src\msys+7za+wget+svn+git+mercurial+cvs-rev13.7z -> .appveyor.yml
 - C:\src\luawinmake.zip -> .appveyor.yml
 build_script:
-- cmd: >-
-    cd C:\projects\mudlet-1\src
-    SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;%PATH%
-    qmake CONFIG+=release LIBPATH+=/c/mingw32/bin
-    make -j 2
+- cd C:\projects\mudlet-1\src
+- SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;%PATH%
+- qmake CONFIG+=release LIBPATH+=/c/mingw32/bin
+- make -j 2
 
-    cd release
-    COPY %QT_BASE_DIR%\bin\icudt54.dll .
-    COPY %QT_BASE_DIR%\bin\icuin54.dll .
-    COPY %QT_BASE_DIR%\bin\icuuc54.dll .
-    COPY %QT_BASE_DIR%\bin\Qt5Core.dll .
-    COPY %QT_BASE_DIR%\bin\Qt5Gui.dll .
-    COPY %QT_BASE_DIR%\bin\libEGL.dll .
-    COPY %QT_BASE_DIR%\bin\libGLESv2.dll .
-    COPY %QT_BASE_DIR%\bin\Qt5Network.dll .
-    COPY %QT_BASE_DIR%\bin\Qt5OpenGL.dll .
-    COPY %QT_BASE_DIR%\bin\Qt5Widgets.dll .
-    COPY %QT_BASE_DIR%\bin\Qt5Multimedia.dll .
-    COPY %QT_BASE_DIR%\bin\libgcc_s_dw2-1.dll .
-    COPY "%QT_BASE_DIR%\bin\libstdc++-6.dll" .
-    COPY %QT_BASE_DIR%\bin\libwinpthread-1.dll .
-    COPY C:\mingw32\lib\libyajl.dll .
-    COPY C:\src\lua-5.1.5\src\lua51.dll .
-    COPY C:\src\openssl-1.0.2k\libeay32.dll .
-    COPY C:\src\openssl-1.0.2k\ssleay32.dll .
-    COPY C:\mingw32\bin\libzip-2.dll .
-    COPY C:\mingw32\bin\libhunspell-1.4-0.dll .
-    COPY C:\mingw32\bin\libpcre-1.dll .
-    COPY C:\mingw32\bin\libsqlite3-0.dll .
-    COPY C:\mingw32\bin\zlib1.dll .
-    XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
-    COPY ..\*.dic .
-    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\audio audio
-    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\mediaservice mediaservice
-    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\platforms platforms
-    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\imageformats imageformats
+- cd release
+- COPY %QT_BASE_DIR%\bin\icudt54.dll .
+- COPY %QT_BASE_DIR%\bin\icuin54.dll .
+- COPY %QT_BASE_DIR%\bin\icuuc54.dll .
+- COPY %QT_BASE_DIR%\bin\Qt5Core.dll .
+- COPY %QT_BASE_DIR%\bin\Qt5Gui.dll .
+- COPY %QT_BASE_DIR%\bin\libEGL.dll .
+- COPY %QT_BASE_DIR%\bin\libGLESv2.dll .
+- COPY %QT_BASE_DIR%\bin\Qt5Network.dll .
+- COPY %QT_BASE_DIR%\bin\Qt5OpenGL.dll .
+- COPY %QT_BASE_DIR%\bin\Qt5Widgets.dll .
+- COPY %QT_BASE_DIR%\bin\Qt5Multimedia.dll .
+- COPY %QT_BASE_DIR%\bin\libgcc_s_dw2-1.dll .
+- COPY "%QT_BASE_DIR%\bin\libstdc++-6.dll" .
+- COPY %QT_BASE_DIR%\bin\libwinpthread-1.dll .
+- COPY C:\mingw32\lib\libyajl.dll .
+- COPY C:\src\lua-5.1.5\src\lua51.dll .
+- COPY C:\src\openssl-1.0.2k\libeay32.dll .
+- COPY C:\src\openssl-1.0.2k\ssleay32.dll .
+- COPY C:\mingw32\bin\libzip-2.dll .
+- COPY C:\mingw32\bin\libhunspell-1.4-0.dll .
+- COPY C:\mingw32\bin\libpcre-1.dll .
+- COPY C:\mingw32\bin\libsqlite3-0.dll .
+- COPY C:\mingw32\bin\zlib1.dll .
+- XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
+- COPY ..\*.dic .
+- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\audio audio
+- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\mediaservice mediaservice
+- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\platforms platforms
+- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\imageformats imageformats
 
-    COPY C:\src\luazip-master\zip.dll .
-    XCOPY /S /I /Q C:\mingw32\lib\lua\5.1 .
+- COPY C:\src\luazip-master\zip.dll .
+- XCOPY /S /I /Q C:\mingw32\lib\lua\5.1 .
 
-    DEL /Q *.cpp
-    DEL /Q *.o
+- DEL /Q *.cpp
+- DEL /Q *.o
 artifacts:
 - path: src\release
   name: mudlet
