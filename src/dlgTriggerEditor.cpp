@@ -345,14 +345,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
-    QAction * copyAction = new QAction( QIcon( QStringLiteral( ":/icons/copy.png" ) ), tr("Copy as XML"), this);
+    QAction * copyAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-copy.png" ) ), tr("Copy (as XML)"), this);
     //copyAction->setShortcut(tr("Ctrl+C"));
     copyAction->setToolTip(tr("Copies the trigger/script/alias/etc as XML."));
     copyAction->setStatusTip(tr("Copies the trigger/script/alias/etc as XML."));
 
     connect( copyAction, SIGNAL(triggered()), this, SLOT( slot_copy_xml() ));
 
-    QAction * pasteAction = new QAction( QIcon( QStringLiteral( ":/icons/paste.png" ) ), tr("Paste from XML"), this);
+    QAction * pasteAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-paste.png" ) ), tr("Paste (from XML)"), this);
     //pasteAction->setShortcut(tr("Ctrl+V"));
     pasteAction->setToolTip(tr("Pastes triggers/scripts/aliases/etc from XML."));
     pasteAction->setStatusTip(tr("Pastes triggers/scripts/aliases/etc from XML."));
@@ -7018,30 +7018,29 @@ void dlgTriggerEditor::slot_copy_xml()
 
 void dlgTriggerEditor::slot_paste_xml()
 {
-    if( mCurrentView )
+    int savedView = mCurrentView;
+    switch( mCurrentView )
     {
-        switch( mCurrentView )
-        {
-            case cmTriggerView:
-                saveTrigger();
-                break;
-            case cmTimerView:
-                saveTimer();
-                break;
-            case cmAliasView:
-                saveAlias();
-                break;
-            case cmScriptView:
-                saveScript();
-                break;
-            case cmActionView:
-                saveAction();
-                break;
-            case cmKeysView:
-                saveKey();
-                break;
-        };
-    }
+        case cmTriggerView:
+            saveTrigger();
+            break;
+        case cmTimerView:
+            saveTimer();
+            break;
+        case cmAliasView:
+            saveAlias();
+            break;
+        case cmScriptView:
+            saveScript();
+            break;
+        case cmActionView:
+            saveAction();
+            break;
+        case cmKeysView:
+            saveKey();
+            break;
+    };
+
     QString profileName = mpHost->getName();
     QString login = mpHost->getLogin();
     QString pass = mpHost->getPass();
@@ -7062,7 +7061,7 @@ void dlgTriggerEditor::slot_paste_xml()
 
     slot_profileSaveAction();
 
-    fillout_form();
+    fillout_form(); // This resets mCurrentView
 
     mpCurrentTriggerItem = 0;
     mpCurrentTimerItem = 0;
@@ -7071,7 +7070,28 @@ void dlgTriggerEditor::slot_paste_xml()
     mpCurrentActionItem = 0;
     mpCurrentKeyItem = 0;
 
-    slot_show_triggers();
+    mCurrentView = savedView;
+    switch( mCurrentView )
+    {
+    case cmTriggerView:
+        slot_show_triggers();
+        break;
+    case cmTimerView:
+        slot_show_timers();
+        break;
+    case cmAliasView:
+        slot_show_aliases();
+        break;
+    case cmScriptView:
+        slot_show_scripts();
+        break;
+    case cmActionView:
+        slot_show_actions();
+        break;
+    case cmKeysView:
+        slot_show_keys();
+        break;
+    }
 }
 
 void dlgTriggerEditor::slot_import()

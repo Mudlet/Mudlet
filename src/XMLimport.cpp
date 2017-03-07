@@ -219,9 +219,6 @@ bool XMLimport::importFromClipboard( )
     setDevice( &xmlBuffer );
     xmlBuffer.open(QIODevice::ReadOnly);
 
-    //setDevice() reader.importPackage( & file2, packageName );
-    //QXmlStreamReader xmlReader( xml );
-
     while( ! atEnd() )
     {
         readNext();
@@ -232,32 +229,11 @@ bool XMLimport::importFromClipboard( )
             {
                 readPackage();
             }
-            else if( name() == "map" )
-            {
-                readMap();
-                mpHost->mpMap->audit();
-            }
             else
             {
                 qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
             }
         }
-    }
-
-    if( gotTimer )
-    {
-        mpTimer->setIsActive( true );
-        mpTimer->enableTimer( mpTimer->getID() );
-    }
-
-    if( gotAlias )
-    {
-        mpAlias->setIsActive( true );
-    }
-
-    if( gotAction )
-    {
-        mpHost->getActionUnit()->updateToolbar();
     }
 
     return ! error();
