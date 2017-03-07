@@ -1,0 +1,172 @@
+version: 1.0.{build}
+init:
+- cmd: mkdir C:\src\
+environment:
+  matrix:
+  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
+  - QT_BASE_DIR: C:\Qt\5.7\mingw53_32
+  - QT_BASE_DIR: C:\Qt\5.8\mingw53_32
+matrix:
+  allow_failures:
+  - QT_BASE_DIR: C:\Qt\5.7\mingw53_32
+  - QT_BASE_DIR: C:\Qt\5.8\mingw53_32
+install:
+- cmd: >-
+    cd C:\src
+    SET PATH=C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
+
+    IF NOT EXIST x32-4.8.1-release-posix-dwarf-rev5.7z wget --no-check-certificate -nv --output-document x32-4.8.1-release-posix-dwarf-rev5.7z https://sourceforge.net/projects/mingwbuilds/files/host-windows/releases/4.8.1/32-bit/threads-posix/dwarf/x32-4.8.1-release-posix-dwarf-rev5.7z/download
+    IF NOT EXIST msys+7za+wget+svn+git+mercurial+cvs-rev13.7z wget --no-check-certificate -nv --output-document msys+7za+wget+svn+git+mercurial+cvs-rev13.7z https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys+7za+wget+svn+git+mercurial+cvs-rev13.7z/download
+    IF NOT EXIST hunspell-1.4.1.tar.gz wget --no-check-certificate -nv --output-document hunspell-1.4.1.tar.gz https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz
+    IF NOT EXIST lua-5.1.5.tar.gz wget -nv http://www.lua.org/ftp/lua-5.1.5.tar.gz
+    IF NOT EXIST pcre-8.38.tar.gz wget --no-check-certificate -nv https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download
+    IF NOT EXIST zlib-1.2.11.tar.gz wget -nv http://zlib.net/zlib-1.2.11.tar.gz
+    IF NOT EXIST sqlite-autoconf-3071700.tar.gz wget -nv http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz
+    IF NOT EXIST libzip_0.11.2.orig.tar.gz wget -nv --no-check-certificate https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz
+    IF NOT EXIST yajl-2.0.1.tar.gz wget -nv --no-check-certificate --output-document yajl-2.0.1.tar.gz https://github.com/lloyd/yajl/tarball/2.0.1
+    IF NOT EXIST boost_1_60_0.tar.gz wget -nv --no-check-certificate https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download
+    IF NOT EXIST zziplib-0.13.62.tar.bz2 wget -nv --no-check-certificate https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download
+    IF NOT EXIST openssl-1.0.2k-i386-win32.zip wget -nv --no-check-certificate https://indy.fulgan.com/SSL/openssl-1.0.2k-i386-win32.zip
+    IF NOT EXIST luarocks-2.4.0-win32.zip wget -nv --no-check-certificate http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip
+    IF NOT EXIST luazip.zip wget -nv --no-check-certificate --output-document luazip.zip https://github.com/rjpcomputing/luazip/archive/master.zip
+    IF NOT EXIST luawinmake.zip wget -nv --no-check-certificate --output-document luawinmake.zip https://github.com/Tieske/luawinmake/archive/master.zip
+
+    bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf $a || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj $a || true; done)"
+    7z -oopenssl-1.0.2k e openssl-1.0.2k-i386-win32.zip
+    7z -oC: x x32-4.8.1-release-posix-dwarf-rev5.7z
+    7z -oC:\mingw32 x msys+7za+wget+svn+git+mercurial+cvs-rev13.7z
+    7z x luarocks-2.4.0-win32.zip\n7z x luazip.zip\n7z e boost_1_60_0.tar.gz
+    7z x boost_1_60_0.tar
+    7z x luawinmake.zip
+    XCOPY /S /I /Q boost_1_60_0\boost C:\mingw32\include\boost
+    cd hunspell-1.4.1
+    bash -c "./configure --prefix=C:/mingw32"
+    make -j 2
+    make install
+    cd ..
+
+    cd lloyd-yajl-f4b2b1a
+    powershell -Command "(Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt\"
+    mkdir build
+    cd build
+    cmake -G "MSYS Makefiles" ..
+    make
+    COPY yajl-2.0.1\lib\* C:\mingw32\lib
+    XCOPY /S /I /Q yajl-2.0.1\include C:\mingw32\include
+    cd ..\..
+
+    XCOPY /S /I /Q C:\src\luawinmake-master\etc C:\src\lua-5.1.5\etc
+    cd lua-5.1.5
+    etc\winmake
+    etc\winmake install C:\mingw32\
+    cd ..
+
+    cd pcre-8.38
+    bash -c "./configure --prefix=/c/mingw32"
+    make -j 2
+    make install
+    cd ..
+
+    cd sqlite-autoconf-3071700
+    bash -c "./configure --prefix=/c/mingw32"
+    make -j 2
+    make install
+    cd ..
+
+    cd zlib-1.2.11
+    make -f win32/Makefile.gcc
+    SET INCLUDE_PATH=C:\mingw32\include
+    SET LIBRARY_PATH=C:\mingw32\lib
+    SET BINARY_PATH=C:\mingw32\bin
+    make -f win32/Makefile.gcc install
+    COPY zlib1.dll C:\mingw32\bin
+    COPY libz.dll.a C:\mingw32\lib
+    cd ..
+
+    cd libzip-0.11.2
+    bash -c "./configure --prefix=/c/mingw32"
+    make -j 2
+    make install
+    COPY lib\zipconf.h C:\mingw32\include
+    cd ..
+
+    cd zziplib-0.13.62
+    powershell -Command "(Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure"
+    bash -c "./configure --disable-mmap --prefix=/c/mingw32"
+    make -j 2
+    make install
+    cd ..
+
+    cd luarocks-2.4.0-win32
+    install.bat /P C:\LuaRocks /MW /Q
+    cd \LuaRocks\lua\luarocks
+    powershell -Command "(gc cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua"
+    cd \LuaRocks
+    luarocks install LuaFileSystem
+    luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="C:\mingw32\include" SQLITE_LIBDIR="C:\mingw32\lib"
+    luarocks install lrexlib-pcre PCRE_LIBDIR="C:\mingw32\lib" PCRE_INCDIR="C:\mingw32\include"
+    cd C:\src\luazip-master
+    gcc -O2 -c -o src/luazip.o -IC:/mingw32/include src/luazip.c
+    gcc -shared -o zip.dll src/luazip.o -LC:/mingw32/lib -lzzip -lz C:/mingw32/bin/lua51.dll -lm
+cache:
+- C:\src\hunspell-1.4.1.tar.gz -> .appveyor.yml
+- C:\src\lua-5.1.5.tar.gz -> .appveyor.yml
+- C:\src\pcre-8.38.tar.gz -> .appveyor.yml
+- C:\src\zlib-1.2.11.tar.gz -> .appveyor.yml
+- C:\src\sqlite-autoconf-3071700.tar.gz -> .appveyor.yml
+- C:\src\libzip_0.11.2.orig.tar.gz -> .appveyor.yml
+- C:\src\yajl-2.0.1.tar.gz -> .appveyor.yml
+- C:\src\boost_1_60_0.tar.gz -> .appveyor.yml
+- C:\src\zziplib-0.13.62.tar.bz2 -> .appveyor.yml
+- C:\src\openssl-1.0.2k-i386-win32.zip -> .appveyor.yml
+- C:\src\luarocks-2.4.0-win32.zip -> .appveyor.yml
+- C:\src\luazip.zip -> .appveyor.yml
+- C:\src\x32-4.8.1-release-posix-dwarf-rev5.7z -> .appveyor.yml
+- C:\src\msys+7za+wget+svn+git+mercurial+cvs-rev13.7z -> .appveyor.yml
+- C:\src\luawinmake.zip -> .appveyor.yml
+build_script:
+- cmd: >-
+    cd C:\projects\mudlet-1\src
+    SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;%PATH%
+    qmake CONFIG+=release LIBPATH+=/c/mingw32/bin
+    make -j 2
+
+    cd release
+    COPY %QT_BASE_DIR%\bin\icudt54.dll .
+    COPY %QT_BASE_DIR%\bin\icuin54.dll .
+    COPY %QT_BASE_DIR%\bin\icuuc54.dll .
+    COPY %QT_BASE_DIR%\bin\Qt5Core.dll .
+    COPY %QT_BASE_DIR%\bin\Qt5Gui.dll .
+    COPY %QT_BASE_DIR%\bin\libEGL.dll .
+    COPY %QT_BASE_DIR%\bin\libGLESv2.dll .
+    COPY %QT_BASE_DIR%\bin\Qt5Network.dll .
+    COPY %QT_BASE_DIR%\bin\Qt5OpenGL.dll .
+    COPY %QT_BASE_DIR%\bin\Qt5Widgets.dll .
+    COPY %QT_BASE_DIR%\bin\Qt5Multimedia.dll .
+    COPY %QT_BASE_DIR%\bin\libgcc_s_dw2-1.dll .
+    COPY "%QT_BASE_DIR%\bin\libstdc++-6.dll" .
+    COPY %QT_BASE_DIR%\bin\libwinpthread-1.dll .
+    COPY C:\mingw32\lib\libyajl.dll .
+    COPY C:\src\lua-5.1.5\src\lua51.dll .
+    COPY C:\src\openssl-1.0.2k\libeay32.dll .
+    COPY C:\src\openssl-1.0.2k\ssleay32.dll .
+    COPY C:\mingw32\bin\libzip-2.dll .
+    COPY C:\mingw32\bin\libhunspell-1.4-0.dll .
+    COPY C:\mingw32\bin\libpcre-1.dll .
+    COPY C:\mingw32\bin\libsqlite3-0.dll .
+    COPY C:\mingw32\bin\zlib1.dll .
+    XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
+    COPY ..\*.dic .
+    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\audio audio
+    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\mediaservice mediaservice
+    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\platforms platforms
+    XCOPY /S /I /Q %QT_BASE_DIR%\plugins\imageformats imageformats
+
+    COPY C:\src\luazip-master\zip.dll .
+    XCOPY /S /I /Q C:\mingw32\lib\lua\5.1 .
+
+    DEL /Q *.cpp
+    DEL /Q *.o
+artifacts:
+- path: src\release
+  name: mudlet
