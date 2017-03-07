@@ -72,7 +72,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mCommandSeparator  ( QString(";") )
 , mDisableAutoCompletion( false )
 , mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
-, mEnableGMCP( false )
+, mEnableGMCP( true )
 , mEnableMSDP( false )
 , mFORCE_GA_OFF( false )
 , mFORCE_NO_COMPRESSION( false )
