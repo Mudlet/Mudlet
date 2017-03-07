@@ -1652,10 +1652,10 @@ void cTelnet::readPipe()
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
+    qDebug("Replay data: \"%s\"", loadBuffer);
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];
-        qDebug() << "GOT REPLAY:"<<loadBuffer;
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
             #ifdef DEBUG
