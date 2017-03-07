@@ -36,6 +36,7 @@ install:
 - 7z -oC:\mingw32 x msys+7za+wget+svn+git+mercurial+cvs-rev13.7z
 - 7z x luarocks-2.4.0-win32.zip
 - 7z x luazip.zip
+- 7z e boost_1_60_0.tar.gz
 - 7z x boost_1_60_0.tar
 - 7z x luawinmake.zip
 - XCOPY /S /I /Q boost_1_60_0\boost C:\mingw32\include\boost
