@@ -12156,7 +12156,7 @@ bool TLuaInterpreter::compile(const QString & code, QString & errorMsg, const QS
         }
         errorMsg = "<b><font color='blue'>";
         errorMsg.append( e.c_str() );
-        errorMsg.append("</b></font>");
+        errorMsg.append("</font></b>");
         if( mudlet::debugMode ){ TDebug(QColor(Qt::white),QColor(Qt::red))<<"\n "<<e.c_str()<<"\n">>0;}
     }
     else
