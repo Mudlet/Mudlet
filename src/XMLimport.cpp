@@ -36,15 +36,15 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-// clang-format off
+// clang-format: off
 #include "pre_guard.h"
-// clang-format on
+// clang-format: on
 #include <QDebug>
 #include <QBuffer>
 #include <QStringList>
-// clang-format off
-#include "pre_guard.h"
-// clang-format on
+// clang-format: off
+#include "post_guard.h"
+// clang-format: on
 
 XMLimport::XMLimport(Host* pH)
     : mpHost(pH)
@@ -758,7 +758,7 @@ void XMLimport::readHostPackage(Host* pHost)
     }
     pHost->mLineSize = attributes().value("mLineSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
-        pHost->mLineSize = 1.0; // Same value as is in Host class initalizer list
+        pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
     }
     pHost->mBubbleMode = (attributes().value("mBubbleMode") == "yes");
     pHost->mShowRoomID = (attributes().value("mShowRoomIDs") == "yes");
