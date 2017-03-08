@@ -32,7 +32,7 @@ install:
 
 - bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf $a || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj $a || true; done)"
 - 7z -oopenssl-1.0.2k e openssl-1.0.2k-i386-win32.zip
-- 7z -oC: x x32-4.8.1-release-posix-dwarf-rev5.7z
+- 7z -oC:\ x x32-4.8.1-release-posix-dwarf-rev5.7z
 - 7z -oC:\mingw32 x msys+7za+wget+svn+git+mercurial+cvs-rev13.7z
 - 7z x luarocks-2.4.0-win32.zip
 - 7z x luazip.zip
