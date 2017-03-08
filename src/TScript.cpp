@@ -130,7 +130,18 @@ bool TScript::setScript(const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;
-    if( ! mpHost->blockScripts() ) mOK_code = compileScript();
+    if( ! mpHost->blockScripts() )
+    {
+        mOK_code = compileScript();
+    }
+    else
+    {
+        // mOK_code is initialised to TRUE and if not reset here could leave the
+        // internal state flagged incorrectly as OK (during profile's
+        // initialisation when a script's code is inserted but
+        // Host::mBlockScriptCompile is true)!
+        mOK_code = false;
+    }
     return mOK_code;
 }
 
