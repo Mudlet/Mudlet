@@ -13128,8 +13128,13 @@ void TLuaInterpreter::initLuaGlobals()
     QString n;
     int error;
 
+#ifdef Q_OS_LINUX
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring (pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
+
+    //AppInstaller on Linux would like the search path to also be set to the current binary directory
+    luaL_dostring (pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg( QCoreApplication::applicationDirPath()).toUtf8().constData() );
+#endif
 
     error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
     if( error != 0 )
@@ -13274,7 +13279,16 @@ void TLuaInterpreter::loadGlobal()
     {
         // For the installer we do not go down a level to search for this. So
         // we check again for the user case of a windows install.
+#if QT_VERSION >= 0x050200
+        // overload previous behaviour to check by absolute path as well
+        // TODO this sould be cleaned up and refactored to just use an array and a for loop
+        path = QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua";
+        if ( ! QFileInfo::exists(path) ) {
+            path = "mudlet-lua/lua/LuaGlobal.lua";
+        }
+#else
         path = "mudlet-lua/lua/LuaGlobal.lua";
+#endif
         error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
         if( error != 0 ) {
             string e = "no error message available from Lua";
