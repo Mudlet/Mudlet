@@ -119,7 +119,6 @@ public:
     //QString            getBufferLine( int );
     void               saveModules(int);
     void               reloadModule(const QString& moduleName);
-    bool               blockScripts() { return mBlockScriptCompile; }
 
     void               setIsAutologin( bool b ){ mIsAutologin = b; }
     bool               isAutologin(){ return mIsAutologin; }
@@ -160,7 +159,6 @@ public:
     bool               mAlertOnNewData;
     bool               mAllowToSendCommand;
     bool               mAutoClearCommandLineAfterSend;
-    bool               mBlockScriptCompile;
     bool               mEchoLuaErrors; 
     int                mBorderBottomHeight;
     int                mBorderLeftWidth;

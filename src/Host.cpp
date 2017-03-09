@@ -61,7 +61,6 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mAlertOnNewData( true )
 , mAllowToSendCommand( true )
 , mAutoClearCommandLineAfterSend( false )
-, mBlockScriptCompile( true )
 , mEchoLuaErrors( false )
 , mBorderBottomHeight( 0 )
 , mBorderLeftWidth( 0 )
@@ -349,7 +348,6 @@ void Host::resetProfile()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mBlockScriptCompile = false;
 
 
     getTriggerUnit()->compileAll();
