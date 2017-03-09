@@ -256,7 +256,7 @@ function Geyser.Label:displayNest(label)
         scrollEndH = Geyser.Label.scrollH[parent][2].scroll
     end
     local entryCount = {V=0, H=0}
-    parent.nestLabels = parent.nestedLabels or {}
+    parent.nestedLabels = parent.nestedLabels or {}
     for i,v in pairs(parent.nestedLabels) do
         entryCount[v.layoutDir] = entryCount[v.layoutDir]+1
         if v.layoutDir == "V" and not scrollV then
