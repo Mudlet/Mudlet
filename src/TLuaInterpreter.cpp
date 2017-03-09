@@ -5183,17 +5183,17 @@ int TLuaInterpreter::getMudletHomeDir( lua_State * L )
 }
 
 // returns search paths for LuaGlobal itself to look at when loading other modules
+// follows the principle of closest paths to the binary first, furthest away lasy
 int TLuaInterpreter::getMudletLuaDefaultPaths( lua_State * L )
 {
     lua_newtable( L );
     lua_createtable(L,2,0);
-    // add the default search path as specified by build file
-    QString path = LUA_DEFAULT_PATH "/";
-    QString nativePath = QDir::toNativeSeparators( path );
+    // add filepath relative to the binary itself (one usecase is AppImage on Linux)
+    QString nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
     lua_rawseti(L, -2,1);
-    // as well as the filepath relative to the binary itself (one usecase is AppImage on Linux)
-    nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/" );
+    // add the default search path as specified by build file
+    nativePath = QDir::toNativeSeparators( LUA_DEFAULT_PATH "/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
     lua_rawseti(L, -2,2);
     return 1;
