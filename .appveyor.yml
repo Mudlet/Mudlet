@@ -29,6 +29,7 @@ install:
 - IF NOT EXIST luarocks-2.4.0-win32.zip wget -nv --no-check-certificate http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip
 - IF NOT EXIST luazip.zip wget -nv --no-check-certificate --output-document luazip.zip https://github.com/rjpcomputing/luazip/archive/master.zip
 - IF NOT EXIST luawinmake.zip wget -nv --no-check-certificate --output-document luawinmake.zip https://github.com/Tieske/luawinmake/archive/master.zip
+- IF NOT EXIST installbuilder-qt-enterprise-17.3.0-windows-installer.exe wget --no-check-certificate -nv https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe
 
 - bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf $a || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj $a || true; done)"
 - 7z -oopenssl-1.0.2k e openssl-1.0.2k-i386-win32.zip
@@ -125,6 +126,7 @@ cache:
 - C:\src\x32-4.8.1-release-posix-dwarf-rev5.7z -> .appveyor.yml
 - C:\src\msys+7za+wget+svn+git+mercurial+cvs-rev13.7z -> .appveyor.yml
 - C:\src\luawinmake.zip -> .appveyor.yml
+- C:\src\installbuilder-qt-enterprise-17.3.0-windows-installer.exe -> .appveyor.yml
 build_script:
 - cd C:\projects\mudlet-1\src
 - SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;%PATH%
@@ -167,6 +169,11 @@ build_script:
 
 - DEL /Q *.cpp
 - DEL /Q *.o
+after_build:
+- "C:\src\installbuilder-installer.exe" "--mode unattended --unattendedmodeui none"
+- git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
+- cd C:\projects\installers\windows
+- nuget install secure-file -ExcludeVersion
 artifacts:
 - path: src\release
   name: mudlet
