@@ -170,7 +170,7 @@ build_script:
 - DEL /Q *.cpp
 - DEL /Q *.o
 after_build:
-- "C:\src\installbuilder-installer.exe" "--mode unattended --unattendedmodeui none"
+- C:\src\installbuilder-installer.exe --mode unattended --unattendedmodeui none
 - git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
 - cd C:\projects\installers\windows
 - nuget install secure-file -ExcludeVersion
