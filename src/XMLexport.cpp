@@ -478,6 +478,45 @@ bool XMLexport::writeHost( Host * pHost )
     // Use if() to block each XXXXPackage element to limit scope of iterator so
     // we can use more of the same code in each block - and to escape quicker on
     // error...
+
+    // Variables have been moved in front of all other items in case the
+    // latter's lua code refers to variables that have been saved - this change
+    // in connection with others to the XMLimport class around the same time
+    // may produce transistory issues in previous save files for TScript items
+    // being reported as bugs on initial loading when no bug is subsquently
+    // found the next time the TScript::mScript item is recompiled but will go
+    // away when the profile is saved once in the new order. - Slysven
+    if( isOk ) {
+        writeStartElement("VariablePackage");
+        LuaInterface * lI = pHost->getLuaInterface();
+        VarUnit * vu = lI->getVarUnit();
+        //do hidden variables first
+        { // Blocked so that indentation reflects that of the XML file
+            writeStartElement("HiddenVariables");
+            QSetIterator<QString> itHiddenVariableName( vu->hiddenByUser );
+            while( itHiddenVariableName.hasNext() ) {
+                writeTextElement( "name", itHiddenVariableName.next() );
+            }
+            writeEndElement(); // </HiddenVariables>
+        }
+
+        TVar * base = vu->getBase();
+        if( ! base ) {
+            lI->getVars( false );
+            base = vu->getBase();
+        }
+
+        if( base ) {
+            QListIterator<TVar *> itVariable( base->getChildren( false ) );
+            while( isOk && itVariable.hasNext() ) {
+                if( ! writeVariable( itVariable.next(), lI, vu ) ) {
+                    isOk = false;
+                }
+            }
+        }
+        writeEndElement(); // </VariablePackage>
+    }
+
     if( isOk ) {
         writeStartElement("TriggerPackage");
         for( auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it ) {
@@ -560,37 +599,6 @@ bool XMLexport::writeHost( Host * pHost )
             }
         }
         writeEndElement(); // </KeyPackage>
-    }
-
-    if( isOk ) {
-        writeStartElement("VariablePackage");
-        LuaInterface * lI = pHost->getLuaInterface();
-        VarUnit * vu = lI->getVarUnit();
-        //do hidden variables first
-        { // Blocked so that indentation reflects that of the XML file
-            writeStartElement("HiddenVariables");
-            QSetIterator<QString> itHiddenVariableName( vu->hiddenByUser );
-            while( itHiddenVariableName.hasNext() ) {
-                writeTextElement( "name", itHiddenVariableName.next() );
-            }
-            writeEndElement(); // </HiddenVariables>
-        }
-
-        TVar * base = vu->getBase();
-        if( ! base ) {
-            lI->getVars( false );
-            base = vu->getBase();
-        }
-
-        if( base ) {
-            QListIterator<TVar *> itVariable( base->getChildren( false ) );
-            while( isOk && itVariable.hasNext() ) {
-                if( ! writeVariable( itVariable.next(), lI, vu ) ) {
-                    isOk = false;
-                }
-            }
-        }
-        writeEndElement(); // </VariablePackage>
     }
 
     return ( isOk && ( ! hasError() ) );
