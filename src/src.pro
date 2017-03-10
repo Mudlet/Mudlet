@@ -430,6 +430,15 @@ macx: {
     ICON = osx-installer/osx.icns
 }
 
+win32: {
+    # set the Windows binary icon
+    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+
+    # specify some windows information about the binary
+    QMAKE_TARGET_COMPANY = "Mudlet makers"
+    QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+}
+
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
     ${LUA.files} \
