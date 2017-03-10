@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>900</width>
-    <height>285</height>
+    <width>614</width>
+    <height>533</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -25,35 +25,35 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,1">
    <property name="spacing">
     <number>3</number>
    </property>
-   <property name="margin">
+   <property name="leftMargin">
     <number>0</number>
    </property>
-   <item>
-    <widget class="QWidget" name="widget" native="true">
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item alignment="Qt::AlignTop">
+    <widget class="QWidget" name="widget_top" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <property name="spacing">
-       <number>9</number>
-      </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
       <property name="leftMargin">
-       <number>6</number>
-      </property>
-      <property name="topMargin">
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
@@ -64,13 +64,17 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit_action_name"/>
+       <widget class="QLineEdit" name="lineEdit_action_name">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This text should have been replaced by code in dlgTriggerEditor::slot_action_selected()!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget_4" native="true">
+    <widget class="QWidget" name="widget_middle" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -78,6 +82,12 @@
       </sizepolicy>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_6">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QGroupBox" name="groupBox_toolBar">
         <property name="sizePolicy">
@@ -101,9 +111,12 @@
         <property name="title">
          <string>Button Bar Properties</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
-          <widget class="QLabel" name="label_action_name_6">
+          <widget class="QLabel" name="label_action_buttonColumns">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -111,10 +124,24 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Number of columns/rows (depending on orientation)::</string>
+            <string>Number of columns/rows
+(depending on orientation):</string>
            </property>
            <property name="buddy">
-            <cstring>buttonColumns</cstring>
+            <cstring>spinBox_buttonColumns</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="spinBox_buttonColumns">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Each &lt;i&gt;button&lt;/i&gt; or &lt;i&gt;menu&lt;/i&gt; item on this toolbar is placed in sequence into one of the given number of rows or columns with no gaps.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="value">
+            <number>1</number>
            </property>
           </widget>
          </item>
@@ -125,6 +152,9 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Specifies whether the &lt;i&gt;buttons&lt;/i&gt; and &lt;i&gt;menus&lt;/i&gt; are laid out in the given number of rows or columns.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <item>
             <property name="text">
@@ -146,30 +176,43 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This control specifies where the tool bar should be located/docked with options to be positioned to the left, right or top of the main Mudlet screen.  There is a further option that allows the toolbar to be floated free and positioned any where on the desktop, and for a multi-screen (virtual) desktop even on a different monitor.&lt;/p&gt;&lt;p&gt;A &amp;quot;docked&amp;quot; toolbar can be undocked and dragged to a new position, it will automatically redock if that position is close to a valid docking area on screen or left floating otherwise; this will be remembered and reflected in the choice displayed here afterwards.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
            <item>
             <property name="text">
-             <string>Dock Area Top</string>
+             <string>Docked in Top Area</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>Dock Area Left</string>
+             <string>Docked in Left Area</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>Dock Area Right</string>
+             <string>Docked in Right Area</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>Floating Toolbar</string>
+             <string>Floating</string>
             </property>
            </item>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QSpinBox" name="buttonColumns"/>
+         <item row="3" column="0" colspan="2">
+          <spacer name="verticalSpacer_barProperties">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>
@@ -191,21 +234,56 @@
         <property name="title">
          <string>Button Properties</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_3">
+        <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0,0,0,0,0">
          <item row="0" column="0">
-          <widget class="QLabel" name="label_action_name_5">
+          <widget class="QLabel" name="label_action_icon">
+           <property name="text">
+            <string>Icon:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="4">
+          <widget class="QLineEdit" name="lineEdit_action_icon">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="cursor">
+            <cursorShape>ForbiddenCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This displays - but does not allow editing of - the path and file name for an image file that is used as an icon for this button that has been selected using the &lt;i&gt;Click to change icon&lt;/i&gt; button.  Use the &lt;i&gt;Clear Icon&lt;/i&gt; button to remove a file shown here.&lt;/p&gt;&lt;p&gt;&lt;i&gt;&lt;b&gt;Note:&lt;/b&gt; The entry displayed here may be selected and copied to the clipboard which can then be pasted into the file selection dialogue that the&lt;/i&gt; Click to change icon &lt;i&gt; brings up which means that an entry for one button can be copied to another button if required.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+           <property name="clearButtonEnabled">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_action_button_rotation">
            <property name="text">
             <string>Button Rotation:</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="buttonRotation">
+         <item row="1" column="1" colspan="3">
+          <widget class="QComboBox" name="comboBox_buttonRotation">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;By default buttons are drawn as rectangles with the Name text written horizontally.  This control allows the text to be rotated by ninty degrees in either direction which will also alter the overall shape of the button rectangle.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <item>
             <property name="text">
@@ -224,32 +302,150 @@
            </item>
           </widget>
          </item>
-         <item row="1" column="0" colspan="2">
-          <widget class="QGroupBox" name="checkBox_pushdownbutton">
+         <item row="1" column="4" rowspan="2">
+          <widget class="QPushButton" name="pushButton_changeIcon">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>6</pointsize>
+            </font>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This displays the selected icon for the button or menu. Clicking it will allow a suitable existing image file to be included in the button or menu, images will be scaled down but not up to fit in the available space to the left of the text from the &lt;i&gt;Name:&lt;/i&gt; field.&lt;/p&gt;&lt;p&gt;When clicked a file selection dialogue will be shown which will by default be set to the existing file if there is one or a general location if not.  Using the &lt;i&gt;Cancel&lt;/i&gt; option from the file selector will leave the existing entry unchanged - to clear an existing icon use the seperate &lt;i&gt;Clear icon&lt;/i&gt; button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Click to
+change icon</string>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>48</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="checkable">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QCheckBox" name="checkBox_pushdownbutton">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="title">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this option is checked for a button then it can be used as a toggle in that it will &amp;quot;stay down&amp;quot; or &amp;quot;switch on&amp;quot; on the first click and then &amp;quot;release&amp;quot; or &amp;quot;switch off&amp;quot; on a second click. The state can be detected &lt;i&gt;&lt;u&gt;in code entered in the script area&lt;/u&gt;&lt;/i&gt; by the use of the &lt;b&gt;&lt;i&gt;getButtonState()&lt;/i&gt;&lt;/b&gt; Lua command which will return &lt;b&gt;&lt;i&gt;1&lt;/i&gt;&lt;/b&gt; if the button is off/up or &lt;b&gt;&lt;i&gt;2&lt;/i&gt;&lt;/b&gt; if it is down/on. Buttons that do not have this option enabled will always return &lt;b&gt;&lt;i&gt;1&lt;/i&gt;&lt;/b&gt; for this command.&lt;/p&gt;&lt;p&gt;Buttons that have this option enabled can send different commands directly to the MUD server for when the button is clicked down and for when it is released and enabling this option will show a second entry box below for the second entry below the first one here.  Buttons that do not have this option set will send the contents of the &lt;i&gt;Command&lt;/i&gt; entry to the MUD Server &lt;i&gt;every&lt;/i&gt; time the button is clicked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
             <string>Push down button</string>
            </property>
-           <property name="checkable">
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="2" column="3">
+          <widget class="QPushButton" name="pushButton_clearIcon">
+           <property name="font">
+            <font>
+             <pointsize>6</pointsize>
+            </font>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This button is only enabled if there is something in the &lt;span style=&quot; font-style:italic;&quot;&gt;Icon:&lt;/span&gt; entry - it will then clear it and remove any existing icon from the button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Clear
+Icon</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../mudlet_alpha.qrc">
+             <normaloff>:/icons/edit-delete.png</normaloff>:/icons/edit-delete.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_action_command_down">
+           <property name="text">
+            <string>Command (down):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1" colspan="5">
+          <widget class="QLineEdit" name="lineEdit_action_command_down">
+           <property name="enabled">
             <bool>true</bool>
            </property>
-           <property name="checked">
-            <bool>false</bool>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="margin">
-             <number>0</number>
-            </property>
-           </layout>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter a plain text command to be send directly to the MUD server when this button is clicked.&lt;/p&gt;&lt;p&gt;A menu does not act in the same way as the action of clicking on it is normally to display the contents of the menu so this will not show should a menu (a button &lt;i&gt;Group&lt;/i&gt; item be selected).&lt;/p&gt;&lt;p&gt;If this is a button that has been set as a &lt;i&gt;push-down button&lt;/i&gt; then what is entered here is sent on the &lt;b&gt;first&lt;/b&gt; press of the button, i.e. going from the &lt;b&gt;off to on&lt;/b&gt; state - in this case a second entry box is enabled and what is entered in &lt;i&gt;that one&lt;/i&gt; is send when the button is clicked a second time to go from the &lt;b&gt;on to off&lt;/b&gt; state.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="clearButtonEnabled">
+            <bool>true</bool>
+           </property>
           </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_action_command_up">
+           <property name="text">
+            <string>Command (up):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1" colspan="5">
+          <widget class="QLineEdit" name="lineEdit_action_command_up">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this is a button that has been set as a &lt;i&gt;push-down button&lt;/i&gt; then what is entered here is sent on the &lt;b&gt;second&lt;/b&gt; press of the button, i.e. going from the &lt;b&gt;on to off&lt;/b&gt; state - in this case the other entry box is only sent every other click as the button goes from the &lt;b&gt;off to on&lt;/b&gt; state.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="clearButtonEnabled">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <spacer name="verticalSpacer_buttonProperties">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>
@@ -258,91 +454,59 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget_2" native="true">
+    <widget class="QWidget" name="widget_bottom" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1">
       <property name="leftMargin">
-       <number>6</number>
-      </property>
-      <property name="topMargin">
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
-       <widget class="QGroupBox" name="groupBox">
+       <widget class="QLabel" name="label_css">
+        <property name="text">
+         <string>CSS:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPlainTextEdit" name="css">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="title">
-         <string>Optional CSS</string>
+        <property name="font">
+         <font>
+          <family>Bitstream Vera Sans Mono</family>
+          <pointsize>8</pointsize>
+         </font>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <item>
-          <widget class="QPlainTextEdit" name="css">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>50</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Bitstream Vera Sans Mono</family>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="tabChangesFocus">
-            <bool>false</bool>
-           </property>
-           <property name="backgroundVisible">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use Qt style sheet formatting code here to modify the appearence of &lt;b&gt;this&lt;/b&gt; item.&lt;/p&gt;&lt;p&gt;For more information on this please refer to documentation provided by &lt;a href='http://doc.qt.io/qt-4.8/stylesheet-syntax.html'&gt;Qt&lt;/a&gt; or refer to the Mudlet Wiki.&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="tabChangesFocus">
+         <bool>false</bool>
+        </property>
+        <property name="backgroundVisible">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-   <item>
-    <widget class="QLineEdit" name="lineEdit_action_icon">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-    </widget>
-   </item>
   </layout>
-  <zorder>lineEdit_action_icon</zorder>
-  <zorder>widget</zorder>
-  <zorder>widget_2</zorder>
-  <zorder>widget_4</zorder>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections/>
 </ui>

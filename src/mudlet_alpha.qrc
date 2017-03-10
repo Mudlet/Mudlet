@@ -30,6 +30,7 @@
         <file>icons/applications-accessories.png</file>
         <file>icons/applications-engineering.png</file>
         <file>icons/applications-internet.png</file>
+        <file>icons/archive-remove.png</file>
         <file>icons/avalon.png</file>
         <file>icons/badge.png</file>
         <file>icons/batmud_mud.png</file>
@@ -49,6 +50,7 @@
         <file>icons/document-save-all.png</file>
         <file>icons/document-save-as.png</file>
         <file>icons/edit-bomb.png</file>
+        <file>icons/edit-delete.png</file>
         <file>icons/edit-delete-shred.png</file>
         <file>icons/edit-find-user.png</file>
         <file>icons/errors.png</file>
