@@ -5186,20 +5186,27 @@ int TLuaInterpreter::getMudletHomeDir( lua_State * L )
 // follows the principle of closest paths to the binary first, furthest away lasy
 int TLuaInterpreter::getMudletLuaDefaultPaths( lua_State * L )
 {
+    int index = 1;
     lua_newtable( L );
+#if defined(Q_OS_MAC)
     lua_createtable(L,3,0);
+#else
+    lua_createtable(L,2,0);
+#endif
     // add filepath relative to the binary itself (one usecase is AppImage on Linux)
     QString nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
-    lua_rawseti(L, -2,1);
+    lua_rawseti(L, -2,i++);
+#if defined(Q_OS_MAC)
     // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
-    nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "../Resources//mudlet-lua/lua/" );
+    nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "../Resources/mudlet-lua/lua/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
-    lua_rawseti(L, -2,2);
+    lua_rawseti(L, -2,i++);
+#endif
     // add the default search path as specified by build file
     nativePath = QDir::toNativeSeparators( LUA_DEFAULT_PATH "/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
-    lua_rawseti(L, -2,3);
+    lua_rawseti(L, -2,i++);
     return 1;
 }
 
