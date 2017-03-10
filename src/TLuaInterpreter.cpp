@@ -5196,17 +5196,17 @@ int TLuaInterpreter::getMudletLuaDefaultPaths( lua_State * L )
     // add filepath relative to the binary itself (one usecase is AppImage on Linux)
     QString nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
-    lua_rawseti(L, -2,i++);
+    lua_rawseti(L, -2, index++);
 #if defined(Q_OS_MAC)
     // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
     nativePath = QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + "../Resources/mudlet-lua/lua/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
-    lua_rawseti(L, -2,i++);
+    lua_rawseti(L, -2, index++);
 #endif
     // add the default search path as specified by build file
     nativePath = QDir::toNativeSeparators( LUA_DEFAULT_PATH "/" );
     lua_pushstring( L, nativePath.toUtf8().constData() );
-    lua_rawseti(L, -2,i++);
+    lua_rawseti(L, -2, index++);
     return 1;
 }
 
