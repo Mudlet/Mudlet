@@ -935,7 +935,6 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mColorTriggerBg = (attributes().value("isColorTriggerBg") == "yes");
     pT->mColorTriggerFg = (attributes().value("isColorTriggerFg") == "yes");
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
 
@@ -945,7 +944,10 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
             if (name() == "name") {
                 pT->setName(readElementText());
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readElementText();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
+                }
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "triggerType") {
@@ -967,6 +969,10 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
             } else if (name() == "mSoundFile") {
                 pT->mSoundFile = readElementText();
             } else if (name() == "regexCodeList") {
+                // This and the next one ought to be combined into a single element
+                // in the next revision - sample code for "RegexCode" elements
+                // inside a "RegexList" container (with a "size" attribute) is
+                // commented out in the XMLexporter class.
                 readStringList(pT->mRegexCodeList);
             } else if (name() == "regexCodePropertyList") {
                 readIntegerList(pT->mRegexCodePropertyList, pT->getName());
@@ -988,12 +994,6 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList)) {
         qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
                               "initialize pattern list for trigger: "
-                           << pT->getName();
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
-                              "compile trigger's script for: "
                            << pT->getName();
     }
 }
@@ -1029,7 +1029,6 @@ void XMLimport::readTimerGroup(TTimer* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1040,7 +1039,10 @@ void XMLimport::readTimerGroup(TTimer* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readElementText();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not compile timer's lua code for: " << pT->getName();
+                }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "time") {
@@ -1051,12 +1053,6 @@ void XMLimport::readTimerGroup(TTimer* pParent)
                 readUnknownTimerElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not "
-                              "compile timer's script for: "
-                           << pT->getName();
     }
 
     mudlet::self()->registerTimer(pT, pT->mpTimer);
@@ -1095,7 +1091,6 @@ void XMLimport::readAliasGroup(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
 
@@ -1107,7 +1102,10 @@ void XMLimport::readAliasGroup(TAlias* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readElementText();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not compile alias's lua code for: " << pT->getName();
+                }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "regex") {
@@ -1118,12 +1116,6 @@ void XMLimport::readAliasGroup(TAlias* pParent)
                 readUnknownAliasElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not "
-                              "compile alias's script for: "
-                           << pT->getName();
     }
 }
 
@@ -1159,7 +1151,6 @@ void XMLimport::readActionGroup(TAction* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1170,7 +1161,10 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readElementText();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not compile action's lua code for: " << pT->getName();
+                }
             } else if (name() == "css") {
                 pT->css = readElementText();
             } else if (name() == "commandButtonUp") {
@@ -1206,12 +1200,6 @@ void XMLimport::readActionGroup(TAction* pParent)
             }
         }
     }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not "
-                              "compile action's script for: "
-                           << pT->getName();
-    }
 }
 
 void XMLimport::readScriptPackage()
@@ -1243,7 +1231,6 @@ void XMLimport::readScriptGroup(TScript* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1254,7 +1241,10 @@ void XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readElementText();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName();
+                }
             } else if (name() == "eventHandlerList") {
                 readStringList(pT->mEventHandlerList);
                 pT->setEventHandlerList(pT->mEventHandlerList);
@@ -1264,12 +1254,6 @@ void XMLimport::readScriptGroup(TScript* pParent)
                 readUnknownScriptElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not "
-                              "compile script's script for: "
-                           << pT->getName();
     }
 }
 
@@ -1302,7 +1286,6 @@ void XMLimport::readKeyGroup(TKey* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1313,7 +1296,10 @@ void XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readElementText();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not compile key's lua code for: " << pT->getName();
+                }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "keyCode") {
@@ -1326,12 +1312,6 @@ void XMLimport::readKeyGroup(TKey* pParent)
                 readUnknownKeyElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not "
-                              "compile key's script for: "
-                           << pT->getName();
     }
 }
 
