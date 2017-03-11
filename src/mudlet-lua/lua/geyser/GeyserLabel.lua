@@ -474,7 +474,7 @@ addChildCons = {
   message = "",
   fgColor = "white",
   bgColor = "black",
-  fillBig = 1,
+  fillBg = 1,
 }
 addChildCons = nil
 
