@@ -153,7 +153,7 @@ public:
     bool            mModuleMasterFolder;
 private:
 
-                                           TTrigger(){};
+                                           TTrigger(){}
     void                                   updateMultistates( int regexNumber,
                                                               std::list<std::string> & captureList,
                                                               std::list<int> & posList );

@@ -50,7 +50,7 @@ public:
     void            compileRegex();
     QString          getName()                       { return mName; }
     void             setName( QString name );
-// Not Used:    void             compile();
+    void             compile();
     bool             compileScript();
     void             execute();
     QString          getScript()                     { return mScript; }

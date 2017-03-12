@@ -315,20 +315,13 @@ void TAlias::compileRegex()
                                                         << "\"\n"
                                                         >> 0;
         }
-        setError( tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." )
-                  .arg( error ) );
+        setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                  .arg( tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." )
+                        .arg( error ) ) );
     }
     else
     {
         mOK_init = true;
-        if( mudlet::debugMode ) {
-            TDebug( QColor(Qt::white), QColor(Qt::darkGreen) ) << "REGEX OK: successful compilation of:\n"
-                                                               >> 0;
-            TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "\""
-                                                        << mRegexCode
-                                                        << "\"\n"
-                                                        >> 0;
-        }
     }
 
     mpRegex = re;
@@ -350,19 +343,12 @@ void TAlias::compileAll()
     if( ! compileScript() )
     {
         if( mudlet::debugMode ) {
-            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA ERROR: when compiling script of alias:"
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "ERROR: Lua compile error. compiling script of alias:"
                                                          << mName
                                                          << "\n"
                                                          >> 0;
         }
         mOK_code = false;
-    }
-    else
-    {
-        TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA OK: when compiling script of alias:"
-                                                     << mName
-                                                     << "\n"
-                                                     >> 0;
     }
     compileRegex(); // Effectively will repost the error if there was a problem in the regex
     typedef list<TAlias *>::const_iterator I;
@@ -373,24 +359,23 @@ void TAlias::compileAll()
     }
 }
 
-// Not used - so commented out rather than updating error/success messages
-//void TAlias::compile()
-//{
-//    if( mNeedsToBeCompiled )
-//    {
-//        if( ! compileScript() )
-//        {
-//            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
-//            mOK_code = false;
-//        }
-//    }
-//    typedef list<TAlias *>::const_iterator I;
-//    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-//    {
-//        TAlias * pChild = *it;
-//        pChild->compile();
-//    }
-//}
+void TAlias::compile()
+{
+    if( mNeedsToBeCompiled )
+    {
+        if( ! compileScript() )
+        {
+            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
+            mOK_code = false;
+        }
+    }
+    typedef list<TAlias *>::const_iterator I;
+    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    {
+        TAlias * pChild = *it;
+        pChild->compile();
+    }
+}
 
 bool TAlias::setScript( const QString & script )
 {

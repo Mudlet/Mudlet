@@ -188,23 +188,18 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                                                 << "\"\n"
                                                                 >> 0;
                 }
-                setError( tr( "Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\"." )
-                          .arg( i )
-                          .arg( pattern )
-                          .arg( error ) );
+                setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                          .arg( tr( "Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\"." )
+                                .arg( i )
+                                .arg( pattern )
+                                .arg( error ) ) );
                 state = false;
-                //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             else
             {
                 if( mudlet::debugMode )
                 {
-                    TDebug( QColor(Qt::white), QColor(Qt::darkGreen) ) << "REGEX OK: successful compilation of:\n"
-                                                                       >> 0;
-                    TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "\""
-                                                                << pattern
-                                                                << "\"\n"
-                                                                >> 0;
+                    TDebug(QColor(Qt::white),QColor(Qt::darkGreen))<<"[OK]: REGEX_COMPILE OK\n">>0;
                 }
             }
             mRegexMap[i] = re;
@@ -221,10 +216,11 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              QString error;
              if( ! mpLua->compile( code, error ) )
              {
-                 setError( tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.")
-                           .arg( i )
-                           .arg( regexList.at( i ) )
-                           .arg( error ) );
+                 setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                           .arg( tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.")
+                                 .arg( i )
+                                 .arg( regexList.at( i ) )
+                                 .arg( error ) ) );
                  state = false;
                  if( mudlet::debugMode )
                  {
@@ -240,18 +236,10 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              }
              else
              {
-                 if( mudlet::debugMode )
-                 {
-                     TDebug( QColor(Qt::white), QColor(Qt::darkGreen) ) << "LUA OK: successful compilation of:\n"
-                                                                        >> 0;
-                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "lua condition function: \""
-                                                                 << regexList.at( i )
-                                                                 << "\"\n"
-                                                                 >> 0;
-                 }
                  mLuaConditionMap[i] = funcName;
              }
         }
+
         if( propertyList[i] == REGEX_COLOR_PATTERN )
         {
             QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
