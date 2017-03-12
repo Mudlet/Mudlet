@@ -5183,7 +5183,7 @@ int TLuaInterpreter::getMudletHomeDir( lua_State * L )
 }
 
 // returns search paths for LuaGlobal itself to look at when loading other modules
-// follows the principle of closest paths to the binary first, furthest away lasy
+// follows the principle of closest paths to the binary first, furthest away last
 int TLuaInterpreter::getMudletLuaDefaultPaths( lua_State * L )
 {
     int index = 1;
