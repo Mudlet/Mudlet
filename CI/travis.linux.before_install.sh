@@ -11,3 +11,6 @@ sudo apt-get update
 pushd $HOME
 git clone https://github.com/lloyd/yajl.git
 popd
+# remove cmake and cmake-data that comes with precise by default on travis, as we'd like to upgrade it to cmake from ppa (which does not use a corresponding cmake-data)
+sudo apt-get remove cmake cmake-data
+
