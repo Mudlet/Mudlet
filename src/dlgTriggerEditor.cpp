@@ -3023,7 +3023,7 @@ void dlgTriggerEditor::addAlias( bool isFolder )
         //insert a new root item
 ROOT_ALIAS:
         pT = new TAlias( name, mpHost );
-        pT->setRegexCode( regex );
+        pT->setRegexCode( regex ); // Empty regex will always succeed to compile
         pNewItem = new QTreeWidgetItem( mpAliasBaseItem, nameL );
         treeWidget_aliases->insertTopLevelItem( 0, pNewItem );
     }
@@ -3032,7 +3032,7 @@ ROOT_ALIAS:
 
     pT->setName( name );
     pT->setCommand( command );
-    pT->setRegexCode( regex );
+    pT->setRegexCode( regex ); // Empty regex will always succeed to compile
     pT->setScript( script );
     pT->setIsFolder( isFolder );
     pT->setIsActive( false );
@@ -3412,7 +3412,7 @@ void dlgTriggerEditor::saveTrigger()
                 iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
                 pItem->setIcon( 0, iconError );
                 pT->setIsActive( false );
-
+                showError( pT->getError() );
             }
         }
     }
@@ -3551,7 +3551,7 @@ void dlgTriggerEditor::saveAlias()
             QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( substitution );
-            pT->setRegexCode( regex );
+            pT->setRegexCode( regex ); // This could generate an error state if regex does not compile
             pT->setScript( script );
 
             QIcon icon;
@@ -3636,6 +3636,7 @@ void dlgTriggerEditor::saveAlias()
                 iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
                 pItem->setIcon( 0, iconError );
                 pItem->setText( 0, name );
+                showError( pT->getError() );
             }
         }
     }

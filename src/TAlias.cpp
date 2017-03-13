@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -284,9 +285,14 @@ MUD_ERROR:
 void TAlias::setRegexCode( QString code )
 {
     mRegexCode = code;
+    compileRegex();
+}
+
+void TAlias::compileRegex()
+{
     const char *error;
-    char * pattern = (char *) malloc( strlen( code.toLocal8Bit().data() ) + 48 );
-    strcpy( pattern, code.toLocal8Bit().data() );
+    char * pattern = (char *) malloc( strlen( mRegexCode.toLocal8Bit().data() ) + 48 ); // TODO: add PCRE_UTF8 to options in pcre_compile() below and change to code.toUft8().constData()
+    strcpy( pattern, mRegexCode.toLocal8Bit().data() );
     int erroffset;
 
     pcre * re;
@@ -299,6 +305,19 @@ void TAlias::setRegexCode( QString code )
     if( re == NULL )
     {
         mOK_init = false;
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "REGEX ERROR: failed to compile, reason:\n"
+                                                         << error
+                                                         << "\n"
+                                                         >> 0;
+            TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
+                                                        << mRegexCode
+                                                        << "\"\n"
+                                                        >> 0;
+        }
+        setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                  .arg( tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." )
+                        .arg( error ) ) );
     }
     else
     {
@@ -323,9 +342,15 @@ void TAlias::compileAll()
     mNeedsToBeCompiled = true;
     if( ! compileScript() )
     {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "ERROR: Lua compile error. compiling script of alias:"
+                                                         << mName
+                                                         << "\n"
+                                                         >> 0;
+        }
         mOK_code = false;
     }
+    compileRegex(); // Effectively will repost the error if there was a problem in the regex
     typedef list<TAlias *>::const_iterator I;
     for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
