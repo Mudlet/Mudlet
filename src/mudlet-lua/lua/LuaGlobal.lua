@@ -131,6 +131,13 @@ local prefixes = {"../src/mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
     "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua",
     getMudletLuaDefaultPath()}
 
+-- add default search paths coming from the C++ side as well
+if getMudletLuaDefaultPaths then
+    for _, path in ipairs(getMudletLuaDefaultPaths()) do
+        prefixes[#prefixes+1] = path
+    end
+end
+
 local prefix
 for i = 1, #prefixes do
     if lfs.attributes(prefixes[i]) then
