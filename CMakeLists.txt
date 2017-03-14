@@ -19,13 +19,7 @@
 ############################################################################
 
 PROJECT(mudlet)
-
-# Windows builds need 2.8.11, but for other platforms 2.8.9 should be enough
-IF(MSVC)
-  CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
-ELSE()
-  CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
-ENDIF()
+CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 
 IF(CMAKE_CONFIGURATION_TYPES)
   ADD_CUSTOM_TARGET(check COMMAND ${CMAKE_CTEST_COMMAND}
