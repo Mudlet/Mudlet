@@ -1317,3 +1317,27 @@ function setHexFgColor(windowName, colorString)
     setFgColor(colTable.r, colTable.g, colTable.b)
   end
 end
+
+--- Form of setBgColor that accepts a hex color string instead of decimal values
+--- @param windowName Optional name of the window to use the function on
+--- @param colorString hex string for the color to use
+function setHexBgColor(windowName, colorString)
+  local win = colorString and windowName
+  local col = colorString or windowName
+
+  if win == "main" then win = nil end
+
+  if #col ~= 6 then error("setHexFgColor needs a 6 digit hex color code.") end
+
+  local colTable = {
+    r = tonumber(col:sub(1,2), 16),
+    g = tonumber(col:sub(3,4), 16),
+    b = tonumber(col:sub(5,6), 16)
+  }
+
+  if win then
+    setBgColor(win, colTable.r, colTable.g, colTable.b)
+  else
+    setBgColor(colTable.r, colTable.g, colTable.b)
+  end
+end
