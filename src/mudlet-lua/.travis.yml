@@ -7,7 +7,7 @@ install:
  - sudo apt-get install liblua5.1-sql-sqlite3-2
  - sudo apt-get install liblua5.1-zip0
  - sudo apt-get install luarocks
- - sudo luarocks install busted 1.11.1
+ - sudo luarocks install busted
 
 script:
  - "cd tests"

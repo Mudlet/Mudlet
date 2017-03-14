@@ -1,3 +1,5 @@
+-- Label class to use CSS and images
+
 --------------------------------------
 --                                  --
 -- The Geyser Layout Manager by guy --
@@ -254,6 +256,7 @@ function Geyser.Label:displayNest(label)
         scrollEndH = Geyser.Label.scrollH[parent][2].scroll
     end
     local entryCount = {V=0, H=0}
+    parent.nestedLabels = parent.nestedLabels or {}
     for i,v in pairs(parent.nestedLabels) do
         entryCount[v.layoutDir] = entryCount[v.layoutDir]+1
         if v.layoutDir == "V" and not scrollV then
@@ -412,8 +415,8 @@ function Geyser.Label:new (cons, container)
          me:setClickCallback(me.callback)
       end
    end
-   
-   
+
+
    if me.onEnter then
         me:setOnEnter(me.onEnter, me.args)
    end
@@ -429,6 +432,7 @@ end
 function fakeFunction()
 end
 
+--- internal function that adds the "More..." scrollbars
 function Geyser.Label:addScrollbars(parent,layout)
     local label = parent.nestedLabels[1]
     local flyDir, layoutDir
@@ -451,7 +455,16 @@ function Geyser.Label:addScrollbars(parent,layout)
     return {backward, forward}
 end
 
-
+---@param cons table of Geyser window options such as name, width, and height
+-- @param cons.name a unique name for the label
+-- @param cons.height height of the label - specify it as the defaults are huge
+-- @param cons.width width of the label - specify it as the defaults are huge
+-- @param[opt='LV'] cons.layoutDir specifies in which direction and axis should the labels align, where 2 letters combine into the option: first letter R for right, L for left, T for top, B for bottom, followed by the orientation: V for vertical or H for horizontal. So options are: layoutDir="RV", layoutDir="RH", layoutDir="LV", layoutDir="LH", and so on
+-- @param[opt=false] cons.flyOut allows labels to show up when mouse is hovered over
+-- @param[opt=''] cons.message initial message to show on the label
+-- @param[opt='white'] cons.fgColor optional foreground colour - colour to use for text on the label
+-- @param[opt='black'] cons.bgColor optional background colour - colour of the whole label
+-- @param[opt=1] cons.fillBg 1 if the background is to be filled, 0 for no background
 function Geyser.Label:addChild(cons, container)
     cons = cons or {}
     cons.type = cons.type or "nestedLabel"

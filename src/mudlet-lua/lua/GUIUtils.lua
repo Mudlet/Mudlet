@@ -611,24 +611,6 @@ function handleWindowResizeEvent()
 end
 
 
-
---- Clears the current selection in the main window or miniConsole window. <br/>
---- (Note: <i>deselect(windowName)</i> is implemented in Core Mudlet.)
----
---- @usage Clear selection in main window.
----   <pre>
----   deselect()
----   </pre>
---- @usage Clear selection in myMiniConsole window.
----   <pre>
----   deselect("myMiniConsole")
----   </pre>
-function deselect()
-	selectString("", 1)
-end
-
-
-
 --- Sets current background color to a named color.
 ---
 --- @usage Set background color to magenta.
@@ -1180,6 +1162,35 @@ local lightColours = {
   [7] = {255,255,255}, -- white
 }
 
+-- black + 23 tone grayscale up to white
+-- The values are to be used for each of te r, g and b values
+local grayscaleComponents = {
+  [0]  =   0,
+  [1]  =  11,
+  [2]  =  22,
+  [3]  =  33,
+  [4]  =  44,
+  [5]  =  55,
+  [6]  =  67,
+  [7]  =  78,
+  [8]  =  89,
+  [9]  = 100,
+  [10] = 111,
+  [11] = 122,
+  [12] = 133,
+  [13] = 144,
+  [14] = 155,
+  [15] = 166,
+  [16] = 177,
+  [17] = 188,
+  [18] = 200,
+  [19] = 211,
+  [20] = 222,
+  [21] = 233,
+  [22] = 244,
+  [23] = 255
+}
+
 local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
 -- function for converting raw ANSI string into something decho can process
 -- bold, italics, underline not currently supported since decho doesn't support them
@@ -1207,11 +1218,10 @@ function ansi2decho(text)
         r = floor(tag / 36)
         g = floor((tag-(r*36)) / 6)
         b = floor((tag-(r*36))-(g*6))
-        rgb = {r*42, g*42, b*42}
+        rgb = {r*51, g*51, b*51}
       else
-        -- black + 23 tone grayscale from dark to light gray
-        tag = tag - 232
-        rgb = {tag*10, tag*10, tag*10}
+        local component = grayscaleComponents[tag - 232]
+        rgb = {component, component, component}
       end
 
       return rgb
@@ -1245,7 +1255,7 @@ function ansi2decho(text)
           i = i + 2
 
         elseif cmd == 8 and t[i+1] == '2' then -- xterm256, rgb
-          colour = {t[i+2] or '', t[i+3] or '', t[i+4] or ''}
+          colour = {t[i+2] or '0', t[i+3] or '0', t[i+4] or '0'}
           i = i + 4
 
         elseif layerCode == 9 or layerCode == 10 then --light colours
