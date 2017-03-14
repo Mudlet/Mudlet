@@ -148,9 +148,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       setFgColor = function(r, g, b)
         outputTable = { r = r, g = g, b = b }
       end
-      for inp, outp in pairs(hexStrings) do
-        setHexFgColor(inp)
-        assert.are.same(outputTable, outp)
+      for _, pair in ipairs(hexStrings) do
+        setHexFgColor(pair[1])
+        assert.are.same(outputTable, pair[2])
       end
     end)
 
