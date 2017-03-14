@@ -5,6 +5,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Michael Hupp (Darksix) - darksix@northfire.org  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -734,13 +735,13 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
-                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on -Darksix //
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       qDebug() << "MCCP v1 disabled !";
                   }
                   if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
-                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on -Darksix //
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       //MCCP->setMCCP2 (false);
                       qDebug() << "MCCP v1 disabled !";
                   }
@@ -1618,7 +1619,7 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
     {
         if( zval < 0 )
         {
-            mWaitingForCompressedStreamToStart = true; // Wasn't needed before, but is now. -Darksix //
+            mWaitingForCompressedStreamToStart = true; // Wasn't needed before, but is now (fixes MCCP toggling on/off)
             initStreamDecompressor();
             return -1;
         }
