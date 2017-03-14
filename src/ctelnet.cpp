@@ -645,7 +645,7 @@ void cTelnet::processTelnetCommand( const string & command )
                            //MCCP v2...
                            sendTelnetOption( TN_DONT, option );
                            hisOptionState[idxOption] = false;
-                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
+                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
                        }
                        else
                        {
@@ -733,11 +733,13 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on -Darksix //
                       qDebug() << "MCCP v1 disabled !";
                   }
                   if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on -Darksix //
                       //MCCP->setMCCP2 (false);
                       qDebug() << "MCCP v1 disabled !";
                   }
@@ -954,6 +956,13 @@ void cTelnet::processTelnetCommand( const string & command )
 
               }
               return;
+          }
+
+          // Original fix by RockHound, second revision by Darksix - To take out normal MCCP version 1 option and 2, no need for them now. // 
+          if ((mWaitingForCompressedStreamToStart) && (!mpHost->mFORCE_NO_COMPRESSION))
+          {
+            mNeedDecompression = true;
+            initStreamDecompressor();
           }
 
           // GMCP
@@ -1583,11 +1592,16 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
         // such as in the case of a copyover -JM
         hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
         hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
+
+        // To finish off this old code, here is a fix to make it stay working. -Darksix //
+        qDebug() << "Listening for new compression sequences or Z_OK.";
+        mWaitingForCompressedStreamToStart = true; // Was an unused boolean, thanks RockHound //
     }
     else
     {
         if( zval < 0 )
         {
+            mWaitingForCompressedStreamToStart = true; // Wasn't needed before, but is now. -Darksix //
             initStreamDecompressor();
             return -1;
         }
