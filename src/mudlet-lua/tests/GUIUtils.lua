@@ -156,4 +156,25 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
+  describe("Tests the functionality of setHexBgColor()", function()
+
+    it("Should convert hex string correctly", function()
+      local hexStrings = {
+        {"000000", { r = 0, g = 0, b = 0 }},
+        {"FFFFFF", { r = 255, g = 255, b = 255 }},
+        {"B22222", { r = 178, g = 34, b = 34 }},
+      }
+      local origSetFgColor = setFgColor
+      local outputTable
+      setBgColor = function(r, g, b)
+        outputTable = { r = r, g = g, b = b }
+      end
+      for _, pair in ipairs(hexStrings) do
+        setHexBgColor(pair[1])
+        assert.are.same(pair[2], outputTable) 
+      end
+    end)
+
+  end)
+
 end)
