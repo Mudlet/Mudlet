@@ -150,7 +150,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
       for _, pair in ipairs(hexStrings) do
         setHexFgColor(pair[1])
-        assert.are.same(outputTable, pair[2])
+        assert.are.same(pair[2], outputTable) 
       end
     end)
 
