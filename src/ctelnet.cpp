@@ -4,6 +4,8 @@
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
+ *   Copyright (C) 2017 by Darksix - https://launchpad.net/~deathlire      *
+ *   Copyright (C) 2017 by RockHound                                       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -645,7 +647,7 @@ void cTelnet::processTelnetCommand( const string & command )
                            //MCCP v2...
                            sendTelnetOption( TN_DONT, option );
                            hisOptionState[idxOption] = false;
-                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
+                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
                        }
                        else
                        {
@@ -733,11 +735,13 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       qDebug() << "MCCP v1 disabled !";
                   }
                   if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       //MCCP->setMCCP2 (false);
                       qDebug() << "MCCP v1 disabled !";
                   }
@@ -954,6 +958,13 @@ void cTelnet::processTelnetCommand( const string & command )
 
               }
               return;
+          }
+
+          // Take out normal MCCP version 1 option and 2, no need for them now. //
+          if ((mWaitingForCompressedStreamToStart) && (!mpHost->mFORCE_NO_COMPRESSION))
+          {
+            mNeedDecompression = true;
+            initStreamDecompressor();
           }
 
           // GMCP
@@ -1581,13 +1592,20 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
 
         // Reset the option state so we can re-enable compression again in the future
         // such as in the case of a copyover -JM
-        hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
-        hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
+
+        // These aren't needed at all. -Darksix //
+        //hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
+        //hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
+
+        // To finish off this old code, here is a fix to make it stay working.
+        qDebug() << "Listening for new compression sequences or Z_OK.";
+        mWaitingForCompressedStreamToStart = true; // Was an unused boolean
     }
     else
     {
         if( zval < 0 )
         {
+            mWaitingForCompressedStreamToStart = true; // Wasn't needed before, but is now.
             initStreamDecompressor();
             return -1;
         }
