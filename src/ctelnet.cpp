@@ -5,7 +5,8 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
- *   Copyright (C) 2017 by Michael Hupp (Darksix) - darksix@northfire.org  *
+ *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
+ *   Copyright (C) 2017 by Colton Rasbury - rasbury.colton@gmail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -959,7 +960,7 @@ void cTelnet::processTelnetCommand( const string & command )
               return;
           }
 
-          // Original fix by RockHound, second revision by Darksix - To take out normal MCCP version 1 option and 2, no need for them now. // 
+          // Original fix by CR, second revision by MH - To take out normal MCCP version 1 option and 2, no need for them now. //
           if ((mWaitingForCompressedStreamToStart) && (!mpHost->mFORCE_NO_COMPRESSION))
           {
             mNeedDecompression = true;
@@ -1611,9 +1612,9 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
         hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
         hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
 
-        // To finish off this old code, here is a fix to make it stay working. -Darksix //
+        // To finish off this old code, here is a fix to make it stay working. -MH //
         qDebug() << "Listening for new compression sequences or Z_OK.";
-        mWaitingForCompressedStreamToStart = true; // Was an unused boolean, thanks RockHound //
+        mWaitingForCompressedStreamToStart = true; // Was an unused boolean, thanks CR //
     }
     else
     {
