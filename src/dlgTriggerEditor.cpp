@@ -7070,7 +7070,7 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_scripts->clear();
 
     XMLimport reader( mpHost );
-    reader.importFromClipboard( );
+    savedView = reader.importFromClipboard( );
 
     mpHost->setName( profileName );
     mpHost->setLogin( login );

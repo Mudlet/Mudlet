@@ -54,10 +54,10 @@ class XMLimport : public QXmlStreamReader
 public:
     XMLimport(Host*);
     bool importPackage(QIODevice* device, QString packageName = QString(), int moduleFlag = 0);
-    bool importFromClipboard();
+    int importFromClipboard();
 
 private:
-    void readPackage();
+    int  readPackage();
     void readUnknownPackage();
 
     void readHostPackage();
@@ -118,6 +118,14 @@ private:
     int module;
     int mMaxRoomId;
     int mMaxAreaId; // Could be useful when iterating through map data
+
+    static const int            cmTriggerView;
+    static const int            cmTimerView;
+    static const int            cmAliasView;
+    static const int            cmScriptView;
+    static const int            cmActionView;
+    static const int            cmKeysView;
+    static const int            cmVarsView;
 };
 
 #endif // MUDLET_XMLEXPORT_H

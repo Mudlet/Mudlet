@@ -46,6 +46,14 @@
 #include "post_guard.h"
 // clang-format: on
 
+const int XMLimport::cmTriggerView = 1;
+const int XMLimport::cmTimerView = 2;
+const int XMLimport::cmAliasView = 3;
+const int XMLimport::cmScriptView = 4;
+const int XMLimport::cmActionView = 5;
+const int XMLimport::cmKeysView = 6;
+const int XMLimport::cmVarsView = 7;
+
 XMLimport::XMLimport(Host* pH)
     : mpHost(pH)
     , mPackageName(QString())
@@ -151,7 +159,7 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
 
         if (isStartElement()) {
             if (name() == "MudletPackage") {
-                readPackage();
+                int result = readPackage();
             } else if (name() == "map") {
                 readMap();
                 mpHost->mpMap->audit();
@@ -205,10 +213,14 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
     return !error();
 }
 
-bool XMLimport::importFromClipboard( )
+int XMLimport::importFromClipboard( )
 {
+
     QString xml;
     QClipboard *cb = QApplication::clipboard();
+
+    int packageType = 0;
+    int result = 0;
 
     xml = cb->text(QClipboard::Clipboard);
             //setText( xml, QClipboard::Clipboard );
@@ -227,7 +239,7 @@ bool XMLimport::importFromClipboard( )
         {
             if( name() == "MudletPackage" )
             {
-                readPackage();
+                result = readPackage();
             }
             else
             {
@@ -236,7 +248,8 @@ bool XMLimport::importFromClipboard( )
         }
     }
 
-    return ! error();
+    return error() ? -1 : result;
+    //return ! error();
 }
 
 void XMLimport::readVariableGroup(TVar* pParent)
@@ -517,8 +530,9 @@ void XMLimport::readUnknownMapElement()
     }
 }
 
-void XMLimport::readPackage()
+int XMLimport::readPackage()
 {
+    int objectType = 0;
     while (!atEnd()) {
         readNext();
 
@@ -528,26 +542,34 @@ void XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
+                objectType = cmTriggerView;
                 readTriggerPackage();
             } else if (name() == "TimerPackage") {
+                objectType = cmTimerView;
                 readTimerPackage();
             } else if (name() == "AliasPackage") {
+                objectType = cmAliasView;
                 readAliasPackage();
             } else if (name() == "ActionPackage") {
+                objectType = cmActionView;
                 readActionPackage();
             } else if (name() == "ScriptPackage") {
+                objectType = cmScriptView;
                 readScriptPackage();
             } else if (name() == "KeyPackage") {
+                objectType = cmKeysView;
                 readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
+                objectType = cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownPackage();
             }
         }
     }
+    return objectType;
 }
 
 void XMLimport::readHelpPackage()
@@ -579,7 +601,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            readPackage();
+            int result = readPackage();
         }
     }
 }

@@ -34,10 +34,6 @@
 #include "TTimer.h"
 #include "TVar.h"
 #include "VarUnit.h"
-#include <QApplication>
-#include <QClipboard>
-#include <QBuffer>
-
 
 using namespace std;
 

@@ -27,6 +27,9 @@
 #include "pre_guard.h"
 #include <QPointer>
 #include <QXmlStreamWriter>
+#include <QApplication>
+#include <QClipboard>
+#include <QBuffer>
 #include "post_guard.h"
 
 class Host;
