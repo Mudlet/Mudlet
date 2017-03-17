@@ -8,10 +8,10 @@ BUILD=""
 if [ -z "${TRAVIS_TAG}" ]; then
   BUILD="-testing"
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
-    COMMIT=$(git parse-rev --short "${TRAVIS_PULL_REQUEST_SHA}")
+    COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     BUILD="${BUILD}-CI-${COMMIT}"
   else
-    COMMIT=$(git parse-rev --short HEAD)
+    COMMIT=$(git rev-parse --short HEAD)
     BUILD="${BUILD}-${COMMIT}"
   fi
 fi
