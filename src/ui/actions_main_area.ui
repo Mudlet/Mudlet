@@ -262,9 +262,6 @@
            <property name="readOnly">
             <bool>true</bool>
            </property>
-           <property name="clearButtonEnabled">
-            <bool>false</bool>
-           </property>
           </widget>
          </item>
          <item row="1" column="0">
@@ -403,9 +400,6 @@ Icon</string>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter a plain text command to be send directly to the MUD server when this button is clicked.&lt;/p&gt;&lt;p&gt;A menu does not act in the same way as the action of clicking on it is normally to display the contents of the menu so this will not show should a menu (a button &lt;i&gt;Group&lt;/i&gt; item be selected).&lt;/p&gt;&lt;p&gt;If this is a button that has been set as a &lt;i&gt;push-down button&lt;/i&gt; then what is entered here is sent on the &lt;b&gt;first&lt;/b&gt; press of the button, i.e. going from the &lt;b&gt;off to on&lt;/b&gt; state - in this case a second entry box is enabled and what is entered in &lt;i&gt;that one&lt;/i&gt; is send when the button is clicked a second time to go from the &lt;b&gt;on to off&lt;/b&gt; state.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
-           <property name="clearButtonEnabled">
-            <bool>true</bool>
-           </property>
           </widget>
          </item>
          <item row="4" column="0">
@@ -428,9 +422,6 @@ Icon</string>
            </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If this is a button that has been set as a &lt;i&gt;push-down button&lt;/i&gt; then what is entered here is sent on the &lt;b&gt;second&lt;/b&gt; press of the button, i.e. going from the &lt;b&gt;on to off&lt;/b&gt; state - in this case the other entry box is only sent every other click as the button goes from the &lt;b&gt;off to on&lt;/b&gt; state.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-           <property name="clearButtonEnabled">
-            <bool>true</bool>
            </property>
           </widget>
          </item>
