@@ -19,9 +19,7 @@ before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
-  - export COMMIT=$(git rev-parse --short HEAD)
-  - perl -pi -e "s/SET\(APP_BUILD \"-dev\"\)/SET(APP_BUILD \"-testing-$COMMIT\")/" CMakeLists.txt
-  - perl -pi -e "s/BUILD = -dev/BUILD = -testing-$COMMIT/" src/src.pro
+  - ./CI/travis.set-build-info.sh
   - mkdir build
   - cd src
 script:
