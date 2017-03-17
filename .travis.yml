@@ -19,7 +19,7 @@ before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
-  - ./CI/travis.set-build-info.sh
+  - bash CI/travis.set-build-info.sh
   - mkdir build
   - cd src
 script:
