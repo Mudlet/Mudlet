@@ -1290,7 +1290,17 @@ void XMLimport::readActionGroup(TAction* pParent)
                 pT->mCommandButtonDown = readElementText();
                 continue;
             } else if (name() == "icon") {
-                pT->mIcon = readElementText();
+                // Must check for attributes BEFORE we read the element text!
+                QXmlStreamAttributes tempAttributes( attributes() );
+                QString tempPathFile = readElementText();
+                if( tempAttributes.hasAttribute( "isRelative" ) ) {
+                    if( tempAttributes.value( "isRelative" ) == "true" ) {
+                        // Only load the relative pathFileName if we have both
+                        pT->setIconPathFileName( tempPathFile );
+                    }
+                } else {
+                    pT->setIconPathFileName( tempPathFile );
+                }
                 continue;
             } else if (name() == "orientation") {
                 pT->mOrientation = readElementText().toInt();

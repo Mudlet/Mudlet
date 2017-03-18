@@ -36,9 +36,17 @@ EAction::EAction( QIcon & icon, QString & name, mudlet * parent )
     connect(this, SIGNAL(triggered(bool)), this, SLOT(slot_execute(bool)));
 }
 
-void EAction::slot_execute(bool checked)
+void EAction::slot_execute(bool isChecked)
 {
-    if( checked )
+    qDebug() << "\nEAction::slot_execute("
+             << isChecked
+             << ") called for: "
+             << mpHost->getActionUnit()->getAction( mID )->getName()
+             << "it will now set the related TAction's mButtonState to:"
+             << (isChecked ? "2" : "1")
+             << "and then call TAction::execute().";
+
+    if( isChecked )
     {
         mpHost->getActionUnit()->getAction( mID )->mButtonState = 2;
     }
@@ -46,6 +54,6 @@ void EAction::slot_execute(bool checked)
     {
         mpHost->getActionUnit()->getAction( mID )->mButtonState = 1;
     }
-    QStringList sL;
-    mpHost->getActionUnit()->getAction( mID )->_execute( sL );
+
+    mpHost->getActionUnit()->getAction( mID )->execute();
 }

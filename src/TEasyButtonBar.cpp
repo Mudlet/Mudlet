@@ -171,24 +171,46 @@ void TEasyButtonBar::slot_pressed()
     }
 
     TAction * pA = pB->mpTAction;
+    // WARNING: showMenu() blocks until the user selects something on the menu
+    // it is also why we cannot permit a "command" to be set on a menu as
+    // otherwise the action of popping up the menu will ALSO send the "command"
+    // to the MUD server - which can never be a wanted action?
     pB->showMenu();
+
+    // Technically only checkable buttons can be checked with setChecked(...),
+    // but doing so DOES NOT emit the clicked(bool) SIGNAL...
+    qDebug() << "TEasyButtonBar::slot_pressed() called for:"
+             << pA->getName()
+             << ( pA->isPushDownButton() ? "this is a PushDown button" : "this is a Clickable (non-PushDown) button" )
+             << "TAction mButtonState is:"
+             << pA->mButtonState;
 
     if( pA->mButtonState == 2 )
     {
+        qDebug() << "TEasyButtonBar::slot_pressed() setting TAction mButtonState to 1, and setting TFlipButton to NOT checked.";
         pA->mButtonState = 1;
         pB->setChecked( false );
     }
     else
     {
+        qDebug() << "TEasyButtonBar::slot_pressed() setting TAction mButtonState to 2, and setting TFlipButton to CHECKED.";
         pA->mButtonState = 2;
         pB->setChecked( true );
     }
+
+    // This is wrong I think
     if( pB->isChecked() )
+    {
+        qDebug() << "TEasyButtonBar::slot_pressed() setting TConsole::mButtonState to 1 before calling TAction::execute().";
         pA->mpHost->mpConsole->mButtonState = 1;
+    }
     else
+    {
+        qDebug() << "TEasyButtonBar::slot_pressed() setting TConsole::mButtonState to 0 before calling TAction::execute().";
         pA->mpHost->mpConsole->mButtonState = 0;
-    QStringList sL;
-    pA->_execute( sL );
+    }
+
+    pA->execute();
 }
 
 void TEasyButtonBar::clear()

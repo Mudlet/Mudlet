@@ -161,22 +161,44 @@ void TToolBar::slot_pressed()
     }
 
     TAction * pA = pB->mpTAction;
+    // WARNING: showMenu() blocks until the user selects something on the menu
+    // it is also why we cannot permit a "command" to be set on a menu as
+    // otherwise the action of popping up the menu will ALSO send the "command"
+    // to the MUD server - which can never be a wanted action?
     pB->showMenu();
+
+    // Technically only checkable buttons can be checked with setChecked(...),
+    // but doing so DOES NOT emit the clicked(bool) SIGNAL...
+    qDebug() << "TToolBar::slot_pressed() called for:"
+             << pA->getName()
+             << ( pA->isPushDownButton() ? "this is a PushDown button" : "this is a Clickable (non-PushDown) button" )
+             << "TAction mButtonState is:"
+             << pA->mButtonState;
 
     if( pB->isChecked() )
     {
+        qDebug() << "TToolBar::slot_pressed() setting TAction mButtonState to 2.";
         pA->mButtonState = 2;
     }
     else
     {
+        qDebug() << "TToolBar::slot_pressed() setting TAction mButtonState to 1.";
         pA->mButtonState = 1;
     }
+
+    // This is wrong I think
     if( pB->isChecked() )
+    {
+        qDebug() << "TToolBar::slot_pressed() setting TConsole::mButtonState to 1 before calling TAction::execute().";
         pA->mpHost->mpConsole->mButtonState = 1;
+    }
     else
+    {
+        qDebug() << "TToolBar::slot_pressed() setting TConsole::mButtonState to 0 before calling TAction::execute().";
         pA->mpHost->mpConsole->mButtonState = 0;
-    QStringList sL;
-    pA->_execute( sL );
+    }
+
+    pA->execute();
 }
 
 void TToolBar::clear()

@@ -257,7 +257,7 @@
             <cursorShape>ForbiddenCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This displays - but does not allow editing of - the path and file name for an image file that is used as an icon for this button that has been selected using the &lt;i&gt;Click to change icon&lt;/i&gt; button.  Use the &lt;i&gt;Clear Icon&lt;/i&gt; button to remove a file shown here.&lt;/p&gt;&lt;p&gt;&lt;i&gt;&lt;b&gt;Note:&lt;/b&gt; The entry displayed here may be selected and copied to the clipboard which can then be pasted into the file selection dialogue that the&lt;/i&gt; Click to change icon &lt;i&gt; brings up which means that an entry for one button can be copied to another button if required.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This displays - but does not allow editing of - the &lt;i&gt;relative to the profile home directory&lt;/i&gt; path and file name for an image file that is used as an icon for this button that has been selected using the &lt;i&gt;Click to change icon&lt;/i&gt; button.  Use the &lt;i&gt;Clear Icon&lt;/i&gt; button to remove a file shown here.&lt;/p&gt;&lt;p&gt;&lt;i&gt;&lt;b&gt;Note:&lt;/b&gt; By using a relative form it is hoped to enable a more portable format for the location especially if the end user/package creator stores custom icons in a directory within the directories that Mudlet reserves for it's own use.&lt;/i&gt;&lt;/p&gt;&lt;p&gt;The value shown here may be selected and copied to the clipboard which can then be pasted into the file selection dialogue that the&lt;/i&gt; Click to change icon &lt;i&gt; brings up which means that an entry for one button can be copied to another button if required.&lt;/i&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="readOnly">
             <bool>true</bool>
@@ -309,7 +309,7 @@
            </property>
            <property name="font">
             <font>
-             <pointsize>6</pointsize>
+             <pointsize>8</pointsize>
             </font>
            </property>
            <property name="toolTip">
@@ -363,7 +363,7 @@ change icon</string>
           <widget class="QPushButton" name="pushButton_clearIcon">
            <property name="font">
             <font>
-             <pointsize>6</pointsize>
+             <pointsize>8</pointsize>
             </font>
            </property>
            <property name="toolTip">

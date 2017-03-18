@@ -862,7 +862,32 @@ bool XMLexport::writeAction( TAction * pT )
     writeTextElement( "css", pT->css );
     writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
     writeTextElement( "commandButtonDown", pT->mCommandButtonDown );
-    writeTextElement( "icon", pT->mIcon );
+    // To allow both relative (better new way) and absolute (old format and only
+    // one understood by prior to release_3.0.0-kappa Mudlet versions) details
+    // to be stored, write the icon file name twice so that the first, relative
+    // one is replaced with the absolute second one by older versions that will
+    // silently (without moaning) ignore the "isRelative" attribute but which
+    // will be taking in preference by versions that understand it.
+    // In future, should A) We turn on XML file format checking and B) upgrade
+    // it past the longstanding "1.00" we can safely always use a relative path
+    // without the data loss that would occur when an old version forgets the
+    // relative data when it rewrites the data on saving - Slysven
+
+    // Note for information:
+    // writeTextElement("myElement","myValue") is a convience shortcut for:
+    //
+    // writeStartElement("myElement")
+    // writeCharacters("myValue")
+    // writeEndElement()
+    // but does not allow any attributes to be inserted for the "myElement"! 8-)
+    writeStartElement( "icon" );
+    writeAttribute( "isRelative", "true" );
+    writeCharacters( pT->getIconPathFileName( true ) );
+    writeEndElement();
+    writeStartElement( "icon" );
+    writeAttribute( "isRelative", "false" );
+    writeCharacters( pT->getIconPathFileName( false ) );
+    writeEndElement();
     writeTextElement( "orientation", QString::number(pT->mOrientation) );
     writeTextElement( "location", QString::number(pT->mLocation) );
     writeTextElement( "posX", QString::number(pT->mPosX) );

@@ -161,8 +161,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpActionsMainArea = new dlgActionMainArea( mainArea );
     mpActionsMainArea->setSizePolicy( sizePolicy );
     pVB1->addWidget( mpActionsMainArea, Qt::AlignTop );
-    connect(mpActionsMainArea->pushButton_changeIcon, SIGNAL(pressed()), this, SLOT(slot_chose_action_icon()));
-    connect(mpActionsMainArea->pushButton_clearIcon, SIGNAL(pressed()), this, SLOT(slot_clear_action_icon()));
+    connect(mpActionsMainArea->pushButton_changeIcon, SIGNAL(clicked()), this, SLOT(slot_chose_action_icon()));
+    connect(mpActionsMainArea->pushButton_clearIcon, SIGNAL(clicked()), this, SLOT(slot_clear_action_icon()));
     connect(mpActionsMainArea->checkBox_pushdownbutton, SIGNAL(stateChanged(int)), this, SLOT(slot_toggle_isPushDownButton(int)));
     mpActionsMainArea->widget_middle->hide();
     mpActionsMainArea->widget_bottom->hide(); // Hide the details until we know which parts to show
@@ -3727,7 +3727,7 @@ void dlgTriggerEditor::saveAction()
         if( pT->mPackageName.isEmpty() )
         {
             pT->setName( name );
-            pT->setIcon( icon );
+            pT->setIconPathFileName( icon );
             pT->setScript( script );
             pT->setIsPushDownButton( isChecked );
             pT->setCommandButtonDown( commandDown );
@@ -4827,7 +4827,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         // this particular item...
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
-        QString iconFileName = pT->getIcon();
+        QString iconFileName = pT->getIconPathFileName( true );
         if( iconFileName.isEmpty() )
         {
             mpActionsMainArea->lineEdit_action_icon->clear();
@@ -4837,7 +4837,17 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         else
         {
             mpActionsMainArea->lineEdit_action_icon->setText( iconFileName );
-            mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( iconFileName ) );
+            if( QDir::isRelativePath( iconFileName ) )
+            {
+                mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                                                                          .arg( QDir::homePath() )
+                                                                          .arg( mpHost->getName() )
+                                                                          .arg( iconFileName ) ) );
+            }
+            else
+            {
+                mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( iconFileName ) );
+            }
             mpActionsMainArea->pushButton_clearIcon->setEnabled( true );
         }
         mpActionsMainArea->lineEdit_action_command_down->setText( pT->getCommandButtonDown() );
@@ -4867,10 +4877,11 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
             mpSourceEditorArea->hide();
             mpActionsMainArea->lineEdit_action_name->setReadOnly(true);
             mpActionsMainArea->lineEdit_action_name->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
-                                                                 .arg( "The module or package name was set when the module was created and cannot be modified "
-                                                                       "here. You may add or remove things from the module by dragging and dropping and all the "
-                                                                       "button/menu/toolbar items can be enabled/disabled at once by activating/deactivating "
-                                                                       "this item." ) );
+                                                                 .arg( "This is the module/package name and it cannot be modified here. You may add or "
+                                                                       "remove things from the module by dragging and dropping and all the button/menu/toolbar "
+                                                                       "items can be enabled/disabled at once by activating/deactivating this item.</p>"
+                                                                       "<p>Also, it cannot be deleted from here: instead you must <i>uninstall</i> "
+                                                                       "it via the package or module manager as appropriate." ) );
 
             mpDeleteItemButton->setEnabled( false ); // Prevent deletion on this type of action
         }
@@ -7310,10 +7321,20 @@ void dlgTriggerEditor::grab_key_callback( int key, int modifier )
 
 void dlgTriggerEditor::slot_chose_action_icon()
 {
+    QString profileHomeDirectoryPathFilename = QStringLiteral( "%1/.config/mudlet/profiles/%2/" )
+                                               .arg( QDir::homePath() )
+                                               .arg( mpHost->getName() );
+
     QString initialValue = mpActionsMainArea->lineEdit_action_icon->text();
     if( initialValue.isEmpty() )
     {
-        initialValue = QDir::homePath();
+        initialValue = profileHomeDirectoryPathFilename;
+    }
+    else if( QDir::isRelativePath( initialValue ) )
+    {
+        initialValue = QStringLiteral( "%1%2" )
+                       .arg( profileHomeDirectoryPathFilename )
+                       .arg( initialValue );
     }
 
     QString fileName = QFileDialog::getOpenFileName( this,
@@ -7322,8 +7343,13 @@ void dlgTriggerEditor::slot_chose_action_icon()
                                                      tr("Images (*.png *.xpm *.jpg)") );
     if( ! fileName.isEmpty() )
     {
-        mpActionsMainArea->lineEdit_action_icon->setText( fileName );
-        mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( fileName ) );
+        QDir profileHomeDirectory( profileHomeDirectoryPathFilename );
+        QString relativeIconPathFileName = profileHomeDirectory.relativeFilePath( fileName );
+        mpActionsMainArea->lineEdit_action_icon->setText( relativeIconPathFileName );
+        mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                                                                  .arg( QDir::homePath() )
+                                                                  .arg( mpHost->getName() )
+                                                                  .arg( relativeIconPathFileName ) ) );
         mpActionsMainArea->pushButton_clearIcon->setEnabled( true ); // The button should now be enabled
     }
     else if( mpActionsMainArea->lineEdit_action_icon->text().isEmpty() )

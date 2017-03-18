@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -70,10 +71,9 @@ public:
     void             fillMenu( TEasyButtonBar * pT, QMenu * menu );
     void             compile();
     bool             compileScript();
-    void             execute(QStringList &);
-    void             _execute(QStringList &);
-    QString          getIcon()                                 { return mIcon; }
-    void             setIcon( QString & icon )                 { mIcon = icon; }
+    void            execute();
+    QString         getIconPathFileName( const bool isToForceRelative = false ) const;
+    void            setIconPathFileName( const QString & icon ) { mIcon = icon; }
     QString          getScript()                               { return mScript; }
     bool             setScript( QString & script );
     QString          getCommandButtonUp()                      { return mCommandButtonUp; }
@@ -113,8 +113,7 @@ public:
     bool             mIsFolder;
 
     bool             mNeedsToBeCompiled;
-    QString          mIcon;
-    QIcon            mIconPix;
+// Not currently used:    QIcon            mIconPix;
 
     int              mButtonRotation;
     int              mButtonColumns;
@@ -128,9 +127,12 @@ public:
     Host *           mpHost;
     bool             exportItem;
     bool            mModuleMasterFolder;
-private:
 
+private:
                     TAction(){}
+
+
+    QString         mIcon;
     QString          mFuncName;
     bool                  mModuleMember;
 
