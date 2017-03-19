@@ -1,0 +1,7 @@
+:MainWindow.Avalon.de_TConsole	{name='Avalon.de' type='TConsole' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.Connect_QToolButton	{text='Connect' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_QWidget	{occurrence='23' type='QWidget' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_mudlet	{name='MainWindow' type='mudlet' visible='1'}
+:profile_dialog.Connect_QPushButton	{text='Connect' type='QPushButton' unnamed='1' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.profiles_tree_widget_QListWidget	{name='profiles_tree_widget' type='QListWidget' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog_dlgConnectionProfiles	{name='profile_dialog' type='dlgConnectionProfiles' visible='1'}
