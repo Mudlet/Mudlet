@@ -1,11 +1,17 @@
 :MainWindow.Avalon.de_TConsole	{name='Avalon.de' type='TConsole' visible='1' window=':MainWindow_mudlet'}
 :MainWindow.Connect_QToolButton	{text='Connect' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.Map - Achaea_QDockWidget	{type='QDockWidget' unnamed='1' visible='1' window=':MainWindow_mudlet' windowTitle='Map - Achaea'}
+:MainWindow.Map_QToolButton	{text='Map' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
 :MainWindow.Triggers_QToolButton	{text='Triggers' type='QToolButton' unnamed='1' visible='1' window=':MainWindow_mudlet'}
+:MainWindow.mp2dMap_T2DMap	{name='mp2dMap' type='T2DMap' visible='1' window=':MainWindow_mudlet'}
+:MainWindow_QMenu	{type='QMenu' unnamed='1' visible='1' window=':MainWindow_mudlet'}
 :MainWindow_QWidget	{occurrence='23' type='QWidget' unnamed='1' visible='1' window=':MainWindow_mudlet'}
 :MainWindow_TCommandLine	{type='TCommandLine' unnamed='1' visible='1' window=':MainWindow_mudlet'}
 :MainWindow_TTextEdit	{type='TTextEdit' unnamed='1' visible='1' window=':MainWindow_mudlet'}
 :MainWindow_mudlet	{name='MainWindow' type='mudlet' visible='1'}
+:Map - Achaea.mp2dMap_T2DMap	{container=':MainWindow.Map - Achaea_QDockWidget' name='mp2dMap' type='T2DMap' visible='1'}
 :Triggers.Simple highlight trigger_QModelIndex	{column='0' container=':treeWidget_triggers.Triggers_QModelIndex' text='Simple highlight trigger' type='QModelIndex'}
+:_QSplashScreen	{type='QSplashScreen' unnamed='1' visible='0'}
 :frame_left.treeWidget_triggers_TTreeWidget	{container=':splitter_main.frame_left_QFrame' name='treeWidget_triggers' type='TTreeWidget' visible='1'}
 :frame_right.splitter_rightTopBottom_QSplitter	{container=':splitter_main.frame_right_QFrame' name='splitter_rightTopBottom' type='QSplitter' visible='1'}
 :frame_rightTop.colorizerTrigger_QGroupBox	{container=':splitter_rightTopBottom.frame_rightTop_QFrame' name='colorizerTrigger' type='QGroupBox' visible='1'}
@@ -23,6 +29,7 @@
 :requiredArea.host_name_entry_QLineEdit	{container=':profile_dialog.requiredArea_QGroupBox' name='host_name_entry' type='QLineEdit' visible='1'}
 :requiredArea.port_entry_QLineEdit	{container=':profile_dialog.requiredArea_QGroupBox' name='port_entry' type='QLineEdit' visible='1'}
 :requiredArea.profile_name_entry_QLineEdit	{container=':profile_dialog.requiredArea_QGroupBox' name='profile_name_entry' type='QLineEdit' visible='1'}
+:roomExits_QDialog	{name='roomExits' type='QDialog' visible='1'}
 :scrollArea.lineEdit_QLineEdit	{container=':frame_rightTop.scrollArea_QScrollArea' name='lineEdit' type='QLineEdit' visible='1'}
 :splitter_main.frame_left_QFrame	{container=':trigger_editor.splitter_main_QSplitter' name='frame_left' type='QFrame' visible='1'}
 :splitter_main.frame_right_QFrame	{container=':trigger_editor.splitter_main_QSplitter' name='frame_right' type='QFrame' visible='1'}
