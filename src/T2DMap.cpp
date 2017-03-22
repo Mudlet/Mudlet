@@ -63,12 +63,12 @@
 
 T2DMap::T2DMap(QWidget * parent)
 : QWidget(parent)
-, mDialogLock(false)
 , mMultiSelectionListWidget(this)
 , mMultiSelectionHighlightRoomId(-1)
 , mIsSelectionSorting(true)
 , mIsSelectionSortByNames(false)
 , mIsSelectionUsingNames(false)
+, mDialogLock(false)
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -2151,6 +2151,8 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
 void T2DMap::mouseDoubleClickEvent ( QMouseEvent * event )
 {
+    if( mDialogLock )
+        return;
     int x = event->x();
     int y = event->y();
     mPHighlight = QPoint(x,y);
@@ -2638,6 +2640,8 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
         if( mCustomLinesRoomFrom > 0 )
         {
+            if( mDialogLock )
+                return;
 
             if( mDialogLock )
             {
@@ -2932,6 +2936,10 @@ void T2DMap::slot_customLineProperties()
 
     if( pR )
     {
+        if( exit.isEmpty() ) {
+            qDebug("T2DMap::slot_customLineProperties() called but no exit is selected...");
+            return;
+        }
         if( pR->customLines.contains( exit ) )
         {
             QUiLoader loader;
@@ -3149,7 +3157,7 @@ void T2DMap::slot_doneCustomLine()
 {
     if( mpCustomLinesDialog )
     {
-        mpCustomLinesDialog->close(); // Have changed so that we don't close the dialog until finished drawing the line
+        mpCustomLinesDialog->accept();
         mpCustomLinesDialog = 0;
     }
     mHelpMsg = "";
@@ -4552,11 +4560,7 @@ void T2DMap::slot_setCustomLine()
     if( ! d ) {
         return;
     }
-
     d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-    mpCustomLinesDialog = d;
-    mpCustomLinesDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";
@@ -4811,8 +4815,8 @@ void T2DMap::slot_setCustomLine()
         qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"cancel\" button!");
         return;
     }
-    connect(b_, SIGNAL(clicked()), this, SLOT(slot_setCustomLine2()));
-    // Arrange that even a cancel request gets handled by the slot_setCustomLine2() method
+    connect(b_, SIGNAL(clicked()), d, SLOT(reject()));
+    connect(d, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
     QStringList _lineStyles;
     _lineStyles << "solid line" << "dot line" << "dash line" << "dash dot line" << "dash dot dot line";
@@ -4822,8 +4826,10 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineColor->setStyleSheet("background-color:" + mCurrentLineColor.name());
     connect(specialExits, SIGNAL(itemClicked(QTreeWidgetItem *,int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
     connect(mpCurrentLineColor, SIGNAL(clicked()), this, SLOT(slot_customLineColor()));
-    d->show();
-    d->raise();
+    mpCustomLinesDialog = d; // Don't assign the pointer value to the class memeber until ready to go
+    mpCustomLinesDialog->show();
+    mpCustomLinesDialog->raise();
+    mDialogLock = true; // Prevent any line drawing until dialog has been used
 }
 
 void T2DMap::slot_customLineColor()
@@ -4842,20 +4848,40 @@ void T2DMap::slot_customLineColor()
     }
 }
 
+// Called by dialog's reject event which is caused at least by "X" button on
+// title bar and by ESC keypress...
+void T2DMap::slot_cancelCustomLineDialog()
+{
+    mpCustomLinesDialog->deleteLater();
+    mpCustomLinesDialog = 0;
+    mCustomLinesRoomFrom = 0;
+    mCustomLinesRoomTo = 0;
+    mCustomLinesRoomExit.clear();
+    mDialogLock = false;
+}
+
 void T2DMap::slot_setCustomLine2()
 {
     QPushButton* pB = qobject_cast<QPushButton *>( sender() );
-    if( ! pB || pB->objectName() == "button_cancel" )
+    if( ! pB )
     {
-        mpCustomLinesDialog->close();
-        mCustomLinesRoomFrom = 0; // This is needed to escape from custom line exit drawing mode
-        mCustomLinesRoomTo = 0;
-        mCustomLinesRoomExit.clear();
+        if( mpCustomLinesDialog ) {
+            mpCustomLinesDialog->reject();
+        }
+        else {
+            // This is needed to escape from custom line exit drawing mode if
+            // the dialog has disappeared, not likely I think/hope
+            mCustomLinesRoomFrom = 0;
+            mCustomLinesRoomTo = 0;
+            mCustomLinesRoomExit.clear();
+            mDialogLock = false;
+        }
         return;
     }
     QString exit = pB->text();
-    mpCustomLinesDialog->close();
+    mpCustomLinesDialog->hide(); // Hide but don't delete until done the custom line
     mCustomLinesRoomExit = exit;
+    mDialogLock = false;
     TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
     if( ! pR )
         return;
@@ -4916,7 +4942,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem * special_exit, int column )
     if( ! special_exit )
         return;
     QString exit = special_exit->text(2);
-    mpCustomLinesDialog->close();
+    mpCustomLinesDialog->hide(); // Hide but don't delete until done the custom line
     mCustomLinesRoomExit = exit;
     mCustomLinesRoomTo = special_exit->text(1).toInt(); // Wasn't being set !
     mDialogLock = false;
