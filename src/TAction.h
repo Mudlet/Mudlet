@@ -87,12 +87,10 @@ public:
     bool             registerAction();
     void             insertActions( TToolBar * pT,
                                     QMenu * menu );
-    void             expandToolbar( TToolBar * pT,
-                                    QMenu * menu );
+    void             expandToolbar( TToolBar * pT );
     void             insertActions( TEasyButtonBar * pT,
                                     QMenu * menu );
-    void             expandToolbar( TEasyButtonBar * pT,
-                                    QMenu * menu );
+    void             expandToolbar( TEasyButtonBar * pT );
     TToolBar *       mpToolBar;
     TEasyButtonBar * mpEasyButtonBar;
     int              mButtonState;

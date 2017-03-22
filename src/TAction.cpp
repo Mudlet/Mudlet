@@ -181,7 +181,7 @@ void TAction::execute()
     mpHost->mpConsole->setFocus();
 }
 
-void TAction::expandToolbar( TToolBar * pT, QMenu * menu )
+void TAction::expandToolbar( TToolBar * pT )
 {
    typedef list<TAction *>::const_iterator I;
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -190,7 +190,7 @@ void TAction::expandToolbar( TToolBar * pT, QMenu * menu )
 
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
-       TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
+       TFlipButton * button = new TFlipButton( pChild, mpHost );
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
@@ -243,7 +243,7 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
 }
 
 
-void TAction::expandToolbar( TEasyButtonBar * pT, QMenu * menu )
+void TAction::expandToolbar( TEasyButtonBar * pT )
 {
    typedef list<TAction *>::const_iterator I;
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -252,7 +252,7 @@ void TAction::expandToolbar( TEasyButtonBar * pT, QMenu * menu )
        if( ! pChild->isActive() ) continue;
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
-       TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
+       TFlipButton * button = new TFlipButton( pChild, mpHost );
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
