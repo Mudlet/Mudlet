@@ -159,6 +159,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     mpActionsMainArea = new dlgActionMainArea( mainArea );
     mpActionsMainArea->setSizePolicy( sizePolicy8 );
+    connect(mpActionsMainArea->checkBox_pushdownbutton, SIGNAL(stateChanged(const int)), this, SLOT(slot_toggle_isPushDownButton(const int)));
     pVB1->addWidget( mpActionsMainArea );
 
     mpKeysMainArea = new dlgKeysMainArea( mainArea );
@@ -2428,13 +2429,42 @@ void dlgTriggerEditor::slot_action_toggle_active()
 
     if( pT->isFolder() )
     {
-        if( pT->isActive() )
+        if( ! pT->getPackageName().isEmpty() )
         {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
+            // Has a package name - is a module master folder
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+        }
+        else if( ! pT->getParent()
+              || ! pT->getParent()->getPackageName().isEmpty() )
+        {
+            // Does not have a parent or the parent has a package name - is a toolbar
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
         }
         else
         {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            // Must be a menu
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
         }
     }
     else
@@ -2451,19 +2481,28 @@ void dlgTriggerEditor::slot_action_toggle_active()
 
     if( pT->state() )
     {
-        pItem->setIcon( 0, icon);
-        pItem->setText( 0, pT->getName() );
+        if( pT->shouldBeActive() )
+        {
+            showInfo( tr( "Trying to activate a button/menu/toolbar or the part of a module \"%1\" that contains them <em>succeeded</em>." )
+                      .arg( pT->getName() ) );
+        }
+        else
+        {
+            showInfo( tr( "Trying to deactivate a button/menu/toolbar or the part of a module \"%1\" that contains them <em>succeeded</em>." )
+                      .arg( pT->getName() ) );
+        }
     }
     else
     {
-        QIcon iconError;
-        iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-        pItem->setIcon( 0, iconError );
+        pT->setIsActive( false );
+        showError( tr( "Unable to activate (and automatically deactivating) a button/menu/toolbar or the part of a module \"%1\" that contains them; reason: %2." )
+                   .arg( pT->getName() )
+                   .arg( pT->getError() ) );
+        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
     }
-    showInfo( QString( "Trying to %2 action <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+    pItem->setIcon( 0, icon);
+    pItem->setText( 0, pT->getName() );
+
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -3649,37 +3688,52 @@ void dlgTriggerEditor::saveAction()
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
+    QString commandDown = mpActionsMainArea->lineEdit_command_down->text();
+    QString commandUp = mpActionsMainArea->lineEdit_command_up->text();
     QString script = mpSourceEditor->toPlainText();
-    int rotation = mpActionsMainArea->buttonRotation->currentIndex();
+    // currentIndex() can return -1 if no setting was previously made - need to fixup:
+    int rotation = qMax( 0, mpActionsMainArea->buttonRotation->currentIndex() );
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
-    int location = mpActionsMainArea->comboBox_location->currentIndex();
+    // currentIndex() can return -1 if no setting was previously made - need to fixup:
+    int location = qMax( 0, mpActionsMainArea->comboBox_location->currentIndex() );
     if( location > 0 ) location++;
 
-    int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
-    if( pItem )
-    {
+    // currentIndex() can return -1 if no setting was previously made - need to fixup:
+    int orientation = qMax( 0, mpActionsMainArea->comboBox_orientation->currentIndex() );
+
+    // This is an unnecessary level of indentation but has been retained to
+    // reduce the noise in a git commit/diff caused by the removal of a
+    // redundent "if( pITem )" - can be removed next time the file is modified
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
         TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
         if( pT )
         {
-            pT->setName( name );
-            pT->setIcon( icon );
-            pT->setScript( script );
-            pT->setIsPushDownButton( isChecked );
-            pT->mLocation = location;
-            pT->mOrientation = orientation;
-            pT->setIsActive( pT->shouldBeActive() );
-            pT->setButtonRotation( rotation );
-            pT->setButtonColumns( columns );
-            pT->mUseCustomLayout = false;
-            pT->css = mpActionsMainArea->css->toPlainText();
+            // Do not change anything for a module master folder - it won't "take"
+            if( pT->mPackageName.isEmpty() )
+            {
+                pT->setName( name );
+                pT->setIcon( icon );
+                pT->setScript( script );
+                pT->setCommandButtonDown( commandDown );
+                pT->setCommandButtonUp( commandUp );
+                pT->setIsPushDownButton( isChecked );
+                pT->mLocation = location;
+                pT->mOrientation = orientation;
+                pT->setIsActive( pT->shouldBeActive() );
+                pT->setButtonRotation( rotation );
+                pT->setButtonColumns( columns );
+                pT->mUseCustomLayout = false;
+                pT->css = mpActionsMainArea->css->toPlainText();
+            }
+
             QIcon icon;
             if( pT->isFolder() )
             {
                 if( ! pT->mPackageName.isEmpty() )
                 {
+                    // Has a package name so is a module master folder
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3689,19 +3743,10 @@ void dlgTriggerEditor::saveAction()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent() )
+                else if( ! pT->getParent()
+                      || ! pT->getParent()->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( ! pT->getParent()->mPackageName.isEmpty() )
-                {
+                    // No parent or it has a parent with a package name so is a toolbar
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3713,6 +3758,7 @@ void dlgTriggerEditor::saveAction()
                 }
                 else
                 {
+                    // Else must be a menu
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3725,6 +3771,7 @@ void dlgTriggerEditor::saveAction()
             }
             else
             {
+                // Is a button
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3749,7 +3796,7 @@ void dlgTriggerEditor::saveAction()
                 pItem->setText( 0, name );
             }
         }
-    }
+
     mpHost->getActionUnit()->updateToolbar();
     mudlet::self()->processEventLoopHack();
 }
@@ -4748,46 +4795,110 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditor->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditor->clear();
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
+    mpActionsMainArea->lineEdit_command_down->clear();
+    mpActionsMainArea->lineEdit_command_up->clear();
     mpActionsMainArea->buttonColumns->clear();
     mpActionsMainArea->css->clear();
+    mpActionsMainArea->comboBox_location->setCurrentIndex( 0 );
+    mpActionsMainArea->comboBox_orientation->setCurrentIndex( 0 );
+    mpActionsMainArea->buttonRotation->setCurrentIndex( 0 );
+    mpActionsMainArea->buttonColumns->setValue( 1 );
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
+    // ID will be 0 for the root of the treewidget and it is not appropriate
+    // to show any right hand side details - pT will also be Q_NULLPTR!
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
     if( pT )
     {
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
+        mpActionsMainArea->label_command_up->hide();
+        mpActionsMainArea->label_command_down->hide();
+        mpActionsMainArea->lineEdit_command_up->hide();
+        mpActionsMainArea->lineEdit_command_down->hide();
+        mpActionsMainArea->label_command_down->setText( tr( "Command:" ) );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
+        mpActionsMainArea->lineEdit_command_down->setText( pT->getCommandButtonDown() );
+        mpActionsMainArea->lineEdit_command_up->setText( pT->getCommandButtonUp() );
         mpSourceEditor->setPlainText( pT->getScript() );
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
         if( location > 0 ) location--;
         mpActionsMainArea->comboBox_location->setCurrentIndex( location );
         mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
-        QColor color = pT->getButtonColor();
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
         mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
         mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
-        mpActionsMainArea->css->clear();
         mpActionsMainArea->css->setPlainText( pT->css );
-        if( ! pT->getParent() )
+        if( pT->isFolder() )
         {
-            mpActionsMainArea->groupBox_toolBar->show();
-            mpActionsMainArea->groupBox_appearance->hide();
+            if( ! pT->getPackageName().isEmpty() )
+            {
+                // We have a non-empty package name (Tree<T>::mModuleName
+                // is NEVER used but Tree<T>::mPackageName is for both!)
+                // THUS: We are a module master folder
+
+                mpActionsMainArea->groupBox_toolBar->hide();
+                mpActionsMainArea->groupBox_appearance->hide();
+                mpActionsMainArea->widget_2->hide();
+                mpSourceEditorArea->hide();
+            }
+            else if( ! pT->getParent()
+                  || ( pT->getParent() && ! pT->getParent()->getPackageName().isEmpty() ) )
+                // We are a top-level folder with no parent
+                // OR: We have a parent and that IS a module master folder
+                // THUS: We are a toolbar
+            {
+
+                mpActionsMainArea->groupBox_toolBar->show();
+                mpActionsMainArea->groupBox_appearance->hide();
+                mpActionsMainArea->widget_2->show();
+                mpSourceEditorArea->show();
+            }
+            else {
+                // We must be a MENU
+
+                mpActionsMainArea->groupBox_appearance->setTitle( tr( "Menu properties" ) );
+                mpActionsMainArea->groupBox_toolBar->hide();
+                mpActionsMainArea->checkBox_pushdownbutton->hide();
+                mpActionsMainArea->groupBox_appearance->show();
+                mpActionsMainArea->widget_2->show();
+                mpSourceEditorArea->show();
+            }
         }
-        else
-        {
+        else {
+            // We are a BUTTON
+
+            mpActionsMainArea->groupBox_appearance->setTitle( tr( "Button properties" ) );
             mpActionsMainArea->groupBox_toolBar->hide();
             mpActionsMainArea->groupBox_appearance->show();
+            mpActionsMainArea->label_command_down->show();
+            mpActionsMainArea->lineEdit_command_down->show();
+            mpActionsMainArea->checkBox_pushdownbutton->show();
+            mpSourceEditorArea->show();
+            if( pT->isPushDownButton() )
+            {
+                mpActionsMainArea->label_command_down->setText( tr( "Command (down);" ) );
+                mpActionsMainArea->lineEdit_command_up->show();
+                mpActionsMainArea->label_command_up->show();
+            }
+
+            mpActionsMainArea->widget_2->show();
         }
+
         if( ! pT->state() ) showError( pT->getError() );
+    }
+    else
+    {
+        // On root of treewidget_actions: - show help message instead
+        mpActionsMainArea->hide();
+        mpSourceEditor->hide();
+        showInfo( msgInfoAddButton );
     }
 }
 
@@ -5352,18 +5463,8 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent() )
-                {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( ! pT->getParent()->mPackageName.isEmpty() )
+                else if( ! pT->getParent()
+                      || ! pT->getParent()->mPackageName.isEmpty() )
                 {
                     if( pT->isActive() )
                     {
@@ -5857,6 +5958,8 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
         {
             if( ! pT->getParent()->mPackageName.isEmpty() )
             {
+                // Must have a parent (or would not be IN this method) and the
+                // parent has a package name - this is a toolbar
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5868,6 +5971,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
             }
             else if( pT->isFolder() )
             {
+                // Is a folder and is not a toolbar - this is a menu
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5879,6 +5983,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
             }
             else
             {
+                // Is a button
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
@@ -7144,6 +7249,22 @@ void dlgTriggerEditor::slot_chose_action_icon()
         QDir::homePath(),
         tr("Images (*.png *.xpm *.jpg)"));
     mpActionsMainArea->lineEdit_action_icon->setText( fileName );
+}
+
+void dlgTriggerEditor::slot_toggle_isPushDownButton( const int state )
+{
+    if( state == Qt::Checked )
+    {
+        mpActionsMainArea->lineEdit_command_up->show();
+        mpActionsMainArea->label_command_up->show();
+        mpActionsMainArea->label_command_down->setText( tr( "Command (down):" ) );
+    }
+    else
+    {
+        mpActionsMainArea->lineEdit_command_up->hide();
+        mpActionsMainArea->label_command_up->hide();
+        mpActionsMainArea->label_command_down->setText( tr( "Command:" ) );
+    }
 }
 
 void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
