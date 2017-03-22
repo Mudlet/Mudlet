@@ -4822,7 +4822,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         mpActionsMainArea->label_command_down->hide();
         mpActionsMainArea->lineEdit_command_up->hide();
         mpActionsMainArea->lineEdit_command_down->hide();
-        mpActionsMainArea->label_command_down->setText( tr( "Command;" ) );
+        mpActionsMainArea->label_command_down->setText( tr( "Command:" ) );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpActionsMainArea->lineEdit_command_down->setText( pT->getCommandButtonDown() );
         mpActionsMainArea->lineEdit_command_up->setText( pT->getCommandButtonUp() );
