@@ -196,6 +196,7 @@ public slots:
 
 private slots:
     void                        slot_changeEditorTextOptions( QTextOption::Flags );
+    void                        slot_toggle_isPushDownButton( const int );
 
 private:
 
