@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -154,12 +155,7 @@ bool TAction::compileScript()
     }
 }
 
-void TAction::execute(QStringList & list )
-{
-    qDebug()<<"TAction::execute() called: depricated!";
-}
-
-void TAction::_execute(QStringList & list)
+void TAction::execute()
 {
     if( ( mCommandButtonUp.size() > 0 ) && ( mButtonState == 1 ) )
     {
@@ -265,8 +261,7 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
        if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence ) //&& pChild->mButtonState == 2 )
        {
            qDebug()<<"expandToolBar() name="<<pChild->mName<<" executing script";
-           QStringList bla;
-           pChild->_execute(bla);
+           pChild->execute();
        }
 
        pT->addButton( button );
@@ -300,8 +295,7 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )//&& pChild->mButtonState == 2 )
         {
             qDebug()<<"fillMenu() name="<<pChild->mName<<" executing script";
-            QStringList bla;
-            pChild->_execute(bla);
+            pChild->execute();
         }
         menu->addAction( action );
         if( pChild->mIsFolder )

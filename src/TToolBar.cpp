@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -175,8 +176,8 @@ void TToolBar::slot_pressed()
         pA->mpHost->mpConsole->mButtonState = 1;
     else
         pA->mpHost->mpConsole->mButtonState = 0;
-    QStringList sL;
-    pA->_execute( sL );
+
+    pA->execute();
 }
 
 void TToolBar::clear()
