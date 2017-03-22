@@ -13164,6 +13164,10 @@ void TLuaInterpreter::initLuaGlobals()
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring (pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg( QCoreApplication::applicationDirPath()).toUtf8().constData() );
 #endif
+#ifdef Q_OS_MAC
+    //macOS app bundle would like the search path to also be set to the current binary directory
+    luaL_dostring (pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg( QCoreApplication::applicationDirPath()).toUtf8().constData() );
+#endif
 
     error = luaL_dostring( pGlobalLua, "require \"rex_pcre\"" );
     if( error != 0 )
