@@ -4503,7 +4503,7 @@ mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
 
 
-local newversion = &quot;developer&quot;
+local newversion = &quot;17.3.2&quot;
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then mmp.echo(&quot;Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.&quot;)
   else mmp.echo(&quot;Mapper script updated - thanks! You don't need to restart.&quot;) end
@@ -4645,7 +4645,7 @@ end</script>
   -- allow mapper 'addons' to link their own exits in
   raiseEvent(&quot;mmp link externals&quot;)
 
-  if mmp.game == &quot;achaea&quot; and (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) and gmcp.Room and not table.contains(gmcp.Room.Info.details, &quot;indoors&quot;) and mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Prime&quot;) then
+  if mmp.game == &quot;achaea&quot; and (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) and gmcp.Room and not table.contains(gmcp.Room.Info.details, &quot;indoors&quot;) and mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Main&quot;) then
     if mmp.settings.duanatharan then
       addSpecialExit(mmp.currentroom, 4882, getcmd(&quot;duanatharan&quot;))
       addSpecialExit(mmp.currentroom, 3885, getcmd(&quot;duanathar&quot;))
@@ -5676,7 +5676,7 @@ function mmp.roomFind(query)
   local function showmeropis(roomid)
     if mmp.game ~= &quot;achaea&quot; then return '' end
 
-    return mmp.oncontinent(getRoomArea(roomid), &quot;Prime&quot;) and '' or ' (Meropis)'
+    return mmp.oncontinent(getRoomArea(roomid), &quot;Main&quot;) and '' or ' (Meropis)'
   end
 
   if not tonumber(select(2, next(result))) then -- old style
@@ -7683,7 +7683,7 @@ function mmapper_achaea_went_outside()
   if not mmp.autowalking or not (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) or mmp.game ~= &quot;achaea&quot; or
     (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
     table.contains(gmcp.Room.Info.details, &quot;indoors&quot;) or
-    not mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Prime&quot;) then return end
+    not mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Main&quot;) then return end
 
   -- repath, maybe that'll allow us to use wings now.
   local madeduanatharan, madeduanathar, madeduantahar
@@ -8768,6 +8768,7 @@ end</script>
                         <string>sys2DMapLoad</string>
                         <string>sys3DMapLoad</string>
                         <string>sysMapDownloadEvent</string>
+                        <string>mapOpenEvent</string>
                     </eventHandlerList>
                 </Script>
             </Script>
