@@ -85,17 +85,13 @@ public:
     void             setIsPushDownButton( bool b )             { mIsPushDownButton = b; }
     void             setIsFolder( bool b )                     { mIsFolder = b; }
     bool             registerAction();
-    void             insertActions( mudlet * pMainWindow,
-                                    TToolBar * pT,
+    void             insertActions( TToolBar * pT,
                                     QMenu * menu );
-    void             expandToolbar( mudlet * pMainWindow,
-                                    TToolBar * pT,
+    void             expandToolbar( TToolBar * pT,
                                     QMenu * menu );
-    void             insertActions( mudlet * pMainWindow,
-                                    TEasyButtonBar * pT,
+    void             insertActions( TEasyButtonBar * pT,
                                     QMenu * menu );
-    void             expandToolbar( mudlet * pMainWindow,
-                                    TEasyButtonBar * pT,
+    void             expandToolbar( TEasyButtonBar * pT,
                                     QMenu * menu );
     TToolBar *       mpToolBar;
     TEasyButtonBar * mpEasyButtonBar;

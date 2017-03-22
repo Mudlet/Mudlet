@@ -181,7 +181,7 @@ void TAction::execute()
     mpHost->mpConsole->setFocus();
 }
 
-void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
+void TAction::expandToolbar( TToolBar * pT, QMenu * menu )
 {
    typedef list<TAction *>::const_iterator I;
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -206,17 +206,17 @@ qDebug()<<"button="<<pChild->mName<<" checked="<<(pChild->mButtonState==2);
            QMenu * newMenu = new QMenu( pT );
            button->setMenu( newMenu );
            newMenu->setStyleSheet( css );
-           pChild->insertActions( pMainWindow, pT, newMenu );
+           pChild->insertActions( pT, newMenu );
        }
    }
 }
 
 
-void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
+void TAction::insertActions( TToolBar * pT, QMenu * menu )
 {
     mpToolBar = pT;
     QIcon icon( mIcon );
-    EAction * action = new EAction( icon, mName, pMainWindow );
+    EAction * action = new EAction( icon, mName );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;
@@ -227,7 +227,9 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
 
     if( mIsFolder )
     {
-        QMenu * newMenu = new QMenu( pMainWindow );
+        // The use of mudlet::self() here means that the QMenu is not destroyed
+        // until the mudlet instance is at the end of the application!
+        QMenu * newMenu = new QMenu( mudlet::self() );
         newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
 
@@ -235,13 +237,13 @@ void TAction::insertActions( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
         for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
         {
             TAction * pChild = *it;
-            pChild->insertActions( pMainWindow, pT, newMenu );
+            pChild->insertActions( pT, newMenu );
         }
     }
 }
 
 
-void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
+void TAction::expandToolbar( TEasyButtonBar * pT, QMenu * menu )
 {
    typedef list<TAction *>::const_iterator I;
    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
@@ -285,7 +287,7 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         if( ! pChild->isActive() ) continue;
         mpEasyButtonBar = pT;
         QIcon icon( mIcon );
-        EAction * action = new EAction( icon, pChild->mName, mudlet::self() );
+        EAction * action = new EAction( icon, pChild->mName );
         action->setCheckable( pChild->mIsPushDownButton );
         action->mID = pChild->mID;
         action->mpHost = mpHost;
@@ -309,11 +311,11 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
     }
 }
 
-void TAction::insertActions( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * menu )
+void TAction::insertActions( TEasyButtonBar * pT, QMenu * menu )
 {
     mpEasyButtonBar = pT;
     QIcon icon( mIcon );
-    EAction * action = new EAction( icon, mName, pMainWindow );
+    EAction * action = new EAction( icon, mName );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;

@@ -28,8 +28,8 @@
 #include "TAction.h"
 
 
-EAction::EAction( QIcon & icon, QString & name, mudlet * parent )
-: QAction( icon, name, parent )
+EAction::EAction( QIcon & icon, QString & name )
+    : QAction( icon, name, mudlet::self() )
 {
     setText( name );
     setObjectName( name );
