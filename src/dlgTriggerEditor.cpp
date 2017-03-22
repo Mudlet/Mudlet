@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -46,6 +46,7 @@
 #include "THighlighter.h"
 #include "TriggerUnit.h"
 #include "TTextEdit.h"
+#include "TToolBar.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
 #include "VarUnit.h"
@@ -158,8 +159,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pVB1->addWidget( mpAliasMainArea );
 
     mpActionsMainArea = new dlgActionMainArea( mainArea );
-    mpActionsMainArea->setSizePolicy( sizePolicy8 );
-    pVB1->addWidget( mpActionsMainArea );
+    mpActionsMainArea->setSizePolicy( sizePolicy );
+    pVB1->addWidget( mpActionsMainArea, Qt::AlignTop );
+    connect(mpActionsMainArea->pushButton_changeIcon, SIGNAL(clicked()), this, SLOT(slot_chose_action_icon()));
+    connect(mpActionsMainArea->pushButton_clearIcon, SIGNAL(clicked()), this, SLOT(slot_clear_action_icon()));
+    connect(mpActionsMainArea->checkBox_pushdownbutton, SIGNAL(stateChanged(int)), this, SLOT(slot_toggle_isPushDownButton(int)));
+    mpActionsMainArea->widget_middle->hide();
+    mpActionsMainArea->widget_bottom->hide(); // Hide the details until we know which parts to show
+
 
     mpKeysMainArea = new dlgKeysMainArea( mainArea );
     mpKeysMainArea->setSizePolicy( sizePolicy8 );
@@ -174,6 +181,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy9(QSizePolicy::Expanding, QSizePolicy::Fixed);
     mpScriptsMainArea->setSizePolicy( sizePolicy9 );
     pVB1->addWidget( mpScriptsMainArea );
+
+    // Provide something to push the remaining things up if there is surplus space:
+    pVB1->addStretch();
 
     mIsScriptsMainAreaEditHandler = false;
     mpScriptsMainAreaEditHandlerItem = 0;
@@ -357,9 +367,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
     connect( addTriggerAction, SIGNAL(triggered()), this, SLOT( slot_add_new()));
 
-    QAction * deleteTriggerAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-delete-shred.png" ) ), tr("Delete Item"), this);
-    deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
-    connect( deleteTriggerAction, SIGNAL(triggered()), this, SLOT( slot_delete_item()));
+    mpDeleteItemButton = new QAction( QIcon( QStringLiteral( ":/icons/archive-remove.png" ) ), tr("Delete Item"), this);
+    mpDeleteItemButton->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
+    connect( mpDeleteItemButton, SIGNAL(triggered()), this, SLOT( slot_delete_item()));
 
     QAction * addFolderAction = new QAction( QIcon( QStringLiteral( ":/icons/folder-new.png" ) ), tr("Add Group"), this);
     addFolderAction->setStatusTip(tr("Add new Group"));
@@ -490,7 +500,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( addFolderAction );
 
     toolBar->addSeparator();
-    toolBar->addAction( deleteTriggerAction );
+    toolBar->addAction( mpDeleteItemButton );
     toolBar->addAction( importAction );
     toolBar->addAction( exportAction );
     toolBar->addAction( saveProfileAsAction );
@@ -2418,52 +2428,92 @@ void dlgTriggerEditor::slot_script_toggle_active()
 void dlgTriggerEditor::slot_action_toggle_active()
 {
     QTreeWidgetItem * pItem = treeWidget_actions->currentItem();
-    if( ! pItem ) return;
-    QIcon icon;
+    if( ! pItem )
+    {
+        return;
+    }
 
     TAction * pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
-    if( ! pT ) return;
-
-    pT->setIsActive( ! pT->shouldBeActive() );
-
-    if( pT->isFolder() )
+    if( ! pT )
     {
-        if( pT->isActive() )
-        {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
-        }
-        else
-        {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
-        }
-    }
-    else
-    {
-        if( pT->isActive() )
-        {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
-        }
-        else
-        {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
-        }
+        return;
     }
 
+    QIcon icon;
     if( pT->state() )
     {
-        pItem->setIcon( 0, icon);
-        pItem->setText( 0, pT->getName() );
+        pT->setIsActive( ! pT->shouldBeActive() );
+        if( pT->isFolder() )
+        {
+            if( ! pT->mPackageName.isEmpty() )
+            {
+                if( pT->isActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+            else if( ! pT->getParent()
+                  || ! pT->getParent()->mPackageName.isEmpty() )
+            {
+
+                if( pT->isActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+            else {
+                if( pT->isActive() )
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+                else
+                {
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
+                }
+            }
+        }
+        else
+        {
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+        }
+
+        if( pT->shouldBeActive() )
+        {
+            showInfo( tr( "Trying to activate button/menu/toolbar or part of a module \"%1\" containing any of these <em>succeeded</em>." )
+                      .arg( pT->getName() ) );
+        }
+        else
+        {
+            showInfo( tr( "Trying to deactivate button/menu/toolbar or part of a module \"%1\" containing any of these <em>succeeded</em>." )
+                      .arg( pT->getName() ) );
+        }
     }
     else
     {
-        QIcon iconError;
-        iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-        pItem->setIcon( 0, iconError );
+        pT->setIsActive( false );
+        showError( tr( "Unable to activate (and automatically deactivating) button/menu/toolbar or part of a module \"%1\" containing any of these; reason: %2." )
+                   .arg( pT->getName() )
+                   .arg( pT->getError() ) );
+        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
     }
-    showInfo( QString( "Trying to %2 action <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+    pItem->setText( 0, pT->getName() );
+    pItem->setIcon( 0, icon);
+
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -3645,37 +3695,54 @@ void dlgTriggerEditor::saveAlias()
 void dlgTriggerEditor::saveAction()
 {
     QTreeWidgetItem * pItem = mpCurrentActionItem;
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
+    QString commandDown = mpActionsMainArea->lineEdit_action_command_down->text();
+    QString commandUp = mpActionsMainArea->lineEdit_action_command_up->text();
     QString script = mpSourceEditor->toPlainText();
-    int rotation = mpActionsMainArea->buttonRotation->currentIndex();
-    int columns = mpActionsMainArea->buttonColumns->text().toInt();
+    int rotation = mpActionsMainArea->comboBox_buttonRotation->currentIndex();
+    int columns = mpActionsMainArea->spinBox_buttonColumns->text().toInt();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     int location = mpActionsMainArea->comboBox_location->currentIndex();
-    if( location > 0 ) location++;
+    if( location > 0 )
+    {
+        location++;
+    }
 
     int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
-    if( pItem )
+
+    int triggerID = pItem->data(0, Qt::UserRole).toInt();
+    TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
+    if( pT )
     {
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
-        if( pT )
+        pT->setIsActive( pT->shouldBeActive() );
+        // We do NOT want to change ANYTHING for a module folder except, perhaps
+        // its active state!
+        if( pT->mPackageName.isEmpty() )
         {
             pT->setName( name );
-            pT->setIcon( icon );
+            pT->setIconPathFileName( icon );
             pT->setScript( script );
             pT->setIsPushDownButton( isChecked );
+            pT->setCommandButtonDown( commandDown );
+            pT->setCommandButtonUp( commandUp );
             pT->mLocation = location;
             pT->mOrientation = orientation;
-            pT->setIsActive( pT->shouldBeActive() );
             pT->setButtonRotation( rotation );
             pT->setButtonColumns( columns );
             pT->mUseCustomLayout = false;
             pT->css = mpActionsMainArea->css->toPlainText();
-            QIcon icon;
+        }
+
+        QIcon icon;
+        if( pT->state() )
+        {
             if( pT->isFolder() )
             {
                 if( ! pT->mPackageName.isEmpty() )
@@ -3689,19 +3756,11 @@ void dlgTriggerEditor::saveAction()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent() )
+                else if( ! pT->getParent()
+                      || ! pT->getParent()->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( ! pT->getParent()->mPackageName.isEmpty() )
-                {
+
+                    // We are a toolbar
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3713,6 +3772,7 @@ void dlgTriggerEditor::saveAction()
                 }
                 else
                 {
+                    // We are a menu
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3734,22 +3794,15 @@ void dlgTriggerEditor::saveAction()
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
                 }
             }
-
-            if( pT->state() )
-            {
-                pItem->setIcon( 0, icon);
-                pItem->setText( 0, name );
-
-            }
-            else
-            {
-                QIcon iconError;
-                iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-                pItem->setIcon( 0, iconError );
-                pItem->setText( 0, name );
-            }
         }
+        else
+        {
+            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
+        }
+        pItem->setIcon( 0, icon );
+        pItem->setText( 0, name );
     }
+
     mpHost->getActionUnit()->updateToolbar();
     mudlet::self()->processEventLoopHack();
 }
@@ -4257,6 +4310,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     if ( pItem != mpCurrentTriggerItem )
         saveTrigger();
 
+    mpDeleteItemButton->setEnabled( true ); // TODO: disable deletion when appropriate
+
     mpCurrentTriggerItem = pItem;
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
@@ -4411,6 +4466,8 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     if ( pItem != mpCurrentAliasItem )
         saveAlias();
 
+    mpDeleteItemButton->setEnabled( true ); // TODO: disable deletion when appropriate
+
     mpCurrentAliasItem = pItem;
     mpAliasMainArea->show();
     mpSourceEditorArea->show();
@@ -4450,6 +4507,8 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     // save the current key before switching to the new one
     if ( pItem != mpCurrentKeyItem )
         saveKey();
+
+    mpDeleteItemButton->setEnabled( true ); // TODO: disable deletion when appropriate
 
     mpCurrentKeyItem = pItem;
     mpKeysMainArea->show();
@@ -4577,6 +4636,8 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     // save the current variable before switching to the new one
     if ( pItem != mpCurrentVarItem )
         saveVar();
+
+    mpDeleteItemButton->setEnabled( true ); // TODO: disable deletion when appropriate
 
     mChangingVar = true;
     int column = treeWidget_variables->currentColumn();
@@ -4738,56 +4799,179 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
 
 void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 {
-    if( ! pItem ) return;
+    if( ! pItem )
+    {
+        return;
+    }
 
     // save the current action before switching to the new one
     if ( pItem != mpCurrentActionItem )
+    {
         saveAction();
+    }
 
-    mpActionsMainArea->show();
-    mpSourceEditor->show();
-
-    mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
-
-    mpActionsMainArea->lineEdit_action_icon->clear();
-    mpActionsMainArea->lineEdit_action_name->clear();
-    mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
-    mpActionsMainArea->buttonColumns->clear();
-    mpActionsMainArea->css->clear();
+    // As there is more than one place where this is needed save it as a variable
+    QString normalNameToolTipText = QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                                    .arg( tr( "Enter a unique name for this item, future code will allow some control of permanent "
+                                              "toolbars/menus/buttons from Lua scripts but this will rely on a unique identifier "
+                                              "being used across all of these types of item.  This text is also what will be shown "
+                                              "in the button or menu or used as part of the title for a floating toolbar even if it "
+                                              "is subsequently docked.") );
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
     if( pT )
     {
+        // We set every 'field' up even though they may not be appropriate for
+        // this particular item...
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
-        mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
-        mpSourceEditor->setPlainText( pT->getScript() );
-        // location = 1 = location = bottom is no longer supported
-        int location = pT->mLocation;
-        if( location > 0 ) location--;
-        mpActionsMainArea->comboBox_location->setCurrentIndex( location );
-        mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
-        QColor color = pT->getButtonColor();
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
-        mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
-        mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
-        mpActionsMainArea->css->clear();
-        mpActionsMainArea->css->setPlainText( pT->css );
-        if( ! pT->getParent() )
+        QString iconFileName = pT->getIconPathFileName( true );
+        if( iconFileName.isEmpty() )
         {
-            mpActionsMainArea->groupBox_toolBar->show();
-            mpActionsMainArea->groupBox_appearance->hide();
+            mpActionsMainArea->lineEdit_action_icon->clear();
+            mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon() );
+            mpActionsMainArea->pushButton_clearIcon->setEnabled( false );
         }
         else
         {
+            mpActionsMainArea->lineEdit_action_icon->setText( iconFileName );
+            if( QDir::isRelativePath( iconFileName ) )
+            {
+                mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                                                                          .arg( QDir::homePath() )
+                                                                          .arg( mpHost->getName() )
+                                                                          .arg( iconFileName ) ) );
+            }
+            else
+            {
+                mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( iconFileName ) );
+            }
+            mpActionsMainArea->pushButton_clearIcon->setEnabled( true );
+        }
+        mpActionsMainArea->lineEdit_action_command_down->setText( pT->getCommandButtonDown() );
+        mpActionsMainArea->lineEdit_action_command_up->setText( pT->getCommandButtonUp() );
+        mpSourceEditor->setPlainText( pT->getScript() );
+        // location = 1 = location = bottom is no longer supported
+        int location = pT->mLocation;
+        if( location > 0 )
+        {
+            location--;
+        }
+        mpActionsMainArea->comboBox_location->setCurrentIndex( location );
+        mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
+        mpActionsMainArea->comboBox_buttonRotation->setCurrentIndex( pT->getButtonRotation() );
+        mpActionsMainArea->spinBox_buttonColumns->setValue( pT->getButtonColumns() );
+        mpActionsMainArea->css->setPlainText( pT->css );
+
+        // Now show/hide the relevant bits:
+        mpActionsMainArea->show();
+        mpSystemMessageArea->hide();
+        if( pT->isFolder() && ! pT->mPackageName.isEmpty() )
+        {
+            // This is a module master or package folder - hide everything but
+            // the name and protect that from editing
+            mpActionsMainArea->widget_middle->hide();
+            mpActionsMainArea->widget_bottom->hide();
+            mpSourceEditorArea->hide();
+            mpActionsMainArea->lineEdit_action_name->setReadOnly(true);
+            mpActionsMainArea->lineEdit_action_name->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                                                                 .arg( "This is the module/package name and it cannot be modified here. You may add or "
+                                                                       "remove things from the module by dragging and dropping and all the button/menu/toolbar "
+                                                                       "items can be enabled/disabled at once by activating/deactivating this item.</p>"
+                                                                       "<p>Also, it cannot be deleted from here: instead you must <i>uninstall</i> "
+                                                                       "it via the package or module manager as appropriate." ) );
+
+            mpDeleteItemButton->setEnabled( false ); // Prevent deletion on this type of action
+        }
+        else if( pT->isFolder()
+                 && (! pT->getParent()
+                    || ( pT->getParent() && ! pT->getParent()->mPackageName.isEmpty() ) ) )
+        {
+            // This action is a folder; it has NO parent OR its parent is a
+            // module or package folder - this must be a TOOLBAR.
+            mpActionsMainArea->widget_middle->show();
+            mpActionsMainArea->widget_bottom->show();
+            mpSourceEditorArea->show();
+
+            mpActionsMainArea->groupBox_toolBar->show();
+            mpActionsMainArea->groupBox_appearance->hide();
+            mpActionsMainArea->lineEdit_action_name->setReadOnly(false);
+            mpActionsMainArea->lineEdit_action_name->setToolTip( normalNameToolTipText );
+            mpActionsMainArea->checkBox_pushdownbutton->setCheckState( Qt::Unchecked );
+            mpDeleteItemButton->setEnabled( true );
+        }
+        else if( pT->isFolder() )
+        {
+            // This is a container that is not a toolbar - it must be a MENU
+            // forceably clear the push down button option - it is not
+            // feasible for a menu and hide it and all the command stuff
+            // as they do not make sense else (clicking on the menu is how
+            // access is gained to its contents - we do not want to send
+            // anything to the MUD server merely on doing THAT!)
+            mpActionsMainArea->widget_middle->show();
+            mpActionsMainArea->widget_bottom->show();
+            mpSourceEditorArea->show();
+
             mpActionsMainArea->groupBox_toolBar->hide();
             mpActionsMainArea->groupBox_appearance->show();
+
+            mpActionsMainArea->lineEdit_action_name->setReadOnly(false);
+            mpActionsMainArea->lineEdit_action_name->setToolTip( normalNameToolTipText );
+
+            mpActionsMainArea->checkBox_pushdownbutton->setCheckState( Qt::Unchecked );
+            mpActionsMainArea->checkBox_pushdownbutton->setVisible( false );
+
+            mpActionsMainArea->lineEdit_action_command_up->setVisible( false );
+            mpActionsMainArea->lineEdit_action_command_down->setVisible( false );
+            mpActionsMainArea->label_action_command_up->setVisible( false );
+            mpActionsMainArea->label_action_command_down->setVisible( false );
+
+            mpActionsMainArea->groupBox_appearance->setTitle( tr( "Menu properties" ) );
+            mpDeleteItemButton->setEnabled( true );
         }
-        if( ! pT->state() ) showError( pT->getError() );
+        else
+        {
+            // This is a BUTTON
+            mpActionsMainArea->widget_middle->show();
+            mpActionsMainArea->widget_bottom->show();
+            mpSourceEditorArea->show();
+
+            mpActionsMainArea->groupBox_toolBar->hide();
+            mpActionsMainArea->groupBox_appearance->show();
+
+            mpActionsMainArea->checkBox_pushdownbutton->setVisible( true );
+            if( mpActionsMainArea->checkBox_pushdownbutton->checkState() == Qt::Checked )
+            {
+                mpActionsMainArea->label_action_command_up->setVisible( true );
+                mpActionsMainArea->lineEdit_action_command_up->setVisible( true );
+                mpActionsMainArea->label_action_command_down->setText( tr( "Command (down):" ) );
+            }
+            else
+            {
+                mpActionsMainArea->label_action_command_up->setVisible( false );
+                mpActionsMainArea->lineEdit_action_command_up->setVisible( false );
+                mpActionsMainArea->label_action_command_down->setText( tr( "Command:" ) );
+            }
+
+            mpActionsMainArea->label_action_command_down->setVisible( true );
+            mpActionsMainArea->lineEdit_action_command_down->setVisible( true );
+
+            mpActionsMainArea->groupBox_appearance->setTitle( tr( "Button properties" ) );
+            mpDeleteItemButton->setEnabled( true );
+        }
+        if( ! pT->state() )
+        {
+            showError( pT->getError() );
+        }
+    }
+    else
+    {
+        // We are on the root of the treeWidget_actions tree
+        mpActionsMainArea->hide();
+        mpSourceEditorArea->hide();
+        showInfo( msgInfoAddButton );
     }
 }
 
@@ -4824,6 +5008,8 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     // save the current script before switching to the new one
     if ( pItem != mpCurrentScriptItem )
         saveScript();
+
+    mpDeleteItemButton->setEnabled( true ); // TODO: disable deletion when appropriate
 
     mpCurrentScriptItem = pItem;
     mpScriptsMainArea->show();
@@ -4862,6 +5048,8 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     // save the current timer before switching to the new one
     if ( pItem != mpCurrentTimerItem )
         saveTimer();
+
+    mpDeleteItemButton->setEnabled( true ); // TODO: disable deletion when appropriate
 
     mpCurrentTimerItem = pItem;
     mpTimersMainArea->show();
@@ -5352,19 +5540,11 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent() )
+                else if( ! pT->getParent()
+                      || ! pT->getParent()->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( ! pT->getParent()->mPackageName.isEmpty() )
-                {
+                    // We do not have a parent or our parent is a module master
+                    // or package folder - we are a Toolbar
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5376,6 +5556,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
+                    // We are a menu
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5841,18 +6022,18 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
     for( I it=childrenList->begin(); it!=childrenList->end(); it++ )
     {
         TAction * pT = *it;
-        QString s = pT->getName();
         QStringList sList;
-        sList << s;
+        sList << pT->getName();
         QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
-        QIcon icon;
         if( pT->hasChildren() )
         {
             expand_child_action( pT, pItem );
         }
+
+        QIcon icon;
         if( pT->state() )
         {
             if( ! pT->getParent()->mPackageName.isEmpty() )
@@ -7140,10 +7321,64 @@ void dlgTriggerEditor::grab_key_callback( int key, int modifier )
 
 void dlgTriggerEditor::slot_chose_action_icon()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Seclect Icon"),
-        QDir::homePath(),
-        tr("Images (*.png *.xpm *.jpg)"));
-    mpActionsMainArea->lineEdit_action_icon->setText( fileName );
+    QString profileHomeDirectoryPathFilename = QStringLiteral( "%1/.config/mudlet/profiles/%2/" )
+                                               .arg( QDir::homePath() )
+                                               .arg( mpHost->getName() );
+
+    QString initialValue = mpActionsMainArea->lineEdit_action_icon->text();
+    if( initialValue.isEmpty() )
+    {
+        initialValue = profileHomeDirectoryPathFilename;
+    }
+    else if( QDir::isRelativePath( initialValue ) )
+    {
+        initialValue = QStringLiteral( "%1%2" )
+                       .arg( profileHomeDirectoryPathFilename )
+                       .arg( initialValue );
+    }
+
+    QString fileName = QFileDialog::getOpenFileName( this,
+                                                     tr("Select Icon"),
+                                                     initialValue,
+                                                     tr("Images (*.png *.xpm *.jpg)") );
+    if( ! fileName.isEmpty() )
+    {
+        QDir profileHomeDirectory( profileHomeDirectoryPathFilename );
+        QString relativeIconPathFileName = profileHomeDirectory.relativeFilePath( fileName );
+        mpActionsMainArea->lineEdit_action_icon->setText( relativeIconPathFileName );
+        mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                                                                  .arg( QDir::homePath() )
+                                                                  .arg( mpHost->getName() )
+                                                                  .arg( relativeIconPathFileName ) ) );
+        mpActionsMainArea->pushButton_clearIcon->setEnabled( true ); // The button should now be enabled
+    }
+    else if( mpActionsMainArea->lineEdit_action_icon->text().isEmpty() )
+    {
+        mpActionsMainArea->pushButton_clearIcon->setEnabled( false ); // The button should stay disabled
+    }
+}
+
+void dlgTriggerEditor::slot_clear_action_icon()
+{
+    mpActionsMainArea->lineEdit_action_icon->clear();
+    mpActionsMainArea->pushButton_changeIcon->setIcon( QIcon() );
+    mpActionsMainArea->pushButton_clearIcon->setEnabled( false ); // The button should now be disabled until there IS a icon file selected again.
+}
+
+void dlgTriggerEditor::slot_toggle_isPushDownButton( const int state )
+{
+    if( state == Qt::Checked )
+    {
+        mpActionsMainArea->lineEdit_action_command_up->setVisible( true );
+        mpActionsMainArea->label_action_command_up->setVisible( true );
+        mpActionsMainArea->label_action_command_down->setText( tr( "Command (down):" ) );
+    }
+    else
+    {
+        mpActionsMainArea->lineEdit_action_command_up->setVisible( false );
+        mpActionsMainArea->label_action_command_up->setVisible( false );
+        mpActionsMainArea->label_action_command_down->setText( tr( "Command:" ) );
+    }
 }
 
 void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()

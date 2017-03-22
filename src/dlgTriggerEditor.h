@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -181,6 +181,8 @@ public slots:
     void                        slot_deleteKey();
     void                        slot_save_edit();
     void                        slot_chose_action_icon();
+    void                        slot_clear_action_icon();
+    void                        slot_toggle_isPushDownButton( const int );
     void                        slot_show_search_area();
     void                        slot_script_main_area_delete_handler();
     void                        slot_script_main_area_add_handler();
@@ -278,6 +280,9 @@ private:
     bool                        mChangingVar;
     QPlainTextEdit *            mpSourceEditor;
     QTextDocument *             mpSourceEditorDocument;
+
+private:
+    QAction *                   mpDeleteItemButton; // Track so we can disable it for modules and packages
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
