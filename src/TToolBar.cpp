@@ -43,7 +43,6 @@ TToolBar::TToolBar( TAction * pA, QString name, QWidget * pW )
 , mRecordMove( false )
 , mpLayout( 0 )
 , mItemCount( 0 )
-
 {
     setFeatures( QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable );
     setWidget( mpWidget );
@@ -130,7 +129,10 @@ void TToolBar::addButton( TFlipButton * pB )
     {
         pB->move( pB->mpTAction->mPosX, pB->mpTAction->mPosY );
     }
-    connect( pB, SIGNAL(pressed()), this, SLOT(slot_pressed()) );
+
+    // Was using pressed() signal but now we want to track the ACTUAL state of
+    // the underlying QAbstractButton
+    connect( pB, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
 }
 
 void TToolBar::finalize()
@@ -153,7 +155,9 @@ void TToolBar::finalize()
 //    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
 }
 
-void TToolBar::slot_pressed()
+// Used by buttons directly on a TToolBar instance but NOT on sub-menu item - we
+// now retrieve the button state to ensure the visible representation is used.
+void TToolBar::slot_pressed(const bool isChecked)
 {
     TFlipButton * pB = dynamic_cast<TFlipButton *>( sender() );
     if( ! pB )
@@ -162,20 +166,25 @@ void TToolBar::slot_pressed()
     }
 
     TAction * pA = pB->mpTAction;
-    pB->showMenu();
+    // NOTE: This function blocks until an item is selected from the menu, and,
+    // as the action to "pop-up" the menu is the same as "buttons" use to
+    // perform their command/scripts is why "commands" are (no longer) permitted
+    // on a "menu".  It also means that the script for a "menu" is run every
+    // time it is "clicked" upon to display the pop-up containing the menu
+    // entries...
+    pB->menu();
 
-    if( pB->isChecked() )
+    if( pA->mIsPushDownButton )
     {
-        pA->mButtonState = 2;
+        pA->mButtonState = isChecked;
+        pA->mpHost->mpConsole->mButtonState = ( pA->mButtonState ? 2 : 1 ); // Was using 1 and 0 but that was wrong
     }
     else
     {
-        pA->mButtonState = 1;
+        pA->mButtonState = false;
+        pB->setChecked( false ); // This does NOT invoke the clicked()!
+        pA->mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
     }
-    if( pB->isChecked() )
-        pA->mpHost->mpConsole->mButtonState = 1;
-    else
-        pA->mpHost->mpConsole->mButtonState = 0;
 
     pA->execute();
 }

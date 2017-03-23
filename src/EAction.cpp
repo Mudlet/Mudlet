@@ -39,14 +39,6 @@ EAction::EAction( QIcon & icon, QString & name )
 
 void EAction::slot_execute(bool checked)
 {
-    if( checked )
-    {
-        mpHost->getActionUnit()->getAction( mID )->mButtonState = 2;
-    }
-    else
-    {
-        mpHost->getActionUnit()->getAction( mID )->mButtonState = 1;
-    }
-
+    mpHost->getActionUnit()->getAction( mID )->mButtonState = checked;
     mpHost->getActionUnit()->getAction( mID )->execute();
 }

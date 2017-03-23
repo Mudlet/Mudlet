@@ -93,7 +93,14 @@ public:
     void             expandToolbar( TEasyButtonBar * pT );
     TToolBar *       mpToolBar;
     TEasyButtonBar * mpEasyButtonBar;
-    int              mButtonState;
+    // The following was an int but there was confusion over:
+    // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
+    // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
+    // The Wiki says it should be "1" and "2" but the code sort of did "0"/"1"
+    // in some places.
+    // Now uses a boolean:
+    // "true" = pressed/clicked/down & "false" = released/unclicked/up
+    bool             mButtonState;
     int              mPosX;
     int              mPosY;
     int              mOrientation;

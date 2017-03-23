@@ -867,7 +867,9 @@ bool XMLexport::writeAction( TAction * pT )
     writeTextElement( "location", QString::number(pT->mLocation) );
     writeTextElement( "posX", QString::number(pT->mPosX) );
     writeTextElement( "posY", QString::number(pT->mPosY) );
-    writeTextElement( "mButtonState", QString::number(pT->mButtonState) );
+    // We now use a boolean but file must use original "1" (false)
+    // or "2" (true) for backward compatibility
+    writeTextElement( "mButtonState", QString::number( pT->mButtonState ? 2 : 1 ) );
     writeTextElement( "sizeX", QString::number(pT->mSizeX) );
     writeTextElement( "sizeY", QString::number(pT->mSizeY) );
     writeTextElement( "buttonColumn", QString::number(pT->mButtonColumns) );
