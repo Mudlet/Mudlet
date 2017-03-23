@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>656</width>
+    <width>460</width>
     <height>115</height>
    </rect>
   </property>
@@ -33,35 +33,65 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
-    <number>9</number>
+    <number>3</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>3</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>3</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>3</number>
    </property>
    <property name="spacing">
-    <number>0</number>
+    <number>3</number>
    </property>
-   <item row="0" column="0" rowspan="2" colspan="2">
-    <widget class="QLabel" name="label_5">
+   <item row="0" column="0" colspan="2">
+    <widget class="QLabel" name="label_name">
      <property name="text">
-      <string>Timer name:</string>
+      <string>Name:</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="2" rowspan="2">
+   <item row="0" column="2">
     <widget class="QLineEdit" name="lineEdit_timer_name"/>
    </item>
-   <item row="2" column="2">
+   <item row="1" column="2">
     <widget class="QLineEdit" name="lineEdit_command"/>
    </item>
-   <item row="3" column="0" colspan="3">
-    <widget class="QWidget" name="widget" native="true">
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_command">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Command:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QWidget" name="widget_time" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -80,55 +110,63 @@
        <height>61</height>
       </size>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <property name="spacing">
-       <number>0</number>
-      </property>
+     <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0,0,0,0,0,0,1">
       <property name="leftMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="topMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="rightMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
       <property name="bottomMargin">
-       <number>0</number>
+       <number>3</number>
       </property>
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>80</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-          <weight>50</weight>
-          <bold>false</bold>
-         </font>
-        </property>
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_hours">
         <property name="text">
-         <string>Time:</string>
+         <string>Hours:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
-      <item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_minutes">
+        <property name="text">
+         <string>Minutes:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QLabel" name="label_seconds">
+        <property name="text">
+         <string>Seconds:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QLabel" name="label_milliseconds">
+        <property name="text">
+         <string>Milli-seconds</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
        <widget class="QTimeEdit" name="timeEdit_hours">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -226,8 +264,8 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="label_2">
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_hourMinuteSeparator">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -259,7 +297,7 @@
         </property>
        </widget>
       </item>
-      <item>
+      <item row="1" column="2">
        <widget class="QTimeEdit" name="timeEdit_minutes">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -347,8 +385,8 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="label_6">
+      <item row="1" column="3">
+       <widget class="QLabel" name="label_minuteSecondSeparator">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -380,7 +418,7 @@
         </property>
        </widget>
       </item>
-      <item>
+      <item row="1" column="4">
        <widget class="QTimeEdit" name="timeEdit_seconds">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -471,8 +509,8 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="label_7">
+      <item row="1" column="5">
+       <widget class="QLabel" name="label_secondDecimalSeparator">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -504,7 +542,7 @@
         </property>
        </widget>
       </item>
-      <item>
+      <item row="1" column="6">
        <widget class="QTimeEdit" name="timeEdit_msecs">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -530,9 +568,9 @@
            <colorrole role="Base">
             <brush brushstyle="SolidPattern">
              <color alpha="255">
-              <red>255</red>
-              <green>230</green>
-              <blue>232</blue>
+              <red>224</red>
+              <green>224</green>
+              <blue>255</blue>
              </color>
             </brush>
            </colorrole>
@@ -541,9 +579,9 @@
            <colorrole role="Base">
             <brush brushstyle="SolidPattern">
              <color alpha="255">
-              <red>255</red>
-              <green>230</green>
-              <blue>232</blue>
+              <red>224</red>
+              <green>224</green>
+              <blue>255</blue>
              </color>
             </brush>
            </colorrole>
@@ -591,18 +629,11 @@
          <enum>QDateTimeEdit::MSecSection</enum>
         </property>
         <property name="displayFormat">
-         <string>z</string>
+         <string>zzz</string>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(hours &lt;span style=&quot; font-weight:600;&quot;&gt;:&lt;/span&gt; minutes &lt;span style=&quot; font-weight:600;&quot;&gt;:&lt;/span&gt; seconds &lt;span style=&quot; font-weight:600;&quot;&gt;:&lt;/span&gt; miliseconds)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-       </widget>
-      </item>
-      <item>
+      <item row="1" column="7">
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -619,32 +650,9 @@
     </widget>
    </item>
    <item row="2" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
+    <widget class="QLabel" name="label">
      <property name="text">
-      <string>Command:</string>
+      <string>Time:</string>
      </property>
     </widget>
    </item>
