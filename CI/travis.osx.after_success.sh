@@ -11,4 +11,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake"  -a "${CC}" = "clang" ]; then
   ln -s "${TRAVIS_BUILD_DIR}" source
 
   bash make-installer.sh
+
+  wget --method PUT --body-file="${HOME}/Desktop/Mudlet.dmg" https://transfer.sh/Mudlet.dmg -O - -nv
 fi
+
