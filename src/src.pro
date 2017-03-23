@@ -420,7 +420,7 @@ macx: {
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
     # Set the .app's icns file
-    ICON = osx-installer/osx.icns
+    ICON = icons/osx.icns
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
