@@ -30,8 +30,6 @@ script:
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
   - bash CI/travis.after_success.sh
-  # use variables from the set-build-info above
-  - echo "Finished building Mudlet ${VERSION}${BUILD}"
 notifications:
   webhooks:
     urls:

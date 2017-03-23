@@ -12,6 +12,6 @@ if [ "${Q_OR_C_MAKE}" = "qmake"  -a "${CC}" = "clang" ]; then
 
   bash make-installer.sh
 
-  wget --method PUT --body-file="${HOME}/Desktop/Mudlet.dmg" https://transfer.sh/Mudlet.dmg -O - -nv
+  export DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet.dmg"  https://transfer.sh/Mudlet.dmg -O - -q)
 fi
 
