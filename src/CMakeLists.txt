@@ -36,11 +36,6 @@ SET(mudlet_SRCS
     dlgKeysMainArea.cpp
     dlgMapper.cpp
     dlgNotepad.cpp
-    dlgOptionsAreaAction.cpp
-    dlgOptionsAreaAlias.cpp
-    dlgOptionsAreaScripts.cpp
-    dlgOptionsAreaTimers.cpp
-    dlgOptionsAreaTriggers.cpp
     dlgPackageExporter.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
@@ -114,11 +109,6 @@ SET(mudlet_UIS
     ui/main_window.ui
     ui/mapper.ui
     ui/notes_editor.ui
-    ui/options_area_actions.ui
-    ui/options_area_aliases.ui
-    ui/options_area_scripts.ui
-    ui/options_area_timers.ui
-    ui/options_area_triggers.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
     ui/scripts_main_area.ui
@@ -143,11 +133,6 @@ SET(mudlet_MOC_HDRS
     dlgKeysMainArea.h
     dlgMapper.h
     dlgNotepad.h
-    dlgOptionsAreaAction.h
-    dlgOptionsAreaAlias.h
-    dlgOptionsAreaScripts.h
-    dlgOptionsAreaTimers.h
-    dlgOptionsAreaTriggers.h
     dlgPackageExporter.h
     dlgProfilePreferences.h
     dlgRoomExits.h
