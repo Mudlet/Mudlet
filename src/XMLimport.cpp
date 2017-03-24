@@ -1308,7 +1308,9 @@ void XMLimport::readActionGroup(TAction* pParent)
                 pT->mSizeY = readElementText().toInt();
                 continue;
             } else if (name() == "mButtonState") {
-                pT->mButtonState = readElementText().toInt();
+                // We now use a boolean but file must use original "1" (false)
+                // or "2" (true) for backward compatibility
+                pT->mButtonState = ( readElementText().toInt() == 2 );
                 continue;
             } else if (name() == "buttonColor") {
                 pT->mButtonColor.setNamedColor(readElementText());

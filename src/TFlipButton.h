@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,38 +29,32 @@
 
 class Host;
 class TAction;
-class TEasyButtonBar;
-class TToolBar;
 
 class TFlipButton : public QPushButton
 {
 public:
-    TFlipButton( TToolBar *, TAction *, int, Host * );
-    TFlipButton( TEasyButtonBar *, TAction *, int, Host * );
-    TFlipButton( const QString & text, QWidget* parent = 0);
-    TFlipButton( const QIcon & icon, const QString & text, QWidget * parent = 0 );
+    TFlipButton( TAction *, Host * );
 
     Qt::Orientation orientation() const;
-    void setOrientation( Qt::Orientation orientation );
+    void            setOrientation( Qt::Orientation orientation );
 
-    bool mirrored() const;
-    void setMirrored( bool mirrored );
+    bool            mirrored() const;
+    void            setMirrored( bool mirrored );
 
-    QSize sizeHint() const;
-    QSize minimumSizeHint() const;
+    QSize           sizeHint() const;
+    QSize           minimumSizeHint() const;
 
 protected:
-    void paintEvent( QPaintEvent * event );
+    void            paintEvent( QPaintEvent * );
 
 public:
-    QStyleOptionButton getStyleOption() const;
-    void init();
+    QStyleOptionButton  getStyleOption() const;
 
+    TAction *       mpTAction;
+    int             mID;
+    Host *          mpHost;
     Qt::Orientation mOrientation;
-    bool mMirrored;
-    TAction * mpTAction;
-    int mID;
-    Host * mpHost;
+    bool            mMirrored;
 };
 
 #endif // MUDLET_TFLIPBUTTON_H
