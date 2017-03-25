@@ -192,6 +192,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->console->slot_toggleTimeStamps();
     mpErrorConsole->print("*** starting new session ***\n");
+    mpErrorConsole->hide();
 
     connect( button_searchAreaClose, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
 
