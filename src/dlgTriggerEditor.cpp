@@ -320,7 +320,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     //saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
-
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
     QAction * importAction = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Import"), this);
@@ -331,18 +330,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
 
-    QAction * saveMenu = new QAction( QIcon( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
-    saveMenu->setEnabled( true );
-    saveMenu->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-    saveMenu->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-
-    connect( saveMenu, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
-
     QAction * profileSaveAction = new QAction( QIcon ( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
     profileSaveAction->setEnabled( true );
     profileSaveAction->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
     profileSaveAction->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * saveProfileAsAction = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Save Profile As"), this);
@@ -362,67 +353,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be *MUCH* slower"));
     connect( showDebugAreaAction, SIGNAL(triggered()), this, SLOT( slot_debug_mode() ));
 
-    QAction * addTriggerMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
-    viewTriggerAction->setStatusTip(tr("Add Trigger"));
-    connect(addTriggerMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTrigger()));
-
-    QAction * addAliasMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
-    addAliasMenuAction->setStatusTip(tr("Add Alias"));
-    addAliasMenuAction->setEnabled( true );
-    connect( addAliasMenuAction, SIGNAL(triggered()), this, SLOT( slot_addAlias()));
-
-    QAction * addTimersMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
-    addTimersMenuAction->setStatusTip(tr("Add Timer"));
-    addTimersMenuAction->setEnabled( true );
-    connect( addTimersMenuAction, SIGNAL(triggered()), this, SLOT( slot_addTimer()));
-
-    QAction * addVarsMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Variables"), this);
-    addVarsMenuAction->setStatusTip(tr("View Variables"));
-    addVarsMenuAction->setEnabled( true );
-    connect( addVarsMenuAction, SIGNAL(triggered()), this, SLOT( slot_addVar()));
-
-    QAction * addScriptsMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    addScriptsMenuAction->setStatusTip(tr("Add Script"));
-    addScriptsMenuAction->setEnabled( true );
-    connect( addScriptsMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScript()));
-
-    QAction * addKeysMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), tr("Keys"), this);
-    addKeysMenuAction->setStatusTip(tr("Add Keys"));
-    addKeysMenuAction->setEnabled( true );
-    connect( addKeysMenuAction, SIGNAL(triggered()), this, SLOT( slot_addKey()));
-
-    QMenu * addTriggerMenu = new QMenu( this );
-    addTriggerMenu->addAction( addTriggerMenuAction );
-    addTriggerMenu->addAction( addTimersMenuAction );
-    addTriggerMenu->addAction( addScriptsMenuAction );
-    addTriggerMenu->addAction( addAliasMenuAction );
-    addTriggerMenu->addAction( addKeysMenuAction );
-
-    QAction * addTriggerGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
-    addTriggerGroupMenuAction->setStatusTip(tr("Add Trigger Group"));
-    connect(addTriggerGroupMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTriggerGroup()));
-
-    QAction * addAliasGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
-    addAliasGroupMenuAction->setStatusTip(tr("Add Alias Group"));
-    addAliasGroupMenuAction->setEnabled( true );
-    connect( addAliasGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addAliasGroup()));
-
-    QAction * addTimersGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
-    addTimersGroupMenuAction->setStatusTip(tr("Add Timer Group"));
-    addTimersGroupMenuAction->setEnabled( true );
-    connect( addTimersGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addTimerGroup()));
-
-    QAction * addScriptsGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    addScriptsGroupMenuAction->setStatusTip(tr("Add Script Group"));
-    addScriptsGroupMenuAction->setEnabled( true );
-    connect( addScriptsGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScriptGroup()));
-
-    QMenu * addTriggerGroupMenu = new QMenu( this );
-    addTriggerGroupMenu->addAction( addTriggerGroupMenuAction );
-    addTriggerGroupMenu->addAction( addTimersGroupMenuAction );
-    addTriggerGroupMenu->addAction( addScriptsGroupMenuAction );
-    addTriggerGroupMenu->addAction( addAliasGroupMenuAction );
-
     toolBar = new QToolBar();
     toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
     toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -441,8 +371,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( exportAction );
     toolBar->addAction( saveProfileAsAction );
     toolBar->addAction( profileSaveAction );
-
-
 
     toolBar2 = new QToolBar();
     toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -492,7 +420,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
 
-    mpTriggersMainArea->hide();
+    mpTriggersMainArea->show();
     mpTimersMainArea->hide();
     mpScriptsMainArea->hide();
     mpAliasMainArea->hide();
@@ -500,7 +428,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
 
-    mpSourceEditorArea->hide();
+    mpSourceEditorArea->show();
 
     mpSystemMessageArea->hide();
 
