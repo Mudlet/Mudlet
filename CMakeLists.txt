@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -39,8 +39,8 @@ ELSE()
     SET(APP_TARGET mudlet)
 ENDIF()
 
-SET(APP_VERSION 3.0.0)
-SET(APP_BUILD "")
+SET(APP_VERSION 3.0.1)
+SET(APP_BUILD "-alpha")
 # APP_BUILD should only be empty/null in official "release" builds,
 # developers may like to set it to their user and branch names to make it easier
 # to tell different builds apart!
