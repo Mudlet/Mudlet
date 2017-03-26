@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
- *   <email Chris>                                                         *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,22 +18,24 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "VarUnit.h"
-#include <QDebug>
+
+
+#include "TVar.h"
+
+#include "pre_guard.h"
 #include <QTreeWidgetItem>
-#include "TTreeWidget.h"
-#include <QStringList>
+#include "post_guard.h"
+
 
 VarUnit::VarUnit()
 {
-    qDebug()<<"making new VarUnit";
-//    wVars.setInsertInOrder(true);
 }
 
 bool VarUnit::isHidden( TVar * var ){
     if ( var->getName() == "_G" )//we never hide global
         return false;
-//    qDebug()<<"checking"<<var->getName()<<shortVarName(var).join(".");
     if (hidden.contains(shortVarName(var).join(".")))
         return true;
     return hiddenByUser.contains(shortVarName(var).join("."));
@@ -58,10 +60,9 @@ bool VarUnit::shouldSave( TVar * var ){
 
 void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
     QList< QTreeWidgetItem * > cList;
-    QListIterator<TVar *> it(var->getChildren());
+    QListIterator<TVar *> it(var->getChildren(true));
     while(it.hasNext()){
         TVar * child = it.next();
-//        qDebug()<<child->getName()<<isHidden(child);
         if ( showHidden || !isHidden( child ) ){
             QStringList s1;
             s1 << child->getName();
@@ -73,23 +74,21 @@ void VarUnit::buildVarTree( QTreeWidgetItem * p, TVar * var, bool showHidden ){
             if ( isSaved( child ) )
                 pItem->setCheckState(0, Qt::Checked);
             if ( ! shouldSave( child ) ){//6 is lua_tfunction, parent must be saveable as well if not global
-//                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsUserCheckable));
-                pItem->setDisabled( true );
+                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsUserCheckable));
+                pItem->setForeground(0, QBrush(QColor("grey")));
                 pItem->setToolTip(0, "");
-//                pItem->setData(0, Qt::CheckStateRole, QVariant());
-//                qDebug()<<child->getName();
             }
             pItem->setData( 0, Qt::UserRole, child->getValueType() );
             QIcon icon;
             switch (child->getValueType()){
                 case 5:
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/table.png" ) ), QIcon::Normal, QIcon::Off );
                     break;
                 case 6:
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/function.png" ) ), QIcon::Normal, QIcon::Off );
                     break;
                 default:
-                    icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+                    icon.addPixmap( QPixmap( QStringLiteral( ":/icons/variable.png" ) ), QIcon::Normal, QIcon::Off );
                     break;
             }
             pItem->setIcon( 0, icon );
@@ -189,21 +188,17 @@ void VarUnit::removeHidden( TVar * var ){
 void VarUnit::addSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
     var->saved = true;
-//    qDebug()<<n;
     savedVars.insert(n);
-    qDebug()<<"added"<<n;
 }
 
 void VarUnit::removeSavedVar(TVar * var){
     QString n = shortVarName(var).join(".");
     savedVars.remove(n);
     var->saved = false;
-    //qDebug()<<"removed"<<n;
 }
 
 bool VarUnit::isSaved( TVar * var ){
     QString n = shortVarName(var).join(".");
-//    qDebug()<<"checking isSaved"<<n;
     return (savedVars.contains(n) || var->saved);
 }
 

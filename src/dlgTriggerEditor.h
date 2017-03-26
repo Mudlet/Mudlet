@@ -1,6 +1,10 @@
+#ifndef MUDLET_DLGTRIGGEREDITOR_H
+#define MUDLET_DLGTRIGGEREDITOR_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,33 +22,36 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef DLGTRIGGEREDITOR_H
-#define DLGTRIGGEREDITOR_H
 
-#include <QFile>
-
+#include "pre_guard.h"
 #include "ui_trigger_editor.h"
+#include "post_guard.h"
+
+#include "dlgOptionsAreaTriggers.h"
+#include "dlgSearchArea.h"
+#include "dlgSourceEditorArea.h"
+#include "dlgSystemMessageArea.h"
+#include "dlgTimersMainArea.h"
+#include "dlgTriggersMainArea.h"
+#include "dlgVarsMainArea.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTreeWidget.h"
+#include "TTimer.h"
+#include "TTrigger.h"
+#include "TVar.h"
+
+#include "pre_guard.h"
+#include <QFile>
 #include <QDialog>
 #include <QListWidgetItem>
 #include <QListWidget>
+#include <QScrollArea>
 #include <QTableWidget>
 #include <QTableWidgetItem>
-#include <QScrollArea>
-#include "TTrigger.h"
-#include "TAction.h"
-//#include <Qsci/qsciscintilla.h>
-//#include <Qsci/qscilexerlua.h>
-#include "dlgTriggersMainArea.h"
-#include "dlgTimersMainArea.h"
-#include "dlgSystemMessageArea.h"
-#include "dlgSourceEditorArea.h"
-#include "dlgOptionsAreaTriggers.h"
-#include "dlgSearchArea.h"
-#include "TTreeWidget.h"
-#include "TKey.h"
-#include "dlgVarsMainArea.h"
-#include "TVar.h"
-//#include "TConsole.h"
+#include "post_guard.h"
 
 class dlgTimersMainArea;
 class dlgSystemMessageArea;
@@ -61,9 +68,11 @@ class dlgOptionsAreaTimers;
 class dlgOptionsAreaAction;
 class dlgKeysMainArea;
 class dlgTriggerPatternEdit;
+class TAction;
 class TKey;
 class TConsole;
 class dlgVarsMainArea;
+
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {
@@ -94,25 +103,20 @@ public:
     bool                        showHiddenVars;
     TConsole *                  mpErrorConsole;
     void                        changeView( int );
-    void                        recurseVariablesUp( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
-    void                        recurseVariablesDown( QTreeWidgetItem *, QList< QTreeWidgetItem * > & );
-    void                        recurseVariablesDown( TVar *, QList< TVar * > & );
+    void                        recurseVariablesUp( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
+    void                        recurseVariablesDown( TVar *, QList< TVar * > &, bool );
     void                        show_vars( );
 
-signals:
-
-    void                        signal_establish_connection( QString profile_name );
-    void                        accept();
-    void                        update();
 
 public slots:
-    void                        slot_toggleHiddenVars();
+    void                        slot_toggleHiddenVariables( bool );
     void                        slot_toggleHiddenVar( bool );
     void                        slot_addVar();
     void                        slot_addVarGroup();
-    void                        slot_saveVarAfterEdit();
     void                        slot_deleteVar();
-    void                        slot_var_clicked( QTreeWidgetItem *, int );
+    void                        slot_var_selected( QTreeWidgetItem * );
+    void                        slot_var_changed( QTreeWidgetItem * );
     void                        slot_show_vars( );
     void                        slot_viewErrorsAction();
     void                        slot_cursorPositionChanged();
@@ -120,33 +124,25 @@ public slots:
     void                        slot_soundTrigger();
     void                        slot_colorizeTriggerSetBgColor();
     void                        slot_colorizeTriggerSetFgColor();
-    void                        slot_itemClicked( QTreeWidgetItem * pItem, int column );
+    void                        slot_item_selected_save( QTreeWidgetItem * pItem );
     void                        slot_choseButtonColor();
     void                        slot_export();
     void                        slot_import();
     void                        slot_viewStatsAction();
     void                        slot_debug_mode();
-    void                        slot_saveTriggerAfterEdit();
-    void                        slot_saveTimerAfterEdit();
-    void                        slot_saveScriptAfterEdit();
-    void                        slot_saveAliasAfterEdit();
-    void                        slot_saveActionAfterEdit();
-    void                        slot_saveKeyAfterEdit();
     void                        slot_show_timers();
     void                        slot_show_triggers();
     void                        slot_show_scripts();
     void                        slot_show_aliases();
     void                        slot_show_actions();
     void                        slot_show_keys();
-    void                        slot_trigger_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_timer_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_scripts_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_alias_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_action_clicked( QTreeWidgetItem * pItem, int column );
-    void                        slot_key_clicked( QTreeWidgetItem *pItem, int column );
-    void                        slot_update();
-    void                        slot_deleteProfile();
-    void                        slot_connection_dlg_finnished();
+    void                        slot_tree_selection_changed();
+    void                        slot_trigger_selected( QTreeWidgetItem *pItem );
+    void                        slot_timer_selected( QTreeWidgetItem *pItem );
+    void                        slot_scripts_selected( QTreeWidgetItem *pItem );
+    void                        slot_alias_selected( QTreeWidgetItem *pItem );
+    void                        slot_action_selected( QTreeWidgetItem * pItem );
+    void                        slot_key_selected( QTreeWidgetItem *pItem );
     void                        slot_add_new();
     void                        slot_add_new_folder();
     void                        slot_addTrigger();
@@ -175,8 +171,7 @@ public slots:
     void                        slot_script_toggle_active();
     void                        slot_key_toggle_active();
     void                        slot_search_triggers( const QString s );
-    void                        slot_item_clicked_search_list(QTreeWidgetItem*, int);
-    void                        slot_switchToExpertMonde();
+    void                        slot_item_selected_search_list(QTreeWidgetItem*, int);
     void                        slot_delete_item();
     void                        slot_deleteTrigger();
     void                        slot_deleteTimer();
@@ -186,10 +181,7 @@ public slots:
     void                        slot_deleteKey();
     void                        slot_save_edit();
     void                        slot_chose_action_icon();
-    //void                        slot_trigger_main_area_edit_regex(QListWidgetItem*);
-    //void                        slot_trigger_main_area_add_regex();
     void                        slot_show_search_area();
-    //void                        slot_trigger_main_area_delete_regex();
     void                        slot_script_main_area_delete_handler();
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -201,6 +193,10 @@ public slots:
     void                        setTBIconSize( int );
     void                        slot_color_trigger_fg();
     void                        slot_color_trigger_bg();
+
+private slots:
+    void                        slot_changeEditorTextOptions( QTextOption::Flags );
+    void                        slot_toggle_isPushDownButton( const int );
 
 private:
 
@@ -233,13 +229,6 @@ private:
     void                        exportAction( QFile & );
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
-    QTreeWidgetItem *           mCurrentAlias;
-    QTreeWidgetItem *           mCurrentTrigger;
-    QTreeWidgetItem *           mCurrentTimer;
-    QTreeWidgetItem *           mCurrentAction;
-    QTreeWidgetItem *           mCurrentScript;
-    QTreeWidgetItem *           mCurrentKey;
-    QTreeWidgetItem *           mCurrentVar;
 
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;
@@ -273,8 +262,6 @@ private:
     dlgSystemMessageArea *      mpSystemMessageArea;
     dlgSourceEditorArea *       mpSourceEditorArea;
     dlgOptionsAreaTriggers *    mpOptionsAreaTriggers;
-    //dlgSearchArea *             mpSearchArea;
-    //QTreeWidget *               mpSearchArea;
     dlgAliasMainArea *          mpAliasMainArea;
     dlgActionMainArea *         mpActionsMainArea;
     dlgScriptsMainArea *        mpScriptsMainArea;
@@ -283,16 +270,15 @@ private:
     dlgOptionsAreaAction *      mpOptionsAreaActions;
     dlgOptionsAreaAlias *       mpOptionsAreaAlias;
     dlgOptionsAreaTimers *      mpOptionsAreaTimers;
-    //bool                        mIsTriggerMainAreaEditRegex;
-    //QListWidgetItem *           mpTriggerMainAreaEditRegexItem;
     bool                        mIsScriptsMainAreaEditHandler;
     QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
     bool                        mIsGrabKey;
-    //QsciDocument                mDocument;
     Host *                      mpHost;
     QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
     dlgVarsMainArea *           mpVarsMainArea;
+    bool                        mChangingVar;
+    QPlainTextEdit *            mpSourceEditor;
+    QTextDocument *             mpSourceEditorDocument;
 };
 
-#endif
-
+#endif // MUDLET_DLGTRIGGEREDITOR_H

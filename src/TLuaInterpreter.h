@@ -1,6 +1,10 @@
+#ifndef MUDLET_LUAINTERPRETER_H
+#define MUDLET_LUAINTERPRETER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,33 +22,40 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-#ifndef LUA_INTERPRETER_H
-#define LUA_INTERPRETER_H
-
-#include <string>
-#include <QObject>
+#include "pre_guard.h"
+#include <QMutex>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
-#include <QProcess>
-#include <QTcpSocket>
 #include <QThread>
 #include <QTimer>
+#include "post_guard.h"
 
+#ifndef LUA_CPP
 extern "C"
 {
+#endif
     #include <lua.h>
     #include <lualib.h>
     #include <lauxlib.h>
+#ifndef LUA_CPP
 }
+#endif
 
-#include <QMutexLocker>
-#include <queue>
-#include <string>
 #include <iostream>
 #include <list>
-//#include "TTrigger.h"
-//#include "Host.h"
+#include <map>
+#include <ostream>
+#include <queue>
+#include <string>
+
+
+class Host;
+class TEvent;
+class TGatekeeperThread;
+class TLuaMainThread;
+class TLuaThread;
+class TTrigger;
+
 
 #define SERVEROUTPUT 1
 #define USERCOMMAND 2
@@ -52,12 +63,6 @@ extern "C"
 #define RAWDATA 4
 
 
-class TLuaMainThread;
-class TLuaThread;
-class TGatekeeperThread;
-class Host;
-class TTrigger;
-class TEvent;
 
 
 class TLuaInterpreter : public QThread  {
@@ -101,6 +106,8 @@ public:
     void adjustCaptureGroups( int x, int a );
     void clearCaptureGroups();
     bool callEventHandler( QString & function, TEvent * pE );
+    static QString dirToString( lua_State *, int );
+    static int dirToNumber( lua_State *, int );
 
 
     int startTempTimer( double, QString & );
@@ -152,7 +159,6 @@ public:
     static int createMapLabel( lua_State * );
     static int deleteMapLabel( lua_State * );
     static int getRooms( lua_State * );
-    static int isLockedRoom( lua_State * );
     static int connectToServer( lua_State *L );
     static int sendIrc( lua_State * );
     static int showUnzipProgress( lua_State * );
@@ -176,7 +182,9 @@ public:
     static int getRoomUserData( lua_State * );
     static int searchRoomUserData( lua_State * );
     static int clearRoomUserData( lua_State * );
+    static int clearRoomUserDataItem( lua_State * );
     static int addSpecialExit( lua_State * );
+    static int removeSpecialExit( lua_State * );
     static int getSpecialExits( lua_State * );
     static int getSpecialExitsSwap( lua_State * );
     static int appendCmdLine( lua_State * );
@@ -198,6 +206,7 @@ public:
     static int setExit( lua_State * );
     static int createRoomID( lua_State * );
     static int setRoomArea( lua_State * );
+    static int resetRoomArea( lua_State * );
     static int getRoomArea( lua_State * );
 
     static int denyCurrentSend( lua_State * );
@@ -308,9 +317,11 @@ public:
     static int setBold( lua_State * );
     static int setItalics( lua_State * );
     static int setUnderline( lua_State * );
+    static int setStrikeOut( lua_State * );
     static int disconnect( lua_State * );
     static int reconnect( lua_State * );
     static int getMudletHomeDir( lua_State * );
+    static int getMudletLuaDefaultPaths( lua_State * );
     static int setTriggerStayOpen( lua_State * );
     static int wrapLine( lua_State * );
     static int getFgColor( lua_State * );
@@ -358,6 +369,7 @@ public:
     static int setExitStub( lua_State * L  );
     static int connectExitStub( lua_State * L  );
     static int getExitStubs( lua_State * L  );
+    static int getExitStubs1( lua_State * L  );
     static int getModulePriority( lua_State * L  );
     static int setModulePriority( lua_State * L  );
     static int updateMap(lua_State * L);
@@ -367,6 +379,24 @@ public:
     static int addMapMenu(lua_State * L);
     static int removeMapMenu(lua_State * L);
     static int getMapMenus(lua_State * L);
+    static int getMudletVersion( lua_State * L );
+    static int openWebPage( lua_State * L );
+    static int getAllRoomEntrances( lua_State * L );
+    static int getRoomUserDataKeys( lua_State * L );
+    static int getAllRoomUserData( lua_State * L );
+    static int searchAreaUserData( lua_State * );
+    static int getMapUserData( lua_State * );
+    static int getAreaUserData( lua_State * );
+    static int setMapUserData( lua_State * );
+    static int setAreaUserData( lua_State * );
+    static int getAllAreaUserData( lua_State * );
+    static int getAllMapUserData( lua_State * );
+    static int clearAreaUserData( lua_State * );
+    static int clearAreaUserDataItem( lua_State * );
+    static int clearMapUserData( lua_State * );
+    static int clearMapUserDataItem( lua_State * );
+    static int setDefaultAreaVisible( lua_State * );
+
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
@@ -398,7 +428,7 @@ signals:
 
 public slots:
 
-    void replyFinished(QNetworkReply * reply );
+    void slot_replyFinished( QNetworkReply * );
     void slotOpenUserWindow( int, QString );
     void slotEchoUserWindow( int, QString, QString );
     void slotClearUserWindow( int, QString );
@@ -537,7 +567,4 @@ private:
    QString parameters;
 };
   */
-#endif
-
-
-
+#endif // MUDLET_LUAINTERPRETER_H

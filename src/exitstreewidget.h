@@ -1,8 +1,9 @@
-#ifndef EXITSTREEWIDGET_H
-#define EXITSTREEWIDGET_H
+#ifndef MUDLET_EXITSTREEWIDGET_H
+#define MUDLET_EXITSTREEWIDGET_H
+
 /***************************************************************************
- *   Copyright (C) 2012 by Vadim Peretokin                                 *
- *   vadim.peretokin@mudlet.org                                            *
+ *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,24 +21,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QTreeWidget>
-#include <QDebug>
 
-class Host;
+#include "pre_guard.h"
+#include <QTreeWidget>
+#include "post_guard.h"
+
 
 class ExitsTreeWidget : public QTreeWidget
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-        ExitsTreeWidget( QWidget * pW );
-        void keyPressEvent ( QKeyEvent * event );
-private:
-
-signals:
-
-public slots:
+    ExitsTreeWidget( QWidget * pW );
+    void keyPressEvent( QKeyEvent * event );
 };
 
-
-#endif // EXITSTREEWIDGET_H
+#endif // MUDLET_EXITSTREEWIDGET_H

@@ -1,0 +1,89 @@
+############################################################################
+#    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
+#                                                                          #
+#    Copying and distribution of this file, with or without modification,  #
+#    are permitted in any medium without royalty provided the copyright    #
+#    notice and this notice are preserved.  This file is offered as-is,    #
+#    without any warranty.                                                 #
+############################################################################
+
+# For more information on clang-format:
+# http://clang.llvm.org/docs/ClangFormat.html
+
+BasedOnStyle: LLVM
+
+# language
+Language: Cpp
+Standard: Cpp03
+DisableFormat: false
+
+# line length
+ColumnLimit: 200 # revisit when tuning.
+
+# indentation
+IndentWidth: 4
+UseTab: Never
+TabWidth: 8
+AccessModifierOffset: -4
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+IndentCaseLabels: false
+IndentWrappedFunctionNames: false
+NamespaceIndentation: None
+
+# line breaks
+AlwaysBreakAfterDefinitionReturnType: false
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeBinaryOperators: true
+BreakBeforeBraces: Linux
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+KeepEmptyLinesAtTheStartOfBlocks: true # revisit
+MaxEmptyLinesToKeep: 2
+
+# spaces
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+
+# parameters
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: false
+
+# pointers
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# braces
+Cpp11BracedListStyle: false
+
+# single line statements
+AllowShortBlocksOnASingleLine: false # revisit
+AllowShortFunctionsOnASingleLine: Inline # revisit
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# alignment
+AlignEscapedNewlinesLeft: false
+AlignTrailingComments: true
+
+# penalties (revisit)
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60
+
+# macros
+ForEachMacros: [ foreach, Q_FOREACH, BOOST_FOREACH ]
+
+# comments
+# CommentPragmas:

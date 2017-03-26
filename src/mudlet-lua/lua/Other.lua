@@ -181,13 +181,8 @@ end
 ---   </pre>
 ---
 --- @return true or false
-function io.exists(fileOfFolderName)
-	local f = io.open(fileOfFolderName)
-	if f then
-		io.close(f)
-		return true
-	end
-	return false
+function io.exists(item)
+	return lfs.attributes(item) and true or false
 end
 
 
@@ -223,10 +218,10 @@ end
 --- @return "linux", "mac" or "windows" string
 function getOS()
 	if string.char(getMudletHomeDir():byte()) == "/" then
-		if string.find(os.getenv("HOME"), "home") == 2 then
-			return "linux"
-		else
+		if io.exists("/Applications") then
 			return "mac"
+		else
+			return "linux"
 		end
 	else
 		return "windows"
@@ -413,34 +408,34 @@ end
 
 
 --- <b><u>TODO</u></b> speedwalktimer()
-function speedwalktimer()
-	send(walklist[1])
-	table.remove(walklist, 1)
-	if #walklist>0 then
-		tempTimer(walkdelay, [[speedwalktimer()]])
-	end
+function speedwalktimer(walklist, walkdelay)
+    send(walklist[1])
+    table.remove(walklist, 1)
+    if #walklist>0 then
+        tempTimer(walkdelay, function() speedwalktimer(walklist, walkdelay) end)
+    end
 end
 
 
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay)
 function speedwalk(dirString, backwards, delay)
-	local dirString		= dirString:lower()
-	walklist			= {}
-	walkdelay			= delay
-	local reversedir	= {
-		n	= "s",
-		en	= "sw",
-		e	= "w",
-		es	= "nw",
-		s	= "n",
-		ws	= "ne",
-		w	= "e",
-		wn	= "se",
-		u	= "d",
-		d	= "u",
-		ni	= "out",
-		tuo	= "in"
+	local dirString = dirString:lower()
+	local walkdelay = delay
+	local walklist  = {}
+	local reversedir        = {
+		n       = "s",
+		en      = "sw",
+		e       = "w",
+		es      = "nw",
+		s       = "n",
+		ws      = "ne",
+		w       = "e",
+		wn      = "se",
+		u       = "d",
+		d       = "u",
+		ni      = "out",
+		tuo     = "in"
 	}
 	if not backwards then
 		for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
@@ -462,7 +457,7 @@ function speedwalk(dirString, backwards, delay)
 		end
 	end
 	if walkdelay then
-		speedwalktimer()
+		speedwalktimer(walklist, walkdelay)
 	end
 end
 
@@ -518,24 +513,26 @@ end
 
 --- <b><u>TODO</u></b> getColorWildcard(color)
 function getColorWildcard(color)
-	local color = tonumber(color)
-	local startc
-	local endc
-	local results = {}
+        local color, results, startc, endc = tonumber(color), {}, nil, nil
 
-	for i = 1, string.len(line) do
-		selectSection(i, 1)
-		if isAnsiFgColor(color) then
-			if not startc then if i == 1 then startc = 1 else startc = i + 1 end
-			else endc = i + 1
-				if i == line:len() then results[#results + 1] = line:sub(startc, endc) end
-			end
-		elseif startc then
-			results[#results + 1] = line:sub(startc, endc)
-			startc = nil
-		end
-	end
-	return results[1] and results or false
+        for i = 0, string.len(line) do
+                selectSection(i, 1)
+                if isAnsiFgColor(color) then
+                        if not startc then 
+                                startc = i + 1
+                                endc = i + 1
+                        else 
+                                endc = i + 1
+                                if i == line:len() then
+                                        results[#results + 1] = line:sub(startc, endc)
+                                end
+                        end
+                elseif startc then
+                        results[#results + 1] = line:sub(startc, endc)
+                        startc = nil
+                end
+        end
+        return results[1] and results or false
 end
 
 
@@ -606,13 +603,15 @@ do
 	end
 end
 
-ioprint = print
-function print(...)
-  local t, echo, tostring = {...}, echo, tostring
-  for i = 1, #t do
-    echo((tostring(t[i]) or '?').."    ")
-  end
-  echo("\n")
+if not _TEST then  -- special exception, as overwriting print() messes up printing in the test environment
+	ioprint = print
+	function print(...)
+	  local t, echo, tostring = {...}, echo, tostring
+	  for i = 1, #t do
+	    echo((tostring(t[i]) or '?').."    ")
+	  end
+	  echo("\n")
+	end
 end
 
 function deleteFull()

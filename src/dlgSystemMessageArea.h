@@ -1,6 +1,9 @@
+#ifndef MUDLET_DLGSYSTEMMESSAGEAREA_H
+#define MUDLET_DLGSYSTEMMESSAGEAREA_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,28 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef DLG_system_message_area_H
-#define DLG_system_message_area_H
 
+#include "pre_guard.h"
 #include "ui_system_message_area.h"
-#include <QWidget>
+#include "post_guard.h"
 
 
-class dlgSystemMessageArea : public QWidget , public Ui::systemMessageArea
+class dlgSystemMessageArea : public QWidget, public Ui::systemMessageArea
 {
-Q_OBJECT
-        
+    Q_OBJECT
+
 public:
-        
-   dlgSystemMessageArea(QWidget*);
-    
-signals:
-    
-    
-public slots:
-    
-    
+    dlgSystemMessageArea(QWidget*);
 };
 
-#endif
-
+#endif // MUDLET_DLGSYSTEMMESSAGEAREA_H

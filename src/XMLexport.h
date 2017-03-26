@@ -1,5 +1,10 @@
+#ifndef MUDLET_XMLEXPORT_H
+#define MUDLET_XMLEXPORT_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn  ( KoehnHeiko@googlemail.com )      *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,23 +23,26 @@
  ***************************************************************************/
 
 
-#ifndef XML_EXPORT_H
-#define XML_EXPORT_H
-
-
+#include "pre_guard.h"
 #include <QXmlStreamWriter>
+#include "post_guard.h"
 
-#include "Host.h"
-#include "TVar.h"
-#include "VarUnit.h"
-#include "LuaInterface.h"
+class Host;
+class LuaInterface;
+class TAction;
+class TAlias;
+class TKey;
+class TScript;
+class TTimer;
+class TTrigger;
+class TVar;
+class VarUnit;
 
 
 class XMLexport : public QXmlStreamWriter
 {
 public:
                     XMLexport( Host * );
-                    XMLexport( Host *, bool );
                     XMLexport( TTrigger * );
                     XMLexport( TTimer * );
                     XMLexport( TAlias * );
@@ -56,7 +64,7 @@ public:
 
     bool            exportHost( QIODevice * );
     bool            exportGenericPackage( QIODevice * device );
-    bool            writeGenericPackage( Host * pT );
+    bool            writeGenericPackage( Host * );
     bool            exportTrigger( QIODevice * );
     bool            exportTimer( QIODevice * );
     bool            exportAlias( QIODevice * );
@@ -79,7 +87,6 @@ private:
     TAction *       mpAction;
     TScript *       mpScript;
     TKey *          mpKey;
-    QString         mType;
 };
 
-#endif // XML_EXPORT_H
+#endif // MUDLET_XMLEXPORT_H

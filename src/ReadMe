@@ -1,6 +1,9 @@
 READ THIS IN ORDER TO COMPILE THE Qt4 TEMPLATE
 ----------------------------------------------
 
+For the latest information on compiling Mudlet, please see the wiki here:
+http://wiki.mudlet.org/w/Compiling_Mudlet
+
 Before compiling, check the Qt Options, go to 
 Project->Project Options->C++ Support and open the Qt Options tab.
 

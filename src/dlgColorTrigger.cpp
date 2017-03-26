@@ -1,7 +1,7 @@
-#include "dlgColorTrigger.h"
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,12 +19,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QPalette>
-#include "TTrigger.h"
+
 #include "dlgColorTrigger.h"
+
+
+#include "TTrigger.h"
 #include "Host.h"
 #include "mudlet.h"
 #include "TTextEdit.h"
+
+#include "pre_guard.h"
+#include <QPalette>
+#include "post_guard.h"
+
 
 dlgColorTrigger::dlgColorTrigger( QWidget * pF, TTrigger * pT, int mode )
 : QDialog( pF )
@@ -329,7 +336,7 @@ void dlgColorTrigger::setColorCyan()
     {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 14;
-        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mCyan;
+        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mCyan;
     }
     else
     {
@@ -421,7 +428,7 @@ void dlgColorTrigger::setColorLightWhite()
     {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 15;
-        mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightWhite;
+        mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightWhite;
     }
     else
     {

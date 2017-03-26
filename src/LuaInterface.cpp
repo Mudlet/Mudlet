@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
- *   <email Chris>                                                         *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,9 +20,17 @@
 
 
 #include "LuaInterface.h"
-#include "TVar.h"
+
+
+#include "Host.h"
 #include "VarUnit.h"
+
+#include "pre_guard.h"
 #include <QTime>
+#include "post_guard.h"
+
+#include <setjmp.h>
+
 
 static jmp_buf buf;
 
@@ -42,19 +50,9 @@ int LuaInterface::onPanic( lua_State * L )
     if ( lua_isstring( L, -1 ) )
     {
         error = lua_tostring( L, -1 );
-        //there's never anything but the error on the stack
-//        qDebug()<<"stack dump:";
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            int ltype = lua_type(L, j*-1);
-//            QString value;
-//            if (ltype == LUA_TNUMBER || ltype == LUA_TSTRING ||
-//                    ltype == LUA_TBOOLEAN)
-//                value = lua_tostring(L, j*-1);
-//            qDebug()<<"index"<<j<<"type:"<<ltype<<"value"<<value;
-//        }
-        //lua_error(L);
+        //there's never anything but the error on the stack, nothing to report
     }
-    qDebug()<<"PANIC ERROR:"<<error;
+    //FIXME: report error to user qDebug()<<"PANIC ERROR:"<<error;
     longjmp(buf, 1);
     return 1;
 }
@@ -86,19 +84,15 @@ bool LuaInterface::validMove(QTreeWidgetItem * p){
 }
 
 void LuaInterface::getAllChildren( TVar * var, QList<TVar *> * list){
-    QListIterator<TVar *> it(var->getChildren());
+    QListIterator<TVar *> it(var->getChildren(true));
     if (varUnit->isSaved(var) || var->saved)
         list->append(var);
-    else
-        qDebug()<<"t"<<var->getName()<<"not saved";
     while (it.hasNext()){
         TVar * child = it.next();
         if (child->getValueType() == LUA_TTABLE)
             getAllChildren( child, list);
         else if (varUnit->isSaved(child) || var->saved)
             list->append(child);
-        else
-            qDebug()<<child->getName()<<"not saved";
     }
 }
 
@@ -122,10 +116,8 @@ bool LuaInterface::loadKey(lua_State * L, TVar * var){
                 lua_pushstring(L, var->getName().toLatin1().data());
             }
         }
-        qDebug()<<"key"<<var->getName()<<lua_type(L, -1)<<kType;
         return lua_type(L, -1) == kType;
     }
-    qDebug()<<"panic in loadKey";
     return false;
 }
 
@@ -147,173 +139,12 @@ bool LuaInterface::loadValue(lua_State * L, TVar * var, int index){
         }
         else
             return false;
-        qDebug()<<"value"<<var->getName()<<lua_type(L, -1)<<var->getValueType();
-        return lua_type(L, -1) == var->getValueType();
+        if(lua_gettop(L))
+            return lua_type(L, -1) == var->getValueType();
+        return false;
     }
-    qDebug()<<"panic error in loadValue";
     return false;
 }
-
-//bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
-//    //get the old parent on the stack
-//    if (setjmp(buf) == 0){
-//        int startSize = lua_gettop(L);
-//        bool isSaved = varUnit->isSaved(curVar);
-//        if (isSaved){
-//            QList<TVar *> list;
-//            getAllChildren(curVar, &list);
-//            QListIterator<TVar *> it(list);
-//            while (it.hasNext()){
-//                TVar * t = it.next();
-//                varUnit->removeSavedVar(t);
-//            }
-//        }
-//        qDebug()<<"stack before we start";
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-//        QList<TVar *> vars = varOrder(curVar);
-//        lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
-//        int i=1;
-//        int kType;
-//        for( ; i<vars.size(); i++ ){
-//            kType = vars[i]->getKeyType();
-//            if ( kType == LUA_TNUMBER ){
-//                lua_pushnumber(L, QString(vars[i]->getName()).toInt());
-//            }
-//            else if ( kType == LUA_TTABLE ){
-//                lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-//            }
-//            else{
-//                lua_pushstring(L, QString(vars[i]->getName()).toLatin1().data());
-//            }
-//            lua_gettable(L, -2);
-//            if (lua_isnil(L, -1))
-//                return false;
-//        }
-//        //at this point we have the value we want to put under
-//        //a new parent at the -1 position of the stack, we want
-//        //just this value, so we move it to the bottom and pop
-//        //everything else
-//        lua_insert(L,lua_gettop(L));
-//        lua_pop(L, lua_gettop(L)-1);
-//        //push the key back
-//        kType = curVar->getKeyType();
-//        if ( kType == LUA_TNUMBER ){
-//            lua_pushnumber(L, QString(curVar->getName()).toInt());
-//        }
-//        else if ( kType == LUA_TTABLE ){
-//            lua_rawgeti(L, LUA_REGISTRYINDEX, curVar->getName().toInt());
-//        }
-//        else{
-//            lua_pushstring(L, QString(curVar->getName()).toLatin1().data());
-//        }
-//        //swap the key and value positions
-//        lua_insert(L, -2);
-//        qDebug()<<"old parent with value on stack";
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-
-//        //redo the parenting in TVar
-//        qDebug()<<"new parent is"<<to->getName();
-//        from->removeChild(curVar);
-//        curVar->setParent(to);
-//        to->addChild(curVar);
-//        vars = varOrder(curVar);
-//        qDebug()<<"new vars"<<vars;
-//        lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
-//        i=1;
-//        int pushCount=0;
-//        for( ; i<vars.size()-1; i++ ){
-//            kType = vars[i]->getKeyType();
-//            qDebug()<<vars[i]->getName();
-//            if ( kType == LUA_TNUMBER ){
-//                lua_pushnumber(L, QString(vars[i]->getName()).toInt());
-//                lua_pushnumber(L, QString(vars[i]->getName()).toInt());
-//            }
-//            else if ( kType == LUA_TTABLE ){
-//                lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-//                lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-//            }
-//            else{
-//                lua_pushstring(L, QString(vars[i]->getName()).toLatin1().data());
-//                lua_pushstring(L, QString(vars[i]->getName()).toLatin1().data());
-//            }
-//            lua_gettable(L, -3);
-//            pushCount+=1;
-//            if (lua_isnil(L, -1)){
-//                //value didn't exist, make it
-//                lua_pop(L, 2);
-//                if ( kType == LUA_TNUMBER ){
-//                    lua_pushnumber(L, QString(vars[i]->getName()).toInt());
-//                }
-//                else if ( kType == LUA_TTABLE ){
-//                    lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-//                }
-//                else{
-//                    lua_pushstring(L, QString(vars[i]->getName()).toLatin1().data());
-//                }
-//                lua_newtable(L);
-//                lua_settable(L, -3);
-//                i--;//decrement since we want to reput this table on the stack on next iteration
-//            }
-//        }
-
-//        qDebug()<<"new stack fully loaded";
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-//        qDebug()<<"value reset with pushCount of"<<-3-pushCount*2;
-//        //assign the old value to the new value
-//        //insert our key/table under the old table
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-//        lua_insert(L,-3-pushCount*2);//puts the key under our old table
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-//        lua_insert(L,-3-pushCount*2);//puts the new table under our key
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            lua_pushvalue(L,j*-1);
-//            QString key = lua_tostring(L, -1);
-//            lua_pop(L, 1);
-//            qDebug()<<j<<":"<<lua_type(L,j*-1)<<key;
-//        }
-//        lua_insert(L,-3-pushCount*2);//puts the new table under our key
-//        qDebug()<<"remove the unneeded entries";
-//    //    lua_pop(L, pushCount);
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-//        lua_settable(L, -3);
-//        lua_settable(L, -3);
-//        lua_setglobal(L, vars[0]->getName().toLatin1().data());
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-
-
-//        if (isSaved){
-//            QList<TVar *> list;
-//            list.append(to);
-//            getAllChildren(curVar, &list);
-//            QListIterator<TVar *> it(list);
-//            while (it.hasNext()){
-//                TVar * t = it.next();
-//                qDebug()<<t->getName();
-//                varUnit->addSavedVar(t);
-//            }
-//        }
-//        lua_settop(L, startSize);
-//        return true;
-//    }
-//    else{
-//        qDebug()<<"panic in reparentCVariable";
-//        return false;
-//    }
-//}
 
 bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
     //get the old parent on the stack
@@ -333,7 +164,6 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
         }
         QList<TVar *> vars = varOrder(curVar);
         lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
-        qDebug()<<vars;
         int i=1;
         for( ; i<vars.size(); i++ ){
             if (!loadValue(L, vars[i], -2)){
@@ -341,10 +171,6 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
                 return false;
             }
         }
-//        for (int j=1;j<=lua_gettop(L);j++){
-//            qDebug()<<j<<":"<<lua_type(L,j*-1);
-//        }
-
         //redo the parenting in TVar
         from->removeChild(curVar);
         curVar->setParent(to);
@@ -409,16 +235,10 @@ bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
                 varUnit->addSavedVar(t);
             }
         }
-        for (int j=1;j<=lua_gettop(L);j++){
-            qDebug()<<j<<":"<<lua_type(L,j*-1);
-        }
         lua_settop(L, stackSize);
         return true;
     }
-    else{
-        qDebug()<<"panic in reparentCVariable";
-        return false;
-    }
+    return false;
 }
 
 bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cItem, QTreeWidgetItem * oldP){
@@ -433,11 +253,10 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
     TVar * newParent = varUnit->getWVar(newP);
     TVar * curVar = varUnit->getWVar(cItem);
     TVar * oldParent = varUnit->getWVar(oldP);
-    qDebug()<<newParent<<curVar<<oldParent;
     TVar * from = oldParent;
     TVar * to = newParent;
     if ( newParent && newParent->getValueType() != LUA_TTABLE ){
-        qDebug()<<"attempt to move to a non-table";
+        //FIXME: report why this fails to user
         return false;
     }
     if ( !newParent && !oldParent ){
@@ -462,7 +281,6 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
         QListIterator<TVar *> it(list);
         while (it.hasNext()){
             TVar * t = it.next();
-            qDebug()<<t->getName();
             varUnit->removeSavedVar(t);
         }
     }
@@ -496,17 +314,15 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
     }
 
     QString addString = QString(newName+" = "+oldName);
-    qDebug()<<addString;
     int error = luaL_dostring(L, addString.toLatin1().data());
-    qDebug()<<"reparented with"<<error;
+    //FIXME: report error to user qDebug()<<"reparented with"<<error;
     //delete it
     oldName.append(QString(" = nil"));
     luaL_loadstring(L, oldName.toLatin1().data());
     error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
         QString emsg = lua_tostring(L, -1);
-        qDebug()<<oldName;
-        qDebug()<<"error msg"<<emsg;
+        //FIXME: report error to userqDebug()<<"error msg"<<emsg;
         return false;
     }
     if (isSaved){
@@ -516,7 +332,6 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
         QListIterator<TVar *> it(list);
         while (it.hasNext()){
             TVar * t = it.next();
-            qDebug()<<t->getName();
             varUnit->addSavedVar(t);
         }
     }
@@ -579,11 +394,7 @@ bool LuaInterface::setCValue( QList<TVar *> vars ){
         }
         lua_settable(L, -3);
     }
-    else{
-        qDebug()<<"panic in setCValue";
-        return false;
-    }
-    return true;
+    return false;
 }
 
 bool LuaInterface::setValue( TVar * var ){
@@ -622,12 +433,10 @@ bool LuaInterface::setValue( TVar * var ){
         return false;
     }
     luaL_loadstring(L, newName.toLatin1().data());
-    qDebug()<<newName;
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
-        qDebug()<<newName;
         QString emsg = lua_tostring(L, -1);
-        qDebug()<<"error msg"<<emsg;
+        //FIXME: report error to user qDebug()<<"error msg"<<emsg;
         return false;
     }
     return true;
@@ -651,8 +460,7 @@ void LuaInterface::deleteVar( TVar * var ){
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
         QString emsg = lua_tostring(L, -1);
-        qDebug()<<oldName;
-        qDebug()<<"error msg"<<emsg;
+        //FIXME: report error to userqDebug()<<"error msg"<<emsg;
     }
 }
 
@@ -709,13 +517,9 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         }
         else{
-            qDebug()<<"unknown key type"<<var->getKeyType();
+            //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
             //lua_pop(L,pCount);
             return;
-        }
-        qDebug()<<"new stack fully loaded";
-        for (int j=1;j<=lua_gettop(L);j++){
-            qDebug()<<j<<":"<<lua_type(L,j*-1);
         }
 
         //put the old value on the stack
@@ -747,21 +551,16 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         }
         else{
-            qDebug()<<"unknown key type"<<var->getKeyType();
+            //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
             //lua_pop(L,pCount);
             return;
         }
         lua_gettable(L, -2);
         pushCount++;
-        qDebug()<<"old value fully loaded";
-        for (int j=1;j<=lua_gettop(L);j++){
-            qDebug()<<j<<":"<<lua_type(L,j*-1);
-        }
         //old value is @ -1 now
         //we want to put our new named key @ -2
         kType = var->getKeyType();
         if ( kType == LUA_TSTRING ){
-            qDebug()<<var->getNewName();
             lua_pushstring(L, QString(var->getNewName()).toLatin1().data());
         }
         else if ( kType == LUA_TNUMBER ){
@@ -771,22 +570,16 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         }
         else{
-            qDebug()<<"unknown key type"<<var->getKeyType();
+            //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
             //lua_pop(L,pCount);
             return;
         }
         pushCount++;
         lua_insert(L, -2);
-        qDebug()<<pushCount;
-        qDebug()<<"about to settable with stack to"<<-3-pushCount;
-        for (int j=1;j<=lua_gettop(L);j++){
-            qDebug()<<j<<":"<<lua_type(L,j*-1);
-        }
         lua_settable(L, -3-pushCount);
         //key & value popped
         //delete it, so we put the old key back on the stack and set to nil
         kType = var->getKeyType();
-        qDebug()<<var->getName();
         if ( kType == LUA_TSTRING ){
             lua_pushstring(L, QString(var->getName()).toLatin1().data());
         }
@@ -797,21 +590,14 @@ void LuaInterface::renameCVar( QList<TVar *> vars ){
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         }
         else{
-            qDebug()<<"unknown key type"<<var->getKeyType();
+            //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
             //lua_pop(L,pCount);
             return;
         }
         lua_pushnil(L);
-        for (int j=1;j<=lua_gettop(L);j++){
-            qDebug()<<j<<":"<<lua_type(L,j*-1);
-        }
         lua_settable(L, -3);
         var->clearNewName();
     }
-    else{
-        qDebug()<<"panic in renameCVar";
-    }
-
 }
 
 bool LuaInterface::loadVar( TVar* var ){
@@ -849,7 +635,7 @@ bool LuaInterface::loadVar( TVar* var ){
             return false;
     }
     else{
-        qDebug()<<"panic in loadVar";
+        //FIXME: report error to user qDebug()<<"panic in loadVar";
         return false;
     }
     return true;
@@ -861,7 +647,6 @@ void LuaInterface::renameVar( TVar * var ){
     QList<TVar *> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     QString newName;
-    qDebug()<<vars;
     if (vars.size() > 1)
         newName = vars[0]->getName();
     for(int i=1;i<vars.size();i++){
@@ -886,12 +671,10 @@ void LuaInterface::renameVar( TVar * var ){
     else
         newName.append("[\""+vars.back()->getNewName()+"\"]");
     QString addString = QString(newName+" = "+oldName);
-    qDebug()<<addString;
     luaL_loadstring(L, addString.toLatin1().data());
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
         QString emsg = lua_tostring(L, -1);
-        qDebug()<<"reassigned"<<var->getName()<<"to"<<var->getNewName()<<"with error"<<emsg;
         var->clearNewName();
         return;
     }
@@ -901,75 +684,12 @@ void LuaInterface::renameVar( TVar * var ){
     error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error){
         QString emsg = lua_tostring(L, -1);
-        qDebug()<<oldName;
-        qDebug()<<"error msg"<<emsg;
+        //FIXME: report error to userqDebug()<<"error msg"<<emsg;
     }
-    else
-        qDebug()<<oldName;
     var->clearNewName();
 }
 
-//QString LuaInterface::getValue( TVar * var ){
-//    //let's find it.
-//    L = interpreter->pGlobalLua;
-//    QList<TVar *> vars = varOrder(var);
-//    //QStringList names = varName(var);
-//    if (vars.empty())
-//        return "";
-//    int pCount = vars.size();//how many things we need to pop at the end
-//    lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
-//    int i=1;
-//    for( ; i<vars.size()-1; i++ ){
-////                for (int j=1;j<=lua_gettop(L);j++){
-////                    qDebug()<<j<<":"<<lua_type(L,j*-1);
-////                }
-////                qDebug()<<vars[i]->getName()<<vars[i]->getKeyType();
-//        int kType = vars[i]->getKeyType();
-//        if ( kType == LUA_TNUMBER ){
-//            lua_pushnumber(L, QString(vars[i]->getName()).toInt());
-//        }
-//        else if ( kType == LUA_TTABLE ){
-//            lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
-//        }
-//        else{
-//            lua_pushstring(L, QString(vars[i]->getName()).toLatin1().data());
-//        }
-//        lua_gettable(L, -2);
-//    }
-//    if (vars.size()>1){
-
-////                for (int i=1;i<=lua_gettop(L);i++){
-////                    qDebug()<<i<<":"<<lua_type(L,i*-1);
-////                }
-//        int kType = var->getKeyType();
-//        if ( kType == LUA_TSTRING ){
-//            lua_pushstring(L, QString(var->getName()).toLatin1().data());
-//        }
-//        else if ( kType == LUA_TNUMBER ){
-//            lua_pushnumber(L, var->getName().toInt());
-//        }
-//        else if ( kType == LUA_TTABLE || kType == LUA_TFUNCTION ){
-//            lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
-//        }
-//        else{
-//            qDebug()<<"unknown key type"<<var->getKeyType();
-//            lua_pop(L,pCount);
-//            return "";
-//        }
-//        lua_gettable(L, -2);
-//    }
-//    int vType = lua_type(L, -1);
-//    QString value = "";
-//    if (vType == LUA_TBOOLEAN)
-//        value = lua_toboolean(L, -1) == 0 ? "false" : "true";
-//    else if (vType == LUA_TNUMBER || vType == LUA_TSTRING)
-//        value = lua_tostring(L, -1);
-//    lua_pop(L,pCount);
-//    return value;
-//}
-
 QString LuaInterface::getValue( TVar * var ){
-    qDebug()<<"attempting getValue";
     if (setjmp(buf) == 0){
         L = interpreter->pGlobalLua;
         QList<TVar *> vars = varOrder(var);
@@ -990,9 +710,6 @@ QString LuaInterface::getValue( TVar * var ){
             value = lua_tostring(L, -1);
         lua_pop(L,pCount);
         return value;
-    }
-    else{
-        qDebug()<<"panic in getValue";
     }
     return "";
 }
@@ -1022,11 +739,6 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
             else
                 lua_pop(L, 1);
         }
-//        qDebug()<<"key type/value:"<<kType<<keyName;
-        //qDebug()<<"value type:"<<vType;
-//        for (int i=1;i<=lua_gettop(L);i++){
-//            qDebug()<<i<<":"<<lua_type(L,i*-1);
-//        }
         if (keyName == "package" && depth == 1){//don't load in the 'package' table
             lua_pop(L, 1);
             tVar->removeChild(var);
@@ -1044,7 +756,6 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         var->vpointer = vp;
         if ( varUnit->varExists(var) || keyName == "_G" ){
             lua_pop(L, 1);
-//            qDebug()<<"removing dup"<<keyName;
             tVar->removeChild(var);
             delete var;
             continue;
@@ -1063,10 +774,6 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
                 //put the table on top
                 lua_pushnil(L);
                 var->setValue("{}", LUA_TTABLE);
-//                qDebug()<<"entering table"<<keyName<<kp<<vp<<varUnit->varExists(var);
-//                for (int i=1;i<=lua_gettop(L);i++){
-//                    qDebug()<<i<<":"<<lua_type(L,i*-1);
-//                }
                 iterateTable(L, -2, var, hide);
                 depth--;
             }
@@ -1096,7 +803,6 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
             varUnit->removeVariable(var);
             delete var;
         }
-//        qDebug()<<"var added"<<var->getName();
         lua_pop(L, 1);
     }
 }
@@ -1120,5 +826,5 @@ void LuaInterface::getVars( bool hide ){
     varUnit->setBase(g);
     varUnit->addVariable(g);
     iterateTable( L, LUA_GLOBALSINDEX, g, hide );
-    qDebug()<<"took"<<t.elapsed()<<"to get variables in";
+    //FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }

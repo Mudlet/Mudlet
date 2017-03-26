@@ -1,6 +1,10 @@
+#ifndef MUDLET_ACTIONUNIT_H
+#define MUDLET_ACTIONUNIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn                                *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,22 +22,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _ACTION_UNIT_H
-#define _ACTION_UNIT_H
 
-#include "TAction.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
+#include <QMap>
 #include <QMutex>
-#include <QDataStream>
-#include "TToolBar.h"
-#include "TEasyButtonBar.h"
-#include <QMenu>
+#include <QString>
+#include "post_guard.h"
 
-class TToolBar;
-class TEasyButtonBar;
-class TAction;
+#include <list>
+
 class Host;
+class mudlet;
+class TAction;
+class TEasyButtonBar;
+class TToolBar;
+
 
 class ActionUnit
 {
@@ -48,10 +51,8 @@ public:
     void                  compileAll();
     bool                  registerAction( TAction * pT );
     void                  unregisterAction( TAction * pT );
-    bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream &, bool );
     void                  reParentAction( int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1 );
-    qint64                getNewID();
+    int                   getNewID();
     void                  uninstall( QString );
     void                  _uninstall( TAction * pChild, QString packageName );
     void                  updateToolbar();
@@ -60,8 +61,8 @@ public:
     TAction *             getHeadAction( TToolBar * );
     TAction *             getHeadAction( TEasyButtonBar * );
     void                  processDataStream( QString & );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, TEasyButtonBar * pTB );
+    void                  constructToolbar( TAction *, TToolBar * pTB );
+    void                  constructToolbar( TAction *, TEasyButtonBar * pTB );
     void                  showToolBar( QString & );
     void                  hideToolBar( QString & );
 
@@ -78,7 +79,7 @@ private:
     Host *                mpHost;
     QMap<int, TAction *>  mActionMap;
     std::list<TAction *>  mActionRootNodeList;
-    qint64                mMaxID;
+    int                   mMaxID;
     TToolBar *            mpToolBar;
     TEasyButtonBar *      mpEasyButtonBar;
     bool                  mModuleMember;
@@ -87,5 +88,4 @@ private:
 
 };
 
-
-#endif
+#endif // MUDLET_ACTIONUNIT_H

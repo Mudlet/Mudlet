@@ -1,6 +1,10 @@
+#ifndef MUDLET_HOST_H
+#define MUDLET_HOST_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,48 +23,35 @@
  ***************************************************************************/
 
 
-
-#ifndef _HOST_H_
-#define _HOST_H_
-
-class mudlet;
-class TLuaInterpreter;
-class LuaInterface;
-
-
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QString>
-#include <QMutexLocker>
-#include "ctelnet.h"
-#include "TriggerUnit.h"
-#include "TimerUnit.h"
-#include "ScriptUnit.h"
-#include "AliasUnit.h"
 #include "ActionUnit.h"
-#include "TLuaInterpreter.h"
-#include <QTextBlock>
-#include <QTextStream>
-#include <QFile>
-#include "dlgTriggerEditor.h"
-#include "TEvent.h"
-#include "TKey.h"
+#include "AliasUnit.h"
+#include "ctelnet.h"
 #include "KeyUnit.h"
-#include <QVector3D>
-#include "TArea.h"
-#include "TRoom.h"
-#include "TMap.h"
-#include <QListWidget>
-#include "LuaInterface.h"
+#include "ScriptUnit.h"
+#include "TimerUnit.h"
+#include "TLuaInterpreter.h"
+#include "TriggerUnit.h"
+
+#include "pre_guard.h"
+#include <QColor>
+#include <QFile>
+#include <QFont>
+#include <QTextStream>
+#include "post_guard.h"
+
+class QDialog;
+class QPushButton;
+class QListWidget;
 
 class dlgTriggerEditor;
+class TEvent;
+class TArea;
+class LuaInterface;
+class TMap;
+class TRoom;
 class TConsole;
 class dlgNotepad;
 class TMap;
-
-
-
 
 
 class Host  : public QObject
@@ -91,8 +82,8 @@ public:
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
     bool               closingDown();
-    void               assemblePath();
-    int                check_for_mappingscript();
+    const unsigned int assemblePath();
+    const bool         checkForMappingScript();
     void               orderShutDown();
     TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
     TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
@@ -125,7 +116,6 @@ public:
     void               startSpeedWalk();
     //QStringList        getBufferTable( int, int );
     //QString            getBufferLine( int );
-    bool               serialize();
     void               saveModules(int);
     void               reloadModule(QString moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }
@@ -151,6 +141,8 @@ public:
     bool               uninstallPackage( QString, int module);
     bool               removeDir( const QString dirName, QString originalPath);
     void               readPackageConfig( QString, QString & );
+    void                postMessage( const QString message ) { mTelnet.postMessage(message); }
+
 
     cTelnet            mTelnet;
     TConsole *         mpConsole;
@@ -176,10 +168,10 @@ public:
     bool               mCodeCompletion;
     QFont              mCommandLineFont;
     QString            mCommandSeparator;
-    QString            mCommandSeperator;
     bool               mDisableAutoCompletion;
     QFont              mDisplayFont;
     bool               mEnableGMCP;
+    bool               mEnableMSDP;
     int                mEncoding;
     QTextStream        mErrorLogStream;
     QFile              mErrorLogFile;
@@ -214,7 +206,21 @@ public:
     int                mPort;
     bool               mPrintCommand;
     QString            mPrompt;
-    bool               mRawStreamDump;
+                       // The following was incorrectly called mRawStreamDump
+                       // and caused the log file to be in HTML format rather
+                       // then plain text.  To cover the corner case of the user
+                       // changing the mode whilst a log is being written it has
+                       // been split into:
+    bool               mIsNextLogFileInHtmlFormat;
+                       // What the user has set as their preference
+    bool               mIsCurrentLogFileInHtmlFormat;
+                       // What the current file will use, set from the previous
+                       // member at the point that logging starts.
+                       // Ideally this ought to become a number so that we can
+                       // support more than two logging format modes - phpBB
+                       // format would be useful for those wanting to post to
+                       // MUD forums...!  Problem will be reading and write the
+                       // game save file in a compatible way.
     QString            mReplacementCommand;
     QString            mRest;
     bool               mResetProfile;
@@ -293,8 +299,8 @@ public:
     QStringList        mActiveModules;
     bool               mModuleSaveBlock;
 
-    void               showUnpackingProgress( QString  txt );
-    QDialog *          mpUnzipDialog;
+    // There was a QDialog *          mpUnzipDialog; but to avoid issues of
+    // reentrancy it needed to be made local to the method that used it.
     QPushButton *      uninstallButton;
     QListWidget *      packageList;
     QListWidget *                 moduleList;
@@ -315,14 +321,6 @@ public:
     bool               mFORCE_MXP_NEGOTIATION_OFF;
     bool               mHaveMapperScript;
     QSet<QChar>         mDoubleClickIgnore;
-
-private:
-    Host();
-
-
-
-
 };
-#endif
 
-
+#endif // MUDLET_HOST_H

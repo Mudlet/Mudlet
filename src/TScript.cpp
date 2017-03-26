@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,23 +19,15 @@
  ***************************************************************************/
 
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <math.h>
-#include <QDataStream>
-#include <QRegExp>
-#include <QString>
-#include <QTextDocument>
 #include "TScript.h"
+
+
 #include "Host.h"
-#include "HostManager.h"
 #include "mudlet.h"
 #include "TDebug.h"
 
-using namespace std;
 
+using namespace std;
 
 TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
@@ -176,23 +168,3 @@ void TScript::execute()
 
 
 
-TScript& TScript::clone(const TScript& b)
-{
-    mName = b.mName;
-    mScript = b.mScript;
-    mIsFolder = b.mIsFolder;
-    mpHost = b.mpHost;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    mEventHandlerList = b.mEventHandlerList;
-    return *this;
-}
-
-bool TScript::isClone(TScript &b) const
-{
-    return ( mName == b.mName
-             && mScript == b.mScript
-             && mIsFolder == b.mIsFolder
-             && mpHost == b.mpHost
-             && mNeedsToBeCompiled == b.mNeedsToBeCompiled
-             && mEventHandlerList == b.mEventHandlerList );
-}

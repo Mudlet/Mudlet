@@ -1,5 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,9 +19,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 #include "dlgComposer.h"
-#include <QDir>
-#include "TDebug.h"
+
+
 #include "Host.h"
 
 
@@ -28,8 +31,8 @@ dlgComposer::dlgComposer( Host * pH )
 
 {
     setupUi(this);
-    QFont f = QFont("Bitstream Vera Sans Mono", 10, QFont::Courier );
-    edit->setFont ( f );
+    QFont f = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal );
+    edit->setFont( f );
     connect( saveButton, SIGNAL(pressed()), this, SLOT(save()));
     connect( cancelButton, SIGNAL(pressed()), this, SLOT(cancel()));
 }
@@ -51,4 +54,3 @@ void dlgComposer::init( QString t, QString txt )
     titel->setText( t );
     edit->setPlainText( txt );
 }
-

@@ -1,10 +1,9 @@
-
-#ifndef _TMatchState_H_
-#define _TMatchState_H_
+#ifndef MUDLET_TMATCHSTATE_H
+#define MUDLET_TMATCHSTATE_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,7 +24,6 @@
 class TMatchState
 {
 public:
-    
     TMatchState( int NumberOfConditions, int delta )
     {
         mNumberOfConditions = NumberOfConditions;
@@ -34,7 +32,7 @@ public:
         mLineCount = 1;
         mSpacer = 0;
     }
-    
+
     TMatchState( const TMatchState &ms )
     {
         mNumberOfConditions = ms.mNumberOfConditions;
@@ -42,31 +40,17 @@ public:
         mDelta = ms.mDelta;
         mLineCount = ms.mLineCount;
     }
-    
-    int  nextCondition() { return mNextCondition; }
+
+    int nextCondition() { return mNextCondition; }
     void conditionMatched(){ mNextCondition++; }
-    bool isComplete() 
-    { 
-        if( mNextCondition >= mNumberOfConditions )
-        {
-            return true;
-        } 
-        else
-        {
-            return false; 
-        }
+    bool isComplete()
+    {
+        return ( mNextCondition >= mNumberOfConditions );
     }
     void newLineArrived(){ mLineCount++; }
-    bool newLine() 
-    { 
-        if( mLineCount > mDelta )
-        {
-            return false;
-        }
-        else
-        {
-            return true; 
-        }
+    bool newLine()
+    {
+        return !( mLineCount > mDelta );
     }
 
     bool lineSpacerMatch( int lines )
@@ -92,5 +76,4 @@ public:
     int                                 mDelta;
 };
 
-#endif
-
+#endif // MUDLET_TMATCHSTATE_H

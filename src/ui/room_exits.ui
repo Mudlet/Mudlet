@@ -1,383 +1,1957 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
+ <author>Stephen Lyons</author>
  <class>roomExits</class>
  <widget class="QDialog" name="roomExits">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>747</width>
-    <height>486</height>
+    <width>942</width>
+    <height>561</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Exits for Room &quot;&quot; [*]</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="4">
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>General exits</string>
+  <property name="windowIcon">
+   <iconset resource="../mudlet_alpha.qrc">
+    <normaloff>:/icons/mudlet_room_exits.png</normaloff>:/icons/mudlet_room_exits.png</iconset>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_all" rowstretch="1,1,0">
+   <property name="leftMargin">
+    <number>6</number>
+   </property>
+   <property name="topMargin">
+    <number>6</number>
+   </property>
+   <property name="rightMargin">
+    <number>6</number>
+   </property>
+   <property name="bottomMargin">
+    <number>6</number>
+   </property>
+   <item row="0" column="0" colspan="5">
+    <widget class="QGroupBox" name="groupBox_normalExits">
+     <property name="focusPolicy">
+      <enum>Qt::StrongFocus</enum>
      </property>
-     <layout class="QGridLayout" name="gridLayout_2">
+     <property name="title">
+      <string>General exits:</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_normalExits" rowstretch="1,1,1,1" columnstretch="1,1,1,1">
       <item row="0" column="0">
-       <widget class="QPushButton" name="lnw">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+       <widget class="QFrame" name="frame_nw">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="autoFillBackground">
+         <bool>false</bool>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_nw">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_nw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_nw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="nw">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>NW exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_nw">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_nw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_nw</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_nw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_nw</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_nw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_nw</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_nw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_nw</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QLineEdit" name="nw">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the northwest here</string>
+       <widget class="QFrame" name="frame_n">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="placeholderText">
-         <string>NW exit...</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_n">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_n">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_n">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="n">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>N exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_n">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_n">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_n</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_n">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_n</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_n">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_n</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_n">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_n</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QPushButton" name="ln">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+       <widget class="QFrame" name="frame_ne">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_ne">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_ne">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_ne">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="ne">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>NE exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_ne">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_ne">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_ne</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_ne">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_ne</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_ne">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_ne</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_ne">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_ne</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="0" column="3">
-       <widget class="QLineEdit" name="n">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the north here</string>
+       <widget class="QFrame" name="frame_up">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="placeholderText">
-         <string>N exit...</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-       </widget>
-      </item>
-      <item row="0" column="4">
-       <widget class="QPushButton" name="lne">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
-        <property name="text">
-         <string>lock</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="5">
-       <widget class="QLineEdit" name="ne">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the northeast here</string>
-        </property>
-        <property name="placeholderText">
-         <string>NE exit...</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="7">
-       <widget class="QPushButton" name="lup">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
-        </property>
-        <property name="text">
-         <string>lock</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="8">
-       <widget class="QLineEdit" name="up">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the up here</string>
-        </property>
-        <property name="placeholderText">
-         <string>Up exit...</string>
-        </property>
+        <layout class="QGridLayout" name="gridLayout_up">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_up">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_up">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="up">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>Up exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_up">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_up">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_up</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_up">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_up</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_up">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_up</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_up">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_up</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QPushButton" name="lw">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+       <widget class="QFrame" name="frame_w">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_w">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_w">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_w">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="w">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string>W exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_w">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_w">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_w</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_w">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_w</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_w">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_w</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_w">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_w</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QLineEdit" name="w">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the west here</string>
+       <widget class="QFrame" name="frame_id">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string/>
+        <property name="cursor">
+         <cursorShape>ForbiddenCursor</cursorShape>
         </property>
-        <property name="placeholderText">
-         <string>W exit...</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_id" columnstretch="4,5" columnminimumwidth="0,0">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_roomID">
+           <property name="text">
+            <string>ID:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="roomID">
+           <property name="cursor">
+            <cursorShape>ForbiddenCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_roomWeight">
+           <property name="text">
+            <string>Weight:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="roomWeight">
+           <property name="cursor">
+            <cursorShape>ForbiddenCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="1" column="4">
-       <widget class="QPushButton" name="le">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+      <item row="1" column="2">
+       <widget class="QFrame" name="frame_e">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_e">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_e">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_e">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="e">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>E exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_e">
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_e">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_e</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_e">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_e</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_e">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_e</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_e">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_e</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="1" column="5">
-       <widget class="QLineEdit" name="e">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the east here</string>
+      <item row="1" column="3">
+       <widget class="QFrame" name="frame_down">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="placeholderText">
-         <string>E exit...</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-       </widget>
-      </item>
-      <item row="1" column="6">
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="1" column="7">
-       <widget class="QPushButton" name="ldown">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
-        </property>
-        <property name="text">
-         <string>lock</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="8">
-       <widget class="QLineEdit" name="down">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the down here</string>
-        </property>
-        <property name="placeholderText">
-         <string>Down exit...</string>
-        </property>
+        <layout class="QGridLayout" name="gridLayout_down">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_down">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_down">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="down">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>Down exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_down">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_down">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_down</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_down">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_down</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_down">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_down</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_down">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_down</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="2" column="0">
-       <widget class="QPushButton" name="lsw">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+       <widget class="QFrame" name="frame_sw">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_sw">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_sw">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_sw">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="sw">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>SW exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_sw">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_sw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_sw</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_sw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_sw</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_sw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_sw</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_sw">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_sw</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QLineEdit" name="sw">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the southwest here</string>
+       <widget class="QFrame" name="frame_s">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="placeholderText">
-         <string>SW exit...</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_s">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_s">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_s">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="s">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>S exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_s">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_s">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_s</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_s">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_s</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_s">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_s</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_s">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_s</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="2" column="2">
-       <widget class="QPushButton" name="ls">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+       <widget class="QFrame" name="frame_se">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_se">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_se">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_se">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="se">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>SE exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_se">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_se">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_se</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_se">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_se</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_se">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_se</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_se">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_se</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item row="2" column="3">
-       <widget class="QLineEdit" name="s">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the south here</string>
+       <widget class="QFrame" name="frame_in">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="placeholderText">
-         <string>S exit...</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_in">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_in">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_in">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="in">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>In exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_in">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_in">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_in</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_in">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_in</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_locked_in">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_in</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_closed_in">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_in</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="2" column="4">
-       <widget class="QPushButton" name="lse">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+      <item row="3" column="3">
+       <widget class="QFrame" name="frame_out">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="text">
-         <string>lock</string>
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
         </property>
-        <property name="checkable">
-         <bool>true</bool>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_out">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="noroute_out">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="stub_out">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2" colspan="4">
+          <widget class="QLineEdit" name="out">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>Out exit...</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_out">
+           <property name="cursor">
+            <cursorShape>SizeVerCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QRadioButton" name="doortype_none_out">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_out</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QRadioButton" name="doortype_open_out">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_out</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QRadioButton" name="doortype_closed_out">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_out</string>
+           </attribute>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QRadioButton" name="doortype_locked_out">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently), can be set on either a stub or a real exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <attribute name="buttonGroup">
+            <string notr="true">doortype_out</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="2" column="5">
-       <widget class="QLineEdit" name="se">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the southeast here</string>
+      <item row="3" column="0" colspan="3">
+       <widget class="QFrame" name="frame_key">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
-        <property name="placeholderText">
-         <string>SE exit...</string>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-       </widget>
-      </item>
-      <item row="2" column="7">
-       <widget class="QPushButton" name="lin">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
+        <property name="cursor">
+         <cursorShape>WhatsThisCursor</cursorShape>
         </property>
-        <property name="text">
-         <string>lock</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="8">
-       <widget class="QLineEdit" name="in">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the in here</string>
-        </property>
-        <property name="placeholderText">
-         <string>In exit...</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="7">
-       <widget class="QPushButton" name="lout">
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
-        </property>
-        <property name="text">
-         <string>lock</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="8">
-       <widget class="QLineEdit" name="out">
-        <property name="toolTip">
-         <string>Set the number of the room that's to the out here</string>
-        </property>
-        <property name="placeholderText">
-         <string>Out exit...</string>
-        </property>
+        <layout class="QGridLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_key">
+           <property name="text">
+            <string>Key:</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="noroute_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="text">
+            <string>No route</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QCheckBox" name="stub_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Stub Exit</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2" colspan="4">
+          <widget class="QLineEdit" name="key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room that's to the southwest here.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="placeholderText">
+            <string>Exit RoomID number</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="specialValueText">
+            <string>Exit Weight (0=No overide)</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QRadioButton" name="doortype_none_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>No door</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="3">
+          <widget class="QRadioButton" name="doortype_open_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Open door</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="4">
+          <widget class="QRadioButton" name="doortype_closed_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Closed door</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="5">
+          <widget class="QRadioButton" name="doortype_locked_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Locked door</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="4">
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="title">
-      <string>Special exits</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="0">
-       <widget class="ExitsTreeWidget" name="specialExits">
-        <property name="rootIsDecorated">
-         <bool>false</bool>
-        </property>
-        <property name="itemsExpandable">
-         <bool>false</bool>
-        </property>
-        <property name="columnCount">
-         <number>3</number>
-        </property>
-        <attribute name="headerStretchLastSection">
-         <bool>true</bool>
-        </attribute>
-        <column>
-         <property name="text">
-          <string>Locked?</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Exit room ID</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Command or script (Lua scripts need to be prefixed with &quot;script:&quot;)</string>
-         </property>
-        </column>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QPushButton" name="addSpecialExit">
-     <property name="text">
-      <string>add special exit</string>
-     </property>
     </widget>
    </item>
    <item row="2" column="2">
-    <widget class="QPushButton" name="saveButton">
-     <property name="text">
-      <string>OK</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="3">
-    <widget class="QPushButton" name="pushButton_14">
-     <property name="text">
-      <string>Cancel</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <spacer name="horizontalSpacer_2">
+    <spacer name="horizontalSpacer_controlButtons">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -389,6 +1963,197 @@
      </property>
     </spacer>
    </item>
+   <item row="2" column="3">
+    <widget class="QPushButton" name="button_save">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Save</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="4">
+    <widget class="QPushButton" name="button_cancel">
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Cancel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="5">
+    <widget class="QGroupBox" name="groupBox_specialExits">
+     <property name="title">
+      <string>Special exits:</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_specialExits">
+      <item row="0" column="0">
+       <widget class="ExitsTreeWidget" name="specialExits">
+        <property name="focusPolicy">
+         <enum>Qt::StrongFocus</enum>
+        </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <property name="rootIsDecorated">
+         <bool>false</bool>
+        </property>
+        <property name="itemsExpandable">
+         <bool>false</bool>
+        </property>
+        <property name="sortingEnabled">
+         <bool>false</bool>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="columnCount">
+         <number>8</number>
+        </property>
+        <attribute name="headerDefaultSectionSize">
+         <number>80</number>
+        </attribute>
+        <attribute name="headerMinimumSectionSize">
+         <number>40</number>
+        </attribute>
+        <attribute name="headerShowSortIndicator" stdset="0">
+         <bool>false</bool>
+        </attribute>
+        <attribute name="headerStretchLastSection">
+         <bool>true</bool>
+        </attribute>
+        <column>
+         <property name="text">
+          <string>Exit
+Room ID</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>No
+Route</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Exit
+Weight</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set to a positive integer value to overide the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Door
+None</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Door
+Open</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Door
+Closed</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Door
+Locked</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Command
+or LUA script</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="button_addSpecialExit">
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Add special exit</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="button_endEditing">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;End S. Exits editing</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -399,213 +2164,23 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>addSpecialExit</tabstop>
-  <tabstop>saveButton</tabstop>
-  <tabstop>pushButton_14</tabstop>
+  <tabstop>button_addSpecialExit</tabstop>
+  <tabstop>button_save</tabstop>
+  <tabstop>button_cancel</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../mudlet_alpha.qrc"/>
+ </resources>
  <connections>
   <connection>
-   <sender>lnw</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>nw</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>36</x>
-     <y>48</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>135</x>
-     <y>45</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ln</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>n</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>216</x>
-     <y>52</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>328</x>
-     <y>48</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lne</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>ne</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>395</x>
-     <y>47</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>494</x>
-     <y>47</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lup</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>up</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>571</x>
-     <y>46</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>678</x>
-     <y>47</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lw</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>w</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>43</x>
-     <y>73</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>138</x>
-     <y>76</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>le</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>e</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>387</x>
-     <y>74</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>490</x>
-     <y>78</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ldown</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>down</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>570</x>
-     <y>71</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>663</x>
-     <y>71</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lsw</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>sw</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>39</x>
-     <y>114</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>145</x>
-     <y>114</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>ls</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>s</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>211</x>
-     <y>108</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>306</x>
-     <y>111</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lse</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>se</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>399</x>
-     <y>108</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>494</x>
-     <y>108</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lin</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>in</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>575</x>
-     <y>100</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>666</x>
-     <y>100</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>lout</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>out</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>571</x>
-     <y>133</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>679</x>
-     <y>133</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButton_14</sender>
+   <sender>button_cancel</sender>
    <signal>clicked()</signal>
    <receiver>roomExits</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>679</x>
-     <y>456</y>
+     <x>1019</x>
+     <y>569</y>
     </hint>
     <hint type="destinationlabel">
      <x>298</x>
@@ -614,4 +2189,35 @@
    </hints>
   </connection>
  </connections>
+ <designerdata>
+  <property name="gridDeltaX">
+   <number>10</number>
+  </property>
+  <property name="gridDeltaY">
+   <number>10</number>
+  </property>
+  <property name="gridSnapX">
+   <bool>true</bool>
+  </property>
+  <property name="gridSnapY">
+   <bool>true</bool>
+  </property>
+  <property name="gridVisible">
+   <bool>true</bool>
+  </property>
+ </designerdata>
+ <buttongroups>
+  <buttongroup name="doortype_nw"/>
+  <buttongroup name="doortype_n"/>
+  <buttongroup name="doortype_ne"/>
+  <buttongroup name="doortype_up"/>
+  <buttongroup name="doortype_w"/>
+  <buttongroup name="doortype_e"/>
+  <buttongroup name="doortype_down"/>
+  <buttongroup name="doortype_sw"/>
+  <buttongroup name="doortype_s"/>
+  <buttongroup name="doortype_se"/>
+  <buttongroup name="doortype_in"/>
+  <buttongroup name="doortype_out"/>
+ </buttongroups>
 </ui>

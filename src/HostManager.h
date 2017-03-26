@@ -1,9 +1,9 @@
-#ifndef _HOSTMANAGER_H_
-#define _HOSTMANAGER_H_
+#ifndef MUDLET_HOSTMANAGER_H
+#define MUDLET_HOSTMANAGER_H
 
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,11 +22,17 @@
  ***************************************************************************/
 
 
+#include "HostPool.h"
+
+#include "pre_guard.h"
+#include <QList>
+#include <QMap>
+#include <QMutex>
 #include <QString>
 #include <QStringList>
-#include <string>
-#include "HostPool.h"
-#include "Host.h"
+#include "post_guard.h"
+
+class Host;
 
 
 class HostManager
@@ -39,12 +45,10 @@ public:
     QStringList        getHostList() { return mHostPool.getHostList(); }
     QList<QString>     getHostNameList() { return mHostPool.getHostNameList(); }
     Host *             getFirstHost(){ return mHostPool.getFirstHost(); }
-    Host *             getNextHost( QString LastHost ){ return mHostPool.getNextHost(LastHost); } //get next host key by providing a LastHost
     bool               addHost( QString name, QString port, QString login, QString pass );
     bool               deleteHost( QString );
     bool               renameHost( QString );
     Host *             getHostFromHostID( int id ){ return mHostPool.getHostFromHostID( id ); }
-    bool               serialize();
     void               postIrcMessage(QString, QString, QString );
 
 private:
@@ -60,6 +64,4 @@ private:
 
 };
 
-#endif
-
-
+#endif // MUDLET_HOSTMANAGER_H

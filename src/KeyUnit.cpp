@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,21 +18,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cstddef> // NULL
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "Host.h"
-#include "TLuaInterpreter.h"
-#include <QDebug>
+
 #include "KeyUnit.h"
 
-#include <iostream>
+
+#include "Host.h"
+#include "TKey.h"
+
 
 using namespace std;
 
@@ -281,7 +273,7 @@ void KeyUnit::removeKey( TKey * pT )
 }
 
 
-qint64 KeyUnit::getNewID()
+int KeyUnit::getNewID()
 {
     return ++mMaxID;
 }
@@ -634,5 +626,3 @@ void KeyUnit::setupKeyNames()
     mKeys[0x01020006]=QString("Zoom");
     mKeys[0x01020001]=QString("Cancel");
 }
-
-

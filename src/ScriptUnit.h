@@ -1,6 +1,9 @@
+#ifndef MUDLET_SCRIPTUNIT_H
+#define MUDLET_SCRIPTUNIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,17 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _SCRIPT_UNIT_H
-#define _SCRIPT_UNIT_H
 
-#include "TScript.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
+#include <QMap>
 #include <QMutex>
-#include <QDataStream>
+#include <QString>
+#include "post_guard.h"
 
-class TScript;
+#include <list>
+
 class Host;
+class TScript;
+
 
 class ScriptUnit
 {
@@ -47,7 +51,7 @@ public:
     void                  stopAllTriggers();
     void                  uninstall( QString );
     void                  _uninstall( TScript * pChild, QString packageName );
-    qint64                getNewID();
+    int                     getNewID();
     QMutex                mScriptUnitLock;
     QList<TScript*>        uninstallList;
 
@@ -62,11 +66,9 @@ private:
     Host *                mpHost;
     QMap<int, TScript *>  mScriptMap;
     std::list<TScript *>  mScriptRootNodeList;
-    qint64                mMaxID;
+    int                     mMaxID;
 
 
 };
 
-
-#endif
-
+#endif // MUDLET_SCRIPTUNIT_H

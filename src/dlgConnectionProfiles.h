@@ -1,6 +1,10 @@
+#ifndef MUDLET_DLGCONNECTIONPROFILES_H
+#define MUDLET_DLGCONNECTIONPROFILES_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,14 +22,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef DLGCONNECTION_PROFILES_H
-#define DLGCONNECTION_PROFILES_H
-
-
-#include <QListWidgetItem>
-#include <QDir>
+#include "pre_guard.h"
 #include "ui_connection_profiles.h"
-
+#include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
 {
@@ -44,7 +43,6 @@ public:
 signals:
 
     void signal_establish_connection( QString profile_name, int historyVersion );
-    void update();
 
 public slots:
 
@@ -60,7 +58,6 @@ public slots:
     void slot_update_description();
 
     void slot_item_clicked( QListWidgetItem * );
-    void slot_update();
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
@@ -80,20 +77,15 @@ private:
     bool validPort;
     bool validateConnect();
 
-    QString            mOrigin;
-    QString            mUnsavedProfileName;
     QStringList        mProfileList;
-    bool               mEditOK;
     QPalette           mRegularPalette;
     QPalette           mOKPalette;
     QPalette           mErrorPalette;
     QPalette           mReadOnlyPalette;
-    QString            mCurrentProfileEditName;
     QPushButton *      connect_button;
     QLineEdit *        delete_profile_lineedit;
     QPushButton *      delete_button;
 
 };
 
-#endif
-
+#endif // MUDLET_DLGCONNECTIONPROFILES_H

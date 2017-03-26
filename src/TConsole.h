@@ -1,6 +1,10 @@
+#ifndef MUDLET_TCONSOLE_H
+#define MUDLET_TCONSOLE_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,72 +23,30 @@
  ***************************************************************************/
 
 
-
-
-#ifndef TCONSOLE_H
-#define TCONSOLE_H
-
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <QMainWindow>
-#include <QCloseEvent>
-//#include "ui_console.h"
-//#include <QtWebKit>
-#include <iostream>
-#include "ctelnet.h"
-#include "TCommandLine.h"
-#include <QPlainTextEdit>
-#include <QTextDocumentFragment>
-#include <QPoint>
 #include "TBuffer.h"
-#include "Host.h"
-#include "TLabel.h"
 
+#include "pre_guard.h"
+#include <QFile>
+#include <QTextStream>
+#include <QDataStream>
+#include <QWidget>
+#include "post_guard.h"
+
+#include <list>
+#include <map>
+
+class QCloseEvent;
+class QLineEdit;
+class QScrollBar;
+class QToolButton;
+
+class dlgMapper;
 class Host;
-class mudlet;
 class TTextEdit;
-class TBuffer;
+class TCommandLine;
 class TLabel;
 class TSplitter;
 class dlgNotepad;
-
-
-class TFontSpecsLogger
-{
-public:
-    TFontSpecsLogger(){ reset(); }
-    QString getFontWeight()
-    {
-        if(bold)
-        {
-            return QString("bold");
-        }
-        else return QString("normal");
-    }
-    QString getFontStyle(){ return (italics) ? QString("italics") : QString("normal");}
-    QString getFontDecoration(){ return (underline) ? QString("underline") : QString("normal");}
-    void reset()
-    {
-        bold = false;
-        italics = false;
-        underline = false;
-        m_bgColorHasChanged = false;
-        m_fgColorHasChanged = false;
-    }
-    void bg_color_change(){ m_bgColorHasChanged=true; }
-    void fg_color_change(){ m_fgColorHasChanged=true; }
-    QColor fgColor;
-    QColor fgColorLight;
-    QColor bgColor;
-    bool m_bgColorHasChanged;
-    bool m_fgColorHasChanged;
-    bool bold;
-    bool italics;
-    bool underline;
-
-};
 
 
 class TConsole : public QWidget
@@ -168,6 +130,7 @@ public:
       void              setLink( QString & linkText, QStringList & linkFunction, QStringList & linkHint );
       void              setItalics( bool );
       void              setUnderline( bool );
+      void              setStrikeOut( bool );
       void              finalize();
       void              runTriggers( int );
       void              showStatistics();
@@ -183,9 +146,7 @@ public:
       void              selectCurrentLine();
       bool              saveMap(QString location);
       bool              loadMap(QString location);
-      QString           logger_translate( QString & );
-      void              logger_set_text_properties( QString );
-      QString           assemble_html_font_specs();
+      bool              importMap( const QString, QString *errMsg = Q_NULLPTR );
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
 
       Host *            mpHost;
@@ -200,7 +161,6 @@ public:
       QWidget *         layer;
       QWidget *         layerCommandLine;
       QWidget *         layerEdit;
-      TFontSpecsLogger  m_LoggerfontSpecs;
       QColor            mBgColor;
       int               mButtonState;
       TBuffer           mClipboard;
@@ -277,7 +237,6 @@ public:
       QPoint            P_end;
       QString           profile_name;
       TSplitter *       splitter;
-      int               mLastBufferLogLine;
       bool              mIsPromptLine;
       QToolButton *     logButton;
       bool              mUserAgreedToCloseConsole;
@@ -298,8 +257,11 @@ public slots:
       void              slot_toggleReplayRecording();
       void              slot_stop_all_triggers( bool );
       void              slot_toggleLogging();
+    void                slot_reloadMap( QList<QString> );
+                        // Used by mudlet class as told by "Profile Preferences"
+                        // =>"Copy Map" in another profile to inform a list of
+                        // profiles - asynchronously - to load in an updated map
 
 };
 
-#endif
-
+#endif // MUDLET_TCONSOLE_H

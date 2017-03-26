@@ -1,6 +1,9 @@
+#ifndef MUDLET_DLGSEARCHAREA_H
+#define MUDLET_DLGSEARCHAREA_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,28 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef dlg_search_area_h
-#define dlg_search_area_h
 
+#include "pre_guard.h"
 #include "ui_extended_search_area.h"
-#include <QWidget>
+#include "post_guard.h"
 
 
-class dlgSearchArea : public QWidget , public Ui::extended_search_area
+class dlgSearchArea : public QWidget, public Ui::extended_search_area
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgSearchArea(QWidget *);
-    
-signals:
-    
-    
-public slots:
-    
-    
+
+public:
+    dlgSearchArea(QWidget *);
 };
 
-#endif
-
+#endif // MUDLET_DLGSEARCHAREA_H

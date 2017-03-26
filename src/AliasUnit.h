@@ -1,5 +1,9 @@
+#ifndef MUDLET_ALIASUNIT_H
+#define MUDLET_ALIASUNIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn (KoehnHeiko@googlemail.com)    *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,18 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _Alias_UNIT_H
-#define _Alias_UNIT_H
 
-#include "TAlias.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
 #include <QMutex>
-#include <QDataStream>
-#include <QTextBlock>
+#include <QMultiMap>
+#include <QString>
+#include "post_guard.h"
 
-class TAlias;
+#include <list>
+
 class Host;
+class TAlias;
+
 
 class AliasUnit
 {
@@ -48,8 +52,6 @@ public:
     void                            unregisterAlias( TAlias * pT );
     void                            uninstall( QString );
     void                            _uninstall( TAlias * pChild, QString packageName );
-//    bool                            serialize( QDataStream & );
-//    bool                            restore( QDataStream &, bool );
     void                            reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     bool                            processDataStream( QString & );
     void                            dump();
@@ -57,13 +59,13 @@ public:
     void                            stopAllTriggers();
     void                            reenableAllTriggers();
     QString                         assembleReport();
-    std::list<TAlias *>             mCleanupList;
-    qint64                          getNewID();
-    QMultiMap<QString, TAlias *>    mLookupTable;
-    QMutex                          mAliasUnitLock;
+    int                             getNewID();
     void                            markCleanup( TAlias * pT );
     void                            doCleanup();
 
+    QMultiMap<QString, TAlias *>    mLookupTable;
+    std::list<TAlias *>             mCleanupList;
+    QMutex                          mAliasUnitLock;
     int                             statsAliasTotal;
     int                             statsTempAliass;
     int                             statsActiveAliass;
@@ -92,10 +94,8 @@ private:
     Host *                          mpHost;
     QMap<int, TAlias *>             mAliasMap;
     std::list<TAlias *>             mAliasRootNodeList;
-    qint64                          mMaxID;
-    bool                  mModuleMember;
+    int                             mMaxID;
+    bool                            mModuleMember;
 };
 
-
-#endif
-
+#endif // MUDLET_ALIASUNIT_H

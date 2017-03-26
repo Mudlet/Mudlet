@@ -1,6 +1,9 @@
+#ifndef MUDLET_KEYUNIT_H
+#define MUDLET_KEYUNIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,17 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _KEY_UNIT_H
-#define _KEY_UNIT_H
 
-#include "TKey.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
+#include <QMap>
 #include <QMutex>
-#include <QDataStream>
+#include <QString>
+#include "post_guard.h"
 
-class TKey;
+#include <list>
+
 class Host;
+class TKey;
+
 
 class KeyUnit
 {
@@ -46,7 +50,7 @@ public:
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
     void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    qint64                getNewID();
+    int                  getNewID();
     QString               getKeyName( int keyCode, int modifier );
     void                  setupKeyNames();
     void                  uninstall( QString );
@@ -65,12 +69,10 @@ private:
     Host *                mpHost;
     QMap<int, TKey *>     mKeyMap;
     std::list<TKey *>     mKeyRootNodeList;
-    qint64                mMaxID;
+    int                 mMaxID;
     bool                  mModuleMember;
     QMap<int, QString>    mKeys;
 
 };
 
-
-#endif
-
+#endif // MUDLET_KEYUNIT_H

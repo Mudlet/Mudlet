@@ -1,0 +1,12 @@
+In QtCreator, in project view select "sources" item of project, right click,
+select "Add new...", select "C++ Class" and click "Choose...", fill out both
+pages of the C++ Class wizard (possibly renaming the putative non-unix C++
+class source file from a ".c++" suffix to ".cpp") then click on "Finish" to
+find a pair of files inserted in the project file and open for further
+editing with the contents of those respective template headers inserted at
+the top of the relevant file.
+
+To configure this go to QtCreator "Options" -> "C++" -> "File Naming" and
+browse for the template directory with the browser button on the bottom
+line "Licence Template:"
+

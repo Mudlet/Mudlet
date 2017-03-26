@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,20 +19,13 @@
  ***************************************************************************/
 
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <math.h>
-#include <QDataStream>
-#include <QRegExp>
-#include <QString>
-#include <QTextDocument>
 #include "TTimer.h"
+
+
 #include "Host.h"
-#include "HostManager.h"
 #include "mudlet.h"
 #include "TDebug.h"
+
 
 using namespace std;
 
@@ -244,22 +237,16 @@ bool TTimer::checkRestart()
 
 void TTimer::execute()
 {
-    if( ! isActive() || mIsFolder )
-    {
+    if( ! isActive() || mIsFolder ) {
         mpTimer->stop();
         return;
     }
 
-    if( mudlet::debugMode ) {TDebug(QColor(Qt::darkYellow),QColor(Qt::darkBlue)) << "\n[TIMER EXECUTES]: "<<mName<<" fired. Executing command="<<mCommand<<" and executing script:"<<mScript<<"\n" >> 0;}
-
-    if( mIsTempTimer )
-    {
-        if( mScript == "" )
-        {
+    if( mIsTempTimer ) {
+        if( mScript.isEmpty() ) {
             mpHost->mLuaInterpreter.call_luafunction( this );
         }
-        else
-        {
+        else {
             mpHost->mLuaInterpreter.compileAndExecuteScript( mScript );
         }
         mpTimer->stop();
@@ -267,41 +254,37 @@ void TTimer::execute()
         return;
     }
 
-    if( ( ! isFolder() && hasChildren() ) || ( isOffsetTimer() ) )
-    {
+    if( ( ! isFolder() && hasChildren() )
+     || ( isOffsetTimer() ) ) {
+
         typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
+        for( I it = mpMyChildrenList->begin();
+             it != mpMyChildrenList->end();
+             ++it ) {
+
             TTimer * pChild = *it;
-            if( pChild->isOffsetTimer() )
-            {
+            if( pChild->isOffsetTimer() ) {
                 pChild->enableTimer( pChild->getID() );
             }
         }
-        if( isOffsetTimer() )
-        {
+        if( isOffsetTimer() ) {
             disableTimer( mID );
             deactivate();
         }
     }
 
-    if( mCommand.size() > 0 )
-    {
+    if( ! mCommand.isEmpty() ) {
         mpHost->send( mCommand );
     }
 
-    if( mScript.size() > 0 )
-    {
-        if( mNeedsToBeCompiled )
-        {
-            if( ! compileScript() )
-            {
+    if( ! mScript.isEmpty() ) {
+        if( mNeedsToBeCompiled ) {
+            if( ! compileScript() ) {
                 disableTimer();
                 return;
             }
         }
-        if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) )
-        {
+        if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) ) {
             mpTimer->stop();
         }
     }
@@ -326,7 +309,7 @@ bool TTimer::canBeUnlocked( TTimer * pChild )
 
 }
 
-void TTimer::enableTimer( qint64 id )
+void TTimer::enableTimer( int id )
 {
 
     if( mID == id )
@@ -362,7 +345,7 @@ void TTimer::enableTimer( qint64 id )
     }
 }
 
-void TTimer::disableTimer( qint64 id )
+void TTimer::disableTimer( int id )
 {
     if( mID == id )
     {
@@ -474,30 +457,4 @@ void TTimer::killTimer()
 {
     deactivate();
     mpTimer->stop();
-}
-
-
-TTimer& TTimer::clone(const TTimer & b)
-{
-    mName = b.mName;
-    mScript = b.mScript;
-    mTime = b.mTime;
-    mCommand = b.mCommand;
-    mIsFolder = b.mIsFolder;
-    mpHost = b.mpHost;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    mIsTempTimer = b.mIsTempTimer;
-    return *this;
-}
-
-bool TTimer::isClone( TTimer & b ) const
-{
-    return( mName == b.mName
-            && mScript == b.mScript
-            && mTime == b.mTime
-            && mCommand == b.mCommand
-            && mIsFolder == b.mIsFolder
-            && mpHost == b.mpHost
-            && mNeedsToBeCompiled == b.mNeedsToBeCompiled
-            && mIsTempTimer == b.mIsTempTimer );
 }

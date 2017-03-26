@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,15 +18,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
+
 #include "TTreeWidget.h"
-#include <QtGui>
+
+
 #include "Host.h"
-#include "HostManager.h"
-#include "TDebug.h"
 #include "LuaInterface.h"
+#include "TTimer.h"
 #include "VarUnit.h"
+
+#include "pre_guard.h"
+#include <QtEvents>
+#include <QHeaderView>
+#include <QTreeWidget>
+#include "post_guard.h"
+
 
 TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
 {
@@ -224,7 +230,6 @@ void TTreeWidget::rowsAboutToBeRemoved( const QModelIndex & parent, int start, i
                 mChildID = 0;
         }
     }
-    //QTreeWidget::rowsAboutToBeRemoved( parent, start, end );
 }
 
 
@@ -263,22 +268,22 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
                 {
                     if( pTChild->shouldBeActive() )
                     {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-on.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                     else
                     {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-off.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
                 else
                 {
                     if( pTChild->shouldBeActive() )
                     {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png") ), QIcon::Normal, QIcon::Off );
                     }
                     else
                     {
-                        icon.addPixmap(QPixmap(QString::fromUtf8(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png") ), QIcon::Normal, QIcon::Off );
                     }
                 }
                 QTreeWidgetItem * pParent = itemFromIndex( parent );
@@ -355,7 +360,6 @@ void TTreeWidget::dropEvent(QDropEvent *event)
         QTreeWidgetItem * oldpItem = cItem->parent();
         if ( ! lI->reparentVariable( newpItem, cItem, oldpItem ) )
         {
-            qDebug()<<"reparent failed";
             event->setDropAction( Qt::IgnoreAction );
             event->ignore();
         }
@@ -383,5 +387,3 @@ bool TTreeWidget::dropMimeData ( QTreeWidgetItem * parent, int index, const QMim
 {
     return QTreeWidget::dropMimeData( parent, index, data, action );
 }
-
-

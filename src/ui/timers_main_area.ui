@@ -84,7 +84,16 @@
       <property name="spacing">
        <number>0</number>
       </property>
-      <property name="margin">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
@@ -433,6 +442,9 @@
           <pointsize>30</pointsize>
          </font>
         </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;second&lt;/span&gt; interval that the timer will go off at&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="whatsThis">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;second&lt;/span&gt; interval that the timer will go off at&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
@@ -553,6 +565,9 @@
          <font>
           <pointsize>30</pointsize>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;milisecond&lt;/span&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="whatsThis">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style=&quot; font-weight:600;&quot;&gt;milisecond&lt;/span&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

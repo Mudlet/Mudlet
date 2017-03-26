@@ -1,0 +1,34 @@
+language: cpp
+os:
+  - osx
+  - linux
+compiler:
+  - gcc
+  - clang
+env:
+  - Q_OR_C_MAKE=qmake
+  - Q_OR_C_MAKE=cmake
+matrix:
+# Something goes wrong internally in Qt (5.0.2) for CMake Clang builds on Linux
+    allow_failures:
+    - os: linux
+      compiler: clang
+      env: Q_OR_C_MAKE=cmake
+
+before_install: ./CI/travis.before_install.sh
+install: ./CI/travis.install.sh
+before_script:
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
+  - mkdir build
+  - cd src
+script:
+  - cd ../build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
+  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ../src/src.pro && make -j2; else cmake --version; cmake .. && make -j2; fi
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/4ed233d9013d611a1568
+    on_success: always  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: false     # default: false

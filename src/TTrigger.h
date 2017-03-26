@@ -1,10 +1,10 @@
-
-#ifndef _TRIGGER_H_
-#define _TRIGGER_H_
+#ifndef MUDLET_TTRIGGER_H
+#define MUDLET_TTRIGGER_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,22 +23,23 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QString>
-#include <QColor>
-
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
-#include "TMatchState.h"
+
+#include "pre_guard.h"
+#include <QApplication>
+#include <QColor>
+#include <QMap>
+#include "post_guard.h"
+
 #include <pcre.h>
-//#include <QSound>
+
+#include <map>
+#include <string>
+
+class Host;
+class TLuaInterpreter;
+class TMatchState;
+
 
 #define REGEX_SUBSTRING 0
 #define REGEX_PERL 1
@@ -64,7 +65,7 @@ struct TColorTable
 
 class TTrigger : public Tree<TTrigger>
 {
-
+    Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -75,7 +76,6 @@ public:
     virtual          ~TTrigger();
                      TTrigger( TTrigger * parent, Host * pHost );
                      TTrigger( QString name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host * pHost ); //throws exeption ExObjNoCreate
-                     TTrigger & clone( const TTrigger & );
                       //TTrigger & TTrigger( const TTrigger & ); //assignment operator not needed by now
                       //TTrigger( const TTrigger & ); //copyconstructor not needed so far all members have copyconstructors
     QString          getCommand()                    { return mCommand; }
@@ -127,8 +127,6 @@ public:
     int              getConditionLineDelta() { return mConditionLineDelta; }
     bool             registerTrigger();
     void             setSound( QString file ){ mSoundFile = file; }
-    bool             serialize( QDataStream & );
-    bool             restore( QDataStream & fs, bool );
     bool             setupColorTrigger( int, int );
     bool             setupTmpColorTrigger( int ansiFg, int ansiBg );
     TColorTable*     createColorPattern(int, int);
@@ -147,7 +145,6 @@ public:
     int              mColorTriggerFgAnsi;
     int              mColorTriggerBgAnsi;
     int              mKeepFiring;
-    bool             isClone( TTrigger & ) const;
     Host *           mpHost;
     QString                                mName;
     bool                                   mIsTempTrigger;
@@ -156,7 +153,7 @@ public:
     bool            mModuleMasterFolder;
 private:
 
-                                           TTrigger(){};
+                                           TTrigger(){}
     void                                   updateMultistates( int regexNumber,
                                                               std::list<std::string> & captureList,
                                                               std::list<int> & posList );
@@ -191,5 +188,4 @@ private:
 
 };
 
-#endif
-
+#endif // MUDLET_TTRIGGER_H

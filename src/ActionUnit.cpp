@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,20 +19,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cstddef> // NULL
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "Host.h"
-#include "TLuaInterpreter.h"
-#include <QDebug>
+
 #include "ActionUnit.h"
+
+
+#include "Host.h"
 #include "mudlet.h"
+#include "TAction.h"
+#include "TCommandLine.h"
+#include "TConsole.h"
+#include "TEasyButtonBar.h"
+#include "TToolBar.h"
+
 
 using namespace std;
 
@@ -283,7 +282,7 @@ void ActionUnit::removeAction( TAction * pT )
 }
 
 
-qint64 ActionUnit::getNewID()
+int ActionUnit::getNewID()
 {
     return ++mMaxID;
 }
@@ -293,10 +292,8 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        qDebug()<<"ActionUnit::getToolBarList(): Action name:"<<(*it)->getName();
         if( (*it)->mPackageName.size() > 0 )
         {
-            qDebug()<<"ActionUnit::getToolBarList(): ACTION PACKAGE found! name:"<<(*it)->mPackageName;
             typedef list<TAction *>::iterator I3;
             for( I3 it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
@@ -324,7 +321,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
                 {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar( *it3, mudlet::self(), pTB );
+                constructToolbar( *it3, pTB );
                 (*it3)->mpToolBar = pTB;
                 pTB->setStyleSheet( pTB->mpTAction->css );
             }
@@ -354,7 +351,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar( *it, mudlet::self(), pTB );
+        constructToolbar( *it, pTB );
         (*it)->mpToolBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
@@ -367,11 +364,9 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
     typedef list<TAction *>::iterator I;
     for( I it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        qDebug()<<"ActionUnit::getEasyButtonBarList(): Action name:"<<(*it)->getName();
 
         if( (*it)->mPackageName.size() > 0 )
         {
-            qDebug()<<"ActionUnit::getEasyButtonBarList(): ACTION PACKAGE found! name:"<<(*it)->mPackageName;
             typedef list<TAction *>::iterator I3;
             for( I3 it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
@@ -401,7 +396,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
                 {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar( *it3, mudlet::self(), pTB );
+                constructToolbar( *it3, pTB );
                 (*it3)->mpEasyButtonBar = pTB;
                 pTB->setStyleSheet( pTB->mpTAction->css );
             }
@@ -433,7 +428,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar( *it, mudlet::self(), pTB );
+        constructToolbar( *it, pTB );
         (*it)->mpEasyButtonBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
@@ -490,7 +485,7 @@ void ActionUnit::hideToolBar( QString & name )
 
 }
 
-void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
+void ActionUnit::constructToolbar( TAction * pA, TToolBar * pTB )
 {
     pTB->clear();
     if( ( pA->mLocation != 4 ) || ( ! pA->isActive() ) )
@@ -502,7 +497,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
 
     if( pA->mLocation == 4 )
     {
-        pA->expandToolbar( pMainWindow, pTB, 0 );
+        pA->expandToolbar( pTB );
         pTB->setTitleBarWidget( 0 );
     }
     /*else
@@ -556,7 +551,7 @@ TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
     return 0;
 }
 
-void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButtonBar * pTB )
+void ActionUnit::constructToolbar( TAction * pA, TEasyButtonBar * pTB )
 {
     pTB->clear();
     if( pA->mLocation == 4 ) return; //floating toolbars are handled differently
@@ -566,7 +561,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
         return;
     }
 
-    pA->expandToolbar( pMainWindow, pTB, 0 );
+    pA->expandToolbar( pTB );
     pTB->finalize();
     if( pA->mOrientation == 0 )
         pTB->setHorizontalOrientation();
@@ -588,9 +583,6 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
 
 void ActionUnit::updateToolbar()
 {
-    qDebug()<<"ActionUnit::updateToolBar()";
     getToolBarList();
     getEasyButtonBarList();
 }
-
-

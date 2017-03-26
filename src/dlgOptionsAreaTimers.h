@@ -1,6 +1,9 @@
+#ifndef MUDLET_DLGOPTIONSAREATIMERS_H
+#define MUDLET_DLGOPTIONSAREATIMERS_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,28 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _dlgOptionsAreaTimers_h
-#define _dlgOptionsAreaTimers_h
 
+#include "pre_guard.h"
 #include "ui_options_area_timers.h"
-#include <QWidget>
-#include "TTimer.h"
+#include "post_guard.h"
 
-class dlgOptionsAreaTimers: public QWidget , public Ui::options_area_timers
+
+class dlgOptionsAreaTimers : public QWidget, public Ui::options_area_timers
 {
-Q_OBJECT
-      
+    Q_OBJECT
+
 public:
-        
-        dlgOptionsAreaTimers(QWidget *);
-    
-signals:
-    
-    
-public slots:
-    
-    
+    dlgOptionsAreaTimers(QWidget *);
 };
 
-#endif
-
+#endif // MUDLET_DLGOPTIONSAREATIMERS_H

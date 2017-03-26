@@ -1,10 +1,9 @@
-#ifndef TLABEL_H
-#define TLABEL_H
-
+#ifndef MUDLET_TLABEL_H
+#define MUDLET_TLABEL_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,12 +21,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "mudlet.h"
-#include "Host.h"
-#include <QLabel>
-#include "TEvent.h"
 
+#include "pre_guard.h"
+#include <QLabel>
+#include <QString>
+#include "post_guard.h"
+
+class Host;
 class TEvent;
+
+class QMouseEvent;
+
 
 class TLabel : public QLabel
 {
@@ -51,13 +55,6 @@ TEvent *          mpParameters;
 TEvent *          mLeaveParams;
 TEvent *          mEnterParams;
 bool              mouseInside;
-public slots:
-
-signals:
-
-
 };
 
-
-
-#endif // TLABEL_H
+#endif // MUDLET_TLABEL_H

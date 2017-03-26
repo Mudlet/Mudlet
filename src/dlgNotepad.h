@@ -1,5 +1,9 @@
+#ifndef MUDLET_DLGNOTEPAD_H
+#define MUDLET_DLGNOTEPAD_H
+
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,26 +21,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _dlg_notepad_h
-#define _dlg_notepad_h
+
+#include "pre_guard.h"
+#include "ui_notes_editor.h"
+#include "post_guard.h"
 
 class Host;
 
-#include "ui_notes_editor.h"
 
-
-
-class dlgNotepad : public QMainWindow , public Ui::NotesEditor
+class dlgNotepad : public QMainWindow, public Ui::NotesEditor
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
-
-        dlgNotepad( Host * );
-        void save();
-        void restore();
-        Host * mpHost;
+    dlgNotepad( Host * );
+    void save();
+    void restore();
+    Host * mpHost;
 };
 
-#endif
-
+#endif // MUDLET_DLGNOTEPAD_H

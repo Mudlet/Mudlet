@@ -1,6 +1,10 @@
+#ifndef MUDLET_MUDLET_H
+#define MUDLET_MUDLET_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,35 +23,37 @@
  ***************************************************************************/
 
 
-
-#ifndef MUDLET_H
-#define MUDLET_H
-
-#include <QMainWindow>
-#include <QCloseEvent>
-//#include "ui_console.h"
-#include "TConsole.h"
-#include "mudlet.h"
-#include "ctelnet.h"
 #include "HostManager.h"
-#include <map>
-#include <QMap>
-#include "Host.h"
-#include <QMdiArea>
-#include "TConsole.h"
+
+#include "pre_guard.h"
 #include "ui_main_window.h"
+#include <QFlags>
+#include <QMainWindow>
+#include <QMap>
 #include <QMediaPlayer>
+#include <QQueue>
+#include <QTime>
+#include <QTextOption>
+#include "post_guard.h"
+
+#include <assert.h>
 
 class QAction;
+class QCloseEvent;
 class QMenu;
+class QListWidget;
+class QPushButton;
+class QTableWidget;
+class QTableWidgetItem;
 class QTextEdit;
-class EAction;
+class QTimer;
+
+class Host;
 class TConsole;
+class TEvent;
 class TLabel;
+class TTimer;
 class dlgIRC;
-
-
-
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow
@@ -87,7 +93,7 @@ public:
    bool                          pasteWindow( Host * pHost, QString & name );
    bool                          setBackgroundColor( Host *, QString & name, int r, int g, int b, int alpha );
    bool                          setBackgroundImage( Host *, QString & name, QString & path );
-   bool                          setTextFormat( Host *, QString & name, int, int, int, int, int, int, bool, bool, bool );
+   bool                          setTextFormat( Host *, QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
    bool                          setLabelClickCallback( Host *, QString &, QString &, TEvent * );
    bool                          setLabelOnEnter( Host *, QString &, QString &, TEvent * );
    bool                          setLabelOnLeave( Host *, QString &, QString &, TEvent * );
@@ -101,6 +107,7 @@ public:
    void                          setLink( Host * pHost, QString & name, QString & linkText, QStringList & linkFunction, QStringList & );
    void                          setItalics( Host *, QString & name, bool );
    void                          setUnderline( Host *, QString & name, bool );
+   void                          setStrikeOut( Host *, QString & name, bool );
    void                          setFgColor( Host *, QString & name, int, int, int );
    void                          setBgColor( Host *, QString & name, int, int, int );
    bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
@@ -157,7 +164,29 @@ public:
    QMediaPlayer *                mpMusicBox4;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
+   QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
+                                                    // only ::ShowTabsAndSpaces
+                                                    // and ::ShowLineAndParagraphSeparators
+                                                    // are considered/used/stored
+   void                         setEditorTextoptions( const bool, const bool );
 
+   enum StatusBarOption {
+       statusBarHidden = 0x0,     // Currently not on display
+       statusBarAutoShown = 0x1,  // Currently shown but to hide as soon as there is no text to display
+       statusBarAlwaysShown = 0x2
+   };
+
+   Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
+   StatusBarOptions             mStatusBarState;
+
+   void                         requestProfilesToReloadMaps( QList<QString> );
+                                // Used by a profile to tell the mudlet class
+                                // to tell other profiles to reload the updated
+                                // maps (via signal_profileMapReloadRequested(...))
+
+    const bool                  getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
+    void                        setAuditErrorsToConsoleEnabled( const bool state ) { mIsToDisplayMapAuditErrorsToConsole = state; }
+    void                        createMapper( bool isToLoadDefaultMapFile = true );
 
 
 public slots:
@@ -205,6 +234,11 @@ protected:
 
    void                          closeEvent(QCloseEvent *event);
 
+signals:
+
+   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
+   void                         signal_profileMapReloadRequested( QList<QString> );
+
 private slots:
 
    void                          slot_close_profile();
@@ -217,7 +251,9 @@ private slots:
    void                          show_timer_dialog();
    void                          show_action_dialog();
    void                          show_key_dialog();
+   void                          show_variable_dialog();
    void                          show_options_dialog();
+   void                         slot_statusBarMessageChanged( QString );
 
 private:
 
@@ -255,7 +291,12 @@ private:
    QPushButton *                 moduleInstallButton;
    QPushButton *                 moduleHelpButton;
 
+   QStatusBar *                 mpMainStatusBar;
+
+   bool                         mIsToDisplayMapAuditErrorsToConsole;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 
 class TConsoleMonitor : public QObject
  {
@@ -265,7 +306,4 @@ class TConsoleMonitor : public QObject
      bool eventFilter(QObject *obj, QEvent *event);
  };
 
-
-
-#endif
-
+#endif // MUDLET_MUDLET_H

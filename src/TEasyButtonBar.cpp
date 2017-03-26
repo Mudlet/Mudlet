@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,12 +19,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QWidget>
-#include <QtGui>
-#include "Host.h"
-#include "HostManager.h"
+
 #include "TEasyButtonBar.h"
-#include "mudlet.h"
+
+#include "Host.h"
+#include "TAction.h"
+#include "TConsole.h"
+#include "TFlipButton.h"
+
+#include "pre_guard.h"
+#include <QDebug>
+#include <QGridLayout>
+#include "post_guard.h"
+
 
 TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
 : QWidget( pW )
@@ -123,11 +131,12 @@ void TEasyButtonBar::addButton( TFlipButton * pB )
         pB->move( pB->mpTAction->mPosX, pB->mpTAction->mPosY );
     }
 
-    connect( pB, SIGNAL(released()), this, SLOT(slot_pressed()) );
+
+    // Was using released() signal but now we want to track the ACTUAL state of
+    // the underlying QAbstractButton
+    connect( pB, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
     mButtonList.push_back( pB );
-    pB->setChecked( (pB->mpTAction->mButtonState==2) );
-
-
+    pB->setChecked( pB->mpTAction->mButtonState );
 }
 
 
@@ -155,7 +164,9 @@ void TEasyButtonBar::finalize()
     }
 }
 
-void TEasyButtonBar::slot_pressed()
+// Used by buttons directly on an TEasyButtonBar instance - we now retrieve the
+// button state to ensure the visible representation is used.
+void TEasyButtonBar::slot_pressed(const bool isChecked)
 {
     TFlipButton * pB = dynamic_cast<TFlipButton *>( sender() );
     if( ! pB )
@@ -164,33 +175,38 @@ void TEasyButtonBar::slot_pressed()
     }
 
     TAction * pA = pB->mpTAction;
+
+    // NOTE: This function blocks until an item is selected from the menu, and,
+    // as the action to "pop-up" the menu is the same as "buttons" use to
+    // perform their command/scripts is why "commands" are (no longer) permitted
+    // on a "menu".  It also means that the script for a "menu" is run every
+    // time it is "clicked" upon to display the pop-up containing the menu
+    // entries...
     pB->showMenu();
 
-    if( pA->mButtonState == 2 )
+    if( pA->mIsPushDownButton )
     {
-        pA->mButtonState = 1;
-        pB->setChecked( false );
+        // DO NOT MANIPULATE THE BUTTON STATE OURSELF NOW
+        pA->mButtonState = isChecked;
+        pA->mpHost->mpConsole->mButtonState = ( pA->mButtonState ? 2 : 1 );
     }
     else
     {
-        pA->mButtonState = 2;
-        pB->setChecked( true );
+        pA->mButtonState = false; // Forces a fixup if not correct
+        pB->setChecked( false ); // This does NOT invoke the clicked() signal!
+        pA->mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
     }
-    if( pB->isChecked() )
-        pA->mpHost->mpConsole->mButtonState = 1;
-    else
-        pA->mpHost->mpConsole->mButtonState = 0;
-    QStringList sL;
-    pA->_execute( sL );
+
+    pA->execute();
 }
 
 void TEasyButtonBar::clear()
 {
     QWidget * pW = new QWidget;
-       typedef std::list<TFlipButton *>::iterator IT;
+    typedef std::list<TFlipButton *>::iterator IT;
     for( IT it = mButtonList.begin(); it != mButtonList.end(); it++ )
     {
-        disconnect( *it, SIGNAL(released()), this, SLOT(slot_pressed()) );
+        disconnect( *it, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
     }
     mButtonList.clear();
     mpWidget->deleteLater();
@@ -223,5 +239,3 @@ void TEasyButtonBar::clear()
     mpWidget->setStyleSheet( mpTAction->css );
 
 }
-
-

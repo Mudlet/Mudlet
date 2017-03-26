@@ -1,6 +1,10 @@
+#ifndef MUDLET_TROOM_H
+#define MUDLET_TROOM_H
+
 /***************************************************************************
- *   Copyright (C) 2012 by Heiko Koehn (KoehnHeiko@googlemail.com)         *
- *                                                                         *
+ *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2015 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,13 +23,16 @@
  ***************************************************************************/
 
 
-#ifndef TROOM_H
-#define TROOM_H
+#include "TMap.h"
 
-#include <QVector3D>
-#include <QMap>
+#include "pre_guard.h"
+#include <QApplication>
 #include <QColor>
-//#include "TRoomDB.h"
+#include <QMap>
+#include <QVector3D>
+#include <QHash>
+#include "post_guard.h"
+
 
 #define DIR_NORTH 1
 #define DIR_NORTHEAST 2
@@ -39,6 +46,7 @@
 #define DIR_DOWN 10
 #define DIR_IN 11
 #define DIR_OUT 12
+#define DIR_OTHER 13
 
 class XMLimport;
 class XMLexport;
@@ -46,29 +54,36 @@ class TRoomDB;
 
 class TRoom
 {
+    Q_DECLARE_TR_FUNCTIONS(TRoom) // Needed so we can use tr() even though TRoom is NOT derived from QObject
+
 public:
-    TRoom(TRoomDB* pRDB);
+    TRoom( TRoomDB* pRDB );
     ~TRoom();
-    void setId(int);
-    //bool setExit( int to , int dir);
-    bool hasExit(int _id);
+    void setId( int );
+    bool setExit( int to, int direction );
+    int getExit( int direction );
+    QHash<int, int> getExits();
+    bool hasExit( int direction );
     void setWeight( int );
     void setExitLock( int, bool );
-    void setSpecialExitLock(int to, QString cmd, bool doLock);
-    bool hasExitLock(int to);
+    void setSpecialExitLock( int to, QString cmd, bool doLock );
+    bool setSpecialExitLock( QString cmd, bool doLock );
+    bool hasExitLock( int to );
     bool hasSpecialExitLock( int, QString );
     void removeAllSpecialExitsToRoom(int _id );
-    void addSpecialExit( int to, QString cmd );
-    void clearSpecialExits() { other.clear(); }
+    void setSpecialExit( int to, QString cmd );
+    void clearSpecialExits();
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
     const QMap<QString, int> & getExitWeights() const { return exitWeights; }
-    void setExitWeight(QString cmd, int w );
-    void setDoor( QString cmd, int doorStatus );//0=no door, 1=open door, 2=closed, 3=locked
-    int hasExitStub(int direction);
-    void setExitStub(int direction, int status);
+    void setExitWeight( QString cmd, int w );
+    bool hasExitWeight( QString cmd );
+    const bool setDoor( const QString cmd, const int doorStatus ); //0=no door, 1=open door, 2=closed, 3=locked
+    int getDoor( QString cmd );
+    bool hasExitStub( int direction );
+    void setExitStub( int direction, bool status );
     void calcRoomDimensions();
-    void setArea(int _areaID);
-    int getExitWeight(QString cmd);
+    int getExitWeight( QString cmd );
+    bool setArea( int , bool isToDeferAreaRelatedRecalculations = false );
 
     int getWeight() { return weight; }
     int getNorth() { return north; }
@@ -97,8 +112,18 @@ public:
     void setOut( int id ) { out=id; }
     int getId() { return id; }
     int getArea() { return area; }
-    void auditExits();
+    void audit( const QHash<int, int>, const QHash<int, int> );
+    void auditExits( const QHash<int, int> );
     /*bool*/ void restore( QDataStream & ifs, int roomID, int version );
+    void auditExit( int &, const int, const QString, const QString, const QString,
+                    QMap<QString, int> &, QSet<int> &, QSet<int> &,
+                    QMap<QString, int> &, QMap<QString, QList<QPointF> > &,
+                    QMap<QString, QList<int> > &, QMap<QString, QString> &,
+                    QMap<QString, bool> &,
+                    const QHash<int, int> );
+    const QString dirCodeToDisplayName( const int dirCode );
+
+
     int x;
     int y;
     int z;
@@ -145,6 +170,7 @@ private:
     int in;
     int out;
 
+    // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
     QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
                                    //verbotene exits werden mit 0 geprefixed, offene mit 1
 
@@ -153,5 +179,4 @@ private:
     friend class XMLexport;
 };
 
-#endif // TROOM_H
-
+#endif // MUDLET_TROOM_H

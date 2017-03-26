@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,21 +18,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <cstddef> // NULL
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "Host.h"
-#include "TLuaInterpreter.h"
-#include "TConsole.h"
 
-#include <QDebug>
 #include "AliasUnit.h"
+
+#include "Host.h"
+#include "TAlias.h"
+#include "TLuaInterpreter.h"
+
+#include "pre_guard.h"
+#include <QStringList>
+#include "post_guard.h"
+
 
 using namespace std;
 
@@ -262,7 +258,7 @@ void AliasUnit::removeAlias( TAlias * pT )
 }
 
 
-qint64 AliasUnit::getNewID()
+int AliasUnit::getNewID()
 {
     return ++mMaxID;
 }
@@ -313,17 +309,6 @@ void AliasUnit::reenableAllTriggers()
         pChild->enableFamily();
     }
 }
-
-//bool AliasUnit::serialize( QDataStream & ofs )
-//{
-//    return true;
-//}
-
-
-//bool AliasUnit::restore( QDataStream & ifs, bool initMode )
-//{
-//    return true;
-//}
 
 TAlias * AliasUnit::findAlias( QString & name )
 {
@@ -480,9 +465,3 @@ void AliasUnit::markCleanup( TAlias * pT )
     }
     mCleanupList.push_back( pT );
 }
-
-
-
-
-
-

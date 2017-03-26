@@ -1,6 +1,10 @@
+#ifndef MUDLET_TTEXTEDIT_H
+#define MUDLET_TTEXTEDIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,25 +22,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _T_TEXTEDIT_H
-#define _T_TEXTEDIT_H
 
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <iostream>
-//#include <strstream>
-
+#include "pre_guard.h"
 #include <QMap>
-#include <QString>
-#include <QScrollBar>
 #include <QTime>
-#include "mudlet.h"
-#include "TBuffer.h"
+#include <QWidget>
+#include "post_guard.h"
+
+#include <string>
 
 class Host;
+class TBuffer;
 class TConsole;
+
+class QScrollBar;
+class QString;
+
 
 class TTextEdit : public QWidget
 {
@@ -63,6 +64,7 @@ public:
                                       bool isBold,
                                       bool isUnderline,
                                       bool isItalics,
+                                      bool isStrikeOut,
                                       QColor & fgColor,
                                       QColor & bgColor );
     std::string       getCurrentTime();
@@ -158,5 +160,4 @@ private:
 
 };
 
-#endif
-
+#endif // MUDLET_TTEXTEDIT_H

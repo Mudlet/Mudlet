@@ -1,7 +1,10 @@
-#ifndef DLGMAPPER_H
-#define DLGMAPPER_H
+#ifndef MUDLET_DLGMAPPER_H
+#define MUDLET_DLGMAPPER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,15 +23,12 @@
  ***************************************************************************/
 
 
-class Host;
-
+#include "pre_guard.h"
 #include "ui_mapper.h"
-#include <QMainWindow>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QDir>
+#include <QMainWindow>
+#include "post_guard.h"
 
-#include <QProgressDialog>
 
 class Host;
 class TMap;
@@ -40,13 +40,13 @@ Q_OBJECT
 
 public:
         dlgMapper( QWidget *, Host *, TMap * );
-        void downloadMap();
         void updateAreaComboBox();
+    void                setDefaultAreaShown( const bool );
+    bool                getDefaultAreaShown() { return mShowDefaultArea; }
+    void                resetAreaComboBoxToPlayerRoomArea();
+
         TMap * mpMap;
         Host * mpHost;
-        QNetworkAccessManager * mpDownloader;
-        QProgressDialog * mpProgressDialog;
-        QNetworkReply * mpReply;
 
 
 public slots:
@@ -56,13 +56,13 @@ public slots:
         void slot_toggleStrongHighlight( int v );
         void show2dView();
         void slot_togglePanel();
-        void setDownloadProgress( qint64, qint64 );
-        void cancel();
-        void replyFinished( QNetworkReply * );
         void goRoom();
         void choseRoom( QListWidgetItem * );
         void slot_roomSize(int d);
         void slot_lineSize(int d);
+
+private:
+    bool                mShowDefaultArea;
 };
 
-#endif // DLGMAPPER_H
+#endif // MUDLET_DLGMAPPER_H

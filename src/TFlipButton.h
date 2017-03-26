@@ -1,47 +1,60 @@
-#ifndef TFLIPBUTTON_H
-#define TFLIPBUTTON_H
+#ifndef MUDLET_TFLIPBUTTON_H
+#define MUDLET_TFLIPBUTTON_H
 
-#include "TToolBar.h"
-#include "TEasyButtonBar.h"
+/***************************************************************************
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+
+#include "pre_guard.h"
 #include <QPushButton>
-#include <QStyleOptionButton>
+#include "post_guard.h"
 
-class TAction;
 class Host;
-class TToolBar;
-class TEasyButtonBar;
+class TAction;
 
 class TFlipButton : public QPushButton
 {
 public:
-    TFlipButton( TToolBar *, TAction *, int, Host * );
-    TFlipButton( TEasyButtonBar *, TAction *, int, Host * );
-    TFlipButton( const QString & text, QWidget* parent = 0);
-    TFlipButton( const QIcon & icon, const QString & text, QWidget * parent = 0 );
-    
+    TFlipButton( TAction *, Host * );
+
     Qt::Orientation orientation() const;
-    void setOrientation( Qt::Orientation orientation );
-    
-    bool mirrored() const;
-    void setMirrored( bool mirrored );
-    
-    QSize sizeHint() const;
-    QSize minimumSizeHint() const;
-    
+    void            setOrientation( Qt::Orientation orientation );
+
+    bool            mirrored() const;
+    void            setMirrored( bool mirrored );
+
+    QSize           sizeHint() const;
+    QSize           minimumSizeHint() const;
+
 protected:
-    
-    void paintEvent( QPaintEvent * event );
-    
+    void            paintEvent( QPaintEvent * );
+
 public:
-    
-    QStyleOptionButton getStyleOption() const;
-    void init();
-    
+    QStyleOptionButton  getStyleOption() const;
+
+    TAction *       mpTAction;
+    int             mID;
+    Host *          mpHost;
     Qt::Orientation mOrientation;
-    bool mMirrored;
-    TAction * mpTAction;
-    int mID;
-    Host * mpHost;
+    bool            mMirrored;
 };
 
-#endif
+#endif // MUDLET_TFLIPBUTTON_H

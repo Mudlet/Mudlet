@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,21 +19,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QtUiTools>
+
 #include "dlgConnectionProfiles.h"
+
+
 #include "Host.h"
 #include "HostManager.h"
+#include "LuaInterface.h"
 #include "mudlet.h"
 #include "XMLimport.h"
+
+#include "pre_guard.h"
 #include <QFileDialog>
+#include <QInputDialog>
+#include <QMessageBox>
 #include <QPainter>
-#include "LuaInterface.h"
+#include <QtUiTools>
+#include "post_guard.h"
+
 
 #define _DEBUG_
 
-dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
+dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
+: QDialog( parent )
+, mProfileList( QStringList() )
+, connect_button( Q_NULLPTR )
+, delete_profile_lineedit( Q_NULLPTR )
+, delete_button( Q_NULLPTR )
 {
     setupUi( this );
 
@@ -43,9 +56,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     profiles_tree_widget->setSelectionMode( QAbstractItemView::SingleSelection );
 
     QAbstractButton * abort = dialog_buttonbox->button( QDialogButtonBox::Cancel );
-    abort->setIcon(QIcon(":/icons/dialog-close.png"));
+    abort->setIcon( QIcon( QStringLiteral( ":/icons/dialog-close.png" ) ) );
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    connect_button->setIcon(QIcon(":/icons/dialog-ok-apply.png"));
+    connect_button->setIcon( QIcon( QStringLiteral( ":/icons/dialog-ok-apply.png" ) ) );
 
     connect( connect_button, SIGNAL(clicked()), this, SLOT(accept()));
     connect( abort, SIGNAL(clicked()), this, SLOT(slot_cancel()));
@@ -60,14 +73,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent) : QDialog(parent)
     connect( login_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_login(const QString)));
     connect( character_password_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_pass(const QString)));
     connect( mud_description_textedit, SIGNAL(textChanged()), this, SLOT(slot_update_description()));
-    connect( this, SIGNAL( update() ), this, SLOT( slot_update() ) );
-    connect( profiles_tree_widget, SIGNAL( itemClicked( QListWidgetItem * ) ), this, SLOT( slot_item_clicked( QListWidgetItem * )));
+    connect( profiles_tree_widget, SIGNAL( currentItemChanged( QListWidgetItem *, QListWidgetItem * ) ), this, SLOT( slot_item_clicked( QListWidgetItem * )));
     connect( profiles_tree_widget, SIGNAL( itemDoubleClicked( QListWidgetItem * ) ), this, SLOT ( accept() ) );
 
     // website_entry atm is only a label
     //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
-    profile_name_entry->setReadOnly(true);
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();
@@ -119,7 +130,7 @@ void dlgConnectionProfiles::slot_update_description()
     {
         QString profile = pItem->text();
         QString desc = mud_description_textedit->toPlainText();
-        writeProfileData( profile, "description", desc );
+        writeProfileData( profile, QStringLiteral( "description" ), desc );
     }
 }
 
@@ -129,7 +140,7 @@ void dlgConnectionProfiles::slot_update_website( const QString url )
     if( pItem )
     {
         QString profile = pItem->text();
-        writeProfileData( profile, "website", url );
+        writeProfileData( profile, QStringLiteral( "website" ), url );
     }
 }
 
@@ -139,7 +150,7 @@ void dlgConnectionProfiles::slot_update_pass( const QString pass )
     if( pItem )
     {
         QString profile = pItem->text();
-        writeProfileData( profile, "password", pass );
+        writeProfileData( profile, QStringLiteral( "password" ), pass );
     }
 }
 
@@ -149,13 +160,13 @@ void dlgConnectionProfiles::slot_update_login( const QString login )
     if( pItem )
     {
         QString profile = pItem->text();
-        writeProfileData( profile, "login", login );
+        writeProfileData( profile, QStringLiteral( "login" ), login );
     }
 }
 
 void dlgConnectionProfiles::slot_update_url( const QString url )
 {
-    if (url == "")
+    if (url.isEmpty() )
     {
         validUrl = false;
         connect_button->setDisabled(true);
@@ -179,7 +190,7 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
             notificationAreaMessageBox->hide();
             validUrl = true;
             validateConnect();
-            writeProfileData( profile, "url", url );
+            writeProfileData( profile, QStringLiteral( "url" ), url );
         }
         else
         {
@@ -189,7 +200,7 @@ void dlgConnectionProfiles::slot_update_url( const QString url )
             notificationAreaIconLabelError->show();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText( QString("Please enter the URL or IP address of the MUD server.\n\n")+check.errorString() );
+            notificationAreaMessageBox->setText( tr( "Please enter the URL or IP address of the MUD server.\n\n%1" ).arg( check.errorString() ) );
             validUrl = false;
             connect_button->setDisabled(true);
         }
@@ -202,7 +213,7 @@ void dlgConnectionProfiles::slot_update_autologin( int state )
     if( ! pItem )
         return;
     QString profile = pItem->text();
-    writeProfileData( profile, "autologin", QString::number( state ) );
+    writeProfileData( profile, QStringLiteral( "autologin" ), QString::number( state ) );
 }
 
 void dlgConnectionProfiles::slot_update_port( const QString ignoreBlank )
@@ -216,7 +227,7 @@ void dlgConnectionProfiles::slot_update_port( const QString ignoreBlank )
         return;
     }
 
-    if( port.indexOf(QRegExp("^\\d+$"), 0) == -1 )
+    if( port.indexOf(QRegExp( QStringLiteral( "^\\d+$" ) ), 0) == -1 )
     {
         QString val = port;
         val.chop( 1 );
@@ -248,7 +259,7 @@ void dlgConnectionProfiles::slot_update_port( const QString ignoreBlank )
             notificationAreaMessageBox->hide();
             validPort = true;
             validateConnect();
-            writeProfileData( profile, "port", port );
+            writeProfileData( profile, QStringLiteral( "port" ), port );
         }
         else
         {
@@ -265,23 +276,22 @@ void dlgConnectionProfiles::slot_update_port( const QString ignoreBlank )
     }
 }
 
-void dlgConnectionProfiles::slot_update_name( const QString _n )
+void dlgConnectionProfiles::slot_update_name( const QString newName )
 {
-    QString name = profile_name_entry->text().trimmed();
+    QString name = newName.trimmed();
     QListWidgetItem * pItem = profiles_tree_widget->currentItem();
 
-    const QString allowedChars = ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ";
-    bool __error = false;
-    for( int __i=0; __i<name.size(); __i++ )
-    {
-        if( ! allowedChars.contains( name[__i] ) )
+    const QString allowedChars = QStringLiteral( ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ" );
+    bool isError = false;
+    for( int i=0; i < name.size(); ++i ) {
+        if( ! allowedChars.contains( name.at(i) ) )
         {
-            name.replace( name[__i], "" );
-            __i=-1;
-            __error = true;
+            name.replace( name.at( i-- ), QString() );
+            isError = true;
         }
     }
-    if( __error )
+
+    if( isError )
     {
         profile_name_entry->setText( name );
         notificationArea->show();
@@ -289,7 +299,7 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
         notificationAreaIconLabelError->hide();
         notificationAreaIconLabelInformation->hide();
         notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText( tr("This character is not permitted. Use one of the following: %1\n").arg(allowedChars) );
+        notificationAreaMessageBox->setText( tr("This character is not permitted. Use one of the following:\n\"%1\".\n").arg(allowedChars) );
         return;
     }
 
@@ -320,79 +330,86 @@ void dlgConnectionProfiles::slot_update_name( const QString _n )
 void dlgConnectionProfiles::slot_save_name()
 {
     QListWidgetItem * pItem = profiles_tree_widget->currentItem();
-    QString name = profile_name_entry->text().trimmed();
+    QString newProfileName = profile_name_entry->text().trimmed();
 
-    if (notificationAreaIconLabelError->isVisible() || name == "")
+    if (notificationAreaIconLabelError->isVisible() || newProfileName.isEmpty() )
         return;
 
     validName = true;
     if( pItem )
     {
-        mCurrentProfileEditName = pItem->text();
-        int row = mProfileList.indexOf( mCurrentProfileEditName );
+        QString currentProfileEditName = pItem->text();
+        int row = mProfileList.indexOf( currentProfileEditName ); // This returns -1 if currentProfileEditName not present!
         if( ( row >= 0 ) && ( row < mProfileList.size() ) )
         {
-            mProfileList[row] = name;
+            mProfileList[row] = newProfileName;
         }
         else
-            mProfileList << name;
+            mProfileList << newProfileName;
 
         // don't do anything if this was just a normal click, and not an edit of any sort
-        if (mCurrentProfileEditName == name)
+        if( currentProfileEditName == newProfileName )
             return;
 
-        pItem->setText( name );
+        pItem->setText( newProfileName );
 
-        QDir previouspath(QDir::homePath()+"/.config/mudlet/profiles/"+mCurrentProfileEditName);
+        QDir currentPath( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( currentProfileEditName ) );
         QDir dir;
 
-        if (previouspath.exists())
+        if (currentPath.exists())
         {
-            QDir parentpath(QDir::homePath()+"/.config/mudlet/profiles/");
-            if (! parentpath.rename( mCurrentProfileEditName, name ) )
+            QDir parentpath( QStringLiteral( "%1/.config/mudlet/profiles/" ).arg( QDir::homePath() ) );
+            if (! parentpath.rename( currentProfileEditName, newProfileName ) )
             {
                 notificationArea->show();
                 notificationAreaIconLabelWarning->show();
                 notificationAreaIconLabelError->hide();
                 notificationAreaIconLabelInformation->hide();
                 notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText( tr("Couldn't rename your profile data on the computer." ));
+                notificationAreaMessageBox->setText( tr( "Could not rename your profile data on the computer." ));
             }
-        } else if (! dir.mkpath(QDir::homePath()+"/.config/mudlet/profiles/"+name) )
+        }
+        else if (! dir.mkpath( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( newProfileName ) ) )
         {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
             notificationAreaIconLabelError->hide();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText( tr("Couldn't create the new profile folder on your computer." ));
+            notificationAreaMessageBox->setText( tr("Could not create the new profile folder on your computer." ));
         }
 
-        // code stolen from fillout_form, should be moved to it's own function
-        QFont font("Bitstream Vera Sans Mono", 1 );//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
-        QString sList = name;
-        QString s = name;
+        // code stolen from fillout_form, should be moved to its own function
+        QFont font( QStringLiteral( "Bitstream Vera Sans Mono" ), 1, QFont::Normal );
+        // Some uses of QFont have a third argument such as QFont::Helvetica or
+        // QFont::Courier but that is not a valid value for that argument - it
+        // is a font weight and typically only QFont::Normal or QFont::Bold is
+        // correct there (or a number 0 to 99, the two given are 50 and 75
+        // respectively)
+
+        QString sList = newProfileName;
+        QString s = newProfileName;
         pItem->setFont(font);
-        pItem->setForeground(QColor(255,255,255,255));
+        pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
         QPixmap pb( 120, 30 );
         pb.fill(QColor(0,0,0,0));
-        int hash = qHash( sList );
+        uint hash = qHash( sList );
         QLinearGradient shade(0, 0, 120, 30);
         int i = row;
-        int i1 = hash%255;
-        int i2 = (hash+i)%255;
-        int i3 = (abs(i*hash))%255;
-        int i4 = (3*hash)%255;
-        int i5 = (hash)%255;
-        int i6 = abs((hash/i))%255;
+        quint8 i1 = hash%255;
+        quint8 i2 = (hash+i)%255;
+        quint8 i3 = (i*hash)%255;
+        quint8 i4 = (3*hash)%255;
+        quint8 i5 = (hash)%255;
+        quint8 i6 = (hash/(i+2))%255; // Under some corner cases i might be -1 or 0
         shade.setColorAt( 1, QColor(i1, i2, i3,255) );
         shade.setColorAt( 0, QColor(i4, i5, i6,255) );
-        QBrush br( shade );
+
         QPainter pt(&pb);
         pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
         pt.fillRect(QRect(0,0,120,30), shade);
-        QPixmap pg( ":/icons/mudlet_main_32px.png");
+        QPixmap pg( QStringLiteral( ":/icons/mudlet_main_32px.png" ) );
         pt.drawPixmap( QRect(5,5, 20, 20 ), pg );
 
         QFont _font;
@@ -404,13 +421,13 @@ void dlgConnectionProfiles::slot_save_name()
         {
             _pt.eraseRect( QRect( 0, 0, 90, 30 ) );
             _pt.fillRect(QRect(0,0,90,30), QColor(255,0,0,10));
-            _font = QFont("DejaVu Sans", fs, QFont::Helvetica);
+            _font = QFont( QStringLiteral("DejaVu Sans"), fs, QFont::Normal );
             _pt.setFont( _font );
             QRect _r;
             if( (i1+i2+i3+i4+i5+i6)/6 < 100 )
-                _pt.setPen( QColor(255,255,255,255) );
+                _pt.setPen( QColor(Qt::white) );
             else
-                _pt.setPen( QColor(0,0,0,255));
+                _pt.setPen( QColor(Qt::black));
             _pt.drawText(QRect(0,0, 90, 30), Qt::AlignHCenter|Qt::AlignVCenter|Qt::TextWordWrap, s, &_r );
             /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
             && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
@@ -423,9 +440,9 @@ void dlgConnectionProfiles::slot_save_name()
         pt.setFont( _font );
         QRect _r;
         if( (i1+i2+i3+i4+i5+i6)/6 < 100 )
-            pt.setPen( QColor(255,255,255,255) );
+            pt.setPen( QColor(Qt::white) );
         else
-            pt.setPen( QColor(0,0,0,255));
+            pt.setPen( QColor(Qt::black));
         pt.drawText( QRect(30,0, 90, 30), Qt::AlignHCenter|Qt::AlignVCenter|Qt::TextWordWrap, s, &_r );
         QIcon mi = QIcon( pb );
         pItem->setIcon( mi );
@@ -443,12 +460,10 @@ void dlgConnectionProfiles::slot_addProfile()
     informationalArea->show();
     optionalArea->show();
 
-    QStringList newname;
-    mUnsavedProfileName = tr("new profile name");
+    QString newname = tr( "new profile name" );
 
-    QListWidgetItem * pItem = new QListWidgetItem( mUnsavedProfileName);
-    if( ! pItem )
-    {
+    QListWidgetItem * pItem = new QListWidgetItem( newname );
+    if( ! pItem ) {
         return;
     }
 
@@ -463,7 +478,7 @@ void dlgConnectionProfiles::slot_addProfile()
     profiles_tree_widget->setCurrentItem( pItem );
     profiles_tree_widget->setItemSelected( pItem, true );
 
-    profile_name_entry->setText( mUnsavedProfileName );
+    profile_name_entry->setText( newname );
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
     profile_name_entry->setReadOnly( false );
@@ -476,6 +491,7 @@ void dlgConnectionProfiles::slot_addProfile()
     connect_button->setDisabled(true);
 }
 
+// enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
 {
     QString profile = profiles_tree_widget->currentItem()->text();
@@ -488,27 +504,27 @@ void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
     }
 }
 
+// actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-// N/U:     int currentRow = profiles_tree_widget->currentIndex().row();
-    QDir dir( QDir::homePath()+"/.config/mudlet/profiles/"+profile );
-    removeDir( dir.path(), dir.path() );
+    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( profile ) );
+    dir.removeRecursively(); // note: we should replace this with a function that pops up a progress dialog should the deletion be taking longer than a second
     fillout_form();
     profiles_tree_widget->setFocus();
 }
 
+// called when the 'delete' button is pressed, raises a dialog to confirm deletion
 void dlgConnectionProfiles::slot_deleteProfile()
 {
     if( ! profiles_tree_widget->currentItem() )
         return;
 
     QString profile = profiles_tree_widget->currentItem()->text();
-    if( profile.size() > 1 ) return;
 
     QUiLoader loader;
 
-    QFile file(":/ui/delete_profile_confirmation.ui");
+    QFile file( QStringLiteral( ":/ui/delete_profile_confirmation.ui" ) );
     file.open(QFile::ReadOnly);
 
     QDialog *delete_profile_dialog = dynamic_cast<QDialog *>(loader.load(&file, this));
@@ -517,21 +533,19 @@ void dlgConnectionProfiles::slot_deleteProfile()
     if (!delete_profile_dialog)
         return;
 
-    delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>("delete_profile_lineedit");
-    delete_button = delete_profile_dialog->findChild<QPushButton*>("delete_button");
-    QPushButton * cancel_button = delete_profile_dialog->findChild<QPushButton*>("cancel_button");
+    delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>( QStringLiteral( "delete_profile_lineedit" ) );
+    delete_button = delete_profile_dialog->findChild<QPushButton*>( QStringLiteral( "delete_button" ) );
+    QPushButton * cancel_button = delete_profile_dialog->findChild<QPushButton*>( QStringLiteral( "cancel_button" ) );
 
     if (!delete_profile_lineedit || !delete_button || !cancel_button) return;
 
     connect(delete_profile_lineedit, SIGNAL(textChanged(const QString)), this, SLOT(slot_deleteprofile_check(const QString)));
     connect(delete_profile_dialog, SIGNAL(accepted()), this, SLOT(slot_reallyDeleteProfile()));
 
-    #if QT_VERSION >= 0x040700
     delete_profile_lineedit->setPlaceholderText(profile);
-    #endif
     cancel_button->setFocus();
     delete_button->setDisabled(true);
-    delete_profile_dialog->setWindowTitle("Deleting '"+profile+"'");
+    delete_profile_dialog->setWindowTitle( tr( "Deleting '%1'" ).arg( profile ) );
 
     delete_profile_dialog->show();
     delete_profile_dialog->raise();
@@ -539,18 +553,21 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData( QString profile, QString item )
 {
-    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
-    file.open( QIODevice::ReadOnly );
-    QDataStream ifs( & file );
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath() ).arg( profile ).arg( item ) );
+    bool success = file.open( QIODevice::ReadOnly );
     QString ret;
-    ifs >> ret;
-    file.close();
+    if ( success ) {
+        QDataStream ifs( & file );
+        ifs >> ret;
+        file.close();
+    }
+
     return ret;
 }
 
 QStringList dlgConnectionProfiles::readProfileHistory( QString profile, QString item )
 {
-    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath() ).arg( profile ).arg( item ) );
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( & file );
     QString ret;
@@ -566,7 +583,7 @@ QStringList dlgConnectionProfiles::readProfileHistory( QString profile, QString 
 
 void dlgConnectionProfiles::writeProfileData( QString profile, QString item, QString what )
 {
-    QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath() ).arg( profile ).arg( item ) );
     file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
     QDataStream ofs( & file );
     ofs << what;
@@ -579,7 +596,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
     if( !pItem )
         return;
 
-    profile_name_entry->setReadOnly(true);
 
     QString profile_name = pItem->text();
 
@@ -587,86 +603,93 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     QString profile = profile_name;
 
-    QString item = "url";
-    QString val = readProfileData( profile, item );
-    if( val.size() < 1 )
+
+    QString val = readProfileData( profile, QStringLiteral( "url" ) );
+    if( val.isEmpty() )
     {
-        if( profile_name == "Avalon.de" )
-            val = "avalon.mud.de";
-        if( profile_name == "God Wars II" )
-            val = "godwars2.org";
-        if( profile_name == "Materia Magica" )
-            val = "materiamagica.com";
-        if( profile_name == "BatMUD" )
-            val = "batmud.bat.org";
-        if( profile_name == "Aardwolf" )
-            val = "aardmud.org";
-        if( profile_name == "Achaea" )
-            val = "achaea.com";
-        if( profile_name == "Aetolia" )
-            val = "aetolia.com";
-        if( profile_name == "Midkemia" )
-            val = "midkemiaonline.com";
-        if( profile_name == "Lusternia" )
-            val = "lusternia.com";
-        if( profile_name == "Imperian" )
-            val = "imperian.com";
-        if( profile_name == "Realms of Despair" )
-            val = "realmsofdespair.com";
-        if( profile_name == "ZombieMUD" )
-            val = "zombiemud.org";
-        if( profile_name == "3Scapes")
-            val = "3k.org";
-        if( profile_name == "3Kingdoms")
-            val = "3k.org";
-        if( profile_name == "Slothmud")
-            val = "slothmud.org";
+        // Host to connect to, see below for port
+        if( profile_name == QStringLiteral( "Avalon.de" ) )
+            val = QStringLiteral( "avalon.mud.de" );
+        if( profile_name == QStringLiteral( "God Wars II" ) )
+            val = QStringLiteral( "godwars2.org" );
+        if( profile_name == QStringLiteral( "Materia Magica" ) )
+            val = QStringLiteral( "materiamagica.com" );
+        if( profile_name == QStringLiteral( "BatMUD" ) )
+            val = QStringLiteral( "batmud.bat.org" );
+        if( profile_name == QStringLiteral( "Aardwolf" ) )
+            val = QStringLiteral( "aardmud.org" );
+        if( profile_name == QStringLiteral( "Achaea" ) )
+            val = QStringLiteral( "achaea.com" );
+        if( profile_name == QStringLiteral( "Aetolia" ) )
+            val = QStringLiteral( "aetolia.com" );
+        if( profile_name == QStringLiteral( "Lusternia" ) )
+            val = QStringLiteral( "lusternia.com" );
+        if( profile_name == QStringLiteral( "Imperian" ) )
+            val = QStringLiteral( "imperian.com" );
+        if( profile_name == QStringLiteral( "Realms of Despair" ) )
+            val = QStringLiteral( "realmsofdespair.com" );
+        if( profile_name == QStringLiteral( "ZombieMUD" ) )
+            val = QStringLiteral( "zombiemud.org" );
+        if( profile_name == QStringLiteral( "3Scapes" ) )
+            val = QStringLiteral( "3k.org" );
+        if( profile_name == QStringLiteral( "3Kingdoms" ) )
+            val = QStringLiteral( "3k.org" );
+        if( profile_name == QStringLiteral( "Slothmud" ) )
+            val = QStringLiteral( "slothmud.org" );
+        if( profile_name == QStringLiteral( "WoTMUD" ) )
+            val = QStringLiteral( "game.wotmud.org" );
+        if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+            val = QStringLiteral( "midnightsun2.org" );
+
     }
     host_name_entry->setText( val );
-    item = "port";
-    val = readProfileData( profile, item );
-    if( val.size() < 1 )
+
+    val = readProfileData( profile, QStringLiteral( "port" ) );
+    if( val.isEmpty() )
     {
-        if( profile_name == "Avalon.de" )
-            val = "23";
-        if( profile_name == "God Wars II" )
-            val = "3000";
-        if( profile_name == "Materia Magica" )
-            val = "23";
-        if( profile_name == "BatMUD" )
-            val = "23";
-        if( profile_name == "Aardwolf" )
-            val = "4000";
-        if( profile_name == "Achaea" )
-            val = "23";
-        if( profile_name == "Aetolia" )
-            val = "23";
-        if( profile_name == "Midkemia" )
-            val = "23";
-        if( profile_name == "Lusternia" )
-            val = "23";
-        if( profile_name == "Imperian" )
-            val = "23";
-        if( profile_name == "Realms of Despair" )
-            val = "4000";
-        if( profile_name == "ZombieMUD" )
-            val = "23";
-        if( profile_name == "3Scapes")
-            val = "3200";
-        if( profile_name == "3Kingdoms")
-            val = "3000";
-        if( profile_name == "Slothmud")
-            val = "6101";
+        // Port to connect to
+        if( profile_name == QStringLiteral( "Avalon.de" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "God Wars II" ) )
+            val = QStringLiteral( "3000" );
+        if( profile_name == QStringLiteral( "Materia Magica" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "BatMUD" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "Aardwolf" ) )
+            val = QStringLiteral( "4000" );
+        if( profile_name == QStringLiteral( "Achaea" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "Aetolia" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "Lusternia" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "Imperian" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "Realms of Despair" ) )
+            val = QStringLiteral( "4000" );
+        if( profile_name == QStringLiteral( "ZombieMUD" ) )
+            val = QStringLiteral( "23" );
+        if( profile_name == QStringLiteral( "3Scapes" ) )
+            val = QStringLiteral( "3200" );
+        if( profile_name == QStringLiteral( "3Kingdoms" ) )
+            val = QStringLiteral( "3000" );
+        if( profile_name == QStringLiteral( "Slothmud" ) )
+            val = QStringLiteral( "6101" );
+        if( profile_name == QStringLiteral( "WoTMUD" ) )
+            val = QStringLiteral( "2224" );
+        if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+            val = QStringLiteral( "3000" );
     }
     port_entry->setText( val );
-    item = "password";
-    val = readProfileData( profile, item );
+
+    val = readProfileData( profile, QStringLiteral( "password" ) );
     character_password_entry->setText( val );
-    item = "login";
-    val = readProfileData( profile, item );
+
+    val = readProfileData( profile, QStringLiteral( "login" ) );
     login_entry->setText( val );
-    item = "autologin";
-    val = readProfileData( profile, item );
+
+    val = readProfileData( profile, QStringLiteral( "autologin" ) );
     if( val.toInt() == Qt::Checked )
     {
         autologin_checkBox->setChecked( true );
@@ -675,78 +698,103 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
     {
         autologin_checkBox->setChecked( false );
     }
-    item = "description";
-    if( profile_name == "Realms of Despair" )
-        val = "The Realms of Despair is the original SMAUG MUD and is FREE to play. We have an active Roleplaying community, an active player-killing (deadly) community, and a very active peaceful community. Players can choose from 13 classes (including a deadly-only class) and 13 races. Character appearances are customizable on creation and we have a vast collection of equipment that is level, gender, class, race and alignment specific. We boast well over 150 original, exclusive areas, with a total of over 20,000 rooms. Mob killing, or 'running' is one of our most popular activities, with monster difficulties varying from easy one-player kills to difficult group kills. We have four deadly-only Clans, twelve peaceful-only Guilds, eight Orders, and fourteen Role-playing Nations that players can join to interact more closely with other players. We have two mortal councils that actively work toward helping players: The Symposium hears ideas for changes, and the Newbie Council assists new players. Our team of Immortals are always willing to answer questions and to help out however necessary. Best of all, playing the Realms of Despair is totally FREE!";
-    else if( profile_name == "ZombieMUD" )
-        val = "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your achievements on the game is your own imagination and will to succeed.";
-    else if( profile_name == "God Wars II" )
-        val = "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to new situations. Take on the role of a godlike supernatural being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless possibilities.";
-    else if( profile_name == "3Scapes")
-        val = "3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but unique and twisted in so many ways.  3Scapes offers a faster pace of play, along with an assortment of new guilds, features, and areas.";
-    else if ( profile_name == "3Kingdoms")
-        val = "Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms is a colossal adventure through which many years of active and continued development by its dedicated coding staff.  Based around the mighty town of Pinnacle, three main realms beckon the player to explore. These kingdoms are known as: Fantasy, a vast medieval realm full of orcs, elves, dragons, and a myriad of other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-distant future; and Chaos, a transient realm where the enormous realities of Fantasy and Science collide to produce creatures so bizarre that they have yet to be categorized.  During their exploration of the realms, players have the opportunity to join any of well over a dozen different guilds, which grant special, unique powers to the player, furthering their abilities as they explore the vast expanses of each realm. Add in the comprehensive skill system that 3K offers and you are able to extensively customize your characters.";
-    else if( profile_name == "Slothmud" )
-        val = "SlothMUD... the ultimate in DIKUMUD! The most active, intricate, exciting FREE MUD of its kind. This text based multiplayer free online rpg game and is enjoyed continuously by players worldwide. With over 27,500 uniquely described rooms, 9,300 distinct creatures, 14,200 characters, and 87,100 pieces of equipment, charms, trinkets and other items, our online rpg world is absolutely enormous and ready to explore.";
+
+    if( profile_name == QStringLiteral("Realms of Despair") )
+        val = tr( "The Realms of Despair is the original SMAUG MUD and is FREE to play. We have an active Roleplaying community, an active player-killing (deadly) community, and a very active peaceful community. Players can choose from 13 classes (including a deadly-only class) and 13 races. Character appearances are customizable on creation and we have a vast collection of equipment that is level, gender, class, race and alignment specific. We boast well over 150 original, exclusive areas, with a total of over 20,000 rooms. Mob killing, or 'running' is one of our most popular activities, with monster difficulties varying from easy one-player kills to difficult group kills. We have four deadly-only Clans, twelve peaceful-only Guilds, eight Orders, and fourteen Role-playing Nations that players can join to interact more closely with other players. We have two mortal councils that actively work toward helping players: The Symposium hears ideas for changes, and the Newbie Council assists new players. Our team of Immortals are always willing to answer questions and to help out however necessary. Best of all, playing the Realms of Despair is totally FREE!" );
+    else if( profile_name == QStringLiteral( "ZombieMUD" ) )
+        val = tr( "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your achievements on the game is your own imagination and will to succeed." );
+    else if( profile_name == QStringLiteral("God Wars II") )
+        val = tr( "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to new situations. Take on the role of a godlike supernatural being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless possibilities." );
+    else if( profile_name == QStringLiteral( "3Scapes" ))
+        val = tr( "3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but unique and twisted in so many ways.  3Scapes offers a faster pace of play, along with an assortment of new guilds, features, and areas." );
+    else if ( profile_name == QStringLiteral( "3Kingdoms" ))
+        val = tr( "Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms is a colossal adventure through which many years of active and continued development by its dedicated coding staff.  Based around the mighty town of Pinnacle, three main realms beckon the player to explore. These kingdoms are known as: Fantasy, a vast medieval realm full of orcs, elves, dragons, and a myriad of other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-distant future; and Chaos, a transient realm where the enormous realities of Fantasy and Science collide to produce creatures so bizarre that they have yet to be categorized.  During their exploration of the realms, players have the opportunity to join any of well over a dozen different guilds, which grant special, unique powers to the player, furthering their abilities as they explore the vast expanses of each realm. Add in the comprehensive skill system that 3K offers and you are able to extensively customize your characters." );
+    else if( profile_name == QStringLiteral( "Slothmud" ) )
+        val = tr( "SlothMUD... the ultimate in DIKUMUD! The most active, intricate, exciting FREE MUD of its kind. This text based multiplayer free online rpg game and is enjoyed continuously by players worldwide. With over 27,500 uniquely described rooms, 9,300 distinct creatures, 14,200 characters, and 87,100 pieces of equipment, charms, trinkets and other items, our online rpg world is absolutely enormous and ready to explore." );
+    else if( profile_name == QStringLiteral( "WoTMUD" ) )
+        val = tr( "WoTMUD is the most popular on-line game based on the late Robert Jordan's epic Wheel of Time fantasy novels.\n"
+                  "Not only totally FREE to play since it started in 1993 it was officially sanctioned by the Author himself.\n"
+                  "Explore a World very like that of Rand al'Thor's; from the Blight in the North down to the Isle of Madmen far, far south.\n"
+                  "Wander around in any of the towns from the books such as Caemlyn, Tar Valon or Tear, or start your adventure in the Two Rivers area, not YET the home of the Dragon Reborn.\n"
+                  "Will you join one of the Clans working for the triumph of the Light over the creatures and minions of the Dark One; or will you be one of the returning invaders in the South West, descendants of Artur Hawkwing's long-thought lost Armies; or just maybe you are skilled enough to be a hideous Trolloc, creature of the Dark, who like Humans - but only as a source of sustenance.\n"
+                  "Very definitely a Player Verses Player (PvP) world but with strong Role Playing (RP) too; nowhere is totally safe but some parts are much more dangerous than others - once you enter you may never leave..." );
+    else if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+        val = tr( "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong sense of community." );
     else
-        val = readProfileData( profile, item );
+        val = readProfileData( profile, QStringLiteral( "description" ) );
     mud_description_textedit->clear();
     mud_description_textedit->insertPlainText( val );
-    item = "website";
-    val = readProfileData( profile, item );
-    if( val.size() < 1 )
+
+    val = readProfileData( profile, QStringLiteral( "website" ) );
+    if( val.isEmpty() )
     {
-        if( profile_name == "Avalon.de" )
-            val = "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>";
-        if( profile_name == "God Wars II" )
-            val = "<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>";
-        if( profile_name == "Materia Magica" )
-            val = val = "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>";
-        if( profile_name == "BatMUD" )
-            val = val = "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>";
-        if( profile_name == "Aardwolf" )
-            val = "<center><a href='http://www.aardwolf.com/'>http://www.aardwolf.com</a></center>";;
-        if( profile_name == "Achaea" )
-            val = "<center><a href='http://www.achaea.com/'>http://www.achaea.com</a></center>";
-        if( profile_name == "Realms of Despair" )
-            val = "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>";
-        if( profile_name == "ZombieMUD" )
-            val = "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>";
-        if( profile_name == "Aetolia" )
-            val = "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>";;
-        if( profile_name == "Midkemia" )
-            val = "<center><a href='http://www.midkemiaonline.com/'>http://www.midkemiaonline.com</a></center>";;
-        if( profile_name == "Lusternia" )
-            val = "<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>";;
-        if( profile_name == "Imperian" )
-            val = "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>";;
-        if( profile_name == "3Scapes" )
-            val = "<center><a href='http://www.3scapes.org/'>http://www.3scapes.org</a></center>";;
-        if( profile_name == "3Kingdoms" )
-            val = "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>";;
-        if( profile_name == "Slothmud" )
-            val = "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>";
+        if( profile_name == QStringLiteral( "Avalon.de" ) )
+            val = QStringLiteral( "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>" );
+        if( profile_name == QStringLiteral( "God Wars II" ) )
+            val = QStringLiteral( "<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>" );
+        if( profile_name == QStringLiteral( "Materia Magica" ) )
+            val = QStringLiteral( "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>" );
+        if( profile_name == QStringLiteral( "BatMUD" ) )
+            val = QStringLiteral( "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>" );
+        if( profile_name == QStringLiteral( "Aardwolf" ) )
+            val = QStringLiteral( "<center><a href='http://www.aardwolf.com/'>http://www.aardwolf.com</a></center>" );
+        if( profile_name == QStringLiteral( "Achaea" ) )
+            val = QStringLiteral( "<center><a href='http://www.achaea.com/'>http://www.achaea.com</a></center>" );
+        if( profile_name == QStringLiteral( "Realms of Despair" ) )
+            val = QStringLiteral( "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>" );
+        if( profile_name == QStringLiteral( "ZombieMUD" ) )
+            val = QStringLiteral( "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>" );
+        if( profile_name == QStringLiteral( "Aetolia" ) )
+            val = QStringLiteral( "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>" );
+        if( profile_name == QStringLiteral( "Lusternia" ) )
+            val = QStringLiteral( "<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>" );
+        if( profile_name == QStringLiteral( "Imperian" ) )
+            val = QStringLiteral( "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>" );
+        if( profile_name == QStringLiteral( "3Scapes" ) )
+            val = QStringLiteral( "<center><a href='http://www.3scapes.org/'>http://www.3scapes.org</a></center>" );
+        if( profile_name == QStringLiteral( "3Kingdoms" ) )
+            val = QStringLiteral( "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>" );
+        if( profile_name == QStringLiteral( "Slothmud" ) )
+            val = QStringLiteral( "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>" );
+        if( profile_name == QStringLiteral( "WoTMUD" ) )
+            val = QStringLiteral( "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
+                                  "<center><a href='http://www.wotmod.org/'>Forums</a></center>" );
+        if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
+            val = QStringLiteral( "<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>" );
     }
     website_entry->setText( val );
 
     profile_history->clear();
 
-    QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
-    QDir dir( folder );
+    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( profile_name ) );
     dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList( QDir::Files, QDir::Time );
+    QStringList entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
 
     for (int i = 0; i < entries.size(); ++i)
     {
-        QRegExp rx("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml");
+        QRegExp rx( QStringLiteral( "(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml" ) );
         if( rx.indexIn(entries.at(i)) != -1 )
         {
-            QString day = rx.cap(1);
+            QString day;
             QString month = rx.cap(2);
-            QString year = rx.cap(3);
+            QString year;
             QString hour = rx.cap(4);
             QString minute = rx.cap(5);
             QString second = rx.cap(6);
+            if( rx.cap(1).toInt() > 31 && rx.cap(3).toInt() >= 1 && rx.cap(3).toInt() <= 31 )
+            {
+                // I have been experimenting with code that puts the year first
+                // which is actually quite useful - this accommodates such cases
+                // as well... - SlySven
+                year = rx.cap(1);
+                day = rx.cap(3);
+            }
+            else
+            {
+                day = rx.cap(1);
+                year = rx.cap(3);
+            }
+
 
             QDateTime datetime;
             datetime.setTime(QTime (hour.toInt(), minute.toInt(), second.toInt()));
@@ -761,10 +809,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     }
 
-    if( profile_history->count() == 0 )
-        profile_history->setDisabled(true);
-    else
-        profile_history->setEnabled(true);
+    profile_history->setEnabled( static_cast<bool>(profile_history->count()) );
 
     QStringList loadedProfiles = HostManager::self()->getHostList();
     if( loadedProfiles.contains( profile_name ) )
@@ -786,7 +831,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         notificationAreaIconLabelError->hide();
         notificationAreaIconLabelInformation->show();
         notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText(tr("This profile is currently loaded - you'll need to disconnect before changing the connection parameters."));
+        notificationAreaMessageBox->setText(tr("This profile is currently loaded - you will need to disconnect before changing the connection parameters."));
     }
     else
     {
@@ -802,17 +847,16 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         host_name_entry->setPalette( mRegularPalette );
         port_entry->setPalette( mRegularPalette );
 
-        if (notificationAreaMessageBox->text() == tr("This profile is currently loaded - you'll need to disconnect before changing the connection parameters."))
+        if (notificationAreaMessageBox->text() == tr("This profile is currently loaded - you will need to disconnect before changing the connection parameters."))
         {
             notificationArea->hide();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->hide();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->hide();
-            notificationAreaMessageBox->setText(tr(""));
+            notificationAreaMessageBox->setText( QString() );
         }
     }
-    profile_name_entry->setReadOnly(true);
 
 }
 
@@ -824,9 +868,10 @@ void dlgConnectionProfiles::fillout_form()
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
+    mProfileList = QDir(QStringLiteral("%1/.config/mudlet/profiles").arg(QDir::homePath())).entryList(QDir::Dirs|QDir::NoDotAndDotDot, QDir::Name);
 
-    if( mProfileList.size() < 3 )
+    // By removing the "." and ".." entries we simplify things a little!
+    if( mProfileList.isEmpty() )
     {
         welcome_message->show();
         requiredArea->hide();
@@ -844,72 +889,69 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     profiles_tree_widget->setIconSize(QSize(120,30));
-    QFont font("Bitstream Vera Sans Mono", 1 );//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
+    QFont font( QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal );
+    // This (and setting the font color to white on a white background for an
+    // unselected widget) is a hack that minimises - but does not remove the
+    // QString assigned as the "name" of the QListWidgetItem in the constructor
+    // we use - unfortunately we currently need that text programmatically at
+    // present to identify each item - more work is needed, and is plausable, to
+    // completely resolve this. -Slysven
     QString muds;
     QListWidgetItem * pM;
     QIcon mi;
 
 
-    muds = "Avalon.de";
+    muds = QStringLiteral("Avalon.de");
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    QPixmap p(":/icons/avalon.png");
+    QPixmap p( QStringLiteral( ":/icons/avalon.png" ) );
     mi = QIcon( p.scaled(QSize(120,30)) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Achaea";
+    muds = QStringLiteral( "Achaea" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/achaea_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/achaea_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "3Kingdoms";
+    muds = QStringLiteral( "3Kingdoms" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem(pM);
-    QPixmap pd(":/icons/3klogo.png");
+    QPixmap pd( QStringLiteral( ":/icons/3klogo.png" ) );
     QPixmap pd1 = pd.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
     QIcon mi5(pd1);
     pM->setIcon(mi5);
 
-    muds = "3Scapes";
+    muds = QStringLiteral( "3Scapes" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem(pM);
-    QPixmap pc(":/icons/3slogo.png");
+    QPixmap pc( QStringLiteral( ":/icons/3slogo.png" ) );
     QPixmap pc1 = pc.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
     QIcon mi4(pc1);
     pM->setIcon(mi4);
     muds.clear();
 
-    muds = "Midkemia";
+    muds = QStringLiteral( "Lusternia" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/midkemia_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/lusternia_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Lusternia";
-    pM = new QListWidgetItem( muds );
-    pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
-    profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/lusternia_120_30.png" );
-    pM->setIcon(mi);
-    muds.clear();
-
-    muds = "BatMUD";
-    QPixmap pb(":/icons/batmud_mud.png");
+    muds = QStringLiteral( "BatMUD" );
+    QPixmap pb( QStringLiteral( ":/icons/batmud_mud.png" ) );
     QPixmap pb1 = pb.scaled(QSize(120,30)).copy();
     mi = QIcon( pb1 );
     pM = new QListWidgetItem( muds );
@@ -919,140 +961,149 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "God Wars II";
+    muds = QStringLiteral("God Wars II");
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/gw2.png" );
+    mi = QIcon( QStringLiteral( ":/icons/gw2.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Slothmud";
+    muds = QStringLiteral( "Slothmud" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/Slothmud.png" );
+    mi = QIcon( QStringLiteral( ":/icons/Slothmud.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Aardwolf";
+    muds = QStringLiteral( "Aardwolf" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon(":/icons/aardwolf_mud.png");
+    mi = QIcon( QStringLiteral( ":/icons/aardwolf_mud.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Materia Magica";
+    muds = QStringLiteral( "Materia Magica" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/materiaMagicaIcon" );
+    mi = QIcon( QStringLiteral( ":/materiaMagicaIcon" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Realms of Despair";
+    muds = QStringLiteral( "Realms of Despair" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/120x30RoDLogo.png" );
+    mi = QIcon( QStringLiteral( ":/icons/120x30RoDLogo.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "ZombieMUD";
+    muds = QStringLiteral( "ZombieMUD" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/zombiemud.png" );
+    mi = QIcon( QStringLiteral( ":/icons/zombiemud.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Aetolia";
+    muds = QStringLiteral( "Aetolia" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/aetolia_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/aetolia_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
-    muds = "Imperian";
+    muds = QStringLiteral( "Imperian" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
     pM->setForeground(QColor(255,255,255));
     profiles_tree_widget->addItem( pM );
-    mi = QIcon( ":/icons/imperian_120_30.png" );
+    mi = QIcon( QStringLiteral( ":/icons/imperian_120_30.png" ) );
     pM->setIcon(mi);
     muds.clear();
 
+    muds = QStringLiteral( "WoTMUD" );
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( QPixmap( QStringLiteral( ":/icons/wotmudicon.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
+    pM->setIcon(mi);
+    muds.clear();
+
+    muds = QStringLiteral( "Midnight Sun 2" );
+    pM = new QListWidgetItem( muds );
+    pM->setFont(font);
+    pM->setForeground(QColor(255,255,255));
+    profiles_tree_widget->addItem( pM );
+    mi = QIcon( QPixmap( QStringLiteral( ":/icons/midnightsun2.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
+    pM->setIcon(mi);
+    muds.clear();
 
     QDateTime test_date;
-    QListWidgetItem * toselect = 0;
+    QListWidgetItem * toselect = Q_NULLPTR;
 
     muds.clear();
     for( int i=0; i<mProfileList.size(); i++ )
     {
-        QString s = mProfileList[i];
-        if( s.size() < 1 )
-            continue;
-        if( (mProfileList[i] == ".") || (mProfileList[i] == ".." ) )
+        QString s = mProfileList.at(i);
+        if( s.isEmpty() )
             continue;
 
-        if( mProfileList[i] == "Avalon.de" )
+        // mProfileList is derived from a filesystem directory, but MacOS is not
+        // necesserily case preserving for file names so any tests on them
+        // should be case insensitive...! - Slysven
+        // Change from using a "==" test to a QString::compare( const QString )
+        // which returns a 0 on a match or +/-1 on difference
+        if( ( ! mProfileList.at(i).compare( QStringLiteral( "Avalon.de" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "BatMUD" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Materia Magica" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Aardwolf" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Achaea" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Aetolia" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Lusternia" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Imperian" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Realms of Despair" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "ZombieMUD" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "3Scapes" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "3Kingdoms" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "Midnight Sun 2" ), Qt::CaseInsensitive ) )
+         || ( ! mProfileList.at(i).compare( QStringLiteral( "WoTMUD" ), Qt::CaseInsensitive ) ) ) {
+
             continue;
-        if( mProfileList[i] == "BatMUD" )
-            continue;
-        if( mProfileList[i] == "Materia Magica" )
-            continue;
-        if( mProfileList[i] == "Aardwolf" )
-            continue;
-        if( mProfileList[i] == "Achaea" )
-            continue;
-        if( mProfileList[i] == "Aetolia" )
-            continue;
-        if( mProfileList[i] == "Midkemia" )
-            continue;
-        if( mProfileList[i] == "Lusternia" )
-            continue;
-        if( mProfileList[i] == "Imperian" )
-            continue;
-        if( mProfileList[i] == "Realms of Despair" )
-            continue;
-        if( mProfileList[i] == "ZombieMUD" )
-            continue;
-        if( mProfileList[i] == "3Scapes" )
-            continue;
-        if( mProfileList[i] == "3Kingdoms" )
-            continue;
-        QString sList;
-        sList = mProfileList[i];
-        QListWidgetItem * pItem = new QListWidgetItem( sList );
+        }
+
+        QListWidgetItem * pItem = new QListWidgetItem( mProfileList.at(i) );
         pItem->setFont(font);
-        pItem->setForeground(QColor(255,255,255,255));
+        pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
         QPixmap pb( 120, 30 );
         pb.fill(QColor(0,0,0,0));
-        int hash = qHash( sList );
+        uint hash = qHash( mProfileList.at(i) );
         QLinearGradient shade(0, 0, 120, 30);
-        int i1 = hash%255;
-        int i2 = (hash+i)%255;
-        int i3 = (abs(i*hash))%255;
-        int i4 = (3*hash)%255;
-        int i5 = (hash)%255;
-        int i6 = abs((hash/i))%255;
+        quint8 i1 = hash%255;
+        quint8 i2 = (hash+i)%255;
+        quint8 i3 = (i*hash)%255;
+        quint8 i4 = (3*hash)%255;
+        quint8 i5 = (hash)%255;
+        quint8 i6 = (hash/(i+2))%255; // In the other place where this is used i might be -1 or 0
         shade.setColorAt( 1, QColor(i1, i2, i3,255) );
         shade.setColorAt( 0, QColor(i4, i5, i6,255) );
-        QBrush br( shade );
         QPainter pt(&pb);
         pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
         pt.fillRect(QRect(0,0,120,30), shade);
-        QPixmap pg( ":/icons/mudlet_main_32px.png");
+        QPixmap pg( QStringLiteral( ":/icons/mudlet_main_32px.png" ) );
         pt.drawPixmap( QRect(5,5, 20, 20 ), pg );
 
         QFont _font;
@@ -1064,13 +1115,13 @@ void dlgConnectionProfiles::fillout_form()
         {
             _pt.eraseRect( QRect( 0, 0, 90, 30 ) );
             _pt.fillRect(QRect(0,0,90,30), QColor(255,0,0,10));
-            _font = QFont("DejaVu Sans", fs, QFont::Helvetica);
+            _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
             _pt.setFont( _font );
             QRect _r;
             if( (i1+i2+i3+i4+i5+i6)/6 < 100 )
-                _pt.setPen( QColor(255,255,255,255) );
+                _pt.setPen(QColor(Qt::white));
             else
-                _pt.setPen( QColor(0,0,0,255));
+                _pt.setPen(QColor(Qt::black));
             _pt.drawText(QRect(0,0, 90, 30), Qt::AlignHCenter|Qt::AlignVCenter|Qt::TextWordWrap, s, &_r );
             /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
             && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
@@ -1083,15 +1134,20 @@ void dlgConnectionProfiles::fillout_form()
         pt.setFont( _font );
         QRect _r;
         if( (i1+i2+i3+i4+i5+i6)/6 < 100 )
-            pt.setPen( QColor(255,255,255,255) );
+            pt.setPen(QColor(Qt::white));
         else
-            pt.setPen( QColor(0,0,0,255));
+            pt.setPen(QColor(Qt::black));
         pt.drawText( QRect(30,0, 90, 30), Qt::AlignHCenter|Qt::AlignVCenter|Qt::TextWordWrap, s, &_r );
         mi = QIcon( pb );
         pItem->setIcon( mi );
 
-        QDateTime profile_lastRead = QFileInfo(QDir::homePath()+"/.config/mudlet/profiles/"+mProfileList[i]+"/Host.dat").lastRead();
-        if (profile_lastRead > test_date)
+        // Previously was using Host.dat file but that is (not now) used or
+        // present; now use the "current" directory as that is updated when a
+        // profile is used AND saved...
+        QDateTime profile_lastRead = QFileInfo( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( mProfileList.at(i) ) ).lastRead();
+        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
+        // work as expected - so test for validity of the test_date value as well
+        if( ( ! test_date.isValid() ) || profile_lastRead > test_date )
         {
             test_date = profile_lastRead;
             toselect = pItem;
@@ -1100,12 +1156,13 @@ void dlgConnectionProfiles::fillout_form()
 
     if( toselect )
         profiles_tree_widget->setCurrentItem( toselect );
-    profile_name_entry->setReadOnly(true);
 }
 
 void dlgConnectionProfiles::slot_cancel()
 {
-    QDialog::done( 0 );
+    // QDialog::Rejected is the enum value (= 0) return value for a "cancelled"
+    // outcome...
+    QDialog::done( QDialog::Rejected );
 }
 
 void dlgConnectionProfiles::slot_copy_profile()
@@ -1113,15 +1170,15 @@ void dlgConnectionProfiles::slot_copy_profile()
     QString profile_name = profile_name_entry->text().trimmed();
     QString oldname = profile_name;
 
-    if( profile_name == "")
+    if( profile_name.isEmpty())
         return;
 
     // prepend n+1 to end of the profile name
-    if (profile_name[profile_name.size()-1].isDigit())
+    if (profile_name.at( profile_name.size()-1 ).isDigit())
     {
         int i=1;
         do {
-            profile_name = profile_name.left(profile_name.size()-1) + QString::number(profile_name[profile_name.size()-1].digitValue() + i++);
+            profile_name = profile_name.left(profile_name.size()-1) + QString::number(profile_name.at( profile_name.size()-1 ).digitValue() + i++);
         } while (mProfileList.contains(profile_name));
     } else {
         int i=1;
@@ -1153,11 +1210,12 @@ void dlgConnectionProfiles::slot_copy_profile()
     port_entry->setReadOnly( false );
 
     // copy the folder on-disk
-    QDir dir(QDir::homePath()+"/.config/mudlet/profiles/"+oldname);
+    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( oldname ) );
     if (!dir.exists())
         return;
 
-    copyFolder(QDir::homePath()+"/.config/mudlet/profiles/"+oldname, QDir::homePath()+"/.config/mudlet/profiles/"+profile_name);
+    copyFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( oldname ),
+                QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( profile_name ) );
     mProfileList << profile_name;
     slot_item_clicked(pItem);
 }
@@ -1166,32 +1224,36 @@ void dlgConnectionProfiles::slot_connectToServer()
 {
     QString profile_name = profile_name_entry->text().trimmed();
 
-    if( profile_name.size() < 1 )
+    if( profile_name.isEmpty() )
         return;
 
-    Host * pOH = HostManager::self()->getHost( profile_name );
-    if( pOH )
+    Host * pHost = HostManager::self()->getHost( profile_name );
+    if( pHost )
     {
-        pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
+        pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
         QDialog::accept();
         return;
     }
     // load an old profile if there is any
-    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
-    Host * pHost = HostManager::self()->getHost( profile_name );
+    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
+    pHost = HostManager::self()->getHost( profile_name );
 
     if( ! pHost ) return;
 
-    QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
+    QString folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" )
+                     .arg( QDir::homePath() )
+                     .arg( profile_name );
     QDir dir( folder );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
     bool needsGenericPackagesInstall = false;
     LuaInterface * lI = pHost->getLuaInterface();
     lI->getVars( true );
-    if( entries.size() > 0 )
+    if( ! entries.isEmpty() )
     {
-        QFile file(folder+"/"+profile_history->itemData(profile_history->currentIndex()).toString());   //entries[0]);
+        QFile file( QStringLiteral( "%1%2" )
+                    .arg(  folder )
+                    .arg( profile_history->itemData( profile_history->currentIndex() ).toString() ) );
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
@@ -1231,23 +1293,24 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( needsGenericPackagesInstall )
     {
         //install generic mapper script
-        if( pHost->getUrl().toLower().contains( "aetolia.com" ) ||
-            pHost->getUrl().toLower().contains( "achaea.com" ) ||
-            pHost->getUrl().toLower().contains( "lusternia.com" ) ||
-            pHost->getUrl().toLower().contains( "midkemiaonline.com" ) ||
-            pHost->getUrl().toLower().contains( "imperian.com" ) )
+        if( pHost->getUrl().contains( QStringLiteral( "aetolia.com" ), Qt::CaseInsensitive ) ||
+            pHost->getUrl().contains( QStringLiteral( "achaea.com" ), Qt::CaseInsensitive ) ||
+            pHost->getUrl().contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ||
+            pHost->getUrl().contains( QStringLiteral( "imperian.com" ), Qt::CaseInsensitive ) )
         {
-           mudlet::self()->packagesToInstallList.append(":/mudlet-mapper.xml");
+
+            mudlet::self()->packagesToInstallList.append( QStringLiteral( ":/mudlet-mapper.xml" ) );
         }
-        else if( pHost->getUrl().toLower().contains("3scapes.org") ||
-                 pHost->getUrl().toLower().contains("3k.org"))
+        else if( pHost->getUrl().contains( QStringLiteral( "3scapes.org" ), Qt::CaseInsensitive ) ||
+                 pHost->getUrl().contains( QStringLiteral( "3k.org" ), Qt::CaseInsensitive ) )
         {
-            mudlet::self()->packagesToInstallList.append(":/3k-mapper.xml");
+
+            mudlet::self()->packagesToInstallList.append( QStringLiteral( ":/3k-mapper.xml" ) );
         }
 
-        mudlet::self()->packagesToInstallList.append(":/deleteOldProfiles.xml");
-        mudlet::self()->packagesToInstallList.append(":/echo.xml");
-        mudlet::self()->packagesToInstallList.append(":/run-lua-code-v4.xml");
+        mudlet::self()->packagesToInstallList.append( QStringLiteral( ":/deleteOldProfiles.xml" ) );
+        mudlet::self()->packagesToInstallList.append( QStringLiteral( ":/echo.xml" ) );
+        mudlet::self()->packagesToInstallList.append( QStringLiteral( ":/run-lua-code-v4.xml" ) );
 
     }
 
@@ -1264,7 +1327,9 @@ void dlgConnectionProfiles::slot_chose_history()
         return;
     }
     QString fileName = QFileDialog::getOpenFileName(this, tr("Chose Mudlet Profile"),
-                                                    QDir::homePath()+"/.config/mudlet/profiles/"+profile_name,
+                                                    QStringLiteral( "%1/.config/mudlet/profiles/%2" )
+                                                        .arg( QDir::homePath() )
+                                                        .arg( profile_name ),
                                                     tr("*.xml"));
 
     if( fileName.isEmpty() ) return;
@@ -1279,7 +1344,7 @@ void dlgConnectionProfiles::slot_chose_history()
         return;
     }
 
-    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), "", "" );
+    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
     Host * pHost = HostManager::self()->getHost( profile_name );
     if( ! pHost ) return;
     XMLimport importer( pHost );
@@ -1289,28 +1354,24 @@ void dlgConnectionProfiles::slot_chose_history()
     QDialog::accept();
 }
 
-void dlgConnectionProfiles::slot_update()
-{
-    update();
-}
-
 bool dlgConnectionProfiles::validateConnect()
 {
     if (validName && validUrl && validPort)
     {
         connect_button->setEnabled(true);
-        connect_button->setToolTip("");
+        connect_button->setToolTip(QString());
         return true;
     }
     else if (!validName)
         slot_update_name(profile_name_entry->text());
     else if (!validUrl)
-        slot_update_url("");
+        slot_update_url(QString());
     else if (!validPort)
-        slot_update_port("");
+        slot_update_port(QString());
 
     connect_button->setDisabled(true);
-    connect_button->setToolTip("Please set a valid profile name, game server address and the game port before connecting.");
+    connect_button->setToolTip( QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
+                                .arg( tr( "Please set a valid profile name, game server address and the game port before connecting." ) ) );
     return false;
 }
 
@@ -1342,34 +1403,4 @@ void dlgConnectionProfiles::copyFolder(QString sourceFolder, QString destFolder)
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
-}
-
-// credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool dlgConnectionProfiles::removeDir( const QString dirName, QString originalPath )
-{
-    bool result = true;
-    QDir dir(dirName);
-    if( dir.exists( dirName ) )
-    {
-        Q_FOREACH( QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
-        {
-            // prevent recursion outside of the original branch
-            if( info.isDir() && info.absoluteFilePath().startsWith( originalPath ) )
-            {
-                result = removeDir( info.absoluteFilePath(), originalPath );
-            }
-            else
-            {
-                result = QFile::remove( info.absoluteFilePath() );
-            }
-
-            if( !result )
-            {
-                return result;
-            }
-        }
-        result = dir.rmdir( dirName );
-    }
-
-    return result;
 }

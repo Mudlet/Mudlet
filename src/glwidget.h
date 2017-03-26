@@ -1,6 +1,10 @@
+#ifndef MUDLET_GLWIDGET_H
+#define MUDLET_GLWIDGET_H
+
 /***************************************************************************
- *   Copyright (C) 2010 by Heiko Koehn ( KoehnHeiko@googlemail.com )       *
- *                                                                         *
+ *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,14 +22,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef GLWIDGET_H
-#define GLWIDGET_H
-class TMap;
-#include <QtOpenGL/qgl.h>//<QGLWidget>
-#include "TMap.h"
-#include "Host.h"
+
+#include "pre_guard.h"
+#include <QtOpenGL/qgl.h> //problem with git
+#include "post_guard.h"
 
 class Host;
+class TMap;
 
 
 class GLWidget : public QGLWidget
@@ -36,7 +39,8 @@ public:
     GLWidget(QWidget *parent = 0);
     GLWidget(TMap * pM, QWidget *parent = 0);
     ~GLWidget();
-    void wheelEvent ( QWheelEvent * e );
+    void wheelEvent( QWheelEvent * e );
+    void setViewCenter( int, int, int, int );
 
     bool is2DView;
 
@@ -61,7 +65,6 @@ public slots:
     void shiftRight();
     void shiftZup();
     void shiftZdown();
-    void showArea(QString);
     void setXRotation(int angle);
     void setYRotation(int angle);
     void setZRotation(int angle);
@@ -115,6 +118,7 @@ public:
     TMap * mpMap;
     int mTarget;
     Host * mpHost;
-    QMap<int,int> mQuads;
+    QMap<int, int> mQuads;
 };
-#endif
+
+#endif // MUDLET_GLWIDGET_H

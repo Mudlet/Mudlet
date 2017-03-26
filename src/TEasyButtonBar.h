@@ -1,10 +1,10 @@
-#ifndef TEASYBUTTONBAR_H
-#define TEASYBUTTONBAR_H
-
+#ifndef MUDLET_TEASYBUTTONBAR_H
+#define MUDLET_TEASYBUTTONBAR_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,15 +23,17 @@
  ***************************************************************************/
 
 
-#include <QDockWidget>
-#include <QDebug>
-#include <QGridLayout>
-#include "TFlipButton.h"
-#include "TAction.h"
+#include "pre_guard.h"
+#include <QWidget>
+#include "post_guard.h"
 
-class Host;
+#include <list>
+
 class TFlipButton;
 class TAction;
+
+class QGridLayout;
+
 
 class TEasyButtonBar : public QWidget
 {
@@ -63,10 +65,7 @@ signals:
 
 public slots:
 
-    void slot_pressed();
-
+    void            slot_pressed( const bool );
 };
 
-
-
-#endif // TEASYBUTTONBAR_H
+#endif // MUDLET_TEASYBUTTONBAR_H

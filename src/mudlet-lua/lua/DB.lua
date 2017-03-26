@@ -9,7 +9,9 @@
 -----------------------------------------------------------------------------
 if package.loaded["rex_pcre"] then rex = require"rex_pcre" end
 
-
+if not display then require"DebugTools" end
+if not table.contains then require"TableUtils" end
+if not string.trim then require"StringUtils" end
 
 -- TODO those funciton are already definde elsewhere
 -- Tests if a table is empty: this is useful in situations where you find
@@ -78,7 +80,15 @@ datetime = {
    }
 }
 
-
+-- the timestamp is stored in UTC time, so work out the difference in seconds
+-- from local to UTC time. Credit: https://github.com/stevedonovan/Penlight/blob/master/lua/pl/Date.lua#L85
+function datetime:calculate_UTCdiff(ts)
+   local date, time = os.date, os.time
+   local utc = date('!*t',ts)
+   local lcl = date('*t',ts)
+   lcl.isdst = false
+   return os.difftime(time(lcl), time(utc))
+end
 
 -- NOT LUADOC
 -- The rex.match function does not return named patterns even if you use named capture
@@ -131,7 +141,7 @@ function datetime:parse(source, format, as_epoch)
    local fmt = datetime:_get_pattern(format)
    local m = {fmt:tfind(source)}
 
-   if m then
+   if m and m[3] then
       m = m[3]
       dt = {}
 
@@ -181,7 +191,7 @@ end
 -----------------------------------------------------------------------------
 -- The database wrapper library
 -----------------------------------------------------------------------------
-if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
+if package.loaded["luasql.sqlite3"] then luasql = require "luasql.sqlite3" end
 
 db = {}
 db.__autocommit = {}
@@ -213,6 +223,7 @@ end
 -- NOT LUADOC
 -- Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
 -- prevent inadvertant SQL injection.
+-- called when generating the schema
 function db:_sql_convert(value)
    local t = db:_sql_type(value)
 
@@ -290,7 +301,12 @@ function db:_sql_columns(value)
    if t == "table" then
       col_chunks = {}
       for _, v in ipairs(value) do
-         col_chunks[#col_chunks+1] = '"'..v:lower()..'"'
+         -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term
+         if v:lower() == "desc" or v:lower() == "asc" then
+            col_chunks[#col_chunks] = col_chunks[#col_chunks] .. " " .. v
+         else
+            col_chunks[#col_chunks+1] = '"'..v:lower()..'"'
+         end
       end
 
       colstr = table.concat(col_chunks, ',')
@@ -338,7 +354,7 @@ function db:_sql_values(values)
          if not t._timestamp then
             return "NULL"
          else
-            s = tostring(t._timestamp)
+            s = "datetime('"..t._timestamp.."', 'unixepoch')"
          end
       else
          s = tostring(v)
@@ -413,13 +429,13 @@ end
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
 function db:create(db_name, sheets)
-   if not db.__env then
+   if not db.__env or (db.__env and db.__env == 'SQLite3 environment (closed)') then
       db.__env = luasql.sqlite3()
    end
 
    db_name = db:safe_name(db_name)
 
-   if not db.__conn[db_name] then
+   if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') then
       db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
       db.__conn[db_name]:setautocommit(false)
       db.__autocommit[db_name] = true
@@ -441,12 +457,16 @@ function db:create(db_name, sheets)
             t[v] = ""
          end
          sht = t
-      else                          -- sheet provided in the sheet = {"colun1" = default} format
+      else                          -- sheet provided in the sheet = {"column1" = default} format
+         local opts = {}
          for k, v in pairs(sht) do
             if string.starts(k, "_") then
                options[k] = v
-               sht[k] = ""
+               opts[#opts + 1] = k
             end
+         end
+         for _, v in ipairs(opts) do
+            sht[v] = nil
          end
       end
 
@@ -478,13 +498,66 @@ function db:_migrate(db_name, s_name)
    -- have been added.
    local cur = conn:execute("PRAGMA table_info('"..s_name.."')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
-   if cur ~= 0 then
+   if type(cur) ~= "number" then
       local row = cur:fetch({}, "a")
+      if row then
+         while row do
+            current_columns[row.name] = row.type
+            row = cur:fetch({}, "a")
+         end
+      else
+         ---------------  GETS ALL COLUMNS FROM SHEET IF IT EXISTS
+         db:echo_sql("SELECT * FROM "..s_name)
+         local get_sheet_cur = conn:execute("SELECT * FROM "..s_name)  -- select the sheet
 
-      while row do
-         current_columns[row.name] = row.type
-         row = cur:fetch({}, "a")
+         if get_sheet_cur and get_sheet_cur ~= 0 then
+            local row = get_sheet_cur:fetch({}, "a") -- grab the first row, if any
+            if not row then -- if no first row then
+               local tried_cols, contains, found_something, col = {}, table.contains, false
+
+               while not found_something do -- guarded by the error below from infinite looping
+                  col = false
+                  for k,v in pairs(schema.columns) do -- look through sheet schema to find the first column that is text
+                     if type(k) == "number" then
+                        if string.sub(v,1,1) ~= "_" and not contains(tried_cols, v) then col = v break end
+                     else
+                        if string.sub(k,1,1) ~= "_" and type(v) == "string" and not contains(tried_cols, k) then col = k break end
+                     end
+                  end
+
+                  if not col then error("db:_migrate: cannot find a suitable column for testing a new row with.") end
+
+                  -- add row with found column set as "test"
+                  db:add({_db_name = db_name, _sht_name = s_name},{[col] = "test"})
+
+                  db:echo_sql("SELECT * FROM "..s_name)
+                  local get_row_cur = conn:execute("SELECT * FROM "..s_name) -- select the sheet
+                  row = get_row_cur:fetch({}, "a") -- grab the newly created row
+                  get_row_cur:close()
+
+                  -- delete the newly created row. If we picked a row that doesn't exist yet and we're
+                  -- trying to add, the delete will fail - remember this, and try another row
+                  local worked, msg = pcall(db.delete, db, {_db_name = db_name, _sht_name = s_name},db:eq({database = db_name, sheet = s_name, name = col, type = "string"},"test"))
+
+                  if not worked then
+                     tried_cols[#tried_cols+1] = col
+                  else
+                     found_something = true
+                  end
+               end
+            end
+
+            if row then -- add each column from row to current_columns table
+               for k,v in pairs(row) do
+                  current_columns[k] = ""
+               end
+            end
+            get_sheet_cur:close()
+         end
       end
+   end
+
+   if type(cur) == "userdata" then
       cur:close()
    end
 
@@ -493,54 +566,86 @@ function db:_migrate(db_name, s_name)
    -- The db module does not presently support columns that are required. Everything is optional,
    -- everything may be NULL / nil.
    -- If you specify a column's type, you also specify its default value.
-   local sql_column = ', "%s" %s NULL'
-   local sql_column_default = sql_column..' DEFAULT %s'
-
    if table.is_empty(current_columns) then
       -- At this point, we know that the specified table does not exist in the database and so we
       -- should create it.
 
       -- Every sheet has an implicit _row_id column. It is not presently (and likely never will be)
       -- supported to define the primary key of any sheet.
-      local sql_chunks = {"CREATE TABLE ", s_name,  '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT'}
-
-      -- We iterate over every defined column, and add a line which creates it.
-      for key, value in pairs(schema.columns) do
-         local sql = ""
-         if value == nil then
-            sql = sql_column:format(key, db:_sql_type(value))
-         else
-            sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
-         end
-         if table.contains(schema.options._unique, key) then
-            sql = sql .. " UNIQUE"
-         end
-         sql_chunks[#sql_chunks+1] = sql
-      end
-
-      sql_chunks[#sql_chunks+1] = ")"
-
-      local sql = table.concat(sql_chunks, "")
+      local sql = db:_build_create_table_sql(schema, s_name)
       db:echo_sql(sql)
       conn:execute(sql)
 
    else
       -- At this point we know that the sheet already exists, but we are concerned if the current
       -- definition includes columns which may be added.
-
-      local sql_chunks = {}
-      local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+      local missing = {}
 
       for k, v in pairs(schema.columns) do
-         t = db:_sql_type(v)
-         v = db:_sql_convert(v)
 
          -- Here we test it a given column exists in the sheet already, and if not, we add that
          -- column.
          if not current_columns[k] then
-            local sql = sql_add:format(s_name, k, t, v)
+            missing[#missing + 1] = { name = k, default = v }
+         end
+      end
+
+      if #missing > 0 and
+         table.size(current_columns) + #missing == table.size(schema.columns)+1
+         -- We have changes and when we did those changes, we have exactly
+         -- the number of columns we need. The "+1" is for the _row_id
+         -- which is not in the schema.
+      then
+         local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
+         for _, v in ipairs(missing) do
+            local t = db:_sql_type(v.default)
+            local def = db:_sql_convert(v.default)
+            local sql = sql_add:format(s_name, v.name, t, def)
             conn:execute(sql)
             db:echo_sql(sql)
+         end
+      elseif
+         #missing + table.size(current_columns) > table.size(schema.columns) + 1
+         -- if we add all missing columns and we have more columns than we want
+         -- then there are currently some columns we don't want anymore.
+      then
+         local get_create = "SELECT sql FROM sqlite_master " ..
+                            "WHERE type = 'table' AND " ..
+                            "name = '" .. s_name .."'"
+         local ret_str
+         cur, ret_str = conn:execute(get_create)
+         assert(cur, ret_str)
+         if type(cur) ~= "number" then
+            local row = cur:fetch({}, "a");
+            cur:close()
+            local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
+            local sql_chunks = {}
+            local fields = { "_row_id" }
+            local sql
+
+            create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
+
+            for k, _ in pairs(schema.columns) do
+              fields[#fields + 1] = string.format('"%s"', k)
+            end
+            local fields_sql = table.concat(fields, ", ")
+
+            sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
+            sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak " ..
+                                          "SELECT * FROM " .. s_name .. ";"
+            sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
+            sql_chunks[#sql_chunks + 1] = db:_build_create_table_sql(schema,
+                                               s_name) .. ";"
+            sql_chunks[#sql_chunks + 1] = string.format(
+                 "INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql,
+                 s_name)
+            sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
+
+            for _, sql in ipairs(sql_chunks) do
+               db:echo_sql(sql)
+               local ret, str = conn:execute(sql)
+               assert(ret, str)
+            end
          end
       end
    end
@@ -562,6 +667,33 @@ function db:_migrate(db_name, s_name)
    conn:execute("VACUUM")
 end
 
+function db:_build_create_table_sql(schema, s_name)
+
+   local sql_column = ', "%s" %s NULL'
+   local sql_column_default = sql_column..' DEFAULT %s'
+
+
+   local sql_chunks = {"CREATE TABLE ", s_name,  '("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT'}
+
+      -- We iterate over every defined column, and add a line which creates it.
+   for key, value in pairs(schema.columns) do
+      local sql = ""
+      if value == nil then
+         sql = sql_column:format(key, db:_sql_type(value))
+      else
+         sql = sql_column_default:format(key, db:_sql_type(value), db:_sql_convert(value))
+      end
+      if (type(schema.options._unique) == "table" and table.contains(schema.options._unique, key))
+         or (type(schema.options._unique) == "string" and schema.options._unique == key) then
+         sql = sql .. " UNIQUE"
+      end
+      sql_chunks[#sql_chunks+1] = sql
+   end
+
+   sql_chunks[#sql_chunks+1] = ")"
+
+   return table.concat(sql_chunks, "")
+end
 
 
 -- NOT LUADOC
@@ -581,7 +713,7 @@ function db:_migrate_indexes(conn, s_name, schema, current_columns)
                --assert(db:_index_valid(current_columns, value),
                --      "In sheet "..s_name.." an index field is specified that does not exist.")
 
-               sql = sql_create_index:format(
+               local sql = sql_create_index:format(
                      opt[option_type], db:_index_name(s_name, value), s_name, db:_sql_columns(value)
                )
                db:echo_sql(sql)
@@ -659,7 +791,8 @@ function db:fetch_sql(sheet, sql)
    db:echo_sql(sql)
    local cur = conn:execute(sql)
 
-   if cur ~= 0 then
+   -- if we had a syntax error in our SQL, cur will be nil
+   if cur and cur ~= 0 then
       local results = {}
       local row = cur:fetch({}, "a")
 
@@ -687,14 +820,14 @@ end
 ---
 --- The results that are returned are not in any guaranteed order, though they are usually the same order
 --- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the
---- order_by field. This must be a table array listing the columns you want to sort by.
---- It can be { "column1" }, or { "column1", "column2" } <br/><br/>
+--- order_by field. This must be a table array listing the fields you want to sort by.
+--- It can be { mydb.kills.area }, or { mydb.kills.area, mydb.kills.name } <br/><br/>
 ---
 --- The results are returned in ascending (smallest to largest) order; to reverse this pass true into the final field.
 ---
 --- @usage The first will fetch all of your enemies, sorted first by the city they reside in and then by their name.
 ---   <pre>
----   db:fetch(mydb.enemies, nil, {"city", "name"})
+---   db:fetch(mydb.enemies, nil, {mydb.enemies.city, mydb.enemies.name})
 ---   </pre>
 --- @usage The second will fetch only the enemies which are in San Francisco.
 ---   <pre>
@@ -729,13 +862,13 @@ function db:fetch(sheet, query, order_by, descending)
       for _, v in ipairs(order_by) do
          assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
          o[#o+1] = v.name
+
+         if descending then
+            o[#o+1] = "DESC"
+         end
       end
 
       sql = sql.." ORDER BY "..db:_sql_columns(o)
-
-      if descending then
-         sql = sql.." DESC"
-      end
    end
 
    return db:fetch_sql(sheet, sql)
@@ -761,7 +894,7 @@ end
 ---   local mydb = db:get_database("my database")
 ---   echo(db:aggregate(mydb.enemies.name, "count"))
 ---   </pre>
-function db:aggregate(field, fn, query)
+function db:aggregate(field, fn, query, distinct)
    local db_name = field.database
    local s_name = field.sheet
    local conn = db.__conn[db_name]
@@ -769,28 +902,14 @@ function db:aggregate(field, fn, query)
    assert(type(field) == "table", "Field must be a field reference.")
    assert(field.name, "Field must be a real field reference.")
 
-   local sql_chunks = {"SELECT", fn, "(", field.name, ")", "AS", fn, "FROM", s_name}
+   local sql_chunks = {"SELECT", fn, "(", distinct and "DISTINCT" or "", field.name, ")", "AS", fn, "FROM", s_name}
 
    if query then
+      sql_chunks[#sql_chunks+1] = "WHERE"
       if type(query) == "table" then
          sql_chunks[#sql_chunks+1] = db:AND(unpack(query))
       else
          sql_chunks[#sql_chunks+1] = query
-      end
-   end
-
-   if order_by then
-      local o = {}
-      for _, v in ipairs(order_by) do
-         assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
-         o[#o+1] = v.name
-      end
-
-      sql_chunks[#sql_chunks+1] = "ORDER BY"
-      sql_chunks[#sql_chunks+1] = db:_sql_columns(o)
-
-      if descending then
-         sql_chunks[#sql_chunks+1] = "DESC"
       end
    end
 
@@ -803,6 +922,19 @@ function db:aggregate(field, fn, query)
       local row = cur:fetch({}, "a")
       local count = row[fn]
       cur:close()
+
+      -- give back the correct data type. see http://www.sqlite.org/lang_aggfunc.html
+      if (fn:upper() ~= "MIN" and fn:upper() ~= "MAX") or field.type == "number" then
+         return tonumber(count)
+      end
+      if field.type == "string" then
+        return count
+      end
+      -- Only datetime left
+      -- the value, count, is currently in a UTC timestamp
+      local localtime = datetime:parse(count, nil, true)
+      -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
+      count = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
       return count
    else
       return 0
@@ -1089,7 +1221,7 @@ end
 ---   </pre>
 function db:echo_sql(sql)
    if db.debug_sql then
-      echo("\n"..sql.."\n")
+      print(sql)
    end
 end
 
@@ -1109,7 +1241,10 @@ function db:_coerce_sheet(sheet, tbl)
             if field.type == "number" then
                tbl[k] = tonumber(tbl[k]) or tbl[k]
             elseif field.type == "datetime" then
-               tbl[k] = db:Timestamp(datetime:parse(tbl[k], nil, true))
+               -- the value, tbl[k], is currently in a UTC timestamp
+               local localtime = datetime:parse(tbl[k], nil, true)
+               -- convert it into a UTC timestamp as datetime:parse parses it in the local time context
+               tbl[k] = db:Timestamp(localtime + datetime:calculate_UTCdiff(localtime))
             end
          end
       end
@@ -1130,7 +1265,7 @@ function db:_coerce(field, value)
       if value._timestamp == false then
          return "NULL"
       else
-         return tonumber(value._timestamp) or "'"..value.."'"
+         return "datetime('"..value._timestamp.."', 'unixepoch')" or "'"..value.."'"
       end
    else
       return "'"..tostring(value):gsub("'", "''").."'"
@@ -1143,12 +1278,15 @@ end
 ---
 --- @see db:fetch
 function db:eq(field, value, case_insensitive)
+   local fieldname = field.name
+   -- escape column names as per https://www.sqlite.org/lang_expr.html
+   fieldname = '"'..fieldname:gsub("'", "''")..'"'
    if case_insensitive then
       local v = db:_coerce(field, value):lower()
-      return "lower("..field.name..") == "..v
+      return "lower("..fieldname..") == "..v
    else
       local v = db:_coerce(field, value)
-      return field.name.." == "..v
+      return fieldname.." == "..v
    end
 end
 
@@ -1399,7 +1537,9 @@ function db:close()
    for _, c in pairs(db.__conn) do
       c:close()
    end
+   db.__conn = {}
    db.__env:close()
+   db.__env = nil
 end
 
 
@@ -1414,27 +1554,34 @@ db.__TimestampMT = {
 }
 
 
-
 function db.__Timestamp:as_string(format)
    if not format then
       format = "%m-%d-%Y %H:%M:%S"
    end
 
+   -- given how we have an as_string function, having to wrap it in tostring() is a bit silly. So in this case, return nil as a string
+   if type(self._timestamp) ~= "number" then return "nil", "db.Timestamp:as_string: timestamp seems to be invalid and isn't a number" end
+
    return os.date(format, self._timestamp)
 end
 
-
-
 function db.__Timestamp:as_table()
+   if type(self._timestamp) ~= "number" then return nil, "db.Timestamp:as_table: timestamp seems to be invalid and isn't a number" end
+
    return os.date("*t", self._timestamp)
 end
 
-
-
 function db.__Timestamp:as_number()
+   if type(self._timestamp) ~= "number" then return nil, "db.Timestamp:as_number: timestamp seems to be invalid and isn't a number" end
+
    return self._timestamp
 end
 
+function db.__Timestamp:set(timestamp)
+   assert(type(timestamp) == "number", "db.Timestamp:set: timestamp needs to be a number")
+
+   self._timestamp = timestamp
+end
 
 
 --- <b><u>TODO</u></b>
@@ -1454,20 +1601,6 @@ function db:Timestamp(ts, fmt)
    end
    return setmetatable(dt, db.__TimestampMT)
 end
-
-
-
--- function db.Timestamp:new(ts, fmt)
---    local dt = {}
---    if type(ts) == "table" then
---       dt._timestamp = os.time(ts)
---    elseif type(ts) == "number" then
---       dt._timestamp = ts
---    elseif assert(ts == "CURRENT_TIMESTAMP", "The only strings supported by db.DateTime:new is CURRENT_TIMESTAMP") then
---       dt._timestamp = "CURRENT_TIMESTAMP"
---    end
---    return setmetatable(dt, db.__TimestampMT)
--- end
 
 
 
@@ -1601,3 +1734,135 @@ function db:get_database(db_name)
    return setmetatable(db_inst, db.__DatabaseMT)
 end
 
+--- Queries for database content matching the given example. Different fields of
+--- the example are AND connected.
+--- </br>
+--- Field values should be strings and can contain the following values:
+--- <ul>
+---   <li>literal strings to search for
+---   <li>comparison terms prepended with &lt;, &gt;, &gt;=, &lt;=, !=, &lt;&gt;
+---       for number and date comparisons
+---   <li>ranges with :: between lower and upper bound
+---   <li>different single values combined by || as OR
+---   <li>strings containing % for a single and _ for multiple wildcard
+---       characters
+--- </ul>
+--- <br/>
+--- @param database Reference to the database that should be queried.
+--- @param example  Query prototype that should be searched for.
+--- @usage This example shows, how to use this function:
+---   <pre>
+---      mydb = db:create("mydb",
+---        {
+---          sheet = {
+---            name = "", id = 0, city = "",
+---            _index = { "name" },
+---            _unique = { "id" },
+---            _violations = "FAIL"
+---          }
+---        })
+---      test_data = {
+---        {name="Ixokai", city="Magnagora", id=1},
+---        {name="Vadi", city="New Celest", id=2},
+---        {name="Heiko", city="Hallifax", id=3},
+---        {name="Keneanung", city="Hashan", id=4},
+---        {name="Carmain", city="Mhaldor", id=5},
+---        {name="Ixokai", city="Hallifax", id=6},
+---      }
+---      db:add(mydb.sheet, unpack(test_data))
+---      res = db:query_by_example(mydb.sheet, { name = "Ixokai"})
+---      display(res)
+---      --[[
+---      Prints
+---      {
+---        {
+---          id = 1,
+---          name = "Ixokai",
+---          city = "Magnagora"
+---        },
+---        {
+---          id = 6,
+---          name = "Ixokai",
+---          city = "Hallifax"
+---        }
+---      }
+---      --]]
+---   </pre>
+---
+--- @usage This example shows, how to combine two fields:
+---   <pre>
+---      mydb = db:create("mydb",
+---        {
+---          sheet = {
+---            name = "", id = 0, city = "",
+---            _index = { "name" },
+---            _unique = { "id" },
+---            _violations = "FAIL"
+---          }
+---        })
+---      test_data = {
+---        {name="Ixokai", city="Magnagora", id=1},
+---        {name="Vadi", city="New Celest", id=2},
+---        {name="Heiko", city="Hallifax", id=3},
+---        {name="Keneanung", city="Hashan", id=4},
+---        {name="Carmain", city="Mhaldor", id=5},
+---      }
+---      db:add(mydb.sheet, unpack(test_data))
+---      res = db:query_by_example(mydb.sheet, { name = "Ixokai", id = "1"})
+---      display(res)
+---      --[[
+---      Prints
+---      {
+---        id = 1,
+---        name = "Ixokai",
+---        city = "Magnagora"
+---      }
+---      --]]
+---   </pre>
+function db:query_by_example(database, example)
+
+   if table.is_empty(example) then return nil end
+
+   local topLevel = {}
+   local find = string.find
+   local match = string.match
+
+   for key, value in pairs(example) do
+
+      value = string.trim(value)
+
+      local op, exp = match(value, "^%s*([<>=!]*)%s*(.*)$")
+
+      if op == "<" then
+         topLevel[#topLevel + 1] = db:lt(database[key], exp)
+      elseif op == ">" then
+         topLevel[#topLevel + 1] = db:gt(database[key], exp)
+      elseif op == ">=" then
+         topLevel[#topLevel + 1] = db:gte(database[key], exp)
+      elseif op == "<=" then
+         topLevel[#topLevel + 1] = db:lte(database[key], exp)
+      elseif op == "!=" or op == "<>" then
+         if find(exp, "__NULL__", 1, true) then
+            topLevel[#topLevel + 1] = db:is_not_nil(database[key])
+         else
+            topLevel[#topLevel + 1] = db:not_eq(database[key], exp)
+         end
+      else
+         if find(value, "%s*||%s*") then
+            topLevel[#topLevel + 1] = db:in_(database[key], string.split(value,
+"%s*||%s*"))
+         elseif find(value, "__NULL__", 1, true) then
+            topLevel[#topLevel + 1] = db:is_nil(database[key])
+         elseif find(value, "_", 1, true) or find(value, "%", 1, true) then
+            topLevel[#topLevel + 1] = db:like(database[key], value)
+         elseif find(value, "::", 1, true) then
+            topLevel[#topLevel + 1] = db:between(database[key], match(value, "^(.-)::(.+)$"))
+         else
+            topLevel[#topLevel + 1] = db:eq(database[key], value)
+         end
+      end
+
+   end
+
+   return db:AND(unpack(topLevel))
+end

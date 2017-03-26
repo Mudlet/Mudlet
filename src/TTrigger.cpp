@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn  KoehnHeiko@googlemail.com     *
- *                                                                         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,25 +19,24 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <assert.h>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <math.h>
-#include <QDataStream>
-#include <QRegExp>
-#include <QString>
-#include <QTextDocument>
+
 #include "TTrigger.h"
+
+
 #include "Host.h"
-#include "HostManager.h"
-#include <map>
 #include "mudlet.h"
+#include "TConsole.h"
 #include "TDebug.h"
-#include <pcre.h>
+#include "TMatchState.h"
+
+#include "pre_guard.h"
+#include <QRegExp>
+#include "post_guard.h"
+
+#include <assert.h>
+
 #include <sstream>
-//#include <QSound>
+
 
 using namespace std;
 
@@ -175,16 +175,25 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                &erroffset,
                                0 );
 
-            if (re == 0)
+            if (!re)
             {
                 if( mudlet::debugMode )
                 {
-                    TDebug(QColor(Qt::white),QColor(Qt::red))<<"REGEX COMPILE ERROR:">>0;
-                    TDebug(QColor(Qt::red),QColor(Qt::gray))<<pattern<<"\n">>0;
+                    TDebug( QColor(Qt::white), QColor(Qt::red) ) << "REGEX ERROR: failed to compile, reason:\n"
+                                                                 << error
+                                                                 << "\n"
+                                                                 >> 0;
+                    TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
+                                                                << pattern
+                                                                << "\"\n"
+                                                                >> 0;
                 }
-                setError( QString( "Pattern '" )+QString(pattern)+QString( "' failed to compile. Correct the pattern.") );
+                setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                          .arg( tr( "Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\"." )
+                                .arg( i )
+                                .arg( pattern )
+                                .arg( error ) ) );
                 state = false;
-                //printf("PCRE compilation failed at offset %d: %s\n", erroffset, error);
             }
             else
             {
@@ -196,24 +205,41 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             mRegexMap[i] = re;
             mTriggerContainsPerlRegex = true;
         }
-        if( propertyList[i] == REGEX_LUA_CODE )
+
+        if( propertyList.at(i) == REGEX_LUA_CODE )
         {
              std::string funcName;
              std::stringstream func;
              func << "trigger" << mID << "condition" << i;
              funcName = func.str();
-             QString code = QString("function ")+funcName.c_str()+QString("()\n")+regexList[i]+QString("\nend\n");
+             QString code = QStringLiteral("function %1()\n%2\nend\n").arg( funcName.c_str() ).arg( regexList[i] );
              QString error;
              if( ! mpLua->compile( code, error ) )
              {
-                 setError( QString("pattern type Lua condition function '")+regexList[i]+QString("' failed to compile.")+error);
+                 setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                           .arg( tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.")
+                                 .arg( i )
+                                 .arg( regexList.at( i ) )
+                                 .arg( error ) ) );
                  state = false;
+                 if( mudlet::debugMode )
+                 {
+                     TDebug( QColor(Qt::white), QColor(Qt::red) ) << "LUA ERROR: failed to compile, reason:\n"
+                                                                  << error
+                                                                  << "\n"
+                                                                  >> 0;
+                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in lua condition function: \""
+                                                                 << regexList.at( i )
+                                                                 << "\"\n"
+                                                                 >> 0;
+                 }
              }
              else
              {
                  mLuaConditionMap[i] = funcName;
              }
         }
+
         if( propertyList[i] == REGEX_COLOR_PATTERN )
         {
             QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
@@ -252,48 +278,6 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
         mOK_init = true;
     }
     return state;
-}
-
-
-TTrigger & TTrigger::clone(const TTrigger& b)
-{
-    mName = b.mName;
-    mRegexCodeList = b.mRegexCodeList;
-    mRegexCodePropertyList = b.mRegexCodePropertyList;
-    mRegexMap = b.mRegexMap;
-    mpHost = b.mpHost;
-    mScript = b.mScript;
-    mIsTempTrigger = b.mIsTempTrigger;
-    mIsFolder = b.mIsFolder;
-    mNeedsToBeCompiled = b.mNeedsToBeCompiled;
-    mTriggerType = b.mTriggerType;
-    mIsLineTrigger = b.mIsLineTrigger;
-    mStartOfLineDelta = b.mStartOfLineDelta;
-    mLineDelta = b.mLineDelta;
-    mIsMultiline = b.mIsMultiline;
-    mConditionLineDelta = b.mConditionLineDelta;
-    mConditionMap = b.mConditionMap;
-    return *this;
-}
-
-bool TTrigger::isClone( TTrigger & b ) const
-{
-    return (    mName == b.mName
-             && mRegexCodeList == b.mRegexCodeList
-             && mRegexCodePropertyList == b.mRegexCodePropertyList
-             && mRegexMap == b.mRegexMap
-             && mpHost == b.mpHost
-             && mScript == b.mScript
-             && mIsTempTrigger == b.mIsTempTrigger
-             && mIsFolder == b.mIsFolder
-             && mNeedsToBeCompiled == b.mNeedsToBeCompiled
-             && mTriggerType == b.mTriggerType
-             && mIsLineTrigger == b.mIsLineTrigger
-             && mStartOfLineDelta == b.mStartOfLineDelta
-             && mLineDelta == b.mLineDelta
-             && mIsMultiline == b.mIsMultiline
-             && mConditionLineDelta == b.mConditionLineDelta
-             && mConditionMap == b.mConditionMap );
 }
 
 bool TTrigger::match_perl( char * subject, QString & toMatch, int regexNumber, int posOffset )
@@ -1516,70 +1500,3 @@ TTrigger * TTrigger::killTrigger( QString & name )
     }
     return 0;
 }
-
-
-bool TTrigger::serialize( QDataStream & ofs )
-{
-    ofs << mName;
-    ofs << mScript;
-    ofs << mRegexCodeList;
-    ofs << mRegexCodePropertyList;
-    ofs << mID;
-    ofs << mIsFolder;
-    ofs << mTriggerType;
-    ofs << mIsTempTrigger;
-    ofs << mIsMultiline;
-    ofs << mConditionLineDelta;
-    ofs << (qint64)mpMyChildrenList->size();
-
-    bool ret = true;
-    typedef list<TTrigger *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTrigger * pChild = *it;
-        ret = pChild->serialize( ofs );
-    }
-    return ret;
-}
-
-bool TTrigger::restore( QDataStream & ifs, bool initMode )
-{
-    ifs >> mName;
-    ifs >> mScript;
-    QStringList regexList;
-    QList<int> propertyList;
-    ifs >> regexList;
-    ifs >> propertyList;
-    setRegexCodeList( regexList, propertyList );
-    ifs >> mID;
-    ifs >> mIsFolder;
-    ifs >> mTriggerType;
-    ifs >> mIsTempTrigger;
-    ifs >> mIsMultiline;
-    ifs >> mConditionLineDelta;
-    qint64 children;
-    ifs >> children;
-
-    mID = mpHost->getTriggerUnit()->getNewID();
-
-    //if( initMode ) qDebug()<<"TTrigger::restore() mName="<<mName<<" mID="<<mID<<" children="<<children;
-
-    bool ret = false;
-
-    if( ifs.status() == QDataStream::Ok )
-        ret = true;
-
-    for( qint64 i=0; i<children; i++ )
-    {
-        TTrigger * pChild = new TTrigger( this, mpHost );
-        ret = pChild->restore( ifs, initMode );
-        if( initMode )
-            pChild->registerTrigger();
-    }
-
-    if( getChildrenList()->size() > 0 )
-        mIsFolder = true;
-
-    return ret;
-}
-

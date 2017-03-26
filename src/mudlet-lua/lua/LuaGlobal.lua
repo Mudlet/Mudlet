@@ -79,9 +79,22 @@ end
 function handleWindowResizeEvent()
 end
 
+-- override built-in createMiniConsole to allow for multiple calls
+do
+	local oldcreateMiniConsole = createMiniConsole
+
+	function createMiniConsole(name,x,y,width,height)
+		oldcreateMiniConsole(name, 0,0,0,0)
+		moveWindow(name,x,y)
+		resizeWindow(name,width,height)
+	end
+end
+
+
 local packages = {
 	"StringUtils.lua",
 	"TableUtils.lua",
+	-- "Logging.lua", -- never documented and fails to load now
 	"DebugTools.lua",
 	"DB.lua",
 	"geyser/Geyser.lua",
@@ -103,10 +116,48 @@ local packages = {
 	"GUIUtils.lua",
 	"Other.lua",
 	"GMCP.lua",
-	}
+}
+
+-- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
+-- on Mac, it's set to LuaGlobals location - or the Applications folder, or something else...
+-- So work out where to load Lua files from using some heuristics
+-- Addition of "../src/" to front of first path allows things to work when "Shadow Building"
+-- option of Qt Creator is used (separates object code from source code in directories
+-- beside the latter, allowing parallel builds against different Qt Library versions
+-- or {Release|Debug} types).
+-- TODO: extend to support common Lua code being placed in system shared directory
+-- tree as ought to happen for *nix install builds.
+local prefixes = {"../src/mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
+    "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua"}
+
+-- add default search paths coming from the C++ side as well
+if getMudletLuaDefaultPaths then
+    for _, path in ipairs(getMudletLuaDefaultPaths()) do
+        prefixes[#prefixes+1] = path
+    end
+end
+
+local prefix
+for i = 1, #prefixes do
+    if lfs.attributes(prefixes[i]) then
+        prefix = prefixes[i]
+        break
+    end
+end
+
+-- For some reason on windows, mudlet-lua/lua/ does not register as a directory with the above strategy.
+-- Thus, if chosen we need to append a slash.
+if prefix == "mudlet-lua/lua" then
+	prefix = prefix .. "/"
+end
+
+if not prefix then
+        echo("Error locating Lua files from LuaGlobal - we're looking from '"..lfs.currentdir().."'.\n")
+	return
+end
 
 for _, package in ipairs(packages) do
-	local result, msg = pcall(dofile, "./mudlet-lua/lua/" .. package)
+        local result, msg = pcall(dofile, prefix .. package)
 	if not result then echo("Error attempting to load file: " .. package .. ": "..msg.."\n") end
 end
 

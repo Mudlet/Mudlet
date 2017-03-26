@@ -1,15 +1,15 @@
-Compiling Mudlet 2.0
----------------------
+Compiling Mudlet on Linux
+-------------------------
 
-Use the Qt-4.6-SDK package from ftp://ftp.trolltech.com/qtsdk/ or http://qt.nokia.com 
-It comes with a binary distribution of the libs a ready made compiler for windows (mingw)  
+Use the Qt-4.6-SDK package from ftp://ftp.trolltech.com/qtsdk/ or http://qt.nokia.com
+It comes with a binary distribution of the libs a ready made compiler for windows (mingw)
 (NOTE GNU/Linux: If you experience instability or weird behaviour of Mudlet link against the SDK libs instead of your distro's qt libs.)
 
-1. DEPENDENCIES: 
+1. DEPENDENCIES:
 ================
 required libs to compile Mudlet:
 - Qt >=4.4 (included in the SDK)
-- liblua-5.1 
+- liblua-5.1
 - libpcre-7.8 or later
 - yajl-1.0 (you can also use yajl-2.0 if you change make config file src/src.pro and include lua_yajl.c instead of lua_yajl1.c)
 - hunspell
@@ -37,15 +37,21 @@ additional packages that should be present on your system to get the full featur
    mudlet/src/src.pro - simply look at the top of the file and adjust the paths you find to
    your own system. This is easy. If compile breaks with an error your paths are not correct.
    After having adjusted src.pro:
-   make clean 
+   make clean
    qmake-qt4 (NOTE: On most systems there is qmake and qmake-qt4 qmake relates to the old qt version 3 qmake.)
    make
    make install
- 
-  Note: If you run into compiler problems then edit the file mudlet/src/src.pro in order to 
+
+  Note: If you run into compiler problems then edit the file mudlet/src/src.pro in order to
    change the INCLUDE and/or LIBS part of the make file and set the correct path on your system.
 
+Compiling Mudlet on Macs
+------------------------
+These instructions are rough and in-progress.
 
+Install Homebrew (it'll require XCode - install that), With Homebrew, install:
+  boost, hunspell, libzzip, luarocks, pcre, readline, cmake, libzip, lua, lzlib, pkg-config, yajl
 
-Good Luck.
+Then run qmake, and the usual make to compile.
 
+See INSTALL instructions on how to get the finished .dmg from a .app that you've compiled.

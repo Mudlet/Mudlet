@@ -40,7 +40,7 @@
 --                   used to handle proper resizing of held windows as well as
 --                   during show()s and hide()s to recursive show and hide all
 --                   children windows.
--- @field windows This is an ordered list of the names of the window held by this container. 
+-- @field windows This is an ordered list of the names of the window held by this container.
 -- @field fontSize The default size font used when calculating dimensions
 --                 based on the character constraint. Default is 8.
 -- @field h_policy This sets if this widget should be stretched/shrinked horizontally or not
@@ -62,7 +62,7 @@ Geyser.Container =  {
    h_policy = Geyser.Dynamic,
    v_policy = Geyser.Dynamic,
    h_stretch_factor = 1.0,
-   v_stretch_factor = 1.0,   
+   v_stretch_factor = 1.0,
 }
 
 function Geyser.Container:calculate_dynamic_window_size()
@@ -116,10 +116,10 @@ function Geyser.Container:reposition ()
    local x,y,w,h = self:get_x(), self:get_y(), self:get_width(), self:get_height()
    moveWindow(self.name, self:get_x(), self:get_y())
    resizeWindow(self.name, self:get_width(), self:get_height())
-   
+
    -- deal with all children of this container
    for k,v in pairs(self.windowList) do
-      if k ~= self then
+      if k ~= self and not v.nestLabels then
          v:reposition()
       end
    end
@@ -169,7 +169,7 @@ function Geyser.Container:show_impl()
    showWindow(self.name)
 end
 
---- Moves this window according to the new x and y contraints set. 
+--- Moves this window according to the new x and y contraints set.
 -- @param x New x constraint to use. If nil, uses current value.
 -- @param y New y constraint to use. If nil, uses current value.
 function Geyser.Container:move (x, y)
@@ -178,7 +178,7 @@ function Geyser.Container:move (x, y)
    self:set_constraints(self)
 end
 
---- Resizes this window according to the new width and height constraints set. 
+--- Resizes this window according to the new width and height constraints set.
 -- @param width New width constraint to use.  If nil, uses current value.
 -- @param height New height constraint to use.  If nil, uses current value.
 function Geyser.Container:resize (width, height)
@@ -209,9 +209,9 @@ function Geyser.Container:set_constraints (cons)
    end
 end
 
---- Flashes a white box over the dimensions of this container. 
--- This is very useful to see where a container actually is if you've 
--- forgotten its details. 
+--- Flashes a white box over the dimensions of this container.
+-- This is very useful to see where a container actually is if you've
+-- forgotten its details.
 -- @param time Time in seconds to flash for, default is 1.0s.
 function Geyser.Container:flash (time)
    local time = time or 1.0

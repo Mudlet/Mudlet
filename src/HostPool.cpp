@@ -1,6 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,16 +19,19 @@
  ***************************************************************************/
 
 
-#include <map>
+#include "HostPool.h"
+
+
+#include "Host.h"
+
+#include "pre_guard.h"
 #include <QDir>
+#include "post_guard.h"
+
 #include <iostream>
 #include <fstream>
-#include <QStringList>
+#include <map>
 
-#include "HostPool.h"
-#include "Host.h"
-#include <QMutex>
-#include <QMutexLocker>
 
 bool HostPool::deleteHost(QString hostname)
 {
@@ -95,11 +98,6 @@ bool HostPool::addNewHost( QString hostname, QString port, QString login, QStrin
 
     int id = createNewHostID();
     Host * pNewHost = new Host( portnumber, hostname, login, pass, id );
-
-    if( pNewHost == 0 ) //enough memory?
-    {
-        return false;
-    }
 
     mHostPool[hostname] = pNewHost;
     return true;
@@ -205,61 +203,3 @@ Host * HostPool::getFirstHost()
     Host * pHost = mHostPool.begin().value();
     return pHost;
 }
-
-Host * HostPool::getNextHost( QString LastHost )
-{
-    QMutexLocker locker(& mPoolLock);
-    if( mHostPool.find( LastHost ) != mHostPool.end() )
-    {
-        //ok host exists get next one
-        QMap<QString, Host*>::iterator it;
-        if( ++it != mHostPool.end() )
-        {
-            Host * pHost = mHostPool[it.key()];
-            return pHost;
-        }
-    }
-    else
-    {
-        return 0;
-    }
-    Host * pHost = mHostPool[mHostPool.begin().key()];
-    return pHost;
-}
-
-bool HostPool::serialize( QString directory )
-{
-    QMutexLocker locker(& mPoolLock);
-    QString filename = directory + "/HostPool.dat";
-    QDir dir;
-    if( ! dir.exists( directory ) )
-    {
-        dir.mkpath( directory );
-    }
-    QFile file( filename );
-    file.open(QIODevice::WriteOnly);
-    QDataStream ofs(&file);
-
-    ofs << mHostPool.size();
-    typedef QMap<QString, Host*>::iterator IT;
-    for( IT it=mHostPool.begin(); it!=mHostPool.end(); it++ )
-    {
-        ofs << it.key(); //host pool selbst serialisen
-        QString host_directory = directory + it.key();
-        if( ! it.value()->serialize() )
-        {
-            file.close();
-            qDebug() << "ERROR: can't serialize " << it.key() << endl;
-            return false;
-        }
-    }
-    file.close();
-    return true;
-}
-
-
-
-
-
-
-

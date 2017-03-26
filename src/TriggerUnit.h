@@ -1,6 +1,9 @@
+#ifndef MUDLET_TRIGGERUNIT_H
+#define MUDLET_TRIGGERUNIT_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,18 +21,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _TRIGGER_UNIT_H
-#define _TRIGGER_UNIT_H
 
-#include "TTrigger.h"
-#include <list>
-#include <map>
+#include "pre_guard.h"
 #include <QMutex>
-#include <QDataStream>
-#include <QTextBlock>
+#include <QMultiMap>
+#include <QString>
+#include "post_guard.h"
 
-class TTrigger;
+#include <list>
+
 class Host;
+class TTrigger;
+
 
 class TriggerUnit
 {
@@ -48,8 +51,6 @@ public:
     bool                  killTrigger( QString & name );
     bool                  registerTrigger( TTrigger * pT );
     void                  unregisterTrigger( TTrigger * pT );
-    bool                  serialize( QDataStream & );
-    bool                  restore( QDataStream &, bool );
     void                  reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     void                  processDataStream( QString &, int );
     void                  dump();
@@ -59,7 +60,7 @@ public:
     void                  reenableAllTriggers();
     QString               assembleReport();
     std::list<TTrigger *> mCleanupList;
-    qint64                getNewID();
+    int                     getNewID();
     QMultiMap<QString, TTrigger *> mLookupTable;
     QMutex                mTriggerUnitLock;
     void                  markCleanup( TTrigger * pT );
@@ -95,12 +96,10 @@ private:
     Host *                    mpHost;
     QMap<int, TTrigger *>     mTriggerMap;
     std::list<TTrigger *>     mTriggerRootNodeList;
-    qint64                    mMaxID;
+    int                     mMaxID;
     bool                  mModuleMember;
 
 
 };
 
-
-#endif
-
+#endif // MUDLET_TRIGGERUNIT_H

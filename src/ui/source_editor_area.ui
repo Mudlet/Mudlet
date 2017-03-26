@@ -27,7 +27,11 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QPlainTextEdit" name="editor"/>
+    <widget class="QPlainTextEdit" name="editor">
+     <property name="backgroundVisible">
+      <bool>false</bool>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

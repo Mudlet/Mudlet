@@ -1,10 +1,9 @@
-
-#ifndef _TIMER_H_
-#define _TIMER_H_
+#ifndef MUDLET_TTIMER_H
+#define MUDLET_TTIMER_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,21 +22,17 @@
  ***************************************************************************/
 
 
-
-#include <iostream>
-#include <fstream>
-#include <list>
-#include <string>
-#include <QMutex>
-#include <QTimer>
-#include <QString>
-#include <QRegExp>
 #include "Tree.h"
-#include <QDataStream>
-#include "Host.h"
-#include <QTextBlock>
-#include <QTime>
 
+
+#include "pre_guard.h"
+#include <QMutex>
+#include <QTime>
+#include "post_guard.h"
+
+class Host;
+
+class QTimer;
 
 
 class TTimer : public Tree<TTimer>
@@ -51,7 +46,6 @@ public:
                     ~TTimer();
                      TTimer( TTimer * parent, Host * pHost );
                      TTimer( QString name, QTime time, Host * pHost );
-                     TTimer& clone(const TTimer& );
     void             compileAll();
     QString &        getName()                       { return mName; }
     void             setName( QString name );
@@ -78,11 +72,10 @@ public:
     void             disableTimer();
     void             enableTimer( QString & );
     void             disableTimer( QString & );
-    void             enableTimer( qint64 );
-    void             disableTimer( qint64 );
+    void             enableTimer( int );
+    void             disableTimer( int );
     void             killTimer();
 
-    bool             isClone(TTimer &b) const;
     bool             isOffsetTimer();
     bool             mRegisteredAnonymousLuaFunction;
     bool             exportItem;
@@ -106,5 +99,4 @@ private:
 
 };
 
-#endif
-
+#endif // MUDLET_TTIMER_H

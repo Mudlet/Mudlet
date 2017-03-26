@@ -1,12 +1,50 @@
+/***************************************************************************
+ *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+
 #include "dlgPackageExporter.h"
-#include "ui_dlgPackageExporter.h"
+
+
 #include "Host.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTrigger.h"
+#include "TTimer.h"
+#include "XMLexport.h"
+
+#include "pre_guard.h"
+#include "ui_dlgPackageExporter.h"
+#include <QDesktopServices>
 #include <QFileDialog>
 #include <QInputDialog>
-#include "XMLexport.h"
-#include <QDesktopServices>
-#include "zip.h"
-#include "zipconf.h"
+#include "post_guard.h"
+
+#include <zip.h>
+
+#include <errno.h>
+
+
+using namespace std;
+
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
@@ -25,17 +63,22 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     closeButton = ui->buttonBox->addButton (QDialogButtonBox::Close);
     exportButton = new QPushButton(tr("&Export"));
 
-//
-//HEIKO: added ability to make fully fledged Mudlet packages including a package
-//       name config file and arbitray additional package content selection.
-//       However, this feature is currently restricted to windows only
-//       until quazip is part of the other Mudlet builds
-//#ifdef Q_OS_WIN
     ui->browseButton->hide();
     ui->filePath->hide();
     ui->textLabel1->hide();
-    packageName = QInputDialog::getText(0,"Package Name", "Package Name");
+
+    // reset zipFile and filePath from possible previous use
+    zipFile = filePath = "";
+
+    packageName = QInputDialog::getText(0,"Package name", "Package name:");
+    if (packageName.isEmpty()) {
+        return;
+    }
     QString packagePath = QFileDialog::getExistingDirectory(0,"Where do you want to save the package?","Where do you want to save the package?");
+    if (packagePath.isEmpty()) {
+        return;
+    }
+
     tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/tmp/";
     packagePath.replace("\\", "/");
     tempDir = tempDir + "/" + packageName;
@@ -48,7 +91,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
 
     QString luaConfig = tempDir + "/config.lua";
     QFile configFile(luaConfig);
-    QStringList strings;
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         QTextStream out(&configFile);
@@ -57,12 +99,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
         configFile.close();
     }
     connect(ui->addFiles, SIGNAL(clicked()), this, SLOT(slot_addFiles()));
-//#else
-//    ui->addFiles->hide();
-//    ui->textLabel1_2->hide();
-//    connect(ui->browseButton, SIGNAL(clicked()), this, SLOT(slot_browse_button()));
-//    exportButton->setDisabled(true); // disabled by default until the user selects a location
-//#endif
 
     ui->buttonBox->addButton(exportButton, QDialogButtonBox::ResetRole);
     connect(exportButton, SIGNAL(clicked()), this, SLOT(slot_export_package()));
@@ -244,20 +280,13 @@ void dlgPackageExporter::slot_export_package(){
         //#ifdef Q_OS_WIN
         int err = 0;
         char buf[100];
-        zip* archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
-        qDebug()<<"dp saving to"<<zipFile;
+        zip* archive;
+        //archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
+        archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE, &err);
         if ( err != 0 )
         {
             zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"dp zip open error"<<zipFile<<buf;
-            close();
-            return;
-        }
-        err = zip_dir_add( archive, tempDir.toStdString().c_str(), ZIP_FL_ENC_GUESS );
-        if ( err != 0 )
-        {
-            zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"dp zip add dir error"<<buf;
+            //FIXME: report error to user qDebug()<<"dp zip open error"<<zipFile<<buf;
             close();
             return;
         }
@@ -275,21 +304,22 @@ void dlgPackageExporter::slot_export_package(){
                 int sep = 0;
                 zip_error_get( archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);
-                qDebug()<<"zip source error"<<fullName<<fname<<buf;
+                //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
             }
-            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+//            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            err = zip_add( archive, fname.toStdString().c_str(), s);
             if ( err == -1 )
             {
                 int sep = 0;
                 zip_error_get( archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);
-                qDebug()<<"added file error"<<fullName<<fname<<buf;
+                //FIXME: report error to userqDebug()<<"added file error"<<fullName<<fname<<buf;
             }
         }
         err = zip_close( archive );
         if ( err != 0 ){
             zip_error_to_str(buf, sizeof(buf), err, errno);
-            qDebug()<<"dp close file error"<<buf;
+            //FIXME: report error to userqDebug()<<"dp close file error"<<buf;
             close();
             return;
         }
@@ -308,22 +338,24 @@ void dlgPackageExporter::slot_addFiles(){
     QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
 }
 
-void dlgPackageExporter::slot_browse_button(){
-    QFileDialog dialog(this);
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
-    dialog.setViewMode(QFileDialog::Detail);
-    QString fileName;
-    if (dialog.exec()) {
-        fileName = dialog.selectedFiles().first();
+// Not Used - otherwise might need to tweak search for *.xml to ensure it worked
+// on MacOS:
+//void dlgPackageExporter::slot_browse_button(){
+//    QFileDialog dialog(this);
+//    dialog.setFileMode(QFileDialog::AnyFile);
+//    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
+//    dialog.setViewMode(QFileDialog::Detail);
+//    QString fileName;
+//    if (dialog.exec()) {
+//        fileName = dialog.selectedFiles().first();
 
-        if (!fileName.endsWith(".xml"))
-            fileName.append(".xml");
+//        if (!fileName.endsWith(".xml"))
+//            fileName.append(".xml");
 
-        ui->filePath->setText(fileName);
-        exportButton->setDisabled(false);
-    }
-}
+//        ui->filePath->setText(fileName);
+//        exportButton->setDisabled(false);
+//    }
+//}
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig){
     list<TTrigger *> * childList = trig->getChildrenList();

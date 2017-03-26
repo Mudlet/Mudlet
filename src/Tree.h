@@ -1,6 +1,9 @@
+#ifndef MUDLET_TREE_H
+#define MUDLET_TREE_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn                                     *
- *   KoehnHeiko@googlemail.com                                             *
+ *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,17 +22,13 @@
  ***************************************************************************/
 
 
-#ifndef __TREE__H
-#define __TREE__H
-
-
+#include "pre_guard.h"
+#include <QString>
+#include "post_guard.h"
 
 #include <iostream>
-#include <fstream>
 #include <list>
-#include <string>
-#include <QString>
-#include <QDebug>
+
 
 template<class T>
 class Tree
@@ -46,8 +45,8 @@ public:
     void               Dump();
     void               setFullyExpanded()          { FullyExpanded = true; }
     bool               isFullyExpanded()           { return FullyExpanded; }
-    qint64             getID()                     { return mID; }
-    void               setID( qint64 id )          { mID=id; }
+    int                getID()                     { return mID; }
+    void               setID( int id )             { mID=id; }
     void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );
     bool               popChild( T * removeChild );
     void               setParent( T * parent );
@@ -63,7 +62,7 @@ public:
 
     T *                mpParent;
     std::list<T *> *   mpMyChildrenList;
-    qint64             mID;
+    int                mID;
     QString &          getError();
     void               setError( QString );
     bool               state();
@@ -331,5 +330,4 @@ void Tree<T>::Dump()
     std::cout << "ende dump()"<< std::endl;
 }
 
-#endif
-
+#endif // MUDLET_TREE_H

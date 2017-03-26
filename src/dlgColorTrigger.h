@@ -1,8 +1,9 @@
-#ifndef DLGCOLORTRIGGER_H
-#define DLGCOLORTRIGGER_H
+#ifndef MUDLET_DLGCOLORTRIGGER_H
+#define MUDLET_DLGCOLORTRIGGER_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,19 +22,19 @@
  ***************************************************************************/
 
 
+#include "pre_guard.h"
 #include "ui_color_trigger.h"
-#include <QDialog>
-#include "TTrigger.h"
+#include "post_guard.h"
 
 class Host;
 class TTrigger;
 
-class dlgColorTrigger : public QDialog , public Ui::color_trigger_dlg
+
+class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
 {
     Q_OBJECT
 
 public:
-
     dlgColorTrigger( QWidget *, TTrigger *, int );
 signals:
 
@@ -60,10 +61,8 @@ public slots:
     void slot_save_and_exit();
 
 private:
-
     TTrigger * mpTrigger;
     int        mMode;
-
 };
 
-#endif // DLGCOLORTRIGGER_H
+#endif // MUDLET_DLGCOLORTRIGGER_H

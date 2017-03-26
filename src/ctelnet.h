@@ -1,38 +1,55 @@
+#ifndef MUDLET_CTELNET_H
+#define MUDLET_CTELNET_H
+
 /***************************************************************************
+ *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
-copyright (C) 2002-2005 by Tomas Mecir (kmuddy@kmuddy.com)
-copyright (c) 2008-2009 by Heiko Koehn (koehnheiko@googlemail.com)
 
-***************************************************************************
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-***************************************************************************/
-
-#ifndef CTELNET_H
-#define CTELNET_H
-#include <QObject>
-#include <list>
-//#include <sys/time.h>
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <queue>
-#include <QQueue>
-#include <QTextCodec>
+#include "pre_guard.h"
 #include <QHostAddress>
-#include <QTcpSocket>
 #include <QHostInfo>
-#include <zlib.h>
-#include <QTimer>
+#include <QTcpSocket>
 #include <QTime>
-#include <QColor>
-#include "dlgComposer.h"
-#include <QNetworkAccessManager>
-#include <QProgressDialog>
+#include "post_guard.h"
+#include <QStringList>
+
+#include <zlib.h>
+
+#include <iostream>
+#include <queue>
+#include <string>
+
+class QNetworkAccessManager;
+class QNetworkReply;
+class QProgressDialog;
+class QTextCodec;
+class QTextDecoder;
+class QTextEncoder;
+class QTimer;
+
+class Host;
+class dlgComposer;
+
 
 const char TN_SE = 240;
 const char TN_NOP = 241;
@@ -53,7 +70,8 @@ const char TN_IAC = 255;
 const char TN_EOR = 239;
 
 const char GMCP = 201; /* GMCP */
-const char MXP = 91; //MXP
+const char MXP = 91; // MXP
+const char MSDP = 69; // MSDP, documented at http://tintin.sourceforge.net/msdp/
 
 const char OPT_ECHO = 1;
 const char OPT_SUPPRESS_GA = 3;
@@ -69,141 +87,131 @@ const char OPT_MXP = 91;
 const char TNSB_IS = 0;
 const char TNSB_SEND = 1;
 
-
-
-
-class mudlet;
-class Host;
-//class dlgComposer;
-
 class cTelnet : public QObject
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
                       cTelnet( Host * pH );
-                     ~cTelnet();
-  void                connectIt(const QString &address, int port);
-  void                disconnect();
-  bool                sendData ( QString & data );
-  void                setCommandEcho( bool cmdEcho );
-  void                setATCPVariables( QString & _msg );
-  void                setGMCPVariables( QString & _msg );
-  void                atcpComposerCancel();
-  void                atcpComposerSave( QString );
-  void                setLPMudStyle ( bool lpmustyle );
-  void                setNegotiateOnStartup( bool startupneg );
-  void                setDisplayDimensions();
-  void                encodingChanged(QString encoding);
-  void                set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
-  void                set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
-  void                recordReplay();
-  void                loadReplay( QString & );
-  void                _loadReplay();
+                      ~cTelnet();
+    void              connectIt(const QString &address, int port);
+    void              disconnect();
+    bool              sendData( QString & data );
+    void              setCommandEcho( bool cmdEcho );
+    void              setATCPVariables( QString & _msg );
+    void              setGMCPVariables( QString & _msg );
+    void              atcpComposerCancel();
+    void              atcpComposerSave( QString );
+    void              setLPMudStyle( bool lpmustyle );
+    void              setNegotiateOnStartup( bool startupneg );
+    void              setDisplayDimensions();
+    void              encodingChanged(QString encoding);
+    void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
+    void              set_LF_ON_GA( bool b ){ mLF_ON_GA=b; }
+    void              recordReplay();
+    void              loadReplay( QString & );
+    void              _loadReplay();
 
-  void                setChannel102Variables( QString & );
-
-
+    void              setChannel102Variables( QString & );
 
 
-  bool                socketOutRaw(std::string & data);
 
-  QMap<int,bool>      supportedTelnetOptions;
-  bool                mResponseProcessed;
-  double              networkLatency;
-  QTime               networkLatencyTime;
-  bool                mAlertOnNewData;
-  bool                mGA_Driver;
-  bool                mFORCE_GA_OFF;
-  dlgComposer *       mpComposer;
-  QNetworkAccessManager * mpDownloader;
-  QProgressDialog *   mpProgressDialog;
-  QString             mServerPackage;
+
+    bool              socketOutRaw(std::string & data);
+
+    QMap<int, bool>   supportedTelnetOptions;
+    bool              mResponseProcessed;
+    double            networkLatency;
+    QTime             networkLatencyTime;
+    bool              mAlertOnNewData;
+    bool              mGA_Driver;
+    bool              mFORCE_GA_OFF;
+    dlgComposer *     mpComposer;
+    QNetworkAccessManager * mpDownloader;
+    QProgressDialog * mpProgressDialog;
+    QString           mServerPackage;
+    void              postMessage( QString msg );
 
 public slots:
-  void                setDownloadProgress( qint64, qint64 );
-  void                replyFinished( QNetworkReply * );
-  void                readPipe();
-  void                handle_socket_signal_hostFound(QHostInfo);
-  void                handle_socket_signal_connected();
-  void                handle_socket_signal_disconnected();
-  void                handle_socket_signal_readyRead();
-  void                handle_socket_signal_error();
-  void                slot_timerPosting();
-  void                slot_send_login();
-  void                slot_send_pass();
+    void              setDownloadProgress( qint64, qint64 );
+    void              replyFinished( QNetworkReply * );
+    void              readPipe();
+    void              handle_socket_signal_hostFound(QHostInfo);
+    void              handle_socket_signal_connected();
+    void              handle_socket_signal_disconnected();
+    void              handle_socket_signal_readyRead();
+    void              handle_socket_signal_error();
+    void              slot_timerPosting();
+    void              slot_send_login();
+    void              slot_send_pass();
 
 
 private:
-                      cTelnet(){;}
-  void                initStreamDecompressor();
-  int                 decompressBuffer( char * dirtyBuffer, int length );
-  void                postMessage( QString msg );
-  void                reset();
-  void                connectionFailed();
+                      cTelnet(){}
+    void              initStreamDecompressor();
+    int               decompressBuffer( char *& in_buffer, int& length, char* out_buffer );
+    void              reset();
+    void              connectionFailed();
 
-  void                processTelnetCommand (const std::string &command);
-  void                sendTelnetOption( char type, char option);
-  //string getCurrentTime(); //NOTE: not w32 compatible
-  void                gotRest( std::string & );
-  void                gotPrompt( std::string & );
-  void                postData();
-
-
-
-  Host *              mpHost;
-  QTcpSocket          socket;
-  QHostAddress        mHostAddress;
-  QTextCodec *        incomingDataCodec;
-  QTextCodec *        outgoingDataCodec;
-  QTextDecoder *      incomingDataDecoder;
-  QTextEncoder *      outgoingDataDecoder;
-  QString             hostName;
-  int                 hostPort;
-  QDataStream         mOfs;
-  double              networkLatencyMin;
-  double              networkLatencyMax;
-  bool                mWaitingForResponse;
-  std::queue<int>     mCommandQueue;
-
-  z_stream            mZstream;
-
-  bool                mNeedDecompression;
-  bool                mWaitingForCompressedStreamToStart;
-  std::string         command;
-  bool                iac, iac2, insb;
-  bool                myOptionState[256], hisOptionState[256];
-  bool                announcedState[256];
-  bool                heAnnouncedState[256];
-  bool                triedToEnable[256];
-  bool                recvdGA;
-
-  int                 curX, curY;
-  QString             termType;
-  QString             encoding;
-  QTimer *            mpPostingTimer;
-  bool                mUSE_IRE_DRIVER_BUGFIX;
-  bool                mLF_ON_GA;
-
-  int                 mCommands;
-  bool                mMCCP_version_1;
-  bool                mMCCP_version_2;
+    void              processTelnetCommand(const std::string &command);
+    void              sendTelnetOption( char type, char option);
+    // string getCurrentTime(); //NOTE: not w32 compatible
+    void              gotRest( std::string & );
+    void              gotPrompt( std::string & );
+    void              postData();
+    void              raiseProtocolEvent( const QString & name, const QString & protocol );
 
 
-  std::string         mMudData;
-  bool                mIsTimerPosting;
-  QTimer *            mTimerLogin;
-  QTimer *            mTimerPass;
-  QTime               timeOffset;
-  QTime               mConnectionTime;
-  int                 lastTimeOffset;
-  bool                enableATCP;
-  bool                enableGMCP;
-  bool                enableChannel102;
+
+    Host *            mpHost;
+    QTcpSocket        socket;
+    QHostAddress      mHostAddress;
+    QTextCodec *      incomingDataCodec;
+    QTextCodec *      outgoingDataCodec;
+    QTextDecoder *    incomingDataDecoder;
+    QTextEncoder *    outgoingDataDecoder;
+    QString           hostName;
+    int               hostPort;
+    double            networkLatencyMin;
+    double            networkLatencyMax;
+    bool              mWaitingForResponse;
+    std::queue<int>   mCommandQueue;
+
+    z_stream          mZstream;
+
+    bool              mNeedDecompression;
+    bool              mWaitingForCompressedStreamToStart;
+    std::string       command;
+    bool              iac, iac2, insb;
+    bool              myOptionState[256], hisOptionState[256];
+    bool              announcedState[256];
+    bool              heAnnouncedState[256];
+    bool              triedToEnable[256];
+    bool              recvdGA;
+
+    int               curX, curY;
+    QString           termType;
+    QString           encoding;
+    QTimer *          mpPostingTimer;
+    bool              mUSE_IRE_DRIVER_BUGFIX;
+    bool              mLF_ON_GA;
+
+    int               mCommands;
+    bool              mMCCP_version_1;
+    bool              mMCCP_version_2;
 
 
+    std::string       mMudData;
+    bool              mIsTimerPosting;
+    QTimer *          mTimerLogin;
+    QTimer *          mTimerPass;
+    QTime             timeOffset;
+    QTime             mConnectionTime;
+    int               lastTimeOffset;
+    bool              enableATCP;
+    bool              enableGMCP;
+    bool              enableChannel102;
+    QStringList       messageStack;
 };
 
-#endif
-
-
+#endif // MUDLET_CTELNET_H

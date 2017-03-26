@@ -1,6 +1,9 @@
+#ifndef MUDLET_DLGSOURCEEDITORAREA_H
+#define MUDLET_DLGSOURCEEDITORAREA_H
+
 /***************************************************************************
- *   Copyright (C) 2008 by Heiko Koehn   *
- *   KoehnHeiko@googlemail.com   *
+ *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,34 +21,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef dlg_source_editor_area_h
-#define dlg_source_editor_area_h
 
+#include "pre_guard.h"
 #include "ui_source_editor_area.h"
-#include <QWidget>
+#include "post_guard.h"
 
 class THighlighter;
 
-//#include <Qsci/qsciscintilla.h>
-//#include <Qsci/qscilexerlua.h>
 
-class dlgSourceEditorArea : public QWidget , public Ui::source_editor_area
+class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 {
     Q_OBJECT
-        
-        public:
-        
-        dlgSourceEditorArea(QWidget*);
-        THighlighter * highlighter;
-    //QsciLexerLua * mpLuaLexer;
-    
-signals:
-    
-    
-public slots:
-    
-    
+
+public:
+    dlgSourceEditorArea(QWidget*);
+    THighlighter * highlighter;
 };
 
-#endif
-
+#endif // MUDLET_DLGSOURCEEDITORAREA_H
