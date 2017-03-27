@@ -140,11 +140,7 @@ void TRoomDB::updateEntranceMap(TRoom * pR, bool isMapLoading)
     // room b and c efficiently.
     // So we create a mapping like: {room_a: room_b, room_a: room_c}. This allows us to delete
     // rooms and know which other rooms are impacted by this change in a single lookup.
-<<<<<<< HEAD
     if( pR ) {
-=======
-    if(pR){
->>>>>>> SlySven/release_30
         int id = pR->getId();
         QHash<int, int> exits = pR->getExits();
         QList<int> toExits = exits.keys();
@@ -624,7 +620,6 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
 
     QSet<int> validUsedRoomIds; // Used good ids (>= 1)
     QSet<int> validUsedAreaIds; // As rooms
-<<<<<<< HEAD
 
     // START OF TASK 1 & 2:
     // Scan through all rooms and record their idea of which area they
@@ -632,15 +627,6 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
     QHash<int, int> roomAreaHash; // Key: room Id, Value: area it believes it should be in
     QMultiHash<int, int> areaRoomMultiHash; // Key: areaId, ValueS: rooms that believe they belong there
 
-=======
-
-    // START OF TASK 1 & 2:
-    // Scan through all rooms and record their idea of which area they
-    // should be in.  Note invalid room Ids those will be fixed up later...
-    QHash<int, int> roomAreaHash; // Key: room Id, Value: area it believes it should be in
-    QMultiHash<int, int> areaRoomMultiHash; // Key: areaId, ValueS: rooms that believe they belong there
-
->>>>>>> SlySven/release_30
     { // Block this code to limit scope of iterator
         QMutableHashIterator<int, TRoom *> itRoom( rooms );
         while( itRoom.hasNext() ) {
