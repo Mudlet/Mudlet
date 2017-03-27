@@ -189,11 +189,7 @@ void TRoom::setExitWeight(const QString& cmd, int w )
 //
 // also: up, down, in, out or any unprefixed special exit command
 // all of which can be stored but aren't (yet?) showable on the 2D mapper
-<<<<<<< HEAD
 const bool TRoom::setDoor( const QString & cmd, const int doorStatus )
-=======
-const bool TRoom::setDoor( const QString cmd, const int doorStatus )
->>>>>>> SlySven/release_30
 {
     if( doorStatus > 0 && doorStatus <=3 ) {
         if( doors.value( cmd, 0 ) != doorStatus ) {
@@ -589,12 +585,8 @@ void TRoom::setSpecialExit( int to, const QString& cmd )
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
 }
 
-<<<<<<< HEAD
 void TRoom::clearSpecialExits()
 {
-=======
-void TRoom::clearSpecialExits(){
->>>>>>> SlySven/release_30
     other.clear();
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
