@@ -22,7 +22,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-<<<<<<< HEAD
 
 // clang-format off
 #include "pre_guard.h"
@@ -35,18 +34,6 @@
 // clang-format off
 #include "post_guard.h"
 // clang-format on
-=======
-// clang-format: off
-#include "pre_guard.h"
-// clang-format: on
-#include <QApplication>
-#include <QMap>
-#include <QMultiHash>
-#include <QXmlStreamReader>
-// clang-format: off
-#include "post_guard.h"
-// clang-format: on
->>>>>>> SlySven/release_30
 
 class Host;
 class TAction;
@@ -64,10 +51,7 @@ class XMLimport : public QXmlStreamReader
 
 public:
     XMLimport(Host*);
-<<<<<<< HEAD
-=======
 
->>>>>>> SlySven/release_30
     bool importPackage(QIODevice* device, QString packageName = QString(), int moduleFlag = 0);
 
 private:
@@ -114,11 +98,7 @@ private:
     void readIntegerList(QList<int>&, const QString&);
     void readModulesDetailsMap(QMap<QString, QStringList>&);
 
-<<<<<<< HEAD
     QPointer<Host> mpHost;
-=======
-    Host* mpHost;
->>>>>>> SlySven/release_30
     QString mPackageName;
     TTrigger* mpTrigger;
     TTimer* mpTimer;
