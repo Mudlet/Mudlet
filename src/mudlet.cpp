@@ -106,15 +106,12 @@ mudlet::mudlet()
 , mIsGoingDown( false )
 , actionReplaySpeedDown( 0 )
 , actionReplaySpeedUp( 0 )
-<<<<<<< HEAD
 , actionSpeedDisplay( 0 )
 , actionReplayTime( 0 )
 , replaySpeedDisplay( 0 )
 , replayTime( 0 )
 , replayTimer( 0 )
 , replayToolBar( 0 )
-=======
->>>>>>> SlySven/release_30
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
 , mIsToDisplayMapAuditErrorsToConsole( false )
@@ -395,14 +392,11 @@ mudlet::mudlet()
     else {
         mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
     }
-<<<<<<< HEAD
 }
 
 HostManager * mudlet::getHostManager()
 {
     return &mHostManager;
-=======
->>>>>>> SlySven/release_30
 }
 
 bool mudlet::moduleTableVisible()
@@ -1062,14 +1056,10 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
         return false;
 }
 
-<<<<<<< HEAD
-bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
-=======
-bool mudlet::setTextFormat( Host * pHost, QString & name,
+bool mudlet::setTextFormat( Host * pHost, const QString & name,
                             int r1, int g1, int b1,
                             int r2, int g2, int b2,
                             bool bold, bool underline, bool italics, bool strikeout )
->>>>>>> SlySven/release_30
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1104,12 +1094,6 @@ bool mudlet::setTextFormat( Host * pHost, QString & name,
         else
         {
             pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
-<<<<<<< HEAD
-        if( strikeout )
-            pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
-        else
-            pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
-=======
         }
         if( strikeout )
         {
@@ -1119,7 +1103,6 @@ bool mudlet::setTextFormat( Host * pHost, QString & name,
         {
             pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
         }
->>>>>>> SlySven/release_30
         return true;
     }
     else
@@ -1480,11 +1463,7 @@ void mudlet::setUnderline( Host * pHost, const QString & name, bool b )
     }
 }
 
-<<<<<<< HEAD
 void mudlet::setStrikeOut( Host * pHost, const QString & name, bool b )
-=======
-void mudlet::setStrikeOut( Host * pHost, QString & name, bool b )
->>>>>>> SlySven/release_30
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1494,11 +1473,7 @@ void mudlet::setStrikeOut( Host * pHost, QString & name, bool b )
     }
 }
 
-<<<<<<< HEAD
 void mudlet::setFgColor( Host * pHost, const QString & name, int r, int g, int b )
-=======
-void mudlet::setFgColor( Host * pHost, QString & name, int r, int g, int b )
->>>>>>> SlySven/release_30
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1733,18 +1708,18 @@ void mudlet::closeEvent(QCloseEvent *event)
 void mudlet::readSettings()
 {
     QSettings settings("mudlet", "Mudlet");
-    
-    /*In case sensitive environments, two different config directories 
+
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
     Furthermore, we skip the version from the application name to follow the convention.
-    For compatibility with older settings, if no config is loaded 
-    from the config directory "mudlet", application "Mudlet", we try to load from the config 
+    For compatibility with older settings, if no config is loaded
+    from the config directory "mudlet", application "Mudlet", we try to load from the config
     directory "Mudlet", application "Mudlet 1.0". */
     if(settings.value("pos") == 0)
     {
         QSettings settings("Mudlet","Mudlet 1.0");
     }
-    
+
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
@@ -1800,7 +1775,7 @@ void mudlet::setIcoSize( int s )
 
 void mudlet::writeSettings()
 {
-    /*In case sensitive environments, two different config directories 
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
     Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
@@ -1959,11 +1934,7 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
     }
 
     QDockWidget * pDock = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
-<<<<<<< HEAD
     pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
-=======
-    pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap );//FIXME: mpHost definieren
->>>>>>> SlySven/release_30
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
 
