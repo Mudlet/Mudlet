@@ -26,12 +26,9 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
-<<<<<<< HEAD
 #include <QPointer>
 #include <QSharedPointer>
-=======
 #include <QApplication>
->>>>>>> SlySven/release_30
 #include "post_guard.h"
 
 #include <pcre.h>
@@ -59,11 +56,7 @@ public:
     bool             compileScript();
     void             execute();
     QString          getScript()                     { return mScript; }
-<<<<<<< HEAD
-    bool             setScript(const QString & script );
-=======
     bool             setScript( const QString & script );
->>>>>>> SlySven/release_30
     QString          getRegexCode()                  { return mRegexCode; }
     void             setRegexCode(const QString& );
     void             setCommand(const QString& command ) { mCommand = command; }
