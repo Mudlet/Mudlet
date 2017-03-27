@@ -1,7 +1,10 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+<<<<<<< HEAD
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+=======
+>>>>>>> SlySven/release_30
  *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -340,7 +343,10 @@ bool XMLexport::writeHost( Host * pHost )
     writeAttribute( "mUSE_FORCE_LF_AFTER_PROMPT", pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no" );
     writeAttribute( "mUSE_UNIX_EOL", pHost->mUSE_UNIX_EOL ? "yes" : "no" );
     writeAttribute( "mNoAntiAlias", pHost->mNoAntiAlias ? "yes" : "no" );
+<<<<<<< HEAD
     writeAttribute( "mEchoLuaErrors", pHost->mEchoLuaErrors ? "yes" : "no" );
+=======
+>>>>>>> SlySven/release_30
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.
@@ -358,19 +364,30 @@ bool XMLexport::writeHost( Host * pHost )
     writeAttribute( "mAcceptServerGUI", pHost->mAcceptServerGUI ? "yes" : "no" );
     writeAttribute( "mMapperUseAntiAlias", pHost->mMapperUseAntiAlias ? "yes" : "no" );
     writeAttribute( "mFORCE_MXP_NEGOTIATION_OFF", pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no" );
+<<<<<<< HEAD
     writeAttribute( "mRoomSize", QString::number(pHost->mRoomSize, 'f', 1) );
     writeAttribute( "mLineSize", QString::number(pHost->mLineSize, 'f', 1) );
+=======
+    writeAttribute( "mRoomSize", QString::number(pHost->mRoomSize));
+    writeAttribute( "mLineSize", QString::number(pHost->mLineSize));
+>>>>>>> SlySven/release_30
     writeAttribute( "mBubbleMode", pHost->mBubbleMode ? "yes" : "no");
     writeAttribute( "mShowRoomIDs", pHost->mShowRoomID ? "yes" : "no");
     writeAttribute( "mShowPanel", pHost->mShowPanel ? "yes" : "no");
     writeAttribute( "mHaveMapperScript", pHost->mHaveMapperScript ? "yes" : "no");
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
+<<<<<<< HEAD
     while( it.hasNext() ) {
+=======
+    while( it.hasNext() )
+    {
+>>>>>>> SlySven/release_30
         ignore = ignore.append(it.next());
     }
     writeAttribute( "mDoubleClickIgnore", ignore);
 
+<<<<<<< HEAD
     { // Blocked so that indentation reflects that of the XML file
         writeTextElement( "name", pHost->mHostName );
 
@@ -594,6 +611,222 @@ bool XMLexport::writeHost( Host * pHost )
     }
 
     return ( isOk && ( ! hasError() ) );
+=======
+    writeTextElement( "name", pHost->mHostName );
+    //writeTextElement( "login", pHost->mLogin );
+    //writeTextElement( "pass", pHost->mPass );
+    writeStartElement( "mInstalledPackages" );
+    for( int i=0; i<pHost->mInstalledPackages.size(); i++ )
+    {
+        writeTextElement( "string", pHost->mInstalledPackages[i] );
+    }
+    writeEndElement();
+    if (pHost->mInstalledModules.size()){
+        writeStartElement( "mInstalledModules" );
+        QMapIterator<QString, QStringList> it(pHost->mInstalledModules);
+        pHost->modulesToWrite.clear();
+        while( it.hasNext() )
+        {
+            it.next();
+            writeTextElement("key", it.key());
+            QStringList entry = it.value();
+            writeTextElement("filepath", entry[0]);
+            writeTextElement("globalSave", entry[1]);
+            if (entry[1].toInt()){
+                pHost->modulesToWrite[it.key()] = entry;
+            }
+            writeTextElement("priority", QString::number(pHost->mModulePriorities[it.key()]));
+        }
+        writeEndElement();
+    }
+    writeTextElement( "url", pHost->mUrl );
+    writeTextElement( "serverPackageName", pHost->mServerGUI_Package_name );
+    writeTextElement( "serverPackageVersion", QString::number(pHost->mServerGUI_Package_version ) );
+    writeTextElement( "port", QString::number(pHost->mPort) );
+    writeTextElement( "borderTopHeight", QString::number(pHost->mBorderTopHeight) );
+    writeTextElement( "borderBottomHeight", QString::number(pHost->mBorderBottomHeight) );
+    writeTextElement( "borderLeftWidth", QString::number(pHost->mBorderLeftWidth) );
+    writeTextElement( "borderRightWidth", QString::number(pHost->mBorderRightWidth) );
+    writeTextElement( "wrapAt", QString::number(pHost->mWrapAt) );
+    writeTextElement( "wrapIndentCount", QString::number(pHost->mWrapIndentCount) );
+    writeTextElement( "mFgColor", pHost->mFgColor.name() );
+    writeTextElement( "mBgColor", pHost->mBgColor.name() );
+    writeTextElement( "mCommandFgColor", pHost->mCommandFgColor.name() );
+    writeTextElement( "mCommandBgColor", pHost->mCommandBgColor.name() );
+    writeTextElement( "mCommandLineFgColor", pHost->mCommandLineFgColor.name() );
+    writeTextElement( "mCommandLineBgColor", pHost->mCommandLineBgColor.name() );
+    writeTextElement( "mBlack", pHost->mBlack.name() );
+    writeTextElement( "mLightBlack", pHost->mLightBlack.name() );
+    writeTextElement( "mRed", pHost->mRed.name() );
+    writeTextElement( "mLightRed", pHost->mLightRed.name() );
+    writeTextElement( "mBlue", pHost->mBlue.name() );
+    writeTextElement( "mLightBlue", pHost->mLightBlue.name() );
+    writeTextElement( "mGreen", pHost->mGreen.name() );
+    writeTextElement( "mLightGreen", pHost->mLightGreen.name() );
+    writeTextElement( "mYellow", pHost->mYellow.name() );
+    writeTextElement( "mLightYellow", pHost->mLightYellow.name() );
+    writeTextElement( "mCyan", pHost->mCyan.name() );
+    writeTextElement( "mLightCyan", pHost->mLightCyan.name() );
+    writeTextElement( "mMagenta", pHost->mMagenta.name() );
+    writeTextElement( "mLightMagenta", pHost->mLightMagenta.name() );
+    writeTextElement( "mWhite", pHost->mWhite.name() );
+    writeTextElement( "mLightWhite", pHost->mLightWhite.name() );
+    writeTextElement( "mDisplayFont", pHost->mDisplayFont.toString() );
+    writeTextElement( "mCommandLineFont", pHost->mCommandLineFont.toString() );
+    // There was a mis-spelt duplicate commandSeperator above but it is now gone
+    writeTextElement( "mCommandSeparator", pHost->mCommandSeparator );
+    writeTextElement( "commandLineMinimumHeight", QString::number(pHost->commandLineMinimumHeight) );
+
+    writeTextElement( "mFgColor2", pHost->mFgColor_2.name() );
+    writeTextElement( "mBgColor2", pHost->mBgColor_2.name() );
+    writeTextElement( "mBlack2", pHost->mBlack_2.name() );
+    writeTextElement( "mLightBlack2", pHost->mLightBlack_2.name() );
+    writeTextElement( "mRed2", pHost->mRed_2.name() );
+    writeTextElement( "mLightRed2", pHost->mLightRed_2.name() );
+    writeTextElement( "mBlue2", pHost->mBlue_2.name() );
+    writeTextElement( "mLightBlue2", pHost->mLightBlue_2.name() );
+    writeTextElement( "mGreen2", pHost->mGreen_2.name() );
+    writeTextElement( "mLightGreen2", pHost->mLightGreen_2.name() );
+    writeTextElement( "mYellow2", pHost->mYellow_2.name() );
+    writeTextElement( "mLightYellow2", pHost->mLightYellow_2.name() );
+    writeTextElement( "mCyan2", pHost->mCyan_2.name() );
+    writeTextElement( "mLightCyan2", pHost->mLightCyan_2.name() );
+    writeTextElement( "mMagenta2", pHost->mMagenta_2.name() );
+    writeTextElement( "mLightMagenta2", pHost->mLightMagenta_2.name() );
+    writeTextElement( "mWhite2", pHost->mWhite_2.name() );
+    writeTextElement( "mLightWhite2", pHost->mLightWhite_2.name() );
+    writeTextElement( "mSpellDic", pHost->mSpellDic );
+    // TODO: Consider removing these sub-elements that duplicate the same
+    // attributes - which WERE bugged - when we update the XML format, must leave
+    // them in place for now even though we no longer use them for compatibility
+    // with older version of Mudlet
+    writeTextElement( "mLineSize", QString::number(pHost->mLineSize, 'f', 1) );
+    writeTextElement( "mRoomSize", QString::number(pHost->mRoomSize, 'f', 1) );
+
+    writeEndElement(); // end Host tag
+    writeEndElement(); // end HostPackage tag
+
+    writeStartElement( "TriggerPackage" );
+    bool ret = true;
+    typedef list<TTrigger *>::const_iterator ItTriggerUnit;
+    for( ItTriggerUnit it1 = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); it1 != pHost->mTriggerUnit.mTriggerRootNodeList.end(); it1++)
+    {
+        TTrigger * pChildTrigger = *it1;
+        if( ! pChildTrigger || pChildTrigger->mModuleMember) continue;
+        if( ! pChildTrigger->isTempTrigger())
+        {
+            if( ! writeTrigger( pChildTrigger ) )
+            {
+                ret = false;
+            }
+        }
+    }
+    writeEndElement(); //end trigger package tag
+
+    writeStartElement("TimerPackage");
+    typedef list<TTimer *>::const_iterator ItTimerUnit;
+    for( ItTimerUnit it2 = pHost->mTimerUnit.mTimerRootNodeList.begin(); it2 != pHost->mTimerUnit.mTimerRootNodeList.end(); it2++)
+    {
+        TTimer * pChildTimer = *it2;
+        if (pChildTimer->mModuleMember) continue;
+        if( ! pChildTimer->isTempTimer())
+        {
+            if( ! writeTimer( pChildTimer ) )
+            {
+                ret = false;
+            }
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("AliasPackage");
+    typedef list<TAlias *>::const_iterator ItAliasUnit;
+    for( ItAliasUnit it3 = pHost->mAliasUnit.mAliasRootNodeList.begin(); it3 != pHost->mAliasUnit.mAliasRootNodeList.end(); it3++)
+    {
+        TAlias * pChildAlias = *it3;
+        if (pChildAlias->mModuleMember) continue;
+        if( ! pChildAlias->isTempAlias())
+        {
+            if( ! writeAlias( pChildAlias ) )
+            {
+                ret = false;
+            }
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("ActionPackage");
+    typedef list<TAction *>::const_iterator ItActionUnit;
+    for( ItActionUnit it4 = pHost->mActionUnit.mActionRootNodeList.begin(); it4 != pHost->mActionUnit.mActionRootNodeList.end(); it4++)
+    {
+        TAction * pChildAction = *it4;
+        if (pChildAction->mModuleMember) continue;
+        if( ! writeAction( pChildAction ) )
+        {
+            ret = false;
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("ScriptPackage");
+    typedef list<TScript *>::const_iterator ItScriptUnit;
+    for( ItScriptUnit it5 = pHost->mScriptUnit.mScriptRootNodeList.begin(); it5 != pHost->mScriptUnit.mScriptRootNodeList.end(); it5++)
+    {
+        TScript * pChildScript = *it5;
+        if (pChildScript->mModuleMember) continue;
+        if( ! writeScript( pChildScript ) )
+        {
+            ret = false;
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("KeyPackage");
+    typedef list<TKey *>::const_iterator ItKeyUnit;
+    for( ItKeyUnit it6 = pHost->mKeyUnit.mKeyRootNodeList.begin(); it6 != pHost->mKeyUnit.mKeyRootNodeList.end(); it6++)
+    {
+        TKey * pChildKey = *it6;
+        if (pChildKey->mModuleMember) continue;
+        if( ! writeKey( pChildKey ) )
+        {
+            ret = false;
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("VariablePackage");
+    LuaInterface * lI = pHost->getLuaInterface();
+    VarUnit * vu = lI->getVarUnit();
+    //do hidden variables first
+    writeStartElement("HiddenVariables");
+    QSetIterator<QString> it8( vu->hiddenByUser );
+    while( it8.hasNext() )
+    {
+        writeTextElement( "name", it8.next() );
+    }
+    writeEndElement();
+    TVar * base = vu->getBase();
+    if ( !base )
+    {
+        lI->getVars( false );
+        base = vu->getBase();
+    }
+    if ( base )
+    {
+        QListIterator<TVar *> it7( base->getChildren(false) );
+        while( it7.hasNext() )
+        {
+            TVar * var = it7.next();
+            if( ! writeVariable( var, lI, vu ) )
+            {
+                ret = false;
+            }
+        }
+    }
+    writeEndElement();
+
+    return ret;
+>>>>>>> SlySven/release_30
 }
 
 bool XMLexport::writeVariable( TVar * pVar, LuaInterface * pLuaInterface, VarUnit * pVariableUnit )
@@ -602,6 +835,7 @@ bool XMLexport::writeVariable( TVar * pVar, LuaInterface * pLuaInterface, VarUni
     if( pVariableUnit->isSaved( pVar ) ) {
         if( pVar->getValueType() == LUA_TTABLE ) {
             writeStartElement( "VariableGroup" );
+<<<<<<< HEAD
             writeTextElement( "name", pVar->getName() );
             writeTextElement( "keyType", QString::number( pVar->getKeyType() ) );
             writeTextElement( "value", pLuaInterface->getValue( pVar ) );
@@ -615,6 +849,25 @@ bool XMLexport::writeVariable( TVar * pVar, LuaInterface * pLuaInterface, VarUni
             writeEndElement(); // </VariableGroup>
         }
         else {
+=======
+            writeTextElement( "name", var->getName() );
+            writeTextElement( "keyType", QString::number( var->getKeyType() ) );
+            writeTextElement( "value", lI->getValue( var ) );
+            writeTextElement( "valueType", QString::number( var->getValueType() ) );
+            QListIterator<TVar *> it( var->getChildren(false) );
+            while( it.hasNext() )
+            {
+                TVar * var = it.next();
+                writeVariable( var, lI, vu );
+            }
+            writeEndElement();
+        }
+    }
+    else
+    {
+        if ( vu->isSaved( var ) )
+        {
+>>>>>>> SlySven/release_30
             writeStartElement( "Variable" );
             writeTextElement( "name", pVar->getName() );
             writeTextElement( "keyType", QString::number( pVar->getKeyType() ) );
@@ -651,6 +904,7 @@ bool XMLexport::exportGenericPackage( QIODevice * device )
 
 bool XMLexport::writeGenericPackage( Host * pHost )
 {
+<<<<<<< HEAD
     bool isOk = true;
     if( isOk ) {
         writeStartElement( "TriggerPackage" );
@@ -716,6 +970,93 @@ bool XMLexport::writeGenericPackage( Host * pHost )
         }
         writeEndElement(); // </ScriptPackage>
     }
+=======
+    writeStartElement( "TriggerPackage" );
+    bool ret = true;
+    typedef list<TTrigger *>::const_iterator ItTriggerUnit;
+    for( ItTriggerUnit it1 = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); it1 != pHost->mTriggerUnit.mTriggerRootNodeList.end(); it1++)
+    {
+        TTrigger * pChildTrigger = *it1;
+        if( ! pChildTrigger ) continue;
+        if( ! pChildTrigger->isTempTrigger())
+        {
+            if( ! writeTrigger( pChildTrigger ) )
+            {
+                ret = false;
+            }
+        }
+    }
+    writeEndElement(); //end trigger package tag
+
+    writeStartElement("TimerPackage");
+    typedef list<TTimer *>::const_iterator ItTimerUnit;
+    for( ItTimerUnit it2 = pHost->mTimerUnit.mTimerRootNodeList.begin(); it2 != pHost->mTimerUnit.mTimerRootNodeList.end(); it2++)
+    {
+        TTimer * pChildTimer = *it2;
+        if( ! pChildTimer->isTempTimer())
+        {
+            if( ! writeTimer( pChildTimer ) )
+            {
+                ret = false;
+            }
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("AliasPackage");
+    typedef list<TAlias *>::const_iterator ItAliasUnit;
+    for( ItAliasUnit it3 = pHost->mAliasUnit.mAliasRootNodeList.begin(); it3 != pHost->mAliasUnit.mAliasRootNodeList.end(); it3++)
+    {
+        TAlias * pChildAlias = *it3;
+        if( ! pChildAlias->isTempAlias())
+        {
+            if( ! writeAlias( pChildAlias ) )
+            {
+                ret =false;
+            }
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("ActionPackage");
+    typedef list<TAction *>::const_iterator ItActionUnit;
+    for( ItActionUnit it4 = pHost->mActionUnit.mActionRootNodeList.begin(); it4 != pHost->mActionUnit.mActionRootNodeList.end(); it4++)
+    {
+        TAction * pChildAction = *it4;
+        if( ! writeAction( pChildAction ) )
+        {
+            ret = false;
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("ScriptPackage");
+    typedef list<TScript *>::const_iterator ItScriptUnit;
+    for( ItScriptUnit it5 = pHost->mScriptUnit.mScriptRootNodeList.begin(); it5 != pHost->mScriptUnit.mScriptRootNodeList.end(); it5++)
+    {
+        TScript * pChildScript = *it5;
+        if( ! writeScript( pChildScript ) )
+        {
+            ret = false;
+        }
+    }
+    writeEndElement();
+
+    writeStartElement("KeyPackage");
+    typedef list<TKey *>::const_iterator ItKeyUnit;
+    for( ItKeyUnit it6 = pHost->mKeyUnit.mKeyRootNodeList.begin(); it6 != pHost->mKeyUnit.mKeyRootNodeList.end(); it6++)
+    {
+        TKey * pChildKey = *it6;
+        if( ! writeKey( pChildKey ) )
+        {
+            ret = false;
+        }
+    }
+    writeEndElement();
+
+    return ret;
+}
+>>>>>>> SlySven/release_30
 
     if( isOk ) {
         writeStartElement( "KeyPackage" );
@@ -760,6 +1101,7 @@ bool XMLexport::exportTrigger( QIODevice * device )
 
 bool XMLexport::writeTrigger( TTrigger * pT )
 {
+<<<<<<< HEAD
     bool isOk = true;
     if( !pT->mModuleMasterFolder && pT->exportItem ) {
 
@@ -829,6 +1171,84 @@ bool XMLexport::writeTrigger( TTrigger * pT )
     }
 
     return ( isOk && ( ! hasError() ) );
+=======
+    if (!pT->mModuleMasterFolder && pT->exportItem){
+    //qDebug()<<"trigger written"<<pT->mModuleMember;
+    QString tag;
+    if( pT->mIsFolder )
+    {
+        tag = "TriggerGroup";
+    }
+    else
+    {
+        tag = "Trigger";
+    }
+    writeStartElement( tag );
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
+    writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
+    writeAttribute( "isTempTrigger", pT->mIsTempTrigger ? "yes" : "no" );
+    writeAttribute( "isMultiline", pT->mIsMultiline ? "yes" : "no" );
+    writeAttribute( "isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no" );
+    writeAttribute( "isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no" );
+    writeAttribute( "isFilterTrigger", pT->mFilterTrigger ? "yes" : "no" );
+    writeAttribute( "isSoundTrigger", pT->mSoundTrigger ? "yes" : "no" );
+    writeAttribute( "isColorTrigger", pT->mColorTrigger ? "yes" : "no" );
+    writeAttribute( "isColorTriggerFg", pT->mColorTriggerFg ? "yes" : "no" );
+    writeAttribute( "isColorTriggerBg", pT->mColorTriggerBg ? "yes" : "no" );
+
+
+    writeTextElement( "name", pT->mName );
+    writeTextElement( "script", pT->mScript );
+    writeTextElement( "triggerType", QString::number( pT->mTriggerType ) );
+    writeTextElement( "conditonLineDelta", QString::number( pT->mConditionLineDelta ) );
+    writeTextElement( "mStayOpen", QString::number( pT->mStayOpen ) );
+    writeTextElement( "mCommand", pT->mCommand );
+    writeTextElement( "packageName", pT->mPackageName );
+    writeTextElement( "mFgColor", pT->mFgColor.name() );
+    writeTextElement( "mBgColor", pT->mBgColor.name() );
+    writeTextElement( "mSoundFile", pT->mSoundFile );
+    writeTextElement( "colorTriggerFgColor", pT->mColorTriggerFgColor.name() );
+    writeTextElement( "colorTriggerBgColor", pT->mColorTriggerBgColor.name() );
+
+// TODO: The next bit could be revised for a new - not BACKWARD COMPATIBLE form
+// if/when we get 'version' checking enforced in the 'MudletPackage' element:
+//    int elementCount = qMin( pTt->mRegexCodeList.size(), pT->mRegexCodePropertyList.size() ):
+//    writeStartElement( "RegexList" );
+//    writeAttribute( "size", QString::number( elementCount ) );
+//    for( int i = 0; i < elementCount; ++i ) {
+//        writeEmptyElement( "RegexCode" );
+//        writeAttribute( "index", QString::number( i ) );
+//        writeAttribute( "type", QString::number( pT->mRegexCodePropertyList.at(i) ) );
+//        writeAttribute( "data", pT->mRegexCodeList.at(i) );
+//    }
+//    writeEndElement(); // </RegexList>
+
+    writeStartElement( "regexCodeList" );
+    for( int i=0; i<pT->mRegexCodeList.size(); i++ )
+    {
+        writeTextElement( "string", pT->mRegexCodeList[i] );
+    }
+    writeEndElement();
+
+    writeStartElement( "regexCodePropertyList" );
+    for( int i=0; i<pT->mRegexCodePropertyList.size(); i++ )
+    {
+        writeTextElement( "integer", QString::number( pT->mRegexCodePropertyList[i] ) );
+    }
+    writeEndElement();
+    }
+    typedef list<TTrigger *>::const_iterator I;
+    for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
+    {
+        TTrigger * pChild = *it;
+      //  if (pChild->mModuleMember) continue;
+        writeTrigger( pChild );
+    }
+    if (pT->exportItem)
+        writeEndElement();
+
+    return true;
+>>>>>>> SlySven/release_30
 }
 
 
@@ -916,6 +1336,7 @@ bool XMLexport::exportAction( QIODevice * device )
 
 bool XMLexport::writeAction( TAction * pT )
 {
+<<<<<<< HEAD
     bool isOk = true;
     if( !pT->mModuleMasterFolder && pT->exportItem ) {
 
@@ -948,6 +1369,52 @@ bool XMLexport::writeAction( TAction * pT )
         }
 
         isOk = ! hasError();
+=======
+    if (!pT->mModuleMasterFolder && pT->exportItem){
+    QString tag;
+    if( pT->mIsFolder )
+    {
+        tag = "ActionGroup";
+    }
+    else
+    {
+        tag = "Action";
+    }
+
+    writeStartElement( tag );
+
+    writeAttribute( "isActive", pT->shouldBeActive() ? "yes" : "no" );
+    writeAttribute( "isFolder", pT->mIsFolder ? "yes" : "no" );
+    writeAttribute( "isPushButton", pT->mIsPushDownButton ? "yes" : "no" );
+    writeAttribute( "isFlatButton", pT->mButtonFlat ? "yes" : "no" );
+    writeAttribute( "useCustomLayout", pT->mUseCustomLayout ? "yes" : "no" );
+
+    writeTextElement( "name", pT->mName );
+    writeTextElement( "packageName", pT->mPackageName );
+    writeTextElement( "script", pT->mScript );
+    writeTextElement( "css", pT->css );
+    writeTextElement( "commandButtonUp", pT->mCommandButtonUp );
+    writeTextElement( "commandButtonDown", pT->mCommandButtonDown );
+    writeTextElement( "icon", pT->mIcon );
+    writeTextElement( "orientation", QString::number(pT->mOrientation) );
+    writeTextElement( "location", QString::number(pT->mLocation) );
+    writeTextElement( "posX", QString::number(pT->mPosX) );
+    writeTextElement( "posY", QString::number(pT->mPosY) );
+    // We now use a boolean but file must use original "1" (false)
+    // or "2" (true) for backward compatibility
+    writeTextElement( "mButtonState", QString::number( pT->mButtonState ? 2 : 1 ) );
+    writeTextElement( "sizeX", QString::number(pT->mSizeX) );
+    writeTextElement( "sizeY", QString::number(pT->mSizeY) );
+    writeTextElement( "buttonColumn", QString::number(pT->mButtonColumns) );
+    writeTextElement( "buttonRotation", QString::number(pT->mButtonRotation) );
+    writeTextElement( "buttonColor", pT->mButtonColor.name() );
+}
+    typedef list<TAction *>::const_iterator I;
+    for( I it = pT->mpMyChildrenList->begin(); it != pT->mpMyChildrenList->end(); it++)
+    {
+        TAction * pChild = *it;
+        writeAction( pChild );
+>>>>>>> SlySven/release_30
     }
 
     for( auto it = pT->mpMyChildrenList->begin(); isOk && it != pT->mpMyChildrenList->end(); ++it ) {

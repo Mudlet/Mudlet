@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -388,9 +388,15 @@ public:
     static int getMapMenus(lua_State * L);
     static int getMudletVersion( lua_State * L );
     static int openWebPage( lua_State * L );
+<<<<<<< HEAD
     static int getRoomUserDataKeys( lua_State * L );
     static int getAllRoomUserData( lua_State * L );
     static int getAllRoomEntrances( lua_State * L );
+=======
+    static int getAllRoomEntrances( lua_State * L );
+    static int getRoomUserDataKeys( lua_State * L );
+    static int getAllRoomUserData( lua_State * L );
+>>>>>>> SlySven/release_30
     static int searchAreaUserData( lua_State * );
     static int getMapUserData( lua_State * );
     static int getAreaUserData( lua_State * );
@@ -403,8 +409,11 @@ public:
     static int clearMapUserData( lua_State * );
     static int clearMapUserDataItem( lua_State * );
     static int setDefaultAreaVisible( lua_State * );
+<<<<<<< HEAD
     static int getProfileName( lua_State * );
     static int raiseGlobalEvent( lua_State * );
+=======
+>>>>>>> SlySven/release_30
 
 
     std::list<std::string> mCaptureGroupList;
@@ -438,6 +447,7 @@ signals:
 public slots:
 
     void slot_replyFinished( QNetworkReply * );
+<<<<<<< HEAD
 // Not Used:    void slotOpenUserWindow( int, const QString& );
 // Not Used:    void slotEchoUserWindow( int, const QString&, const QString& );
 // Not Used:    void slotClearUserWindow( int, const QString& );
@@ -447,6 +457,17 @@ public slots:
 // Not Used:    void slotEchoMessage( int, const QString& );
 // Not Used:    void slotNewCommand( int, const QString& );
 // Not Used:    void slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName );
+=======
+    void slotOpenUserWindow( int, QString );
+    void slotEchoUserWindow( int, QString, QString );
+    void slotClearUserWindow( int, QString );
+    void slotEnableTimer( int, QString );
+    void slotDisableTimer( int, QString );
+    void slotReplace( int, QString );
+    void slotEchoMessage( int, QString );
+    void slotNewCommand( int, QString );
+    void slotTempTimer( int hostID, double timeout, QString function, QString timerName );
+>>>>>>> SlySven/release_30
     void slotPurge();
     void slotDeleteSender();
 

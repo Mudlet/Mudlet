@@ -27,7 +27,10 @@
 #include "ui_mapper.h"
 #include <QDir>
 #include <QMainWindow>
+<<<<<<< HEAD
 #include <QPointer>
+=======
+>>>>>>> SlySven/release_30
 #include "post_guard.h"
 
 
@@ -43,11 +46,19 @@ public:
         dlgMapper( QWidget *, Host *, TMap * );
         void updateAreaComboBox();
     void                setDefaultAreaShown( const bool );
+<<<<<<< HEAD
     const bool          getDefaultAreaShown() { return mShowDefaultArea; }
     void                resetAreaComboBoxToPlayerRoomArea();
 
         TMap * mpMap;
         QPointer<Host> mpHost;
+=======
+    bool                getDefaultAreaShown() { return mShowDefaultArea; }
+    void                resetAreaComboBoxToPlayerRoomArea();
+
+        TMap * mpMap;
+        Host * mpHost;
+>>>>>>> SlySven/release_30
 
 
 public slots:

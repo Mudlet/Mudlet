@@ -42,9 +42,12 @@
 #include <math.h>    // for sqrt
 
 class TRoom;
+<<<<<<< HEAD
 
 using namespace boost;
 using namespace std;
+=======
+>>>>>>> SlySven/release_30
 
 
 // auxiliary types
@@ -66,10 +69,10 @@ struct route
 
 // euclidean distance heuristic
 template <class Graph, class CostType, class LocMap>
-class distance_heuristic : public astar_heuristic<Graph, CostType>
+class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
-  typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
+  typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
   distance_heuristic(LocMap l, Vertex goal)
     : m_location(l), m_goal(goal) {}
   CostType operator()(Vertex u)

@@ -206,7 +206,11 @@
     <string>Open script editor</string>
    </property>
    <property name="statusTip">
+<<<<<<< HEAD
     <string>opens the Editor for the different types of things that can be scripted by the user</string>
+=======
+    <string>Opens the Editor for the different types of things that can be scripted by the user</string>
+>>>>>>> SlySven/release_30
    </property>
    <property name="shortcut">
     <string>Alt+E</string>

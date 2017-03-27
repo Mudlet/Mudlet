@@ -4,8 +4,12 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+<<<<<<< HEAD
  *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+=======
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+>>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -82,6 +86,7 @@ public:
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * );
    void                          unregisterTimer( QTimer * );
+<<<<<<< HEAD
    bool                          openWindow( Host *, const QString & );
    bool                          createMiniConsole( Host *, const QString &, int, int, int, int );
    bool                          createLabel( Host *, const QString &, int, int, int, int, bool );
@@ -125,6 +130,50 @@ public:
    bool                          moveCursorEnd( Host *, const QString & );
    bool                          moveCursor( Host *, const QString &, int, int );
    int                           getLastLineNumber( Host *, const QString & );
+=======
+   bool                          openWindow( Host *, QString & );
+   bool                          createMiniConsole( Host *, QString &, int, int, int, int );
+   bool                          createLabel( Host *, QString &, int, int, int, int, bool );
+   bool                          echoWindow( Host *, QString &, QString & );
+   bool                          echoLink( Host * pHost, QString & name, QString & text, QStringList &, QStringList &, bool customFormat=false );
+   void                          insertLink( Host *, QString &, QString, QStringList &, QStringList &, bool customFormat=false );
+   bool                          appendBuffer( Host *, QString & );
+   bool                          createBuffer( Host *, QString & );
+   bool                          showWindow( Host *, QString & );
+   bool                          hideWindow( Host *, QString & );
+   bool                          paste( Host *, QString & );
+   bool                          closeWindow( Host *, QString & );
+   bool                          resizeWindow( Host *, QString &, int, int );
+   bool                          clearWindow( Host *, QString & );
+   bool                          pasteWindow( Host * pHost, QString & name );
+   bool                          setBackgroundColor( Host *, QString & name, int r, int g, int b, int alpha );
+   bool                          setBackgroundImage( Host *, QString & name, QString & path );
+   bool                          setTextFormat( Host *, QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
+   bool                          setLabelClickCallback( Host *, QString &, QString &, TEvent * );
+   bool                          setLabelOnEnter( Host *, QString &, QString &, TEvent * );
+   bool                          setLabelOnLeave( Host *, QString &, QString &, TEvent * );
+   bool                          moveWindow( Host *, QString & name, int, int );
+   void                          deleteLine( Host *, QString & name );
+   void                          insertText( Host *, QString & name, QString );
+   void                          replace( Host *, QString & name, QString );
+   int                           selectString( Host *, QString & name, QString what, int );
+   int                           selectSection( Host *, QString & name, int, int );
+   void                          setBold( Host *, QString & name, bool );
+   void                          setLink( Host * pHost, QString & name, QString & linkText, QStringList & linkFunction, QStringList & );
+   void                          setItalics( Host *, QString & name, bool );
+   void                          setUnderline( Host *, QString & name, bool );
+   void                          setStrikeOut( Host *, QString & name, bool );
+   void                          setFgColor( Host *, QString & name, int, int, int );
+   void                          setBgColor( Host *, QString & name, int, int, int );
+   bool                          userWindowLineWrap( Host * pHost, QString & name, bool on );
+   QString                       readProfileData( QString profile, QString item );
+   bool                          setWindowWrap( Host * pHost, QString & name, int & wrap );
+   bool                          setWindowWrapIndent( Host * pHost, QString & name, int & wrap );
+   bool                          copy( Host * pHost, QString & name );
+   bool                          moveCursorEnd( Host *, QString & );
+   bool                          moveCursor( Host *, QString &, int, int );
+   int                           getLastLineNumber( Host *, QString & );
+>>>>>>> SlySven/release_30
    void                          readSettings();
    void                          writeSettings();
    void                          showUnzipProgress( const QString& txt );
@@ -245,6 +294,11 @@ signals:
    void                         signal_editorTextOptionsChanged( QTextOption::Flags );
    void                         signal_profileMapReloadRequested( QList<QString> );
 
+signals:
+
+   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
+   void                         signal_profileMapReloadRequested( QList<QString> );
+
 private slots:
 
    void                          slot_close_profile();
@@ -301,7 +355,10 @@ private:
    QPushButton *                 moduleInstallButton;
    QPushButton *                 moduleHelpButton;
 
+<<<<<<< HEAD
    HostManager                   mHostManager;
+=======
+>>>>>>> SlySven/release_30
    QStatusBar *                 mpMainStatusBar;
 
    bool                         mIsToDisplayMapAuditErrorsToConsole;

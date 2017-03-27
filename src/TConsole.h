@@ -4,8 +4,12 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+<<<<<<< HEAD
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+=======
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+>>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,6 +55,7 @@ class TSplitter;
 class dlgNotepad;
 
 
+<<<<<<< HEAD
 class TFontSpecsLogger
 {
 public:
@@ -80,6 +85,8 @@ public:
 };
 
 
+=======
+>>>>>>> SlySven/release_30
 class TConsole : public QWidget
 {
 Q_OBJECT
@@ -177,12 +184,18 @@ public:
       void              _luaWrapLine( int );
       QString           getCurrentLine();
       void              selectCurrentLine();
+<<<<<<< HEAD
       bool              saveMap(const QString& location);
       bool              loadMap(const QString& location);
       bool              importMap(const QString& location, QString *errMsg = Q_NULLPTR );
       QString           logger_translate( QString & );
       void              logger_set_text_properties(const QString& );
       QString           assemble_html_font_specs();
+=======
+      bool              saveMap(QString location);
+      bool              loadMap(QString location);
+      bool              importMap( const QString, QString *errMsg = Q_NULLPTR );
+>>>>>>> SlySven/release_30
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
       void              toggleLogging(bool);
 
@@ -198,7 +211,6 @@ public:
       QWidget *         layer;
       QWidget *         layerCommandLine;
       QWidget *         layerEdit;
-      TFontSpecsLogger  m_LoggerfontSpecs;
       QColor            mBgColor;
       int               mButtonState;
       TBuffer           mClipboard;

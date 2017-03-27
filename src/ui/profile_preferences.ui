@@ -769,6 +769,7 @@
             </property>
            </widget>
           </item>
+<<<<<<< HEAD
           <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_echoLuaErrors">
             <property name="toolTip">
@@ -779,6 +780,8 @@
             </property>
            </widget>
           </item>
+=======
+>>>>>>> SlySven/release_30
          </layout>
         </widget>
        </item>

@@ -1,6 +1,10 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
+<<<<<<< HEAD
 #    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
+=======
+#    Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         #
+>>>>>>> SlySven/release_30
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -269,6 +273,14 @@ IF(WIN32)
   ENDIF()
 ENDIF()
 
+<<<<<<< HEAD
+=======
+IF(WIN32)
+  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
+  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
+ENDIF()
+
+>>>>>>> SlySven/release_30
 # Break each step into a separate command so any status message is output straigh away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h

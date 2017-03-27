@@ -103,6 +103,7 @@ public slots:
 
     // Save.
     void slot_save_and_exit();
+    void slot_chooseProfilesChanged(QAction *);
 
     void hideActionLabel();
 

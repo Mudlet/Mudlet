@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,8 +26,12 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
+<<<<<<< HEAD
 #include <QPointer>
 #include <QSharedPointer>
+=======
+#include <QApplication>
+>>>>>>> SlySven/release_30
 #include "post_guard.h"
 
 #include <pcre.h>
@@ -36,6 +41,7 @@ class Host;
 
 class TAlias : public Tree<TAlias>
 {
+    Q_DECLARE_TR_FUNCTIONS(TAlias) // Needed so we can use tr() even though TAlias is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -46,13 +52,18 @@ public:
                      TAlias( TAlias * parent, Host * pHost );
                      TAlias(const QString& name, Host * pHost );
     void             compileAll();
+    void            compileRegex();
     QString          getName()                       { return mName; }
     void             setName(const QString& name );
     void             compile();
     bool             compileScript();
     void             execute();
     QString          getScript()                     { return mScript; }
+<<<<<<< HEAD
     bool             setScript(const QString & script );
+=======
+    bool             setScript( const QString & script );
+>>>>>>> SlySven/release_30
     QString          getRegexCode()                  { return mRegexCode; }
     void             setRegexCode(const QString& );
     void             setCommand(const QString& command ) { mCommand = command; }
@@ -66,7 +77,7 @@ public:
 
 
 
-                     TAlias(){};
+                     TAlias(){}
     QString          mName;
     QString          mCommand;
     QString          mRegexCode;

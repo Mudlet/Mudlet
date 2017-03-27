@@ -71,6 +71,7 @@ public:
     bool hasExitLock( int to );
     bool hasSpecialExitLock( int, const QString& );
     void removeAllSpecialExitsToRoom(int _id );
+<<<<<<< HEAD
     void setSpecialExit( int to, const QString& cmd );
     void clearSpecialExits();
     const QMultiMap<int, QString> & getOtherMap() const { return other; }
@@ -84,6 +85,21 @@ public:
     void calcRoomDimensions();
     bool setArea( int , bool isToDeferAreaRelatedRecalculations = false );
     int getExitWeight(const QString& cmd );
+=======
+    void setSpecialExit( int to, QString cmd );
+    void clearSpecialExits();
+    const QMultiMap<int, QString> & getOtherMap() const { return other; }
+    const QMap<QString, int> & getExitWeights() const { return exitWeights; }
+    void setExitWeight( QString cmd, int w );
+    bool hasExitWeight( QString cmd );
+    const bool setDoor( const QString cmd, const int doorStatus ); //0=no door, 1=open door, 2=closed, 3=locked
+    int getDoor( QString cmd );
+    bool hasExitStub( int direction );
+    void setExitStub( int direction, bool status );
+    void calcRoomDimensions();
+    int getExitWeight( QString cmd );
+    bool setArea( int , bool isToDeferAreaRelatedRecalculations = false );
+>>>>>>> SlySven/release_30
 
     int getWeight() { return weight; }
     int getNorth() { return north; }

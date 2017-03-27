@@ -55,14 +55,10 @@ public:
     bool             mRecordMove;
     QGridLayout *    mpLayout;
     int              mItemCount;
-    
-signals:
-    
-    
+
+
 public slots:
-    
-    void slot_pressed();    
-    
+    void             slot_pressed( const bool );
 };
 
 #endif // MUDLET_TTOOLBAR_H

@@ -41,6 +41,13 @@ public:
     std::list<T *> *   getChildrenList();
     bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
     int                getChildCount()             { return mpMyChildrenList->size(); }
+<<<<<<< HEAD
+=======
+    void               DumpFamily();
+    void               Dump();
+    void               setFullyExpanded()          { FullyExpanded = true; }
+    bool               isFullyExpanded()           { return FullyExpanded; }
+>>>>>>> SlySven/release_30
     int                getID()                     { return mID; }
     void               setID( int id )             { mID=id; }
     void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );

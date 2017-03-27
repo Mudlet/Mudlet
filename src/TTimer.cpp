@@ -253,7 +253,12 @@ void TTimer::execute()
     if( ( ! isFolder() && hasChildren() )
      || ( isOffsetTimer() ) ) {
 
+<<<<<<< HEAD
         for( auto it = mpMyChildrenList->begin();
+=======
+        typedef list<TTimer *>::const_iterator I;
+        for( I it = mpMyChildrenList->begin();
+>>>>>>> SlySven/release_30
              it != mpMyChildrenList->end();
              ++it ) {
 

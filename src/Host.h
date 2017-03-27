@@ -5,7 +5,10 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+<<<<<<< HEAD
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+=======
+>>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -86,6 +89,10 @@ public:
     bool               closingDown();
     const unsigned int assemblePath();
     const bool         checkForMappingScript();
+<<<<<<< HEAD
+=======
+    void               orderShutDown();
+>>>>>>> SlySven/release_30
     TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
     TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
     AliasUnit *        getAliasUnit()                   { return & mAliasUnit; }
@@ -138,11 +145,19 @@ public:
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
 
+<<<<<<< HEAD
     bool               installPackage(const QString&, int module);
     bool               uninstallPackage(const QString&, int module);
     bool               removeDir( const QString& dirName, const QString& originalPath);
     void               readPackageConfig(const QString&, QString & );
     void                postMessage( const QString message ) { mTelnet.postMessage( message ); }
+=======
+    bool               installPackage( QString, int module);
+    bool               uninstallPackage( QString, int module);
+    bool               removeDir( const QString dirName, QString originalPath);
+    void               readPackageConfig( QString, QString & );
+    void                postMessage( const QString message ) { mTelnet.postMessage(message); }
+>>>>>>> SlySven/release_30
 
 
     cTelnet            mTelnet;

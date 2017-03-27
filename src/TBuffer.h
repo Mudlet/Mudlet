@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -41,6 +42,24 @@
 #define TCHAR_INVERSE 8
 #define TCHAR_ECHO 16
 #define TCHAR_STRIKEOUT 32
+<<<<<<< HEAD
+=======
+// TODO: {Reserve for} use the next four bits for extensions...
+// Next one is for ANSI CSI SGR Overline (53 on, 55 off)
+//#define TCHAR_OVERLINE 64
+// We currently use inverse for selected text, but will need reworking so that
+// code fragments currently using TCHAR_INVERSE use TCHAR_SELECT instead and
+// and then used TCHAR_INVERSE in new methods as per BOLD/ITALICS - at point
+// when used to draw text for display we will need to XOR the two flags together...!
+//#define TCHAR_SELECT 128
+// Next one is for ANSI CSI SGR Slow blink < 2.5 Hz (5 on, 25 off)
+//#define TCHAR_SLOWBLINK 256
+// Next one is for ANSI CSI SGR Rapid blink >= 2.5 Hz (6 on, 25 off)), make it
+// mutually exclusive with previous (and have priority...)
+//#define TCHAR_FASTBLINK 512
+// Convience for testing for both Blink types
+//#define TCHAR_BLINKMASK 768
+>>>>>>> SlySven/release_30
 
 class Host;
 
@@ -53,6 +72,8 @@ public:
            TChar( Host * );
            TChar( const TChar & copy );
     bool   operator==( const TChar & c );
+
+
     int    fgR;
     int    fgG;
     int    fgB;
@@ -82,8 +103,13 @@ class TBuffer
 public:
 
     TBuffer( Host * pH );
+<<<<<<< HEAD
     QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
     bool insertInLine( QPoint & cursor, const QString & what, TChar & format );
+=======
+    QPoint insert( QPoint &, QString text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
+    bool insertInLine( QPoint & cursor, QString & what, TChar & format );
+>>>>>>> SlySven/release_30
     void expandLine( int y, int count, TChar & );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
     void log( int, int );
@@ -117,16 +143,25 @@ public:
     void resetFontSpecs();
     QPoint getEndPos();
     void translateToPlainText( std::string & s );
+<<<<<<< HEAD
     void append(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
     void appendLine(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
     int lookupColor(const QString & s, int pos );
     void set_text_properties(int tag);
+=======
+    void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
+    void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
+    int lookupColor( QString & s, int pos );
+>>>>>>> SlySven/release_30
     void setWrapAt( int i ){ mWrapAt = i; }
     void setWrapIndent( int i ){ mWrapIndent = i; }
     void updateColors();
     TBuffer copy( QPoint &, QPoint & );
     TBuffer cut( QPoint &, QPoint & );
     void paste( QPoint &, TBuffer );
+    void              setBufferSize( int s, int batch );
+
+
     std::deque<TChar> bufferLine;
     std::deque< std::deque<TChar> > buffer;
     QStringList            timeBuffer;
@@ -142,7 +177,6 @@ public:
     int               mUntriggered;
     int               mWrapAt;
     int               mWrapIndent;
-    void              setBufferSize( int s, int batch );
     int               speedTP;
     int               speedSequencer;
     int               speedAppend;
@@ -167,10 +201,13 @@ public:
     std::string       mAssembleRef;
     bool              mEchoText;
 
+
 private:
     inline void       shrinkBuffer();
     inline int        calcWrapPos( int line, int begin, int end );
     void              handleNewLine();
+
+
     bool              gotESC;
     bool              gotHeader;
     QString           code;

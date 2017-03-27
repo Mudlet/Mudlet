@@ -1,7 +1,11 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+<<<<<<< HEAD
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+=======
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+>>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -357,6 +361,7 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
     }
 }
 
+<<<<<<< HEAD
 inline void TBuffer::set_text_properties(int tag)
 {
     if( mWaitingForHighColorCode )
@@ -614,22 +619,130 @@ NORMAL_ANSI_COLOR_TAG:
     };
 }
 
+=======
+//void TBuffer::appendLink( QString & text,
+//                          int sub_start,
+//                          int sub_end,
+//                          int fgColorR,
+//                          int fgColorG,
+//                          int fgColorB,
+//                          int bgColorR,
+//                          int bgColorG,
+//                          int bgColorB,
+//                          bool bold,
+//                          bool italics,
+//                          bool underline )
+//{
+//    if( static_cast<int>(buffer.size()) > mLinesLimit )
+//    {
+//        shrinkBuffer();
+//    }
+//    int last = buffer.size()-1;
+//    if( last < 0 )
+//    {
+//        std::deque<TChar> newLine;
+//        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
+//        newLine.push_back( c );
+//        buffer.push_back( newLine );
+//        lineBuffer.push_back(QString());
+//        promptBuffer.push_back(false);
+//        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+//        dirty.push_back(true);
+//        last = 0;
+//    }
+//    bool firstChar = (lineBuffer.back().size() == 0);
+//    int length = text.size();
+//    if( length < 1 ) return;
+//    if( sub_end >= length ) sub_end = text.size()-1;
+
+//    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
+//    {
+//        if( text.at(i) == '\n' )
+//        {
+//            std::deque<TChar> newLine;
+//            buffer.push_back( newLine );
+//            lineBuffer.push_back( QString() );
+//            QString time = "-----";
+//            timeBuffer << time;
+//            promptBuffer << false;
+//            dirty << true;
+//            mLastLine++;
+//            newLines++;
+//            firstChar = true;
+//            continue;
+//        }
+//        if( lineBuffer.back().size() >= mWrapAt )
+//        {
+//            //assert(lineBuffer.back().size()==buffer.back().size());
+//            const QString lineBreaks = ",.- ";
+//            const QString nothing = "";
+//            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
+//            {
+//                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
+//                {
+//                    QString tmp = lineBuffer.back().mid(0,i+1);
+//                    QString lineRest = lineBuffer.back().mid(i+1);
+//                    lineBuffer.back() = tmp;
+//                    std::deque<TChar> newLine;
+
+//                    int k = lineRest.size();
+//                    if( k > 0 )
+//                    {
+//                        while( k > 0 )
+//                        {
+//                            newLine.push_front(buffer.back().back());
+//                            buffer.back().pop_back();
+//                            k--;
+//                        }
+//                    }
+
+//                    buffer.push_back( newLine );
+//                    if( lineRest.size() > 0 )
+//                        lineBuffer.append( lineRest );
+//                    else
+//                        lineBuffer.append( nothing );
+//                    QString time = "-----";
+//                    timeBuffer << time;
+//                    promptBuffer << false;
+//                    dirty << true;
+//                    mLastLine++;
+//                    newLines++;
+//                    break;
+//                }
+//            }
+//        }
+//        lineBuffer.back().append( text.at( i ) );
+
+//        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, mLinkID );
+//        buffer.back().push_back( c );
+//        if( firstChar )
+//        {
+//            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+//        }
+//    }
+//}
+
+
+//int speedTP;
+>>>>>>> SlySven/release_30
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
       -----------------------------------------
       0 reset
       1 intensity bold on
-      2 intensity faint
+      2 intensity faint on
       3 italics on
       4 underline on
-      5 blink slow
-      6 blink fast
+      5 blink on slow
+      6 blink on fast
       7 inverse on
-      9 strikethrough
+      9 strikethrough on
       10 ? TODO
       22 intensity normal (not bold, not faint)
       23 italics off
       24 underline off
+      25 blink off
+      26 RESERVED (for proportional spacing)
       27 inverse off
       29 strikethrough off
       30 fg black
@@ -640,7 +753,7 @@ NORMAL_ANSI_COLOR_TAG:
       35 fg magenta
       36 fg cyan
       37 fg white
-      39 bg default white
+      39 fg default
       40 bg black
       41 bg red
       42 bg green
@@ -649,11 +762,44 @@ NORMAL_ANSI_COLOR_TAG:
       45 bg magenta
       46 bg cyan
       47 bg white
-      49 bg black FIXME: add
+      49 bg default
+      50 RESERVED (for proportional spacing)
+      51 framed on
+      52 encircled on
+      53 overlined on
+      54 framed / encircled off
+      55 overlined off
 
-      sequences for 256 Color support:
-      38;5;0-256 foreground color
-      48;5;0-256 background color */
+      Notes for code 38/48:
+      38:0 implementation defined (48:0 is NOT allowed)
+
+      38:1 transparent foreground
+      48:1 transparent background
+
+      sequences for 24-bit Color support:
+      38:2:0-255:0-255:0-255:XXX:0-255:0-1 (direct) RGB space foreground color
+      48:2:0-255:0-255:0-255:XXX:0-255:0-1 (direct) RGB space background color
+      38:3:0-255:0-255:0-255:XXX:0-255:0-1 (direct) CMY space foreground color
+      48:3:0-255:0-255:0-255:XXX:0-255:0-1 (direct) CMY space background color
+      38:4:0-255:0-255:0-255:0-255:0-255:0-1 (direct) CMYK space foreground color
+      48:4:0-255:0-255:0-255:0-255:0-255:0-1 (direct) CMYK space background color
+      The seventh parameter may be used to specify a tolerance value (an integer)
+      and the parameter element 8 may be used to specify a colour space associated
+      with the tolerance (0 for CIELUV, 1 for CIELAB).
+
+      sequences for (indexed) 256 Color support:
+      38:5:0-256 (indexed) foreground color
+      48:5:0-256 (indexed) background color:
+          0x00-0x07:   0 -   7 standard colors (as in ESC [ 30–37 m)
+          0x08-0x0F:   8 -  15 high intensity colors (as in ESC [ 90–97 m)
+          0x10-0xE7:  16 - 231 6 × 6 × 6 = 216 colors: 16 + 36 × r + 6 × g + b (0 ≤ r, g, b ≤ 5)
+          0xE8-0xFF: 232 - 255 grayscale from black to white in 24 steps
+
+      Also note that for the 38 and 48 codes the parameter elements SHOULD be
+      separated by ':' but some interpretations erronously use ';'.  Also
+      "empty" parameter elements represent a default value and that empty
+      elements at the end can be omitted.
+      */
 
 
 
@@ -897,41 +1043,84 @@ void TBuffer::translateToPlainText( std::string & s )
                                      }
                                     continue;
                                 }
-                                if( tag < 232 )
+                                else if( tag < 232 )
                                 {
                                     tag-=16; // because color 1-15 behave like normal ANSI colors
-                                    // 6x6 RGB color space
+                                    // 6x6x6 RGB color space
                                     int r = tag / 36;
                                     int g = (tag-(r*36)) / 6;
                                     int b = (tag-(r*36))-(g*6);
-                                    fgColorR = r*42;
-                                    fgColorLightR = r*42;
-                                    fgColorG = g*42;
-                                    fgColorLightG = g*42;
-                                    fgColorB = b*42;
-                                    fgColorLightB = b*42;
+                                    // Did use 42 as a factor but that isn't
+                                    // right as it yields:
+                                    // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
+                                    // 6 x 42 DOES equal 252 BUT IT IS OUT OF
+                                    // RANGE... Instead we should use 51:
+                                    // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
+                                    fgColorR = r*51;
+                                    fgColorLightR = r*51;
+                                    fgColorG = g*51;
+                                    fgColorLightG = g*51;
+                                    fgColorB = b*51;
+                                    fgColorLightB = b*51;
                                 }
                                 else
                                 {
                                     // black + 23 tone grayscale from dark to light gray
-                                    tag -= 232;
-                                    fgColorR = tag*10;
-                                    fgColorLightR = tag*10;
-                                    fgColorG = tag*10;
-                                    fgColorLightG = tag*10;
-                                    fgColorB = tag*10;
-                                    fgColorLightB = tag*10;
+                                    // Similiar to RGB case the multipler is a bit off
+                                    // we have been using 10 but 23 x 10 = 230
+                                    // whereas 23 should map to 255, this requires
+                                    // a non-integer multiplier, instead of mulipling
+                                    // and rounding we, for speed, can use a look-up table:
+                                    int value;
+                                    switch( tag )
+                                    {
+                                    case 232:   value =   0; break; //   0.000
+                                    case 233:   value =  11; break; //  11.087
+                                    case 234:   value =  22; break; //  22.174
+                                    case 235:   value =  33; break; //  33.261
+                                    case 236:   value =  44; break; //  44.348
+                                    case 237:   value =  55; break; //  55.435
+                                    case 238:   value =  67; break; //  66.522
+                                    case 239:   value =  78; break; //  77.609
+                                    case 240:   value =  89; break; //  88.696
+                                    case 241:   value = 100; break; //  99.783
+                                    case 242:   value = 111; break; // 110.870
+                                    case 243:   value = 122; break; // 121.957
+                                    case 244:   value = 133; break; // 133.043
+                                    case 245:   value = 144; break; // 144.130
+                                    case 246:   value = 155; break; // 155.217
+                                    case 247:   value = 166; break; // 166.304
+                                    case 248:   value = 177; break; // 177.391
+                                    case 249:   value = 188; break; // 188.478
+                                    case 250:   value = 200; break; // 199.565
+                                    case 251:   value = 211; break; // 210.652
+                                    case 252:   value = 222; break; // 221.739
+                                    case 253:   value = 233; break; // 232.826
+                                    case 254:   value = 244; break; // 243.913
+                                    case 255:   value = 255; break; // 255.000
+                                    default:
+                                        value = 192;
+                                        qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for foreground failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to light-grey!";
+                                    }
+
+                                    fgColorR = value;
+                                    fgColorLightR = value;
+                                    fgColorG = value;
+                                    fgColorLightG = value;
+                                    fgColorB = value;
+                                    fgColorLightB = value;
                                 }
                                 mHighColorModeForeground = false;
                                 mWaitingForHighColorCode = false;
                                 mIsHighColorMode = false;
                                 continue;
                             }
+
                             if( mHighColorModeBackground )
                             {
                                 if( tag < 16 )
                                 {
-                                    mHighColorModeForeground = false;
+                                    mHighColorModeBackground = false;
                                     mWaitingForHighColorCode = false;
                                     mIsHighColorMode = false;
 
@@ -1035,17 +1224,48 @@ void TBuffer::translateToPlainText( std::string & s )
                                     int r = tag / 36;
                                     int g = (tag-(r*36)) / 6;
                                     int b = (tag-(r*36))-(g*6);
-                                    bgColorR = r*42;
-                                    bgColorG = g*42;
-                                    bgColorB = b*42;
+                                    bgColorR = r*51;
+                                    bgColorG = g*51;
+                                    bgColorB = b*51;
                                 }
                                 else
                                 {
-                                    // black + 23 tone grayscale from dark to light gray
-                                    tag -= 232;
-                                    bgColorR = tag*10;
-                                    bgColorG = tag*10;
-                                    bgColorB = tag*10;
+                                    // black + 23 tone grayscale from dark to (NOT light gray, but) white
+                                    int value;
+                                    switch( tag )
+                                    {
+                                    case 232:   value =   0; break; //   0.000
+                                    case 233:   value =  11; break; //  11.087
+                                    case 234:   value =  22; break; //  22.174
+                                    case 235:   value =  33; break; //  33.261
+                                    case 236:   value =  44; break; //  44.348
+                                    case 237:   value =  55; break; //  55.435
+                                    case 238:   value =  67; break; //  66.522
+                                    case 239:   value =  78; break; //  77.609
+                                    case 240:   value =  89; break; //  88.696
+                                    case 241:   value = 100; break; //  99.783
+                                    case 242:   value = 111; break; // 110.870
+                                    case 243:   value = 122; break; // 121.957
+                                    case 244:   value = 133; break; // 133.043
+                                    case 245:   value = 144; break; // 144.130
+                                    case 246:   value = 155; break; // 155.217
+                                    case 247:   value = 166; break; // 166.304
+                                    case 248:   value = 177; break; // 177.391
+                                    case 249:   value = 188; break; // 188.478
+                                    case 250:   value = 200; break; // 199.565
+                                    case 251:   value = 211; break; // 210.652
+                                    case 252:   value = 222; break; // 221.739
+                                    case 253:   value = 233; break; // 232.826
+                                    case 254:   value = 244; break; // 243.913
+                                    case 255:   value = 255; break; // 255.000
+                                    default:
+                                        value = 64;
+                                        qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for background failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to dark-grey!";
+                                    }
+
+                                    bgColorR = value;
+                                    bgColorG = value;
+                                    bgColorB = value;
                                 }
                                 mHighColorModeBackground = false;
                                 mWaitingForHighColorCode = false;
@@ -1066,9 +1286,29 @@ void TBuffer::translateToPlainText( std::string & s )
                             mHighColorModeBackground = true;
                             continue;
                         }
-                        if( ( mIsHighColorMode ) && ( tag == 5 ) )
+
+                        if( mIsHighColorMode )
                         {
-                            mWaitingForHighColorCode = true;
+                            switch( tag )
+                            {
+                            case 5: // Indexed 256 color mode
+                                mWaitingForHighColorCode = true;
+                                break;
+                            case 2: // 24Bit RGB color mode
+// TODO:
+//                                mWaitingFor24BitColor = true;
+//                                break;
+                            case 4: // 24Bit CYMB color mode
+                            case 3: // 24Bit CYM color mode
+                            case 1: // "Transparent" mode
+                            case 0: // "Application defined" mode
+                                qWarning() << "TBuffer::translateToPlainText(...) Warning unhandled ANSI SGR 38/48 type color code encountered, first parameter is:" << tag;
+                                break;
+                            default:
+                                qWarning() << "TBuffer::translateToPlainText(...) Warning unknown ANSI SGR 38/48 type color code encountered, first parameter is:" << tag;
+                                break;
+                            }
+
                             continue;
                         }
 
@@ -1105,10 +1345,13 @@ void TBuffer::translateToPlainText( std::string & s )
                             mUnderline = true;
                             break;
                         case 5:
-                            break; //blinking
+                            // TODO:
+                            break; //slow-blinking
                         case 6:
+                            // TODO:
                             break; //fast blinking
                         case 7:
+                            // TODO:
                             break; //inverse
                         case 9:
                             mStrikeOut = true;
@@ -1124,11 +1367,18 @@ void TBuffer::translateToPlainText( std::string & s )
                         case 24:
                             mUnderline = false;
                             break;
+                        case 25:
+                            break; // blink off
                         case 27:
+                            // TODO:
                             break; //inverse off
                         case 29:
                             mStrikeOut = false;
+<<<<<<< HEAD
                             break; //not crossed out text (strikethrough)
+=======
+                            break; //not crossed out (strikethrough) text
+>>>>>>> SlySven/release_30
                         case 30:
                             fgColorR = mBlackR;
                             fgColorG = mBlackG;
@@ -1201,7 +1451,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             fgColorLightB = mLightWhiteB;
                             mIsDefaultColor = false;
                             break;
-                        case 39: //default text color
+                        case 39: //default foreground color
                             fgColorR = mFgColorR;
                             fgColorG = mFgColorG;
                             fgColorB = mFgColorB;
@@ -1250,6 +1500,12 @@ void TBuffer::translateToPlainText( std::string & s )
                             bgColorR = mBgColorR;
                             bgColorG = mBgColorG;
                             bgColorB = mBgColorB;
+                            break;
+                        case 53: // overline on
+                            // TODO:
+                            break;
+                        case 55: // overline off
+                            // TODO:
                             break;
                         };
                     }
@@ -1895,7 +2151,11 @@ void TBuffer::append(const QString & text,
                     log(size()-2, size()-2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
+<<<<<<< HEAD
                     // test from log file.
+=======
+                    // text from log file.
+>>>>>>> SlySven/release_30
                     break;
                 }
             }
@@ -1913,6 +2173,7 @@ void TBuffer::append(const QString & text,
     }
 }
 
+<<<<<<< HEAD
 void TBuffer::appendLine(const QString & text,
                         int sub_start,
                         int sub_end,
@@ -1927,6 +2188,22 @@ void TBuffer::appendLine(const QString & text,
                         bool underline,
                         bool strikeout,
                         int linkID )
+=======
+void TBuffer::appendLine( QString & text,
+                          int sub_start,
+                          int sub_end,
+                          int fgColorR,
+                          int fgColorG,
+                          int fgColorB,
+                          int bgColorR,
+                          int bgColorG,
+                          int bgColorB,
+                          bool bold,
+                          bool italics,
+                          bool underline,
+                          bool strikeout,
+                          int linkID )
+>>>>>>> SlySven/release_30
 {
     if( sub_end < 0 ) return;
     if( static_cast<int>(buffer.size()) > mLinesLimit )
@@ -1967,7 +2244,11 @@ void TBuffer::appendLine(const QString & text,
     }
 }
 
+<<<<<<< HEAD
 QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
+=======
+QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
+>>>>>>> SlySven/release_30
 {
     QPoint P(-1, -1);
 
@@ -1999,7 +2280,12 @@ QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int f
         }
         lineBuffer[y].insert( x, text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
+<<<<<<< HEAD
         auto it = buffer[y].begin();
+=======
+        typedef std::deque<TChar>::iterator IT;
+        IT it = buffer[y].begin();
+>>>>>>> SlySven/release_30
         buffer[y].insert( it+x, c );
     }
     dirty[y] = true;
@@ -2070,8 +2356,13 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
                      buffer[y][x].bgB,
                      (buffer[y][x].flags & TCHAR_BOLD),
                      (buffer[y][x].flags & TCHAR_ITALICS),
+<<<<<<< HEAD
                      (buffer[y][x].flags & TCHAR_UNDERLINE), 
                      (buffer[y][x].flags & TCHAR_STRIKEOUT)  );
+=======
+                     (buffer[y][x].flags & TCHAR_UNDERLINE),
+                     (buffer[y][x].flags & TCHAR_STRIKEOUT) );
+>>>>>>> SlySven/release_30
         }
         return slice;
 }
@@ -3231,12 +3522,33 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                 textDecoration = textDecoration.trimmed();
             }
             s += "<span style=\"";
+<<<<<<< HEAD
             s += "color: rgb(" + QString::number(inverse ? bgR : fgR) + ","
                                + QString::number(inverse ? bgG : fgG) + ","
                                + QString::number(inverse ? bgB : fgB) + ");";
             s += " background: rgb(" + QString::number(inverse ? fgR : bgR) + ","
                                      + QString::number(inverse ? fgG : bgG) + ","
                                      + QString::number(inverse ? fgB : bgB) + ");";
+=======
+//            if( inverse )
+//            {
+//                s += "color: rgb(" + QString::number(bgR) + ","
+//                                   + QString::number(bgG) + ","
+//                                   + QString::number(bgB) + ");";
+//                s += " background: rgb(" + QString::number(fgR) + ","
+//                                         + QString::number(fgG) + ","
+//                                         + QString::number(fgB) + ");";
+//            }
+//            else
+//            {
+            s += "color: rgb(" + QString::number(fgR) + ","
+                               + QString::number(fgG) + ","
+                               + QString::number(fgB) + ");";
+            s += " background: rgb(" + QString::number(bgR) + ","
+                                     + QString::number(bgG) + ","
+                                     + QString::number(bgB) + ");";
+//            }
+>>>>>>> SlySven/release_30
             s += " font-weight: " + fontWeight +
                  "; font-style: " + fontStyle +
                  "; text-decoration: " + textDecoration + "\">";

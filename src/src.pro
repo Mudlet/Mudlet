@@ -56,7 +56,11 @@ QT += network opengl uitools multimedia gui
 # (it is NOT a Qt built-in variable) for a release build or, if you are
 # distributing modified code, it would be useful if you could put something to
 # distinguish the version:
+<<<<<<< HEAD
 BUILD = -dev
+=======
+BUILD =
+>>>>>>> SlySven/release_30
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -108,8 +112,13 @@ unix:!macx {
     INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
+<<<<<<< HEAD
     LIBS += -L"C:\\mingw32\\bin" \
         -L"C:\\mingw32\\lib" \
+=======
+    LIBS += -L"C:\\mingw32\\lib" \
+        -L"C:\\mingw32\\bin" \
+>>>>>>> SlySven/release_30
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.4 \
@@ -119,7 +128,11 @@ unix:!macx {
         -lopengl32 \
         -lglut \
         -lglu32
+<<<<<<< HEAD
     INCLUDEPATH += "C:\\mingw32\\include"
+=======
+    INCLUDEPATH += "C:\\mingw32\\include" 
+>>>>>>> SlySven/release_30
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
@@ -276,10 +289,15 @@ HEADERS += \
     Host.h \
     HostManager.h \
     irc/include/irc.h \
+<<<<<<< HEAD
     irc/include/irccodecplugin.h \
     irc/include/irccommand.h \
     irc/include/ircglobal.h \
     irc/include/ircmessage.h \
+=======
+    irc/include/ircbuffer.h \
+    irc/include/ircglobal.h \
+>>>>>>> SlySven/release_30
     irc/include/ircsession.h \
     irc/include/ircutil.h \
     irc/include/IrcGlobal \
@@ -423,6 +441,15 @@ macx: {
     ICON = icons/osx.icns
 }
 
+win32: {
+    # set the Windows binary icon
+    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+
+    # specify some windows information about the binary
+    QMAKE_TARGET_COMPANY = "Mudlet makers"
+    QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+}
+
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
     ${LUA.files} \
@@ -463,4 +490,8 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
+<<<<<<< HEAD
     .clang-format
+=======
+    ../.clang-format
+>>>>>>> SlySven/release_30

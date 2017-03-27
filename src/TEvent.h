@@ -4,7 +4,10 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
+<<<<<<< HEAD
  *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+=======
+>>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *

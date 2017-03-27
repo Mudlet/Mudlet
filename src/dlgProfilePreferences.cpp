@@ -2,7 +2,10 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+<<<<<<< HEAD
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+=======
+>>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -70,7 +73,10 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
     enableSpellCheck->setChecked( pH->mEnableSpellCheck );
+<<<<<<< HEAD
     checkBox_echoLuaErrors->setChecked( pH->mEchoLuaErrors );
+=======
+>>>>>>> SlySven/release_30
     checkBox_showSpacesAndTabs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces );
     checkBox_showLineFeedsAndParagraphs->setChecked( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators );
 
@@ -117,6 +123,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 
     connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
 
+<<<<<<< HEAD
     connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
     connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
 
@@ -140,6 +147,57 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(pushButton_background_color, SIGNAL(clicked()), this, SLOT(setBgColor()));
     connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
     connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
+=======
+    pushButton_command_line_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandLineFgColor.name() ) );
+    pushButton_command_line_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandLineBgColor.name() ) );
+
+                            pushButton_black->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlack.name() ) );
+                           pushButton_Lblack->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlack.name() ) );
+                            pushButton_green->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mGreen.name() ) );
+                           pushButton_Lgreen->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightGreen.name() ) );
+                              pushButton_red->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mRed.name() ) );
+                             pushButton_Lred->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightRed.name() ) );
+                             pushButton_blue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlue.name() ) );
+                            pushButton_Lblue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlue.name() ) );
+                           pushButton_yellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mYellow.name() ) );
+                          pushButton_Lyellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightYellow.name() ) );
+                             pushButton_cyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCyan.name() ) );
+                            pushButton_Lcyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightCyan.name() ) );
+                          pushButton_magenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mMagenta.name() ) );
+                         pushButton_Lmagenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightMagenta.name() ) );
+                            pushButton_white->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mWhite.name() ) );
+                           pushButton_Lwhite->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightWhite.name() ) );
+
+                 pushButton_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mFgColor.name() ) );
+                 pushButton_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBgColor.name() ) );
+         pushButton_command_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandFgColor.name() ) );
+         pushButton_command_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCommandBgColor.name() ) );
+
+    connect(pushButton_command_line_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandLineFgColor()));
+    connect(pushButton_command_line_background_color, SIGNAL(clicked()), this, SLOT(setCommandLineBgColor()));
+
+    connect(pushButton_black                        , SIGNAL(clicked()), this, SLOT(setColorBlack()));
+    connect(pushButton_Lblack                       , SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
+    connect(pushButton_green                        , SIGNAL(clicked()), this, SLOT(setColorGreen()));
+    connect(pushButton_Lgreen                       , SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
+    connect(pushButton_red                          , SIGNAL(clicked()), this, SLOT(setColorRed()));
+    connect(pushButton_Lred                         , SIGNAL(clicked()), this, SLOT(setColorLightRed()));
+    connect(pushButton_blue                         , SIGNAL(clicked()), this, SLOT(setColorBlue()));
+    connect(pushButton_Lblue                        , SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
+    connect(pushButton_yellow                       , SIGNAL(clicked()), this, SLOT(setColorYellow()));
+    connect(pushButton_Lyellow                      , SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
+    connect(pushButton_cyan                         , SIGNAL(clicked()), this, SLOT(setColorCyan()));
+    connect(pushButton_Lcyan                        , SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
+    connect(pushButton_magenta                      , SIGNAL(clicked()), this, SLOT(setColorMagenta()));
+    connect(pushButton_Lmagenta                     , SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
+    connect(pushButton_white                        , SIGNAL(clicked()), this, SLOT(setColorWhite()));
+    connect(pushButton_Lwhite                       , SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
+
+    connect(pushButton_foreground_color             , SIGNAL(clicked()), this, SLOT(setFgColor()));
+    connect(pushButton_background_color             , SIGNAL(clicked()), this, SLOT(setBgColor()));
+    connect(pushButton_command_foreground_color     , SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
+    connect(pushButton_command_background_color     , SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
+>>>>>>> SlySven/release_30
 
     connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
 
@@ -148,6 +206,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     for( int i=1; i<40; i++ ) sizeList << QString::number(i);
     fontSize->insertItems( 1, sizeList );
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
+<<<<<<< HEAD
 //    connect(pushButton_command_line_font, SIGNAL(clicked()), this, SLOT(setCommandLineFont()));
 //    connect(pushButtonBorderColor, SIGNAL(clicked()), this, SLOT(setBorderColor()));
 //    connect(pushButtonBorderImage, SIGNAL(clicked()), this, SLOT(setBorderImage()));
@@ -172,6 +231,48 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
 
     connect(reset_colors_button_2, SIGNAL(clicked()), this, SLOT(resetColors2()));
+=======
+
+               pushButton_black_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlack_2.name() ) );
+              pushButton_Lblack_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlack_2.name() ) );
+               pushButton_green_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mGreen_2.name() ) );
+              pushButton_Lgreen_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightGreen_2.name() ) );
+                 pushButton_red_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mRed_2.name() ) );
+                pushButton_Lred_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightRed_2.name() ) );
+                pushButton_blue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBlue_2.name() ) );
+               pushButton_Lblue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightBlue_2.name() ) );
+              pushButton_yellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mYellow_2.name() ) );
+             pushButton_Lyellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightYellow_2.name() ) );
+                pushButton_cyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mCyan_2.name() ) );
+               pushButton_Lcyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightCyan_2.name() ) );
+             pushButton_magenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mMagenta_2.name() ) );
+            pushButton_Lmagenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightMagenta_2.name() ) );
+               pushButton_white_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mWhite_2.name() ) );
+              pushButton_Lwhite_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mLightWhite_2.name() ) );
+
+    pushButton_foreground_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mFgColor_2.name() ) );
+    pushButton_background_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( mpHost->mBgColor_2.name() ) );
+
+    connect(pushButton_black_2           , SIGNAL(clicked()), this, SLOT(setColorBlack2()));
+    connect(pushButton_Lblack_2          , SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
+    connect(pushButton_green_2           , SIGNAL(clicked()), this, SLOT(setColorGreen2()));
+    connect(pushButton_Lgreen_2          , SIGNAL(clicked()), this, SLOT(setColorLightGreen2()));
+    connect(pushButton_red_2             , SIGNAL(clicked()), this, SLOT(setColorRed2()));
+    connect(pushButton_Lred_2            , SIGNAL(clicked()), this, SLOT(setColorLightRed2()));
+    connect(pushButton_blue_2            , SIGNAL(clicked()), this, SLOT(setColorBlue2()));
+    connect(pushButton_Lblue_2           , SIGNAL(clicked()), this, SLOT(setColorLightBlue2()));
+    connect(pushButton_yellow_2          , SIGNAL(clicked()), this, SLOT(setColorYellow2()));
+    connect(pushButton_Lyellow_2         , SIGNAL(clicked()), this, SLOT(setColorLightYellow2()));
+    connect(pushButton_cyan_2            , SIGNAL(clicked()), this, SLOT(setColorCyan2()));
+    connect(pushButton_Lcyan_2           , SIGNAL(clicked()), this, SLOT(setColorLightCyan2()));
+    connect(pushButton_magenta_2         , SIGNAL(clicked()), this, SLOT(setColorMagenta2()));
+    connect(pushButton_Lmagenta_2        , SIGNAL(clicked()), this, SLOT(setColorLightMagenta2()));
+    connect(pushButton_white_2           , SIGNAL(clicked()), this, SLOT(setColorWhite2()));
+    connect(pushButton_Lwhite_2          , SIGNAL(clicked()), this, SLOT(setColorLightWhite2()));
+
+    connect(pushButton_foreground_color_2, SIGNAL(clicked()), this, SLOT(setFgColor2()));
+    connect(pushButton_background_color_2, SIGNAL(clicked()), this, SLOT(setBgColor2()));
+>>>>>>> SlySven/release_30
 
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
@@ -338,8 +439,11 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
 void dlgProfilePreferences::setColors()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
 
+<<<<<<< HEAD
     QString styleSheet;
 
     styleSheet = QString("QPushButton{background-color:")+pHost->mCommandLineFgColor.name()+QString(";}");
@@ -461,6 +565,26 @@ void dlgProfilePreferences::setColors()
 
     styleSheet = QString("QPushButton{background-color:")+pHost->mBgColor_2.name()+QString(";}");
     pushButton_background_color_2->setStyleSheet( styleSheet );
+=======
+    pushButton_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mFgColor.name() ) );
+    pushButton_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mBgColor.name() ) );
+               pushButton_black->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mBlack.name() ) );
+              pushButton_Lblack->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightBlack.name() ) );
+                 pushButton_red->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mRed.name() ) );
+                pushButton_Lred->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightRed.name() ) );
+               pushButton_green->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mGreen.name() ) );
+              pushButton_Lgreen->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightGreen.name() ) );
+                pushButton_blue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mBlue.name() ) );
+               pushButton_Lblue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightBlue.name() ) );
+              pushButton_yellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mYellow.name() ) );
+             pushButton_Lyellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightYellow.name() ) );
+                pushButton_cyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mCyan.name() ) );
+               pushButton_Lcyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightCyan.name() ) );
+             pushButton_magenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mMagenta.name() ) );
+            pushButton_Lmagenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightMagenta.name() ) );
+               pushButton_white->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mWhite.name() ) );
+              pushButton_Lwhite->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( pHost->mLightWhite.name() ) );
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::resetColors()
@@ -501,6 +625,7 @@ void dlgProfilePreferences::resetColors()
 void dlgProfilePreferences::resetColors2()
 {
     Host * pHost = mpHost;
+<<<<<<< HEAD
     if( ! pHost ) return;
 
     pHost->mFgColor_2      = Qt::lightGray;
@@ -526,11 +651,26 @@ void dlgProfilePreferences::resetColors2()
     if( mudlet::self()->mConsoleMap.contains( pHost ) )
     {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
+=======
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mFgColor, this );
+    if( color.isValid() ) {
+        pHost->mFgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+
+        pushButton_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+>>>>>>> SlySven/release_30
     }
 }
 
 void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
 {
+<<<<<<< HEAD
     Host* pHost = mpHost;
     if(!pHost) return;
 
@@ -543,6 +683,20 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
 
         QString styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
         b->setStyleSheet(styleSheet);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mBgColor, this );
+    if( color.isValid() ) {
+        pHost->mBgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+>>>>>>> SlySven/release_30
     }
 }
 
@@ -559,26 +713,91 @@ void dlgProfilePreferences::setBgColor()
 
 void dlgProfilePreferences::setCommandFgColor()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_command_foreground_color, mpHost->mCommandFgColor);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mCommandFgColor, this );
+    if( color.isValid() ) {
+        pHost->mCommandFgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setCommandLineFgColor()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_command_line_foreground_color, mpHost->mCommandLineFgColor);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mCommandLineFgColor, this );
+    if( color.isValid() ) {
+        pHost->mCommandLineFgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_line_foreground_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setCommandLineBgColor()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_command_line_background_color, mpHost->mCommandLineBgColor);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mCommandLineBgColor, this );
+    if( color.isValid() ) {
+        pHost->mCommandLineBgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_line_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setCommandBgColor()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_command_background_color, mpHost->mCommandBgColor);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mCommandBgColor, this );
+    if ( color.isValid() )
+    {
+        pHost->mCommandBgColor = color;
+        if( mudlet::self()->mConsoleMap.contains( pHost ) ) {
+            mudlet::self()->mConsoleMap.value( pHost )->changeColors();
+        }
+        pushButton_command_background_color->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 
@@ -617,62 +836,196 @@ void dlgProfilePreferences::setCommandLineFont()
 
 void dlgProfilePreferences::setColorBlack()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_black, mpHost->mBlack);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mBlack, this );
+    if( color.isValid() ) {
+        pHost->mBlack = color;
+        pushButton_black->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorLightBlack()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lblack, mpHost->mLightBlack);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightBlack, this );
+    if( color.isValid() ) {
+        pHost->mLightBlack = color;
+        pushButton_Lblack->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorRed()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_red, mpHost->mRed);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mRed, this );
+    if( color.isValid() ) {
+        pHost->mRed = color;
+        pushButton_red->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 void dlgProfilePreferences::setColorLightRed()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lred, mpHost->mLightRed);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightRed, this );
+    if( color.isValid() ) {
+        pHost->mLightRed = color;
+        pushButton_Lred->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorGreen()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_green, mpHost->mGreen);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mGreen, this );
+    if( color.isValid() ) {
+        pHost->mGreen = color;
+        pushButton_green->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
+
 void dlgProfilePreferences::setColorLightGreen()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lgreen, mpHost->mLightGreen);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightGreen, this );
+    if( color.isValid() ) {
+        pHost->mLightGreen = color;
+        pushButton_Lgreen->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorBlue()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_blue, mpHost->mBlue);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mBlue, this );
+    if( color.isValid() ) {
+        pHost->mBlue = color;
+        pushButton_blue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
+
 void dlgProfilePreferences::setColorLightBlue()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lblue, mpHost->mLightBlue);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightBlue, this );
+    if( color.isValid() ) {
+        pHost->mLightBlue = color;
+        pushButton_Lblue->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorYellow()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_yellow, mpHost->mYellow);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mYellow, this );
+    if( color.isValid() ) {
+        pHost->mYellow = color;
+        pushButton_yellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
+
 void dlgProfilePreferences::setColorLightYellow()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lyellow, mpHost->mLightYellow);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightYellow, this );
+    if( color.isValid() ) {
+        pHost->mLightYellow = color;
+        pushButton_Lyellow->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorCyan()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_cyan, mpHost->mCyan);
 }
@@ -680,10 +1033,36 @@ void dlgProfilePreferences::setColorLightCyan()
 {
     if( mpHost )
         setColor(pushButton_Lcyan, mpHost->mLightCyan);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mCyan, this );
+    if( color.isValid() ) {
+        pHost->mCyan = color;
+        pushButton_cyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightCyan()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightCyan, this );
+    if( color.isValid() ) {
+        pHost->mLightCyan = color;
+        pushButton_Lcyan->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorMagenta()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_magenta, mpHost->mMagenta);
 }
@@ -691,21 +1070,74 @@ void dlgProfilePreferences::setColorLightMagenta()
 {
     if( mpHost )
         setColor(pushButton_Lmagenta, mpHost->mLightMagenta);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mMagenta, this );
+    if( color.isValid() ) {
+        pHost->mMagenta = color;
+        pushButton_magenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightMagenta()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightMagenta, this );
+    if( color.isValid() ) {
+        pHost->mLightMagenta = color;
+        pushButton_Lmagenta->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorWhite()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_white, mpHost->mWhite);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mWhite, this );
+    if( color.isValid() ) {
+        pHost->mWhite = color;
+        pushButton_white->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
+
 void dlgProfilePreferences::setColorLightWhite()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lwhite, mpHost->mLightWhite);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightWhite, this );
+    if( color.isValid() ) {
+        pHost->mLightWhite = color;
+        pushButton_Lwhite->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setFgColor2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_foreground_color_2, mpHost->mFgColor_2);
 }
@@ -713,33 +1145,111 @@ void dlgProfilePreferences::setBgColor2()
 {
     if( mpHost )
         setColor(pushButton_background_color_2, mpHost->mBgColor_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mFgColor_2, this );
+    if( color.isValid() ) {
+        pHost->mFgColor_2 = color;
+        pushButton_foreground_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setBgColor2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mBgColor_2, this );
+    if( color.isValid() ) {
+        pHost->mBgColor_2 = color;
+        pushButton_background_color_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 
 void dlgProfilePreferences::setColorBlack2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_black_2, mpHost->mBlack_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mBlack_2, this );
+    if( color.isValid() ) {
+        pHost->mBlack_2 = color;
+        pushButton_black_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 void dlgProfilePreferences::setColorLightBlack2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lblack_2, mpHost->mLightBlack_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightBlack_2, this );
+    if( color.isValid() ) {
+        pHost->mLightBlack_2 = color;
+        pushButton_Lblack_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorRed2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_red_2, mpHost->mRed_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mRed_2, this );
+    if( color.isValid() ) {
+        pHost->mRed_2 = color;
+        pushButton_red_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 void dlgProfilePreferences::setColorLightRed2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lred_2, mpHost->mLightRed_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightRed_2, this );
+    if( color.isValid() ) {
+        pHost->mLightRed_2 = color;
+        pushButton_Lred_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorGreen2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_green_2, mpHost->mGreen_2);
 }
@@ -747,21 +1257,74 @@ void dlgProfilePreferences::setColorLightGreen2()
 {
     if( mpHost )
         setColor(pushButton_Lgreen_2, mpHost->mLightGreen_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mGreen_2, this );
+    if( color.isValid() ) {
+        pHost->mGreen_2 = color;
+        pushButton_green_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightGreen2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightGreen_2, this );
+    if( color.isValid() ) {
+        pHost->mLightGreen_2 = color;
+        pushButton_Lgreen_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorBlue2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_blue_2, mpHost->mBlue_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mBlue_2, this );
+    if( color.isValid() ) {
+        pHost->mBlue_2 = color;
+        pushButton_blue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
+
 void dlgProfilePreferences::setColorLightBlue2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_Lblue_2, mpHost->mLightBlue_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightBlue_2, this );
+    if( color.isValid() ) {
+        pHost->mLightBlue_2 = color;
+        pushButton_Lblue_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorYellow2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_yellow_2, mpHost->mYellow_2);
 }
@@ -769,10 +1332,36 @@ void dlgProfilePreferences::setColorLightYellow2()
 {
     if( mpHost )
         setColor(pushButton_Lyellow_2, mpHost->mLightYellow_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mYellow_2, this );
+    if( color.isValid() ) {
+        pHost->mYellow_2 = color;
+        pushButton_yellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightYellow2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightYellow_2, this );
+    if( color.isValid() ) {
+        pHost->mLightYellow_2 = color;
+        pushButton_Lyellow_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorCyan2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_cyan_2, mpHost->mCyan_2);
 }
@@ -780,10 +1369,36 @@ void dlgProfilePreferences::setColorLightCyan2()
 {
     if( mpHost )
         setColor(pushButton_Lcyan_2, mpHost->mLightCyan_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mCyan_2, this );
+    if( color.isValid() ) {
+        pHost->mCyan_2 = color;
+        pushButton_cyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightCyan2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightCyan_2, this );
+    if( color.isValid() ) {
+        pHost->mLightCyan_2 = color;
+        pushButton_Lcyan_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorMagenta2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_magenta_2, mpHost->mMagenta_2);
 }
@@ -791,10 +1406,36 @@ void dlgProfilePreferences::setColorLightMagenta2()
 {
     if( mpHost )
         setColor(pushButton_Lmagenta_2, mpHost->mLightMagenta_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mMagenta_2, this );
+    if( color.isValid() ) {
+        pHost->mMagenta_2 = color;
+        pushButton_magenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightMagenta2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightMagenta_2, this );
+    if( color.isValid() ) {
+        pHost->mLightMagenta_2 = color;
+        pushButton_Lmagenta_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::setColorWhite2()
 {
+<<<<<<< HEAD
     if( mpHost )
         setColor(pushButton_white_2, mpHost->mWhite_2);
 }
@@ -802,19 +1443,57 @@ void dlgProfilePreferences::setColorLightWhite2()
 {
     if( mpHost )
         setColor(pushButton_Lwhite_2, mpHost->mLightWhite_2);
+=======
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mWhite_2, this );
+    if( color.isValid() ) {
+        pHost->mWhite_2 = color;
+        pushButton_white_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+}
+void dlgProfilePreferences::setColorLightWhite2()
+{
+    Host * pHost = mpHost;
+    if( ! pHost ) {
+        return;
+    }
+
+    QColor color = QColorDialog::getColor( pHost->mLightWhite_2, this );
+    if( color.isValid() ) {
+        pHost->mLightWhite_2 = color;
+        pushButton_Lwhite_2->setStyleSheet( QStringLiteral( "QPushButton{background-color: %1;}" ).arg( color.name() ) );
+    }
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::downloadMap()
 {
+<<<<<<< HEAD
     if (!mpHost) {
         return;
     }
     if( ! mpHost->mpMap->mpMapper ) {
+=======
+    Host * pHost = mpHost;
+    if( ! pHost )
+    {
+        return;
+    }
+    if( ! pHost->mpMap->mpMapper ) {
+>>>>>>> SlySven/release_30
         // CHECK: What happens if we are NOT the current profile anymore?
         mudlet::self()->createMapper( false );
     }
 
+<<<<<<< HEAD
     mpHost->mpMap->downloadMap();
+=======
+    pHost->mpMap->downloadMap();
+>>>>>>> SlySven/release_30
 }
 
 void dlgProfilePreferences::loadMap()
@@ -824,6 +1503,7 @@ void dlgProfilePreferences::loadMap()
     {
         return;
     }
+<<<<<<< HEAD
 
     QString fileName = QFileDialog::getOpenFileName(this,
                                                     tr( "Load Mudlet map" ),
@@ -834,6 +1514,19 @@ void dlgProfilePreferences::loadMap()
     }
 
     label_mapFileActionResult->show();
+=======
+
+    QString fileName = QFileDialog::getOpenFileName(this,
+                                                    tr( "Load Mudlet map" ),
+                                                    QDir::homePath(),
+                                                    tr( "Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!" ) );
+    if( fileName.isEmpty() ) {
+        return;
+    }
+
+    label_mapFileActionResult->show();
+
+>>>>>>> SlySven/release_30
     // Ensure the setting is already made as the loadMap(...) uses the set value
     bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
     mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
@@ -870,7 +1563,9 @@ void dlgProfilePreferences::loadMap()
 void dlgProfilePreferences::saveMap()
 {
     Host * pHost = mpHost;
-    if( ! pHost ) return;
+    if( ! pHost ) {
+        return;
+    }
 
     QString fileName = QFileDialog::getSaveFileName( this,
                                                      tr( "Save Mudlet map" ),
@@ -884,6 +1579,21 @@ void dlgProfilePreferences::saveMap()
         fileName.append( QStringLiteral( ".dat" ) );
     }
 
+<<<<<<< HEAD
+    QString fileName = QFileDialog::getSaveFileName( this,
+                                                     tr( "Save Mudlet map" ),
+                                                     QDir::homePath(),
+                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programatically!" ) );
+    if( fileName.isEmpty() ) {
+        return;
+    }
+
+    if( ! fileName.endsWith( QStringLiteral( ".dat" ), Qt::CaseInsensitive) ) {
+        fileName.append( QStringLiteral( ".dat" ) );
+    }
+
+=======
+>>>>>>> SlySven/release_30
     label_mapFileActionResult->show();
     label_mapFileActionResult->setText( tr( "Saving map - please wait..." ) );
     qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -973,6 +1683,7 @@ void dlgProfilePreferences::copyMap()
                 toProfilesRoomIdMap.insert( otherHostName, pOtherHost->mpMap->mRoomIdHash.value( otherHostName, -1 ) );
             }
         }
+<<<<<<< HEAD
     }
     // otherProfileCurrentRoomId will be -1 if tried and failed to get it from
     // current running profile, > 0 on sucess or 0 if not running as another profile
@@ -1005,6 +1716,158 @@ void dlgProfilePreferences::copyMap()
             continue;
         }
 
+        // Most of these we'll just get for debugging!
+        QString otherProfileFileUsed;
+        int otherProfileRoomCount;
+        int otherProfileAreaCount;
+        int otherProfileVersion;
+        int otherProfileCurrentRoomId; // What we are looking for!
+        if( pHost->mpMap->retrieveMapFileStats( itOtherProfile.key(),
+                                                 & otherProfileFileUsed,
+                                                 & otherProfileVersion,
+                                                 & otherProfileCurrentRoomId,
+                                                 & otherProfileAreaCount,
+                                                 & otherProfileRoomCount ) ) {
+
+            qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
+                     << itOtherProfile.key()
+                     << "\n    the file examined was:"
+                     << otherProfileFileUsed
+                     << "\n    it was of version:"
+                     << otherProfileVersion
+                     << "\n    it had an area count of:"
+                     << otherProfileAreaCount
+                     << "\n    it had a room count of:"
+                     << otherProfileRoomCount
+                     << "\n    the player was located in:"
+                     << otherProfileCurrentRoomId;
+            itOtherProfile.setValue( otherProfileCurrentRoomId );
+            // Using a mutable iterator we must modify (mutate) the data through
+            // the iterator!
+            if( pHost->mpMap->mpRoomDB->getRoom( otherProfileCurrentRoomId ) ) {
+                // That room IS in the map we are copying across, so update the
+                // local record of it for the map for that profile:
+                pHost->mpMap->mRoomIdHash[ itOtherProfile.key() ] = otherProfileCurrentRoomId;
+            }
+        }
+=======
+>>>>>>> SlySven/release_30
+    }
+    // otherProfileCurrentRoomId will be -1 if tried and failed to get it from
+    // current running profile, > 0 on sucess or 0 if not running as another profile
+
+    // Ensure the setting is already made as the value could be used in the
+    // code following after
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
+    mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
+
+    // We now KNOW there are places where the destination profiles will/have
+    // stored their maps - if we do not already know where the player is in the
+    // other profiles - because they aren't active - or have not set it - try
+    // and find out what the rooms are from the last saved files - ignoring
+    // other details that we have also obtained.
+    QMutableMapIterator<QString, int> itOtherProfile( toProfilesRoomIdMap );
+    while( itOtherProfile.hasNext() ) {
+        itOtherProfile.next();
+        if( itOtherProfile.value() > 0 ) {
+            // Skip the ones where we have already got the player room from the
+            // active profile
+            qDebug() << "dlgProfilePreference::copyMap() in other ACTIVE profile:"
+                     << itOtherProfile.key()
+                     << "\n    the player was located in:"
+                     << itOtherProfile.value();
+            if( pHost->mpMap->mpRoomDB->getRoom( itOtherProfile.value() ) ) {
+                // That room IS in the map we are copying across, so update the
+                // local record of it for the map for that profile:
+                pHost->mpMap->mRoomIdHash[ itOtherProfile.key() ] = itOtherProfile.value();
+            }
+            continue;
+        }
+
+<<<<<<< HEAD
+    // Now, we can save our current map with all the profiles' player room data
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText( tr( "Backing up current map - please wait..." ) );
+    qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                           // Just in case is needed to make the above message
+                           // show up when saving big maps
+
+    // Temporarily use whatever version is currently set
+    int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
+#if QT_VERSION >= 0x050200
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+#else
+    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
+#endif
+
+    if ( ! pHost->mpConsole->saveMap( QString() ) ) {
+        label_mapFileActionResult->setText( tr( "Could not backup the map - saving it failed." ) );
+        QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
+        return;
+    }
+
+    // Then restore prior version
+    pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
+
+    // work out which map is latest in THIS profile - which SHOULD be the one
+    // we just saved!
+    QString thisProfileLatestMapPathFileName;
+    QFile thisProfileLatestMapFile;
+    QString sourceMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
+                                 .arg( QDir::homePath() )
+                                 .arg( pHost->getName() ) );
+    QStringList mProfileList = QDir( sourceMapFolder )
+                                   .entryList( QDir::Files | QDir::NoDotAndDotDot, QDir::Time );
+    for( unsigned int i = 0, total = mProfileList.size(); i < total; ++i ) {
+        thisProfileLatestMapPathFileName = mProfileList.at( i );
+        if( thisProfileLatestMapPathFileName.isEmpty() ) {
+            continue;
+        }
+
+        thisProfileLatestMapFile.setFileName( QStringLiteral( "%1/%2" )
+                                                  .arg( sourceMapFolder )
+                                                  .arg( thisProfileLatestMapPathFileName ) );
+        break;
+    }
+
+    if( thisProfileLatestMapFile.fileName().isEmpty() ) {
+        label_mapFileActionResult->setText( tr( "Could not copy the map - failed to work out which map file we just saved the map as!" ) );
+        QTimer::singleShot( 10 * 1000, this, SLOT( hideActionLabel() ) );
+        return;
+    }
+
+    // Make the copies into the destination profiles (for all to profiles whether
+    // in use or not):
+    itOtherProfile.toFront();
+    while( itOtherProfile.hasNext() ) {
+        itOtherProfile.next();
+        QString otherHostName = itOtherProfile.key();
+        // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
+        label_mapFileActionResult->setText( tr( "Copying over map to %1 - please wait..." )
+                                                .arg( otherHostName ) );
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                               // Just in case is needed to make the above message
+                               // show up when saving big maps
+
+        if( ! thisProfileLatestMapFile.copy( QStringLiteral( "%1/.config/mudlet/profiles/%2/map/%3" )
+                                                 .arg( QDir::homePath() )
+                                                 .arg( otherHostName )
+                                                 .arg( thisProfileLatestMapPathFileName ) ) ) {
+            label_mapFileActionResult->setText( tr( "Could not copy the map to %1 - unable to copy the new map file over." )
+                                                        .arg( otherHostName ));
+            QTimer::singleShot( 10*1000, this, SLOT( hideActionLabel() ) );
+            continue; // Try again with next profile
+        }
+        else {
+            label_mapFileActionResult->setText( tr( "Map copied successfully to other profile %1." )
+                                                    .arg( otherHostName ) );
+            qApp->processEvents(); // Copied from "Loading map - please wait..." case
+                                   // Just in case is needed to make the above message
+                                   // show up when saving big maps
+        }
+    }
+
+=======
         // Most of these we'll just get for debugging!
         QString otherProfileFileUsed;
         int otherProfileRoomCount;
@@ -1123,6 +1986,7 @@ void dlgProfilePreferences::copyMap()
         }
     }
 
+>>>>>>> SlySven/release_30
     // Finally, signal the other profiles to reload their maps:
     mudlet::self()->requestProfilesToReloadMaps( toProfilesRoomIdMap.keys() );
     // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
@@ -1260,7 +2124,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
     mudlet::self()->setEditorTextoptions( checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked() );
     mudlet::self()->setAuditErrorsToConsoleEnabled( checkBox_reportMapIssuesOnScreen->isChecked() );
+<<<<<<< HEAD
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+=======
+>>>>>>> SlySven/release_30
     close();
 }
 
