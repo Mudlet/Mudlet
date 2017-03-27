@@ -67,10 +67,6 @@ T2DMap::T2DMap(QWidget * parent)
 , mIsSelectionSorting(true)
 , mIsSelectionSortByNames(false)
 , mIsSelectionUsingNames(false)
-<<<<<<< HEAD
-=======
-, mDialogLock(false)
->>>>>>> SlySven/release_30
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -2347,14 +2343,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         if( mCustomLinesRoomFrom > 0 )
         {
             if( mDialogLock )
-<<<<<<< HEAD
-                return; // Prevent any line drawing until ready
-=======
             {
                  return; // Prevent any line drawing until ready
             }
-
->>>>>>> SlySven/release_30
 
             TRoom * pR = mpMap->mpRoomDB->getRoom( mCustomLinesRoomFrom );
             if( pR )
@@ -2647,15 +2638,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         if( mCustomLinesRoomFrom > 0 )
         {
             if( mDialogLock )
-                return;
-<<<<<<< HEAD
-=======
-
-            if( mDialogLock )
             {
                  return;
             }
->>>>>>> SlySven/release_30
 
             TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if( pR )
@@ -3752,7 +3737,6 @@ void T2DMap::slot_spread()
     {
         TRoom * pMovingR = mpMap->mpRoomDB->getRoom( itSelectionRoom.next() );
         if( !pMovingR )
-<<<<<<< HEAD
         {
             continue;
         }
@@ -3765,20 +3749,6 @@ void T2DMap::slot_spread()
         QMap<QString, QList<QPointF> > newCustomLinePointsMap;
         while( itCustomLine.hasNext() )
         {
-=======
-        {
-            continue;
-        }
-
-        pMovingR->x *= spread;
-        pMovingR->y *= spread;
-        pMovingR->x += dx;
-        pMovingR->y += dy;
-        QMapIterator<QString, QList<QPointF> > itCustomLine( pMovingR->customLines );
-        QMap<QString, QList<QPointF> > newCustomLinePointsMap;
-        while( itCustomLine.hasNext() )
-        {
->>>>>>> SlySven/release_30
             itCustomLine.next();
             QList<QPointF> customLinePoints = itCustomLine.value();
             for( int pointIndex=0; pointIndex< customLinePoints.size(); pointIndex++ )
@@ -3835,7 +3805,6 @@ void T2DMap::slot_shrink()
     {
         TRoom * pMovingR = mpMap->mpRoomDB->getRoom( itSelectionRoom.next() );
         if( !pMovingR )
-<<<<<<< HEAD
         {
             continue;
         }
@@ -3847,19 +3816,6 @@ void T2DMap::slot_shrink()
         QMap<QString, QList<QPointF> > newCustomLinePointsMap;
         while( itCustomLine.hasNext() )
         {
-=======
-        {
-            continue;
-        }
-        pMovingR->x /= spread;
-        pMovingR->y /= spread;
-        pMovingR->x += dx;
-        pMovingR->y += dy;
-        QMapIterator<QString, QList<QPointF> > itCustomLine( pMovingR->customLines );
-        QMap<QString, QList<QPointF> > newCustomLinePointsMap;
-        while( itCustomLine.hasNext() )
-        {
->>>>>>> SlySven/release_30
             itCustomLine.next();
             QList<QPointF> customLinePoints = itCustomLine.value();
             for( int pointIndex=0; pointIndex< customLinePoints.size(); pointIndex++ )
@@ -4009,7 +3965,6 @@ void T2DMap::slot_setRoomWeight()
             // Obtain a set of "used" weights
             QSet<uint> weightCountsSet;
             while( itWeightsUsed.hasNext() )
-<<<<<<< HEAD
             {
                 itWeightsUsed.next();
                 weightCountsSet.insert( itWeightsUsed.value() );
@@ -4085,83 +4040,6 @@ void T2DMap::slot_setRoomWeight()
             if( !pR ) {
                 continue;
             }
-=======
-            {
-                itWeightsUsed.next();
-                weightCountsSet.insert( itWeightsUsed.value() );
-            }
-            // Obtains a list of those weights sorted in ascending count of used
-            QList<uint> weightCountsList = weightCountsSet.toList();
-            if( weightCountsList.size() > 1 )
-            {
-                std::sort( weightCountsList.begin(), weightCountsList.end() );
-            }
-            // Build a list of the "used" weights in decending count of use
-            QStringList displayStrings;
-            for( int i = weightCountsList.size()-1; i >= 0; --i )
-            {
-                itWeightsUsed.toFront();
-                while( itWeightsUsed.hasNext() )
-                {
-                    itWeightsUsed.next();
-                    if( itWeightsUsed.value() == weightCountsList.at(i) )
-                    {
-                        if( itWeightsUsed.key() == 1 )
-                        { // Indicate the "default" value which is unity weight
-                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
-                        }
-                        else
-                        {
-                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
-                        }
-                    }
-                }
-            }
-            if( ! usedWeights.contains(1) )
-            { // If unity weight was not used insert it at end of list
-                displayStrings.append( tr("1 {count 0, default}") );
-            }
-            QString newWeightText = QInputDialog::getItem( this, // QWidget * parent
-                                                           tr("Enter room weight"), // const QString & title
-                                                           tr("Choose an existing\n"
-                                                              "roomweight (= travel\n"
-                                                              "time) from the list\n"
-                                                              "(sorted by most commonly\n"
-                                                              "used first) or enter a\n"
-                                                              "new (positive) integer\n"
-                                                              "value for all selected\n"
-                                                              "rooms:", "Use line feeds to format text into a reasonable rectangle."), // const QString & label
-                                                           displayStrings, // QStringList & items
-                                                           0, // int current = 0, last value in list
-                                                           true, // bool editable = true
-                                                           &isOk, // bool * ok = 0
-                                                           0, // Qt::WindowFlags flags = 0
-                                                           Qt::ImhDigitsOnly); // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
-            newWeight = 1;
-            if( isOk )
-            { // Don't do anything if cancel was pressed
-                if( newWeightText.toInt() > 0 )
-                {
-                    newWeight = newWeightText.toInt();
-                }
-                else
-                {
-                    isOk = false; // Prevent any change if the value is not reasonable
-                }
-            }
-        }
-    }
-
-    if( isOk && newWeight > 0 )
-    { // Don't proceed if cancel was pressed or the value is not valid
-        itSelectedRoom.toFront();
-        while( itSelectedRoom.hasNext() )
-        {
-            pR = mpMap->mpRoomDB->getRoom( itSelectedRoom.next() ) ;
-            if( !pR ) {
-                continue;
-            }
->>>>>>> SlySven/release_30
 
             pR->setWeight( newWeight );
         }
@@ -4667,7 +4545,6 @@ void T2DMap::setExitSize( double f )
 void T2DMap::slot_setCustomLine()
 {
     if( mMultiSelectionSet.isEmpty() ) {
-<<<<<<< HEAD
         return;
     }
     TRoom * pR = mpMap->mpRoomDB->getRoom( mMultiSelectionHighlightRoomId );
@@ -4681,21 +4558,7 @@ void T2DMap::slot_setCustomLine()
         mpCustomLinesDialog->raise();
         return;
     }
-=======
-        return;
-    }
-    TRoom * pR = mpMap->mpRoomDB->getRoom( mMultiSelectionHighlightRoomId );
-    if( !pR ) {
-        return;
-    }
 
-    if( mpCustomLinesDialog ) {
-        // Refuse to create another instance if one is already present!
-        // Just show it...
-        mpCustomLinesDialog->raise();
-        return;
-    }
->>>>>>> SlySven/release_30
     QUiLoader loader;
 
     QFile file(":/ui/custom_lines.ui");
@@ -4705,15 +4568,7 @@ void T2DMap::slot_setCustomLine()
     if( ! d ) {
         return;
     }
-<<<<<<< HEAD
-
     d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-    mpCustomLinesDialog = d;
-    mpCustomLinesDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-
-=======
-    d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
->>>>>>> SlySven/release_30
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";

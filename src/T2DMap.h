@@ -27,10 +27,7 @@
 #include <QColor>
 #include <QPixmap>
 #include <QPointer>
-<<<<<<< HEAD
 #include <QString>
-=======
->>>>>>> SlySven/release_30
 #include <QTreeWidget>
 #include <QWidget>
 #include "post_guard.h"
@@ -58,7 +55,6 @@ public:
     QColor   _getColor( int id );
     void     init();
     void     exportAreaImage( int );
-<<<<<<< HEAD
     void     paintEvent( QPaintEvent * ) override;
     void     mousePressEvent(QMouseEvent * ) override;
     void     mouseDoubleClickEvent ( QMouseEvent * event ) override;
@@ -66,15 +62,6 @@ public:
     void     wheelEvent ( QWheelEvent * ) override;
     void     mouseMoveEvent( QMouseEvent * event ) override;
     void     mouseReleaseEvent(QMouseEvent * e ) override;
-=======
-    void     paintEvent( QPaintEvent * );
-    void     mousePressEvent(QMouseEvent * );
-    void     mouseDoubleClickEvent ( QMouseEvent * event );
-    bool     event(QEvent * event );
-    void     wheelEvent ( QWheelEvent * );
-    void     mouseMoveEvent( QMouseEvent * event );
-    void     mouseReleaseEvent(QMouseEvent * e );
->>>>>>> SlySven/release_30
     bool     getCenterSelection();
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via
