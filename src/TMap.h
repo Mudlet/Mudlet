@@ -74,16 +74,10 @@ class TMap : public QObject
 {
     Q_OBJECT
 
-<<<<<<< HEAD
 
 public:
     TMap( Host *);
     ~TMap();
-=======
-public:
-            TMap( Host *);
-           ~TMap();
->>>>>>> SlySven/release_30
     void mapClear();
     int createMapLabelID( int area );
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling );
@@ -148,11 +142,7 @@ public:
     TRoomDB * mpRoomDB;
     QMap<int, int> envColors;
 // Not used:    QVector3D span;
-<<<<<<< HEAD
     QPointer<Host> mpHost;
-=======
-    Host * mpHost;
->>>>>>> SlySven/release_30
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
     QHash<QString, int> mRoomIdHash;
@@ -174,17 +164,10 @@ public:
     QMap<int, int> roomidToIndex;
     // QMap<int, int> indexToRoomid;
 
-<<<<<<< HEAD
-// Not used:    QMap<QString, int> pixNameTable;
-// Not used:    QMap<int, QPixmap> pixTable;
-    typedef adjacency_list<listS, vecS, directedS, no_property, boost::property<edge_weight_t, cost> > mygraph_t;
-    typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
-=======
 // Not used:        QMap<QString, int> pixNameTable;
 // Not used:        QMap<int, QPixmap> pixTable;
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost> > mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
->>>>>>> SlySven/release_30
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
     mygraph_t g;
@@ -211,10 +194,7 @@ public:
 
     QMap<QString, QString> mUserData;
 
-<<<<<<< HEAD
-=======
 
->>>>>>> SlySven/release_30
 public slots:
     // Moved and revised from dlgMapper:
     void                            slot_setDownloadProgress( qint64, qint64 );

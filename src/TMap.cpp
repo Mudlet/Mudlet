@@ -550,13 +550,8 @@ void TMap::audit()
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
-<<<<<<< HEAD
         QString infoMsg = tr( "[  OK  ]  - Auditing of map completed (%1s). Enjoy your game..." )
                               .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
-=======
-        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed, in %1 seconds. Enjoy your game..." )
-                              .arg( _time.nsecsElapsed() * 1.0e-9 );
->>>>>>> SlySven/release_30
         postMessage( infoMsg );
         appendErrorMsg( infoMsg );
     }
@@ -1018,11 +1013,7 @@ bool TMap::findPath( int from, int to )
         astar_search( g,
                       start,
                       distance_heuristic<mygraph_t, cost, std::vector<location> >(locations, goal),
-<<<<<<< HEAD
                       predecessor_map(&p[0]).distance_map(&d[0]).
-=======
-                      boost::predecessor_map(&p[0]).distance_map(&d[0]).
->>>>>>> SlySven/release_30
                       visitor(astar_goal_visitor<vertex>(goal)) );
     }
     catch( found_goal ) {
@@ -1341,13 +1332,7 @@ bool TMap::restore( QString location )
         }
 
         QDataStream ifs( & file );
-<<<<<<< HEAD
-
         ifs >> mVersion;
-//        qDebug()<<"map version:"<<mVersion;
-=======
-        ifs >> mVersion;
->>>>>>> SlySven/release_30
         if( mVersion > mDefaultVersion ) {
             if( QByteArray( APP_BUILD ).isEmpty() ) {
                 // This is a release version - should not support any map file versions higher that it was built for
@@ -1612,15 +1597,9 @@ bool TMap::restore( QString location )
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-<<<<<<< HEAD
         QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
                                         "consistency details..." )
                             .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
-=======
-        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, checking some\n"
-                                        "consistency details..." )
-                            .arg( _time.nsecsElapsed() * 1.0e-9 );
->>>>>>> SlySven/release_30
 
         postMessage( okMsg );
         appendErrorMsgWithNoLf( okMsg );
@@ -1644,11 +1623,7 @@ bool TMap::restore( QString location )
             if( msgBox.clickedButton() == yesButton ) {
                 downloadMap();
             }
-<<<<<<< HEAD
             else if( msgBox.clickedButton() == noButton ) {
-=======
-            else if( msgBox.clickedButton() == noButton) {
->>>>>>> SlySven/release_30
                 ; //No-op to avoid unused "noButton"
             }
         }
@@ -2266,13 +2241,6 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
     else if( url.toString().contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ) {
         mExpectedFileSize = qRound( 1.1f * 4842063 );
     }
-<<<<<<< HEAD
-// Midkemia is due for deletion in another pending PR!
-//    else if( url.toString().contains( QStringLiteral( "midkemiaonline.com" ), Qt::CaseInsensitive ) ) {
-//        mExpectedFileSize = qRound( 1.1f * 2600241 );
-//    }
-=======
->>>>>>> SlySven/release_30
 
     QString infoMsg = tr( "[ INFO ]  - Map download initiated, please wait..." );
     postMessage( infoMsg );
@@ -2439,11 +2407,7 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-<<<<<<< HEAD
-    if(  reply->error() != QNetworkReply::NoError ) {
-=======
     if( reply->error() != QNetworkReply::NoError ) {
->>>>>>> SlySven/release_30
         if( reply->error() != QNetworkReply::OperationCanceledError ) {
             // Don't post an error for the cancel case - it has already been done
             QString alertMsg = tr( "[ ALERT ] - Map download failed, error reported was:\n%1.").arg( reply->errorString() );
@@ -2453,20 +2417,13 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
         // THAT in slot_downloadCancel()
     }
     else {
-<<<<<<< HEAD
-        // The QNetworkReply is Ok here:
-=======
->>>>>>> SlySven/release_30
         QFile file( mLocalMapFileName );
         if( ! file.open( QFile::WriteOnly ) ) {
             QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg( mLocalMapFileName );
             postMessage( alertMsg );
         }
         else {
-<<<<<<< HEAD
-=======
             // The QNetworkReply is Ok here:
->>>>>>> SlySven/release_30
             if( file.write( reply->readAll() ) == -1 ) {
                 QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg( mLocalMapFileName );
                 postMessage( alertMsg );
