@@ -24,7 +24,7 @@ lessThan(QT_MAJOR_VERSION, 5) {
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.0.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -56,11 +56,7 @@ QT += network opengl uitools multimedia gui
 # (it is NOT a Qt built-in variable) for a release build or, if you are
 # distributing modified code, it would be useful if you could put something to
 # distinguish the version:
-<<<<<<< HEAD
-BUILD = -dev
-=======
-BUILD =
->>>>>>> SlySven/release_30
+BUILD = "-dev"
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -112,13 +108,8 @@ unix:!macx {
     INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
-<<<<<<< HEAD
     LIBS += -L"C:\\mingw32\\bin" \
         -L"C:\\mingw32\\lib" \
-=======
-    LIBS += -L"C:\\mingw32\\lib" \
-        -L"C:\\mingw32\\bin" \
->>>>>>> SlySven/release_30
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.4 \
@@ -128,11 +119,7 @@ unix:!macx {
         -lopengl32 \
         -lglut \
         -lglu32
-<<<<<<< HEAD
-    INCLUDEPATH += "C:\\mingw32\\include"
-=======
     INCLUDEPATH += "C:\\mingw32\\include" 
->>>>>>> SlySven/release_30
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
@@ -289,19 +276,15 @@ HEADERS += \
     Host.h \
     HostManager.h \
     irc/include/irc.h \
-<<<<<<< HEAD
     irc/include/irccodecplugin.h \
     irc/include/irccommand.h \
+    irc/include/ircdecoder_p.h \
     irc/include/ircglobal.h \
     irc/include/ircmessage.h \
-=======
-    irc/include/ircbuffer.h \
-    irc/include/ircglobal.h \
->>>>>>> SlySven/release_30
+    irc/include/ircparser_p.h \
+    irc/include/ircsender.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
-    irc/include/IrcGlobal \
-    irc/include/IrcSender \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -318,6 +301,7 @@ HEADERS += \
     TConsole.h \
     TDebug.h \
     TEasyButtonBar.h \
+    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -486,12 +470,9 @@ DISTFILES += \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-<<<<<<< HEAD
     .clang-format
-=======
-    ../.clang-format
->>>>>>> SlySven/release_30
