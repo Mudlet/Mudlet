@@ -3,10 +3,7 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
-<<<<<<< HEAD
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
-=======
->>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -122,7 +119,6 @@ TLuaInterpreter::~TLuaInterpreter()
     lua_close(pGlobalLua);
 }
 
-<<<<<<< HEAD
 // Not Used:
 //lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
 //{
@@ -142,8 +138,6 @@ TLuaInterpreter::~TLuaInterpreter()
 //    return 0;
 //}
 
-=======
->>>>>>> SlySven/release_30
 // Previous code didn't tell the Qt libraries when we had finished with a
 // QNetworkReply so all the data downloaded would be held in memory until the
 // profile was closed - importantly the documentation for the signal
@@ -174,7 +168,6 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
     }
 
     QString localFileName = downloadMap.value( reply );
-<<<<<<< HEAD
     TEvent e;
     if( reply->error() != QNetworkReply::NoError ) {
         e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
@@ -183,16 +176,6 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         e.mArgumentList << localFileName;
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-=======
-    TEvent * e = new TEvent;
-    if( reply->error() != QNetworkReply::NoError ) {
-        e->mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-        e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e->mArgumentList << reply->errorString();
-        e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e->mArgumentList << localFileName;
-        e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
->>>>>>> SlySven/release_30
 
         reply->deleteLater();
         downloadMap.remove( reply );
@@ -202,7 +185,6 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
     else { // reply IS ok...
         QFile localFile( localFileName );
         if( ! localFile.open( QFile::WriteOnly ) ) {
-<<<<<<< HEAD
             e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
@@ -211,16 +193,6 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "unableToOpenLocalFileForWriting", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-=======
-            e->mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << localFileName;
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << tr( "unableToOpenLocalFileForWriting", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
->>>>>>> SlySven/release_30
 
             reply->deleteLater();
             downloadMap.remove( reply );
@@ -230,7 +202,6 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
 
         qint64 bytesWritten = localFile.write( reply->readAll() );
         if( bytesWritten == -1 ) {
-<<<<<<< HEAD
             e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
@@ -239,23 +210,12 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "unableToWriteLocalFile", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-=======
-            e->mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << localFileName;
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << tr( "unableToWriteLocalFile", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
->>>>>>> SlySven/release_30
 
             reply->deleteLater();
             downloadMap.remove( reply );
             pHost->raiseEvent( e );
             return;
         }
-<<<<<<< HEAD
 
         localFile.flush();
 
@@ -278,30 +238,6 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         }
 
-=======
-
-        localFile.flush();
-
-        if( localFile.error() == QFile::NoError ) {
-            e->mArgumentList << "sysDownloadDone";
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << localFileName;
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << QString::number( bytesWritten );
-            e->mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-        }
-        else {
-            e->mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << localFileName;
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e->mArgumentList << localFile.errorString();
-            e->mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        }
-
->>>>>>> SlySven/release_30
         localFile.close();
         reply->deleteLater();
         downloadMap.remove( reply );
@@ -2332,7 +2268,6 @@ int TLuaInterpreter::loadMap( lua_State * L )
             location = QString::fromUtf8( lua_tostring( L, 1 ) );
         }
     }
-<<<<<<< HEAD
 
     bool isOk = false;
     if( ! location.isEmpty() && location.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) ) {
@@ -2359,35 +2294,6 @@ int TLuaInterpreter::loadMap( lua_State * L )
     return 1;
 }
 
-=======
-
-    bool isOk = false;
-    if( ! location.isEmpty() && location.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) ) {
-        QString errMsg;
-        isOk = pHost->mpConsole->importMap( location, & errMsg );
-        if( ! isOk ) {
-            // A false was returned which indicates an error, convert it to a nil
-            lua_pushnil( L );
-            // And add the expected error message, is to be structured in a
-            // compatible manner
-            if( ! errMsg.isEmpty() ) {
-                lua_pushstring( L, errMsg.toUtf8().constData() );
-                return 2;
-            }
-            else {
-                return 1;
-            }
-        }
-
-    }
-    else {
-        isOk = pHost->mpConsole->loadMap( location );
-    }
-    lua_pushboolean( L, isOk );
-    return 1;
-}
-
->>>>>>> SlySven/release_30
 // enableTimer( sess, timer_name )
 int TLuaInterpreter::enableTimer( lua_State *L )
 {
@@ -3691,19 +3597,11 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     bool bold;
     if( lua_isboolean( L, ++s ) )
-<<<<<<< HEAD
     {
         bold = lua_toboolean( L, s );
     }
     else if( lua_isnumber( L, s ) )
     {
-=======
-    {
-        bold = lua_toboolean( L, s );
-    }
-    else if( lua_isnumber( L, s ) )
-    {
->>>>>>> SlySven/release_30
         bold = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
     }
     else
@@ -3718,7 +3616,6 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     bool underline;
     if( lua_isboolean( L, ++s ) )
-<<<<<<< HEAD
     {
         underline = lua_toboolean( L, s );
     }
@@ -3748,18 +3645,6 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     else
     {
         lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (italic format as boolean {or number, non-zero is true} expected, got %2!)" )
-=======
-    {
-        underline = lua_toboolean( L, s );
-    }
-    else if( lua_isnumber( L, s ) )
-    {
-        underline = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
-    }
-    else
-    {
-        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (underline format as boolean {or number, non-zero is true} expected, got %2!)" )
->>>>>>> SlySven/release_30
                         .arg( s )
                         .arg( luaL_typename( L, s ) )
                         .toUtf8().constData() );
@@ -3767,7 +3652,6 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
         return 1;
     }
 
-<<<<<<< HEAD
     bool strikeout = false;
     if( s > n ) // s has not been incremented yet so this means we still have another argument!
     {
@@ -3824,23 +3708,6 @@ int TLuaInterpreter::raiseWindow( lua_State *L )
     if( ! lua_isstring( L, 1 ) )
     {
         lua_pushstring( L, "raiseWindow: wrong argument type" );
-=======
-    bool italics;
-    if( lua_isboolean( L, ++s ) )
-    {
-        italics = lua_toboolean( L, s );
-    }
-    else if( lua_isnumber( L, s ) )
-    {
-        italics = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
-    }
-    else
-    {
-        lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (italic format as boolean {or number, non-zero is true} expected, got %2!)" )
-                        .arg( s )
-                        .arg( luaL_typename( L, s ) )
-                        .toUtf8().constData() );
->>>>>>> SlySven/release_30
         lua_error( L );
         return 1;
     }
@@ -3848,7 +3715,6 @@ int TLuaInterpreter::raiseWindow( lua_State *L )
     bool strikeout = false;
     if( s > n ) // s has not been incremented yet so this means we still have another argument!
     {
-<<<<<<< HEAD
         windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -3871,52 +3737,6 @@ int TLuaInterpreter::lowerWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     lua_pushboolean( L, pHost->mpConsole->lowerWindow( windowName ));
-=======
-        if( lua_isboolean( L, ++s ) )
-        {
-            strikeout = lua_toboolean( L, s );
-        }
-        else if( lua_isnumber( L, s ) )
-        {
-            strikeout = ! qFuzzyCompare( 1.0, 1.0+lua_tonumber( L, s ) );
-        }
-        else
-        {
-            lua_pushstring( L, tr( "setTextFormat: bad argument #%1 type (strikeout format as boolean {or number, non-zero is true} optional, got %2!)" )
-                            .arg( s )
-                            .arg( luaL_typename( L, s ) )
-                            .toUtf8().constData() );
-            lua_error( L );
-            return 1;
-        }
-    }
-
-    if( windowName.isEmpty() || windowName.compare( QStringLiteral("main"), Qt::CaseSensitive ) )
-    {
-        TConsole * pC = pHost->mpConsole;
-        pC->mFormatCurrent.bgR = colorComponents.at(0);
-        pC->mFormatCurrent.bgG = colorComponents.at(1);
-        pC->mFormatCurrent.bgB = colorComponents.at(2);
-        pC->mFormatCurrent.fgR = colorComponents.at(3);
-        pC->mFormatCurrent.fgG = colorComponents.at(4);
-        pC->mFormatCurrent.fgB = colorComponents.at(5);
-        int flags = (bold ? TCHAR_BOLD : 0)
-                  + (underline ? TCHAR_UNDERLINE : 0)
-                  + (italics ? TCHAR_ITALICS : 0)
-                  + (strikeout ? TCHAR_STRIKEOUT : 0);
-        pC->mFormatCurrent.flags &= ~(TCHAR_BOLD|TCHAR_UNDERLINE|TCHAR_ITALICS|TCHAR_STRIKEOUT) ;
-        pC->mFormatCurrent.flags |= flags;
-        lua_pushboolean( L, true );
-    }
-    else
-    {
-        lua_pushboolean( L, mudlet::self()->setTextFormat( pHost, windowName,
-                                                           colorComponents.at(0), colorComponents.at(1), colorComponents.at(2),
-                                                           colorComponents.at(3), colorComponents.at(4), colorComponents.at(5),
-                                                           bold, underline, italics, strikeout ) );
-    }
-
->>>>>>> SlySven/release_30
     return 1;
 }
 
@@ -4029,22 +3849,14 @@ int TLuaInterpreter::setRoomName( lua_State *L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-<<<<<<< HEAD
         lua_pushstring( L, tr( "setRoomName: NULL Host pointer - something is wrong!" )
                         .toUtf8().constData() );
-=======
-        lua_pushstring( L, tr( "setRoomName: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
->>>>>>> SlySven/release_30
         return 2;
     }
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
         lua_pushnil( L );
-<<<<<<< HEAD
         lua_pushstring( L, tr( "setRoomName: no map present or loaded!" )
                         .toUtf8().constData() );
-=======
-        lua_pushstring( L, tr( "setRoomName: no map present or loaded!" ).toUtf8().constData() );
->>>>>>> SlySven/release_30
         return 2;
     }
 
@@ -4115,28 +3927,16 @@ int TLuaInterpreter::getRoomName( lua_State *L )
 
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
     if( pR ) {
-<<<<<<< HEAD
-        lua_pushstring( L, pR->name.toUtf8().constData() );
-=======
         lua_pushstring(L, pR->name.toUtf8().constData() );
->>>>>>> SlySven/release_30
         return 1;
     }
     else {
         lua_pushnil( L );
         lua_pushstring( L, tr( "getRoomName: bad argument #1 value (number %1 is not a valid room id)." )
-<<<<<<< HEAD
                         .arg( id )
                         .toUtf8().constData() );
         return 2;
     }
-=======
-                       .arg( id )
-                       .toUtf8().constData() );
-        return 2;
-    }
-
->>>>>>> SlySven/release_30
 }
 
 int TLuaInterpreter::setRoomWeight( lua_State *L )
@@ -4622,7 +4422,6 @@ int TLuaInterpreter::getRoomExits( lua_State *L )
 // that enter the given room (even one way routes).
 // TODO: Provide exit details:
 int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
-<<<<<<< HEAD
 {
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
@@ -4668,128 +4467,10 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
             lua_pushnumber( L, entrances.at( i ) );
             lua_settable(L, -3);
         }
-=======
-{
-    int roomId;
-    if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 type (room id as number expected, got %1!)" )
-                        .arg( luaL_typename( L, 1 ) )
-                        .toUtf8().constData());
-        lua_error( L );
-    }
-    else {
-       roomId = lua_tonumber( L, 1 );
-    }
-
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getAllRoomEntrances: NULL Host pointer - something is wrong!" ).toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getAllRoomEntrances: no map present or loaded!" ).toUtf8().constData() );
-        return 2;
-    }
-    else {
-        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
-        if( ! pR ) {
-            lua_pushnil( L );
-            lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 value (number %1 is not a valid room id)." )
-                            .arg( roomId )
-                            .toUtf8().constData() );
-            return 2;
-        }
-        lua_newtable(L);
-        QList<int> entrances = pHost->mpMap->mpRoomDB->getEntranceHash().values( roomId );
-        // Could use a .toSet().toList() to remove duplicates values
-        if( entrances.count() > 1 ) {
-            std::sort( entrances.begin(), entrances.end() );
-        }
-        for( uint i = 0; i < entrances.size(); i++ ) {
-            lua_pushnumber( L, i+1 );
-            lua_pushnumber( L, entrances.at( i ) );
-            lua_settable(L, -3);
-        }
         return 1;
     }
 }
 
-// EITHER searchRoom( roomId ):
-// Returns the room name for the given roomId number, or errors out if no such
-// room exists.
-// OR searchRoom( roomName ):
-// Original implimentation did a case insensitive and matched on only part
-// of the room name if a string is supplied as the argument.  Returns a table
-// of room ids with the matching room name for each room id.
-// NOW Enhanced in a compatible matter with two further optional boolean arguments:
-// searchRoom( roomName, < caseSensitive < , exact match > > )
-// which both default to false if omitted to reproduce the original action.
-int TLuaInterpreter::searchRoom( lua_State *L )
-{
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "searchRoom: NULL Host pointer - something is wrong!" )
-                        .toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "searchRoom: no map present or loaded!" )
-                        .toUtf8().constData() );
-        return 2;
-    }
-
-    int room_id = 0;
-    int n = lua_gettop( L );
-    bool gotRoomID = false;
-    bool caseSensitive = false;
-    bool exactMatch = false;
-    QString room;
-
-    if( lua_isnumber( L, 1 ) ) {
-        room_id = lua_tointeger( L, 1 );
-        gotRoomID = true;
-    }
-    else if( lua_isstring( L, 1 ) ) {
-        if( n > 1 ) {
-            if( lua_isboolean( L, 2) ) {
-                caseSensitive = lua_toboolean( L, 2 );
-                if( n > 2 ) {
-                    if( lua_isboolean( L, 3) )
-                        exactMatch = lua_toboolean( L, 3);
-                    else {
-                        lua_pushstring( L, tr( "searchRoom: bad argument #3 type (\"exact match\" as boolean is optional, got %1!)" )
-                                        .arg( luaL_typename( L, 1 ) )
-                                        .toUtf8().constData() );
-                        lua_error( L );
-                        return 1;
-                    }
-                }
-            }
-            else {
-                lua_pushstring( L, tr( "searchRoom: bad argument #2 type (\"case sensitive\" as boolean is optional, got %1!)" )
-                                .arg( luaL_typename( L, 1 ) )
-                                .toUtf8().constData() );
-                lua_error( L );
-                return 1;
-            }
-        }
-        room = QString::fromUtf8( lua_tostring( L, 1 ) );
-    }
-    else {
-        lua_pushstring( L, tr( "searchRoom: bad argument #1 type (room name as string \"room name\" expected, got %1!)" )
-                        .arg( luaL_typename( L, 1 ) )
-                        .toUtf8().constData() );
-        lua_error( L );
->>>>>>> SlySven/release_30
-        return 1;
-    }
-}
-
-<<<<<<< HEAD
 // EITHER searchRoom( roomId ):
 // Returns the room name for the given roomId number, or errors out if no such
 // room exists.
@@ -4859,8 +4540,6 @@ int TLuaInterpreter::searchRoom( lua_State *L )
         return 1;
     }
 
-=======
->>>>>>> SlySven/release_30
     if( gotRoomID ) {
         TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(room_id);
         if( pR ) {
@@ -4868,12 +4547,8 @@ int TLuaInterpreter::searchRoom( lua_State *L )
             return 1;
         }
         else {
-<<<<<<< HEAD
-            lua_pushstring( L, tr( "searchRoom ERROR: no such room!" ).toUtf8().constData());
-=======
             lua_pushstring( L, tr( "searchRoom ERROR: no such room!" )
                             .toUtf8().constData() );
->>>>>>> SlySven/release_30
             // Should've been a nil with this as an second returned string !
             return 1;
         }
@@ -4902,11 +4577,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
                 int roomID = pR->getId();
                 lua_pushnumber( L, roomID );
                 lua_pushstring( L, name.toUtf8().constData() );
-<<<<<<< HEAD
-                lua_settable(L, -3);
-=======
                 lua_settable( L, -3 );
->>>>>>> SlySven/release_30
             }
         }
         return 1;
@@ -4932,11 +4603,7 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
                         .toUtf8().constData() );
         return 2;
     }
-<<<<<<< HEAD
-    else if( ! pHost->mpMap ) {
-=======
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
->>>>>>> SlySven/release_30
         lua_pushnil( L );
         lua_pushstring( L, tr( "searchRoomUserData: no map present or loaded!" )
                         .toUtf8().constData() );
@@ -4948,13 +4615,8 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
 
     if( lua_gettop( L ) ) {
         if( ! lua_isstring( L, 1 ) ) {
-<<<<<<< HEAD
-            lua_pushstring( L, tr( "searchRoomUserData: bad argument #1 (string \"key\" optional value permitted, got %1!)" )
-                            .arg( luaL_typename(L, 1) ).toUtf8().constData() );
-=======
             lua_pushstring( L, tr( "searchRoomUserData: bad argument #1 (\"key\" as string is optional, got %1!)" )
                             .arg( luaL_typename( L, 1 ) ).toUtf8().constData() );
->>>>>>> SlySven/release_30
             lua_error( L );
             return 1;
         }
@@ -4964,13 +4626,8 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
 
         if( lua_gettop( L ) > 1 ) {
             if( ! lua_isstring( L, 2 ) ) {
-<<<<<<< HEAD
-                lua_pushstring( L, tr( "searchRoomUserData: bad argument #2 (string \"value\" optional value permitted, got %1!)" )
-                                .arg( luaL_typename(L, 2) ).toUtf8().constData() );
-=======
                 lua_pushstring( L, tr( "searchRoomUserData: bad argument #2 (\"value\" as string is optional, got %1!)" )
                                 .arg( luaL_typename( L, 2 ) ).toUtf8().constData() );
->>>>>>> SlySven/release_30
                 lua_error( L );
                 return 1;
             }
@@ -5005,7 +4662,6 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
             lua_pushstring( L, keys.at(i).toUtf8().constData() );
             lua_settable( L, -3 );
         }
-<<<<<<< HEAD
     }
     else if( value.isNull() ) { // Find all values for a particular key in every room
         QSet<QString> valuesSet; // Use a set as it automatically eliminates duplicates
@@ -5054,56 +4710,6 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
             lua_settable( L, -3 );
         }
     }
-=======
-    }
-    else if( value.isNull() ) { // Find all values for a particular key in every room
-        QSet<QString> valuesSet; // Use a set as it automatically eliminates duplicates
-        while( itRoom.hasNext() ) {
-            itRoom.next();
-            QString roomValueForKey = itRoom.value()->userData.value( key, QString() );
-            // If the key is NOT present, will return second argument which is a
-            // null QString which is NOT the same as an empty QString.
-            if( ! roomValueForKey.isNull() ) {
-                valuesSet.insert( roomValueForKey );
-            }
-        }
-
-        QStringList values = valuesSet.toList();
-        if( values.size() > 1 ) {
-            std::sort( values.begin(), values.end() );
-        }
-
-        for( unsigned int i=0, total = values.size(); i<total; ++i ) {
-            lua_pushnumber( L, i+1 );
-            lua_pushstring( L, values.at(i).toUtf8().constData() );
-            lua_settable( L, -3 );
-        }
-    }
-    else { // Find all rooms where key and value match
-        QSet<int> roomIdsSet;
-        while( itRoom.hasNext() ) {
-            itRoom.next();
-
-            QString roomDataValue = itRoom.value()->userData.value( key, QString() );
-            if( ( ! roomDataValue.isNull() )
-             && ( ! value.compare( roomDataValue , Qt::CaseSensitive ) ) ) {
-
-                roomIdsSet.insert( itRoom.key() );
-            }
-        }
-
-        QList<int> roomIds = roomIdsSet.toList();
-        if( roomIds.size() > 1 ) {
-            std::sort( roomIds.begin(), roomIds.end() );
-        }
-
-        for( unsigned int i=0, total = roomIds.size(); i<total; ++i ) {
-            lua_pushnumber( L, i+1 );
-            lua_pushnumber( L, roomIds.at(i) );
-            lua_settable( L, -3 );
-        }
-    }
->>>>>>> SlySven/release_30
 
     return 1;
 }
@@ -5118,11 +4724,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
                         .toUtf8().constData() );
         return 2;
     }
-<<<<<<< HEAD
-    else if( ! pHost->mpMap ) {
-=======
     else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
->>>>>>> SlySven/release_30
         lua_pushnil( L );
         lua_pushstring( L, tr( "searchAreaUserData: no map present or loaded!" )
                         .toUtf8().constData() );
@@ -5134,11 +4736,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
 
     if( lua_gettop( L ) ) {
         if( ! lua_isstring( L, 1 ) ) {
-<<<<<<< HEAD
-            lua_pushstring( L, tr( "searchAreaUserData: bad argument #1 (string \"key\" optional value permitted, got %1!)" )
-=======
             lua_pushstring( L, tr( "searchAreaUserData: bad argument #1 (\"key\" as string is optional, got %1!)" )
->>>>>>> SlySven/release_30
                             .arg( luaL_typename(L, 1) ).toUtf8().constData() );
             lua_error( L );
             return 1;
@@ -5149,11 +4747,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
 
         if( lua_gettop( L ) > 1 ) {
             if( ! lua_isstring( L, 2 ) ) {
-<<<<<<< HEAD
-                lua_pushstring( L, tr( "searchAreaUserData: bad argument #2 (string \"value\" optional value permitted, got %1!)" )
-=======
                 lua_pushstring( L, tr( "searchAreaUserData: bad argument #2 (\"value\" as string is optional, got %1!)" )
->>>>>>> SlySven/release_30
                                 .arg( luaL_typename(L, 2) ).toUtf8().constData() );
                 lua_error( L );
                 return 1;
@@ -5370,11 +4964,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
 
     if( n > 1 ) {
         if( ! lua_isboolean( L, 2 ) ) {
-<<<<<<< HEAD
             lua_pushstring( L, tr("getAreaExits: bad argument #2 type (full data wanted as boolean is optional, got %1).").arg( luaL_typename(L, 2)).toUtf8().constData());
-=======
-            lua_pushstring( L, tr("getAreaExits: bad argument #2 type (full data wanted, as boolean, optional, got %1).").arg( luaL_typename(L, 2)).toUtf8().constData());
->>>>>>> SlySven/release_30
             lua_error( L );
             return 1;
         }
@@ -5543,64 +5133,6 @@ int TLuaInterpreter::getPath( lua_State *L )
     }
     else {
         targetRoomId = lua_tonumber( L, 2 );
-<<<<<<< HEAD
-=======
-    }
-
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getPath: NULL Host pointer - something is wrong!" )
-                        .toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getPath: no map present or loaded!" )
-                        .toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap->mpRoomDB->getRoom( originRoomId ) ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getPath: bad argument #1 value (number %1 is not a valid source room id)." )
-                        .arg( originRoomId )
-                        .toUtf8().constData() );
-        return 2;
-    }
-    else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "getPath: bad argument #2 value (number %1 is not a valid target room id)." )
-                        .arg( targetRoomId )
-                        .toUtf8().constData() );
-        return 2;
-    }
-
-    bool ret = pHost->mpMap->gotoRoom( originRoomId, targetRoomId );
-    int totalWeight = pHost->assemblePath(); // Needed even if unsucessful, to clear lua tables then
-    if( ret )
-    {
-        lua_pushboolean( L, true );
-        lua_pushnumber( L, totalWeight );
-        return 2;
-    }
-    else {
-        lua_pushboolean( L, false );
-        lua_pushnumber( L, -1 );
-        lua_pushstring( L, tr( "getPath: no path found from room, with Id %1 to room %2!" )
-                        .arg(originRoomId)
-                        .arg(targetRoomId)
-                        .toUtf8().constData() );
-        return 3;
-    }
-}
-
-int TLuaInterpreter::deselect( lua_State *L )
-{
-    string luaWindowName="";
-    if( lua_isstring( L, 1 ) )
-    {
-        luaWindowName = lua_tostring( L, 1 );
->>>>>>> SlySven/release_30
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -6225,11 +5757,7 @@ int TLuaInterpreter::setItalics( lua_State * L )
     return 0;
 }
 
-<<<<<<< HEAD
 int TLuaInterpreter::setUnderline( lua_State *L )
-=======
-int TLuaInterpreter::setUnderline( lua_State * L )
->>>>>>> SlySven/release_30
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
@@ -8062,11 +7590,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
         id = lua_tonumber( L, 1 );
         if( id < 1 ) {
             lua_pushnil( L );
-<<<<<<< HEAD
-            lua_pushstring( L, tr( "setAreaName: bad argument #1 value (number %1 as area id is not greater than 0)." )
-=======
             lua_pushstring( L, tr( "setAreaName: bad argument #1 value (number %1 is not a valid area id as it is less than 1)." )
->>>>>>> SlySven/release_30
                             .arg( id ).toUtf8().constData() );
             return 2;
         }
@@ -8112,14 +7636,9 @@ int TLuaInterpreter::setAreaName( lua_State *L )
     }
 
     if( ! lua_isstring( L, 2 ) ) {
-<<<<<<< HEAD
         lua_pushstring( L, tr( "setAreaName: bad argument #2 type (area name as string expected, got %1!)" )
                         .arg( luaL_typename( L, 2) )
                         .toUtf8().constData() );
-=======
-        lua_pushstring( L, tr( "setAreaName: bad argument #2 type (area name, as string expected, got %1)." )
-                        .arg( luaL_typename( L, 2) ).toUtf8().constData() );
->>>>>>> SlySven/release_30
         lua_error( L );
         return 1;
     }
@@ -8142,11 +7661,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
         if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) != newName ) {
             lua_pushnil( L );
             // And it isn't the trivial case, where the given areaID already IS that name
-<<<<<<< HEAD
-            lua_pushstring( L, tr( "setAreaName: bad argument #2 value (area names may not be duplicated and area Id=%1 already has the name \"%2\")." )
-=======
             lua_pushstring( L, tr( "setAreaName: bad argument #2 value (area names may not be duplicated and area id %1 already has the name \"%2\")." )
->>>>>>> SlySven/release_30
                             .arg( pHost->mpMap->mpRoomDB->getAreaNamesMap().key( newName ) )
                             .arg( newName ).toUtf8().constData() );
             return 2;
@@ -8247,11 +7762,7 @@ int TLuaInterpreter::addAreaName( lua_State *L )
     QString name;
 
     if( ! lua_isstring( L, 1 ) ) {
-<<<<<<< HEAD
         lua_pushstring( L, tr( "addAreaName: bad argument #1 type (area name as string expected, got %1)." )
-=======
-        lua_pushstring( L, tr( "addAreaName: bad argument #1 type (area name, as string expected, got %1)." )
->>>>>>> SlySven/release_30
                         .arg( luaL_typename( L, 1) ).toUtf8().constData() ) ;
         lua_error( L );
         return 1;
