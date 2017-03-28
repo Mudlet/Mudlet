@@ -10,8 +10,11 @@ if [ "${Q_OR_C_MAKE}" = "qmake"  -a "${CC}" = "clang" ]; then
 
   ln -s "${TRAVIS_BUILD_DIR}" source
 
-  bash make-installer.sh
+  appBaseName="Mudlet-${VERSION}${BUILD}"
+  mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
-  export DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet.dmg"  https://transfer.sh/Mudlet.dmg -O - -q)
+  bash make-installer.sh "${appBaseName}.app"
+
+  export DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  https://transfer.sh/${appBaseName}.dmg -O - -q)
 fi
 
