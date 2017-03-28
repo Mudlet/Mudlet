@@ -42,8 +42,6 @@
 #define TCHAR_INVERSE 8
 #define TCHAR_ECHO 16
 #define TCHAR_STRIKEOUT 32
-<<<<<<< HEAD
-=======
 // TODO: {Reserve for} use the next four bits for extensions...
 // Next one is for ANSI CSI SGR Overline (53 on, 55 off)
 //#define TCHAR_OVERLINE 64
@@ -59,7 +57,6 @@
 //#define TCHAR_FASTBLINK 512
 // Convience for testing for both Blink types
 //#define TCHAR_BLINKMASK 768
->>>>>>> SlySven/release_30
 
 class Host;
 
@@ -103,13 +100,8 @@ class TBuffer
 public:
 
     TBuffer( Host * pH );
-<<<<<<< HEAD
     QPoint insert( QPoint &, const QString& text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
     bool insertInLine( QPoint & cursor, const QString & what, TChar & format );
-=======
-    QPoint insert( QPoint &, QString text, int,int,int, int, int, int, bool bold, bool italics, bool underline, bool strikeout );
-    bool insertInLine( QPoint & cursor, QString & what, TChar & format );
->>>>>>> SlySven/release_30
     void expandLine( int y, int count, TChar & );
     int wrapLine( int startLine, int screenWidth, int indentSize, TChar & format );
     void log( int, int );
@@ -143,16 +135,9 @@ public:
     void resetFontSpecs();
     QPoint getEndPos();
     void translateToPlainText( std::string & s );
-<<<<<<< HEAD
     void append(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
     void appendLine(const QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
     int lookupColor(const QString & s, int pos );
-    void set_text_properties(int tag);
-=======
-    void append( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
-    void appendLine( QString & chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID=0 );
-    int lookupColor( QString & s, int pos );
->>>>>>> SlySven/release_30
     void setWrapAt( int i ){ mWrapAt = i; }
     void setWrapIndent( int i ){ mWrapIndent = i; }
     void updateColors();
