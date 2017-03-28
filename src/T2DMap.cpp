@@ -3237,21 +3237,12 @@ void T2DMap::slot_setPlayerLocation()
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[ mpHost->getName() ] = _newRoomId;
         mpMap->mNewMove = true;
-<<<<<<< HEAD
         TEvent manualSetEvent;
         manualSetEvent.mArgumentList.append( QStringLiteral( "sysManualLocationSetEvent" ) );
         manualSetEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         manualSetEvent.mArgumentList.append( QString::number( _newRoomId ) );
         manualSetEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
         mpHost->raiseEvent( manualSetEvent );
-=======
-        TEvent * pManualSetEvent = new TEvent;
-        pManualSetEvent->mArgumentList.append( QStringLiteral( "sysManualLocationSetEvent" ) );
-        pManualSetEvent->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        pManualSetEvent->mArgumentList.append( QString::number( _newRoomId ) );
-        pManualSetEvent->mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( pManualSetEvent );
->>>>>>> SlySven/release_30
         update();
     }
 }
@@ -3272,11 +3263,7 @@ void T2DMap::slot_userAction(QString uniqueName)
             event.mArgumentList.append(QString::number(itRoom.next()));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         }
-<<<<<<< HEAD
         mpHost->raiseEvent( event );
-=======
-        mpHost->raiseEvent( & event );
->>>>>>> SlySven/release_30
     }
 // Unreachable code as had effectively the same test as the previous "if"
 // mMultiSelectionList is now mMultiSelectionSet:

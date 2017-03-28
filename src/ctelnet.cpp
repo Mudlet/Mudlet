@@ -2027,18 +2027,10 @@ MAIN_LOOP_END: ;
 
 void cTelnet::raiseProtocolEvent( const QString & name, const QString & protocol )
 {
-<<<<<<< HEAD
     TEvent me;
     me.mArgumentList.append( name );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     me.mArgumentList.append( protocol );
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-=======
-    TEvent * me = new TEvent;
-    me->mArgumentList.append( name );
-    me->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    me->mArgumentList.append( protocol );
-    me->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
->>>>>>> SlySven/release_30
     mpHost->raiseEvent( me );
 }

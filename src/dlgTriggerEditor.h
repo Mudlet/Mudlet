@@ -190,10 +190,7 @@ public slots:
 
 private slots:
     void                        slot_changeEditorTextOptions( QTextOption::Flags );
-<<<<<<< HEAD
-=======
     void                        slot_toggle_isPushDownButton( const int );
->>>>>>> SlySven/release_30
 
 private:
 
