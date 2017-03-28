@@ -42,12 +42,9 @@
 #include <math.h>    // for sqrt
 
 class TRoom;
-<<<<<<< HEAD
 
 using namespace boost;
 using namespace std;
-=======
->>>>>>> SlySven/release_30
 
 
 // auxiliary types
@@ -72,24 +69,26 @@ template <class Graph, class CostType, class LocMap>
 class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
-  typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-  distance_heuristic(LocMap l, Vertex goal)
-    : m_location(l), m_goal(goal) {}
-  CostType operator()(Vertex u)
-  {
-      if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea() ) {
-          return 1;
-      }
-      CostType dx = m_location[m_goal].pR->x - m_location[u].pR->x;
-      CostType dy = m_location[m_goal].pR->y - m_location[u].pR->y;
-      CostType dz = m_location[m_goal].pR->z - m_location[u].pR->z;
+    typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
+    distance_heuristic(LocMap l, Vertex goal)
+        : m_location(l), m_goal(goal)
+    {}
 
-      return std::sqrt(dx * dx + dy * dy + dz * dz);
-  }
+    CostType operator()(Vertex u)
+    {
+        if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea() ) {
+            return 1;
+        }
+        CostType dx = m_location[m_goal].pR->x - m_location[u].pR->x;
+        CostType dy = m_location[m_goal].pR->y - m_location[u].pR->y;
+        CostType dz = m_location[m_goal].pR->z - m_location[u].pR->z;
+
+        return std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
 
 private:
-  LocMap m_location;
-  Vertex m_goal;
+    LocMap      m_location;
+    Vertex      m_goal;
 };
 
 

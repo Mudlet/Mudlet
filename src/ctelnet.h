@@ -5,12 +5,8 @@
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
-<<<<<<< HEAD
- *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
-=======
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
->>>>>>> SlySven/release_30
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
