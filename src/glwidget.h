@@ -40,11 +40,7 @@ public:
     GLWidget(QWidget *parent = 0);
     GLWidget(TMap * pM, QWidget *parent = 0);
     ~GLWidget();
-<<<<<<< HEAD
     void wheelEvent( QWheelEvent * e ) override;
-=======
-    void wheelEvent( QWheelEvent * e );
->>>>>>> SlySven/release_30
     void setViewCenter( int, int, int, int );
 
     bool is2DView;

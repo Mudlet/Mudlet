@@ -37,13 +37,7 @@ class EAction : public QAction
     Q_OBJECT
 
 public:
-<<<<<<< HEAD
-    EAction(QIcon&, QString&, mudlet*);
-    QWidget* createWidget(QWidget*);
-=======
                     EAction( QIcon &, QString & );
-    QWidget *       createWidget( QWidget * );
->>>>>>> SlySven/release_30
 
     int mID;
     QPointer<Host> mpHost;

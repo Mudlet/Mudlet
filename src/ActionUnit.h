@@ -54,31 +54,17 @@ public:
     void                  unregisterAction( TAction * pT );
     void                  reParentAction( int childID, int oldParentID, int newParentID, int parentPostion = -1, int childPosition = -1 );
     int                   getNewID();
-<<<<<<< HEAD
     void                  uninstall(const QString& );
     void                  _uninstall( TAction * pChild, const QString& packageName );
-=======
-    void                  uninstall( QString );
-    void                  _uninstall( TAction * pChild, QString packageName );
->>>>>>> SlySven/release_30
     void                  updateToolbar();
     std::list<TToolBar *> getToolBarList();
     std::list<TEasyButtonBar *> getEasyButtonBarList();
     TAction *             getHeadAction( TToolBar * );
     TAction *             getHeadAction( TEasyButtonBar * );
-<<<<<<< HEAD
-    void                  processDataStream(const QString & );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, TEasyButtonBar * pTB );
-    void                  showToolBar(const QString & );
-    void                  hideToolBar(const QString & );
-=======
-    void                  processDataStream( QString & );
     void                  constructToolbar( TAction *, TToolBar * pTB );
     void                  constructToolbar( TAction *, TEasyButtonBar * pTB );
-    void                  showToolBar( QString & );
-    void                  hideToolBar( QString & );
->>>>>>> SlySven/release_30
+    void                  showToolBar( const QString & );
+    void                  hideToolBar( const QString & );
 
     QMutex                mActionUnitLock;
     QList<TAction*>       uninstallList;

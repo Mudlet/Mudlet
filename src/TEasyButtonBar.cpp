@@ -199,12 +199,7 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
 void TEasyButtonBar::clear()
 {
     QWidget * pW = new QWidget;
-<<<<<<< HEAD
     for(auto it = mButtonList.begin(); it != mButtonList.end(); it++ )
-=======
-    typedef std::list<TFlipButton *>::iterator IT;
-    for( IT it = mButtonList.begin(); it != mButtonList.end(); it++ )
->>>>>>> SlySven/release_30
     {
         disconnect( *it, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
     }
