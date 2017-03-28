@@ -1,11 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
-<<<<<<< HEAD
  *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
-=======
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
->>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -361,265 +358,6 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
     }
 }
 
-<<<<<<< HEAD
-inline void TBuffer::set_text_properties(int tag)
-{
-    if( mWaitingForHighColorCode )
-    {
-        if( mHighColorModeForeground )
-        {
-            if( tag < 16 )
-            {
-                mHighColorModeForeground = false;
-                mWaitingForHighColorCode = false;
-                mIsHighColorMode = false;
-                goto NORMAL_ANSI_COLOR_TAG;
-            }
-            if( tag < 232 )
-            {
-                tag-=16; // because color 1-15 behave like normal ANSI colors
-                // 6x6 RGB color space
-                int r = tag / 36;
-                int g = (tag-(r*36)) / 6;
-                int b = (tag-(r*36))-(g*6);
-                fgColorR = r*42;
-                fgColorG = g*42;
-                fgColorB = b*42;
-            }
-            else
-            {
-                // black + 23 tone grayscale from dark to light gray
-                tag -= 232;
-                fgColorR = tag*10;
-                fgColorG = tag*10;
-                fgColorB = tag*10;
-            }
-            mHighColorModeForeground = false;
-            mWaitingForHighColorCode = false;
-            mIsHighColorMode = false;
-
-            return;
-        }
-        if( mHighColorModeBackground )
-        {
-            if( tag < 16 )
-            {
-                mHighColorModeBackground = false;
-                mWaitingForHighColorCode = false;
-                mIsHighColorMode = false;
-                goto NORMAL_ANSI_COLOR_TAG;
-            }
-            if( tag < 232 )
-            {
-                tag-=16;
-                int r = tag / 36;
-                int g = (tag-(r*36)) / 6;
-                int b = (tag-(r*36))-(g*6);
-                bgColorR = r*42;
-                bgColorG = g*42;
-                bgColorB = b*42;
-            }
-            else
-            {
-                // black + 23 tone grayscale from dark to light gray
-                tag -= 232;
-                fgColorR = tag*10;
-                fgColorG = tag*10;
-                fgColorB = tag*10;
-            }
-            mHighColorModeBackground = false;
-            mWaitingForHighColorCode = false;
-            mIsHighColorMode = false;
-
-            return;
-        }
-    }
-
-    if( tag == 38 )
-    {
-        mIsHighColorMode = true;
-        mHighColorModeForeground = true;
-        return;
-    }
-    if( tag == 48 )
-    {
-        mIsHighColorMode = true;
-        mHighColorModeBackground = true;
-    }
-    if( ( mIsHighColorMode ) && ( tag == 5 ) )
-    {
-        mWaitingForHighColorCode = true;
-        return;
-    }
-
-    // we are dealing with standard ANSI colors
-NORMAL_ANSI_COLOR_TAG:
-
-    switch( tag )
-    {
-    case 0:
-        mHighColorModeForeground = false;
-        mHighColorModeBackground = false;
-        mWaitingForHighColorCode = false;
-        mIsHighColorMode = false;
-        mIsDefaultColor = true;
-        resetFontSpecs();
-        break;
-    case 1:
-        mBold = true;
-        break;
-    case 2:
-        mBold = false;
-        break;
-    case 3:
-        mItalics = true;
-        break;
-    case 4:
-        mUnderline = true;
-    case 5:
-        break; //FIXME support blinking
-    case 6:
-        break; //FIXME support fast blinking
-    case 7:
-        break; //FIXME support inverse
-    case 9:
-        mStrikeOut = true;
-        break; 
-    case 22:
-        mBold = false;
-        break;
-    case 23:
-        mItalics = false;
-        break;
-    case 24:
-        mUnderline = false;
-        break;
-    case 27:
-        break; //FIXME inverse off
-    case 29:
-        mStrikeOut = false;
-        break;
-    case 30:
-        fgColorR = mBlackR;
-        fgColorG = mBlackG;
-        fgColorB = mBlackB;
-        fgColorLightR = mLightBlackR;
-        fgColorLightG = mLightBlackG;
-        fgColorLightB = mLightBlackB;
-        mIsDefaultColor = false;
-        break;
-    case 31:
-        fgColorR = mRedR;
-        fgColorG = mRedR;
-        fgColorB = mRedB;
-        fgColorLightR = mLightRedR;
-        fgColorLightG = mLightRedG;
-        fgColorLightB = mLightRedB;
-        mIsDefaultColor = false;
-        break;
-    case 32:
-        fgColorR = mGreenR;
-        fgColorG = mGreenG;
-        fgColorB = mGreenB;
-        fgColorLightR = mLightGreenR;
-        fgColorLightG = mLightGreenR;
-        fgColorLightB = mLightGreenB;
-        mIsDefaultColor = false;
-        break;
-    case 33:
-        fgColorR = mYellowR;
-        fgColorG = mYellowG;
-        fgColorB = mYellowB;
-        fgColorLightR = mLightYellowR;
-        fgColorLightG = mLightYellowG;
-        fgColorLightB = mLightYellowB;
-        mIsDefaultColor = false;
-        break;
-    case 34:
-        fgColorR = mBlueR;
-        fgColorG = mBlueG;
-        fgColorB = mBlueB;
-        fgColorLightR = mLightBlueR;
-        fgColorLightG = mLightBlueG;
-        fgColorLightB = mLightBlueB;
-        mIsDefaultColor = false;
-        break;
-    case 35:
-        fgColorR = mMagentaR;
-        fgColorG=mMagentaG;
-        fgColorB=mMagentaB;
-        fgColorLightR=mLightMagentaR;
-        fgColorLightG=mLightMagentaG;
-        fgColorLightB=mLightMagentaB;
-        mIsDefaultColor = false;
-        break;
-    case 36:
-        fgColorR = mCyanR;
-        fgColorG = mCyanG;
-        fgColorB = mCyanB;
-        fgColorLightR = mLightCyanR;
-        fgColorLightG = mLightCyanG;
-        fgColorLightB = mLightCyanB;
-        mIsDefaultColor = false;
-        break;
-    case 37:
-        fgColorR = mWhiteR;
-        fgColorG = mWhiteG;
-        fgColorB = mWhiteB;
-        fgColorLightR = mLightWhiteR;
-        fgColorLightG = mLightWhiteG;
-        fgColorLightB = mLightWhiteB;
-        mIsDefaultColor = false;
-        break;
-    case 39:
-        bgColorR = mBgColorR;
-        bgColorG = mBgColorG;
-        bgColorB = mBgColorB;
-        break;
-    case 40:
-        bgColorR = mBlackR;
-        bgColorG = mBlackG;
-        bgColorB = mBlackB;
-        break;
-    case 41:
-        bgColorR = mRedR;
-        bgColorG = mRedG;
-        bgColorB = mRedB;
-        break;
-    case 42:
-        bgColorR = mGreenR;
-        bgColorG = mGreenG;
-        bgColorB = mGreenB;
-        break;
-    case 43:
-        bgColorR = mYellowR;
-        bgColorG = mYellowG;
-        bgColorB = mYellowB;
-        break;
-    case 44:
-        bgColorR = mBlueR;
-        bgColorG = mBlueG;
-        bgColorB = mBlueB;
-        break;
-    case 45:
-        bgColorR = mMagentaR;
-        bgColorG = mMagentaG;
-        bgColorB = mMagentaB;
-        break;
-    case 46:
-        bgColorR = mCyanR;
-        bgColorG = mCyanG;
-        bgColorB = mCyanB;
-        break;
-    case 47:
-        bgColorR = mWhiteR;
-        bgColorG = mWhiteG;
-        bgColorB = mWhiteB;
-        break;
-    };
-}
-
-=======
 //void TBuffer::appendLink( QString & text,
 //                          int sub_start,
 //                          int sub_end,
@@ -724,7 +462,6 @@ NORMAL_ANSI_COLOR_TAG:
 
 
 //int speedTP;
->>>>>>> SlySven/release_30
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
       -----------------------------------------
@@ -1374,11 +1111,7 @@ void TBuffer::translateToPlainText( std::string & s )
                             break; //inverse off
                         case 29:
                             mStrikeOut = false;
-<<<<<<< HEAD
-                            break; //not crossed out text (strikethrough)
-=======
                             break; //not crossed out (strikethrough) text
->>>>>>> SlySven/release_30
                         case 30:
                             fgColorR = mBlackR;
                             fgColorG = mBlackG;
@@ -2151,11 +1884,7 @@ void TBuffer::append(const QString & text,
                     log(size()-2, size()-2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
-<<<<<<< HEAD
-                    // test from log file.
-=======
                     // text from log file.
->>>>>>> SlySven/release_30
                     break;
                 }
             }
@@ -2173,23 +1902,7 @@ void TBuffer::append(const QString & text,
     }
 }
 
-<<<<<<< HEAD
-void TBuffer::appendLine(const QString & text,
-                        int sub_start,
-                        int sub_end,
-                        int fgColorR,
-                        int fgColorG,
-                        int fgColorB,
-                        int bgColorR,
-                        int bgColorG,
-                        int bgColorB,
-                        bool bold,
-                        bool italics,
-                        bool underline,
-                        bool strikeout,
-                        int linkID )
-=======
-void TBuffer::appendLine( QString & text,
+void TBuffer::appendLine( const QString & text,
                           int sub_start,
                           int sub_end,
                           int fgColorR,
@@ -2203,7 +1916,6 @@ void TBuffer::appendLine( QString & text,
                           bool underline,
                           bool strikeout,
                           int linkID )
->>>>>>> SlySven/release_30
 {
     if( sub_end < 0 ) return;
     if( static_cast<int>(buffer.size()) > mLinesLimit )
@@ -2244,11 +1956,7 @@ void TBuffer::appendLine( QString & text,
     }
 }
 
-<<<<<<< HEAD
 QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
-=======
-QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
->>>>>>> SlySven/release_30
 {
     QPoint P(-1, -1);
 
@@ -2280,12 +1988,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
         }
         lineBuffer[y].insert( x, text.at( i ) );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
-<<<<<<< HEAD
         auto it = buffer[y].begin();
-=======
-        typedef std::deque<TChar>::iterator IT;
-        IT it = buffer[y].begin();
->>>>>>> SlySven/release_30
         buffer[y].insert( it+x, c );
     }
     dirty[y] = true;
@@ -2356,15 +2059,10 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
                      buffer[y][x].bgB,
                      (buffer[y][x].flags & TCHAR_BOLD),
                      (buffer[y][x].flags & TCHAR_ITALICS),
-<<<<<<< HEAD
-                     (buffer[y][x].flags & TCHAR_UNDERLINE), 
-                     (buffer[y][x].flags & TCHAR_STRIKEOUT)  );
-=======
                      (buffer[y][x].flags & TCHAR_UNDERLINE),
                      (buffer[y][x].flags & TCHAR_STRIKEOUT) );
->>>>>>> SlySven/release_30
-        }
-        return slice;
+    }
+    return slice;
 }
 
 TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
@@ -3442,9 +3140,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     bool bold = false;
     bool italics = false;
     bool underline = false;
-    bool overline = false;
+//    bool overline = false;
     bool strikeout = false;
-    bool inverse = false;
+//    bool inverse = false;
     int fgR=0;
     int fgG=0;
     int fgB=0;
@@ -3505,7 +3203,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             else {
                 fontStyle = "normal";
             }
-            if( ! (underline || strikeout || overline) ) {
+            if( ! (underline || strikeout /* || overline */ ) ) {
                 textDecoration = "normal";
             }
             else {
@@ -3516,20 +3214,12 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                 if( strikeout ) {
                     textDecoration += "line-through ";
                 }
-                if( overline ) {
-                    textDecoration += "overline ";
-                }
+//                if( overline ) {
+//                    textDecoration += "overline ";
+//                }
                 textDecoration = textDecoration.trimmed();
             }
             s += "<span style=\"";
-<<<<<<< HEAD
-            s += "color: rgb(" + QString::number(inverse ? bgR : fgR) + ","
-                               + QString::number(inverse ? bgG : fgG) + ","
-                               + QString::number(inverse ? bgB : fgB) + ");";
-            s += " background: rgb(" + QString::number(inverse ? fgR : bgR) + ","
-                                     + QString::number(inverse ? fgG : bgG) + ","
-                                     + QString::number(inverse ? fgB : bgB) + ");";
-=======
 //            if( inverse )
 //            {
 //                s += "color: rgb(" + QString::number(bgR) + ","
@@ -3548,7 +3238,6 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                                      + QString::number(bgG) + ","
                                      + QString::number(bgB) + ");";
 //            }
->>>>>>> SlySven/release_30
             s += " font-weight: " + fontWeight +
                  "; font-style: " + fontStyle +
                  "; text-decoration: " + textDecoration + "\">";
