@@ -13920,7 +13920,6 @@ bool TLuaInterpreter::callEventHandler( const QString & function, const TEvent &
         logError( err, name, function );
         return false;
     }
-<<<<<<< HEAD
 
     for( int i=0; i<pE.mArgumentList.size(); i++ ) {
         switch( pE.mArgumentTypeList.at(i) ) {
@@ -13933,25 +13932,6 @@ bool TLuaInterpreter::callEventHandler( const QString & function, const TEvent &
                       function.toUtf8().constData(),
                       pE.mArgumentTypeList.at(i), i );
             lua_pushnil( L );
-=======
-    for( int i=0; i<pE->mArgumentList.size(); i++ )
-    {
-        if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NUMBER )
-        {
-            lua_pushnumber( L, pE->mArgumentList[i].toDouble() );
-        }
-        else if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_BOOLEAN )
-        {
-            lua_pushboolean( L, pE->mArgumentList[i].toInt() );
-        }
-        else if( pE->mArgumentTypeList[i] == ARGUMENT_TYPE_NIL )
-        {
-            lua_pushnil( L );
-        }
-        else
-        {
-            lua_pushstring( L, pE->mArgumentList[i].toLatin1().data() );
->>>>>>> SlySven/release_30
         }
     }
 

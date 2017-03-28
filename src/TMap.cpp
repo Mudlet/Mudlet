@@ -125,12 +125,6 @@ TMap::TMap( Host * pH )
     reverseDirections[10] = 9;
     reverseDirections[11] = 12;
     reverseDirections[12] = 11;
-<<<<<<< HEAD
-=======
-    m2DPanMode = false;
-    mLeftDown = false;
-    mRightDown = false;
->>>>>>> SlySven/release_30
 
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -2454,15 +2448,9 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
                     // direct importation of a local copy of a map file.
 
                     if( readXmlMapFile( file ) ) {
-<<<<<<< HEAD
                         TEvent mapDownloadEvent;
                         mapDownloadEvent.mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
                         mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-=======
-                        TEvent * mapDownloadEvent = new TEvent;
-                        mapDownloadEvent->mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
-                        mapDownloadEvent->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
->>>>>>> SlySven/release_30
                         pHost->raiseEvent( mapDownloadEvent );
                     }
                     else {
