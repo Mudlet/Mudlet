@@ -177,27 +177,20 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
             {
                 if( mudlet::debugMode )
                 {
-<<<<<<< HEAD
-                    TDebug(QColor(Qt::white),QColor(Qt::red))<<"REGEX COMPILE ERROR:">>0;
-                    TDebug(QColor(Qt::red),QColor(Qt::gray))<<local8Bit.constData()<<"\n">>0;
-                }
-                setError( QString( "Pattern '" )+QString(local8Bit.constData())+QString( "' failed to compile. Correct the pattern.") );
-=======
                     TDebug( QColor(Qt::white), QColor(Qt::red) ) << "REGEX ERROR: failed to compile, reason:\n"
                                                                  << error
                                                                  << "\n"
                                                                  >> 0;
                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
-                                                                << pattern
+                                                                << local8Bit.constData()
                                                                 << "\"\n"
-                                                                >> 0;
+                                                                >>0;
                 }
                 setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
                           .arg( tr( "Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\"." )
                                 .arg( i )
-                                .arg( pattern )
+                                .arg( local8Bit.constData() )
                                 .arg( error ) ) );
->>>>>>> SlySven/release_30
                 state = false;
             }
             else
