@@ -184,18 +184,9 @@ public:
       void              _luaWrapLine( int );
       QString           getCurrentLine();
       void              selectCurrentLine();
-<<<<<<< HEAD
-      bool              saveMap(const QString& location);
-      bool              loadMap(const QString& location);
-      bool              importMap(const QString& location, QString *errMsg = Q_NULLPTR );
-      QString           logger_translate( QString & );
-      void              logger_set_text_properties(const QString& );
-      QString           assemble_html_font_specs();
-=======
-      bool              saveMap(QString location);
-      bool              loadMap(QString location);
-      bool              importMap( const QString, QString *errMsg = Q_NULLPTR );
->>>>>>> SlySven/release_30
+      bool              saveMap(const QString&);
+      bool              loadMap(const QString&);
+      bool              importMap(const QString&, QString *errMsg = Q_NULLPTR );
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
       void              toggleLogging(bool);
 

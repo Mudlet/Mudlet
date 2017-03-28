@@ -1,12 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
-<<<<<<< HEAD
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
-=======
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
->>>>>>> SlySven/release_30
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -445,18 +441,6 @@ inline void TTextEdit::drawBackground( QPainter & painter,
 }
 
 inline void TTextEdit::drawCharacters( QPainter & painter,
-<<<<<<< HEAD
-                                const QRect & rect,
-                                QString & text,
-                                bool isBold,
-                                bool isUnderline,
-                                bool isItalics,
-                                bool isStrikeOut,
-                                QColor & fgColor,
-                                QColor & bgColor )
-{
-    if( ( painter.font().bold() != isBold ) || ( painter.font().underline() != isUnderline ) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut))
-=======
                                        const QRect & rect,
                                        QString & text,
                                        bool isBold,
@@ -466,8 +450,10 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
                                        QColor & fgColor,
                                        QColor & bgColor )
 {
-    if( ( painter.font().bold() != isBold ) || ( painter.font().underline() != isUnderline ) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut) )
->>>>>>> SlySven/release_30
+    if( ( painter.font().bold() != isBold )
+     || ( painter.font().underline() != isUnderline )
+     || ( painter.font().italic() != isItalics )
+     || ( painter.font().strikeOut() != isStrikeOut) )
     {
         QFont font = painter.font();
         font.setBold( isBold );
@@ -583,11 +569,10 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                     else
                         drawBackground( p, textRect, bgColor );
                 }
-<<<<<<< HEAD
-                if( ( p.font().bold() != bool(f.flags & TCHAR_BOLD) ) || ( p.font().underline() != bool(f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != bool(f.flags & TCHAR_ITALICS)) || (p.font().strikeOut() != bool(f.flags & TCHAR_STRIKEOUT)))
-=======
-                if( ( p.font().bold() != (f.flags & TCHAR_BOLD) ) || ( p.font().underline() != (f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != (f.flags & TCHAR_ITALICS)) || (p.font().strikeOut() != (f.flags & TCHAR_STRIKEOUT)) )
->>>>>>> SlySven/release_30
+                if( ( p.font().bold() != static_cast<bool>(f.flags & TCHAR_BOLD) )
+                 || ( p.font().underline() != static_cast<bool>(f.flags & TCHAR_UNDERLINE) )
+                 || ( p.font().italic() != static_cast<bool>(f.flags & TCHAR_ITALICS) )
+                 || ( p.font().strikeOut() != static_cast<bool>(f.flags & TCHAR_STRIKEOUT) ) )
                 {
                     QFont font = p.font();
                     font.setBold( f.flags & TCHAR_BOLD );
@@ -1265,11 +1250,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
             if ( xind > 0 )
                 mPA.setX ( xind+1 );
             else
-<<<<<<< HEAD
                 mPA.setX ( qMax( 0, xind ) );
-=======
-                mPA.setX ( 0 );
->>>>>>> SlySven/release_30
             mPA.setY ( yind );
             highlight();
             event->accept();
@@ -1446,14 +1427,10 @@ void TTextEdit::copySelectionToClipboardHTML()
     }
     else if( this->mIsMiniConsole ) {
         if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
-<<<<<<< HEAD
-            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin(); it != this->mpHost->mpConsole->mSubConsoleMap.cend(); ++it ) {
-=======
-            for( std::map<std::string, TConsole *>::iterator it
-                     = this->mpHost->mpConsole->mSubConsoleMap.begin();
-                 it != this->mpHost->mpConsole->mSubConsoleMap.end();
+            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin();
+                 it != this->mpHost->mpConsole->mSubConsoleMap.cend();
                  ++it ) {
->>>>>>> SlySven/release_30
+
                 if( (*it).second == this->mpConsole ) {
                     title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
                     break;
@@ -1508,7 +1485,6 @@ void TTextEdit::copySelectionToClipboardHTML()
     text.append(QString::number(mpHost->mBgColor.green()));
     text.append(",");
     text.append(QString::number(mpHost->mBgColor.blue()));
-<<<<<<< HEAD
     text.append(");}\n");
     text.append("        span { white-space: pre; } -->\n");
     text.append("  </style>\n");
@@ -1516,9 +1492,6 @@ void TTextEdit::copySelectionToClipboardHTML()
     text.append("  <body><div>");
     // <div></div> tags required around outside of the body <span></spans> for
     // strict HTML 4 as we do not use <p></p>s or anything else
-=======
-    text.append(");} --></style><meta http-equiv='content-type' content='text/html; charset=utf-8'></head><body>");
->>>>>>> SlySven/release_30
 
     for( int y=mPA.y(); y<=mPB.y(); y++ ) {
         if( y >= static_cast<int>(mpBuffer->buffer.size()) ) {
