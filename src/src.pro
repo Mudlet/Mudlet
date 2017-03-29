@@ -24,7 +24,7 @@ lessThan(QT_MAJOR_VERSION, 5) {
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.0.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -420,7 +420,7 @@ macx: {
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
     # Set the .app's icns file
-    ICON = osx-installer/osx.icns
+    ICON = icons/osx.icns
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
