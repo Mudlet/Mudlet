@@ -2,10 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
-<<<<<<< HEAD
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
-=======
->>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -75,11 +72,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mCommandSeparator  ( QString(";") )
 , mDisableAutoCompletion( false )
 , mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
-<<<<<<< HEAD
 , mEnableGMCP( true )
-=======
-, mEnableGMCP( false )
->>>>>>> SlySven/release_30
 , mEnableMSDP( false )
 , mFORCE_GA_OFF( false )
 , mFORCE_NO_COMPRESSION( false )
@@ -153,11 +146,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
 , mModuleSaveBlock(false)
-<<<<<<< HEAD
 , mLineSize            ( 10.0 )
-=======
-, mLineSize            ( 5.0 )
->>>>>>> SlySven/release_30
 , mRoomSize            ( 0.5 )
 , mBubbleMode          ( false )
 , mShowRoomID          ( false )
@@ -732,18 +721,7 @@ bool Host::closingDown()
     return shutdown;
 }
 
-<<<<<<< HEAD
-bool Host::installPackage(const QString& fileName, int module )
-=======
-
-void Host::orderShutDown()
-{
-    QMutexLocker locker(& mLock);
-    mIsClosingDown = true;
-}
-
-bool Host::installPackage( QString fileName, int module )
->>>>>>> SlySven/release_30
+bool Host::installPackage( const QString& fileName, int module )
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -811,10 +789,7 @@ bool Host::installPackage( QString fileName, int module )
                         .arg( packageName );
         QDir _tmpDir( _home ); // home directory for the PROFILE
         _tmpDir.mkpath( _dest );
-<<<<<<< HEAD
-=======
 
->>>>>>> SlySven/release_30
         // TODO: report failure to create destination folder for package/module in profile
 
         QUiLoader loader( this );
@@ -1043,11 +1018,7 @@ bool Host::installPackage( QString fileName, int module )
         err = zip_close( archive );
         if ( err ) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
-<<<<<<< HEAD
             //FIXME: report error to user qDebug()<<"close file error"<<buf;
-=======
-                     //FIXME: report error to user qDebug()<<"close file error"<<buf;
->>>>>>> SlySven/release_30
             if ( pUnzipDialog )
             {
                 pUnzipDialog->deleteLater();
@@ -1213,11 +1184,7 @@ bool Host::removeDir( const QString& dirName, const QString& originalPath )
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
-<<<<<<< HEAD
 bool Host::uninstallPackage(const QString& packageName, int module)
-=======
-bool Host::uninstallPackage( QString packageName, int module)
->>>>>>> SlySven/release_30
 {
 
 //     As with the installPackage, the module codes are:

@@ -388,9 +388,9 @@ public:
     static int getMapMenus(lua_State * L);
     static int getMudletVersion( lua_State * L );
     static int openWebPage( lua_State * L );
-    static int getRoomUserDataKeys( lua_State * L );
-    static int getAllRoomUserData( lua_State * L );
-    static int getAllRoomEntrances( lua_State * L );
+    static int getAllRoomEntrances( lua_State * );
+    static int getRoomUserDataKeys( lua_State * );
+    static int getAllRoomUserData( lua_State * );
     static int searchAreaUserData( lua_State * );
     static int getMapUserData( lua_State * );
     static int getAreaUserData( lua_State * );

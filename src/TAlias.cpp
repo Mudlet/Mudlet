@@ -271,12 +271,7 @@ void TAlias::setRegexCode(const QString& code )
 void TAlias::compileRegex()
 {
     const char *error;
-<<<<<<< HEAD
-    const QByteArray& local8Bit = code.toLocal8Bit();
-=======
-    char * pattern = (char *) malloc( strlen( mRegexCode.toLocal8Bit().data() ) + 48 ); // TODO: add PCRE_UTF8 to options in pcre_compile() below and change to code.toUft8().constData()
-    strcpy( pattern, mRegexCode.toLocal8Bit().data() );
->>>>>>> SlySven/release_30
+    const QByteArray& local8Bit = mRegexCode.toLocal8Bit();
     int erroffset;
 
     QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, NULL), pcre_deleter);
@@ -329,13 +324,8 @@ void TAlias::compileAll()
         }
         mOK_code = false;
     }
-<<<<<<< HEAD
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-=======
     compileRegex(); // Effectively will repost the error if there was a problem in the regex
-    typedef list<TAlias *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
->>>>>>> SlySven/release_30
+    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
     {
         TAlias * pChild = *it;
         pChild->compileAll();
@@ -359,11 +349,7 @@ void TAlias::compile()
     }
 }
 
-<<<<<<< HEAD
-bool TAlias::setScript(const QString & script )
-=======
 bool TAlias::setScript( const QString & script )
->>>>>>> SlySven/release_30
 {
     mScript = script;
     mNeedsToBeCompiled = true;

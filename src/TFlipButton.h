@@ -37,40 +37,25 @@ public:
     TFlipButton( TAction *, Host * );
 
     Qt::Orientation orientation() const;
-    void            setOrientation( Qt::Orientation orientation );
+    void            setOrientation( Qt::Orientation );
 
     bool            mirrored() const;
-    void            setMirrored( bool mirrored );
+    void            setMirrored( bool );
 
-<<<<<<< HEAD
-    QSize sizeHint() const override;
-    QSize minimumSizeHint() const override;
-
-protected:
-    void paintEvent( QPaintEvent * event ) override;
-=======
-    QSize           sizeHint() const;
-    QSize           minimumSizeHint() const;
+    QSize           sizeHint() const override;
+    QSize           minimumSizeHint() const override;
 
 protected:
-    void            paintEvent( QPaintEvent * );
->>>>>>> SlySven/release_30
+    void            paintEvent( QPaintEvent * ) override;
 
 public:
     QStyleOptionButton  getStyleOption() const;
 
     TAction *       mpTAction;
     int             mID;
-    Host *          mpHost;
+    QPointer<Host>  mpHost;
     Qt::Orientation mOrientation;
-<<<<<<< HEAD
-    bool mMirrored;
-    TAction * mpTAction;
-    int mID;
-    QPointer<Host> mpHost;
-=======
     bool            mMirrored;
->>>>>>> SlySven/release_30
 };
 
 #endif // MUDLET_TFLIPBUTTON_H

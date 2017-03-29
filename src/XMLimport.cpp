@@ -328,26 +328,6 @@ void XMLimport::readMap()
         currentRoomCount += areaRoomsSet.count();
         mpHost->mpMap->reportProgressToProgressDialog(currentRoomCount, roomTotal);
     }
-
-    mpHost->mpMap->reportStringToProgressDialog(tr("Assigning rooms to their areas..."));
-    int roomTotal = tempAreaRoomsHash.count();
-    int currentRoomCount = 0;
-
-    QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
-    while (itAreaWithRooms.hasNext()) {
-        int areaId = itAreaWithRooms.next();
-        QSet<int> areaRoomsSet = tempAreaRoomsHash.values(areaId).toSet();
-
-        if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
-            // It is known for map files to have rooms with area Ids that are not in the
-            // listed areas - this cures that:
-            mpHost->mpMap->mpRoomDB->addArea(areaId);
-        }
-
-        mpHost->mpMap->mpRoomDB->setAreaRooms(areaId, areaRoomsSet);
-        currentRoomCount += areaRoomsSet.count();
-        mpHost->mpMap->reportProgressToProgressDialog(currentRoomCount, roomTotal);
-    }
 }
 
 void XMLimport::readEnvColors()

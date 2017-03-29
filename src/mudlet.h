@@ -245,11 +245,6 @@ signals:
    void                         signal_editorTextOptionsChanged( QTextOption::Flags );
    void                         signal_profileMapReloadRequested( QList<QString> );
 
-signals:
-
-   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
-   void                         signal_profileMapReloadRequested( QList<QString> );
-
 private slots:
 
    void                          slot_close_profile();

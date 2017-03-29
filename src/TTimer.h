@@ -71,13 +71,8 @@ public:
     void             start();
     void             enableTimer();
     void             disableTimer();
-<<<<<<< HEAD
-    void             enableTimer(const QString & );
-    void             disableTimer(const QString & );
-=======
-    void             enableTimer( QString & );
-    void             disableTimer( QString & );
->>>>>>> SlySven/release_30
+    void             enableTimer( const QString & );
+    void             disableTimer( const QString & );
     void             enableTimer( int );
     void             disableTimer( int );
     void             killTimer();

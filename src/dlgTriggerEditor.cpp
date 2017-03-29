@@ -1,13 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
-<<<<<<< HEAD
  *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
-=======
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
->>>>>>> SlySven/release_30
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -220,30 +216,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pHB2->addWidget( mpErrorConsole );
     mpErrorConsole->show();
 
-<<<<<<< HEAD
-=======
-
-    mpOptionsAreaTriggers = new dlgOptionsAreaTriggers( popupArea );
-    mpOptionsAreaTriggers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTriggers );
-
-    mpOptionsAreaAlias = new dlgOptionsAreaAlias( popupArea );
-    mpOptionsAreaAlias->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaAlias );
-
-    mpOptionsAreaActions = new dlgOptionsAreaAction( popupArea );
-    mpOptionsAreaActions->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaActions );
-
-    mpOptionsAreaScripts = new dlgOptionsAreaScripts( popupArea );
-    mpOptionsAreaScripts->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaScripts );
-
-    mpOptionsAreaTimers = new dlgOptionsAreaTimers( popupArea );
-    mpOptionsAreaTimers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTimers );
-
->>>>>>> SlySven/release_30
     connect( button_searchAreaClose, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
 
     // additional settings
@@ -255,15 +227,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
     treeWidget_searchResults->hide(); // hide search results
 
-<<<<<<< HEAD
-=======
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
->>>>>>> SlySven/release_30
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost( mpHost );
     treeWidget_aliases->setIsAliasTree();
@@ -535,21 +498,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     connect( comboBox_searchTerms, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( treeWidget_triggers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
-<<<<<<< HEAD
-=======
     connect( treeWidget_triggers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
->>>>>>> SlySven/release_30
     connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_keys, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_timers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
-<<<<<<< HEAD
-    connect( treeWidget_aliases, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_variables, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_variables, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
-=======
     connect( treeWidget_scripts, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_aliases, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_aliases, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
@@ -558,7 +512,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_variables, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_variables, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
     connect( treeWidget_variables, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
->>>>>>> SlySven/release_30
     connect( treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
@@ -574,14 +527,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorArea->hide();
 
     mpSystemMessageArea->hide();
-<<<<<<< HEAD
-=======
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaActions->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
->>>>>>> SlySven/release_30
 
     treeWidget_triggers->show();
     treeWidget_aliases->hide();
@@ -652,11 +597,7 @@ void dlgTriggerEditor::slot_toggleHiddenVar( bool status )
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVariables( bool state )
-<<<<<<< HEAD
- {
-=======
 {
->>>>>>> SlySven/release_30
     if( showHiddenVars != state) {
         showHiddenVars = state;
         repopulateVars();
@@ -673,11 +614,6 @@ void dlgTriggerEditor::slot_viewStatsAction()
 
 void dlgTriggerEditor::slot_viewErrorsAction()
 {
-<<<<<<< HEAD
-    if( frame_rightBottom->isHidden() )frame_rightBottom->show();
-    else
-        frame_rightBottom->hide();
-=======
     if( frame_rightBottom->isHidden() ) {
         frame_rightBottom->show();
     }
@@ -685,7 +621,6 @@ void dlgTriggerEditor::slot_viewErrorsAction()
         frame_rightBottom->hide();
     }
     // These will be inefffective if their container (frame_rightBottom) is not shown!
->>>>>>> SlySven/release_30
     mpErrorConsole->show();
     popupArea->show();
 }
@@ -781,11 +716,6 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-<<<<<<< HEAD
-                treeWidget_triggers->setCurrentItem( pI, 0 );
-                treeWidget_triggers->scrollToItem( pI );
-=======
->>>>>>> SlySven/release_30
                 slot_show_triggers();
                 slot_trigger_selected( pI );
                 treeWidget_triggers->setCurrentItem( pI, 0 );
@@ -805,11 +735,6 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-<<<<<<< HEAD
-                treeWidget_aliases->setCurrentItem( pI, 0 );
-                treeWidget_aliases->scrollToItem( pI );
-=======
->>>>>>> SlySven/release_30
                 slot_show_aliases();
                 slot_alias_selected( pI );
                 treeWidget_aliases->setCurrentItem( pI, 0 );
@@ -916,11 +841,6 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             TVar * var = vu->getWVar( pI );
             if ( vu->shortVarName( var ) == varShort )
             {
-<<<<<<< HEAD
-                treeWidget_variables->setCurrentItem( pI, 0 );
-                treeWidget_variables->scrollToItem( pI );
-=======
->>>>>>> SlySven/release_30
                 show_vars();
                 treeWidget_variables->setCurrentItem( pI, 0 );
                 treeWidget_variables->scrollToItem( pI );
@@ -2789,13 +2709,8 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
 
-<<<<<<< HEAD
-    treeWidget_triggers->setCurrentItem( pNewItem );
-    mpCurrentTriggerItem = pNewItem;
-=======
     mpCurrentTriggerItem = pNewItem;
     treeWidget_triggers->setCurrentItem( pNewItem );
->>>>>>> SlySven/release_30
     showInfo( msgInfoAddTrigger );
     slot_trigger_selected( treeWidget_triggers->currentItem() );
 }
@@ -2888,13 +2803,8 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
     mpSourceEditor->clear();
-<<<<<<< HEAD
-    treeWidget_timers->setCurrentItem( pNewItem );
-    mpCurrentTimerItem = pNewItem;
-=======
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem( pNewItem );
->>>>>>> SlySven/release_30
     showInfo( msgInfoAddTimer );
     slot_timer_selected( treeWidget_timers->currentItem() );
 }
@@ -2966,13 +2876,8 @@ void dlgTriggerEditor::addVar( bool isFolder )
     newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled ));
     if (newItem)
     {
-<<<<<<< HEAD
-        treeWidget_variables->setCurrentItem( newItem );
-        mpCurrentVarItem = newItem;
-=======
         mpCurrentVarItem = newItem;
         treeWidget_variables->setCurrentItem( newItem );
->>>>>>> SlySven/release_30
         showInfo( msgInfoAddVar );
         slot_var_selected( treeWidget_variables->currentItem() );
     }
@@ -3062,13 +2967,8 @@ void dlgTriggerEditor::addKey( bool isFolder )
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
     mpSourceEditor->clear();
-<<<<<<< HEAD
-    treeWidget_keys->setCurrentItem( pNewItem );
-    mpCurrentKeyItem = pNewItem;
-=======
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem( pNewItem );
->>>>>>> SlySven/release_30
     showInfo( msgInfoAddKey );
     slot_key_selected( treeWidget_keys->currentItem() );
 }
@@ -3166,13 +3066,8 @@ ROOT_ALIAS:
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
-<<<<<<< HEAD
-    treeWidget_aliases->setCurrentItem( pNewItem );
-    mpCurrentAliasItem = pNewItem;
-=======
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem( pNewItem );
->>>>>>> SlySven/release_30
     showInfo(msgInfoAddAlias);
     slot_alias_selected( treeWidget_aliases->currentItem() );
 }
@@ -3274,10 +3169,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
 
     mpHost->getActionUnit()->updateToolbar();
     mpCurrentActionItem = pNewItem;
-<<<<<<< HEAD
-=======
     treeWidget_actions->setCurrentItem( pNewItem );
->>>>>>> SlySven/release_30
     showInfo( msgInfoAddButton );
     slot_action_selected( treeWidget_actions->currentItem() );
 }
@@ -3765,16 +3657,11 @@ void dlgTriggerEditor::saveAction()
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
-<<<<<<< HEAD
-    QString script = mpSourceEditor->toPlainText();
-    int rotation = mpActionsMainArea->buttonRotation->currentIndex();
-=======
     QString commandDown = mpActionsMainArea->lineEdit_command_down->text();
     QString commandUp = mpActionsMainArea->lineEdit_command_up->text();
     QString script = mpSourceEditor->toPlainText();
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     int rotation = qMax( 0, mpActionsMainArea->buttonRotation->currentIndex() );
->>>>>>> SlySven/release_30
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
@@ -4877,11 +4764,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditor->show();
 
     mpSystemMessageArea->hide();
-<<<<<<< HEAD
-    mpSourceEditor->setPlainText( "" );
-=======
     mpSourceEditor->clear();
->>>>>>> SlySven/release_30
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -4890,13 +4773,10 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpActionsMainArea->lineEdit_command_up->clear();
     mpActionsMainArea->buttonColumns->clear();
     mpActionsMainArea->css->clear();
-<<<<<<< HEAD
-=======
     mpActionsMainArea->comboBox_location->setCurrentIndex( 0 );
     mpActionsMainArea->comboBox_orientation->setCurrentIndex( 0 );
     mpActionsMainArea->buttonRotation->setCurrentIndex( 0 );
     mpActionsMainArea->buttonColumns->setValue( 1 );
->>>>>>> SlySven/release_30
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
@@ -4913,11 +4793,8 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         mpActionsMainArea->lineEdit_command_down->hide();
         mpActionsMainArea->label_command_down->setText( tr( "Command:" ) );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
-<<<<<<< HEAD
-=======
         mpActionsMainArea->lineEdit_command_down->setText( pT->getCommandButtonDown() );
         mpActionsMainArea->lineEdit_command_up->setText( pT->getCommandButtonUp() );
->>>>>>> SlySven/release_30
         mpSourceEditor->setPlainText( pT->getScript() );
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
@@ -6162,19 +6039,10 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
 
 void dlgTriggerEditor::slot_show_search_area()
 {
-<<<<<<< HEAD
-    if( widget_searchArea->isVisible() )
-    {
-        widget_searchArea->hide();
-    }
-    else
-    {
-=======
     if( widget_searchArea->isVisible() ) {
         widget_searchArea->hide();
     }
     else {
->>>>>>> SlySven/release_30
         widget_searchArea->show();
     }
 }
@@ -6306,16 +6174,6 @@ void dlgTriggerEditor::changeView( int view )
     button_displayAllVariables->hide();
 
     mpSystemMessageArea->hide();
-<<<<<<< HEAD
-=======
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-
->>>>>>> SlySven/release_30
     treeWidget_triggers->hide();
     treeWidget_aliases->hide();
     treeWidget_timers->hide();
@@ -6441,14 +6299,7 @@ void dlgTriggerEditor::slot_show_vars( )
     mpCurrentVarItem = 0;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
-<<<<<<< HEAD
-    if ( showHiddenVars )
-        button_displayAllVariables->setText( "Hide Hidden Variables" );
-    else
-        button_displayAllVariables->setText( "Show Hidden Variables" );
-=======
     button_displayAllVariables->setChecked( showHiddenVars );
->>>>>>> SlySven/release_30
     QTreeWidgetItem * pI = treeWidget_variables->topLevelItem( 0 );
     if( pI )
     {
@@ -6478,14 +6329,7 @@ void dlgTriggerEditor::show_vars( )
     mpCurrentVarItem = 0;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
-<<<<<<< HEAD
-    if ( showHiddenVars )
-        button_displayAllVariables->setText( "Hide Hidden Variables" );
-    else
-        button_displayAllVariables->setText( "Show Hidden Variables" );
-=======
     button_displayAllVariables->setChecked( showHiddenVars );
->>>>>>> SlySven/release_30
     QTreeWidgetItem * pI = treeWidget_variables->topLevelItem( 0 );
     if( pI )
     {
@@ -7293,11 +7137,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                             .arg(file.errorString()));
        return;
     }
-<<<<<<< HEAD
-    XMLexport writer( mpHost );
-=======
     XMLexport writer( mpHost ); //just export a generic package without host element
->>>>>>> SlySven/release_30
     writer.exportGenericPackage( & file );
     file.close();
 }
