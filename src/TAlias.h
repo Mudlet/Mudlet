@@ -46,23 +46,23 @@ public:
                      TAlias( TAlias * parent, Host * pHost );
                      TAlias(const QString& name, Host * pHost );
     void             compileAll();
-    QString          getName()                       { return mName; }
+    QString          getName()                              { return mName; }
     void             setName(const QString& name );
     void             compile();
     bool             compileScript();
     void             execute();
-    QString          getScript()                     { return mScript; }
+    QString          getScript()                            { return mScript; }
     bool             setScript(const QString & script );
-    QString          getRegexCode()                  { return mRegexCode; }
+    QString          getRegexCode()                         { return mRegexCode; }
     void             setRegexCode(const QString& );
-    void             setCommand(const QString& command ) { mCommand = command; }
-    QString          getCommand()                    { return mCommand; }
-    bool             isFolder()                      { return mIsFolder; }
-    void             setIsFolder( bool b )           { mIsFolder = b; }
+    void             setCommand(const QString& command )    { mCommand = command; }
+    QString          getCommand()                           { return mCommand; }
+    bool             isFolder()                             { return mIsFolder; }
+    void             setIsFolder( bool b )                  { mIsFolder = b; }
     bool             match(const QString & toMatch );
     bool             registerAlias();
-    bool             isTempAlias()                   { return mIsTempAlias; }
-    void             setIsTempAlias( bool b )        { mIsTempAlias = b; }
+    bool             isTempAlias()                          { return mIsTempAlias; }
+    void             setIsTempAlias( bool b )               { mIsTempAlias = b; }
 
 
 
@@ -76,8 +76,8 @@ public:
     QPointer<Host>   mpHost;
     bool             mNeedsToBeCompiled;
     bool             mIsTempAlias;
-    bool                  mModuleMember;
-    bool            mModuleMasterFolder;
+    bool             mModuleMember;
+    bool             mModuleMasterFolder;
     QString          mFuncName;
     bool             exportItem;
 };

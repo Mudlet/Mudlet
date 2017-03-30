@@ -63,6 +63,8 @@ public:
     void             setIsFolder( bool b )              { mIsFolder = b; }
     bool             match( int, int );
     bool             registerKey();
+    bool             isTempKey()                        { return mIsTempKey; }
+    void             setIsTempKey( bool b )             { mIsTempKey = b; }
     //bool             serialize( QDataStream & );
     //bool             restore( QDataStream & fs, bool );
     bool             exportItem;
@@ -90,7 +92,8 @@ private:
     bool             mIsFolder;
     QPointer<Host>   mpHost;
     bool             mNeedsToBeCompiled;
-    bool                  mModuleMember;
+    bool             mIsTempKey;
+    bool             mModuleMember;
 
 };
 

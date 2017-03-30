@@ -46,31 +46,50 @@ public:
     std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
     TKey *                getKey( int id );
     void                  compileAll();
+    TKey *                findKey( QString & name );
     bool                  enableKey(const QString & name );
     bool                  disableKey(const QString & name );
+    bool                  killKey( QString & name );
     bool                  registerKey( TKey * pT );
     void                  unregisterKey( TKey * pT );
     void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    int                  getNewID();
+    QString               assembleReport();
+    int                   getNewID();
     QString               getKeyName( int keyCode, int modifier );
     void                  setupKeyNames();
     void                  uninstall(const QString& );
     void                  _uninstall( TKey * pChild, const QString& packageName );
     bool                  processDataStream( int, int );
-    QMutex                mKeyUnitLock;
-    QList<TKey*>        uninstallList;
+    void                  markCleanup( TKey * pT );
+    void                  doCleanup();
+
+    QMultiMap<QString, TKey *>    mLookupTable;
+    std::list<TKey *>             mCleanupList;
+    QMutex                        mKeyUnitLock;
+    int                           statsKeyTotal;
+    int                           statsTempKeys;
+    int                           statsActiveKeys;
+    int                           statsActiveKeysMax;
+    int                           statsActiveKeysMin;
+    int                           statsActiveKeysAverage;
+    int                           statsTempKeysCreated;
+    int                           statsTempKeysKilled;
+    QList<TKey*>                  uninstallList;
 
 private:
     KeyUnit(){;}
     TKey *                getKeyPrivate( int id );
+    void                  initStats();
+    void                  _assembleReport( TKey * );
     void                  addKeyRootNode( TKey * pT, int parentPosition = -1, int childPosition = -1 );
     void                  addKey( TKey * pT );
     void                  removeKeyRootNode( TKey * pT );
     void                  removeKey( TKey *);
+
     QPointer<Host>        mpHost;
     QMap<int, TKey *>     mKeyMap;
     std::list<TKey *>     mKeyRootNodeList;
-    int                 mMaxID;
+    int                   mMaxID;
     bool                  mModuleMember;
     QMap<int, QString>    mKeys;
 

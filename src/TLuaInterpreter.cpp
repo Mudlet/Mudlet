@@ -2361,6 +2361,25 @@ int TLuaInterpreter::disableKey( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::killKey( lua_State *L )
+{
+    string luaSendText="";
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "killKey: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaSendText = lua_tostring( L, 1 );
+    }
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString text(luaSendText.c_str());
+    lua_pushboolean( L, pHost->getKeyUnit()->killKey( text ) );
+    return 1;
+}
+
 int TLuaInterpreter::enableAlias( lua_State *L )
 {
     string luaSendText="";
@@ -6719,8 +6738,8 @@ int TLuaInterpreter::tempAlias( lua_State *L )
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
     QString _luaRegex = luaRegex.c_str();
-    int timerID = pLuaInterpreter->startTempAlias( _luaRegex, _luaFunction );
-    lua_pushnumber( L, timerID );
+    int aliasID = pLuaInterpreter->startTempAlias( _luaRegex, _luaFunction );
+    lua_pushnumber( L, aliasID );
     return 1;
 }
 
@@ -6775,6 +6794,16 @@ int TLuaInterpreter::exists( lua_State * L )
     {
         QMap<QString, TAlias *>::const_iterator it1 = pHost->getAliasUnit()->mLookupTable.find( name );
         while( it1 != pHost->getAliasUnit()->mLookupTable.end() && it1.key() == name )
+        {
+            cnt++;
+            it1++;
+        }
+    }
+    //TODO: exists(keybind) doesn't currently work, figure out why
+    else if( type == "keybind")
+    {
+        QMap<QString, TKey *>::const_iterator it1 = pHost->getKeyUnit()->mLookupTable.find( name );
+        while( it1 != pHost->getKeyUnit()->mLookupTable.end() && it1.key() == name )
         {
             cnt++;
             it1++;
@@ -6849,6 +6878,18 @@ int TLuaInterpreter::isActive( lua_State * L )
             it1++;
         }
     }
+    else if( type == "keybind")
+    {
+        QMap<QString, TKey *>::const_iterator it1 = pHost->getKeyUnit()->mLookupTable.find( name );
+        while( it1 != pHost->getKeyUnit()->mLookupTable.end() && it1.key() == name )
+        {
+            if( it1.value()->isActive() )
+            {
+                cnt++;
+            }
+            it1++;
+        }
+    }
     lua_pushnumber( L, cnt );
     return 1;
 }
@@ -6891,7 +6932,6 @@ int TLuaInterpreter::permAlias( lua_State *L )
     {
         luaRegex = lua_tostring( L, 3 );
     }
-
 
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
@@ -7045,6 +7085,129 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
                                                           _regList,
                                                           _luaFunction );
     lua_pushnumber( L, ret );
+    return 1;
+}
+
+int TLuaInterpreter::permKey( lua_State *L )
+{
+    string luaName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "permKey: need a name for this key" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaName = lua_tostring( L, 1 );
+    }
+
+    string luaParent;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "permKey: need a parent key/group to add this key to" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaParent = lua_tostring( L, 2 );
+    }
+
+    int luaKeyCode;
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "permKey: need the keycode for the key" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaKeyCode = lua_tointeger( L, 3 );
+    }
+
+    int luaModifier;
+    if( ! lua_isstring( L, 4 ) )
+    {
+        lua_pushstring( L, "permKey: need the modifier for the key" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaModifier = lua_tointeger( L, 4 );
+    }
+
+
+    string luaFunction;
+    if( ! lua_isstring( L, 5 ) )
+    {
+        lua_pushstring( L, "permKey: need Lua code for this key" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 5 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _luaName = luaName.c_str();
+    QString _luaParent = luaParent.c_str();
+    QString _luaFunction = luaFunction.c_str();
+    int _luaKeyCode = luaKeyCode;
+    int _luaModifier = luaModifier;
+    int keyID = pLuaInterpreter->startPermKey( _luaName, _luaParent, _luaKeyCode, _luaModifier, _luaFunction );
+    lua_pushnumber( L, keyID );
+    return 1;
+}
+
+int TLuaInterpreter::tempKey( lua_State *L )
+{
+    int luaKeyCode;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "tempKey: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaKeyCode = lua_tointeger( L, 1 );
+    }
+
+    int luaModifier;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "tempKey: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaModifier = lua_tointeger( L, 2 );
+    }
+
+    string luaFunction;
+    if( ! lua_isstring( L, 3 ) )
+    {
+        lua_pushstring( L, "tempKey: wrong argument type" );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, 3 );
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    QString _luaFunction = luaFunction.c_str();
+    int _luaKeyCode = luaKeyCode;
+    int _luaModifier = luaModifier;
+    int timerID = pLuaInterpreter->startTempKey( _luaKeyCode, _luaModifier, _luaFunction );
+    lua_pushnumber( L, timerID );
     return 1;
 }
 
@@ -13103,6 +13266,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "disableTimer", TLuaInterpreter::disableTimer );
     lua_register( pGlobalLua, "enableKey", TLuaInterpreter::enableKey );
     lua_register( pGlobalLua, "disableKey", TLuaInterpreter::disableKey );
+    lua_register( pGlobalLua, "killKey", TLuaInterpreter::killKey );
     lua_register( pGlobalLua, "clearUserWindow", TLuaInterpreter::clearUserWindow );
     lua_register( pGlobalLua, "clearWindow", TLuaInterpreter::clearUserWindow );
     lua_register( pGlobalLua, "killTimer", TLuaInterpreter::killTimer );
@@ -13202,6 +13366,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger );
     lua_register( pGlobalLua, "permTimer", TLuaInterpreter::permTimer );
     lua_register( pGlobalLua, "permAlias", TLuaInterpreter::permAlias );
+    lua_register( pGlobalLua, "permKey", TLuaInterpreter::permKey );
+    lua_register( pGlobalLua, "tempKey", TLuaInterpreter::tempKey );
     lua_register( pGlobalLua, "exists", TLuaInterpreter::exists );
     lua_register( pGlobalLua, "isActive", TLuaInterpreter::isActive );
     lua_register( pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias );
@@ -13728,6 +13894,52 @@ int TLuaInterpreter::startTempAlias(const QString & regex, const QString & funct
     pT->setIsActive( true );
     pT->setIsTempAlias( true );
     pT->registerAlias();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
+    return id;
+}
+
+int TLuaInterpreter::startPermKey( QString & name, QString & parent, int & keycode, int & modifier, QString & function )
+{
+    TKey * pT;
+
+    if( parent.isEmpty() )
+    {
+        pT = new TKey("a", mpHost );
+    }
+    else
+    {
+        TKey * pP = mpHost->getKeyUnit()->findKey( parent );
+        if( !pP )
+        {
+            return -1;//parent not found
+        }
+        pT = new TKey( pP, mpHost );
+    }
+    pT->setKeyCode( keycode );
+    pT->setKeyModifiers( modifier );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempKey( false );
+    pT->registerKey();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( name );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    return id;
+}
+
+int TLuaInterpreter::startTempKey( int & keycode, int & modifier, QString & function )
+{
+    TKey * pT;
+    pT = new TKey( "a", mpHost );
+    pT->setKeyCode( keycode );
+    pT->setKeyModifiers( modifier );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempKey( true );
+    pT->registerKey();
     pT->setScript( function );
     int id = pT->getID();
     pT->setName( QString::number( id ) );

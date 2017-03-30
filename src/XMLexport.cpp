@@ -264,7 +264,7 @@ bool XMLexport::writeModuleXML( QIODevice * device, QString moduleName )
             if( ! (*it) || (*it)->mPackageName != moduleName ) {
                 continue;
             }
-            if( (*it)->mModuleMember ) {
+            if( ! (*it)->isTempKey() && (*it)->mModuleMember ) {
                 if( ! writeKey( *it ) ) {
                     isOk = false;
                 }
@@ -555,8 +555,10 @@ bool XMLexport::writeHost( Host * pHost )
             if( ! (*it) || (*it)->mModuleMember) {
                 continue;
             }
-            if( ! writeKey( *it ) ) {
-                isOk = false;
+            if( ! (*it)->isTempKey() ) {
+                if( ! writeKey( *it ) ) {
+                    isOk = false;
+                }
             }
         }
         writeEndElement(); // </KeyPackage>
@@ -720,7 +722,7 @@ bool XMLexport::writeGenericPackage( Host * pHost )
     if( isOk ) {
         writeStartElement( "KeyPackage" );
         for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) ) {
+            if( ! (*it) || (*it)->isTempKey() ) {
                 continue;
             }
             if( ! writeKey( *it ) ) {
