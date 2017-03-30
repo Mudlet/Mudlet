@@ -31,10 +31,30 @@ OnFeatureStart(function(context) {
 });
 
 Given("the connection dialog is open", function(context) {
-    clickButton(waitForObject(":MainWindow.Connect_QToolButton"));
-});
+        clickButton(waitForObject(":MainWindow.Connect_QToolButton"));
+    });
 
-When("the Avalon.de profile is selected", function(context) {
-    waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon\\.de");
-    clickItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon\\.de", 81, 22, 0, Qt.LeftButton);
-});
+When("the '|any|' profile is selected", function(context, profileName) {
+        profileName = profileName.replace(/\./g, '\\.');
+        waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", profileName);
+        clickItem(":profile_dialog.profiles_tree_widget_QListWidget", profileName, 81, 22, 0, Qt.LeftButton);
+        // GSUB dot for \\. (why?!)
+        //    waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon.de");
+        //    clickItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon.de", 42, 14, 0, Qt.LeftButton);
+
+        //        waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon\\.de");
+        //        clickItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon\\.de", 42, 14, 0, Qt.LeftButton);
+
+    });
+
+Then("the profile name is '|any|'", function(context, profileName) {
+        test.compare(waitForObjectExists(":requiredArea.profile_name_entry_QLineEdit").text, profileName);
+    });
+
+Then("the server address is '|any|'", function(context, profileName) {
+        test.compare(waitForObjectExists(":requiredArea.host_name_entry_QLineEdit").text, profileName);
+    });
+
+Then("the port is '|integer|'", function(context, port) {
+        test.compare(waitForObjectExists(":requiredArea.port_entry_QLineEdit").text, port);
+    });
