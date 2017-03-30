@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -225,7 +226,7 @@ bool ActionUnit::registerAction( TAction * pT )
 void ActionUnit::unregisterAction( TAction * pT )
 {
     if( ! pT ) return;
-    if( pT->getParent() && pT->getParent()->mPackageName.isEmpty() )
+    if( pT->getParent() && ! pT->getParent()->mModuleMasterFolder )
     {
         removeAction( pT );
         updateToolbar();
@@ -233,7 +234,7 @@ void ActionUnit::unregisterAction( TAction * pT )
     }
     else
     {
-        if( pT->mpEasyButtonBar && pT->mPackageName.isEmpty() )
+        if( pT->mpEasyButtonBar && ! pT->mModuleMasterFolder )
         {
             if( pT->mLocation == 0 ) mpHost->mpConsole->mpTopToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
             if( pT->mLocation == 2 ) mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
@@ -282,29 +283,35 @@ int ActionUnit::getNewID()
     return ++mMaxID;
 }
 
-std::list<TToolBar *> ActionUnit::getToolBarList()
+// Return value is NOT used - all it does is redraw the toolbars and update the
+// member mToolBarList that holds a list of toolbars
+// was: std::list<TToolBar *> ActionUnit::getToolBarList()
+void ActionUnit::updateToolBarList()
 {
     for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
-        if( (*it)->mPackageName.size() > 0 )
+        if( (*it)->mModuleMasterFolder )
         {
             for(auto it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
-                bool found = false;
+                bool isFoundInModule = false;
                 TToolBar * pTB = 0;
                 for(auto it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
                 {
                     if( *it2 == (*it3)->mpToolBar )
                     {
-                        found = true;
+                        isFoundInModule = true;
                         pTB = *it2;
+                        break;
                     }
                 }
-                if( ! found )
+
+                if( ! isFoundInModule )
                 {
                     pTB = new TToolBar( *it3, (*it3)->getName(), mudlet::self() );
                     mToolBarList.push_back( pTB );
                 }
+
                 if( (*it3)->mOrientation == 1 )
                 {
                     pTB->setVerticalOrientation();
@@ -313,27 +320,32 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
                 {
                     pTB->setHorizontalOrientation();
                 }
+
                 constructToolbar( *it3, mudlet::self(), pTB );
                 (*it3)->mpToolBar = pTB;
                 pTB->setStyleSheet( pTB->mpTAction->css );
             }
             continue; //action package
         }
-        bool found = false;
+
+        bool isFound = false;
         TToolBar * pTB = 0;
         for(auto it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
         {
             if( *it2 == (*it)->mpToolBar )
             {
-                found = true;
+                isFound = true;
                 pTB = *it2;
+                break;
             }
         }
-        if( ! found )
+
+        if( ! isFound )
         {
             pTB = new TToolBar( *it, (*it)->getName(), mudlet::self() );
             mToolBarList.push_back( pTB );
         }
+
         if( (*it)->mOrientation == 1 )
         {
             pTB->setVerticalOrientation();
@@ -342,20 +354,22 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         {
             pTB->setHorizontalOrientation();
         }
+
         constructToolbar( *it, mudlet::self(), pTB );
         (*it)->mpToolBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
-
-    return mToolBarList;
 }
 
-std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
+// Return value (which was the updated mEasyButtonBarList) was NOT used - so this
+// just redraws the toolbars and update the mEasyButtonBarList
+// Was: std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
+void ActionUnit::updateEasyButtonBarList()
 {
     for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++)
     {
 
-        if( (*it)->mPackageName.size() > 0 )
+        if( (*it)->mModuleMasterFolder )
         {
             for(auto it3 = (*it)->mpMyChildrenList->begin(); it3 != (*it)->mpMyChildrenList->end(); it3++)
             {
@@ -419,8 +433,6 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         (*it)->mpEasyButtonBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
-
-    return mEasyButtonBarList;
 }
 
 TAction * ActionUnit::getHeadAction( TToolBar * pT )
@@ -471,7 +483,7 @@ void ActionUnit::hideToolBar(const QString & name )
 void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
 {
     pTB->clear();
-    if( ( pA->mLocation != 4 ) || ( ! pA->isActive() ) )
+    if( pA->mLocation != 4 || ! ( pA->isActive() && pA->ancestorsActive() ) )
     {
         pTB->setFloating( false );
         mudlet::self()->removeDockWidget( pTB );
@@ -536,7 +548,8 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
 {
     pTB->clear();
     if( pA->mLocation == 4 ) return; //floating toolbars are handled differently
-    if( ! pA->isActive() )
+
+    if( ! ( pA->isActive() && pA->ancestorsActive() ) )
     {
         pTB->hide();
         return;
@@ -564,6 +577,6 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
 
 void ActionUnit::updateToolbar()
 {
-    getToolBarList();
-    getEasyButtonBarList();
+    updateToolBarList();
+    updateEasyButtonBarList();
 }

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -189,6 +190,11 @@ void TAction::expandToolbar( mudlet * pMainWindow, TToolBar * pT, QMenu * menu )
    {
        TAction * pChild = *it;
 
+       if( ! ( pChild->ancestorsActive() && pChild->isActive() ) ) {
+           // Do NOT include inactive buttons/menus
+           continue;
+       }
+
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );
@@ -246,7 +252,11 @@ void TAction::expandToolbar( mudlet * pMainWindow, TEasyButtonBar * pT, QMenu * 
    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
    {
        TAction * pChild = *it;
-       if( ! pChild->isActive() ) continue;
+       if( ! ( pChild->ancestorsActive() && pChild->isActive() ) ) {
+           // Do NOT include inactive buttons/menus
+           continue;
+       }
+
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
        TFlipButton * button = new TFlipButton( pT,pChild, pChild->mID, mpHost );

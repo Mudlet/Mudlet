@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,7 +35,14 @@
 #include "post_guard.h"
 
 
-TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
+TTreeWidget::TTreeWidget( QWidget * pW )
+: QTreeWidget( pW )
+, mIsDropAction( false )
+, mpHost( Q_NULLPTR )
+, mOldParentID( 0 )
+, mChildID( 0 ) // This was NOT being initialised!
+, mItemType( UnknownType )
+, mClickedItem( QModelIndex() ) // Seems to be used to detect double-clicking, this was NOT being initialised!
 {
     setSelectionMode( QAbstractItemView::SingleSelection );
     setSelectionBehavior( QAbstractItemView::SelectRows );
@@ -43,88 +51,6 @@ TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
     setDropIndicatorShown( true );
     viewport()->setAcceptDrops( true );
     setDragDropMode( QAbstractItemView::InternalMove );
-    mIsDropAction = false;
-    mpHost = 0;
-    mOldParentID = 0;
-
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-    mIsVarTree = false;
-}
-
-void TTreeWidget::setIsAliasTree()
-{
-    mIsAliasTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsVarTree()
-{
-    mIsVarTree = true;
-    mIsAliasTree = false;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsTriggerTree()
-{
-    mIsTriggerTree = true;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsActionTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsKeyTree = false;
-    mIsActionTree = true;
-}
-
-void TTreeWidget::setIsKeyTree()
-{
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsScriptTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = true;
-}
-
-void TTreeWidget::setIsTimerTree()
-{
-    mIsTimerTree = true;
-    mIsTriggerTree = false;
-    mIsScriptTree = false;
-    mIsAliasTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
-}
-
-void TTreeWidget::setIsScriptTree()
-{
-    mIsScriptTree = true;
-    mIsTriggerTree = false;
-    mIsAliasTree = false;
-    mIsTimerTree = false;
-    mIsActionTree = false;
-    mIsKeyTree = false;
 }
 
 void TTreeWidget::setHost( Host * pH )
@@ -142,7 +68,7 @@ void TTreeWidget::getAllChildren( QTreeWidgetItem *pItem, QList< QTreeWidgetItem
 void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if( mIsVarTree && indexClicked.isValid() && mClickedItem == indexClicked )
+    if( ( getType() & VariableType ) && indexClicked.isValid() && mClickedItem == indexClicked )
     {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
@@ -182,7 +108,7 @@ void TTreeWidget::mouseReleaseEvent( QMouseEvent *event )
 void TTreeWidget::mousePressEvent( QMouseEvent *event )
 {
     QModelIndex indexClicked = indexAt(event->pos());
-    if( mIsVarTree && indexClicked.isValid() )
+    if( ( getType() & VariableType ) && indexClicked.isValid() )
     {
         QRect vrect = visualRect(indexClicked);
         int itemIndentation = vrect.x() - visualRect(rootIndex()).x();
@@ -244,75 +170,133 @@ void TTreeWidget::rowsInserted( const QModelIndex & parent, int start, int end )
         int childPosition = child.row();
         if( mChildID == 0 )
         {
-            if( ! parent.model() ) goto END;
-            if( ! mpHost ) goto END;
+            if( ! parent.model() || ! mpHost )
+            {
+                // goto END;
+                QTreeWidget::rowsInserted( parent, start, end );
+                return;
+            }
+
             mChildID = parent.model()->index( start, 0 ).data( Qt::UserRole ).toInt();
         }
-        int newParentID = parent.data( Qt::UserRole ).toInt();
-        if( mIsTriggerTree )
-            mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-        if( mIsAliasTree )
-            mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-        if( mIsKeyTree )
-            mpHost->getKeyUnit()->reParentKey( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
 
-        if( mIsTimerTree )
+        int newParentID = parent.data( Qt::UserRole ).toInt();
+
+        switch( getType() )
         {
-            mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-            TTimer * pTChild = mpHost->getTimerUnit()->getTimer( mChildID );
-            //TTimer * pTnewParent = mpHost->getTimerUnit()->getTimer( newParentID );
-            if( pTChild )
-            {
+        case ActionType:
+            mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+            mpHost->getActionUnit()->updateToolbar();
+            break;
+        case AliasType:
+            mpHost->getAliasUnit()->reParentAlias( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+            break;
+        case KeyType:
+            mpHost->getKeyUnit()->reParentKey( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+            break;
+        case ScriptType:
+            mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+            break;
+        case TimerType:
+            { // Code must be in braces to confine scope of icon and pTChild to this case...!
+                mpHost->getTimerUnit()->reParentTimer( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+                TTimer * pTChild = mpHost->getTimerUnit()->getTimer( mChildID );
                 QIcon icon;
-                if( pTChild->isOffsetTimer() )
+                if( pTChild )
                 {
-                    if( pTChild->shouldBeActive() )
+                    if( pTChild->isOffsetTimer() )
                     {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-on.png" ) ), QIcon::Normal, QIcon::Off );
+                        if( pTChild->shouldBeActive() )
+                        {
+                            if( pTChild->ancestorsActive() )
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-on.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                            else
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-on-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                        }
+                        else
+                        {
+                            if( pTChild->ancestorsActive() )
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-off.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                            else
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-off-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                        }
                     }
                     else
                     {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-off.png" ) ), QIcon::Normal, QIcon::Off );
+                        if( pTChild->shouldBeActive() )
+                        {
+                            if( pTChild->ancestorsActive() )
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                            else
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                        }
+                        else
+                        {
+                            if( pTChild->ancestorsActive() )
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ), 0, Qt::MonoOnly ), QIcon::Normal, QIcon::Off );
+                            }
+                            else
+                            {
+                                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox-grey.png" ) ), QIcon::Normal, QIcon::Off );
+                            }
+                        }
                     }
-                }
-                else
-                {
-                    if( pTChild->shouldBeActive() )
+                    QTreeWidgetItem * pParent = itemFromIndex( parent );
+                    if( ! pParent )
                     {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png") ), QIcon::Normal, QIcon::Off );
+                        // goto END;
+                        QTreeWidget::rowsInserted( parent, start, end );
+                        return;
                     }
-                    else
+
+                    for( int i=0; i<pParent->childCount(); i++ )
                     {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png") ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                QTreeWidgetItem * pParent = itemFromIndex( parent );
-                if( ! pParent ) goto END;
-                for( int i=0; i<pParent->childCount(); i++ )
-                {
-                    QTreeWidgetItem * pItem = pParent->child(i);
-                    if( ! pItem ) goto END;
-                    int id = pItem->data(0, Qt::UserRole).toInt();
-                    if( id == mChildID )
-                    {
-                        pItem->setIcon(0, icon);
+                        QTreeWidgetItem * pItem = pParent->child(i);
+                        if( ! pItem )
+                        {
+                            // goto END;
+                            QTreeWidget::rowsInserted( parent, start, end );
+                            return;
+                        }
+
+                        int id = pItem->data(0, Qt::UserRole).toInt();
+                        if( id == mChildID )
+                        {
+                            pItem->setIcon(0, icon);
+                        }
                     }
                 }
             }
-        }
-        if( mIsScriptTree )
-            mpHost->getScriptUnit()->reParentScript( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-        if( mIsActionTree )
-        {
-            mpHost->getActionUnit()->reParentAction( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
-            mpHost->getActionUnit()->updateToolbar();
+            break;
+        case TriggerType:
+            mpHost->getTriggerUnit()->reParentTrigger( mChildID, mOldParentID, newParentID, parentPosition, childPosition );
+            break;
+        case VariableType:
+            // Variables should fall through into default case:
+        default:
+            qWarning() << "TTreeWidget::rowsInserted( const QModelIndex &, int, int ) ERROR - Invalid tree-type detected:" << getType();
         }
 
         mChildID = 0;
         mOldParentID = 0;
         mIsDropAction = false;
     }
-    END: QTreeWidget::rowsInserted( parent, start, end );
+    // The gotos have been removed so this label is no longer needed!
+    // END:
+    QTreeWidget::rowsInserted( parent, start, end );
 }
 
 Qt::DropActions TTreeWidget::supportedDropActions() const
@@ -347,7 +331,7 @@ void TTreeWidget::dropEvent(QDropEvent *event)
         }
     }
 
-    if ( mIsVarTree )
+    if( getType() & VariableType )
     {
         LuaInterface * lI = mpHost->getLuaInterface();        
         if ( ! lI->validMove( pItem ) )
