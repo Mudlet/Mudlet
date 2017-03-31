@@ -127,8 +127,7 @@ bool KeyUnit::disableKey(const QString & name )
 }
 
 bool KeyUnit::killKey( QString & name ) {
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for( auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         if( pChild->getName() == name )
@@ -345,9 +344,8 @@ void KeyUnit::initStats()
 
 void KeyUnit::_assembleReport( TKey * pChild )
 {
-    typedef list<TKey *>::const_iterator I;
     list<TKey*> * childrenList = pChild->mpMyChildrenList;
-    for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for( auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
     {
         TKey * pT = *it2;
         _assembleReport( pT );
@@ -362,15 +360,14 @@ QString KeyUnit::assembleReport()
     statsActiveKeys = 0;
     statsKeyTotal = 0;
     statsTempKeys = 0;
-    typedef list<TKey *>::const_iterator I;
-    for( I it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for( auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
     {
         TKey * pChild = *it;
         if( pChild->isActive() ) statsActiveKeys++;
         if( pChild->isTempKey() ) statsTempKeys++;
         statsKeyTotal++;
         list<TKey*> * childrenList = pChild->mpMyChildrenList;
-        for( I it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        for( auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
         {
             TKey * pT = *it2;
             _assembleReport( pT );
@@ -397,8 +394,7 @@ QString KeyUnit::assembleReport()
 
 void KeyUnit::markCleanup( TKey * pT )
 {
-    typedef list<TKey *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for( auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         if( *it == pT )
         {
@@ -410,8 +406,7 @@ void KeyUnit::markCleanup( TKey * pT )
 
 void KeyUnit::doCleanup()
 {
-    typedef list<TKey *>::iterator I;
-    for( I it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for( auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
     {
         delete *it;
     }
