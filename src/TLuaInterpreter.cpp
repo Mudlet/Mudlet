@@ -2322,19 +2322,21 @@ int TLuaInterpreter::disableTimer( lua_State *L )
 
 int TLuaInterpreter::enableKey( lua_State *L )
 {
-    string luaSendText="";
+    string luaNameID = "";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "enableKey: wrong argument type" );
+        lua_pushstring( L, tr( "enableKey: bad argument #1 type (key name as string expected, got %1!)" )
+            .arg( luaL_typename( L, 1 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else
     {
-        luaSendText = lua_tostring( L, 1 );
+        luaNameID = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
+    QString text(luaNameID.c_str());
     bool error = pHost->getKeyUnit()->enableKey( text );
     lua_pushboolean( L, error );
     return 1;
@@ -2343,19 +2345,21 @@ int TLuaInterpreter::enableKey( lua_State *L )
 // disableTimer( session, timer_name )
 int TLuaInterpreter::disableKey( lua_State *L )
 {
-    string luaSendText="";
+    string luaNameID = "";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "disableKey: wrong argument type" );
+        lua_pushstring( L, tr( "disableKey: bad argument #1 type (key name as string expected, got %1!)" )
+            .arg( luaL_typename( L, 1 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else
     {
-        luaSendText = lua_tostring( L, 1 );
+        luaNameID = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
+    QString text(luaNameID.c_str());
     bool error = pHost->getKeyUnit()->disableKey( text );
     lua_pushboolean( L, error );
     return 1;
@@ -2363,19 +2367,21 @@ int TLuaInterpreter::disableKey( lua_State *L )
 
 int TLuaInterpreter::killKey( lua_State *L )
 {
-    string luaSendText="";
+    string luaNameID = "";
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "killKey: wrong argument type" );
+        lua_pushstring( L, tr( "killKey: bad argument #1 type (key name as string expected, got %1!)" )
+            .arg( luaL_typename( L, 1 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else
     {
-        luaSendText = lua_tostring( L, 1 );
+        luaNameID = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
+    QString text(luaNameID.c_str());
     lua_pushboolean( L, pHost->getKeyUnit()->killKey( text ) );
     return 1;
 }
@@ -7090,22 +7096,26 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
 
 int TLuaInterpreter::permKey( lua_State *L )
 {
-    string luaName;
+    string luaNameID;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "permKey: need a name for this key" );
+        lua_pushstring( L, tr( "permKey: bad argument #1 type (key name as string expected, got %1!)" )
+            .arg( luaL_typename( L, 1 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
     else
     {
-        luaName = lua_tostring( L, 1 );
+        luaNameID = lua_tostring( L, 1 );
     }
 
     string luaParent;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "permKey: need a parent key/group to add this key to" );
+        lua_pushstring( L, tr( "permKey: bad argument #2 type (key parent group as string expected, got %1!)" )
+            .arg( luaL_typename( L, 2 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -7117,7 +7127,9 @@ int TLuaInterpreter::permKey( lua_State *L )
     int luaKeyCode;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "permKey: need the keycode for the key" );
+        lua_pushstring( L, tr( "permKey: bad argument #3 type (key code as string expected, got %1!)" )
+            .arg( luaL_typename( L, 3 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -7129,7 +7141,9 @@ int TLuaInterpreter::permKey( lua_State *L )
     int luaModifier;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, "permKey: need the modifier for the key" );
+        lua_pushstring( L, tr( "permKey: bad argument #4 type (key modifier as string expected, got %1!)" )
+            .arg( luaL_typename( L, 4 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -7142,7 +7156,9 @@ int TLuaInterpreter::permKey( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 5 ) )
     {
-        lua_pushstring( L, "permKey: need Lua code for this key" );
+        lua_pushstring( L, tr( "permKey: bad argument #5 type (key lua code as string expected, got %1!)" )
+            .arg( luaL_typename( L, 5 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -7153,12 +7169,12 @@ int TLuaInterpreter::permKey( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
-    QString _luaName = luaName.c_str();
+    QString _luaNameID = luaNameID.c_str();
     QString _luaParent = luaParent.c_str();
     QString _luaFunction = luaFunction.c_str();
     int _luaKeyCode = luaKeyCode;
     int _luaModifier = luaModifier;
-    int keyID = pLuaInterpreter->startPermKey( _luaName, _luaParent, _luaKeyCode, _luaModifier, _luaFunction );
+    int keyID = pLuaInterpreter->startPermKey( _luaNameID, _luaParent, _luaKeyCode, _luaModifier, _luaFunction );
     lua_pushnumber( L, keyID );
     return 1;
 }
@@ -7168,7 +7184,9 @@ int TLuaInterpreter::tempKey( lua_State *L )
     int luaKeyCode;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "tempKey: wrong argument type" );
+        lua_pushstring( L, tr( "tempKey: bad argument #1 type (key code as string expected, got %1!)" )
+            .arg( luaL_typename( L, 1 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -7180,7 +7198,9 @@ int TLuaInterpreter::tempKey( lua_State *L )
     int luaModifier;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "tempKey: wrong argument type" );
+        lua_pushstring( L, tr( "permKey: bad argument #2 type (key modifier as string expected, got %1!)" )
+            .arg( luaL_typename( L, 2 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
@@ -7192,7 +7212,9 @@ int TLuaInterpreter::tempKey( lua_State *L )
     string luaFunction;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, "tempKey: wrong argument type" );
+        lua_pushstring( L, tr( "permKey: bad argument #3 type (key lua code as string expected, got %1!)" )
+            .arg( luaL_typename( L, 3 ) )
+            .toUtf8().constData() );
         lua_error( L );
         return 1;
     }
