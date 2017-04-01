@@ -164,10 +164,10 @@ public:
     QMap<int, int> roomidToIndex;
     // QMap<int, int> indexToRoomid;
 
-// Not used:    QMap<QString, int> pixNameTable;
-// Not used:    QMap<int, QPixmap> pixTable;
-    typedef adjacency_list<listS, vecS, directedS, no_property, boost::property<edge_weight_t, cost> > mygraph_t;
-    typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
+// Not used:        QMap<QString, int> pixNameTable;
+// Not used:        QMap<int, QPixmap> pixTable;
+    typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost> > mygraph_t;
+    typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
     mygraph_t g;
@@ -193,6 +193,7 @@ public:
                       // by mMinVersion and mMaxVersion.
 
     QMap<QString, QString> mUserData;
+
 
 public slots:
     // Moved and revised from dlgMapper:
