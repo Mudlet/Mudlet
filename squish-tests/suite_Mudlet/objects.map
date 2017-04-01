@@ -23,6 +23,7 @@
 :profile_dialog.Cancel_QPushButton	{text='Cancel' type='QPushButton' unnamed='1' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
 :profile_dialog.Connect_QPushButton	{text='Connect' type='QPushButton' unnamed='1' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
 :profile_dialog.informationalArea_QGroupBox	{name='informationalArea' type='QGroupBox' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
+:profile_dialog.new_profile_button_QPushButton	{name='new_profile_button' type='QPushButton' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
 :profile_dialog.profiles_tree_widget_QListWidget	{name='profiles_tree_widget' type='QListWidget' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
 :profile_dialog.requiredArea_QGroupBox	{name='requiredArea' type='QGroupBox' visible='1' window=':profile_dialog_dlgConnectionProfiles'}
 :profile_dialog_dlgConnectionProfiles	{name='profile_dialog' type='dlgConnectionProfiles' visible='1'}

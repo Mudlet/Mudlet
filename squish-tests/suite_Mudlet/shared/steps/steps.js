@@ -26,7 +26,7 @@
 // be passed to Given/When/Then/Step to use regular expressions.
 //
 
-OnFeatureStart(function(context) {
+OnScenarioStart(function(context) {
     startApplication("mudlet");
 });
 
@@ -38,13 +38,6 @@ When("the '|any|' profile is selected", function(context, profileName) {
         profileName = profileName.replace(/\./g, '\\.');
         waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", profileName);
         clickItem(":profile_dialog.profiles_tree_widget_QListWidget", profileName, 81, 22, 0, Qt.LeftButton);
-        // GSUB dot for \\. (why?!)
-        //    waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon.de");
-        //    clickItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon.de", 42, 14, 0, Qt.LeftButton);
-
-        //        waitForObjectItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon\\.de");
-        //        clickItem(":profile_dialog.profiles_tree_widget_QListWidget", "Avalon\\.de", 42, 14, 0, Qt.LeftButton);
-
     });
 
 Then("the profile name is '|any|'", function(context, profileName) {
@@ -57,4 +50,8 @@ Then("the server address is '|any|'", function(context, profileName) {
 
 Then("the port is '|integer|'", function(context, port) {
         test.compare(waitForObjectExists(":requiredArea.port_entry_QLineEdit").text, port);
+    });
+
+When("the New button is pressed", function(context) {
+        clickButton(waitForObject(":profile_dialog.new_profile_button_QPushButton"));
     });
