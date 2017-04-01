@@ -6798,40 +6798,20 @@ int TLuaInterpreter::exists( lua_State * L )
     QString name = _name.c_str();
     if( type == "timer")
     {
-        QMap<QString, TTimer *>::const_iterator it1 = pHost->getTimerUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getTimerUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += pHost->getTimerUnit()->mLookupTable.count( name );
     }
     else if( type == "trigger")
     {
-        QMap<QString, TTrigger *>::const_iterator it1 = pHost->getTriggerUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getTriggerUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += pHost->getTriggerUnit()->mLookupTable.count( name );
     }
     else if( type == "alias")
     {
-        QMap<QString, TAlias *>::const_iterator it1 = pHost->getAliasUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getAliasUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += pHost->getAliasUnit()->mLookupTable.count( name );
     }
     //TODO: exists(keybind) doesn't currently work, figure out why
     else if( type == "keybind")
     {
-        QMap<QString, TKey *>::const_iterator it1 = pHost->getKeyUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getKeyUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += pHost->getKeyUnit()->mLookupTable.count( name );
     }
     lua_pushnumber( L, cnt );
     return 1;
