@@ -213,10 +213,10 @@ void cTelnet::connectIt(const QString &address, int port)
 void cTelnet::disconnect ()
 {
     socket.disconnectFromHost();
-    TEvent me;
-    me.mArgumentList.append( "sysDisconnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+    //TEvent me;
+    //me.mArgumentList.append( "sysDisconnectionEvent" );
+    //me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    //mpHost->raiseEvent( me );
 
 }
 
