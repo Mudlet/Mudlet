@@ -65,7 +65,7 @@ public:
 
     bool            exportHost( QIODevice * );
     bool            exportGenericPackage( QIODevice * device );
-    bool            writeGenericPackage( Host * pT );
+    bool            writeGenericPackage( Host * );
     bool            exportTrigger( QIODevice * );
     bool            exportTimer( QIODevice * );
     bool            exportAlias( QIODevice * );

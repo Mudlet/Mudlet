@@ -1255,7 +1255,7 @@ function ansi2decho(text)
           i = i + 2
 
         elseif cmd == 8 and t[i+1] == '2' then -- xterm256, rgb
-          colour = {t[i+2] or '', t[i+3] or '', t[i+4] or ''}
+          colour = {t[i+2] or '0', t[i+3] or '0', t[i+4] or '0'}
           i = i + 4
 
         elseif layerCode == 9 or layerCode == 10 then --light colours

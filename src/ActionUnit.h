@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -60,11 +61,10 @@ public:
     std::list<TEasyButtonBar *> getEasyButtonBarList();
     TAction *             getHeadAction( TToolBar * );
     TAction *             getHeadAction( TEasyButtonBar * );
-    void                  processDataStream(const QString & );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, TToolBar * pTB );
-    void                  constructToolbar( TAction *, mudlet * pMainWindow, TEasyButtonBar * pTB );
-    void                  showToolBar(const QString & );
-    void                  hideToolBar(const QString & );
+    void                  constructToolbar( TAction *, TToolBar * pTB );
+    void                  constructToolbar( TAction *, TEasyButtonBar * pTB );
+    void                  showToolBar( const QString & );
+    void                  hideToolBar( const QString & );
 
     QMutex                mActionUnitLock;
     QList<TAction*>       uninstallList;

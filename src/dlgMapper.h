@@ -43,11 +43,11 @@ public:
         dlgMapper( QWidget *, Host *, TMap * );
         void updateAreaComboBox();
     void                setDefaultAreaShown( const bool );
-    const bool          getDefaultAreaShown() { return mShowDefaultArea; }
+    bool                getDefaultAreaShown() { return mShowDefaultArea; }
     void                resetAreaComboBoxToPlayerRoomArea();
 
-        TMap * mpMap;
-        QPointer<Host> mpHost;
+    TMap *              mpMap;
+    QPointer<Host>      mpHost;
 
 
 public slots:
