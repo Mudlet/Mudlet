@@ -702,37 +702,18 @@
                   <number>0</number>
                  </property>
                  <item>
-                  <widget class="QToolButton" name="button_searchAreaClose">
-                   <property name="minimumSize">
-                    <size>
-                     <width>16</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16</width>
-                     <height>16</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>Sans Serif</family>
-                     <pointsize>9</pointsize>
-                    </font>
-                   </property>
-                   <property name="focusPolicy">
-                    <enum>Qt::NoFocus</enum>
+                  <widget class="QToolButton" name="button_toggleSearchAreaResults">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="text">
                     <string>...</string>
                    </property>
-                   <property name="icon">
-                    <iconset resource="../mudlet_alpha.qrc">
-                     <normaloff>:/icons/application-exit.png</normaloff>:/icons/application-exit.png</iconset>
-                   </property>
-                   <property name="autoRaise">
+                   <property name="checkable">
                     <bool>true</bool>
+                   </property>
+                   <property name="arrowType">
+                    <enum>Qt::RightArrow</enum>
                    </property>
                   </widget>
                  </item>
