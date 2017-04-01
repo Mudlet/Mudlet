@@ -7114,7 +7114,7 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
 
 int TLuaInterpreter::permKey( lua_State *L )
 {
-    string luaNameID;
+    string luaNameID = "";
     if( ! lua_isstring( L, 1 ) )
     {
         lua_pushstring( L, tr( "permKey: bad argument #1 type (key name as string expected, got %1!)" )
@@ -7128,7 +7128,7 @@ int TLuaInterpreter::permKey( lua_State *L )
         luaNameID = lua_tostring( L, 1 );
     }
 
-    string luaParent;
+    string luaParent = "";
     if( ! lua_isstring( L, 2 ) )
     {
         lua_pushstring( L, tr( "permKey: bad argument #2 type (key parent group as string expected, got %1!)" )
@@ -7171,7 +7171,7 @@ int TLuaInterpreter::permKey( lua_State *L )
     }
 
 
-    string luaFunction;
+    string luaFunction = "";
     if( ! lua_isstring( L, 5 ) )
     {
         lua_pushstring( L, tr( "permKey: bad argument #5 type (key lua code as string expected, got %1!)" )
@@ -7233,7 +7233,7 @@ int TLuaInterpreter::tempKey( lua_State *L )
         luaModifier = lua_tointeger( L, 2 );
     }
 
-    string luaFunction;
+    string luaFunction = "";
     if( ! lua_isstring( L, 3 ) )
     {
         lua_pushstring( L, tr( "permKey: bad argument #3 type (key lua code as string expected, got %1!)" )
