@@ -2336,6 +2336,12 @@ int TLuaInterpreter::enableKey( lua_State *L )
         luaNameID = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "enableKey: NULL Host pointer - something is wrong!" )
+            .toUtf8().constData() );
+        return 2;
+    }
     QString text(luaNameID.c_str());
     bool error = pHost->getKeyUnit()->enableKey( text );
     lua_pushboolean( L, error );
@@ -2359,6 +2365,12 @@ int TLuaInterpreter::disableKey( lua_State *L )
         luaNameID = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "disableKey: NULL Host pointer - something is wrong!" )
+            .toUtf8().constData() );
+        return 2;
+    }
     QString text(luaNameID.c_str());
     bool error = pHost->getKeyUnit()->disableKey( text );
     lua_pushboolean( L, error );
@@ -2381,6 +2393,12 @@ int TLuaInterpreter::killKey( lua_State *L )
         luaNameID = lua_tostring( L, 1 );
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "killKey: NULL Host pointer - something is wrong!" )
+            .toUtf8().constData() );
+        return 2;
+    }
     QString text(luaNameID.c_str());
     lua_pushboolean( L, pHost->getKeyUnit()->killKey( text ) );
     return 1;
@@ -7168,6 +7186,12 @@ int TLuaInterpreter::permKey( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "permKey: NULL Host pointer - something is wrong!" )
+            .toUtf8().constData() );
+        return 2;
+    }
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
     QString _luaNameID = luaNameID.c_str();
     QString _luaParent = luaParent.c_str();
@@ -7224,6 +7248,12 @@ int TLuaInterpreter::tempKey( lua_State *L )
     }
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "tempKey: NULL Host pointer - something is wrong!" )
+            .toUtf8().constData() );
+        return 2;
+    }
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
     int _luaKeyCode = luaKeyCode;
