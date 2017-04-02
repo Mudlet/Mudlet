@@ -134,6 +134,11 @@ QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &acti
     if( (action) & ( 1 | 2) )
         return new QCoreApplication(argc, argv);  // Ah, we're gonna bail out early, just need a command-line application
     else {
+#if defined (Q_OS_MACOS)
+        // Workaround for horrible mac rendering issues once the mapper widget is open
+        // see https://bugreports.qt.io/browse/QTBUG-41257
+        QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#endif
 #if defined (Q_OS_WIN32)        
         // Force OpenGL use as we use some functions that aren't provided by Qt's OpenGL layer on Windows (QOpenGLFunctions)
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
@@ -194,7 +199,7 @@ int main(int argc, char *argv[])
             // Do "version" action - wording and format is quite tightly specified by the coding standards
             std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;
             std::cout << "Qt libraries " << QT_VERSION_STR << "(compilation) " << qVersion() << "(runtime)" << std::endl;
-            std::cout << "Copyright (C) 2008-" << std::string(__DATE__).substr(7, 4) << " Heiko Koehn." << std::endl;
+            std::cout << "Copyright (C) 2008-" << std::string(__DATE__).substr(7, 4) << " Mudlet devs." << std::endl;
             std::cout << "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>" << std::endl;
             std::cout << "This is free software: you are free to change and redistribute it." << std::endl;
             std::cout << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
@@ -260,8 +265,8 @@ int main(int argc, char *argv[])
             std::cout << "                       and will make the application wait until a debugger"  << std::endl;
             std::cout << "                       connects to it." << std::endl;
             std::cout << std::endl;
-            std::cout << "Report bugs to: <http://launchpad.mudlet.org/>" << std::endl;
-            std::cout << "pkg home page: <http://mudlet.sourceforge.net/>, also see <http://www.mudlet.org/>"<< std::endl;
+            std::cout << "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>" << std::endl;
+            std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
         }
         return 0;
     }
@@ -318,7 +323,7 @@ int main(int argc, char *argv[])
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar( 169 ) % QString( " Heiko K" ) % QChar( 246 ) % QString( "hn 2008-" ) % QString(__DATE__).mid(7);
+        QString sourceCopyrightText = QChar( 169 ) % QString( " Mudlet makers 2008-" ) % QString(__DATE__).mid(7);
         QFont font( "DejaVu Serif", 16, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
         QTextLayout copyrightTextLayout( sourceCopyrightText, font, painter.device() );
         copyrightTextLayout.beginLayout();

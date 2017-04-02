@@ -711,19 +711,27 @@ void mudlet::slot_close_profile()
     {
         if( mConsoleMap.contains( mpCurrentActiveHost ) )
         {
-            QString name = mpCurrentActiveHost->getName();
             Host * pH = mpCurrentActiveHost;
-            mpCurrentActiveHost->mpEditorDialog->close();
-            mConsoleMap[mpCurrentActiveHost]->close();
-            if( mTabMap.contains( pH->getName() ) )
+            if( pH )
             {
-                mpTabBar->removeTab( mpTabBar->currentIndex() );
-                mConsoleMap.remove( pH );
-                getHostManager()->deleteHost( pH->getName() );
-                mTabMap.remove( pH->getName() );
+                QString name = pH->getName();
+                mpCurrentActiveHost->mpEditorDialog->close();
+                mConsoleMap[ pH ]->close();
+                if( mTabMap.contains( name ) )
+                {
+                    mpTabBar->removeTab( mpTabBar->currentIndex() );
+                    mConsoleMap.remove( pH );
+                    getHostManager()->deleteHost( name );
+                    mTabMap.remove( name );
+                }
+                mpCurrentActiveHost = Q_NULLPTR;
             }
-            if( !mpCurrentActiveHost ) disableToolbarButtons();
         }
+
+    }
+    else
+    {
+        disableToolbarButtons();
     }
 }
 
@@ -1044,7 +1052,10 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
         return false;
 }
 
-bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
+bool mudlet::setTextFormat( Host * pHost, const QString & name,
+                            int r1, int g1, int b1,
+                            int r2, int g2, int b2,
+                            bool bold, bool underline, bool italics, bool strikeout )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1057,25 +1068,43 @@ bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, 
         pC->mFormatCurrent.fgG = g2;
         pC->mFormatCurrent.fgB = b2;
         if( bold )
+        {
             pC->mFormatCurrent.flags |= TCHAR_BOLD;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
+        }
         if( underline )
+        {
             pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+        }
         if( italics )
+        {
             pC->mFormatCurrent.flags |= TCHAR_ITALICS;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
+        }
         if( strikeout )
+        {
             pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+        }
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 void mudlet::showEvent( QShowEvent * event )
@@ -1195,18 +1224,16 @@ bool mudlet::setConsoleBufferSize( Host * pHost, const QString & name, int x1, i
         return false;
 }
 
-
-
 bool mudlet::resetFormat( Host * pHost, QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) )
-    {
+    if( dockWindowConsoleMap.contains( name ) ) {
         dockWindowConsoleMap[name]->reset();
         return true;
     }
-    else
+    else {
         return false;
+    }
 }
 
 bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
@@ -1486,13 +1513,17 @@ int mudlet::selectSection( Host * pHost, const QString & name, int f, int t )
         return -1;
 }
 
-void mudlet::deselect( Host * pHost, const QString & name )
+// Added a return value to indicate whether the given windows name was found
+bool mudlet::deselect( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) )
-    {
+    if( dockWindowConsoleMap.contains( name ) ) {
         TConsole * pC = dockWindowConsoleMap[name];
         pC->deselect();
+        return true;
+    }
+    else {
+        return false;
     }
 }
 
@@ -1672,7 +1703,19 @@ void mudlet::closeEvent(QCloseEvent *event)
 
 void mudlet::readSettings()
 {
-    QSettings settings("Mudlet", "Mudlet 1.0");
+    QSettings settings("mudlet", "Mudlet");
+
+    /*In case sensitive environments, two different config directories
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+    Furthermore, we skip the version from the application name to follow the convention.
+    For compatibility with older settings, if no config is loaded
+    from the config directory "mudlet", application "Mudlet", we try to load from the config
+    directory "Mudlet", application "Mudlet 1.0". */
+    if(settings.value("pos") == 0)
+    {
+        QSettings settings("Mudlet","Mudlet 1.0");
+    }
+
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
@@ -1728,7 +1771,10 @@ void mudlet::setIcoSize( int s )
 
 void mudlet::writeSettings()
 {
-    QSettings settings("Mudlet", "Mudlet 1.0");
+    /*In case sensitive environments, two different config directories
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
+    Furthermore, we skip the version from the application name to follow the convention.*/
+    QSettings settings("mudlet", "Mudlet");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mMainIconSize);
@@ -1758,7 +1804,7 @@ void mudlet::show_trigger_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_triggers();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_alias_dialog()
@@ -1769,7 +1815,7 @@ void mudlet::show_alias_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_aliases();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_timer_dialog()
@@ -1780,7 +1826,7 @@ void mudlet::show_timer_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_timers();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_script_dialog()
@@ -1791,7 +1837,7 @@ void mudlet::show_script_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_scripts();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_key_dialog()
@@ -1802,7 +1848,7 @@ void mudlet::show_key_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_keys();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_variable_dialog()
@@ -1813,7 +1859,7 @@ void mudlet::show_variable_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_vars();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_action_dialog()
@@ -1824,7 +1870,7 @@ void mudlet::show_action_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_actions();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_options_dialog()

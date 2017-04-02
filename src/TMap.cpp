@@ -544,8 +544,8 @@ void TMap::audit()
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed, in %1 seconds. Enjoy your game..." )
-                              .arg( _time.nsecsElapsed() * 1.0e-9 );
+        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed (%1s). Enjoy your game..." )
+                              .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
         postMessage( infoMsg );
         appendErrorMsg( infoMsg );
     }
@@ -1326,9 +1326,7 @@ bool TMap::restore( QString location )
         }
 
         QDataStream ifs( & file );
-
         ifs >> mVersion;
-//        qDebug()<<"map version:"<<mVersion;
         if( mVersion > mDefaultVersion ) {
             if( QByteArray( APP_BUILD ).isEmpty() ) {
                 // This is a release version - should not support any map file versions higher that it was built for
@@ -1593,9 +1591,9 @@ bool TMap::restore( QString location )
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, checking some\n"
+        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
                                         "consistency details..." )
-                            .arg( _time.nsecsElapsed() * 1.0e-9 );
+                            .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
 
         postMessage( okMsg );
         appendErrorMsgWithNoLf( okMsg );
@@ -2237,10 +2235,6 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
     else if( url.toString().contains( QStringLiteral( "lusternia.com" ), Qt::CaseInsensitive ) ) {
         mExpectedFileSize = qRound( 1.1f * 4842063 );
     }
-// Midkemia is due for deletion in another pending PR!
-//    else if( url.toString().contains( QStringLiteral( "midkemiaonline.com" ), Qt::CaseInsensitive ) ) {
-//        mExpectedFileSize = qRound( 1.1f * 2600241 );
-//    }
 
     QString infoMsg = tr( "[ INFO ]  - Map download initiated, please wait..." );
     postMessage( infoMsg );
@@ -2407,7 +2401,7 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if(  reply->error() != QNetworkReply::NoError ) {
+    if( reply->error() != QNetworkReply::NoError ) {
         if( reply->error() != QNetworkReply::OperationCanceledError ) {
             // Don't post an error for the cancel case - it has already been done
             QString alertMsg = tr( "[ ALERT ] - Map download failed, error reported was:\n%1.").arg( reply->errorString() );
@@ -2417,13 +2411,13 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
         // THAT in slot_downloadCancel()
     }
     else {
-        // The QNetworkReply is Ok here:
         QFile file( mLocalMapFileName );
         if( ! file.open( QFile::WriteOnly ) ) {
             QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg( mLocalMapFileName );
             postMessage( alertMsg );
         }
         else {
+            // The QNetworkReply is Ok here:
             if( file.write( reply->readAll() ) == -1 ) {
                 QString alertMsg = tr( "[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg( mLocalMapFileName );
                 postMessage( alertMsg );

@@ -70,10 +70,9 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mCodeCompletion( true )
 , mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//( QFont("Monospace", 10, QFont::Courier) )
 , mCommandSeparator  ( QString(";") )
-, mCommandSeperator  ( QString(";") )
 , mDisableAutoCompletion( false )
 , mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
-, mEnableGMCP( false )
+, mEnableGMCP( true )
 , mEnableMSDP( false )
 , mFORCE_GA_OFF( false )
 , mFORCE_NO_COMPRESSION( false )
@@ -147,8 +146,11 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mLogStatus           ( false )
 , mEnableSpellCheck    ( true )
 , mModuleSaveBlock(false)
-, mLineSize            ( 5.0 )
+, mLineSize            ( 10.0 )
 , mRoomSize            ( 0.5 )
+, mBubbleMode          ( false )
+, mShowRoomID          ( false )
+, mMapperUseAntiAlias  ( true )
 , mServerGUI_Package_version( -1 )
 , mServerGUI_Package_name( "nothing" )
 , mAcceptServerGUI     ( true )
@@ -215,7 +217,9 @@ void Host::saveModules(int sync)
         QString tempDir;
         QString zipName;
         zip * zipFile = 0;
-        if ( filename_xml.endsWith( "mpackage" ) || filename_xml.endsWith( "zip" ) )
+        // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
+        if(  filename_xml.endsWith( QStringLiteral( "mpackage" ), Qt::CaseInsensitive )
+          || filename_xml.endsWith( QStringLiteral( "zip" ), Qt::CaseInsensitive ) )
         {
             tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
             filename_xml = tempDir + "/" + moduleName + ".xml";
@@ -630,21 +634,26 @@ void Host::unregisterEventHandler(const QString & name, TScript * pScript )
 
 void Host::raiseEvent( const TEvent & pE )
 {
-    if( pE.mArgumentList.size() < 1 ) return;
-    if( mEventHandlerMap.contains( pE.mArgumentList[0] ) )
+    if( pE.mArgumentList.isEmpty() )
     {
-        QList<TScript *> scriptList = mEventHandlerMap[pE.mArgumentList[0]];
-        for( int i=0; i<scriptList.size(); i++ )
+        return;
+    }
+
+    if( mEventHandlerMap.contains( pE.mArgumentList.at( 0 ) ) )
+    {
+        QList<TScript *> scriptList = mEventHandlerMap.value( pE.mArgumentList.at( 0 ) );
+        for( int i=0, total = scriptList.size(); i<total; ++i )
         {
             scriptList[i]->callEventHandler( pE );
         }
     }
-    if( mAnonymousEventHandlerFunctions.contains( pE.mArgumentList[0] ) )
+
+    if( mAnonymousEventHandlerFunctions.contains( pE.mArgumentList.at( 0 ) ) )
     {
-        QStringList funList = mAnonymousEventHandlerFunctions[pE.mArgumentList[0]];
-        for( int i=0; i<funList.size(); i++ )
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value( pE.mArgumentList.at( 0 ) );
+        for( int i=0, total = functionsList.size(); i<total; ++i )
         {
-            mLuaInterpreter.callEventHandler( funList[i], pE );
+            mLuaInterpreter.callEventHandler( functionsList.at( i ), pE );
         }
     }
 }
@@ -712,7 +721,7 @@ bool Host::closingDown()
     return shutdown;
 }
 
-bool Host::installPackage(const QString& fileName, int module )
+bool Host::installPackage( const QString& fileName, int module )
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -780,6 +789,7 @@ bool Host::installPackage(const QString& fileName, int module )
                         .arg( packageName );
         QDir _tmpDir( _home ); // home directory for the PROFILE
         _tmpDir.mkpath( _dest );
+
         // TODO: report failure to create destination folder for package/module in profile
 
         QUiLoader loader( this );
@@ -1304,9 +1314,9 @@ void Host::readPackageConfig(const QString& luaConfig, QString & packageName )
     }
     else // error
     {
-        string e = "no error message available from Lua";
+        std::string e = "no error message available from Lua";
         e = lua_tostring( L, -1 );
-        string reason;
+        std::string reason;
         switch (error)
         {
             case 4:

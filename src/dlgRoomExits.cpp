@@ -520,7 +520,7 @@ void dlgRoomExits::save()
         else
             pR->setExitWeight( QStringLiteral("se"), 0);
     } else {
-        if( originalExits.value( DIR_SOUTHWEST )->destination > 0 ) {
+        if( originalExits.value( DIR_SOUTHEAST )->destination > 0 ) {
             pR->setExit( -1, DIR_SOUTHEAST );
         }
         if (stub_se->isChecked() != pR->hasExitStub(DIR_SOUTHEAST))
