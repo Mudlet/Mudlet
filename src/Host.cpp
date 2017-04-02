@@ -721,7 +721,7 @@ bool Host::closingDown()
     return shutdown;
 }
 
-bool Host::installPackage(const QString& fileName, int module )
+bool Host::installPackage( const QString& fileName, int module )
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -789,6 +789,7 @@ bool Host::installPackage(const QString& fileName, int module )
                         .arg( packageName );
         QDir _tmpDir( _home ); // home directory for the PROFILE
         _tmpDir.mkpath( _dest );
+
         // TODO: report failure to create destination folder for package/module in profile
 
         QUiLoader loader( this );
@@ -1313,9 +1314,9 @@ void Host::readPackageConfig(const QString& luaConfig, QString & packageName )
     }
     else // error
     {
-        string e = "no error message available from Lua";
+        std::string e = "no error message available from Lua";
         e = lua_tostring( L, -1 );
-        string reason;
+        std::string reason;
         switch (error)
         {
             case 4:

@@ -1056,7 +1056,10 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
         return false;
 }
 
-bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
+bool mudlet::setTextFormat( Host * pHost, const QString & name,
+                            int r1, int g1, int b1,
+                            int r2, int g2, int b2,
+                            bool bold, bool underline, bool italics, bool strikeout )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1069,25 +1072,43 @@ bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, 
         pC->mFormatCurrent.fgG = g2;
         pC->mFormatCurrent.fgB = b2;
         if( bold )
+        {
             pC->mFormatCurrent.flags |= TCHAR_BOLD;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
+        }
         if( underline )
+        {
             pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+        }
         if( italics )
+        {
             pC->mFormatCurrent.flags |= TCHAR_ITALICS;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
+        }
         if( strikeout )
+        {
             pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+        }
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 void mudlet::showEvent( QShowEvent * event )
@@ -1687,18 +1708,18 @@ void mudlet::closeEvent(QCloseEvent *event)
 void mudlet::readSettings()
 {
     QSettings settings("mudlet", "Mudlet");
-    
-    /*In case sensitive environments, two different config directories 
+
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
     Furthermore, we skip the version from the application name to follow the convention.
-    For compatibility with older settings, if no config is loaded 
-    from the config directory "mudlet", application "Mudlet", we try to load from the config 
+    For compatibility with older settings, if no config is loaded
+    from the config directory "mudlet", application "Mudlet", we try to load from the config
     directory "Mudlet", application "Mudlet 1.0". */
     if(settings.value("pos") == 0)
     {
         QSettings settings("Mudlet","Mudlet 1.0");
     }
-    
+
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
@@ -1754,7 +1775,7 @@ void mudlet::setIcoSize( int s )
 
 void mudlet::writeSettings()
 {
-    /*In case sensitive environments, two different config directories 
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
     Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");

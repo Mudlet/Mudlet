@@ -154,6 +154,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     mpActionsMainArea = new dlgActionMainArea( mainArea );
     mpActionsMainArea->setSizePolicy( sizePolicy8 );
+    connect(mpActionsMainArea->checkBox_pushdownbutton, SIGNAL(stateChanged(const int)), this, SLOT(slot_toggle_isPushDownButton(const int)));
     pVB1->addWidget( mpActionsMainArea );
 
     mpKeysMainArea = new dlgKeysMainArea( mainArea );
@@ -497,13 +498,20 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     connect( comboBox_searchTerms, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( treeWidget_triggers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_triggers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_keys, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_timers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_scripts, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_aliases, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_aliases, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
+    connect( treeWidget_actions, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_variables, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
     connect( treeWidget_variables, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
+    connect( treeWidget_variables, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
@@ -589,7 +597,7 @@ void dlgTriggerEditor::slot_toggleHiddenVar( bool status )
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVariables( bool state )
- {
+{
     if( showHiddenVars != state) {
         showHiddenVars = state;
         repopulateVars();
@@ -606,9 +614,13 @@ void dlgTriggerEditor::slot_viewStatsAction()
 
 void dlgTriggerEditor::slot_viewErrorsAction()
 {
-    if( frame_rightBottom->isHidden() )frame_rightBottom->show();
-    else
+    if( frame_rightBottom->isHidden() ) {
+        frame_rightBottom->show();
+    }
+    else {
         frame_rightBottom->hide();
+    }
+    // These will be inefffective if their container (frame_rightBottom) is not shown!
     mpErrorConsole->show();
     popupArea->show();
 }
@@ -689,6 +701,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     if ( !pItem )
         return;
 
+    // For changing views from one type to another (e.g. script->triggers), we have to show
+    // the new view first before changing the TreeWidgetItem. Because we save changes to
+    // the current item when it is left, if we change the TreeWidgetItem and then swap
+    // views the contents of the previous item will be overwritten.
     if( pItem->text(0) == QString("Trigger") )
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_triggers->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
@@ -700,10 +716,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_triggers->setCurrentItem( pI, 0 );
-                treeWidget_triggers->scrollToItem( pI );
                 slot_show_triggers();
                 slot_trigger_selected( pI );
+                treeWidget_triggers->setCurrentItem( pI, 0 );
+                treeWidget_triggers->scrollToItem( pI );
                 return;
             }
         }
@@ -719,10 +735,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_aliases->setCurrentItem( pI, 0 );
-                treeWidget_aliases->scrollToItem( pI );
                 slot_show_aliases();
                 slot_alias_selected( pI );
+                treeWidget_aliases->setCurrentItem( pI, 0 );
+                treeWidget_aliases->scrollToItem( pI );
                 return;
             }
         }
@@ -738,10 +754,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_scripts->setCurrentItem( pI, 0 );
-                treeWidget_scripts->scrollToItem( pI );
                 slot_show_scripts();
                 slot_scripts_selected( pI );
+                treeWidget_scripts->setCurrentItem( pI, 0 );
+                treeWidget_scripts->scrollToItem( pI );
                 return;
             }
         }
@@ -759,10 +775,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_actions->setCurrentItem( pI, 0 );
-                treeWidget_actions->scrollToItem( pI );
                 slot_show_actions();
                 slot_action_selected( pI );
+                treeWidget_actions->setCurrentItem( pI, 0 );
+                treeWidget_actions->scrollToItem( pI );
                 return;
             }
         }
@@ -780,10 +796,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_timers->setCurrentItem( pI, 0 );
-                treeWidget_timers->scrollToItem( pI );
                 slot_show_timers();
                 slot_timer_selected( pI );
+                treeWidget_timers->setCurrentItem( pI, 0 );
+                treeWidget_timers->scrollToItem( pI );
                 return;
             }
         }
@@ -801,10 +817,10 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
-                treeWidget_keys->setCurrentItem( pI, 0 );
-                treeWidget_keys->scrollToItem( pI );
                 slot_show_keys();
                 slot_key_selected( pI );
+                treeWidget_keys->setCurrentItem( pI, 0 );
+                treeWidget_keys->scrollToItem( pI );
                 return;
             }
         }
@@ -825,9 +841,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             TVar * var = vu->getWVar( pI );
             if ( vu->shortVarName( var ) == varShort )
             {
+                show_vars();
                 treeWidget_variables->setCurrentItem( pI, 0 );
                 treeWidget_variables->scrollToItem( pI );
-                show_vars();
                 return;
             }
         }
@@ -2382,13 +2398,42 @@ void dlgTriggerEditor::slot_action_toggle_active()
 
     if( pT->isFolder() )
     {
-        if( pT->isActive() )
+        if( ! pT->getPackageName().isEmpty() )
         {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
+            // Has a package name - is a module master folder
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+        }
+        else if( ! pT->getParent()
+              || ! pT->getParent()->getPackageName().isEmpty() )
+        {
+            // Does not have a parent or the parent has a package name - is a toolbar
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
         }
         else
         {
-            icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            // Must be a menu
+            if( pT->isActive() )
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
+            }
+            else
+            {
+                icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
+            }
         }
     }
     else
@@ -2405,19 +2450,28 @@ void dlgTriggerEditor::slot_action_toggle_active()
 
     if( pT->state() )
     {
-        pItem->setIcon( 0, icon);
-        pItem->setText( 0, pT->getName() );
+        if( pT->shouldBeActive() )
+        {
+            showInfo( tr( "Trying to activate a button/menu/toolbar or the part of a module \"%1\" that contains them <em>succeeded</em>." )
+                      .arg( pT->getName() ) );
+        }
+        else
+        {
+            showInfo( tr( "Trying to deactivate a button/menu/toolbar or the part of a module \"%1\" that contains them <em>succeeded</em>." )
+                      .arg( pT->getName() ) );
+        }
     }
     else
     {
-        QIcon iconError;
-        iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
-        pItem->setIcon( 0, iconError );
+        pT->setIsActive( false );
+        showError( tr( "Unable to activate (and automatically deactivating) a button/menu/toolbar or the part of a module \"%1\" that contains them; reason: %2." )
+                   .arg( pT->getName() )
+                   .arg( pT->getError() ) );
+        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
     }
-    showInfo( QString( "Trying to %2 action <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+    pItem->setIcon( 0, icon);
+    pItem->setText( 0, pT->getName() );
+
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -2655,8 +2709,8 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     mpTriggersMainArea->pushButtonBgColor->setChecked( false );
     mpTriggersMainArea->colorizerTrigger->setChecked( false );
 
-    treeWidget_triggers->setCurrentItem( pNewItem );
     mpCurrentTriggerItem = pNewItem;
+    treeWidget_triggers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTrigger );
     slot_trigger_selected( treeWidget_triggers->currentItem() );
 }
@@ -2749,8 +2803,8 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
     mpSourceEditor->clear();
-    treeWidget_timers->setCurrentItem( pNewItem );
     mpCurrentTimerItem = pNewItem;
+    treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
     slot_timer_selected( treeWidget_timers->currentItem() );
 }
@@ -2822,8 +2876,8 @@ void dlgTriggerEditor::addVar( bool isFolder )
     newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled ));
     if (newItem)
     {
-        treeWidget_variables->setCurrentItem( newItem );
         mpCurrentVarItem = newItem;
+        treeWidget_variables->setCurrentItem( newItem );
         showInfo( msgInfoAddVar );
         slot_var_selected( treeWidget_variables->currentItem() );
     }
@@ -2913,8 +2967,8 @@ void dlgTriggerEditor::addKey( bool isFolder )
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
     mpSourceEditor->clear();
-    treeWidget_keys->setCurrentItem( pNewItem );
     mpCurrentKeyItem = pNewItem;
+    treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
     slot_key_selected( treeWidget_keys->currentItem() );
 }
@@ -2977,7 +3031,7 @@ void dlgTriggerEditor::addAlias( bool isFolder )
         //insert a new root item
 ROOT_ALIAS:
         pT = new TAlias( name, mpHost );
-        pT->setRegexCode( regex );
+        pT->setRegexCode( regex ); // Empty regex will always succeed to compile
         pNewItem = new QTreeWidgetItem( mpAliasBaseItem, nameL );
         treeWidget_aliases->insertTopLevelItem( 0, pNewItem );
     }
@@ -2986,7 +3040,7 @@ ROOT_ALIAS:
 
     pT->setName( name );
     pT->setCommand( command );
-    pT->setRegexCode( regex );
+    pT->setRegexCode( regex ); // Empty regex will always succeed to compile
     pT->setScript( script );
     pT->setIsFolder( isFolder );
     pT->setIsActive( false );
@@ -3012,8 +3066,8 @@ ROOT_ALIAS:
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
-    treeWidget_aliases->setCurrentItem( pNewItem );
     mpCurrentAliasItem = pNewItem;
+    treeWidget_aliases->setCurrentItem( pNewItem );
     showInfo(msgInfoAddAlias);
     slot_alias_selected( treeWidget_aliases->currentItem() );
 }
@@ -3114,9 +3168,8 @@ void dlgTriggerEditor::addAction( bool isFolder )
     mpSourceEditor->clear();
 
     mpHost->getActionUnit()->updateToolbar();
-
-    treeWidget_actions->setCurrentItem( pNewItem );
     mpCurrentActionItem = pNewItem;
+    treeWidget_actions->setCurrentItem( pNewItem );
     showInfo( msgInfoAddButton );
     slot_action_selected( treeWidget_actions->currentItem() );
 }
@@ -3367,7 +3420,7 @@ void dlgTriggerEditor::saveTrigger()
                 iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
                 pItem->setIcon( 0, iconError );
                 pT->setIsActive( false );
-
+                showError( pT->getError() );
             }
         }
     }
@@ -3506,7 +3559,7 @@ void dlgTriggerEditor::saveAlias()
             QString old_name = pT->getName();
             pT->setName( name );
             pT->setCommand( substitution );
-            pT->setRegexCode( regex );
+            pT->setRegexCode( regex ); // This could generate an error state if regex does not compile
             pT->setScript( script );
 
             QIcon icon;
@@ -3591,6 +3644,7 @@ void dlgTriggerEditor::saveAlias()
                 iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
                 pItem->setIcon( 0, iconError );
                 pItem->setText( 0, name );
+                showError( pT->getError() );
             }
         }
     }
@@ -3603,37 +3657,52 @@ void dlgTriggerEditor::saveAction()
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
+    QString commandDown = mpActionsMainArea->lineEdit_command_down->text();
+    QString commandUp = mpActionsMainArea->lineEdit_command_up->text();
     QString script = mpSourceEditor->toPlainText();
-    int rotation = mpActionsMainArea->buttonRotation->currentIndex();
+    // currentIndex() can return -1 if no setting was previously made - need to fixup:
+    int rotation = qMax( 0, mpActionsMainArea->buttonRotation->currentIndex() );
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
     bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
-    int location = mpActionsMainArea->comboBox_location->currentIndex();
+    // currentIndex() can return -1 if no setting was previously made - need to fixup:
+    int location = qMax( 0, mpActionsMainArea->comboBox_location->currentIndex() );
     if( location > 0 ) location++;
 
-    int orientation = mpActionsMainArea->comboBox_orientation->currentIndex();
-    if( pItem )
-    {
+    // currentIndex() can return -1 if no setting was previously made - need to fixup:
+    int orientation = qMax( 0, mpActionsMainArea->comboBox_orientation->currentIndex() );
+
+    // This is an unnecessary level of indentation but has been retained to
+    // reduce the noise in a git commit/diff caused by the removal of a
+    // redundent "if( pITem )" - can be removed next time the file is modified
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
         TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
         if( pT )
         {
-            pT->setName( name );
-            pT->setIcon( icon );
-            pT->setScript( script );
-            pT->setIsPushDownButton( isChecked );
-            pT->mLocation = location;
-            pT->mOrientation = orientation;
-            pT->setIsActive( pT->shouldBeActive() );
-            pT->setButtonRotation( rotation );
-            pT->setButtonColumns( columns );
-            pT->mUseCustomLayout = false;
-            pT->css = mpActionsMainArea->css->toPlainText();
+            // Do not change anything for a module master folder - it won't "take"
+            if( pT->mPackageName.isEmpty() )
+            {
+                pT->setName( name );
+                pT->setIcon( icon );
+                pT->setScript( script );
+                pT->setCommandButtonDown( commandDown );
+                pT->setCommandButtonUp( commandUp );
+                pT->setIsPushDownButton( isChecked );
+                pT->mLocation = location;
+                pT->mOrientation = orientation;
+                pT->setIsActive( pT->shouldBeActive() );
+                pT->setButtonRotation( rotation );
+                pT->setButtonColumns( columns );
+                pT->mUseCustomLayout = false;
+                pT->css = mpActionsMainArea->css->toPlainText();
+            }
+
             QIcon icon;
             if( pT->isFolder() )
             {
                 if( ! pT->mPackageName.isEmpty() )
                 {
+                    // Has a package name so is a module master folder
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3643,19 +3712,10 @@ void dlgTriggerEditor::saveAction()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent() )
+                else if( ! pT->getParent()
+                      || ! pT->getParent()->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( ! pT->getParent()->mPackageName.isEmpty() )
-                {
+                    // No parent or it has a parent with a package name so is a toolbar
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3667,6 +3727,7 @@ void dlgTriggerEditor::saveAction()
                 }
                 else
                 {
+                    // Else must be a menu
                     if( pT->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3679,6 +3740,7 @@ void dlgTriggerEditor::saveAction()
             }
             else
             {
+                // Is a button
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
@@ -3703,7 +3765,7 @@ void dlgTriggerEditor::saveAction()
                 pItem->setText( 0, name );
             }
         }
-    }
+
     mpHost->getActionUnit()->updateToolbar();
     mudlet::self()->processEventLoopHack();
 }
@@ -4702,46 +4764,135 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditor->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditor->clear();
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked( false );
+    mpActionsMainArea->lineEdit_command_down->clear();
+    mpActionsMainArea->lineEdit_command_up->clear();
     mpActionsMainArea->buttonColumns->clear();
     mpActionsMainArea->css->clear();
+    mpActionsMainArea->comboBox_location->setCurrentIndex( 0 );
+    mpActionsMainArea->comboBox_orientation->setCurrentIndex( 0 );
+    mpActionsMainArea->buttonRotation->setCurrentIndex( 0 );
+    mpActionsMainArea->buttonColumns->setValue( 1 );
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
+    // ID will be 0 for the root of the treewidget and it is not appropriate
+    // to show any right hand side details - pT will also be Q_NULLPTR!
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TAction * pT = mpHost->getActionUnit()->getAction(ID);
     if( pT )
     {
         mpActionsMainArea->lineEdit_action_name->setText( pT->getName() );
         mpActionsMainArea->checkBox_pushdownbutton->setChecked( pT->isPushDownButton() );
+        mpActionsMainArea->label_command_up->hide();
+        mpActionsMainArea->label_command_down->hide();
+        mpActionsMainArea->lineEdit_command_up->hide();
+        mpActionsMainArea->lineEdit_command_down->hide();
+        mpActionsMainArea->label_command_down->setText( tr( "Command:" ) );
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
+        mpActionsMainArea->lineEdit_command_down->setText( pT->getCommandButtonDown() );
+        mpActionsMainArea->lineEdit_command_up->setText( pT->getCommandButtonUp() );
         mpSourceEditor->setPlainText( pT->getScript() );
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
         if( location > 0 ) location--;
         mpActionsMainArea->comboBox_location->setCurrentIndex( location );
         mpActionsMainArea->comboBox_orientation->setCurrentIndex( pT->mOrientation );
-        QColor color = pT->getButtonColor();
-        QPalette palette;
-        palette.setColor( QPalette::Button, color );
         mpActionsMainArea->buttonRotation->setCurrentIndex( pT->getButtonRotation() );
         mpActionsMainArea->buttonColumns->setValue( pT->getButtonColumns() );
-        mpActionsMainArea->css->clear();
         mpActionsMainArea->css->setPlainText( pT->css );
-        if( ! pT->getParent() )
+        if( pT->isFolder() )
         {
-            mpActionsMainArea->groupBox_toolBar->show();
-            mpActionsMainArea->groupBox_appearance->hide();
+            if( ! pT->getPackageName().isEmpty() )
+            {
+                // We have a non-empty package name (Tree<T>::mModuleName
+                // is NEVER used but Tree<T>::mPackageName is for both!)
+                // THUS: We are a module master folder
+
+                mpActionsMainArea->groupBox_toolBar->hide();
+                mpActionsMainArea->groupBox_appearance->hide();
+                mpActionsMainArea->widget_2->hide();
+                mpSourceEditorArea->hide();
+            }
+            else if( ! pT->getParent()
+                  || ( pT->getParent() && ! pT->getParent()->getPackageName().isEmpty() ) )
+                // We are a top-level folder with no parent
+                // OR: We have a parent and that IS a module master folder
+                // THUS: We are a toolbar
+            {
+
+                mpActionsMainArea->groupBox_toolBar->show();
+                mpActionsMainArea->groupBox_appearance->hide();
+                mpActionsMainArea->widget_2->show();
+                mpSourceEditorArea->show();
+            }
+            else {
+                // We must be a MENU
+
+                mpActionsMainArea->groupBox_appearance->setTitle( tr( "Menu properties" ) );
+                mpActionsMainArea->groupBox_toolBar->hide();
+                mpActionsMainArea->checkBox_pushdownbutton->hide();
+                mpActionsMainArea->groupBox_appearance->show();
+                mpActionsMainArea->widget_2->show();
+                mpSourceEditorArea->show();
+            }
         }
-        else
-        {
+        else {
+            // We are a BUTTON
+
+            mpActionsMainArea->groupBox_appearance->setTitle( tr( "Button properties" ) );
             mpActionsMainArea->groupBox_toolBar->hide();
             mpActionsMainArea->groupBox_appearance->show();
+            mpActionsMainArea->label_command_down->show();
+            mpActionsMainArea->lineEdit_command_down->show();
+            mpActionsMainArea->checkBox_pushdownbutton->show();
+            mpSourceEditorArea->show();
+            if( pT->isPushDownButton() )
+            {
+                mpActionsMainArea->label_command_down->setText( tr( "Command (down);" ) );
+                mpActionsMainArea->lineEdit_command_up->show();
+                mpActionsMainArea->label_command_up->show();
+            }
+
+            mpActionsMainArea->widget_2->show();
         }
+
         if( ! pT->state() ) showError( pT->getError() );
+    }
+    else
+    {
+        // On root of treewidget_actions: - show help message instead
+        mpActionsMainArea->hide();
+        mpSourceEditor->hide();
+        showInfo( msgInfoAddButton );
+    }
+}
+
+void dlgTriggerEditor::slot_tree_selection_changed()
+{
+    TTreeWidget * sender = qobject_cast<TTreeWidget *>(QObject::sender());
+    if(sender){
+        QList<QTreeWidgetItem *> items = sender->selectedItems();
+        if(items.length()){
+            QTreeWidgetItem * item = items.first();
+            if(sender == treeWidget_scripts)
+                slot_scripts_selected(item);
+            else if(sender == treeWidget_keys)
+                slot_key_selected(item);
+            else if(sender == treeWidget_timers)
+                slot_timer_selected(item);
+            else if(sender == treeWidget_aliases)
+                slot_alias_selected(item);
+            else if(sender == treeWidget_actions)
+                slot_action_selected(item);
+            else if(sender == treeWidget_variables)
+                slot_var_selected(item);
+            else if(sender == treeWidget_triggers)
+                slot_trigger_selected(item);
+        }
     }
 }
 
@@ -5280,18 +5431,8 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent() )
-                {
-                    if( pT->isActive() )
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                    else
-                    {
-                        icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
-                    }
-                }
-                else if( ! pT->getParent()->mPackageName.isEmpty() )
+                else if( ! pT->getParent()
+                      || ! pT->getParent()->mPackageName.isEmpty() )
                 {
                     if( pT->isActive() )
                     {
@@ -5780,6 +5921,8 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
         {
             if( ! pT->getParent()->mPackageName.isEmpty() )
             {
+                // Must have a parent (or would not be IN this method) and the
+                // parent has a package name - this is a toolbar
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5791,6 +5934,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
             }
             else if( pT->isFolder() )
             {
+                // Is a folder and is not a toolbar - this is a menu
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5802,6 +5946,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
             }
             else
             {
+                // Is a button
                 if( pT->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5894,12 +6039,10 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
 
 void dlgTriggerEditor::slot_show_search_area()
 {
-    if( widget_searchArea->isVisible() )
-    {
+    if( widget_searchArea->isVisible() ) {
         widget_searchArea->hide();
     }
-    else
-    {
+    else {
         widget_searchArea->show();
     }
 }
@@ -6156,10 +6299,7 @@ void dlgTriggerEditor::slot_show_vars( )
     mpCurrentVarItem = 0;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
-    if ( showHiddenVars )
-        button_displayAllVariables->setText( "Hide Hidden Variables" );
-    else
-        button_displayAllVariables->setText( "Show Hidden Variables" );
+    button_displayAllVariables->setChecked( showHiddenVars );
     QTreeWidgetItem * pI = treeWidget_variables->topLevelItem( 0 );
     if( pI )
     {
@@ -6189,10 +6329,7 @@ void dlgTriggerEditor::show_vars( )
     mpCurrentVarItem = 0;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
-    if ( showHiddenVars )
-        button_displayAllVariables->setText( "Hide Hidden Variables" );
-    else
-        button_displayAllVariables->setText( "Show Hidden Variables" );
+    button_displayAllVariables->setChecked( showHiddenVars );
     QTreeWidgetItem * pI = treeWidget_variables->topLevelItem( 0 );
     if( pI )
     {
@@ -7000,7 +7137,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
                             .arg(file.errorString()));
        return;
     }
-    XMLexport writer( mpHost );
+    XMLexport writer( mpHost ); //just export a generic package without host element
     writer.exportGenericPackage( & file );
     file.close();
 }
@@ -7090,6 +7227,22 @@ void dlgTriggerEditor::slot_chose_action_icon()
         QDir::homePath(),
         tr("Images (*.png *.xpm *.jpg)"));
     mpActionsMainArea->lineEdit_action_icon->setText( fileName );
+}
+
+void dlgTriggerEditor::slot_toggle_isPushDownButton( const int state )
+{
+    if( state == Qt::Checked )
+    {
+        mpActionsMainArea->lineEdit_command_up->show();
+        mpActionsMainArea->label_command_up->show();
+        mpActionsMainArea->label_command_down->setText( tr( "Command (down):" ) );
+    }
+    else
+    {
+        mpActionsMainArea->lineEdit_command_up->hide();
+        mpActionsMainArea->label_command_up->hide();
+        mpActionsMainArea->label_command_down->setText( tr( "Command:" ) );
+    }
 }
 
 void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()

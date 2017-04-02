@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
             std::cout << "                       and will make the application wait until a debugger"  << std::endl;
             std::cout << "                       connects to it." << std::endl;
             std::cout << std::endl;
-            std::cout << "Report bugs to: <https://bugs.launchpad.net/mudlet/+filebug>" << std::endl;
+            std::cout << "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>" << std::endl;
             std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
         }
         return 0;
