@@ -269,6 +269,11 @@ IF(WIN32)
   ENDIF()
 ENDIF()
 
+IF(WIN32)
+  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
+  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
+ENDIF()
+
 # Break each step into a separate command so any status message is output straigh away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h

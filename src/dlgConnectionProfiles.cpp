@@ -1317,44 +1317,6 @@ void dlgConnectionProfiles::slot_connectToServer()
     emit signal_establish_connection( profile_name, 0 );
 }
 
-// Not Used:
-//void dlgConnectionProfiles::slot_chose_history()
-//{
-//    QString profile_name = profile_name_entry->text().trimmed();
-//    if( profile_name.size() < 1 )
-//    {
-//        QMessageBox::warning(this, tr("Browse Profile History:"),
-//                             tr("You have not selected a profile yet.\nWhich profile history do you want to browse?\nPlease select a profile first."));
-//        return;
-//    }
-//    QString fileName = QFileDialog::getOpenFileName(this, tr("Chose Mudlet Profile"),
-//                                                    QStringLiteral( "%1/.config/mudlet/profiles/%2" )
-//                                                        .arg( QDir::homePath() )
-//                                                        .arg( profile_name ),
-//                                                    tr("*.xml"));
-
-//    if( fileName.isEmpty() ) return;
-
-//    QFile file(fileName);
-//    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-//    {
-//        QMessageBox::warning(this, tr("Import Mudlet Package:"),
-//                             tr("Cannot read file %1:\n%2.")
-//                             .arg(fileName)
-//                             .arg(file.errorString()));
-//        return;
-//    }
-
-//    mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
-//    Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
-//    if( ! pHost ) return;
-//    XMLimport importer( pHost );
-//    importer.importPackage( & file );
-
-//    emit signal_establish_connection( profile_name, -1 );
-//    QDialog::accept();
-//}
-
 bool dlgConnectionProfiles::validateConnect()
 {
     if (validName && validUrl && validPort)

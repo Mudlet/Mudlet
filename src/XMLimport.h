@@ -51,6 +51,7 @@ class XMLimport : public QXmlStreamReader
 
 public:
     XMLimport(Host*);
+
     bool importPackage(QIODevice* device, QString packageName = QString(), int moduleFlag = 0);
 
 private:

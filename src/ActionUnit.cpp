@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -313,7 +314,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
                 {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar( *it3, mudlet::self(), pTB );
+                constructToolbar( *it3, pTB );
                 (*it3)->mpToolBar = pTB;
                 pTB->setStyleSheet( pTB->mpTAction->css );
             }
@@ -342,7 +343,7 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar( *it, mudlet::self(), pTB );
+        constructToolbar( *it, pTB );
         (*it)->mpToolBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
@@ -384,7 +385,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
                 {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar( *it3, mudlet::self(), pTB );
+                constructToolbar( *it3, pTB );
                 (*it3)->mpEasyButtonBar = pTB;
                 pTB->setStyleSheet( pTB->mpTAction->css );
             }
@@ -415,7 +416,7 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar( *it, mudlet::self(), pTB );
+        constructToolbar( *it, pTB );
         (*it)->mpEasyButtonBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
@@ -468,7 +469,7 @@ void ActionUnit::hideToolBar(const QString & name )
 
 }
 
-void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar * pTB )
+void ActionUnit::constructToolbar( TAction * pA, TToolBar * pTB )
 {
     pTB->clear();
     if( ( pA->mLocation != 4 ) || ( ! pA->isActive() ) )
@@ -480,7 +481,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TToolBar 
 
     if( pA->mLocation == 4 )
     {
-        pA->expandToolbar( pMainWindow, pTB, 0 );
+        pA->expandToolbar( pTB );
         pTB->setTitleBarWidget( 0 );
     }
     /*else
@@ -532,7 +533,7 @@ TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
     return 0;
 }
 
-void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButtonBar * pTB )
+void ActionUnit::constructToolbar( TAction * pA, TEasyButtonBar * pTB )
 {
     pTB->clear();
     if( pA->mLocation == 4 ) return; //floating toolbars are handled differently
@@ -542,7 +543,7 @@ void ActionUnit::constructToolbar( TAction * pA, mudlet * pMainWindow, TEasyButt
         return;
     }
 
-    pA->expandToolbar( pMainWindow, pTB, 0 );
+    pA->expandToolbar( pTB );
     pTB->finalize();
     if( pA->mOrientation == 0 )
         pTB->setHorizontalOrientation();

@@ -138,11 +138,11 @@ public:
     class              Exception_NoLogin{};
     class              Exception_NoConnectionAvailable{};
 
-    bool               installPackage(const QString&, int module);
-    bool               uninstallPackage(const QString&, int module);
-    bool               removeDir( const QString& dirName, const QString& originalPath);
-    void               readPackageConfig(const QString&, QString & );
-    void                postMessage( const QString message ) { mTelnet.postMessage( message ); }
+    bool                installPackage(const QString&, int);
+    bool                uninstallPackage(const QString&, int);
+    bool                removeDir(const QString&, const QString&);
+    void                readPackageConfig(const QString&, QString &);
+    void                postMessage(const QString message) { mTelnet.postMessage(message); }
 
 
     cTelnet            mTelnet;
