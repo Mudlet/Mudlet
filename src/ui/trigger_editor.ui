@@ -704,7 +704,7 @@
                  <item>
                   <widget class="QToolButton" name="button_toggleSearchAreaResults">
                    <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    <string>Toggles the display of the search results area.</string>
                    </property>
                    <property name="text">
                     <string>...</string>
