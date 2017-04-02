@@ -12769,9 +12769,6 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
     QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
-    if( mpHost->mpConsole->buffer.size() > 0 )
-        if( !mpHost->mpConsole->buffer.lineBuffer.at( mpHost->mpConsole->buffer.lineBuffer.size() - 1 ).isEmpty() )
-          mpHost->postMessage("\n");
 
     if( mpHost->mpEditorDialog )
     {
@@ -12780,8 +12777,13 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3 );
     }
 
-    if( mpHost->mpConsole && mpHost->mEchoLuaErrors )
+    if( mpHost->mEchoLuaErrors )
     {
+        // ensure the Lua error is on a line of it's own and is not prepended to the previous line
+        if( mpHost->mpConsole->buffer.size() > 0 )
+            if( !mpHost->mpConsole->buffer.lineBuffer.at( mpHost->mpConsole->buffer.lineBuffer.size() - 1 ).isEmpty() )
+              mpHost->postMessage("\n");
+
         mpHost->postMessage( msg );
     }
 }
