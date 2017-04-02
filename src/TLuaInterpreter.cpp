@@ -12777,7 +12777,7 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3 );
     }
 
-    if( mpHost->mpConsole && mpHost->mEchoLuaErrors )
+    if( mpHost->mEchoLuaErrors )
     {
         // ensure the Lua error is on a line of it's own and is not prepended to the previous line
         if( mpHost->mpConsole->buffer.size() > 0 )
