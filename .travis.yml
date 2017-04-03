@@ -6,14 +6,17 @@ compiler:
   - gcc
   - clang
 env:
-  - Q_OR_C_MAKE=qmake
+  matrix:
   - Q_OR_C_MAKE=cmake
+  - Q_OR_C_MAKE=qmake
+  global:
+  - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
 matrix:
 # Something goes wrong internally in Qt (5.0.2) for CMake Clang builds on Linux
-    allow_failures:
-    - os: linux
-      compiler: clang
-      env: Q_OR_C_MAKE=cmake
+  allow_failures:
+  - os: linux
+    compiler: clang
+    env: Q_OR_C_MAKE=cmake
 
 before_install: ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
