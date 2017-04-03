@@ -242,6 +242,8 @@ void XMLimport::readVariableGroup(TVar* pParent)
             }
         }
     }
+
+    delete var;
 }
 
 void XMLimport::readHiddenVariables()
