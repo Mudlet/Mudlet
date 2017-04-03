@@ -46,7 +46,6 @@ signals:
 
 public slots:
 
-// Not Used:    void slot_chose_history();
     void slot_update_name( const QString ) ;
     void slot_save_name() ;
     void slot_update_url( const QString ) ;

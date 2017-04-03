@@ -71,8 +71,8 @@ public:
     void             start();
     void             enableTimer();
     void             disableTimer();
-    void             enableTimer(const QString & );
-    void             disableTimer(const QString & );
+    void             enableTimer( const QString & );
+    void             disableTimer( const QString & );
     void             enableTimer( int );
     void             disableTimer( int );
     void             killTimer();
