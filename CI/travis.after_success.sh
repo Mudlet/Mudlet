@@ -1,4 +1,9 @@
 #!/bin/bash
+
+if [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; then
+  exit 0
+fi
+
 if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then
   echo Deploy on linux.
   . CI/travis.linux.after_success.sh;
