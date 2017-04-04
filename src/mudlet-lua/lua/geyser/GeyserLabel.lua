@@ -112,7 +112,7 @@ function Geyser.Label:getWindow(label)
             return v
         end
 
-        -- 030517 the below searchs down one level
+        -- search down one level to enable nesting in a container
 	for key,val in pairs(v.windowList) do
            if val.name == label then
               return val
