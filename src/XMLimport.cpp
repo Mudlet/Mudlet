@@ -207,6 +207,7 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
 void XMLimport::readVariableGroup(TVar* pParent)
 {
     TVar* var = new TVar(pParent);
+
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     QString keyName, value;
@@ -446,6 +447,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             pT->x = attributes().value(QStringLiteral("x")).toString().toInt();
             pT->y = attributes().value(QStringLiteral("y")).toString().toInt();
             pT->z = attributes().value(QStringLiteral("z")).toString().toInt();
+            continue;
         } else if (Q_UNLIKELY(name().isEmpty())) {
             continue;
         }
@@ -1184,7 +1186,9 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "sizeY") {
                 pT->mSizeY = readElementText().toInt();
             } else if (name() == "mButtonState") {
-                pT->mButtonState = readElementText().toInt();
+                // We now use a boolean but file must use original "1" (false)
+                // or "2" (true) for backward compatibility
+                pT->mButtonState = ( readElementText().toInt() == 2 );
             } else if (name() == "buttonColor") {
                 pT->mButtonColor.setNamedColor(readElementText());
             } else if (name() == "buttonColumn") {
