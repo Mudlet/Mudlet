@@ -79,8 +79,17 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setClickCallback (func, ...)
    setLabelClickCallback(self.name, func, ...)
-   self.callback = func
-   self.args = {...}
+   self.clickCallback = func
+   self.clickArgs = {...}
+end
+
+--- Sets a callback to be used when a mouse click is released over this label.
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.Label:setReleaseCallback (func, ...)
+   setLabelReleaseCallback(self.name, func, ...)
+   self.releaseCallback = func
+   self.releaseArgs = {...}
 end
 
 --- Sets a callback to be used when the mouse passes over this label.
@@ -111,9 +120,15 @@ function Geyser.Label:getWindow(label)
         if v.name == label then
             return v
         end
-    end
-end
 
+        -- search down one level to enable nesting in a container
+	for key,val in pairs(v.windowList) do
+           if val.name == label then
+              return val
+           end
+        end
+     end
+end
 
 --- closes all nested labels
 function closeAllLevels()
@@ -406,13 +421,23 @@ function Geyser.Label:new (cons, container)
      --echo("setting callback to doNestClick")
      setLabelClickCallback(me.name, "doNestClick", me.name)
    end
-   if me.callback then
-      if type(me.args) == "" then
-         me:setClickCallback(me.callback, me.args)
-      elseif type(me.args) == "table" then
-         me:setClickCallback(me.callback, unpack(me.args))
+   if me.clickCallback then
+      if type(me.clickArgs) == "" then
+         me:setClickCallback(me.clickCallback, me.clickArgs)
+      elseif type(me.clickArgs) == "table" then
+         me:setClickCallback(me.clickCallback, unpack(me.clickArgs))
       else
-         me:setClickCallback(me.callback)
+         me:setClickCallback(me.clickCallback)
+      end
+   end
+   
+   if me.releaseCallback then
+      if type(me.releaseArgs) == "" then
+         me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
+      elseif type(me.releaseArgs) == "table" then
+         me:setReleaseCallback(me.releaseCallback, unpack(me.releaseArgs))
+      else
+         me:setReleaseCallback(me.releaseCallback)
       end
    end
 
@@ -455,32 +480,16 @@ function Geyser.Label:addScrollbars(parent,layout)
     return {backward, forward}
 end
 
---- cons argument for @{Geyser.Label:addChild}
--- @field name a unique name for the label
--- @field height height of the label - specify it as the defaults are huge
--- @field width width of the label - specify it as the defaults are huge
--- @field[opt='LV'] layoutDir specifies in which direction and axis should the labels align, where 2 letters combine into the option: first letter R for right, L for left, T for top, B for bottom, followed by the orientation: V for vertical or H for horizontal. So options are: layoutDir="RV", layoutDir="RH", layoutDir="LV", layoutDir="LH", and so on
--- @field[opt=false] flyOut allows labels to show up when mouse is hovered over
--- @field[opt=''] message initial message to show on the label
--- @field[opt='white'] fgColor optional foreground colour - colour to use for text on the label
--- @field[opt='black'] bgColor optional background colour - colour of the whole label
--- @field[opt=1] fillBg 1 if the background is to be filled, 0 for no background
-addChildCons = {
-  name = "",
-  height = 30,
-  width = 70,
-  layoutDir = "RV",
-  flyOut = true,
-  message = "",
-  fgColor = "white",
-  bgColor = "black",
-  fillBig = 1,
-}
-addChildCons = nil
-
---- adds a flyout label to an existing label that is marked with nestable=true
---- see http://wiki.mudlet.org/w/Manual:Geyser#Flyout_Labels for examples
--- @tparam table cons see @{addChildCons}
+---@param cons table of Geyser window options such as name, width, and height
+-- @param cons.name a unique name for the label
+-- @param cons.height height of the label - specify it as the defaults are huge
+-- @param cons.width width of the label - specify it as the defaults are huge
+-- @param[opt='LV'] cons.layoutDir specifies in which direction and axis should the labels align, where 2 letters combine into the option: first letter R for right, L for left, T for top, B for bottom, followed by the orientation: V for vertical or H for horizontal. So options are: layoutDir="RV", layoutDir="RH", layoutDir="LV", layoutDir="LH", and so on
+-- @param[opt=false] cons.flyOut allows labels to show up when mouse is hovered over
+-- @param[opt=''] cons.message initial message to show on the label
+-- @param[opt='white'] cons.fgColor optional foreground colour - colour to use for text on the label
+-- @param[opt='black'] cons.bgColor optional background colour - colour of the whole label
+-- @param[opt=1] cons.fillBg 1 if the background is to be filled, 0 for no background
 function Geyser.Label:addChild(cons, container)
     cons = cons or {}
     cons.type = cons.type or "nestedLabel"
@@ -504,13 +513,21 @@ function Geyser.Label:addChild(cons, container)
         setLabelOnEnter(me.name, "doNestEnter", me.name)
         setLabelOnLeave(me.name, "doNestLeave", me.name)
     end
-    if me.callback then
-       me:setClickCallback(me.callback, me.args)
+    if me.clickCallback then
+       me:setClickCallback(me.clickCallback, me.clickArgs)
     else
         --used in instances where an element only meant to serve as
         --a nest container is clicked on.  Without this, we get
         --seg faults
         me:setClickCallback("fakeFunction")
+    end
+    if me.releaseCallback then
+       me:setReleaseCallback(me.releaseCallback, me.releaseArgs)
+    else
+        --used in instances where an element only meant to serve as
+        --a nest container is released over.  Without this, we get
+        --seg faults
+        me:setreleaseCallback("fakeFunction")
     end
     me.flyDir = flyDir
     me.layoutDir =layoutDir
