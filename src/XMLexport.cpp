@@ -552,13 +552,11 @@ bool XMLexport::writeHost( Host * pHost )
     if( isOk ) {
         writeStartElement("KeyPackage");
         for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->mModuleMember) {
+            if( ! (*it) || (*it)->isTempKey() || (*it)->mModuleMember) {
                 continue;
             }
-            if( ! (*it)->isTempKey() ) {
-                if( ! writeKey( *it ) ) {
-                    isOk = false;
-                }
+            if( ! writeKey( *it ) ) {
+                isOk = false;
             }
         }
         writeEndElement(); // </KeyPackage>
