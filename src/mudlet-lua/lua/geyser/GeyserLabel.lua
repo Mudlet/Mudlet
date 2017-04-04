@@ -83,7 +83,7 @@ function Geyser.Label:setClickCallback (func, ...)
    self.clickArgs = {...}
 end
 
---- Sets a callback to be used a mouse click is released over this label.
+--- Sets a callback to be used when a mouse click is released over this label.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setReleaseCallback (func, ...)
