@@ -248,8 +248,9 @@ void AliasUnit::removeAlias( TAlias * pT )
         mLookupTable.remove( pT->mName, pT );
     }
     else
+    {
         mLookupTable.remove( pT->getName() );
-
+    }
     mAliasMap.remove(pT->getID());
 }
 

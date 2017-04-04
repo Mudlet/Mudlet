@@ -61,7 +61,7 @@ TAlias::~TAlias()
     mpHost->getAliasUnit()->unregisterAlias(this);
 }
 
-void TAlias::setName(const QString& name )
+void TAlias::setName( const QString& name )
 {
     if( ! mIsTempAlias )
     {

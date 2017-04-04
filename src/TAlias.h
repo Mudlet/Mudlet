@@ -44,10 +44,10 @@ public:
 
     virtual          ~TAlias();
                      TAlias( TAlias * parent, Host * pHost );
-                     TAlias(const QString& name, Host * pHost );
+                     TAlias( const QString& name, Host * pHost );
     void             compileAll();
     QString          getName()                              { return mName; }
-    void             setName(const QString& name );
+    void             setName( const QString& name );
     void             compile();
     bool             compileScript();
     void             execute();
