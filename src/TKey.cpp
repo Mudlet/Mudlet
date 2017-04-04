@@ -61,6 +61,15 @@ TKey::~TKey()
     mpHost->getKeyUnit()->unregisterKey(this);
 }
 
+void TKey::setName( const QString& name )
+{
+    if( ! mIsTempKey )
+    {
+        mpHost->getKeyUnit()->mLookupTable.remove( mName, this );
+    }
+    mName = name;
+    mpHost->getKeyUnit()->mLookupTable.insertMulti( name, this );
+}
 
 bool TKey::match( int key, int modifier )
 {

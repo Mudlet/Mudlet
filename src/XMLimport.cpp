@@ -1278,21 +1278,21 @@ void XMLimport::readKeyGroup(TKey* pParent)
 {
     TKey* pT = new TKey(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
     mpHost->getKeyUnit()->registerKey(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
-
+    pT->mIsFolder = (attributes().value("isFolder") == "yes");
     if (module) {
         pT->mModuleMember = true;
     }
 
     while (!atEnd()) {
         readNext();
+
         if (isEndElement()) {
             break;
         } else if (isStartElement()) {
             if (name() == "name") {
-                pT->mName = readElementText();
+                pT->setName(readElementText());
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {

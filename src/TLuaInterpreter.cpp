@@ -6808,7 +6808,6 @@ int TLuaInterpreter::exists( lua_State * L )
     {
         cnt += pHost->getAliasUnit()->mLookupTable.count( name );
     }
-    //TODO: exists(keybind) doesn't currently work, figure out why
     else if( type == "keybind")
     {
         cnt += pHost->getKeyUnit()->mLookupTable.count( name );

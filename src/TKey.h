@@ -45,7 +45,7 @@ public:
                      TKey( QString name, Host * pHost );
     void             compileAll();
     QString          getName()                          { return mName; }
-    void             setName( QString name )            { mName = name; }
+    void             setName( const QString & name );
     int              getKeyCode()                       { return mKeyCode; }
     void             setKeyCode( int code )             { mKeyCode = code; }
     int              getKeyModifiers()                  { return mKeyModifier; }
@@ -69,7 +69,6 @@ public:
     //bool             restore( QDataStream & fs, bool );
     bool             exportItem;
     bool            mModuleMasterFolder;
-private:
 
                      TKey(){};
     QString          mName;
@@ -94,7 +93,6 @@ private:
     bool             mNeedsToBeCompiled;
     bool             mIsTempKey;
     bool             mModuleMember;
-
 };
 
 #endif // MUDLET_TKEY_H
