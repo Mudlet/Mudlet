@@ -672,7 +672,7 @@ void dlgTriggerEditor::readSettings()
     from the config directory "mudlet", application "Mudlet", we try to load from the config 
     directory "Mudlet", application "Mudlet 1.0". */
     QSettings settings_new("mudlet","Mudlet");
-    QSettings settings((settings_new.value("pos")==0? "Mudlet":"mudlet"),(settings_new.value("pos")==0? "Mudlet 1.0":"Mudlet"));
+    QSettings settings((settings_new.contains("pos")? "mudlet":"Mudlet"),(settings_new.contains("pos")? "Mudlet":"Mudlet 1.0"));
     
 
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
