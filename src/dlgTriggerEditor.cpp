@@ -468,12 +468,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_variables, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
 
-    QIcon icon_toggleSearchAreaResults;
-    icon_toggleSearchAreaResults.addPixmap( QPixmap( QStringLiteral( ":/icons/1rightarrow_grey.png" ) ), QIcon::Normal, QIcon::Off );
-    icon_toggleSearchAreaResults.addPixmap( QPixmap( QStringLiteral( ":/icons/1downarrow_grey.png" ) ), QIcon::Normal, QIcon::On );
-    button_toggleSearchAreaResults->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Maximum );
-    button_toggleSearchAreaResults->setMaximumSize( QSize( (3*widget_searchTerm->height())/4, (3*widget_searchTerm->height())/4 ) );
-    button_toggleSearchAreaResults->setIcon( icon_toggleSearchAreaResults );
+    // Force the size of the triangle icon button that shows/hides the search
+    // results to be 3/4 of the height of the combo-box used to enter the search
+    // term - this is to prevent an overlarge button on MacOS platforms where it
+    // was found to be an issue!
+    button_toggleSearchAreaResults->setMaximumSize( QSize( (3*comboBox_searchTerms->height())/4, (3*comboBox_searchTerms->height())/4 ) );
+    button_toggleSearchAreaResults->setMinimumSize( QSize( (3*comboBox_searchTerms->height())/4, (3*comboBox_searchTerms->height())/4 ) );
 
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
@@ -513,13 +513,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QStringList labelList;
     labelList << "Type" << "Name" << "Where" << "What";
     treeWidget_searchResults->setHeaderLabels( labelList );
-    // Force the size of the triangle icon button that shows/hides the search
-    // results to be a (maximum) of 3/4 of the same height as the combo-box used
-    // to enter the search term - this is to prevent an overlarge button on
-    // MacOS platforms where it was found to be an issue!
-    button_toggleSearchAreaResults->setIconSize( QSize( (3*widget_searchTerm->height())/4, (3*widget_searchTerm->height())/4 ) );
-    // Hides the above treeWidget_searchResults and sets the icon on the
-    // show/hide button:
+
     slot_showSearchAreaResults(false);
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
@@ -554,6 +548,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
         pItem->number->show();
     }
     showHiddenVars = false;
+    widget_searchTerm->updateGeometry();
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar( bool status )
@@ -6026,6 +6021,7 @@ void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
             // toggled(bool) one, which is why we use the former...
             button_toggleSearchAreaResults->setChecked( true );
         }
+        button_toggleSearchAreaResults->setArrowType( Qt::DownArrow );
         treeWidget_searchResults->show();
     }
     else {
@@ -6033,6 +6029,7 @@ void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
         {
             button_toggleSearchAreaResults->setChecked( false );
         }
+        button_toggleSearchAreaResults->setArrowType( Qt::RightArrow );
         treeWidget_searchResults->hide();
     }
 }
