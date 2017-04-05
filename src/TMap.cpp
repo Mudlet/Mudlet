@@ -1804,12 +1804,12 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
         }
     }
 
-    TRoom * _pT = new TRoom( 0 );
+    TRoom _pT(0);
     QSet<int> _dummyRoomIdSet;
     while( ! ifs.atEnd() ) {
         int i;
         ifs >> i;
-        _pT->restore( ifs, i, otherProfileVersion );
+        _pT.restore( ifs, i, otherProfileVersion );
         // Can't do mpRoomDB->restoreSingleRoom( ifs, i, pT ) as it would mess up
         // this TMap::mpRoomDB
         // So emulate using _dummyRoomIdSet
