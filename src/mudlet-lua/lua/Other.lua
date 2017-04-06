@@ -141,11 +141,7 @@ end
 ---     permGroup("Defensive aliases", "alias")
 ---   end
 --- </pre>
-function permGroup(name, itemtype, parent)
-  assert(type(name) == "string", "permGroup: need a name for the new thing")
-  parent = parent or ""
-
-  local t = {
+local group_creation_functions = {
     timer = function(name, parent)
         return not (permTimer(name, parent, 0, "") == -1)
        end,
@@ -157,9 +153,11 @@ function permGroup(name, itemtype, parent)
       end
  }
 
- assert(t[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
-
- return t[itemtype](name, parent)
+function permGroup(name, itemtype, parent)
+  assert(type(name) == "string", "permGroup: need a name for the new thing")
+  parent = parent or ""
+  assert(group_creation_functions[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
+  return group_creation_functions[itemtype](name, parent)
 end
 
 
