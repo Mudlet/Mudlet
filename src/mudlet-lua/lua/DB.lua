@@ -498,7 +498,7 @@ function db:_migrate(db_name, s_name)
    -- have been added.
    local cur = conn:execute("PRAGMA table_info('"..s_name.."')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
-   if type(cur) ~= "number" then
+   if cur and type(cur) ~= "number" then
       local row = cur:fetch({}, "a")
       if row then
          while row do
@@ -1692,7 +1692,7 @@ end
 
 
 
-function db.Database._drop(s_name)
+function db.Database:_drop(s_name)
    local conn = db.__conn[self._db_name]
    local schema = db.__schema[self._db_name]
 
