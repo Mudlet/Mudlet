@@ -124,10 +124,25 @@ function sendAll(...)
 end
 
 
+--- Table of functions used by permGroup to create the appropriate group, based on itemtype.
+local group_creation_functions = {
+    timer = function(name, parent)
+        return not (permTimer(name, parent, 0, "") == -1)
+       end,
+    trigger = function(name, parent)
+        return not (permSubstringTrigger(name, parent, {""}, "") == -1)
+      end,
+    alias = function(name, parent)
+        return not (permAlias(name, parent, "", "") == -1)
+      end
+ }
+
 --- Creates a group of a given type that will persist through sessions.
 ---
---- @param name name of the teim
+--- @param name name of the item
 --- @param itemtype type of the item - can be trigger, alias, or timer
+--- @param parent optional name of existing item which the new item
+---   will be created as a child of
 ---
 --- @usage
 --- <pre>
@@ -141,18 +156,6 @@ end
 ---     permGroup("Defensive aliases", "alias")
 ---   end
 --- </pre>
-local group_creation_functions = {
-    timer = function(name, parent)
-        return not (permTimer(name, parent, 0, "") == -1)
-       end,
-    trigger = function(name, parent)
-        return not (permSubstringTrigger(name, parent, {""}, "") == -1)
-      end,
-    alias = function(name, parent)
-        return not (permAlias(name, parent, "", "") == -1)
-      end
- }
-
 function permGroup(name, itemtype, parent)
   assert(type(name) == "string", "permGroup: need a name for the new thing")
   parent = parent or ""
