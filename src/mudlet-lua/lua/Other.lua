@@ -141,24 +141,25 @@ end
 ---     permGroup("Defensive aliases", "alias")
 ---   end
 --- </pre>
-function permGroup(name, itemtype)
+function permGroup(name, itemtype, parent)
   assert(type(name) == "string", "permGroup: need a name for the new thing")
+  parent = parent or ""
 
   local t = {
-    timer = function(name)
-        return (permTimer(name, "", 0, "") == -1) and false or true
+    timer = function(name, parent)
+        return not (permTimer(name, parent, 0, "") == -1)
        end,
-    trigger = function(name)
-        return (permSubstringTrigger(name, "", {""}, "") == -1) and false or true
+    trigger = function(name, parent)
+        return not (permSubstringTrigger(name, parent, {""}, "") == -1)
       end,
-    alias = function(name)
-        return (permAlias(name, "", "", "") == -1) and false or true
+    alias = function(name, parent)
+        return not (permAlias(name, parent, "", "") == -1)
       end
  }
 
  assert(t[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
 
- return t[itemtype](name)
+ return t[itemtype](name, parent)
 end
 
 
