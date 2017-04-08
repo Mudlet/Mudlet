@@ -1648,6 +1648,10 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
     QDir dir( folder );
     dir.setSorting( QDir::Time );
     entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
+    
+    if ( entries.isEmpty() ) {
+        return false;
+    }
 
     // As the files are sorted by time this gets the latest one
     QFile file( QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at( 0 ) ) );
