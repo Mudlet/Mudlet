@@ -1743,40 +1743,40 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
         }
         // read each area
         for( int i = 0; i < areaSize; i++ ) {
-            TArea * pA = new TArea( 0, 0 );
+            TArea pA( 0, 0 );
             int areaID;
             ifs >> areaID;
-            ifs >> pA->rooms;
-            ifs >> pA->ebenen;
-            ifs >> pA->exits;
-            ifs >> pA->gridMode;
-            ifs >> pA->max_x;
-            ifs >> pA->max_y;
-            ifs >> pA->max_z;
-            ifs >> pA->min_x;
-            ifs >> pA->min_y;
-            ifs >> pA->min_z;
-            ifs >> pA->span;
+            ifs >> pA.rooms;
+            ifs >> pA.ebenen;
+            ifs >> pA.exits;
+            ifs >> pA.gridMode;
+            ifs >> pA.max_x;
+            ifs >> pA.max_y;
+            ifs >> pA.max_z;
+            ifs >> pA.min_x;
+            ifs >> pA.min_y;
+            ifs >> pA.min_z;
+            ifs >> pA.span;
             if( otherProfileVersion >= 17 ) {
-                ifs >> pA->xmaxEbene;
-                ifs >> pA->ymaxEbene;
-                ifs >> pA->xminEbene;
-                ifs >> pA->yminEbene;
+                ifs >> pA.xmaxEbene;
+                ifs >> pA.ymaxEbene;
+                ifs >> pA.xminEbene;
+                ifs >> pA.yminEbene;
             }
             else {
                 QMap<int, int> dummyMinMaxEbene;
-                ifs >> pA->xmaxEbene;
-                ifs >> pA->ymaxEbene;
+                ifs >> pA.xmaxEbene;
+                ifs >> pA.ymaxEbene;
                 ifs >> dummyMinMaxEbene;
-                ifs >> pA->xminEbene;
-                ifs >> pA->yminEbene;
+                ifs >> pA.xminEbene;
+                ifs >> pA.yminEbene;
                 ifs >> dummyMinMaxEbene;
             }
-            ifs >> pA->pos;
-            ifs >> pA->isZone;
-            ifs >> pA->zoneAreaRef;
+            ifs >> pA.pos;
+            ifs >> pA.isZone;
+            ifs >> pA.zoneAreaRef;
             if( otherProfileVersion >= 17 ) {
-                ifs >> pA->mUserData;
+                ifs >> pA.mUserData;
             }
         }
     }
