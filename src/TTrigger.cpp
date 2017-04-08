@@ -636,7 +636,7 @@ bool TTrigger::match_substring( const QString & toMatch, const QString & regex, 
             TConsole * pC = mpHost->mpConsole;
             pC->deselect();
             auto its = captureList.begin();
-            std::list<int>::iterator iti = posList.begin();
+            auto iti = posList.begin();
             for( ; iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
