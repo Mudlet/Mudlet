@@ -160,7 +160,7 @@
          </size>
         </property>
         <property name="toolTip">
-         <string>Chose a good name for your trigger. This name will be displayed in the trigger tree.</string>
+         <string>Choose a good name for your trigger. This name will be displayed in the trigger tree.</string>
         </property>
        </widget>
       </item>
@@ -547,7 +547,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>chose file:</string>
+                  <string>choose file:</string>
                  </property>
                 </widget>
                </item>
@@ -1259,7 +1259,7 @@ as this is a complex topic.</string>
             </size>
            </property>
            <property name="toolTip">
-            <string>Chose this option if you want to include all possible matches of the pattern in the line. 
+            <string>Choose this option if you want to include all possible matches of the pattern in the line.
 Without this option, the pattern matching will stop after the first successful match.</string>
            </property>
            <property name="title">

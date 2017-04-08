@@ -373,7 +373,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_57">
             <property name="text">
-             <string>Chose spell check dictionary:</string>
+             <string>Choose spell check dictionary:</string>
             </property>
            </widget>
           </item>
@@ -1484,7 +1484,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_saveMap">
             <property name="text">
-             <string>Press to chose location and save</string>
+             <string>Press to choose location and save</string>
             </property>
            </widget>
           </item>
@@ -1511,7 +1511,7 @@
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_loadMap">
             <property name="text">
-             <string>Press to chose file and load</string>
+             <string>Press to choose file and load</string>
             </property>
            </widget>
           </item>

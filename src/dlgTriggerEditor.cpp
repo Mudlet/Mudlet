@@ -6683,14 +6683,14 @@ void dlgTriggerEditor::exportTrigger( QFile & file )
         else
         {
             QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     }
     else
     {
         QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer( pT );
@@ -6717,14 +6717,14 @@ void dlgTriggerEditor::exportTimer( QFile & file )
         else
         {
             QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     }
     else
     {
         QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer( pT );
@@ -6751,14 +6751,14 @@ void dlgTriggerEditor::exportAlias( QFile & file )
         else
         {
             QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     }
     else
     {
         QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer( pT );
@@ -6785,14 +6785,14 @@ void dlgTriggerEditor::exportAction( QFile & file )
         else
         {
             QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     }
     else
     {
         QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer( pT );
@@ -6819,14 +6819,14 @@ void dlgTriggerEditor::exportScript( QFile & file )
         else
         {
             QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     }
     else
     {
         QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer( pT );
@@ -6853,7 +6853,7 @@ void dlgTriggerEditor::exportKey( QFile & file )
         else
         {
              QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
 
@@ -6861,7 +6861,7 @@ void dlgTriggerEditor::exportKey( QFile & file )
     else
     {
         QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+                             tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer( pT );
@@ -7281,7 +7281,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
 
 void dlgTriggerEditor::slot_soundTrigger()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("chose sound file"),
+    QString fileName = QFileDialog::getOpenFileName(this, tr("choose sound file"),
                                                     QDir::homePath(),
                                                     tr("*"));
     mpTriggersMainArea->lineEdit_soundFile->setText( fileName );
