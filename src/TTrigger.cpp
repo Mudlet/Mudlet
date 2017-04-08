@@ -421,8 +421,8 @@ END:
         int total = captureList.size();
         TConsole * pC = mpHost->mpConsole;
         pC->deselect();
-        std::list<std::string>::iterator its = captureList.begin();
-        std::list<int>::iterator iti = posList.begin();
+        auto its = captureList.begin();
+        auto iti = posList.begin();
         for( int i=1; iti!=posList.end(); ++iti, ++its, i++ )
         {
             int begin = *iti;
@@ -465,8 +465,8 @@ END:
              if( captureList.size() > 1 )
              {
                  int total = captureList.size();
-                 std::list<std::string>::iterator its = captureList.begin();
-                 std::list<int>::iterator iti = posList.begin();
+                 auto its = captureList.begin();
+                 auto iti = posList.begin();
                  for( int i=1; iti!=posList.end(); ++iti, ++its, i++ )
                  {
                      int begin = *iti;
@@ -512,8 +512,8 @@ bool TTrigger::match_begin_of_line_substring( const QString & toMatch, const QSt
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
-            std::list<std::string>::iterator its = captureList.begin();
-            std::list<int>::iterator iti = posList.begin();
+            auto its = captureList.begin();
+            auto iti = posList.begin();
             for( ; iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
@@ -635,7 +635,7 @@ bool TTrigger::match_substring( const QString & toMatch, const QString & regex, 
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
             pC->deselect();
-            std::list<std::string>::iterator its = captureList.begin();
+            auto its = captureList.begin();
             std::list<int>::iterator iti = posList.begin();
             for( ; iti!=posList.end(); ++iti, ++its )
             {
@@ -743,8 +743,8 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
             pC->deselect();
-            std::list<std::string>::iterator its = captureList.begin();
-            std::list<int>::iterator iti = posList.begin();
+            auto its = captureList.begin();
+            auto iti = posList.begin();
             for( ; iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
@@ -859,8 +859,8 @@ bool TTrigger::match_exact_match( const QString & toMatch, const QString & line,
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
-            std::list<std::string>::iterator its = captureList.begin();
-            std::list<int>::iterator iti = posList.begin();
+            auto its = captureList.begin();
+            auto iti = posList.begin();
             for( ; iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
@@ -1017,11 +1017,11 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
                         multiCaptureList = (*it).second->multiCaptureList;
                         if( multiCaptureList.size() > 0 )
                         {
-                            std::list< std::list<std::string> >::iterator mit = multiCaptureList.begin();
+                            auto mit = multiCaptureList.begin();
                             for( ; mit!=multiCaptureList.end(); mit++, k++ )
                             {
                                 int total = (*mit).size();
-                                std::list<std::string>::iterator its = (*mit).begin();
+                                auto its = (*mit).begin();
                                 for( int i=1; its!=(*mit).end(); ++its, i++ )
                                 {
                                     std::string s = *its;

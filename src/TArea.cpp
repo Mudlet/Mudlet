@@ -157,7 +157,7 @@ QList<int> TArea::getCollisionNodes()
                 {
                     if( ! problems.contains( node ) )
                     {
-                        QMultiMap<int, int>::iterator it4 = y_val.find(z);
+                        auto it4 = y_val.find(z);
                         problems.append( it4.value() );
                         //qDebug()<<"problem node="<<node;
                     }

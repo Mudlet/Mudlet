@@ -882,8 +882,8 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
     if( luaNumOfMatch < static_cast<int>(pHost->getLuaInterpreter()->mCaptureGroupList.size()) )
     {
         TLuaInterpreter * pL = pHost->getLuaInterpreter();
-        std::list<std::string>::iterator its = pL->mCaptureGroupList.begin();
-        std::list<int>::iterator iti = pL->mCaptureGroupPosList.begin();
+        auto its = pL->mCaptureGroupList.begin();
+        auto iti = pL->mCaptureGroupPosList.begin();
 
         for( int i=0; iti!=pL->mCaptureGroupPosList.end(); ++iti,++i )
         {
@@ -12719,7 +12719,7 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
 
         // set values
         int i=1; // Lua indexes start with 1 as a general convention
-        std::list<std::string>::iterator it = mCaptureGroupList.begin();
+        auto it = mCaptureGroupList.begin();
         for( ; it!=mCaptureGroupList.end(); it++, i++ )
         {
             //if( (*it).length() < 1 ) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
@@ -12850,7 +12850,7 @@ bool TLuaInterpreter::callMulti(const QString & function, const QString & mName 
     if( mMultiCaptureGroupList.size() > 0 )
     {
         int k=1; // Lua indexes start with 1 as a general convention
-        std::list< std::list<std::string> >::iterator mit = mMultiCaptureGroupList.begin();
+        auto mit = mMultiCaptureGroupList.begin();
         lua_newtable( L );//multimatches
         for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
         {
@@ -12858,7 +12858,7 @@ bool TLuaInterpreter::callMulti(const QString & function, const QString & mName 
             lua_pushnumber( L, k );
             lua_newtable( L );//regex-value => table matches
             int i=1; // Lua indexes start with 1 as a general convention
-            std::list<std::string>::iterator it = (*mit).begin();
+            auto it = (*mit).begin();
             for( ; it!=(*mit).end(); it++, i++ )
             {
                 lua_pushnumber( L, i );
