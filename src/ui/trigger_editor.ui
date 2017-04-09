@@ -655,7 +655,7 @@
                     <string>Toggles the display of the search results area.</string>
                    </property>
                    <property name="text">
-                    <string>...</string>
+                    <string/>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -667,7 +667,7 @@
                     <bool>true</bool>
                    </property>
                    <property name="arrowType">
-                    <enum>Qt::RightArrow</enum>
+                    <enum>Qt::NoArrow</enum>
                    </property>
                   </widget>
                  </item>

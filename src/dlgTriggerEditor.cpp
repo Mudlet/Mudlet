@@ -242,6 +242,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpOptionsAreaTimers->setSizePolicy( sizePolicy2 );
     pHB2->addWidget( mpOptionsAreaTimers );
 
+    button_toggleSearchAreaResults->setStyleSheet( QStringLiteral( "QToolButton::on{border-image:url(:/icons/1downarrow_grey.png);} "
+                                                                   "QToolButton{border-image:url(:/icons/1rightarrow_grey.png);}" ) );
     connect( button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT( slot_showSearchAreaResults(const bool)));
 
     // additional settings
@@ -6021,7 +6023,6 @@ void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
             // toggled(bool) one, which is why we use the former...
             button_toggleSearchAreaResults->setChecked( true );
         }
-        button_toggleSearchAreaResults->setArrowType( Qt::DownArrow );
         treeWidget_searchResults->show();
     }
     else {
@@ -6029,7 +6030,6 @@ void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
         {
             button_toggleSearchAreaResults->setChecked( false );
         }
-        button_toggleSearchAreaResults->setArrowType( Qt::RightArrow );
         treeWidget_searchResults->hide();
     }
 }
