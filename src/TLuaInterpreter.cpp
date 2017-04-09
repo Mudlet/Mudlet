@@ -882,8 +882,8 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
     if( luaNumOfMatch < static_cast<int>(pHost->getLuaInterpreter()->mCaptureGroupList.size()) )
     {
         TLuaInterpreter * pL = pHost->getLuaInterpreter();
-        auto its = pL->mCaptureGroupList.begin();
         auto iti = pL->mCaptureGroupPosList.begin();
+        auto its = pL->mCaptureGroupList.begin();
 
         for( int i=0; iti!=pL->mCaptureGroupPosList.end(); ++iti,++i )
         {
@@ -12719,8 +12719,7 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
 
         // set values
         int i=1; // Lua indexes start with 1 as a general convention
-        auto it = mCaptureGroupList.begin();
-        for( ; it!=mCaptureGroupList.end(); it++, i++ )
+        for(auto it = mCaptureGroupList.begin(); it!=mCaptureGroupList.end(); it++, i++ )
         {
             //if( (*it).length() < 1 ) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
             lua_pushnumber( L, i );
@@ -12850,16 +12849,14 @@ bool TLuaInterpreter::callMulti(const QString & function, const QString & mName 
     if( mMultiCaptureGroupList.size() > 0 )
     {
         int k=1; // Lua indexes start with 1 as a general convention
-        auto mit = mMultiCaptureGroupList.begin();
         lua_newtable( L );//multimatches
-        for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
+        for( auto mit = mMultiCaptureGroupList.begin(); mit!=mMultiCaptureGroupList.end(); mit++, k++ )
         {
             // multimatches{ trigger_idx{ table_matches{ ... } } }
             lua_pushnumber( L, k );
             lua_newtable( L );//regex-value => table matches
             int i=1; // Lua indexes start with 1 as a general convention
-            auto it = (*mit).begin();
-            for( ; it!=(*mit).end(); it++, i++ )
+            for( auto it = (*mit).begin(); it!=(*mit).end(); it++, i++ )
             {
                 lua_pushnumber( L, i );
                 lua_pushstring( L, (*it).c_str() );

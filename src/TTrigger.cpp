@@ -513,8 +513,7 @@ bool TTrigger::match_begin_of_line_substring( const QString & toMatch, const QSt
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
             auto its = captureList.begin();
-            auto iti = posList.begin();
-            for( ; iti!=posList.end(); ++iti, ++its )
+            for( auto iti = posList.begin(); iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
                 std::string & s = *its;
@@ -636,8 +635,7 @@ bool TTrigger::match_substring( const QString & toMatch, const QString & regex, 
             TConsole * pC = mpHost->mpConsole;
             pC->deselect();
             auto its = captureList.begin();
-            auto iti = posList.begin();
-            for( ; iti!=posList.end(); ++iti, ++its )
+            for( auto iti = posList.begin(); iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
                 std::string & s = *its;
@@ -744,8 +742,7 @@ bool TTrigger::match_color_pattern( int line, int regexNumber )
             TConsole * pC = mpHost->mpConsole;
             pC->deselect();
             auto its = captureList.begin();
-            auto iti = posList.begin();
-            for( ; iti!=posList.end(); ++iti, ++its )
+            for( auto iti = posList.begin(); iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
                 std::string & s = *its;
@@ -860,8 +857,7 @@ bool TTrigger::match_exact_match( const QString & toMatch, const QString & line,
             int b2 = mFgColor.blue();
             TConsole * pC = mpHost->mpConsole;
             auto its = captureList.begin();
-            auto iti = posList.begin();
-            for( ; iti!=posList.end(); ++iti, ++its )
+            for( auto iti = posList.begin(); iti!=posList.end(); ++iti, ++its )
             {
                 int begin = *iti;
                 std::string & s = *its;
@@ -1017,8 +1013,7 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
                         multiCaptureList = (*it).second->multiCaptureList;
                         if( multiCaptureList.size() > 0 )
                         {
-                            auto mit = multiCaptureList.begin();
-                            for( ; mit!=multiCaptureList.end(); mit++, k++ )
+                            for( auto mit = multiCaptureList.begin(); mit!=multiCaptureList.end(); mit++, k++ )
                             {
                                 int total = (*mit).size();
                                 auto its = (*mit).begin();
