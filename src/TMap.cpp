@@ -1337,7 +1337,7 @@ bool TMap::restore( QString location )
         ifs >> mVersion;
         if( mVersion > mMaxVersion ) {
             QString errMsg = tr( "[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
-                                 "Mudlet can handle (%2)!  The file is: \"%3\"." )
+                                 "Mudlet can handle (%2)!  The file is:\n\"%3\"." )
                     .arg( mVersion )
                     .arg( mMaxVersion )
                     .arg( file.fileName() );
