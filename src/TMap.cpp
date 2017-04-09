@@ -1335,83 +1335,21 @@ bool TMap::restore( QString location )
 
         QDataStream ifs( & file );
         ifs >> mVersion;
-        if( mVersion > mDefaultVersion ) {
-            if( QByteArray( APP_BUILD ).isEmpty() ) {
-                // This is a release version - should not support any map file versions higher that it was built for
-                QString errMsg = tr( "[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
-                                                 "Mudlet can handle (%2)!  The file is: \"%3\"." )
-                                 .arg( mVersion )
-                                 .arg( mDefaultVersion )
-                                 .arg( file.fileName() );
-                appendErrorMsgWithNoLf( errMsg, false );
-                postMessage( errMsg );
-                QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a Map file saved in a\n"
-                                                  "format that it CAN read.  As this Mudlet appears to be based on a\n"
-                                                  "release version of the source code it is possible that you, or the\n"
-                                                  "creator of the Map file, may have been experimenting with a development\n"
-                                                  "version that has additional features that need a revised format and,\n"
-                                                  "unfortunately the file that has been loaded was from that.  If the\n"
-                                                  "map was loaded automatically on profile start up, you be able to recover\n"
-                                                  "from this by going to the \"map\" sub-directory of this profile's home\n"
-                                                  "directory and selecting a file to load that is NOT the most recent one\n"
-                                                  "(which is the one that is selected normally) though it is probable that\n"
-                                                  "the stored location of the current map location will be wrong." );
-                appendErrorMsgWithNoLf( infoMsg, false );
-                postMessage( infoMsg );
-                file.close();
-                return false;
-            }
-            else {
-                // Is a development version so check against mMaxVersion
-                if( mVersion > mMaxVersion ) {
-                    // Oh dear, can't handle THIS
-                    QString errMsg = tr( "[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
-                                                     "Mudlet can handle (%2)!  The file is: \"%3\"." )
-                                     .arg( mVersion )
-                                     .arg( mMaxVersion )
-                                     .arg( file.fileName() );
-                    appendErrorMsgWithNoLf( errMsg );
-                    postMessage( errMsg );
-                    QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a Map file saved in a\n"
-                                                      "format that it CAN read.  Even though this Mudlet appears to be based on a\n"
-                                                      "development version of the source code it is possible that you, or the\n"
-                                                      "creator of the Map file, may have been experimenting with an even more\n"
-                                                      "advanced version that has additional features that need a revised format\n"
-                                                      "and, unfortunately the file that has been loaded was from that.  If the\n"
-                                                      "map was loaded automatically on profile start up, you be able to recover\n"
-                                                      "from this by going to the \"map\" sub-directory of this profile's home\n"
-                                                      "directory and selecting a file to load that is NOT the most recent one\n"
-                                                      "(which is the one that is selected normally) though it is probable that\n"
-                                                      "the stored location of the current map location will be wrong." );
-                    appendErrorMsgWithNoLf( infoMsg );
-                    postMessage( infoMsg );
-                    file.close();
-                    return false;
-                }
-                else {
-                    QString alertMsg = tr( "[ ALERT ] - Map file is using new features, it's file format (%1) is higher than\n"
-                                                       "the default for this version of Mudlet (%2)!" )
-                                     .arg( mVersion )
-                                     .arg( mDefaultVersion );
-                    appendErrorMsgWithNoLf( alertMsg );
-                    postMessage( alertMsg );
-                    QString infoMsg = tr( "[ INFO ]  - You are using a new, possibly experimental, map file format which this\n"
-                                                      "version of Mudlet CAN read.  This Mudlet appears to be based on a\n"
-                                                      "development version of the source code so it is possible that you, or the\n"
-                                                      "creator of the Map file, may have been experimenting with this more\n"
-                                                      "advanced version that has additional features that need a revised format;\n"
-                                                      "beware that this file may not be usable by the current release version\n"
-                                                      "of Mudlet that you or others with whom you might share it have!" );
-                    appendErrorMsgWithNoLf( infoMsg );
-                    postMessage( infoMsg );
-                    mSaveVersion = mVersion; // Make the save version default to the loaded one
-                                             // this means that each session using a particular
-                                             // map file version will continue to use it unless
-                                             // the user intervenes.
-                }
-            }
-        }
-        else if( mVersion < 4 ) {
+        if( mVersion > mMaxVersion ) {
+            QString errMsg = tr( "[ ERROR ] - Map file is too new, it's file format (%1) is higher than this version of\n"
+                                 "Mudlet can handle (%2)!  The file is: \"%3\"." )
+                    .arg( mVersion )
+                    .arg( mMaxVersion )
+                    .arg( file.fileName() );
+            appendErrorMsgWithNoLf( errMsg );
+            postMessage( errMsg );
+            QString infoMsg = tr( "[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an\n"
+                                  "older format." );
+            appendErrorMsgWithNoLf( infoMsg );
+            postMessage( infoMsg );
+            file.close();
+            return false;
+        } else if( mVersion < 4 ) {
             QString alertMsg = tr( "[ ALERT ] - Map file is really old, it's file format (%1) is so ancient that\n"
                                                "this version of Mudlet may not gain enough information from\n"
                                                "it but it will try!  The file is: \"%2\"." )
