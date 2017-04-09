@@ -48,7 +48,7 @@ TRoom * TRoomDB::getRoom( int id )
 {
     if (id < 0)
         return 0;
-    QHash< int, TRoom * >::iterator i = rooms.find( id );
+    auto i = rooms.find(id );
     if ( i != rooms.end() && i.key() == id )
         return i.value();
     return 0;
