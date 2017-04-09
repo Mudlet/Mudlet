@@ -678,7 +678,7 @@ void TRoom::restore( QDataStream & ifs, int roomID, int version )
     ifs >> environment;
     ifs >> weight;
 
-    // force room weight >= 1 otherwise pathfinding choses random pathes.
+    // force room weight >= 1 otherwise pathfinding chooses random paths.
     if( weight < 1 )
     {
         weight = 1;

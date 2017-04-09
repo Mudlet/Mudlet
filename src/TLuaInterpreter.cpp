@@ -7243,7 +7243,7 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
 
 int TLuaInterpreter::invokeFileDialog( lua_State * L )
 {
-    bool luaDir = false; //default is to chose a directory
+    bool luaDir = false; //default is to choose a directory
     if( ! lua_isboolean( L, 1 ) )
     {
         lua_pushstring( L, "invokeFileDialog: wrong argument type" );
