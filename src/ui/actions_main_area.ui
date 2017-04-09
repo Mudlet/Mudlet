@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>900</width>
-    <height>285</height>
+    <height>275</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -25,15 +25,24 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,1">
    <property name="spacing">
     <number>3</number>
    </property>
-   <property name="margin">
-    <number>0</number>
+   <property name="leftMargin">
+    <number>3</number>
+   </property>
+   <property name="topMargin">
+    <number>3</number>
+   </property>
+   <property name="rightMargin">
+    <number>3</number>
+   </property>
+   <property name="bottomMargin">
+    <number>3</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_top" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -42,10 +51,10 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <property name="spacing">
-       <number>9</number>
+       <number>3</number>
       </property>
       <property name="leftMargin">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
        <number>0</number>
@@ -70,14 +79,23 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget_4" native="true">
+    <widget class="QWidget" name="widget_middle" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_6">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>3</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QGroupBox" name="groupBox_toolBar">
         <property name="sizePolicy">
@@ -117,6 +135,9 @@
             <cstring>buttonColumns</cstring>
            </property>
           </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="buttonColumns"/>
          </item>
          <item row="1" column="0" colspan="2">
           <widget class="QComboBox" name="comboBox_orientation">
@@ -168,9 +189,6 @@
            </item>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QSpinBox" name="buttonColumns"/>
-         </item>
         </layout>
        </widget>
       </item>
@@ -191,15 +209,28 @@
         <property name="title">
          <string>Button Properties</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_3">
+        <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">
+          <widget class="QLineEdit" name="lineEdit_action_icon">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
           <widget class="QLabel" name="label_action_name_5">
            <property name="text">
             <string>Button Rotation:</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
+         <item row="1" column="2">
           <widget class="QComboBox" name="buttonRotation">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -224,31 +255,31 @@
            </item>
           </widget>
          </item>
-         <item row="1" column="0" colspan="2">
+         <item row="2" column="1" colspan="2">
           <widget class="QCheckBox" name="checkBox_pushdownbutton">
            <property name="text">
             <string>Push down button</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item row="3" column="1">
           <widget class="QLabel" name="label_command_down">
            <property name="text">
             <string>Command:</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="3" column="2">
           <widget class="QLineEdit" name="lineEdit_command_down"/>
          </item>
-         <item row="3" column="0">
+         <item row="4" column="1">
           <widget class="QLabel" name="label_command_up">
            <property name="text">
             <string>Command (up):</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
+         <item row="4" column="2">
           <widget class="QLineEdit" name="lineEdit_command_up"/>
          </item>
         </layout>
@@ -258,90 +289,61 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget_2" native="true">
+    <widget class="QGroupBox" name="widget_bottom">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <property name="title">
+      <string>Style-sheet:</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
       <property name="leftMargin">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
-       <widget class="QGroupBox" name="groupBox">
+       <widget class="QPlainTextEdit" name="css">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="title">
-         <string>Optional CSS</string>
+        <property name="font">
+         <font>
+          <family>Bitstream Vera Sans Mono</family>
+          <pointsize>8</pointsize>
+         </font>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <item>
-          <widget class="QPlainTextEdit" name="css">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>50</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Bitstream Vera Sans Mono</family>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="tabChangesFocus">
-            <bool>false</bool>
-           </property>
-           <property name="backgroundVisible">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <property name="tabChangesFocus">
+         <bool>false</bool>
+        </property>
+        <property name="backgroundVisible">
+         <bool>false</bool>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-   <item>
-    <widget class="QLineEdit" name="lineEdit_action_icon">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-    </widget>
-   </item>
   </layout>
-  <zorder>lineEdit_action_icon</zorder>
-  <zorder>widget</zorder>
-  <zorder>widget_2</zorder>
-  <zorder>widget_4</zorder>
+  <zorder>widget_top</zorder>
+  <zorder>widget_bottom</zorder>
+  <zorder>widget_middle</zorder>
  </widget>
  <resources/>
  <connections/>

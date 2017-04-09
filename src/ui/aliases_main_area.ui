@@ -35,7 +35,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Alias name:</string>
+      <string>Name:</string>
      </property>
     </widget>
    </item>
@@ -140,7 +140,7 @@
       </size>
      </property>
      <property name="text">
-      <string>Substitution:</string>
+      <string>Command:</string>
      </property>
     </widget>
    </item>

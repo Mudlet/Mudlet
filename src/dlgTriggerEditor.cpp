@@ -27,12 +27,6 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
-#include "dlgOptionsAreaAction.h"
-#include "dlgOptionsAreaAlias.h"
-#include "dlgOptionsAreaScripts.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaTimers.h"
-#include "dlgOptionsAreaTriggers.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgSearchArea.h"
 #include "dlgTriggerPatternEdit.h"
@@ -125,56 +119,49 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     setStatusBar( statusBar );
     statusBar->show();
     mIsGrabKey = false;
-    QVBoxLayout * pVB1 = new QVBoxLayout(mainArea);
+
+    // Replacement code to use single splitter for all right widgets:
+    mpSystemMessageArea = new dlgSystemMessageArea(splitter_rightTopBottom);
+    mpTriggersMainArea = new dlgTriggersMainArea(splitter_rightTopBottom);
+    mpTimersMainArea = new dlgTimersMainArea(splitter_rightTopBottom);
+    mpAliasMainArea = new dlgAliasMainArea(splitter_rightTopBottom);
+    mpActionsMainArea = new dlgActionMainArea(splitter_rightTopBottom);
+    mpKeysMainArea = new dlgKeysMainArea(splitter_rightTopBottom);
+    mpVarsMainArea = new dlgVarsMainArea(splitter_rightTopBottom);
+    mpScriptsMainArea = new dlgScriptsMainArea(splitter_rightTopBottom);
+    mpSourceEditorArea = new dlgSourceEditorArea(splitter_rightTopBottom);
+    mpErrorConsole = new TConsole(mpHost,false,splitter_rightTopBottom);
+    mpErrorConsole->setMinimumHeight( 200 );
+
+    //Prevent any region being "squashed down" i.e. taken below its minimum size
+    //so that it "disappears"
+    splitter_rightTopBottom->setChildrenCollapsible(false);
+    splitter_main->setChildrenCollapsible(false);
+
+    splitter_rightTopBottom->addWidget(mpSystemMessageArea);
+    splitter_rightTopBottom->addWidget(mpTriggersMainArea);
+    splitter_rightTopBottom->addWidget(mpTimersMainArea);
+    splitter_rightTopBottom->addWidget(mpAliasMainArea);
+    splitter_rightTopBottom->addWidget(mpActionsMainArea);
+    splitter_rightTopBottom->addWidget(mpKeysMainArea);
+    splitter_rightTopBottom->addWidget(mpVarsMainArea);
+    splitter_rightTopBottom->addWidget(mpScriptsMainArea);
+    splitter_rightTopBottom->addWidget(mpSourceEditorArea);
+    splitter_rightTopBottom->addWidget(mpErrorConsole);
 
     // system message area
-    mpSystemMessageArea = new dlgSystemMessageArea( mainArea );
     mpSystemMessageArea->setObjectName("mpSystemMessageArea");
-    QSizePolicy sizePolicy6( QSizePolicy::Expanding, QSizePolicy::Fixed );
-    mpSystemMessageArea->setSizePolicy( sizePolicy6 );
-    pVB1->addWidget( mpSystemMessageArea );
     connect( mpSystemMessageArea->messageAreaCloseButton, SIGNAL(clicked()), mpSystemMessageArea, SLOT(hide()));
 
     // main areas
-
-    mpTriggersMainArea = new dlgTriggersMainArea( mainArea );
-    pVB1->setContentsMargins(0,0,0,0);
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    mpTriggersMainArea->setSizePolicy( sizePolicy );
-    pVB1->addWidget( mpTriggersMainArea );
     mpTriggersMainArea->lineEdit_soundFile->hide();
     connect(mpTriggersMainArea->pushButtonFgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetFgColor()));
     connect(mpTriggersMainArea->pushButtonBgColor, SIGNAL(clicked()), this, SLOT(slot_colorizeTriggerSetBgColor()));
     connect(mpTriggersMainArea->pushButtonSound, SIGNAL(clicked()), this, SLOT(slot_soundTrigger()));
 
-    mpTimersMainArea = new dlgTimersMainArea( mainArea );
-    QSizePolicy sizePolicy7(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    mpTimersMainArea->setSizePolicy( sizePolicy7 );
-    pVB1->addWidget( mpTimersMainArea );
-
-    mpAliasMainArea = new dlgAliasMainArea( mainArea );
-    QSizePolicy sizePolicy8(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    mpAliasMainArea->setSizePolicy( sizePolicy8 );
-    pVB1->addWidget( mpAliasMainArea );
-
-    mpActionsMainArea = new dlgActionMainArea( mainArea );
-    mpActionsMainArea->setSizePolicy( sizePolicy8 );
     connect(mpActionsMainArea->checkBox_pushdownbutton, SIGNAL(stateChanged(const int)), this, SLOT(slot_toggle_isPushDownButton(const int)));
-    pVB1->addWidget( mpActionsMainArea );
 
-    mpKeysMainArea = new dlgKeysMainArea( mainArea );
-    mpKeysMainArea->setSizePolicy( sizePolicy8 );
-    pVB1->addWidget( mpKeysMainArea );
     connect(mpKeysMainArea->pushButton_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
-
-    mpVarsMainArea = new dlgVarsMainArea( mainArea );
-    mpVarsMainArea->setSizePolicy( sizePolicy8 );
-    pVB1->addWidget( mpVarsMainArea );
-
-    mpScriptsMainArea = new dlgScriptsMainArea( mainArea );
-    QSizePolicy sizePolicy9(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    mpScriptsMainArea->setSizePolicy( sizePolicy9 );
-    pVB1->addWidget( mpScriptsMainArea );
 
     mIsScriptsMainAreaEditHandler = false;
     mpScriptsMainAreaEditHandlerItem = 0;
@@ -182,11 +169,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(itemClicked ( QListWidgetItem * )), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
 
     // source editor area
-
-    mpSourceEditorArea = new dlgSourceEditorArea( mainArea );
-    QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    mpSourceEditorArea->setSizePolicy( sizePolicy5 );
-    pVB1->addWidget( mpSourceEditorArea );
     mpSourceEditor = mpSourceEditorArea->editor;
     mpSourceEditor->setWordWrapMode( QTextOption::NoWrap );
 #if QT_VERSION >= 0x050300
@@ -207,40 +189,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( mpSourceEditor, SIGNAL( cursorPositionChanged() ), this, SLOT( slot_cursorPositionChanged() ) );
     connect( mudlet::self(), SIGNAL( signal_editorTextOptionsChanged( QTextOption::Flags ) ), this,  SLOT( slot_changeEditorTextOptions( QTextOption::Flags ) ) );
 
-    // option areas
-
-    QHBoxLayout * pHB2 = new QHBoxLayout(popupArea);
-    QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Maximum);
-    popupArea->setMinimumSize(200,60);
-    pHB2->setSizeConstraint( QLayout::SetMaximumSize );
-    mpErrorConsole = new TConsole(mpHost,false, popupArea);
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->console->slot_toggleTimeStamps();
     mpErrorConsole->print("*** starting new session ***\n");
-    pHB2->setContentsMargins(0,0,0,0);
-    pHB2->addWidget( mpErrorConsole );
-    mpErrorConsole->show();
-
-
-    mpOptionsAreaTriggers = new dlgOptionsAreaTriggers( popupArea );
-    mpOptionsAreaTriggers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTriggers );
-
-    mpOptionsAreaAlias = new dlgOptionsAreaAlias( popupArea );
-    mpOptionsAreaAlias->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaAlias );
-
-    mpOptionsAreaActions = new dlgOptionsAreaAction( popupArea );
-    mpOptionsAreaActions->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaActions );
-
-    mpOptionsAreaScripts = new dlgOptionsAreaScripts( popupArea );
-    mpOptionsAreaScripts->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaScripts );
-
-    mpOptionsAreaTimers = new dlgOptionsAreaTimers( popupArea );
-    mpOptionsAreaTimers->setSizePolicy( sizePolicy2 );
-    pHB2->addWidget( mpOptionsAreaTimers );
+    mpErrorConsole->hide();
 
     connect( button_searchAreaClose, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
 
@@ -252,12 +204,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_triggers->header()->hide();
     connect( treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
     treeWidget_searchResults->hide(); // hide search results
-
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost( mpHost );
@@ -375,7 +321,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     //saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
-
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
     QAction * importAction = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Import"), this);
@@ -386,18 +331,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
 
-    QAction * saveMenu = new QAction( QIcon( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
-    saveMenu->setEnabled( true );
-    saveMenu->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-    saveMenu->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-
-    connect( saveMenu, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
-
     QAction * profileSaveAction = new QAction( QIcon ( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
     profileSaveAction->setEnabled( true );
     profileSaveAction->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
     profileSaveAction->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * saveProfileAsAction = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Save Profile As"), this);
@@ -417,67 +354,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be *MUCH* slower"));
     connect( showDebugAreaAction, SIGNAL(triggered()), this, SLOT( slot_debug_mode() ));
 
-    QAction * addTriggerMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
-    viewTriggerAction->setStatusTip(tr("Add Trigger"));
-    connect(addTriggerMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTrigger()));
-
-    QAction * addAliasMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
-    addAliasMenuAction->setStatusTip(tr("Add Alias"));
-    addAliasMenuAction->setEnabled( true );
-    connect( addAliasMenuAction, SIGNAL(triggered()), this, SLOT( slot_addAlias()));
-
-    QAction * addTimersMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
-    addTimersMenuAction->setStatusTip(tr("Add Timer"));
-    addTimersMenuAction->setEnabled( true );
-    connect( addTimersMenuAction, SIGNAL(triggered()), this, SLOT( slot_addTimer()));
-
-    QAction * addVarsMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Variables"), this);
-    addVarsMenuAction->setStatusTip(tr("View Variables"));
-    addVarsMenuAction->setEnabled( true );
-    connect( addVarsMenuAction, SIGNAL(triggered()), this, SLOT( slot_addVar()));
-
-    QAction * addScriptsMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    addScriptsMenuAction->setStatusTip(tr("Add Script"));
-    addScriptsMenuAction->setEnabled( true );
-    connect( addScriptsMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScript()));
-
-    QAction * addKeysMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), tr("Keys"), this);
-    addKeysMenuAction->setStatusTip(tr("Add Keys"));
-    addKeysMenuAction->setEnabled( true );
-    connect( addKeysMenuAction, SIGNAL(triggered()), this, SLOT( slot_addKey()));
-
-    QMenu * addTriggerMenu = new QMenu( this );
-    addTriggerMenu->addAction( addTriggerMenuAction );
-    addTriggerMenu->addAction( addTimersMenuAction );
-    addTriggerMenu->addAction( addScriptsMenuAction );
-    addTriggerMenu->addAction( addAliasMenuAction );
-    addTriggerMenu->addAction( addKeysMenuAction );
-
-    QAction * addTriggerGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
-    addTriggerGroupMenuAction->setStatusTip(tr("Add Trigger Group"));
-    connect(addTriggerGroupMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTriggerGroup()));
-
-    QAction * addAliasGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
-    addAliasGroupMenuAction->setStatusTip(tr("Add Alias Group"));
-    addAliasGroupMenuAction->setEnabled( true );
-    connect( addAliasGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addAliasGroup()));
-
-    QAction * addTimersGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
-    addTimersGroupMenuAction->setStatusTip(tr("Add Timer Group"));
-    addTimersGroupMenuAction->setEnabled( true );
-    connect( addTimersGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addTimerGroup()));
-
-    QAction * addScriptsGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    addScriptsGroupMenuAction->setStatusTip(tr("Add Script Group"));
-    addScriptsGroupMenuAction->setEnabled( true );
-    connect( addScriptsGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScriptGroup()));
-
-    QMenu * addTriggerGroupMenu = new QMenu( this );
-    addTriggerGroupMenu->addAction( addTriggerGroupMenuAction );
-    addTriggerGroupMenu->addAction( addTimersGroupMenuAction );
-    addTriggerGroupMenu->addAction( addScriptsGroupMenuAction );
-    addTriggerGroupMenu->addAction( addAliasGroupMenuAction );
-
     toolBar = new QToolBar();
     toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
     toolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -496,8 +372,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar->addAction( exportAction );
     toolBar->addAction( saveProfileAsAction );
     toolBar->addAction( profileSaveAction );
-
-
 
     toolBar2 = new QToolBar();
     toolBar2->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -547,7 +421,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
 
-    mpTriggersMainArea->hide();
+    mpTriggersMainArea->show();
     mpTimersMainArea->hide();
     mpScriptsMainArea->hide();
     mpAliasMainArea->hide();
@@ -555,14 +429,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
 
-    mpSourceEditorArea->hide();
+    mpSourceEditorArea->show();
 
     mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaActions->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
 
     treeWidget_triggers->show();
     treeWidget_aliases->hide();
@@ -572,8 +441,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_keys->hide();
     treeWidget_variables->hide();
 
-    popupArea->hide();
-    frame_rightBottom->hide();
     widget_searchArea->hide();
 
     readSettings();
@@ -650,15 +517,12 @@ void dlgTriggerEditor::slot_viewStatsAction()
 
 void dlgTriggerEditor::slot_viewErrorsAction()
 {
-    if( frame_rightBottom->isHidden() ) {
-        frame_rightBottom->show();
+    if( mpErrorConsole->isHidden() ) {
+        mpErrorConsole->show();
     }
     else {
-        frame_rightBottom->hide();
+        mpErrorConsole->hide();
     }
-    // These will be inefffective if their container (frame_rightBottom) is not shown!
-    mpErrorConsole->show();
-    popupArea->show();
 }
 
 
@@ -4307,6 +4171,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpCurrentTriggerItem = pItem;
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
     mpSourceEditor->setPlainText( "" );
@@ -4461,6 +4326,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpCurrentAliasItem = pItem;
     mpAliasMainArea->show();
     mpSourceEditorArea->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
     mpSystemMessageArea->hide();
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
@@ -4501,6 +4367,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpCurrentKeyItem = pItem;
     mpKeysMainArea->show();
     mpSourceEditorArea->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
     mpSystemMessageArea->hide();
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
@@ -4683,6 +4550,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
         }
     }
     mpVarsMainArea->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Value:" ) );
 
     mpCurrentVarItem = pItem; //remember what has been clicked to save it
     // There was repeated test for pItem being null here but we have NOT altered
@@ -4793,6 +4661,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 
     mpActionsMainArea->show();
     mpSourceEditor->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
 
     mpSystemMessageArea->hide();
     mpSourceEditor->clear();
@@ -4845,7 +4714,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 
                 mpActionsMainArea->groupBox_toolBar->hide();
                 mpActionsMainArea->groupBox_appearance->hide();
-                mpActionsMainArea->widget_2->hide();
+                mpActionsMainArea->widget_bottom->hide(); // Contains the CSS QPlainTextEdit
                 mpSourceEditorArea->hide();
             }
             else if( ! pT->getParent()
@@ -4857,7 +4726,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
 
                 mpActionsMainArea->groupBox_toolBar->show();
                 mpActionsMainArea->groupBox_appearance->hide();
-                mpActionsMainArea->widget_2->show();
+                mpActionsMainArea->widget_bottom->show();
                 mpSourceEditorArea->show();
             }
             else {
@@ -4867,7 +4736,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
                 mpActionsMainArea->groupBox_toolBar->hide();
                 mpActionsMainArea->checkBox_pushdownbutton->hide();
                 mpActionsMainArea->groupBox_appearance->show();
-                mpActionsMainArea->widget_2->show();
+                mpActionsMainArea->widget_bottom->show();
                 mpSourceEditorArea->show();
             }
         }
@@ -4888,7 +4757,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
                 mpActionsMainArea->label_command_up->show();
             }
 
-            mpActionsMainArea->widget_2->show();
+            mpActionsMainArea->widget_bottom->show();
         }
 
         if( ! pT->state() ) showError( pT->getError() );
@@ -4939,6 +4808,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpCurrentScriptItem = pItem;
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
     mpSystemMessageArea->hide();
     mpSourceEditor->setPlainText( "" );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
@@ -4977,6 +4847,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpCurrentTimerItem = pItem;
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
+    mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
     mpSystemMessageArea->hide();
     mpSourceEditor->setPlainText( "" );
     mpTimersMainArea->lineEdit_command->clear();
@@ -6202,30 +6073,137 @@ void dlgTriggerEditor::changeView( int view )
         mpSourceEditor->clear();
     mCurrentView = view;
 
-    mpTriggersMainArea->hide();
-    mpTimersMainArea->hide();
-    mpScriptsMainArea->hide();
-    mpAliasMainArea->hide();
-    mpActionsMainArea->hide();
-    mpKeysMainArea->hide();
-    mpVarsMainArea->hide();
-    button_displayAllVariables->hide();
+    switch( mCurrentView )
+    {
+    case cmActionView:
+        mpActionsMainArea->show();
+        treeWidget_actions->show();
+        mpAliasMainArea->hide();
+        treeWidget_aliases->hide();
+        mpKeysMainArea->hide();
+        treeWidget_keys->hide();
+        mpScriptsMainArea->hide();
+        treeWidget_scripts->hide();
+        mpTimersMainArea->hide();
+        treeWidget_timers->hide();
+        mpTriggersMainArea->hide();
+        treeWidget_triggers->hide();
+        mpVarsMainArea->hide();
+        treeWidget_variables->hide();
+        button_displayAllVariables->hide();
+        mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
+        break;
+    case cmAliasView:
+        mpActionsMainArea->hide();
+        treeWidget_actions->hide();
+        mpAliasMainArea->show();
+        treeWidget_aliases->show();
+        mpKeysMainArea->hide();
+        treeWidget_keys->hide();
+        mpScriptsMainArea->hide();
+        treeWidget_scripts->hide();
+        mpTimersMainArea->hide();
+        treeWidget_timers->hide();
+        mpTriggersMainArea->hide();
+        treeWidget_triggers->hide();
+        mpVarsMainArea->hide();
+        treeWidget_variables->hide();
+        button_displayAllVariables->hide();
+        mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
+        break;
+    case cmKeysView:
+        mpActionsMainArea->hide();
+        treeWidget_actions->hide();
+        mpAliasMainArea->hide();
+        treeWidget_aliases->hide();
+        mpKeysMainArea->show();
+        treeWidget_keys->show();
+        mpScriptsMainArea->hide();
+        treeWidget_scripts->hide();
+        mpTimersMainArea->hide();
+        treeWidget_timers->hide();
+        mpTriggersMainArea->hide();
+        treeWidget_triggers->hide();
+        mpVarsMainArea->hide();
+        treeWidget_variables->hide();
+        button_displayAllVariables->hide();
+        mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
+        break;
+    case cmScriptView:
+        mpActionsMainArea->hide();
+        treeWidget_actions->hide();
+        mpAliasMainArea->hide();
+        treeWidget_aliases->hide();
+        mpKeysMainArea->hide();
+        treeWidget_keys->hide();
+        mpScriptsMainArea->show();
+        treeWidget_scripts->show();
+        mpTimersMainArea->hide();
+        treeWidget_timers->hide();
+        mpTriggersMainArea->hide();
+        treeWidget_triggers->hide();
+        mpVarsMainArea->hide();
+        treeWidget_variables->hide();
+        button_displayAllVariables->hide();
+        mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
+        break;
+    case cmTimerView:
+        mpActionsMainArea->hide();
+        treeWidget_actions->hide();
+        mpAliasMainArea->hide();
+        treeWidget_aliases->hide();
+        mpKeysMainArea->hide();
+        treeWidget_keys->hide();
+        mpScriptsMainArea->hide();
+        treeWidget_scripts->hide();
+        mpTimersMainArea->show();
+        treeWidget_timers->show();
+        mpTriggersMainArea->hide();
+        treeWidget_triggers->hide();
+        mpVarsMainArea->hide();
+        treeWidget_variables->hide();
+        button_displayAllVariables->hide();
+        mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
+        break;
+    case cmTriggerView:
+        mpActionsMainArea->hide();
+        treeWidget_actions->hide();
+        mpAliasMainArea->hide();
+        treeWidget_aliases->hide();
+        mpKeysMainArea->hide();
+        treeWidget_keys->hide();
+        mpScriptsMainArea->hide();
+        treeWidget_scripts->hide();
+        mpTimersMainArea->hide();
+        treeWidget_timers->hide();
+        mpTriggersMainArea->show();
+        treeWidget_triggers->show();
+        mpVarsMainArea->hide();
+        treeWidget_variables->hide();
+        button_displayAllVariables->hide();
+        mpSourceEditorArea->label_editor->setText( tr( "Lua code:" ) );
+        break;
+    case cmVarsView:
+        mpActionsMainArea->hide();
+        treeWidget_actions->hide();
+        mpAliasMainArea->hide();
+        treeWidget_aliases->hide();
+        mpKeysMainArea->hide();
+        treeWidget_keys->hide();
+        mpScriptsMainArea->hide();
+        treeWidget_scripts->hide();
+        mpTimersMainArea->hide();
+        treeWidget_timers->hide();
+        mpTriggersMainArea->hide();
+        treeWidget_triggers->hide();
+        mpVarsMainArea->show();
+        treeWidget_variables->show();
+        button_displayAllVariables->show();
+        mpSourceEditorArea->label_editor->setText( tr( "Value:" ) );
+        break;
+    }
 
     mpSystemMessageArea->hide();
-    mpOptionsAreaTriggers->hide();
-    mpOptionsAreaAlias->hide();
-    mpOptionsAreaScripts->hide();
-    mpOptionsAreaTimers->hide();
-    mpOptionsAreaActions->hide();
-
-
-    treeWidget_triggers->hide();
-    treeWidget_aliases->hide();
-    treeWidget_timers->hide();
-    treeWidget_scripts->hide();
-    treeWidget_actions->hide();
-    treeWidget_keys->hide();
-    treeWidget_variables->hide();
 }
 
 void dlgTriggerEditor::slot_show_timers()
