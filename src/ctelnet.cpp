@@ -166,7 +166,6 @@ cTelnet::~cTelnet()
 
 void cTelnet::encodingChanged(QString encoding)
 {
-    qDebug() << "cTelnet::encodingChanged() called!";
     encoding = encoding;
 
     // unicode carries information in form of single byte characters
@@ -1023,7 +1022,6 @@ void cTelnet::processTelnetCommand( const string & command )
 
               case OPT_TERMINAL_TYPE:
               {
-                  qDebug() << "server sends telnet option terminal type";
                   if( myOptionState[static_cast<int>(OPT_TERMINAL_TYPE)] )
                   {
                       if(command[3] == TNSB_SEND )

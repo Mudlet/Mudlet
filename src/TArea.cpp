@@ -260,9 +260,6 @@ void TArea::determineAreaExitsOfRoom( int id )
 
 void TArea::determineAreaExits()
 {
-    QElapsedTimer timer;
-    timer.start();
-
     exits.clear();
     QSetIterator<int> itRoom( rooms );
     while( itRoom.hasNext() ) {
@@ -346,8 +343,6 @@ void TArea::determineAreaExits()
             }
         }
     }
-    //qDebug()<<"exits:"<<exits.size();
-    qDebug() << "TArea::determineAreaExits() area"<< mpRoomDB->getAreaID(this) << "took:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TArea::fast_calcSpan( int id )

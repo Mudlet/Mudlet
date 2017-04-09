@@ -615,9 +615,6 @@ QList<int> TRoomDB::getAreaIDList()
  */
 void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & areaRemapping )
 {
-    QElapsedTimer timer;
-    timer.start();
-
     QSet<int> validUsedRoomIds; // Used good ids (>= 1)
     QSet<int> validUsedAreaIds; // As rooms
 
@@ -1034,8 +1031,6 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
         }
     }
     // END OF TASK 8
-
-    qDebug() << "TRoomDB::auditRooms(...) run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TRoomDB::clearMapDB()

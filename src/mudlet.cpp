@@ -1936,7 +1936,6 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
 
     if( isToLoadDefaultMapFile && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
-        qDebug() << "mudlet::slot_mapper() - restore map case 3.";
         pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(3) report" ), true );
         QDateTime now( QDateTime::currentDateTime() );
         if( pHost->mpMap->restore( QString() ) ) {
