@@ -94,7 +94,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     for( int i=0; i<entries.size(); i++ )
     {
         QString n = entries[i].replace( ".dic", "" );
-        QListWidgetItem * item = new QListWidgetItem( entries[i] );
+        auto item = new QListWidgetItem( entries[i] );
         dictList->addItem( item );
         if( entries[i] == mpHost->mSpellDic )
         {
@@ -310,7 +310,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
                 continue;
             }
 
-            QAction * pItem = new QAction( s, 0 );
+            auto pItem = new QAction( s, 0 );
             pItem->setCheckable( true );
             pItem->setChecked( false );
             pMenu->addAction( pItem );

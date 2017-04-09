@@ -206,7 +206,7 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
 
 void XMLimport::readVariableGroup(TVar* pParent)
 {
-    TVar* var = new TVar(pParent);
+    auto var = new TVar(pParent);
 
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
@@ -395,7 +395,7 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
 {
-    TRoom* pT = new TRoom(mpHost->mpMap->mpRoomDB);
+    auto pT = new TRoom(mpHost->mpMap->mpRoomDB);
 
     pT->id = attributes().value(QStringLiteral("id")).toString().toInt();
     pT->area = attributes().value(QStringLiteral("area")).toString().toInt();
@@ -919,7 +919,7 @@ void XMLimport::readTriggerPackage()
 
 void XMLimport::readTriggerGroup(TTrigger* pParent)
 {
-    TTrigger* pT = new TTrigger(pParent, mpHost);
+    auto pT = new TTrigger(pParent, mpHost);
 
     if (module) {
         pT->mModuleMember = true;
@@ -1021,7 +1021,7 @@ void XMLimport::readTimerPackage()
 
 void XMLimport::readTimerGroup(TTimer* pParent)
 {
-    TTimer* pT = new TTimer(pParent, mpHost);
+    auto pT = new TTimer(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     pT->mIsTempTimer = (attributes().value("isTempTimer") == "yes");
@@ -1086,7 +1086,7 @@ void XMLimport::readAliasPackage()
 
 void XMLimport::readAliasGroup(TAlias* pParent)
 {
-    TAlias* pT = new TAlias(pParent, mpHost);
+    auto pT = new TAlias(pParent, mpHost);
 
     mpHost->getAliasUnit()->registerAlias(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
@@ -1142,7 +1142,7 @@ void XMLimport::readActionPackage()
 
 void XMLimport::readActionGroup(TAction* pParent)
 {
-    TAction* pT = new TAction(pParent, mpHost);
+    auto pT = new TAction(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     pT->mIsPushDownButton = (attributes().value("isPushButton") == "yes");
@@ -1227,7 +1227,7 @@ void XMLimport::readScriptPackage()
 
 void XMLimport::readScriptGroup(TScript* pParent)
 {
-    TScript* pT = new TScript(pParent, mpHost);
+    auto pT = new TScript(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     mpHost->getScriptUnit()->registerScript(pT);
@@ -1282,7 +1282,7 @@ void XMLimport::readKeyPackage()
 
 void XMLimport::readKeyGroup(TKey* pParent)
 {
-    TKey* pT = new TKey(pParent, mpHost);
+    auto pT = new TKey(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     mpHost->getKeyUnit()->registerKey(pT);

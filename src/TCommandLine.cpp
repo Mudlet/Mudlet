@@ -497,7 +497,7 @@ void TCommandLine::mousePressEvent( QMouseEvent * event )
         {
             char ** sl;
             mHunspellSuggestionNumber = Hunspell_suggest( mpHunspell, &sl, c.selectedText().toLatin1().data() );
-            QMenu * popup = new QMenu( this );
+            auto popup = new QMenu( this );
             for( int i=0; i<mHunspellSuggestionNumber; i++ )
             {
                 QAction * pA;

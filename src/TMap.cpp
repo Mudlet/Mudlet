@@ -1451,7 +1451,7 @@ bool TMap::restore( QString location )
             ifs >> areaSize;
             // restore area table
             for( int i=0; i<areaSize; i++ ) {
-                TArea * pA = new TArea( this, mpRoomDB );
+                auto pA = new TArea( this, mpRoomDB );
                 int areaID;
                 ifs >> areaID;
                 if( mVersion >= 18 ) {
@@ -1503,7 +1503,7 @@ bool TMap::restore( QString location )
         }
 
         if( ! mpRoomDB->getAreaMap().keys().contains( -1 ) ) {
-            TArea * pDefaultA = new TArea( this, mpRoomDB );
+            auto pDefaultA = new TArea( this, mpRoomDB );
             mpRoomDB->restoreSingleArea( -1, pDefaultA );
             QString defaultAreaInsertionMsg = tr( "[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                               "area) not found, adding reserved -1 id." );
@@ -1569,7 +1569,7 @@ bool TMap::restore( QString location )
         while( ! ifs.atEnd() ) {
             int i;
             ifs >> i;
-            TRoom * pT = new TRoom(mpRoomDB);
+            auto pT = new TRoom(mpRoomDB);
             pT->restore( ifs, i, mVersion );
             mpRoomDB->restoreSingleRoom( i, pT );
         }

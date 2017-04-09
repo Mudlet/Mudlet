@@ -211,7 +211,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem * pI, int column )
 
 void dlgRoomExits::slot_addSpecialExit()
 {
-    QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
+    auto pI = new QTreeWidgetItem(specialExits);
     pI->setText(0, tr("<room ID>", "This string is used in 2 places, ensure they match!") ); //Exit RoomID
     pI->setForeground( 0, QColor(Qt::red) );
     pI->setToolTip( 0, QStringLiteral( "<html><head/><body><p>%1</p></body></html>" )
@@ -1871,7 +1871,7 @@ void dlgRoomExits::init( int id )
             dir = dir.mid(1);  // Not sure if this will be relevent here??
 
         originalSpecialExits[dir] = new TExit();
-        QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
+        auto pI = new QTreeWidgetItem(specialExits);
         TRoom * pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom( id_to );
         //0 was locked, now exit roomID
         pI->setText( 0, QString::number(id_to) );
@@ -2038,7 +2038,7 @@ void dlgRoomExits::init( int id )
 }
 
 TExit * dlgRoomExits::makeExitFromControls( int direction ) {
-    TExit * exit = new TExit();
+    auto exit = new TExit();
     switch( direction ) {
         case DIR_NORTHWEST:
             exit->destination = nw->text().toInt();

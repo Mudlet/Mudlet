@@ -1301,7 +1301,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
                     if( command.size() > 1 )
                     {
-                        QMenu * popup = new QMenu( this );
+                        auto popup = new QMenu( this );
                         for( int i=0; i<command.size(); i++ )
                         {
                             QAction * pA;
@@ -1332,7 +1332,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         QAction * action2 = new QAction("copy HTML", this );
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect( action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
-        QMenu * popup = new QMenu( this );
+        auto popup = new QMenu( this );
         popup->addAction( action );
         popup->addAction( action2 );
         popup->popup( mapToGlobal( event->pos() ), action );
