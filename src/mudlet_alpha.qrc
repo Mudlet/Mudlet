@@ -148,5 +148,7 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>icons/downarrow.png</file>
+        <file>icons/rightarrow.png</file>
     </qresource>
 </RCC>
