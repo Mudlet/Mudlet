@@ -215,7 +215,7 @@ void TAction::expandToolbar( TToolBar * pT )
        }
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
-       TFlipButton * button = new TFlipButton( pChild, mpHost );
+       auto button = new TFlipButton( pChild, mpHost );
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
@@ -248,7 +248,7 @@ void TAction::expandToolbar( TToolBar * pT )
 
        if( pChild->mIsFolder )
        {
-           QMenu * newMenu = new QMenu( pT );
+           auto newMenu = new QMenu( pT );
            // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
            newMenu->setStyleSheet( css );
            // CHECK: Use the Child's CSS instead for a menu on it? - Slysven:
@@ -275,7 +275,7 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
 {
     mpToolBar = pT;
     QIcon icon( mIcon );
-    EAction * action = new EAction( icon, mName );
+    auto action = new EAction( icon, mName );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;
@@ -287,7 +287,7 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
         // The use of mudlet::self() here meant that the QMenu was not destroyed
         // until the mudlet instance is at the end of the application!
         // Changed to use pT, the toolbar
-        QMenu * newMenu = new QMenu( pT );
+        auto newMenu = new QMenu( pT );
         newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
 
@@ -311,7 +311,7 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
        }
        QIcon icon( pChild->mIcon );
        QString name = pChild->getName();
-       TFlipButton * button = new TFlipButton( pChild, mpHost );
+       auto button = new TFlipButton( pChild, mpHost );
        button->setIcon( icon );
        button->setText( name );
        button->setCheckable( pChild->mIsPushDownButton );
@@ -341,7 +341,7 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
 
        if( pChild->mIsFolder )
        {
-           QMenu * newMenu = new QMenu( button );
+           auto newMenu = new QMenu( button );
            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
            newMenu->setStyleSheet( css );
            // CHECK: consider using the Child's CSS instead for a menu on it
@@ -376,7 +376,7 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         }
         mpEasyButtonBar = pT;
         QIcon icon( mIcon );
-        EAction * action = new EAction( icon, pChild->mName );
+        auto action = new EAction( icon, pChild->mName );
         action->mID = pChild->mID;
         action->mpHost = mpHost;
         action->setStatusTip( pChild->mName );
@@ -402,7 +402,7 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
             // Adding a QWidget derived pointer to new QMenu() means the menu
             // will be destroyed when the pointed to item is, we just need to
             // find the item that it is attached to - ah ha, try the toolbar...
-            QMenu * newMenu = new QMenu( pT );
+            auto newMenu = new QMenu( pT );
             action->setMenu( newMenu );
             newMenu->setStyleSheet( css );
             // CHECK: consider using the Child's CSS instead for a menu on it
@@ -422,7 +422,7 @@ void TAction::insertActions( TEasyButtonBar * pT, QMenu * menu )
 {
     mpEasyButtonBar = pT;
     QIcon icon( mIcon );
-    EAction * action = new EAction( icon, mName );
+    auto action = new EAction( icon, mName );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;

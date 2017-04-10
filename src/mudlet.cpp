@@ -131,7 +131,7 @@ mudlet::mudlet()
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
-    QWidget * frame = new QWidget( this );
+    auto frame = new QWidget( this );
     frame->setFocusPolicy( Qt::NoFocus );
     setCentralWidget( frame );
     mpTabBar = new QTabBar( frame );
@@ -143,7 +143,7 @@ mudlet::mudlet()
     mpTabBar->setMovable(true);
 #endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
-    QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
+    auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
     layoutTopLevel->addWidget( mpTabBar );
     mainPane = new QWidget( frame );
@@ -152,7 +152,7 @@ mudlet::mudlet()
     mainPane->setAutoFillBackground(true);
     mainPane->setFocusPolicy( Qt::NoFocus );
     layoutTopLevel->addWidget( mainPane );
-    QHBoxLayout * layout = new QHBoxLayout( mainPane );
+    auto layout = new QHBoxLayout( mainPane );
     layout->setContentsMargins(0,0,0,0);
 
     mainPane->setContentsMargins(0,0,0,0);
@@ -273,7 +273,7 @@ mudlet::mudlet()
     mpDebugArea->setWindowTitle( tr( "Central Debug Console" ) );
     mpDebugArea->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_debug.png" ) ) );
 
-    TConsoleMonitor * consoleCloser = new TConsoleMonitor(mpDebugArea);
+    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
     mpDebugArea->installEventFilter(consoleCloser);
 
     QSize generalRule( qApp->desktop()->size() );
@@ -372,7 +372,7 @@ mudlet::mudlet()
 
     readSettings();
 
-    QTimer * timerAutologin = new QTimer( this );
+    auto timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
@@ -438,10 +438,10 @@ void mudlet::layoutModules(){
         for(int i=0;i<pModules.size();i++){
             int row = moduleTable->rowCount();
             moduleTable->insertRow(row);
-            QTableWidgetItem *masterModule = new QTableWidgetItem ();
-            QTableWidgetItem *itemEntry = new QTableWidgetItem ();
-            QTableWidgetItem *itemLocation = new QTableWidgetItem ();
-            QTableWidgetItem *itemPriority = new QTableWidgetItem ();
+            auto masterModule = new QTableWidgetItem ();
+            auto itemEntry = new QTableWidgetItem ();
+            auto itemLocation = new QTableWidgetItem ();
+            auto itemPriority = new QTableWidgetItem ();
             masterModule->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
             QStringList moduleInfo = pH->mInstalledModules[pModules[i]];
             masterModule->setText("sync?");
@@ -668,7 +668,7 @@ void mudlet::slot_uninstall_package()
 void mudlet::slot_package_exporter(){
     Host * pH = getActiveHost();
     if( ! pH ) return;
-    dlgPackageExporter *d = new dlgPackageExporter(this, pH);
+    auto d = new dlgPackageExporter(this, pH);
     // don't show the dialog if the user cancelled the wizard
     if (d->filePath.isEmpty()) {
         return;
@@ -804,7 +804,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
     pH->mLogStatus = mAutolog;
-    TConsole * pConsole = new TConsole( pH, false );
+    auto pConsole = new TConsole( pH, false );
     if( ! pConsole ) return;
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle( pH->getName() );
@@ -830,7 +830,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
-    dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
+    auto pEditor = new dlgTriggerEditor( pH );
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
 
@@ -932,12 +932,12 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
-        QDockWidget * pD = new QDockWidget;
+        auto pD = new QDockWidget;
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        TConsole * pC = new TConsole( pHost, false );
+        auto pC = new TConsole( pHost, false );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
@@ -1789,7 +1789,7 @@ void mudlet::writeSettings()
 
 void mudlet::connectToServer()
 {
-    dlgConnectionProfiles * pDlg = new dlgConnectionProfiles(this);
+    auto pDlg = new dlgConnectionProfiles(this);
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
     pDlg->exec();
@@ -1877,7 +1877,7 @@ void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    dlgProfilePreferences * pDlg = new dlgProfilePreferences( this, pHost );
+    auto pDlg = new dlgProfilePreferences( this, pHost );
     connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
     connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
@@ -2000,7 +2000,7 @@ void mudlet::slot_show_help_dialog_download()
 
 void mudlet::slot_show_about_dialog()
 {
-    dlgAboutDialog * pDlg = new dlgAboutDialog( this );
+    auto pDlg = new dlgAboutDialog( this );
     pDlg->raise();
     pDlg->show();
 }

@@ -115,12 +115,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     setUnifiedTitleAndToolBarOnMac( true ); //MAC OSX: make window moveable
     setWindowTitle( mpHost->getName() );
     setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_editor.png" ) ) );
-    QStatusBar * statusBar = new QStatusBar(this);
+    auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled( true );
     setStatusBar( statusBar );
     statusBar->show();
     mIsGrabKey = false;
-    QVBoxLayout * pVB1 = new QVBoxLayout(mainArea);
+    auto pVB1 = new QVBoxLayout(mainArea);
 
     // system message area
     mpSystemMessageArea = new dlgSystemMessageArea( mainArea );
@@ -204,7 +204,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     // option areas
 
-    QHBoxLayout * pHB2 = new QHBoxLayout(popupArea);
+    auto pHB2 = new QHBoxLayout(popupArea);
     QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Maximum);
     popupArea->setMinimumSize(200,60);
     pHB2->setSizeConstraint( QLayout::SetMaximumSize );
@@ -415,7 +415,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addKeysMenuAction->setEnabled( true );
     connect( addKeysMenuAction, SIGNAL(triggered()), this, SLOT( slot_addKey()));
 
-    QMenu * addTriggerMenu = new QMenu( this );
+    auto addTriggerMenu = new QMenu( this );
     addTriggerMenu->addAction( addTriggerMenuAction );
     addTriggerMenu->addAction( addTimersMenuAction );
     addTriggerMenu->addAction( addScriptsMenuAction );
@@ -441,7 +441,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addScriptsGroupMenuAction->setEnabled( true );
     connect( addScriptsGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScriptGroup()));
 
-    QMenu * addTriggerGroupMenu = new QMenu( this );
+    auto addTriggerGroupMenu = new QMenu( this );
     addTriggerGroupMenu->addAction( addTriggerGroupMenuAction );
     addTriggerGroupMenu->addAction( addTimersGroupMenuAction );
     addTriggerGroupMenu->addAction( addScriptsGroupMenuAction );
@@ -549,13 +549,13 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_searchResults->setHeaderLabels( labelList );
     mpScrollArea = mpTriggersMainArea->scrollArea;
     HpatternList = new QWidget;
-    QVBoxLayout * lay1 = new QVBoxLayout( HpatternList );
+    auto lay1 = new QVBoxLayout( HpatternList );
     lay1->setContentsMargins(0,0,0,0);
     lay1->setSpacing(0);
     mpScrollArea->setWidget( HpatternList );
     for( int i=0; i<50; i++)
     {
-        dlgTriggerPatternEdit * pItem = new dlgTriggerPatternEdit(HpatternList);
+        auto pItem = new dlgTriggerPatternEdit(HpatternList);
         QStringList _patternList;
         _patternList << "substring"
                      << "perl regex"
@@ -2840,7 +2840,7 @@ void dlgTriggerEditor::addVar( bool isFolder )
         pParent = cItem;
     else
         pParent = cItem->parent();
-    TVar * newVar = new TVar();
+    auto newVar = new TVar();
     if (pParent)
     {
         //we're nested under something, or going to be.  This HAS to be a table
@@ -4919,7 +4919,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
         QStringList eventHandlerList = pT->getEventHandlerList();
         for( int i=0; i<eventHandlerList.size(); i++ )
         {
-            QListWidgetItem * pItem = new QListWidgetItem( mpScriptsMainArea->listWidget_registered_event_handlers );
+            auto pItem = new QListWidgetItem( mpScriptsMainArea->listWidget_registered_event_handlers );
             pItem->setText( eventHandlerList[i] );
             mpScriptsMainArea->listWidget_registered_event_handlers->addItem( pItem );
         }
@@ -5017,7 +5017,7 @@ void dlgTriggerEditor::fillout_form()
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( mpTriggerBaseItem, sList);
+        auto pItem = new QTreeWidgetItem( mpTriggerBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpTriggerBaseItem->addChild( pItem );
         QIcon icon;
@@ -5137,14 +5137,14 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setExpanded( true );
     list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
 
-    for( list<TTimer *>::iterator it = baseNodeList_timers.begin(); it!=baseNodeList_timers.end(); it++ )
+    for( auto it = baseNodeList_timers.begin(); it!=baseNodeList_timers.end(); it++ )
     {
         TTimer * pT = *it;
         if( pT->isTempTimer() ) continue;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( mpTimerBaseItem, sList);
+        auto pItem = new QTreeWidgetItem( mpTimerBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpTimerBaseItem->addChild( pItem );
         QIcon icon;
@@ -5225,14 +5225,14 @@ void dlgTriggerEditor::fillout_form()
     mpScriptsBaseItem->setExpanded( true );
     list<TScript *> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
 
-    for( list<TScript *>::iterator it = baseNodeList_scripts.begin(); it!=baseNodeList_scripts.end(); it++ )
+    for( auto it = baseNodeList_scripts.begin(); it!=baseNodeList_scripts.end(); it++ )
     {
         TScript * pT = *it;
         QString s = pT->getName();
 
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( mpScriptsBaseItem, sList);
+        auto pItem = new QTreeWidgetItem( mpScriptsBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpScriptsBaseItem->addChild( pItem );
         QIcon icon;
@@ -5298,13 +5298,13 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded( true );
     list<TAlias *> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
 
-    for( list<TAlias *>::iterator it = baseNodeList_alias.begin(); it!=baseNodeList_alias.end(); it++ )
+    for( auto it = baseNodeList_alias.begin(); it!=baseNodeList_alias.end(); it++ )
     {
         TAlias * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( mpAliasBaseItem, sList);
+        auto pItem = new QTreeWidgetItem( mpAliasBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpAliasBaseItem->addChild( pItem );
         QIcon icon;
@@ -5398,13 +5398,13 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded( true );
     list<TAction *> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
 
-    for( list<TAction *>::iterator it = baseNodeList_action.begin(); it!=baseNodeList_action.end(); it++ )
+    for( auto it = baseNodeList_action.begin(); it!=baseNodeList_action.end(); it++ )
     {
         TAction * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( mpActionBaseItem, sList);
+        auto pItem = new QTreeWidgetItem( mpActionBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpActionBaseItem->addChild( pItem );
         QIcon icon;
@@ -5485,13 +5485,13 @@ void dlgTriggerEditor::fillout_form()
     mpKeyBaseItem->setExpanded( true );
     list<TKey *> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
 
-    for( list<TKey *>::iterator it = baseNodeList_key.begin(); it!=baseNodeList_key.end(); it++ )
+    for( auto it = baseNodeList_key.begin(); it!=baseNodeList_key.end(); it++ )
     {
         TKey * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( mpKeyBaseItem, sList);
+        auto pItem = new QTreeWidgetItem( mpKeyBaseItem, sList);
         pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
         mpKeyBaseItem->addChild( pItem );
         QIcon icon;
@@ -5607,7 +5607,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
+        auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
@@ -5717,7 +5717,7 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
+        auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
@@ -5784,7 +5784,7 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
+        auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
@@ -5838,7 +5838,7 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
+        auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
@@ -5904,7 +5904,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
+        auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
@@ -5974,7 +5974,7 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
         QString s = pT->getName();
         QStringList sList;
         sList << s;
-        QTreeWidgetItem * pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
+        auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
         pItem->setData( 0, Qt::UserRole, pT->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
@@ -6648,7 +6648,7 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
     else
     {
     LAZY:
-        QListWidgetItem * pItem = new QListWidgetItem;
+        auto pItem = new QListWidgetItem;
         pItem->setText( mpScriptsMainArea->lineEdit->text() );
         mpScriptsMainArea->listWidget_registered_event_handlers->addItem( pItem );
 
@@ -7318,7 +7318,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     pT->mColorTriggerFgAnsi = ansiFg;
     pT->mColorTriggerBgAnsi = ansiBg;
 
-    dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 0 );
+    auto pD = new dlgColorTrigger(this, pT, 0 );
     pD->setModal( true );
     pD->setWindowModality( Qt::ApplicationModal );
     pD->exec();
@@ -7371,7 +7371,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     pT->mColorTriggerFgAnsi = ansiFg;
     pT->mColorTriggerBgAnsi = ansiBg;
 
-    dlgColorTrigger * pD = new dlgColorTrigger(this, pT, 1 );
+    auto pD = new dlgColorTrigger(this, pT, 1 );
     pD->setModal( true );
     pD->setWindowModality( Qt::ApplicationModal );
     pD->exec();

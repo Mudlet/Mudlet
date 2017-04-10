@@ -557,7 +557,7 @@ inline void TTrigger::updateMultistates( int regexNumber,
     if( regexNumber == 0 )
     {
         // wird automatisch auf #1 gesetzt
-        TMatchState * pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
+        auto pCondition = new TMatchState( mRegexCodeList.size(), mConditionLineDelta );
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back( captureList );
         pCondition->multiCapturePosList.push_back( posList );
@@ -1043,7 +1043,7 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
                     removeList.push_back( (*it).first );
                 }
             }
-            for( list<TMatchState*>::iterator it=removeList.begin(); it!=removeList.end(); it++ )
+            for( auto it=removeList.begin(); it!=removeList.end(); it++ )
             {
                 if( mConditionMap.find( *it ) != mConditionMap.end() )
                 {
@@ -1246,7 +1246,7 @@ TColorTable * TTrigger::createColorPattern( int ansiFg, int ansiBg )
 
     if( invalidColorCode ) return 0;
 
-    TColorTable * pCT = new TColorTable;
+    auto pCT = new TColorTable;
     if( !pCT ) return 0;
 
     pCT->ansiBg = ansiBg;

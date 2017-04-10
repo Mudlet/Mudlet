@@ -56,7 +56,7 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
         QSizePolicy sizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred);
         mpWidget->setSizePolicy( sizePolicy );
     }
-    QWidget * test = new QWidget;
+    auto test = new QWidget;
     setTitleBarWidget(test);
     setStyleSheet( mpTAction->css );
     mpWidget->setStyleSheet( mpTAction->css );
@@ -141,7 +141,7 @@ void TToolBar::finalize()
     {
         return;
     }
-    QWidget * fillerWidget = new QWidget;
+    auto fillerWidget = new QWidget;
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding );
     fillerWidget->setSizePolicy( sizePolicy );
     int columns = mpTAction->getButtonColumns();
@@ -191,7 +191,7 @@ void TToolBar::slot_pressed(const bool isChecked)
 
 void TToolBar::clear()
 {
-    QWidget * pW = new QWidget( this );
+    auto pW = new QWidget( this );
     setWidget( pW );
     mpWidget->deleteLater();
     mpWidget = pW;
@@ -206,7 +206,7 @@ void TToolBar::clear()
     }
     else
         mpLayout = 0;
-    QWidget * test = new QWidget;
+    auto test = new QWidget;
     setStyleSheet( mpTAction->css );
     mpWidget->setStyleSheet( mpTAction->css );
     setTitleBarWidget( test );

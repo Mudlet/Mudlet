@@ -713,7 +713,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         lua_pushvalue(L, -2);//we do this because extracting the key with tostring changes it
         QString keyName;
         QString valueName;
-        TVar * var = new TVar();
+        auto var = new TVar();
         if ( kType == LUA_TTABLE ){
             keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));//this function pops the top item
             lrefs.append(keyName.toInt());
@@ -798,7 +798,7 @@ void LuaInterface::getVars( bool hide ){
     L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
-    TVar * g = new TVar();
+    auto g = new TVar();
     g->setName("_G", LUA_TSTRING);
     g->setValue("{}", LUA_TTABLE);
     QListIterator<int> it(lrefs);

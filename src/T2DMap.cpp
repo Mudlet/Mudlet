@@ -2593,7 +2593,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             mIsSelectionUsingNames = false;
             while( itRoom.hasNext() )
             {
-                QTreeWidgetItem * _item = new QTreeWidgetItem;
+                auto _item = new QTreeWidgetItem;
                 int multiSelectionRoomId = itRoom.next();
                 _item->setText(0,QStringLiteral("%1").arg(multiSelectionRoomId,7)); // Pad with spaces so sorting works
                 _item->setTextAlignment(0, Qt::AlignRight);
@@ -2633,7 +2633,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
     if( event->buttons() & Qt::RightButton )
     {
-        QMenu * popup = new QMenu( this );
+        auto popup = new QMenu( this );
 
         if( mCustomLinesRoomFrom > 0 )
         {
@@ -2872,7 +2872,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             it.next();
             QStringList menuInfo = it.value();
             QString displayName = menuInfo[1];
-            QMenu * userMenu = new QMenu(displayName, this);
+            auto userMenu = new QMenu(displayName, this);
             userMenus.insert(it.key(), userMenu);
         }
         it.toFront();
@@ -2889,11 +2889,11 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         }
         //add our actions
         QMapIterator<QString, QStringList> it2(mUserActions);
-        QSignalMapper* mapper = new QSignalMapper(this);
+        auto mapper = new QSignalMapper(this);
         while (it2.hasNext()){
             it2.next();
             QStringList actionInfo = it2.value();
-            QAction * action = new QAction(actionInfo[2], this );
+            auto action = new QAction(actionInfo[2], this );
             if (actionInfo[1] == "")//no parent
                 popup->addAction(action);
             else if (userMenus.contains(actionInfo[1]))
@@ -3296,14 +3296,14 @@ void T2DMap::slot_movePosition()
     TRoom * pR_start = mpMap->mpRoomDB->getRoom( mMultiSelectionHighlightRoomId );
     // pR has already been validated by getCenterSelection()
 
-    QDialog * pD = new QDialog(this);
-    QGridLayout * pL = new QGridLayout;
+    auto pD = new QDialog(this);
+    auto pL = new QGridLayout;
     pD->setLayout( pL );
     pD->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     pD->setContentsMargins(0,0,0,0);
-    QLineEdit * pLEx = new QLineEdit(pD);
-    QLineEdit * pLEy = new QLineEdit(pD);
-    QLineEdit * pLEz = new QLineEdit(pD);
+    auto pLEx = new QLineEdit(pD);
+    auto pLEy = new QLineEdit(pD);
+    auto pLEz = new QLineEdit(pD);
 
     pLEx->setText(QString::number(pR_start->x));
     pLEy->setText(QString::number(pR_start->y));
@@ -3320,18 +3320,18 @@ void T2DMap::slot_movePosition()
     pL->addWidget(pLEy,2,1,Qt::AlignVCenter|Qt::AlignLeft);
     pL->addWidget(pLa3,3,0,Qt::AlignVCenter|Qt::AlignRight);
     pL->addWidget(pLEz,3,1,Qt::AlignVCenter|Qt::AlignLeft);
-    QWidget * pButtonBar = new QWidget(pD);
+    auto pButtonBar = new QWidget(pD);
 
-    QHBoxLayout * pL2 = new QHBoxLayout;
+    auto pL2 = new QHBoxLayout;
     pButtonBar->setLayout( pL2 );
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
 
-    QPushButton * pB_ok = new QPushButton(pButtonBar);
+    auto pB_ok = new QPushButton(pButtonBar);
     pB_ok->setText("Ok");
     pL2->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), pD, SLOT(accept()));
 
-    QPushButton * pB_abort = new QPushButton(pButtonBar);
+    auto pB_abort = new QPushButton(pButtonBar);
     pB_abort->setText("Cancel");
     connect(pB_abort, SIGNAL(clicked()), pD, SLOT(reject()));
     pL2->addWidget(pB_abort);
@@ -3615,24 +3615,24 @@ void T2DMap::slot_defineNewColor()
 void T2DMap::slot_changeColor()
 {
     mChosenRoomColor = 5;
-    QDialog * pD = new QDialog(this);
-    QVBoxLayout * pL = new QVBoxLayout;
+    auto pD = new QDialog(this);
+    auto pL = new QVBoxLayout;
     pD->setLayout( pL );
     pD->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     pD->setContentsMargins(0,0,0,0);
-    QListWidget * pLW = new QListWidget(pD);
+    auto pLW = new QListWidget(pD);
     pLW->setViewMode(QListView::IconMode);
 
     connect(pLW, SIGNAL(itemDoubleClicked(QListWidgetItem*)), pD, SLOT(accept()));
     connect(pLW, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_selectRoomColor(QListWidgetItem*)));
 
     pL->addWidget(pLW);
-    QWidget * pButtonBar = new QWidget(pD);
+    auto pButtonBar = new QWidget(pD);
 
-    QHBoxLayout * pL2 = new QHBoxLayout;
+    auto pL2 = new QHBoxLayout;
     pButtonBar->setLayout( pL2 );
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
-    QPushButton * pB_newColor = new QPushButton(pButtonBar);
+    auto pB_newColor = new QPushButton(pButtonBar);
     pB_newColor->setText("define new color");
 
     connect(pB_newColor, SIGNAL(clicked()), pD, SLOT(reject()));
@@ -3640,12 +3640,12 @@ void T2DMap::slot_changeColor()
 
     pL2->addWidget(pB_newColor);
 
-    QPushButton * pB_ok = new QPushButton(pButtonBar);
+    auto pB_ok = new QPushButton(pButtonBar);
     pB_ok->setText("ok");
     pL2->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), pD, SLOT(accept()));
 
-    QPushButton * pB_abort = new QPushButton(pButtonBar);
+    auto pB_abort = new QPushButton(pButtonBar);
     pB_abort->setText("abort");
     connect(pB_abort, SIGNAL(clicked()), pD, SLOT(reject()));
     pL2->addWidget(pB_abort);
@@ -3657,7 +3657,7 @@ void T2DMap::slot_changeColor()
         it.next();
         QColor c;
         c = it.value();
-        QListWidgetItem * pI = new QListWidgetItem( pLW );
+        auto pI = new QListWidgetItem( pLW );
         QPixmap pix = QPixmap(50,50);
         pix.fill( c );
         QIcon mi( pix );
@@ -3827,7 +3827,7 @@ void T2DMap::slot_setExits()
     }
     if( mpMap->mpRoomDB->getRoom( mMultiSelectionHighlightRoomId ) )
     {
-        dlgRoomExits * pD = new dlgRoomExits( mpHost, this );
+        auto pD = new dlgRoomExits( mpHost, this );
         pD->init( mMultiSelectionHighlightRoomId );
         pD->show();
         pD->raise();
@@ -4275,7 +4275,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 mIsSelectionUsingNames = false;
                 while( itRoom.hasNext() )
                 {
-                    QTreeWidgetItem * _item = new QTreeWidgetItem;
+                    auto _item = new QTreeWidgetItem;
                     int multiSelectionRoomId = itRoom.next();
                     _item->setText(0,QStringLiteral("%1").arg(multiSelectionRoomId,7));
                     _item->setTextAlignment(0, Qt::AlignRight);
@@ -4792,7 +4792,7 @@ void T2DMap::slot_setCustomLine()
         if( dir.size() > 1 )
             if( dir.startsWith('0')|| dir.startsWith('1') )
                 dir = dir.mid(1);
-        QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
+        auto pI = new QTreeWidgetItem(specialExits);
         if( pR->customLines.contains(dir) )
             pI->setCheckState( 0, Qt::Checked );
         else

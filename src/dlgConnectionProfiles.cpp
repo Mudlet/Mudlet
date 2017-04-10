@@ -462,7 +462,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     QString newname = tr( "new profile name" );
 
-    QListWidgetItem * pItem = new QListWidgetItem( newname );
+    auto pItem = new QListWidgetItem( newname );
     if( ! pItem ) {
         return;
     }
@@ -1084,7 +1084,7 @@ void dlgConnectionProfiles::fillout_form()
             continue;
         }
 
-        QListWidgetItem * pItem = new QListWidgetItem( mProfileList.at(i) );
+        auto pItem = new QListWidgetItem( mProfileList.at(i) );
         pItem->setFont(font);
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
@@ -1189,7 +1189,7 @@ void dlgConnectionProfiles::slot_copy_profile()
         profile_name = profile_name2;
     }
 
-    QListWidgetItem * pItem = new QListWidgetItem( profile_name );
+    auto pItem = new QListWidgetItem( profile_name );
     if( ! pItem )
     {
         return;

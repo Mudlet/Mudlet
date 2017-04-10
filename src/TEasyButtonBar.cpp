@@ -45,7 +45,7 @@ TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
 , mpBar( pW )
 {
     mButtonList.clear();
-    QVBoxLayout * layout = new QVBoxLayout;
+    auto layout = new QVBoxLayout;
     setLayout( layout );
     layout->setContentsMargins(0,0,0,0);
     layout->setMargin(0);
@@ -145,7 +145,7 @@ void TEasyButtonBar::finalize()
     {
         return;
     }
-    QWidget * fillerWidget = new QWidget;
+    auto fillerWidget = new QWidget;
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding );
     fillerWidget->setSizePolicy( sizePolicy );
@@ -198,7 +198,7 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
 
 void TEasyButtonBar::clear()
 {
-    QWidget * pW = new QWidget;
+    auto pW = new QWidget;
     for(auto it = mButtonList.begin(); it != mButtonList.end(); it++ )
     {
         disconnect( *it, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
