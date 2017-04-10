@@ -242,10 +242,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpOptionsAreaTimers->setSizePolicy( sizePolicy2 );
     pHB2->addWidget( mpOptionsAreaTimers );
 
-    button_toggleSearchAreaResults->setStyleSheet( QStringLiteral( "QToolButton::on{border-image:url(:/icons/1downarrow_grey.png);} "
-                                                                   "QToolButton{border-image:url(:/icons/1rightarrow_grey.png);}"
-                                                                   "QToolButton::on:hover{border-image:url(:/icons/downarrow.png);} "
-                                                                   "QToolButton:hover{border-image:url(:/icons/rightarrow.png);}" ) );
+    button_toggleSearchAreaResults->setStyleSheet( QStringLiteral( "QToolButton::on{border-image:url(:/icons/arrow-down_grey.png);} "
+                                                                   "QToolButton{border-image:url(:/icons/arrow-right_grey.png);}"
+                                                                   "QToolButton::on:hover{border-image:url(:/icons/arrow-down.png);} "
+                                                                   "QToolButton:hover{border-image:url(:/icons/arrow-right.png);}" ) );
     connect( button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT( slot_showSearchAreaResults(const bool)));
 
     // additional settings
