@@ -36,9 +36,8 @@ using namespace std;
 void AliasUnit::_uninstall( TAlias * pChild, QString packageName )
 {
     list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto pT : *childrenList)
     {
-        TAlias * pT = *it2;
         _uninstall( pT, packageName );
         uninstallList.append( pT );
     }
@@ -47,19 +46,17 @@ void AliasUnit::_uninstall( TAlias * pChild, QString packageName )
 
 void AliasUnit::uninstall( QString packageName )
 {
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it ++ )
+    for(auto pT : mAliasRootNodeList)
     {
-        TAlias * pT = *it;
-
         if( pT->mPackageName == packageName )
         {
             _uninstall( pT, packageName );
             uninstallList.append( pT );
         }
     }
-    for( int i=0; i<uninstallList.size(); i++ )
+    for(auto & i : uninstallList)
     {
-        unregisterAlias(uninstallList[i]);
+        unregisterAlias(i);
 
     }
     uninstallList.clear();
@@ -67,9 +64,8 @@ void AliasUnit::uninstall( QString packageName )
 
 void AliasUnit::compileAll()
 {
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto pChild : mAliasRootNodeList)
     {
-        TAlias * pChild = *it;
         if( pChild->isActive() )
         {
             pChild->compileAll();
@@ -265,9 +261,8 @@ bool AliasUnit::processDataStream( const QString & data )
     QString lua_command_string = "command";
     Lua->set_lua_string( lua_command_string, data );
     bool state = false;
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto pChild : mAliasRootNodeList)
     {
-        TAlias * pChild = *it;
         // = data.replace( "\n", "" );
         if( pChild->match( data ) )
         {
@@ -286,9 +281,8 @@ bool AliasUnit::processDataStream( const QString & data )
 
 void AliasUnit::stopAllTriggers()
 {
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto pChild : mAliasRootNodeList)
     {
-        TAlias * pChild = *it;
         QString name = pChild->getName();
         pChild->disableFamily();
     }
@@ -296,9 +290,8 @@ void AliasUnit::stopAllTriggers()
 
 void AliasUnit::reenableAllTriggers()
 {
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto pChild : mAliasRootNodeList)
     {
-        TAlias * pChild = *it;
         pChild->enableFamily();
     }
 }
@@ -346,9 +339,8 @@ bool AliasUnit::disableAlias(const QString & name )
 
 bool AliasUnit::killAlias(const QString & name )
 {
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto pChild : mAliasRootNodeList)
     {
-        TAlias * pChild = *it;
         if( pChild->getName() == name )
         {
             // only temporary Aliass can be killed
@@ -370,9 +362,8 @@ bool AliasUnit::killAlias(const QString & name )
 void AliasUnit::_assembleReport( TAlias * pChild )
 {
     list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto pT : *childrenList)
     {
-        TAlias * pT = *it2;
         _assembleReport( pT );
         if( pT->isActive() ) statsActiveAliass++;
         if( pT->isTempAlias() ) statsTempAliass++;
@@ -385,16 +376,14 @@ QString AliasUnit::assembleReport()
     statsActiveAliass = 0;
     statsAliasTotal = 0;
     statsTempAliass = 0;
-    for(auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++)
+    for(auto pChild : mAliasRootNodeList)
     {
-        TAlias * pChild = *it;
         if( pChild->isActive() ) statsActiveAliass++;
         if( pChild->isTempAlias() ) statsTempAliass++;
         statsAliasTotal++;
         list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-        for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+        for(auto pT : *childrenList)
         {
-            TAlias * pT = *it2;
             _assembleReport( pT );
             if( pT->isActive() ) statsActiveAliass++;
             if( pT->isTempAlias() ) statsTempAliass++;
@@ -420,18 +409,18 @@ QString AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto & it : mCleanupList)
     {
-        delete *it;
+        delete it;
     }
     mCleanupList.clear();
 }
 
 void AliasUnit::markCleanup( TAlias * pT )
 {
-    for(auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
+    for(auto & it : mCleanupList)
     {
-        if( *it == pT )
+        if( it == pT )
         {
             return;
         }

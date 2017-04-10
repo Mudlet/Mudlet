@@ -119,8 +119,8 @@ void TRoomDB::deleteValuesFromEntranceMap( QSet<int> & valueSet )
             index = valueList.indexOf( roomId, index + 1 );
         }
     }
-    for (uint i = 0; i < deleteEntries.size(); ++i) {
-        entranceMap.remove( keyList.at(deleteEntries.at(i)), valueList.at(deleteEntries.at(i)) );
+    for (unsigned int deleteEntrie : deleteEntries) {
+        entranceMap.remove( keyList.at(deleteEntrie), valueList.at(deleteEntrie) );
     }
     qDebug() << "TRoomDB::deleteValuesFromEntranceMap() with a list of:" << valueSet.size() << "items, run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
@@ -156,15 +156,15 @@ void TRoomDB::updateEntranceMap(TRoom * pR, bool isMapLoading)
         if( ! isMapLoading ) {
             deleteValuesFromEntranceMap( id ); // When LOADING a map, will never need to do this
         }
-        for( unsigned int i = 0; i < toExits.size(); i++) {
+        for(int toExit : toExits) {
             if( showDebug ) {
-                values.append( QStringLiteral("%1,").arg(toExits.at(i)) );
+                values.append( QStringLiteral("%1,").arg(toExit) );
             }
-            if( ! entranceMap.contains( toExits.at(i), id ) ) {
+            if( ! entranceMap.contains( toExit, id ) ) {
                 // entranceMap is a QMultiHash, so multiple, identical entries is
                 // more than possible - it was actually happening and making
                 // entranceMap get larger than needed...!
-                entranceMap.insert( toExits.at(i), id );
+                entranceMap.insert( toExit, id );
             }
         }
         if( showDebug ) {
@@ -1042,17 +1042,17 @@ void TRoomDB::clearMapDB()
     entranceMap.clear();
     areaNamesMap.clear();
     hashTable.clear();
-    for( uint i=0; i<rPtrL.size(); i++ )
+    for(auto i : rPtrL)
     {
-        delete rPtrL.at(i); // Uses the internally held value of the room Id
+        delete i; // Uses the internally held value of the room Id
                             // (TRoom::id) to call TRoomDB::__removeRoom(id)
     }
 //    assert( rooms.size() == 0 ); // Pointless as rooms.clear() will have achieved the test condition
 
     QList<TArea*> areaList = getAreaPtrList();
-    for( uint i=0; i<areaList.size(); i++ )
+    for(auto i : areaList)
     {
-        delete areaList.at(i);
+        delete i;
     }
     assert( areas.size() == 0 );
     // Must now reinsert areaId -1 name = "Default Area"

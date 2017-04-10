@@ -82,9 +82,8 @@ QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 {
     QMap<int,QMap<int,QMultiMap<int,int> > > kS;
     QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
-    for( int i=0; i<roomList.size(); i++ )
+    for(auto pR : roomList)
     {
-        TRoom * pR = roomList[i];
         int id = pR->getId();
         int x = pR->x;
         int y = pR->y;

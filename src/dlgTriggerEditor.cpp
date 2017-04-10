@@ -705,9 +705,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_triggers->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto pI : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
             int idTree = pI->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
@@ -724,9 +723,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_aliases->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto pI : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
             int idTree = pI->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
@@ -743,9 +741,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_scripts->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto pI : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
             int idTree = pI->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
@@ -764,9 +761,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_actions->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto pI : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
             int idTree = pI->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
@@ -785,9 +781,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_timers->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto pI : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
             int idTree = pI->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
@@ -806,9 +801,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_keys->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto pI : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
             int idTree = pI->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
@@ -863,11 +857,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TTrigger *> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto pChild : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TTrigger * pChild = *it;
             QString n = pChild->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
@@ -940,11 +933,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TAlias *> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto pChild : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TAlias * pChild = *it;
             QString n = pChild->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
@@ -1016,11 +1008,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TScript *> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto pChild : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TScript * pChild = *it;
             QString n = pChild->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
@@ -1072,11 +1063,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TAction *> nodes = mpHost->getActionUnit()->getActionRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto pChild : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TAction * pChild = *it;
             QString n = pChild->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
@@ -1128,11 +1118,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TTimer *> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto pChild : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TTimer * pChild = *it;
             QString n = pChild->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
@@ -1184,11 +1173,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TKey *> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto pChild : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TKey * pChild = *it;
             QString n = pChild->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
@@ -1288,11 +1276,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
 void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const QString & s )
 {
     list<TTrigger *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pChild : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TTrigger * pChild = *it;
         QString n = pChild->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
@@ -1368,11 +1355,10 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
 void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QString & s )
 {
     list<TAlias *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pChild : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TAlias * pChild = *it;
         QString n = pChild->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
@@ -1448,11 +1434,10 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
 void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const QString & s )
 {
     list<TScript *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pChild : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TScript * pChild = *it;
         QString n = pChild->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
@@ -1507,11 +1492,10 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
 void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const QString & s )
 {
     list<TAction *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pChild : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TAction * pChild = *it;
         QString n = pChild->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
@@ -1566,11 +1550,10 @@ void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const Q
 void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QString & s )
 {
     list<TTimer *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pChild : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TTimer * pChild = *it;
         QString n = pChild->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
@@ -1625,11 +1608,10 @@ void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QSt
 void dlgTriggerEditor::recursiveSearchKeys( TKey * pTriggerParent, const QString & s )
 {
     list<TKey *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pChild : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TKey * pChild = *it;
         QString n = pChild->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
@@ -3782,10 +3764,10 @@ void dlgTriggerEditor::saveScript()
         itemList << pItem;
     }
     QStringList handlerList;
-    for( int i=0; i<itemList.size(); i++ )
+    for(auto & i : itemList)
     {
-        if( itemList[i]->text().size() < 1 ) continue;
-        handlerList << itemList[i]->text();
+        if( i->text().size() < 1 ) continue;
+        handlerList << i->text();
     }
 
     if( pItem )
@@ -4539,20 +4521,20 @@ void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem *pItem){
         vu->addSavedVar( var );
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Checked ||
+                        i->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
         list.clear();
         recurseVariablesDown( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Checked ||
+                        i->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
     }
@@ -4563,20 +4545,20 @@ void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem *pItem){
         vu->removeSavedVar(var);
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Checked ||
+                        i->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->removeSavedVar( v );
         }
         list.clear();
         recurseVariablesDown( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Checked ||
+                        i->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->removeSavedVar( v );
         }
     }
@@ -4602,20 +4584,20 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
             vu->addSavedVar( var );
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Checked ||
+                        i->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
         list.clear();
         recurseVariablesDown( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Checked ||
+                        i->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
     }
@@ -4628,20 +4610,20 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
             vu->removeSavedVar( var );
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Unchecked ) )
             {
                 vu->removeSavedVar( v );
             }
         }
         list.clear();
         recurseVariablesDown( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & i : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            TVar * v = vu->getWVar( i );
+            if ( v && ( i->checkState( column ) == Qt::Unchecked ) )
             {
                 vu->removeSavedVar( v );
             }
@@ -5010,9 +4992,8 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setIcon( 0, mainIcon );
     treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
     list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-    for(auto it=baseNodeList.begin(); it!=baseNodeList.end(); it++ )
+    for(auto pT : baseNodeList)
     {
-        TTrigger * pT = *it;
         if( pT->isTempTrigger() ) continue;
         QString s = pT->getName();
         QStringList sList;
@@ -5137,9 +5118,8 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setExpanded( true );
     list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
 
-    for( auto it = baseNodeList_timers.begin(); it!=baseNodeList_timers.end(); it++ )
+    for(auto pT : baseNodeList_timers)
     {
-        TTimer * pT = *it;
         if( pT->isTempTimer() ) continue;
         QString s = pT->getName();
         QStringList sList;
@@ -5225,9 +5205,8 @@ void dlgTriggerEditor::fillout_form()
     mpScriptsBaseItem->setExpanded( true );
     list<TScript *> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
 
-    for( auto it = baseNodeList_scripts.begin(); it!=baseNodeList_scripts.end(); it++ )
+    for(auto pT : baseNodeList_scripts)
     {
-        TScript * pT = *it;
         QString s = pT->getName();
 
         QStringList sList;
@@ -5298,9 +5277,8 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded( true );
     list<TAlias *> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
 
-    for( auto it = baseNodeList_alias.begin(); it!=baseNodeList_alias.end(); it++ )
+    for(auto pT : baseNodeList_alias)
     {
-        TAlias * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5398,9 +5376,8 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded( true );
     list<TAction *> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
 
-    for( auto it = baseNodeList_action.begin(); it!=baseNodeList_action.end(); it++ )
+    for(auto pT : baseNodeList_action)
     {
-        TAction * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5485,9 +5462,8 @@ void dlgTriggerEditor::fillout_form()
     mpKeyBaseItem->setExpanded( true );
     list<TKey *> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
 
-    for( auto it = baseNodeList_key.begin(); it!=baseNodeList_key.end(); it++ )
+    for(auto pT : baseNodeList_key)
     {
-        TKey * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5601,9 +5577,8 @@ void dlgTriggerEditor::repopulateVars()
 void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TTrigger *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pT : *childrenList)
     {
-        TTrigger * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5711,9 +5686,8 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
 void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TKey *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pT : *childrenList)
     {
-        TKey * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5778,9 +5752,8 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
 void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TScript *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pT : *childrenList)
     {
-        TScript * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5832,9 +5805,8 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
 void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TAlias *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pT : *childrenList)
     {
-        TAlias * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5898,9 +5870,8 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
 void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TAction *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pT : *childrenList)
     {
-        TAction * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -5968,9 +5939,8 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
 void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TTimer *> * childrenList = pTimerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto pT : *childrenList)
     {
-        TTimer * pT = *it;
         QString s = pT->getName();
         QStringList sList;
         sList << s;
@@ -7150,11 +7120,11 @@ bool dlgTriggerEditor::event( QEvent * event )
             {
                 case 0x01000000:
                     mIsGrabKey = false;
-                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-                        if ( actionList.at(i)->text() == "Save Item" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+S"));
-                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                    for(auto & i : actionList) {
+                        if ( i->text() == "Save Item" ) {
+                            i->setShortcut(tr("Ctrl+S"));
+                        } else if ( i->text() == "Save Profile" ) {
+                            i->setShortcut(tr("Ctrl+Shift+S"));
                         }
                     }
                     ke->accept();
@@ -7168,11 +7138,11 @@ bool dlgTriggerEditor::event( QEvent * event )
                 default:
                     grab_key_callback( ke->key(), ke->modifiers() );
                     mIsGrabKey = false;
-                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-                        if ( actionList.at(i)->text() == "Save Item" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+S"));
-                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                    for(auto & i : actionList) {
+                        if ( i->text() == "Save Item" ) {
+                            i->setShortcut(tr("Ctrl+S"));
+                        } else if ( i->text() == "Save Profile" ) {
+                            i->setShortcut(tr("Ctrl+Shift+S"));
                         }
                     }
                     ke->accept();
@@ -7188,11 +7158,11 @@ void dlgTriggerEditor::slot_grab_key()
 {
     mIsGrabKey = true;
     QList<QAction *> actionList = toolBar->actions();
-    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-        if ( actionList.at(i)->text() == "Save Item" ) {
-            actionList[i]->setShortcut(tr(""));
-        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-            actionList[i]->setShortcut(tr(""));
+    for(auto & i : actionList) {
+        if ( i->text() == "Save Item" ) {
+            i->setShortcut(tr(""));
+        } else if ( i->text() == "Save Profile" ) {
+            i->setShortcut(tr(""));
         }
     }
 }

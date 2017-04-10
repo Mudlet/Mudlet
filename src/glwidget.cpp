@@ -572,11 +572,11 @@ void GLWidget::paintGL()
                               ebenenColor[ef][2],
                               ebenenColor[ef][3]);*/
                 }
-                for( int k=0; k<exitList.size(); k++ )
+                for(int k : exitList)
                 {
                     bool areaExit = false;
-                    if( exitList[k] == -1 ) continue;
-                    TRoom * pExit = mpMap->mpRoomDB->getRoom( exitList[k] );
+                    if( k == -1 ) continue;
+                    TRoom * pExit = mpMap->mpRoomDB->getRoom( k );
                     if( !pExit )
                     {
                         continue;
@@ -601,7 +601,7 @@ void GLWidget::paintGL()
                         glLineWidth(1);//1/mScale+2);
                     else
                         glLineWidth(1);//1/mScale);
-                    if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
+                    if( k == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
@@ -628,25 +628,25 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glVertex3f( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()-1 );
                     }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
@@ -664,32 +664,32 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.1, 0.1, 0.1);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
                         float mc6[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 0.0 };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc6);
                         glMateriali(GL_FRONT, GL_SHININESS, 96);
 
-                        glLoadName( exitList[k] );
+                        glLoadName( k );
                         quads++;
                         glBegin( GL_QUADS );
                         glNormal3f(0.57735, -0.57735, 0.57735);
@@ -842,25 +842,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.05, 0.05, 0.020);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
 
                         glBegin( GL_QUADS );
@@ -924,11 +924,11 @@ void GLWidget::paintGL()
             }
             else
             {
-                for( int k=0; k<exitList.size(); k++ )
+                for(int k : exitList)
                 {
                     bool areaExit = false;
-                    if( exitList[k] == -1 ) continue;
-                    TRoom * pExit = mpMap->mpRoomDB->getRoom( exitList[k] );
+                    if( k == -1 ) continue;
+                    TRoom * pExit = mpMap->mpRoomDB->getRoom( k );
                     if( !pExit )
                     {
                         continue;
@@ -954,7 +954,7 @@ void GLWidget::paintGL()
                         glLineWidth(1);//1/mScale+2);
                     else
                         glLineWidth(1);//1/mScale);
-                    if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
+                    if( k == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
@@ -982,25 +982,25 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()-1 );
                     }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
@@ -1018,28 +1018,28 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.1, 0.1, 0.1);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
-                        glLoadName( exitList[k] );
+                        glLoadName( k );
                         quads++;
                         glBegin( GL_QUADS );
                         glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1193,25 +1193,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.05, 0.05, 0.020);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
 
                         glBegin( GL_QUADS );

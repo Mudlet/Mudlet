@@ -73,9 +73,8 @@ bool TKey::match( int key, int modifier )
             }
         }
 
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto pChild : *mpMyChildrenList)
         {
-            TKey * pChild = *it;
             if( pChild->match( key, modifier ) ) return true;
         }
     }
@@ -100,9 +99,8 @@ void TKey::enableKey(const QString & name )
     {
         setIsActive( true );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
         pChild->enableKey( name );
     }
 }
@@ -113,9 +111,8 @@ void TKey::disableKey(const QString & name )
     {
         setIsActive( false );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
         pChild->disableKey( name );
     }
 }
@@ -128,9 +125,8 @@ void TKey::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
         pChild->compileAll();
     }
 }
@@ -145,9 +141,8 @@ void TKey::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
         pChild->compile();
     }
 }

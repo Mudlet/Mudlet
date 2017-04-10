@@ -166,9 +166,8 @@ void TTimer::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TTimer * pChild = *it;
         pChild->compile();
     }
 }
@@ -181,9 +180,8 @@ void TTimer::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of timer:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TTimer * pChild = *it;
         pChild->compileAll();
     }
 }
@@ -253,11 +251,8 @@ void TTimer::execute()
     if( ( ! isFolder() && hasChildren() )
      || ( isOffsetTimer() ) ) {
 
-        for( auto it = mpMyChildrenList->begin();
-             it != mpMyChildrenList->end();
-             ++it ) {
+        for(auto pChild : *mpMyChildrenList) {
 
-            TTimer * pChild = *it;
             if( pChild->isOffsetTimer() ) {
                 pChild->enableTimer( pChild->getID() );
             }
@@ -327,9 +322,8 @@ void TTimer::enableTimer( int id )
 
     if( mIsFolder )
     {
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto pChild : *mpMyChildrenList)
         {
-            TTimer * pChild = *it;
             if( ! pChild->isOffsetTimer() )
             {
                 pChild->enableTimer( pChild->getID() );
@@ -346,9 +340,8 @@ void TTimer::disableTimer( int id )
         mpTimer->stop();
     }
 
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TTimer * pChild = *it;
         if( ! pChild->isOffsetTimer() && pChild->shouldBeActive() )
         {
             pChild->disableTimer( pChild->getID() );
@@ -375,9 +368,8 @@ void TTimer::enableTimer()
     }
     if( ! isOffsetTimer() )
     {
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto pChild : *mpMyChildrenList)
         {
-            TTimer * pChild = *it;
             if( ! pChild->isOffsetTimer() ) pChild->enableTimer();
         }
     }
@@ -387,9 +379,8 @@ void TTimer::disableTimer()
 {
     deactivate();
     mpTimer->stop();
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TTimer * pChild = *it;
         pChild->disableTimer();
     }
 }
@@ -416,9 +407,8 @@ void TTimer::enableTimer(const QString & name )
 
     if( ! isOffsetTimer() )
     {
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto pChild : *mpMyChildrenList)
         {
-            TTimer * pChild = *it;
             pChild->enableTimer( pChild->getName() );
         }
     }
@@ -432,9 +422,8 @@ void TTimer::disableTimer(const QString & name )
         mpTimer->stop();
     }
 
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TTimer * pChild = *it;
         pChild->disableTimer( pChild->getName() );
     }
 }

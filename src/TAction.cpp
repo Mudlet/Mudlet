@@ -102,9 +102,8 @@ void TAction::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of action:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TAction * pChild = *it;
         pChild->compileAll();
     }
 }
@@ -119,9 +118,8 @@ void TAction::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TAction * pChild = *it;
         pChild->compile();
     }
 }
@@ -202,9 +200,8 @@ void TAction::execute()
 
 void TAction::expandToolbar( TToolBar * pT )
 {
-   for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   for(auto pChild : *mpMyChildrenList)
    {
-       TAction * pChild = *it;
        if( ! pChild->isActive() )
        {
            // This test and conditional loop abort was missing from this method
@@ -291,9 +288,8 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
         newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
 
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto pChild : *mpMyChildrenList)
         {
-            TAction * pChild = *it;
             pChild->insertActions( pT, newMenu );
         }
     }
@@ -302,9 +298,8 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
 
 void TAction::expandToolbar( TEasyButtonBar * pT )
 {
-   for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   for(auto pChild : *mpMyChildrenList)
    {
-       TAction * pChild = *it;
        if( ! pChild->isActive() )
        {
            continue;
@@ -367,9 +362,8 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
 // the need for the split is not yet clear to me! - Slysven
 void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
 {
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto pChild : *mpMyChildrenList)
     {
-        TAction * pChild = *it;
         if( ! pChild->isActive() )
         {
             continue;

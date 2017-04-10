@@ -771,9 +771,8 @@ int TLuaInterpreter::getFgColor( lua_State * L )
     std::list<int> result;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     result = pHost->mpConsole->getFgColor( luaSendText );
-    for(auto it=result.begin(); it!=result.end(); it++ )
+    for(int pos : result)
     {
-        int pos = *it;
         lua_pushnumber( L, pos );
     }
     return result.size();
@@ -803,9 +802,8 @@ int TLuaInterpreter::getBgColor( lua_State * L )
     std::list<int> result;
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     result = pHost->mpConsole->getBgColor( luaSendText );
-    for(auto it=result.begin(); it!=result.end(); it++ )
+    for(int pos : result)
     {
-        int pos = *it;
         lua_pushnumber( L, pos );
     }
     return result.size();
@@ -4539,8 +4537,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
         QList<TRoom *> roomList = pHost->mpMap->mpRoomDB->getRoomPtrList();
         lua_newtable(L);
         QList<int> roomIdsFound;
-        for( int i=0; i<roomList.size();i++ ) {
-            TRoom * pR = roomList.at(i);
+        for(auto pR : roomList) {
             if( exactMatch ) {
                 if( pR->name.compare( room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive ) == 0 ) {
                     roomIdsFound.append(pR->getId());
@@ -4553,8 +4550,8 @@ int TLuaInterpreter::searchRoom( lua_State *L )
             }
         }
         if( ! roomIdsFound.isEmpty() ) {
-            for( int i=0; i<roomIdsFound.size();i++ ) {
-                TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomIdsFound.at(i) );
+            for(int i : roomIdsFound) {
+                TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( i );
                 QString name = pR->name;
                 int roomID = pR->getId();
                 lua_pushnumber( L, roomID );
@@ -4983,13 +4980,13 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     else {
         QMultiMap<int, QPair<QString, int> > areaExits = pA->getAreaExitRoomData();
         QList<int> fromRooms = areaExits.uniqueKeys();
-        for( int i=0; i<fromRooms.size(); i++ ) {
-            lua_pushnumber( L, fromRooms.at(i) );
+        for(int fromRoom : fromRooms) {
+            lua_pushnumber( L, fromRoom );
             lua_newtable(L);
-            QList<QPair<QString, int> > toRoomsData = areaExits.values(fromRooms.at(i));
-            for( int j=0; j<toRoomsData.size(); j++ ) {
-                lua_pushstring( L, toRoomsData.at(j).first.toUtf8().constData() );
-                lua_pushnumber( L, toRoomsData.at(j).second );
+            QList<QPair<QString, int> > toRoomsData = areaExits.values(fromRoom);
+            for(const auto & j : toRoomsData) {
+                lua_pushstring( L, j.first.toUtf8().constData() );
+                lua_pushnumber( L, j.second );
                 lua_settable(L, -3);
             }
             lua_settable(L, -3);
@@ -11488,26 +11485,26 @@ int TLuaInterpreter::getCustomEnvColorTable( lua_State * L )
     {
         lua_newtable( L );
         QList<int> colorList = pHost->mpMap->customEnvColors.keys();
-        for( int idx=0; idx<colorList.size(); idx++ )
+        for(int & idx : colorList)
         {
-            lua_pushnumber( L, colorList[idx] );
+            lua_pushnumber( L, idx );
             lua_newtable( L );
             // red component
             {
                 lua_pushnumber( L, 1 );
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].red() );
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[idx].red() );
                 lua_settable( L, -3 );//match in matches
             }
             // green component
             {
                 lua_pushnumber( L, 2 );
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].green() );
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[idx].green() );
                 lua_settable( L, -3 );//match in matches
             }
             // blue component
             {
                 lua_pushnumber( L, 3 );
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[colorList[idx]].blue() );
+                lua_pushnumber( L, pHost->mpMap->customEnvColors[idx].blue() );
                 lua_settable( L, -3 );//match in matches
             }
             lua_settable( L, -3 );//matches in regex
@@ -12297,11 +12294,11 @@ void TLuaInterpreter::clearCaptureGroups()
 void TLuaInterpreter::adjustCaptureGroups( int x, int a )
 {
     // adjust all capture group positions in line if data has been inserted by the user
-    for(auto it=mCaptureGroupPosList.begin(); it!=mCaptureGroupPosList.end(); it++ )
+    for(int & it : mCaptureGroupPosList)
     {
-        if( *it >= x )
+        if( it >= x )
         {
-            *it += a;
+            it += a;
         }
     }
 }

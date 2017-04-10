@@ -39,9 +39,8 @@ KeyUnit::KeyUnit( Host * pHost )
 void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
 {
     list<TKey*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto pT : *childrenList)
     {
-        TKey * pT = *it2;
         _uninstall( pT, packageName );
         uninstallList.append( pT );
     }
@@ -50,28 +49,25 @@ void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
 
 void KeyUnit::uninstall(const QString& packageName )
 {
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
+    for(auto pT : mKeyRootNodeList)
     {
-        TKey * pT = *it;
-
         if( pT->mPackageName == packageName )
         {
             _uninstall( pT, packageName );
             uninstallList.append( pT );
         }
     }
-    for( int i=0; i<uninstallList.size(); i++ )
+    for(auto & i : uninstallList)
     {
-        unregisterKey(uninstallList[i]);
+        unregisterKey(i);
     }
      uninstallList.clear();
 }
 
 bool KeyUnit::processDataStream( int key, int modifier )
 {
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto pChild : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
         if( pChild->match( key, modifier ) ) return true;
     }
 
@@ -80,9 +76,8 @@ bool KeyUnit::processDataStream( int key, int modifier )
 
 void KeyUnit::compileAll()
 {
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto pChild : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
         if( pChild->isActive() )
         {
             pChild->compileAll();
@@ -94,9 +89,8 @@ bool KeyUnit::enableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto pChild : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
         pChild->enableKey( name );
         found = true;
     }
@@ -107,9 +101,8 @@ bool KeyUnit::disableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto pChild : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
         pChild->disableKey( name );
         found = true;
     }

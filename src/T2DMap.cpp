@@ -1174,17 +1174,16 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
             // draw exit stubs
             QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
-            for( int k=0; k<pR->exitStubs.size(); k++ )
+            for(int direction : pR->exitStubs)
             {
-                int direction = pR->exitStubs[k];
                 QVector3D uDirection = unitVectors[direction];
                 p.drawLine(rx+rSize*(int)uDirection.x()/2, ry+rSize*(int)uDirection.y(),rx+(int)uDirection.x()*(rSize*3/4*tx), ry+uDirection.y()*(rSize*3/4*ty));
             }
 
             QPen __pen;
-            for( int k=0; k<exitList.size(); k++ )
+            for(int & k : exitList)
             {
-                int rID = exitList[k];
+                int rID = k;
                 if( rID <= 0 ) continue;
 
                 bool areaExit;
@@ -1262,7 +1261,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     pen = p.pen();
                     pen.setWidthF(wegBreite);
                     pen.setCosmetic( mMapperUseAntiAlias );
-                    pen.setColor(getColor(exitList[k]));
+                    pen.setColor(getColor(k));
                     p.setPen( pen );
                     if( pR->getSouth() == rID )
                     {
@@ -1305,7 +1304,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                         _p = QPoint(p2.x()-tx/2, p2.y()+ty/2);
                     }
                     p.drawLine( _line );
-                    mAreaExitList[exitList[k]] = _p;
+                    mAreaExitList[k] = _p;
                     QLineF l0 = QLineF( _line );
                     l0.setLength(wegBreite*5);
                     QPointF _p1 = l0.p1();
@@ -1324,7 +1323,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     _poly.append( _p3 );
                     _poly.append( _p4 );
                     QBrush brush = p.brush();
-                    brush.setColor( getColor(exitList[k]) );
+                    brush.setColor( getColor(k) );
                     brush.setStyle( Qt::SolidPattern );
                     QPen arrowPen = p.pen();
                     arrowPen.setCosmetic( mMapperUseAntiAlias );
@@ -3214,9 +3213,9 @@ void T2DMap::slot_deleteLabel()
                 deleteList.push_back(it.key());
             }
         }
-        for( int i=0; i<deleteList.size(); i++ )
+        for(int & i : deleteList)
         {
-            mpMap->mapLabels[mAID].remove(deleteList[i]);
+            mpMap->mapLabels[mAID].remove(i);
         }
     }
     update();
@@ -3738,11 +3737,11 @@ void T2DMap::slot_spread()
         {
             itCustomLine.next();
             QList<QPointF> customLinePoints = itCustomLine.value();
-            for( int pointIndex=0; pointIndex< customLinePoints.size(); pointIndex++ )
+            for(auto & customLinePoint : customLinePoints)
             {
-                QPointF movingPoint = customLinePoints.at( pointIndex );
-                customLinePoints[pointIndex].setX( (float)(movingPoint.x()*spread+dx) );
-                customLinePoints[pointIndex].setY( (float)(movingPoint.y()*spread+dy) );
+                QPointF movingPoint = customLinePoint;
+                customLinePoint.setX( (float)(movingPoint.x()*spread+dx) );
+                customLinePoint.setY( (float)(movingPoint.y()*spread+dy) );
             }
             newCustomLinePointsMap.insert( itCustomLine.key(), customLinePoints );
         }
@@ -3805,11 +3804,11 @@ void T2DMap::slot_shrink()
         {
             itCustomLine.next();
             QList<QPointF> customLinePoints = itCustomLine.value();
-            for( int pointIndex=0; pointIndex< customLinePoints.size(); pointIndex++ )
+            for(auto & customLinePoint : customLinePoints)
             {
-                QPointF movingPoint = customLinePoints.at( pointIndex );
-                customLinePoints[pointIndex].setX( (float)(movingPoint.x()/spread+dx) );
-                customLinePoints[pointIndex].setY( (float)(movingPoint.y()/spread+dy) );
+                QPointF movingPoint = customLinePoint;
+                customLinePoint.setX( (float)(movingPoint.x()/spread+dx) );
+                customLinePoint.setY( (float)(movingPoint.y()/spread+dy) );
             }
             newCustomLinePointsMap.insert( itCustomLine.key(), customLinePoints );
         }
@@ -4372,11 +4371,11 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 {
                     itk.next();
                     QList<QPointF> _pL = itk.value();
-                    for( int pk=0; pk<_pL.size(); pk++ )
+                    for(auto & pk : _pL)
                     {
-                        QPointF op = _pL[pk];
-                        _pL[pk].setX( (float)(op.x()+dx) );
-                        _pL[pk].setY( (float)(op.y()+dy) );
+                        QPointF op = pk;
+                        pk.setX( (float)(op.x()+dx) );
+                        pk.setY( (float)(op.y()+dy) );
                     }
                     newMap.insert(itk.key(), _pL );
                 }
@@ -4979,8 +4978,8 @@ void T2DMap::slot_roomSelectionChanged()
 {
     QList<QTreeWidgetItem *> _sl = mMultiSelectionListWidget.selectedItems();
     mMultiSelectionSet.clear();
-    for( uint i=0; i< _sl.size(); i++ ) {
-        int currentRoomId = _sl.at(i)->text(0).toInt();
+    for(auto i : _sl) {
+        int currentRoomId = i->text(0).toInt();
         mMultiSelectionSet.insert( currentRoomId );
     }
     switch( mMultiSelectionSet.size() ) {
