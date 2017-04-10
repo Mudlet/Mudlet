@@ -1070,9 +1070,9 @@ bool Host::installPackage( const QString& fileName, int module )
         QStringList _filterList;
         _filterList << QStringLiteral( "*.xml" ) << QStringLiteral( "*.trigger" );
         QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
-        for(auto & entrie : entries)
+        for(auto & entry : entries)
         {
-            file2.setFileName( entrie.absoluteFilePath() );
+            file2.setFileName( entry.absoluteFilePath() );
             file2.open(QFile::ReadOnly | QFile::Text);
             QString profileName = getName();
             QString login = getLogin();

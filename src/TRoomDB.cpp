@@ -119,8 +119,8 @@ void TRoomDB::deleteValuesFromEntranceMap( QSet<int> & valueSet )
             index = valueList.indexOf( roomId, index + 1 );
         }
     }
-    for (unsigned int deleteEntrie : deleteEntries) {
-        entranceMap.remove( keyList.at(deleteEntrie), valueList.at(deleteEntrie) );
+    for (unsigned int entry : deleteEntries) {
+        entranceMap.remove( keyList.at(entry), valueList.at(entry) );
     }
     qDebug() << "TRoomDB::deleteValuesFromEntranceMap() with a list of:" << valueSet.size() << "items, run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
