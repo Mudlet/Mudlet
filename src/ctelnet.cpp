@@ -1335,8 +1335,8 @@ void cTelnet::postMessage( QString msg )
             body.removeFirst();
             if( prefix.contains("ERROR") )
             {
-                mpHost->mpConsole->print( prefix, 150, 0, 0, 0, 0, 0 ); // Red on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                mpHost->mpConsole->print( prefix, QColor(255, 0, 0), Qt::black ); // Bright Red on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(255, 255, 50), Qt::black );  // Bright Yellow on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1345,12 +1345,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified( temp.length() + prefixLength );
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(255, 255, 50), Qt::black );  // Bright Yellow on black
             }
             else if( prefix.contains("LUA") )
             {
-                mpHost->mpConsole->print( prefix, 80, 160, 255, 0, 0, 0 ); // Blue on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 200, 50, 0, 0, 0 );  // Green on black
+                mpHost->mpConsole->print( prefix, QColor(80, 160, 255), Qt::black ); // Light blue on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(50, 200, 50), Qt::black );  // Light green on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1359,13 +1359,13 @@ void cTelnet::postMessage( QString msg )
                 }
                 if( body.size() > 0 )
                 {
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 200, 50, 50, 0, 0, 0 );  // Red on black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(200, 50, 50), Qt::black );  // Red on black
                 }
             }
             else if( prefix.contains("WARN") )
             {
-                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 );
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 150, 0, 0, 0, 0 ); //Foreground dark grey, background bright grey
+                mpHost->mpConsole->print( prefix, QColor(0, 150, 190), Qt::black );
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(190, 150, 0), Qt::black ); // Orange on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1373,12 +1373,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 150, 0, 0, 0, 0 );
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 150, 0), Qt::black );
             }
             else if( prefix.contains("ALERT") )
             {
-                mpHost->mpConsole->print( prefix, 190, 100, 50, 0, 0, 0 ); // Orangish on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                mpHost->mpConsole->print( prefix, QColor(190, 100, 50), Qt::black ); // Orangish on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(190, 190, 50), Qt::black ); // Yellow on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1386,12 +1386,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 190, 50), Qt::black ); // Yellow on Black
             }
             else if( prefix.contains("INFO") )
             {
-                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 ); // Cyan on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                mpHost->mpConsole->print( prefix, QColor(0, 150, 190), Qt::black ); // Cyan on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(0, 160, 0), Qt::black );  // Light Green on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1399,12 +1399,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(0, 160, 0), Qt::black );  // Light Green on Black
             }
             else if( prefix.contains("OK") )
             {
-                mpHost->mpConsole->print( prefix, 0, 160, 0, 0, 0, 0 );  // Light Green on Black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                mpHost->mpConsole->print( prefix, QColor(0, 160, 0), Qt::black );  // Light Green on Black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(0, 150, 190), Qt::black ); // Cyan on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1412,12 +1412,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(0, 150, 190), Qt::black ); // Cyan on black
             }
             else
             {  // Unrecognised but still in a "[ something ] -  message..." format
-                mpHost->mpConsole->print( prefix, 190, 50, 50, 190, 190, 190 ); // Foreground red, background bright grey
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                mpHost->mpConsole->print( prefix, QColor(190, 50, 50), QColor(190, 190, 190) ); // Foreground red, background bright grey
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(50, 50, 50), QColor(190, 190, 190) ); //Foreground dark grey, background bright grey
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1425,12 +1425,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(50, 50, 50), QColor(190, 190, 190) ); //Foreground dark grey, background bright grey
             }
         }
         else
         {  // No prefix found
-            mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 190, 0, 0, 0 ); //Foreground bright grey, background black
+            mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 190, 190), Qt::black ); //Foreground bright grey, background black
         }
         messageStack.removeFirst();
     }

@@ -106,7 +106,7 @@ public:
       TConsole *        createBuffer(const QString & name );
       void              scrollDown( int lines );
       void              scrollUp( int lines );
-      void              print(const QString &, int, int, int, int, int, int );
+      void              print(const QString &, const QColor fgColor, const QColor bgColor);
       void              print(const QString & msg );
       void              print( const char * );
       void              printDebug( QColor &, QColor &, const QString & );
