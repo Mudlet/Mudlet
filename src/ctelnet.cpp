@@ -1404,7 +1404,7 @@ void cTelnet::postMessage( QString msg )
             else if( prefix.contains("OK") )
             {
                 mpHost->mpConsole->print( prefix, QColor(0, 160, 0), Qt::black );  // Light Green on Black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(0, 150, 190), Qt::black ); // Cyan on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(190, 100, 50), Qt::black ); // Orangish on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1412,7 +1412,7 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(0, 150, 190), Qt::black ); // Cyan on black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 100, 50), Qt::black ); // Orangish on black
             }
             else
             {  // Unrecognised but still in a "[ something ] -  message..." format
