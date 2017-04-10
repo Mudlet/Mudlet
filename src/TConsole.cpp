@@ -2226,7 +2226,7 @@ void TConsole::printCommand( QString & msg )
             }
         }
         msg.append("\n");
-        print( msg, mCommandFgColor.red(), mCommandFgColor.green(), mCommandFgColor.blue(), mCommandBgColor.red(), mCommandBgColor.green(), mCommandBgColor.blue() );
+        print( msg, mCommandFgColor, mCommandBgColor );
     }
 }
 
@@ -2617,17 +2617,17 @@ void TConsole::print(const QString & msg )
     console2->showNewLines();
 }
 
-void TConsole::print(const QString & msg, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB )
+void TConsole::print(const QString & msg, const QColor fgColor, const QColor bgColor )
 {
     buffer.append(  msg,
                     0,
                     msg.size(),
-                    fgColorR,
-                    fgColorG,
-                    fgColorB,
-                    bgColorR,
-                    bgColorG,
-                    bgColorB,
+                    fgColor.red(),
+                    fgColor.green(),
+                    fgColor.blue(),
+                    bgColor.red(),
+                    bgColor.green(),
+                    bgColor.blue(),
                     false,
                     false,
                     false,
@@ -2749,7 +2749,7 @@ void TConsole::showStatistics()
 
     QString h = header.join("");
     QString msg = h;
-    print( msg, 150, 120, 0, 0, 0, 0 );
+    print( msg, QColor(150, 120, 0), Qt::black );
 
     QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
@@ -2764,14 +2764,14 @@ void TConsole::showStatistics()
 
     QString r1 = mpHost->getTriggerUnit()->assembleReport();
     msg = r1;
-    print( msg, 150, 120, 0, 0, 0, 0 );
+    print( msg, QColor(150, 120, 0), Qt::black );
     script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
     QString r2 = mpHost->getTimerUnit()->assembleReport();
     QString footer = QString("\n+--------------------------------------------------------------+\n" );
     msg = r2;
-    print( msg, 150, 120, 0, 0, 0, 0 );
-    mpHost->mpConsole->print( footer, 150, 120, 0, 0, 0, 0 );
+    print( msg, QColor(150, 120, 0), Qt::black );
+    mpHost->mpConsole->print( footer, QColor(150, 120, 0), Qt::black );
     script = "resetFormat();";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 
