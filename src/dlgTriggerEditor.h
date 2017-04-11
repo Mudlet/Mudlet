@@ -104,6 +104,15 @@ public:
     void                        show_vars( );
 
 
+    static const int            cmTriggerView;
+    static const int            cmTimerView;
+    static const int            cmAliasView;
+    static const int            cmScriptView;
+    static const int            cmActionView;
+    static const int            cmKeysView;
+    static const int            cmVarsView;
+
+
 public slots:
     void                        slot_toggleHiddenVariables( bool );
     void                        slot_toggleHiddenVar( bool );
@@ -251,13 +260,6 @@ private:
     QTreeWidgetItem *           mpCurrentVarItem;
     QLineEdit *                 mpCursorPositionIndicator;
     int                         mCurrentView;
-    static const int            cmTriggerView;
-    static const int            cmTimerView;
-    static const int            cmAliasView;
-    static const int            cmScriptView;
-    static const int            cmActionView;
-    static const int            cmKeysView;
-    static const int            cmVarsView;
 
     QScrollArea *               mpScrollArea;
     QWidget *                   HpatternList;

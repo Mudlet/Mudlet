@@ -22,6 +22,8 @@
 
 #include "XMLimport.h"
 
+
+#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -45,14 +47,6 @@
 // clang-format: off
 #include "post_guard.h"
 // clang-format: on
-
-const int XMLimport::cmTriggerView = 1;
-const int XMLimport::cmTimerView = 2;
-const int XMLimport::cmAliasView = 3;
-const int XMLimport::cmScriptView = 4;
-const int XMLimport::cmActionView = 5;
-const int XMLimport::cmKeysView = 6;
-const int XMLimport::cmVarsView = 7;
 
 XMLimport::XMLimport(Host* pH)
     : mpHost(pH)
@@ -542,27 +536,27 @@ int XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = cmTriggerView;
+                objectType = dlgTriggerEditor::cmTriggerView;
                 readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = cmTimerView;
+                objectType = dlgTriggerEditor::cmTimerView;
                 readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = cmAliasView;
+                objectType = dlgTriggerEditor::cmAliasView;
                 readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = cmActionView;
+                objectType = dlgTriggerEditor::cmActionView;
                 readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = cmScriptView;
+                objectType = dlgTriggerEditor::cmScriptView;
                 readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = cmKeysView;
+                objectType = dlgTriggerEditor::cmKeysView;
                 readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = cmVarsView;
+                objectType = dlgTriggerEditor::cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownPackage();
