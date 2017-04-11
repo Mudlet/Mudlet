@@ -81,9 +81,9 @@ bool TAlias::match(const QString & toMatch )
             if( shouldBeActive() )
             {
                 bool matchCondition = false;
-                for(auto pChild : *mpMyChildrenList)
+                for(auto alias : *mpMyChildrenList)
                 {
-                    if( pChild->match( toMatch ) ) matchCondition = true;
+                    if( alias->match( toMatch ) ) matchCondition = true;
                 }
                 return matchCondition;
             }
@@ -246,9 +246,9 @@ END:
     }
 
 MUD_ERROR:
-    for(auto pChild : *mpMyChildrenList)
+    for(auto childAlias : *mpMyChildrenList)
     {
-        if( pChild->match( toMatch ) ) matchCondition = true;
+        if( childAlias->match( toMatch ) ) matchCondition = true;
     }
 
     free( subject );
@@ -323,9 +323,9 @@ void TAlias::compileAll()
         mOK_code = false;
     }
     compileRegex(); // Effectively will repost the error if there was a problem in the regex
-    for(auto pChild : *mpMyChildrenList)
+    for(auto alias : *mpMyChildrenList)
     {
-        pChild->compileAll();
+        alias->compileAll();
     }
 }
 
@@ -339,9 +339,9 @@ void TAlias::compile()
             mOK_code = false;
         }
     }
-    for(auto pChild : *mpMyChildrenList)
+    for(auto alias : *mpMyChildrenList)
     {
-        pChild->compile();
+        alias->compile();
     }
 }
 

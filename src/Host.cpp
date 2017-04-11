@@ -641,9 +641,9 @@ void Host::raiseEvent( const TEvent & pE )
     if( mEventHandlerMap.contains( pE.mArgumentList.at( 0 ) ) )
     {
         QList<TScript *> scriptList = mEventHandlerMap.value( pE.mArgumentList.at( 0 ) );
-        for(auto & i : scriptList)
+        for(auto & script : scriptList)
         {
-            i->callEventHandler( pE );
+            script->callEventHandler( pE );
         }
     }
 

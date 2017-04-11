@@ -4371,11 +4371,11 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 {
                     itk.next();
                     QList<QPointF> _pL = itk.value();
-                    for(auto & pk : _pL)
+                    for(auto & point : _pL)
                     {
-                        QPointF op = pk;
-                        pk.setX( (float)(op.x()+dx) );
-                        pk.setY( (float)(op.y()+dy) );
+                        QPointF op = point;
+                        point.setX( (float)(op.x()+dx) );
+                        point.setY( (float)(op.y()+dy) );
                     }
                     newMap.insert(itk.key(), _pL );
                 }
@@ -4978,8 +4978,8 @@ void T2DMap::slot_roomSelectionChanged()
 {
     QList<QTreeWidgetItem *> _sl = mMultiSelectionListWidget.selectedItems();
     mMultiSelectionSet.clear();
-    for(auto i : _sl) {
-        int currentRoomId = i->text(0).toInt();
+    for(auto treeWidgetItem : _sl) {
+        int currentRoomId = treeWidgetItem->text(0).toInt();
         mMultiSelectionSet.insert( currentRoomId );
     }
     switch( mMultiSelectionSet.size() ) {

@@ -32,55 +32,55 @@ using namespace std;
 void TimerUnit::_uninstall( TTimer * pChild, QString packageName )
 {
     list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto timer : *childrenList)
     {
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( timer, packageName );
+        uninstallList.append( timer );
     }
 }
 
 
 void TimerUnit::uninstall( QString packageName )
 {
-    for(auto pT : mTimerRootNodeList)
+    for(auto rootTimer : mTimerRootNodeList)
     {
-        if( pT->mPackageName == packageName )
+        if( rootTimer->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootTimer, packageName );
+            uninstallList.append( rootTimer );
         }
     }
-    for(auto & i : uninstallList)
+    for(auto & timer : uninstallList)
     {
-        unregisterTimer(i);
+        unregisterTimer(timer);
     }
      uninstallList.clear();
 }
 
 void TimerUnit::stopAllTriggers()
 {
-    for(auto pChild : mTimerRootNodeList)
+    for(auto timer : mTimerRootNodeList)
     {
-        pChild->disableTimer( pChild->getID() );
+        timer->disableTimer( timer->getID() );
     }
 }
 
 void TimerUnit::compileAll()
 {
-    for(auto pChild : mTimerRootNodeList)
+    for(auto timer : mTimerRootNodeList)
     {
-        if( pChild->isActive() )
+        if( timer->isActive() )
         {
-            pChild->mNeedsToBeCompiled = true;
+            timer->mNeedsToBeCompiled = true;
         }
     }
 }
 
 void TimerUnit::reenableAllTriggers()
 {
-    for(auto pChild : mTimerRootNodeList)
+    for(auto timer : mTimerRootNodeList)
     {
-        pChild->enableTimer( pChild->getID() );
+        timer->enableTimer( timer->getID() );
     }
 }
 
@@ -153,13 +153,13 @@ void TimerUnit::reParentTimer( int childID, int oldParentID, int newParentID, in
 void TimerUnit::removeAllTempTimers()
 {
     mCleanupList.clear();
-    for(auto pChild : mTimerRootNodeList)
+    for(auto timer : mTimerRootNodeList)
     {
-        if( pChild->isTempTimer() )
+        if( timer->isTempTimer() )
         {
-            pChild->killTimer();
-            pChild->mOK_code = false; //important to not crash on stale Lua function args
-            markCleanup( pChild );
+            timer->killTimer();
+            timer->mOK_code = false; //important to not crash on stale Lua function args
+            markCleanup( timer );
         }
     }
 }
@@ -352,14 +352,14 @@ TTimer * TimerUnit::findTimer(const QString & name )
 
 bool TimerUnit::killTimer(const QString & name )
 {
-    for(auto pChild : mTimerRootNodeList)
+    for(auto timer : mTimerRootNodeList)
     {
-        if( pChild->getName() == name )
+        if( timer->getName() == name )
         {
             // only temporary timers can be killed
-            if( ! pChild->isTempTimer() ) return false;
-            pChild->killTimer();
-            markCleanup( pChild );
+            if( ! timer->isTempTimer() ) return false;
+            timer->killTimer();
+            markCleanup( timer );
             return true;
         }
     }
@@ -396,11 +396,11 @@ void TimerUnit::markCleanup( TTimer * pT )
 void TimerUnit::_assembleReport( TTimer * pChild )
 {
     list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto timer : *childrenList)
     {
-        _assembleReport( pT );
-        if( pT->isActive() ) statsActiveTriggers++;
-        if( pT->isTempTimer() ) statsTempTriggers++;
+        _assembleReport( timer );
+        if( timer->isActive() ) statsActiveTriggers++;
+        if( timer->isTempTimer() ) statsTempTriggers++;
         statsTriggerTotal++;
     }
 }
@@ -410,17 +410,17 @@ QString TimerUnit::assembleReport()
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
-    for(auto pChild : mTimerRootNodeList)
+    for(auto rootTimer : mTimerRootNodeList)
     {
-        if( pChild->isActive() ) statsActiveTriggers++;
-        if( pChild->isTempTimer() ) statsTempTriggers++;
+        if( rootTimer->isActive() ) statsActiveTriggers++;
+        if( rootTimer->isTempTimer() ) statsTempTriggers++;
         statsTriggerTotal++;
-        list<TTimer*> * childrenList = pChild->mpMyChildrenList;
-        for(auto pT : *childrenList)
+        list<TTimer*> * childrenList = rootTimer->mpMyChildrenList;
+        for(auto childTimer : *childrenList)
         {
-            _assembleReport( pT );
-            if( pT->isActive() ) statsActiveTriggers++;
-            if( pT->isTempTimer() ) statsTempTriggers++;
+            _assembleReport( childTimer );
+            if( childTimer->isActive() ) statsActiveTriggers++;
+            if( childTimer->isTempTimer() ) statsTempTriggers++;
             statsTriggerTotal++;
         }
     }

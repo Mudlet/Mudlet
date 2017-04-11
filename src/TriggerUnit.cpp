@@ -52,27 +52,27 @@ void TriggerUnit::initStats()
 void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
 {
     list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto trigger : *childrenList)
     {
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( trigger, packageName );
+        uninstallList.append( trigger );
     }
 }
 
 
 void TriggerUnit::uninstall(const QString& packageName )
 {
-    for(auto pT : mTriggerRootNodeList)
+    for(auto rootTrigger : mTriggerRootNodeList)
     {
-        if( pT->mPackageName == packageName )
+        if( rootTrigger->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootTrigger, packageName );
+            uninstallList.append( rootTrigger );
         }
     }
-    for(auto & i : uninstallList)
+    for(auto & trigger : uninstallList)
     {
-        unregisterTrigger(i);
+        unregisterTrigger(trigger);
 
     }
      uninstallList.clear();
@@ -80,12 +80,12 @@ void TriggerUnit::uninstall(const QString& packageName )
 
 void TriggerUnit::removeAllTempTriggers()
 {
-    for(auto pChild : mTriggerRootNodeList)
+    for(auto trigger : mTriggerRootNodeList)
     {
-        if( pChild->isTempTrigger() )
+        if( trigger->isTempTrigger() )
         {
-            pChild->setIsActive( false );
-            markCleanup( pChild );
+            trigger->setIsActive( false );
+            markCleanup( trigger );
         }
     }
 }
@@ -253,20 +253,20 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
 void TriggerUnit::reorderTriggersAfterPackageImport()
 {
     QList<TTrigger *> tempList;
-    for(auto pChild : mTriggerRootNodeList)
+    for(auto trigger : mTriggerRootNodeList)
     {
-        if( pChild->isTempTrigger() )
+        if( trigger->isTempTrigger() )
         {
-            tempList.push_back( pChild );
+            tempList.push_back( trigger );
         }
     }
-    for(auto & i : tempList)
+    for(auto & trigger : tempList)
     {
-        mTriggerRootNodeList.remove( i );
+        mTriggerRootNodeList.remove( trigger );
     }
-    for(auto & i : tempList)
+    for(auto & trigger : tempList)
     {
-        mTriggerRootNodeList.push_back( i );
+        mTriggerRootNodeList.push_back( trigger );
     }
 
 }
@@ -283,9 +283,9 @@ void TriggerUnit::processDataStream(const QString & data, int line )
         char * subject = (char *) malloc( strlen( data.toLocal8Bit().data() ) + 1 );
         strcpy( subject, data.toLocal8Bit().data() );
 
-        for(auto pChild : mTriggerRootNodeList)
+        for(auto trigger : mTriggerRootNodeList)
         {
-            pChild->match( subject, data, line );
+            trigger->match( subject, data, line );
         }
         free( subject );
 
@@ -300,29 +300,29 @@ void TriggerUnit::processDataStream(const QString & data, int line )
 
 void TriggerUnit::compileAll()
 {
-    for(auto pChild : mTriggerRootNodeList)
+    for(auto trigger : mTriggerRootNodeList)
     {
-        if( pChild->isActive() )
+        if( trigger->isActive() )
         {
-            pChild->compileAll();
+            trigger->compileAll();
         }
     }
 }
 
 void TriggerUnit::stopAllTriggers()
 {
-    for(auto pChild : mTriggerRootNodeList)
+    for(auto trigger : mTriggerRootNodeList)
     {
-        QString name = pChild->getName();
-        pChild->disableFamily();
+        QString name = trigger->getName();
+        trigger->disableFamily();
     }
 }
 
 void TriggerUnit::reenableAllTriggers()
 {
-    for(auto pChild : mTriggerRootNodeList)
+    for(auto trigger : mTriggerRootNodeList)
     {
-        pChild->enableFamily();
+        trigger->enableFamily();
     }
 }
 
@@ -396,12 +396,12 @@ bool TriggerUnit::killTrigger(const QString & name )
 void TriggerUnit::_assembleReport( TTrigger * pChild )
 {
     list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto trigger : *childrenList)
     {
-        _assembleReport( pT );
-        if( pT->isActive() ) statsActiveTriggers++;
-        if( pT->isTempTrigger() ) statsTempTriggers++;
-        statsPatterns += pT->mRegexCodeList.size();
+        _assembleReport( trigger );
+        if( trigger->isActive() ) statsActiveTriggers++;
+        if( trigger->isTempTrigger() ) statsTempTriggers++;
+        statsPatterns += trigger->mRegexCodeList.size();
         statsTriggerTotal++;
     }
 }
@@ -412,19 +412,19 @@ QString TriggerUnit::assembleReport()
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
     statsPatterns = 0;
-    for(auto pChild : mTriggerRootNodeList)
+    for(auto rootTrigger : mTriggerRootNodeList)
     {
-        if( pChild->isActive() ) statsActiveTriggers++;
-        if( pChild->isTempTrigger() ) statsTempTriggers++;
-        statsPatterns += pChild->mRegexCodeList.size();
+        if( rootTrigger->isActive() ) statsActiveTriggers++;
+        if( rootTrigger->isTempTrigger() ) statsTempTriggers++;
+        statsPatterns += rootTrigger->mRegexCodeList.size();
         statsTriggerTotal++;
-        list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-        for(auto pT : *childrenList)
+        list<TTrigger*> * childrenList = rootTrigger->mpMyChildrenList;
+        for(auto childTrigger : *childrenList)
         {
-            _assembleReport( pT );
-            if( pT->isActive() ) statsActiveTriggers++;
-            if( pT->isTempTrigger() ) statsTempTriggers++;
-            statsPatterns += pT->mRegexCodeList.size();
+            _assembleReport( childTrigger );
+            if( childTrigger->isActive() ) statsActiveTriggers++;
+            if( childTrigger->isTempTrigger() ) statsTempTriggers++;
+            statsPatterns += childTrigger->mRegexCodeList.size();
             statsTriggerTotal++;
         }
     }

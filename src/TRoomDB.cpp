@@ -1042,17 +1042,17 @@ void TRoomDB::clearMapDB()
     entranceMap.clear();
     areaNamesMap.clear();
     hashTable.clear();
-    for(auto i : rPtrL)
+    for(auto room : rPtrL)
     {
-        delete i; // Uses the internally held value of the room Id
+        delete room; // Uses the internally held value of the room Id
                             // (TRoom::id) to call TRoomDB::__removeRoom(id)
     }
 //    assert( rooms.size() == 0 ); // Pointless as rooms.clear() will have achieved the test condition
 
     QList<TArea*> areaList = getAreaPtrList();
-    for(auto i : areaList)
+    for(auto area : areaList)
     {
-        delete i;
+        delete area;
     }
     assert( areas.size() == 0 );
     // Must now reinsert areaId -1 name = "Default Area"

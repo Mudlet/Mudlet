@@ -93,9 +93,9 @@ void TScript::setEventHandlerList( QStringList handlerList )
 void TScript::compileAll()
 {
     compile();
-    for(auto pChild : *mpMyChildrenList)
+    for(auto script : *mpMyChildrenList)
     {
-        pChild->compileAll();
+        script->compileAll();
     }
 }
 
@@ -118,9 +118,9 @@ void TScript::compile()
             mOK_code = false;
         }
     }
-    for(auto pChild : *mpMyChildrenList)
+    for(auto script : *mpMyChildrenList)
     {
-        pChild->compile();
+        script->compile();
     }
 }
 

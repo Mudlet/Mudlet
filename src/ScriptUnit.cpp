@@ -35,36 +35,36 @@ using namespace std;
 void ScriptUnit::_uninstall( TScript * pChild, QString packageName )
 {
     list<TScript*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto script : *childrenList)
     {
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( script, packageName );
+        uninstallList.append( script );
     }
 }
 
 
 void ScriptUnit::uninstall( QString packageName )
 {
-    for(auto pT : mScriptRootNodeList)
+    for(auto rootScript : mScriptRootNodeList)
     {
-        if( pT->mPackageName == packageName )
+        if( rootScript->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootScript, packageName );
+            uninstallList.append( rootScript );
         }
     }
-    for(auto & i : uninstallList)
+    for(auto & script : uninstallList)
     {
-        unregisterScript(i);
+        unregisterScript(script);
     }
      uninstallList.clear();
 }
 
 void ScriptUnit::stopAllTriggers()
 {
-    for(auto pChild : mScriptRootNodeList)
+    for(auto script : mScriptRootNodeList)
     {
-        pChild->setIsActive( false );
+        script->setIsActive( false );
     }
 }
 
@@ -226,11 +226,11 @@ int ScriptUnit::getNewID()
 
 void ScriptUnit::compileAll()
 {
-    for(auto pChild : mScriptRootNodeList)
+    for(auto script : mScriptRootNodeList)
     {
-        if( pChild->isActive() )
+        if( script->isActive() )
         {
-            pChild->compileAll();
+            script->compileAll();
         }
     }
 }

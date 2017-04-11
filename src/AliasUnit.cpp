@@ -36,27 +36,27 @@ using namespace std;
 void AliasUnit::_uninstall( TAlias * pChild, QString packageName )
 {
     list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto alias : *childrenList)
     {
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( alias, packageName );
+        uninstallList.append( alias );
     }
 }
 
 
 void AliasUnit::uninstall( QString packageName )
 {
-    for(auto pT : mAliasRootNodeList)
+    for(auto rootAlias : mAliasRootNodeList)
     {
-        if( pT->mPackageName == packageName )
+        if( rootAlias->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootAlias, packageName );
+            uninstallList.append( rootAlias );
         }
     }
-    for(auto & i : uninstallList)
+    for(auto & alias : uninstallList)
     {
-        unregisterAlias(i);
+        unregisterAlias(alias);
 
     }
     uninstallList.clear();
@@ -64,11 +64,11 @@ void AliasUnit::uninstall( QString packageName )
 
 void AliasUnit::compileAll()
 {
-    for(auto pChild : mAliasRootNodeList)
+    for(auto alias : mAliasRootNodeList)
     {
-        if( pChild->isActive() )
+        if( alias->isActive() )
         {
-            pChild->compileAll();
+            alias->compileAll();
         }
     }
 }
@@ -261,10 +261,10 @@ bool AliasUnit::processDataStream( const QString & data )
     QString lua_command_string = "command";
     Lua->set_lua_string( lua_command_string, data );
     bool state = false;
-    for(auto pChild : mAliasRootNodeList)
+    for(auto alias : mAliasRootNodeList)
     {
         // = data.replace( "\n", "" );
-        if( pChild->match( data ) )
+        if( alias->match( data ) )
         {
             state = true;
         }
@@ -281,18 +281,18 @@ bool AliasUnit::processDataStream( const QString & data )
 
 void AliasUnit::stopAllTriggers()
 {
-    for(auto pChild : mAliasRootNodeList)
+    for(auto alias : mAliasRootNodeList)
     {
-        QString name = pChild->getName();
-        pChild->disableFamily();
+        QString name = alias->getName();
+        alias->disableFamily();
     }
 }
 
 void AliasUnit::reenableAllTriggers()
 {
-    for(auto pChild : mAliasRootNodeList)
+    for(auto alias : mAliasRootNodeList)
     {
-        pChild->enableFamily();
+        alias->enableFamily();
     }
 }
 
@@ -339,19 +339,19 @@ bool AliasUnit::disableAlias(const QString & name )
 
 bool AliasUnit::killAlias(const QString & name )
 {
-    for(auto pChild : mAliasRootNodeList)
+    for(auto alias : mAliasRootNodeList)
     {
-        if( pChild->getName() == name )
+        if( alias->getName() == name )
         {
             // only temporary Aliass can be killed
-            if( ! pChild->isTempAlias() )
+            if( ! alias->isTempAlias() )
             {
                 return false;
             }
             else
             {
-                pChild->setIsActive( false );
-                markCleanup( pChild );
+                alias->setIsActive( false );
+                markCleanup( alias );
                 return true;
             }
         }
@@ -362,11 +362,11 @@ bool AliasUnit::killAlias(const QString & name )
 void AliasUnit::_assembleReport( TAlias * pChild )
 {
     list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto alias : *childrenList)
     {
-        _assembleReport( pT );
-        if( pT->isActive() ) statsActiveAliass++;
-        if( pT->isTempAlias() ) statsTempAliass++;
+        _assembleReport( alias );
+        if( alias->isActive() ) statsActiveAliass++;
+        if( alias->isTempAlias() ) statsTempAliass++;
         statsAliasTotal++;
     }
 }
@@ -376,17 +376,17 @@ QString AliasUnit::assembleReport()
     statsActiveAliass = 0;
     statsAliasTotal = 0;
     statsTempAliass = 0;
-    for(auto pChild : mAliasRootNodeList)
+    for(auto alias : mAliasRootNodeList)
     {
-        if( pChild->isActive() ) statsActiveAliass++;
-        if( pChild->isTempAlias() ) statsTempAliass++;
+        if( alias->isActive() ) statsActiveAliass++;
+        if( alias->isTempAlias() ) statsTempAliass++;
         statsAliasTotal++;
-        list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-        for(auto pT : *childrenList)
+        list<TAlias*> * childrenList = alias->mpMyChildrenList;
+        for(auto childAlias : *childrenList)
         {
-            _assembleReport( pT );
-            if( pT->isActive() ) statsActiveAliass++;
-            if( pT->isTempAlias() ) statsTempAliass++;
+            _assembleReport( childAlias );
+            if( childAlias->isActive() ) statsActiveAliass++;
+            if( childAlias->isTempAlias() ) statsTempAliass++;
             statsAliasTotal++;
         }
     }

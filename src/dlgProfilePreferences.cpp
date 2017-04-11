@@ -1251,8 +1251,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
     QString lIgnore = doubleclick_ignore_lineedit->text();
     pHost->mDoubleClickIgnore.clear();
-    for(auto i : lIgnore){
-        pHost->mDoubleClickIgnore.insert(i);
+    for(auto character : lIgnore){
+        pHost->mDoubleClickIgnore.insert(character);
     }
 
 #if QT_VERSION >= 0x050200

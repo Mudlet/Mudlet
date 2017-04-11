@@ -1068,9 +1068,9 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
         {
             if( conditionMet || ( mRegexCodeList.size() < 1 ) )
             {
-                for(auto pChild : *mpMyChildrenList)
+                for(auto trigger : *mpMyChildrenList)
                 {
-                    ret = pChild->match( subject, toMatch, line );
+                    ret = trigger->match( subject, toMatch, line );
                     if( ret ) conditionMet = true;
                 }
             }
@@ -1083,9 +1083,9 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
             {
                 execute();
             }
-            for(auto pChild : *mpMyChildrenList)
+            for(auto trigger : *mpMyChildrenList)
             {
-                ret = pChild->match( subject, toMatch, line );
+                ret = trigger->match( subject, toMatch, line );
                 if( ret ) conditionMet = true;
             }
             return true;
@@ -1308,9 +1308,9 @@ void TTrigger::compileAll()
         mOK_code = false;
     }
     setRegexCodeList(  mRegexCodeList, mRegexCodePropertyList );
-    for(auto pChild : *mpMyChildrenList)
+    for(auto trigger : *mpMyChildrenList)
     {
-        pChild->compileAll();
+        trigger->compileAll();
     }
 }
 
@@ -1325,9 +1325,9 @@ void TTrigger::compile()
             mOK_code = false;
         }
     }
-    for(auto pChild : *mpMyChildrenList)
+    for(auto trigger : *mpMyChildrenList)
     {
-        pChild->compile();
+        trigger->compile();
     }
 }
 
@@ -1391,9 +1391,9 @@ void TTrigger::enableTrigger( const QString & name )
     {
         setIsActive( true );
     }
-    for(auto pChild : *mpMyChildrenList)
+    for(auto trigger : *mpMyChildrenList)
     {
-        pChild->enableTrigger( name );
+        trigger->enableTrigger( name );
     }
 }
 
@@ -1403,9 +1403,9 @@ void TTrigger::disableTrigger( const QString & name )
     {
         setIsActive( false );
     }
-    for(auto pChild : *mpMyChildrenList)
+    for(auto trigger : *mpMyChildrenList)
     {
-        pChild->disableTrigger( name );
+        trigger->disableTrigger( name );
     }
 }
 
@@ -1415,9 +1415,9 @@ TTrigger * TTrigger::killTrigger( const QString & name )
     {
         setIsActive( false );
     }
-    for(auto pChild : *mpMyChildrenList)
+    for(auto trigger : *mpMyChildrenList)
     {
-        pChild->killTrigger( name );
+        trigger->killTrigger( name );
     }
     return 0;
 }

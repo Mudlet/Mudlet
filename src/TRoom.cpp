@@ -636,10 +636,10 @@ void TRoom::calcRoomDimensions()
             min_y = _pL[0].y();
             max_y = min_y;
         }
-        for(auto i : _pL)
+        for(auto point : _pL)
         {
-            qreal _x = i.x();
-            qreal _y = i.y();
+            qreal _x = point.x();
+            qreal _y = point.y();
             if( _x < min_x )
                 min_x = _x;
             if( _x > max_x )

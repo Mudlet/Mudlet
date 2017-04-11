@@ -37,38 +37,38 @@ using namespace std;
 void ActionUnit::_uninstall( TAction * pChild, const QString& packageName )
 {
     list<TAction*> * childrenList = pChild->mpMyChildrenList;
-    for(auto pT : *childrenList)
+    for(auto action : *childrenList)
     {
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( action, packageName );
+        uninstallList.append( action );
     }
 }
 
 
 void ActionUnit::uninstall(const QString& packageName )
 {
-    for(auto pT : mActionRootNodeList)
+    for(auto rootAction : mActionRootNodeList)
     {
-        if( pT->mPackageName == packageName )
+        if( rootAction->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootAction, packageName );
+            uninstallList.append( rootAction );
         }
     }
-    for(auto & i : uninstallList)
+    for(auto & action : uninstallList)
     {
-        delete i;
+        delete action;
     }
     uninstallList.clear();
 }
 
 void ActionUnit::compileAll()
 {
-    for(auto pChild : mActionRootNodeList)
+    for(auto action : mActionRootNodeList)
     {
-        if( pChild->isActive() )
+        if( action->isActive() )
         {
-            pChild->compileAll();
+            action->compileAll();
         }
     }
 }
@@ -318,12 +318,12 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
         }
         bool found = false;
         TToolBar * pTB = 0;
-        for(auto & it2 : mToolBarList)
+        for(auto & toolBar : mToolBarList)
         {
-            if( it2 == action->mpToolBar )
+            if( toolBar == action->mpToolBar )
             {
                 found = true;
-                pTB = it2;
+                pTB = toolBar;
             }
         }
         if( ! found )
@@ -349,31 +349,30 @@ std::list<TToolBar *> ActionUnit::getToolBarList()
 
 std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
 {
-    for(auto & action : mActionRootNodeList)
+    for(auto & rootAction : mActionRootNodeList)
     {
-
-        if( action->mPackageName.size() > 0 )
+        if( rootAction->mPackageName.size() > 0 )
         {
-            for(auto it3 = action->mpMyChildrenList->begin(); it3 != action->mpMyChildrenList->end(); it3++)
+            for(auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++)
             {
                 bool found = false;
                 TEasyButtonBar * pTB = 0;
-                for(auto & it2 : mEasyButtonBarList)
+                for(auto & easyButtonBar : mEasyButtonBarList)
                 {
-                    if( it2 == (*it3)->mpEasyButtonBar )
+                    if( easyButtonBar == (*childActionIterator)->mpEasyButtonBar )
                     {
                         found = true;
-                        pTB = it2;
+                        pTB = easyButtonBar;
                     }
                 }
                 if( ! found )
                 {
-                    pTB = new TEasyButtonBar( action, (*it3)->getName(), mpHost->mpConsole->mpTopToolBar );
+                    pTB = new TEasyButtonBar( rootAction, (*childActionIterator)->getName(), mpHost->mpConsole->mpTopToolBar );
                     mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
                     mEasyButtonBarList.push_back( pTB );
-                    (*it3)->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
+                    (*childActionIterator)->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
                 }
-                if( (*it3)->mOrientation == 1 )
+                if( (*childActionIterator)->mOrientation == 1 )
                 {
                     pTB->setVerticalOrientation();
                 }
@@ -381,30 +380,30 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
                 {
                     pTB->setHorizontalOrientation();
                 }
-                constructToolbar( *it3, pTB );
-                (*it3)->mpEasyButtonBar = pTB;
+                constructToolbar( *childActionIterator, pTB );
+                (*childActionIterator)->mpEasyButtonBar = pTB;
                 pTB->setStyleSheet( pTB->mpTAction->css );
             }
-            continue; //action package
+            continue; //rootAction package
         }
         bool found = false;
         TEasyButtonBar * pTB = 0;
-        for(auto & it2 : mEasyButtonBarList)
+        for(auto & easyButtonBar : mEasyButtonBarList)
         {
-            if( it2 == action->mpEasyButtonBar )
+            if( easyButtonBar == rootAction->mpEasyButtonBar )
             {
                 found = true;
-                pTB = it2;
+                pTB = easyButtonBar;
             }
         }
         if( ! found )
         {
-            pTB = new TEasyButtonBar( action, action->getName(), mpHost->mpConsole->mpTopToolBar );
+            pTB = new TEasyButtonBar( rootAction, rootAction->getName(), mpHost->mpConsole->mpTopToolBar );
             mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
             mEasyButtonBarList.push_back( pTB );
-            action->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
+            rootAction->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
         }
-        if( action->mOrientation == 1 )
+        if( rootAction->mOrientation == 1 )
         {
             pTB->setVerticalOrientation();
         }
@@ -412,8 +411,8 @@ std::list<TEasyButtonBar *> ActionUnit::getEasyButtonBarList()
         {
             pTB->setHorizontalOrientation();
         }
-        constructToolbar( action, pTB );
-        action->mpEasyButtonBar = pTB;
+        constructToolbar( rootAction, pTB );
+        rootAction->mpEasyButtonBar = pTB;
         pTB->setStyleSheet( pTB->mpTAction->css );
     }
 
