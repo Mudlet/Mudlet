@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1086,7 +1086,7 @@ bool Host::installPackage( QString fileName, int module )
             {
                 mInstalledPackages.append( packageName );
             }
-            reader.importPackage( & file2, packageName, module);
+            reader.importPackage( & file2, packageName, module ); // TODO: Missing false return value handler
             setName( profileName );
             setLogin( login );
             setPass( pass );
@@ -1112,7 +1112,7 @@ bool Host::installPackage( QString fileName, int module )
         }
         else
             mInstalledPackages.append( packageName );
-        reader.importPackage( & file2, packageName, module);
+        reader.importPackage( & file2, packageName, module ); // TODO: Missing false return value handler
         setName( profileName );
         setLogin( login );
         setPass( pass );
