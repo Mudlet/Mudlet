@@ -373,18 +373,18 @@ int TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
-    for(auto & it : mCleanupList)
+    for(auto & timer : mCleanupList)
     {
-        delete it;
+        delete timer;
     }
     mCleanupList.clear();
 }
 
 void TimerUnit::markCleanup( TTimer * pT )
 {
-    for(auto & it : mCleanupList)
+    for(auto & timer : mCleanupList)
     {
-        if( it == pT )
+        if( timer == pT )
         {
             return;
         }

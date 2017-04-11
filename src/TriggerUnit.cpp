@@ -289,9 +289,9 @@ void TriggerUnit::processDataStream(const QString & data, int line )
         }
         free( subject );
 
-        for(auto & it : mCleanupList)
+        for(auto & trigger : mCleanupList)
         {
-            delete it;
+            delete trigger;
         }
         mCleanupList.clear();
     }
@@ -439,18 +439,18 @@ QString TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    for(auto & it : mCleanupList)
+    for(auto & trigger : mCleanupList)
     {
-        delete it;
+        delete trigger;
     }
     mCleanupList.clear();
 }
 
 void TriggerUnit::markCleanup( TTrigger * pT )
 {
-    for(auto & it : mCleanupList)
+    for(auto & trigger : mCleanupList)
     {
-        if( it == pT )
+        if( trigger == pT )
         {
             return;
         }
