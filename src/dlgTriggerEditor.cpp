@@ -346,14 +346,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
     QAction * copyAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-copy.png" ) ), tr("Copy (as XML)"), this);
-    //copyAction->setShortcut(tr("Ctrl+C"));
+    copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     copyAction->setToolTip(tr("Copies the trigger/script/alias/etc as XML."));
     copyAction->setStatusTip(tr("Copies the trigger/script/alias/etc as XML."));
 
     connect( copyAction, SIGNAL(triggered()), this, SLOT( slot_copy_xml() ));
 
     QAction * pasteAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-paste.png" ) ), tr("Paste (from XML)"), this);
-    //pasteAction->setShortcut(tr("Ctrl+V"));
+    pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
     pasteAction->setToolTip(tr("Pastes triggers/scripts/aliases/etc from XML."));
     pasteAction->setStatusTip(tr("Pastes triggers/scripts/aliases/etc from XML."));
 
