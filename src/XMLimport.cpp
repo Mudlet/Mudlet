@@ -74,10 +74,10 @@ XMLimport::XMLimport(Host* pH)
 {
 }
 
-bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFlag, QString* pVersionString)
+bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
-    setDevice(device);
+    setDevice(pfile);
 
     module = moduleFlag;
 
@@ -176,11 +176,13 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
                     /*||(mVersionMajor==1&&mVersionMinor)*/) {
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
-                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read is marked as being version %1 which is\n"
-                                         "a later version than this Mudlet can handle! To avoid disappointing\n"
-                                         "behaviour it is being rejected outright. The Creators of Mudlet\n"
-                                         "suggest that you seek help on-line using the links that are available\n"
-                                         "on the screen that the \"About Mudlet\" button brings up...!")
+                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                                         "\"%1\"\n"
+                                         "reports it has a version (%2) it must have come from a newer Mudlet version,\n"
+                                         "which this one cannot read it, you need to update! The creators of Mudlet\n"
+                                         "suggest that you seek help and an update on-line using the links in the panel\n"
+                                         "that the \"About\" Mudlet main toolbar button shows...!")
+                                          .arg(pfile->fileName())
                                           .arg(versionString);
                     mpHost->postMessage(moanMsg);
                     return false;

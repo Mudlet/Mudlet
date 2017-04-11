@@ -26,6 +26,7 @@
 #include "pre_guard.h"
 // clang-format: on
 #include <QApplication>
+#include <QFile>
 #include <QMap>
 #include <QMultiHash>
 #include <QXmlStreamReader>
@@ -50,7 +51,7 @@ class XMLimport : public QXmlStreamReader
 public:
     XMLimport(Host*);
 
-    bool importPackage(QIODevice*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
+    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
 
 private:
     void readPackage();
