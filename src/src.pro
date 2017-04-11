@@ -18,7 +18,11 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|(lessThan(QT_MAJOR_VERSION, 6):lessThan(QT_MINOR_VERSION, 6)){
+# unelegant way to check for both major+minor version
+lessThan(QT_MAJOR_VERSION, 5) {
+    error("Mudlet requires Qt 5.6 or later")
+}
+lessThan(QT_MAJOR_VERSION, 6):lessThan(QT_MINOR_VERSION, 6) {
     error("Mudlet requires Qt 5.6 or later")
 }
 
