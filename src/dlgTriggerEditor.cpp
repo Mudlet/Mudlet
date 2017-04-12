@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -7033,7 +7033,7 @@ void dlgTriggerEditor::slot_import()
     treeWidget_scripts->clear();
 
     XMLimport reader( mpHost );
-    reader.importPackage( & file2, packageName );
+    reader.importPackage( & file2, packageName ); // TODO: Missing false return value handler
 
     mpHost->setName( profileName );
     mpHost->setLogin( login );
