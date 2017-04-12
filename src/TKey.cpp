@@ -47,6 +47,9 @@ TKey::TKey( QString name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mKeyCode()
+, mKeyModifier()
+, mIsFolder()
 {
 }
 

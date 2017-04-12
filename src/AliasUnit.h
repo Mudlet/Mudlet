@@ -45,7 +45,7 @@ class AliasUnit
     friend class XMLimport;
 
 public:
-                                    AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
+                                    AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), mModuleMember() { initStats();}
     std::list<TAlias *>             getAliasRootNodeList()   { return mAliasRootNodeList; }
     TAlias *                        getAlias( int id );
     void                            compileAll();

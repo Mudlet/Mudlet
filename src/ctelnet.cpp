@@ -94,6 +94,15 @@ cTelnet::cTelnet( Host * pH )
 , enableGMCP( false )
 , enableChannel102( false )
 , loadingReplay( false )
+, networkLatency()
+, mpProgressDialog()
+, hostPort()
+, networkLatencyMin()
+, networkLatencyMax()
+, mWaitingForResponse()
+, mZstream()
+, recvdGA()
+, lastTimeOffset()
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;

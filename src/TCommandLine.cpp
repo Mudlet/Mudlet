@@ -45,7 +45,12 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mpConsole( pConsole )
 , mSelectedText( "" )
 , mSelectionStart( 0 )
-
+, mTabCompletion()
+, mTabCompletionCount()
+, mAutoCompletionCount()
+, mUserKeptOnTyping()
+, mHunspellSuggestionNumber()
+, mpHunspellSuggestionList()
 {
     QString path;
 #ifdef Q_OS_LINUX
