@@ -2,7 +2,7 @@
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
@@ -541,12 +541,12 @@ void cTelnet::processTelnetCommand( const string & command )
 
               qDebug() << "ATCP enabled";
               enableATCP = true;
-              sendTelnetOption( TN_DO, 200 );
+              sendTelnetOption( TN_DO, static_cast<char>(200) );
 
               string _h;
               _h += TN_IAC;
               _h += TN_SB;
-              _h += 200;
+              _h += static_cast<char>(200);
               _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
               _h += TN_IAC;
               _h += TN_SE;
@@ -766,7 +766,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
-            sendTelnetOption( TN_WILL, 200 );
+            sendTelnetOption( TN_WILL, static_cast<char>(200) );
             raiseProtocolEvent( "sysProtocolEnabled", "ATCP" );
             break;
           }
@@ -774,7 +774,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
             qDebug() << "TELNET IAC DO GMCP";
             enableGMCP = true;
-            sendTelnetOption( TN_WILL, 201 );
+            sendTelnetOption( TN_WILL, static_cast<char>(201) );
             raiseProtocolEvent( "sysProtocolEnabled", "GMCP" );
             break;
           }
@@ -894,7 +894,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   string _h;
                   _h += TN_IAC;
                   _h += TN_SB;
-                  _h += 200;
+                  _h += static_cast<char>(200);
                   _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
                   _h += TN_IAC;
                   _h += TN_SE;
@@ -1240,7 +1240,7 @@ void cTelnet::atcpComposerSave( QString txt )
         string _h;
         _h += TN_IAC;
         _h += TN_SB;
-        _h += 200;
+        _h += static_cast<char>(200);
         _h += "olesetbuf \n ";
         _h += txt.toLatin1().data();
         _h += '\n';
