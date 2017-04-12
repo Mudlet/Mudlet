@@ -409,7 +409,7 @@ QString AliasUnit::assembleReport()
 
 void AliasUnit::doCleanup()
 {
-    for(auto & alias : mCleanupList)
+    for(auto alias : mCleanupList)
     {
         delete alias;
     }
@@ -418,7 +418,7 @@ void AliasUnit::doCleanup()
 
 void AliasUnit::markCleanup( TAlias * pT )
 {
-    for(auto & alias : mCleanupList)
+    for(auto alias : mCleanupList)
     {
         if( alias == pT )
         {

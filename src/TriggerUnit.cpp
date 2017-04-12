@@ -439,7 +439,7 @@ QString TriggerUnit::assembleReport()
 
 void TriggerUnit::doCleanup()
 {
-    for(auto & trigger : mCleanupList)
+    for(auto trigger : mCleanupList)
     {
         delete trigger;
     }
@@ -448,7 +448,7 @@ void TriggerUnit::doCleanup()
 
 void TriggerUnit::markCleanup( TTrigger * pT )
 {
-    for(auto & trigger : mCleanupList)
+    for(auto trigger : mCleanupList)
     {
         if( trigger == pT )
         {
