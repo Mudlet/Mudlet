@@ -8806,9 +8806,11 @@ int TLuaInterpreter::addCustomLine( lua_State * L )
         id_to = lua_tointeger( L, 2 );
         Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
         TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_to );
-        x.append((qreal)pR->x);
-        y.append((qreal)pR->y);
-        z.append(pR->z);
+        if (pR) {
+            x.append((qreal)pR->x);
+            y.append((qreal)pR->y);
+            z.append(pR->z);
+        }
     }
     else if ( lua_istable( L, 2 ) )
     {
