@@ -143,6 +143,8 @@ void dlgIRC::onMessageReceived( IrcMessage* msg )
     case IrcMessage::Type::Unknown:
         irc_gotMsg2( msg->sender().name(), msg->parameters() );
         break;
+    default:
+        break;
     }
     /*
     Nick 	IrcNickMessage
