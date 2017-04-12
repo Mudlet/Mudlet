@@ -31,6 +31,7 @@ using namespace std;
 KeyUnit::KeyUnit( Host * pHost )
 : mpHost(pHost)
 , mMaxID(0)
+, mModuleMember()
 {
     setupKeyNames();
 }

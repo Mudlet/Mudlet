@@ -34,6 +34,7 @@
 
 
 VarUnit::VarUnit()
+: base()
 {
 }
 

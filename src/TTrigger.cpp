@@ -74,6 +74,9 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
 , mModuleMember(false)
+, mColorTriggerFgAnsi()
+, mColorTriggerBgAnsi()
+, mIsFolder()
 {
 }
 
