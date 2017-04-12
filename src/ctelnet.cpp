@@ -243,10 +243,10 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing );
     mConnectionTime.start();
-    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
+    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
         mTimerLogin->start(2000);
-    if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
+    }
     //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
     TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );
