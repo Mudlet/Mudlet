@@ -178,10 +178,8 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 
                     QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
                                          "\"%1\"\n"
-                                         "reports it has a version (%2) it must have come from a newer Mudlet version,\n"
-                                         "which this one cannot read it, you need to update! The creators of Mudlet\n"
-                                         "suggest that you seek help and an update on-line using the links in the panel\n"
-                                         "that the \"About\" Mudlet main toolbar button shows...!")
+                                         "reports it has a version (%2) it must have come from a later Mudlet version,\n"
+                                         "and this one cannot read it, you need a newer Mudlet!")
                                           .arg(pfile->fileName())
                                           .arg(versionString);
                     mpHost->postMessage(moanMsg);
