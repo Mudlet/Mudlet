@@ -308,6 +308,7 @@ QColor T2DMap::getColor( int id )
         break;
     case 16:
         c = mpHost->mLightBlack_2;
+        break;
     default: //user defined room color
         if( ! mpMap->customEnvColors.contains(env) ) break;
         c = mpMap->customEnvColors[env];
