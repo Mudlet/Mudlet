@@ -214,8 +214,8 @@ void HostManager::postInterHostEvent( const Host * pHost, const TEvent & event )
     allValidHosts = afterSendingHost;
     allValidHosts.append( beforeSendingHost );
 
-    for(int allValidHost : allValidHosts) {
-        hostList.at( allValidHost )->raiseEvent( event );
+    for(int validHost : allValidHosts) {
+        hostList.at( validHost )->raiseEvent( event );
     }
 }
 
