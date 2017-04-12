@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -140,7 +141,7 @@ bool XMLexport::writeModuleXML( QIODevice * device, QString moduleName )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     if( isOk ) {
         writeStartElement( "TriggerPackage" );
@@ -314,7 +315,7 @@ bool XMLexport::exportHost( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "HostPackage" );
     if( ! writeHost( mpHost ) ) {
@@ -639,7 +640,7 @@ bool XMLexport::exportGenericPackage( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     bool isOk = writeGenericPackage( mpHost );
 
@@ -745,7 +746,7 @@ bool XMLexport::exportTrigger( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "TriggerPackage" );
     bool isOk = writeTrigger( mpTrigger );
@@ -844,7 +845,7 @@ bool XMLexport::exportAlias( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "AliasPackage" );
     bool isOk = writeAlias( mpAlias );
@@ -902,7 +903,7 @@ bool XMLexport::exportAction( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "ActionPackage" );
     bool isOk = writeAction( mpAction );
@@ -978,7 +979,7 @@ bool XMLexport::exportTimer( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "TimerPackage" );
     bool isOk = writeTimer( mpTimer );
@@ -1039,7 +1040,7 @@ bool XMLexport::exportScript( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "ScriptPackage" );
     bool isOk = writeScript( mpScript );
@@ -1102,7 +1103,7 @@ bool XMLexport::exportKey( QIODevice * device )
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
     writeStartElement( "KeyPackage" );
     bool isOk = writeKey( mpKey );

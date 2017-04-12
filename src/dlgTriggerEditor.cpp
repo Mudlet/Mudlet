@@ -216,7 +216,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pHB2->addWidget( mpErrorConsole );
     mpErrorConsole->show();
 
-    connect( button_searchAreaClose, SIGNAL(clicked()), this, SLOT( slot_show_search_area()));
+    button_toggleSearchAreaResults->setStyleSheet( QStringLiteral( "QToolButton::on{border-image:url(:/icons/arrow-down_grey.png);} "
+                                                                   "QToolButton{border-image:url(:/icons/arrow-right_grey.png);}"
+                                                                   "QToolButton::on:hover{border-image:url(:/icons/arrow-down.png);} "
+                                                                   "QToolButton:hover{border-image:url(:/icons/arrow-right.png);}" ) );
+    connect( button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT( slot_showSearchAreaResults(const bool)));
 
     // additional settings
     treeWidget_triggers->setColumnCount(1);
@@ -225,7 +229,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     treeWidget_triggers->setHost( mpHost );
     treeWidget_triggers->header()->hide();
     connect( treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)) );
-    treeWidget_searchResults->hide(); // hide search results
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost( mpHost );
@@ -287,7 +290,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     QAction * viewAliasAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
-    viewAliasAction->setEnabled( true );
     connect( viewAliasAction, SIGNAL(triggered()), this, SLOT( slot_show_aliases()));
 
 
@@ -295,20 +297,16 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     showTimersAction->setStatusTip(tr("Show Timers"));
     connect( showTimersAction, SIGNAL(triggered()), this, SLOT( slot_show_timers()));
 
-
     QAction * viewScriptsAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    viewScriptsAction->setEnabled( true );
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
     connect( viewScriptsAction, SIGNAL(triggered()), this, SLOT( slot_show_scripts()));
 
     QAction * viewKeysAction = new QAction( QIcon( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), tr("Keys"), this);
-    viewKeysAction->setStatusTip(tr("Keybindings"));
-    viewKeysAction->setEnabled( true );
+    viewKeysAction->setStatusTip(tr("Show Keybindings"));
     connect( viewKeysAction, SIGNAL(triggered()), this, SLOT( slot_show_keys()));
 
     QAction * viewVarsAction = new QAction( QIcon( QStringLiteral( ":/icons/variables.png" ) ), tr("Variables"), this);
-    viewVarsAction->setStatusTip(tr("Variables"));
-    viewVarsAction->setEnabled( true );
+    viewVarsAction->setStatusTip(tr("Show Variables"));
     connect( viewVarsAction, SIGNAL(triggered()), this, SLOT( slot_show_vars( )));
 
     QAction * toggleActiveAction = new QAction( QIcon( QStringLiteral( ":/icons/document-encrypt.png" ) ), tr("Activate"), this);
@@ -334,16 +332,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     addFolderAction->setStatusTip(tr("Add new Group"));
     connect( addFolderAction, SIGNAL(triggered()), this, SLOT( slot_add_new_folder()));
 
-    QAction * showSearchAreaAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-find-user.png" ) ), tr("Search"), this);
-    //showSearchAreaAction->setShortcut(tr("Ctrl+F"));
-    showSearchAreaAction->setStatusTip(tr("Show Search Results List"));
-    connect( showSearchAreaAction, SIGNAL(triggered()), this, SLOT( slot_show_search_area()));
-
     QAction * saveAction = new QAction( QIcon( QStringLiteral( ":/icons/document-save-as.png" ) ), tr("Save Item"), this);
     saveAction->setShortcut(tr("Ctrl+S"));
-    saveAction->setToolTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
-    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure)"));
-
+    saveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                           .arg(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
+    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, so new changes take effect - does not save to disk though..."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
     QAction * importAction = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Import"), this);
@@ -354,19 +347,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     exportAction->setEnabled( true );
     connect( exportAction, SIGNAL(triggered()), this, SLOT( slot_export()));
 
-    QAction * saveMenu = new QAction( QIcon( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
-    saveMenu->setEnabled( true );
-    saveMenu->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-    saveMenu->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-
-    connect( saveMenu, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
-
     QAction * profileSaveAction = new QAction( QIcon ( QStringLiteral( ":/icons/document-save-all.png" ) ), tr("Save Profile"), this);
     profileSaveAction->setEnabled( true );
     profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
-    profileSaveAction->setToolTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-    profileSaveAction->setStatusTip(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings)\nto your computer disk, so in case of a computer or program crash, all changes you've done will stay.\nIt also makes a backup of your profile, you can load an older version of it when connecting."));
-
+    profileSaveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                  .arg(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p>"
+                                          "<p>It also makes a backup of your profile, you can load an older version of it when connecting.</p>"
+                                          "<p>Should there be any modules that are marked to be \"<i>synced</i>\" this will also cause them to be saved and reloaded into other profiles if they too are active.")));
+    profileSaveAction->setStatusTip(tr("Saves your entire profile (triggers, aliases, etc, but not the map); also \"synchronizes\" modules that are so marked."));
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * saveProfileAsAction = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Save Profile As"), this);
@@ -374,78 +362,17 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( saveProfileAsAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAsAction()));
 
     QAction * viewStatsAction = new QAction( QIcon( QStringLiteral( ":/icons/view-statistics.png" ) ), tr("Statistics"), this);
-    viewStatsAction->setEnabled( true );
+    viewStatsAction->setStatusTip(tr("Generates a statics summary display on the main profile console."));
     connect( viewStatsAction, SIGNAL(triggered()), this, SLOT( slot_viewStatsAction()));
 
     QAction * viewErrorsAction = new QAction( QIcon( QStringLiteral( ":/icons/errors.png" ) ), tr("errors"), this);
-    viewErrorsAction->setEnabled( true );
+    viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
     connect( viewErrorsAction, SIGNAL(triggered()), this, SLOT( slot_viewErrorsAction()));
 
     QAction * showDebugAreaAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-report-bug.png" ) ), tr("Debug"), this);
-    showDebugAreaAction->setEnabled( true );
-    showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be *MUCH* slower"));
+    showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
+    showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
     connect( showDebugAreaAction, SIGNAL(triggered()), this, SLOT( slot_debug_mode() ));
-
-    QAction * addTriggerMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
-    viewTriggerAction->setStatusTip(tr("Add Trigger"));
-    connect(addTriggerMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTrigger()));
-
-    QAction * addAliasMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
-    addAliasMenuAction->setStatusTip(tr("Add Alias"));
-    addAliasMenuAction->setEnabled( true );
-    connect( addAliasMenuAction, SIGNAL(triggered()), this, SLOT( slot_addAlias()));
-
-    QAction * addTimersMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
-    addTimersMenuAction->setStatusTip(tr("Add Timer"));
-    addTimersMenuAction->setEnabled( true );
-    connect( addTimersMenuAction, SIGNAL(triggered()), this, SLOT( slot_addTimer()));
-
-    QAction * addVarsMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Variables"), this);
-    addVarsMenuAction->setStatusTip(tr("View Variables"));
-    addVarsMenuAction->setEnabled( true );
-    connect( addVarsMenuAction, SIGNAL(triggered()), this, SLOT( slot_addVar()));
-
-    QAction * addScriptsMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    addScriptsMenuAction->setStatusTip(tr("Add Script"));
-    addScriptsMenuAction->setEnabled( true );
-    connect( addScriptsMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScript()));
-
-    QAction * addKeysMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/preferences-desktop-keyboard.png" ) ), tr("Keys"), this);
-    addKeysMenuAction->setStatusTip(tr("Add Keys"));
-    addKeysMenuAction->setEnabled( true );
-    connect( addKeysMenuAction, SIGNAL(triggered()), this, SLOT( slot_addKey()));
-
-    auto addTriggerMenu = new QMenu( this );
-    addTriggerMenu->addAction( addTriggerMenuAction );
-    addTriggerMenu->addAction( addTimersMenuAction );
-    addTriggerMenu->addAction( addScriptsMenuAction );
-    addTriggerMenu->addAction( addAliasMenuAction );
-    addTriggerMenu->addAction( addKeysMenuAction );
-
-    QAction * addTriggerGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/tools-wizard.png" ) ), tr("Triggers"), this);
-    addTriggerGroupMenuAction->setStatusTip(tr("Add Trigger Group"));
-    connect(addTriggerGroupMenuAction, SIGNAL(triggered()), this, SLOT(slot_addTriggerGroup()));
-
-    QAction * addAliasGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/system-users.png" ) ), tr("Aliases"), this);
-    addAliasGroupMenuAction->setStatusTip(tr("Add Alias Group"));
-    addAliasGroupMenuAction->setEnabled( true );
-    connect( addAliasGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addAliasGroup()));
-
-    QAction * addTimersGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/chronometer.png" ) ), tr("Timers"), this);
-    addTimersGroupMenuAction->setStatusTip(tr("Add Timer Group"));
-    addTimersGroupMenuAction->setEnabled( true );
-    connect( addTimersGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addTimerGroup()));
-
-    QAction * addScriptsGroupMenuAction = new QAction( QIcon( QStringLiteral( ":/icons/document-properties.png" ) ), tr("Scripts"), this);
-    addScriptsGroupMenuAction->setStatusTip(tr("Add Script Group"));
-    addScriptsGroupMenuAction->setEnabled( true );
-    connect( addScriptsGroupMenuAction, SIGNAL(triggered()), this, SLOT( slot_addScriptGroup()));
-
-    auto addTriggerGroupMenu = new QMenu( this );
-    addTriggerGroupMenu->addAction( addTriggerGroupMenuAction );
-    addTriggerGroupMenu->addAction( addTimersGroupMenuAction );
-    addTriggerGroupMenu->addAction( addScriptsGroupMenuAction );
-    addTriggerGroupMenu->addAction( addAliasGroupMenuAction );
 
     toolBar = new QToolBar();
     toolBar->setIconSize(QSize(mudlet::self()->mMainIconSize*8,mudlet::self()->mMainIconSize*8));
@@ -482,7 +409,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     toolBar2->addAction( viewKeysAction );
     toolBar2->addAction( viewVarsAction );
     toolBar2->addAction( viewActionAction );
-    toolBar2->addAction( showSearchAreaAction );
     toolBar2->addAction( viewErrorsAction );
     toolBar2->addAction( viewStatsAction );
     toolBar2->addAction( showDebugAreaAction );
@@ -513,6 +439,14 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( treeWidget_variables, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
     connect( treeWidget_variables, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
     connect( treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
+
+    // Force the size of the triangle icon button that shows/hides the search
+    // results to be 3/4 of the height of the combo-box used to enter the search
+    // term - this is to prevent an overlarge button on MacOS platforms where it
+    // was found to be an issue!
+    button_toggleSearchAreaResults->setMaximumSize( QSize( (3*comboBox_searchTerms->height())/4, (3*comboBox_searchTerms->height())/4 ) );
+    button_toggleSearchAreaResults->setMinimumSize( QSize( (3*comboBox_searchTerms->height())/4, (3*comboBox_searchTerms->height())/4 ) );
+
     connect( mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect( mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT( slot_script_main_area_delete_handler()));
 
@@ -538,7 +472,6 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     popupArea->hide();
     frame_rightBottom->hide();
-    widget_searchArea->hide();
 
     readSettings();
     setTBIconSize( 0 );
@@ -547,6 +480,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QStringList labelList;
     labelList << "Type" << "Name" << "Where" << "What";
     treeWidget_searchResults->setHeaderLabels( labelList );
+
+    slot_showSearchAreaResults(false);
+
     mpScrollArea = mpTriggersMainArea->scrollArea;
     HpatternList = new QWidget;
     auto lay1 = new QVBoxLayout( HpatternList );
@@ -579,7 +515,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
         pItem->number->show();
     }
     showHiddenVars = false;
-
+    widget_searchTerm->updateGeometry();
 }
 
 void dlgTriggerEditor::slot_toggleHiddenVar( bool status )
@@ -852,7 +788,7 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     QRegExp pattern = QRegExp( s );
 
     treeWidget_searchResults->clear();
-    treeWidget_searchResults->show();
+    slot_showSearchAreaResults(true);
     treeWidget_searchResults->setUpdatesEnabled( false );
 
     // type   | name | line number/pattern/name what has been found
@@ -6033,13 +5969,27 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
     }
 }
 
-void dlgTriggerEditor::slot_show_search_area()
+void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
 {
-    if( widget_searchArea->isVisible() ) {
-        widget_searchArea->hide();
+    if( isChecked )
+    {
+        if( ! button_toggleSearchAreaResults->isChecked() )
+        {
+            // If this slot is called "manually" the checked state of the button
+            // may not match the setting, so make it do so, note that the
+            // setChecked(bool) method does NOT invoke the clicked(bool) signal
+            // that is connected to here in the constructor, but it does the
+            // toggled(bool) one, which is why we use the former...
+            button_toggleSearchAreaResults->setChecked( true );
+        }
+        treeWidget_searchResults->show();
     }
     else {
-        widget_searchArea->show();
+        if( button_toggleSearchAreaResults->isChecked() )
+        {
+            button_toggleSearchAreaResults->setChecked( false );
+        }
+        treeWidget_searchResults->hide();
     }
 }
 
@@ -7020,7 +6970,7 @@ void dlgTriggerEditor::slot_import()
     treeWidget_scripts->clear();
 
     XMLimport reader( mpHost );
-    reader.importPackage( & file2, packageName );
+    reader.importPackage( & file2, packageName ); // TODO: Missing false return value handler
 
     mpHost->setName( profileName );
     mpHost->setLogin( login );

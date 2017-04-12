@@ -130,10 +130,11 @@ public:
    void                          showUnzipProgress( const QString& txt );
    bool                          openWebPage(const QString& path);
    void                          processEventLoopHack();
+   static const QString          scmMudletXmlDefaultVersion;
    static QPointer<TConsole>     mpDebugConsole;
    static QMainWindow*           mpDebugArea;
    static bool                   debugMode;
-   QMap<Host *, TConsole *>     mConsoleMap;
+   QMap<Host *, TConsole *>      mConsoleMap;
    QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
    QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
    QIcon *                       testicon;

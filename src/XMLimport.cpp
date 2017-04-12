@@ -41,7 +41,11 @@
 // clang-format: on
 #include <QDebug>
 #include <QStringList>
-// clang-format: off
+#if QT_VERSION > 0x050002
+#include <QtMath>
+#else
+#include <QtCore/qmath.h>
+#endif
 #include "post_guard.h"
 // clang-format: on
 
@@ -64,13 +68,15 @@ XMLimport::XMLimport(Host* pH)
     , module(0)
     , mMaxRoomId(0)
     , mMaxAreaId(-1)
+    , mVersionMajor(1) // 0 to 255
+    , mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 
-bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFlag)
+bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
-    setDevice(device);
+    setDevice(pfile);
 
     module = moduleFlag;
 
@@ -149,7 +155,37 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
         readNext();
 
         if (isStartElement()) {
-            if (name() == "MudletPackage") {
+            if (name() == QStringLiteral("MudletPackage")) {
+                QString versionString;
+                if (attributes().hasAttribute(QStringLiteral("version"))) {
+                    versionString = attributes().value(QStringLiteral("version")).toString();
+                    if (!versionString.isEmpty()) {
+                        bool isOk = false;
+                        float versionNumber = versionString.toFloat(&isOk);
+                        if (isOk) {
+                            mVersionMajor = qFloor(versionNumber);
+                            mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
+                        }
+                        if (pVersionString) {
+                            *pVersionString = versionString;
+                        }
+                    }
+                }
+
+                if (mVersionMajor > 1
+                    /*||(mVersionMajor==1&&mVersionMinor)*/) {
+                    // Minor check is not currently relevant, just abort on 2.000f or more
+
+                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                                         "\"%1\"\n"
+                                         "reports it has a version (%2) it must have come from a later Mudlet version,\n"
+                                         "and this one cannot read it, you need a newer Mudlet!")
+                                          .arg(pfile->fileName())
+                                          .arg(versionString);
+                    mpHost->postMessage(moanMsg);
+                    return false;
+                }
+
                 readPackage();
             } else if (name() == "map") {
                 readMap();
@@ -1190,7 +1226,7 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "mButtonState") {
                 // We now use a boolean but file must use original "1" (false)
                 // or "2" (true) for backward compatibility
-                pT->mButtonState = ( readElementText().toInt() == 2 );
+                pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
                 pT->mButtonColor.setNamedColor(readElementText());
             } else if (name() == "buttonColumn") {
@@ -1397,4 +1433,11 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
             }
         }
     }
+}
+
+// This will be a string representation of a decimal float with three places of
+// decimals
+void XMLimport::getVersionString(QString& versionString)
+{
+    versionString = QString::number((mVersionMajor * 1000 + mVersionMinor) / 1000.0, 'f', 3);
 }
