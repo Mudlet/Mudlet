@@ -2141,6 +2141,9 @@ void mudlet::doAutoLogin( QString & profile_name )
 
     if( ! pHost ) return;
 
+    LuaInterface * lI = pHost->getLuaInterface();
+    lI->getVars( true );
+
     QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
     QDir dir( folder );
     dir.setSorting(QDir::Time);
