@@ -130,7 +130,7 @@ public:
     bool applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout );
     bool applyFgColor( QPoint &, QPoint &, int, int, int );
     bool applyBgColor( QPoint &, QPoint &, int, int, int );
-    void appendBuffer( TBuffer chunk );
+    void appendBuffer( const TBuffer& chunk );
     bool moveCursor( QPoint & where );
     QPoint & insertText(const QString & what, QPoint & where );
     int getLastLineNumber();
