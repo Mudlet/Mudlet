@@ -123,6 +123,8 @@ public:
    void                          showUnzipProgress( QString txt );
    bool                          openWebPage(QString path);
    void                          processEventLoopHack();
+
+   static const QString         scmMudletXmlDefaultVersion;
    static TConsole *             mpDebugConsole;
    static QMainWindow *          mpDebugArea;
    static bool                   debugMode;

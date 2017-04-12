@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -74,6 +74,30 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
         return QObject::eventFilter(obj, event);
     }
 }
+
+// "mMudletXmlDefaultFormat" number represents a major (integer part) and minor
+// (1000ths, range 0 to 999) that is used as a "version" attribute number when
+// writing the <MudletPackage ...> element of all (but maps if I ever get around
+// to doing a Map Xml file exporter/writer) Xml files used to export/save Mudlet
+// button/menu/toolbars; aliases. keys, scripts, timers, triggers and variables
+// and collections of these as modules/packages and entire profiles as "game
+// saves".  Mudlet versions up to 3.0.1 never bothered checking the version
+// detail and it had been hard coded as "1.0" back as far as history can
+// determine.  From that version a check was coded to test that the version
+// was less than 2.000f with the intention to loudly and clearly fail if a
+// higher version was encountered. Values above 1.000f have not yet been
+// codified but should be accepted so it should be possible to raise the number
+// a little and to use that to extend the Xml data format in a manner that older
+// versions ignore (possibly with some noise) but which they can still get the
+// details they can handle yet allow a later upgraded version to get extra
+// information they want.
+//
+// Taking this number to 2.000f or more WILL prevent old versions from reading
+// Xml files and should be considered a step associated with a major version
+// number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
+// agreement and consideration from the Project management, even a minor part
+// increment should not be done without justification...!
+const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.0f, 'f', 3 );
 
 TConsole *  mudlet::mpDebugConsole = 0;
 QMainWindow * mudlet::mpDebugArea = 0;
@@ -1719,7 +1743,15 @@ void mudlet::closeEvent(QCloseEvent *event)
 
 void mudlet::readSettings()
 {
-    QSettings settings("Mudlet", "Mudlet 1.0");
+    /*In case sensitive environments, two different config directories
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+    Furthermore, we skip the version from the application name to follow the convention.
+    For compatibility with older settings, if no config is loaded 
+    from the config directory "mudlet", application "Mudlet", we try to load from the config 
+    directory "Mudlet", application "Mudlet 1.0". */
+    QSettings settings_new("mudlet","Mudlet");
+    QSettings settings((settings_new.contains("pos")? "mudlet":"Mudlet"),(settings_new.contains("pos")? "Mudlet":"Mudlet 1.0"));
+
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
@@ -1775,7 +1807,10 @@ void mudlet::setIcoSize( int s )
 
 void mudlet::writeSettings()
 {
-    QSettings settings("Mudlet", "Mudlet 1.0");
+    /*In case sensitive environments, two different config directories 
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
+    Furthermore, we skip the version from the application name to follow the convention.*/
+    QSettings settings("mudlet", "Mudlet");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("mainiconsize", mMainIconSize);
@@ -2141,6 +2176,9 @@ void mudlet::doAutoLogin( QString & profile_name )
 
     if( ! pHost ) return;
 
+    LuaInterface * lI = pHost->getLuaInterface();
+    lI->getVars( true );
+
     QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
     QDir dir( folder );
     dir.setSorting(QDir::Time);
@@ -2151,7 +2189,7 @@ void mudlet::doAutoLogin( QString & profile_name )
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
-        importer.importPackage( & file );
+        importer.importPackage( & file ); // TODO: Missing false return value handler
     }
 
     QString login = "login";
