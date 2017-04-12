@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,12 +32,10 @@
 
 TLabel::TLabel( QWidget * pW )
 : QLabel( pW )
-, mpHost( 0 )
+, mpHost( Q_NULLPTR )
 {
     setMouseTracking( true );
 }
-
-QString nothing = "";
 
 void TLabel::mousePressEvent( QMouseEvent * event )
 {
@@ -44,7 +43,7 @@ void TLabel::mousePressEvent( QMouseEvent * event )
     {
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mScript, mpParameters );
+            mpHost->getLuaInterpreter()->callEventHandler( mScript, & mParameters );
         }
         event->accept();
         return;
@@ -55,10 +54,10 @@ void TLabel::mousePressEvent( QMouseEvent * event )
 
 void TLabel::leaveEvent( QEvent * event )
 {
-    if (mLeave != ""){
+    if ( ! mLeave.isEmpty() ){
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mLeave, mLeaveParams );
+            mpHost->getLuaInterpreter()->callEventHandler( mLeave, & mLeaveParams );
         }
         event->accept();
         return;
@@ -68,10 +67,10 @@ void TLabel::leaveEvent( QEvent * event )
 
 void TLabel::enterEvent( QEvent * event )
 {
-    if (mEnter != ""){
+    if ( ! mEnter.isEmpty() ){
         if( mpHost )
         {
-            mpHost->getLuaInterpreter()->callEventHandler( mEnter, mEnterParams );
+            mpHost->getLuaInterpreter()->callEventHandler( mEnter, & mEnterParams );
         }
         event->accept();
         return;
