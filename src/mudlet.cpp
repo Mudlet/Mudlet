@@ -101,7 +101,7 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.0f, 'f', 3 );
 
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
-QMainWindow* mudlet::mpDebugArea;
+QMainWindow* mudlet::mpDebugArea = 0;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 
