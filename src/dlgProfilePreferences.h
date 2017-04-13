@@ -22,12 +22,16 @@
  ***************************************************************************/
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_profile_preferences.h"
 #include <QDialog>
 #include <QtCore>
 #include <QDir>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 class Host;
 

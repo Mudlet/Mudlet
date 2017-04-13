@@ -46,8 +46,10 @@
 #else
 #include <QtCore/qmath.h>
 #endif
+// clang-format: off
 #include "post_guard.h"
 // clang-format: on
+
 
 XMLimport::XMLimport(Host* pH)
     : mpHost(pH)
@@ -1426,7 +1428,8 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                            "convert: \"%s\" to a number when reading the "
                            "'regexCodePropertyList' element of the 'Trigger' "
                            "or 'TriggerGroup' element \"%s\"!",
-                           numberText.toUtf8().constData(), parentName.toUtf8().constData());
+                           numberText.toUtf8().constData(),
+                           parentName.toUtf8().constData());
                 }
             } else {
                 readUnknownTriggerElement();

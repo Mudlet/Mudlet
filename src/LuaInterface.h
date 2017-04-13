@@ -24,10 +24,14 @@
 
 #include "TVar.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QSet>
 #include <QScopedPointer>
-#include "post_guard.h"
+// clang-format: off
+#include "pre_guard.h"
+// clang-format: on
 
 #ifndef LUA_CPP
 extern "C"

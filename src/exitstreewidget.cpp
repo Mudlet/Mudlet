@@ -22,10 +22,14 @@
 #include "exitstreewidget.h"
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QtEvents>
 #include <QTreeWidget>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 ExitsTreeWidget::ExitsTreeWidget( QWidget * pW ) : QTreeWidget( pW )

@@ -28,7 +28,9 @@
 #include "TConsole.h"
 #include "TEvent.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QtEvents>
 #include <QApplication>
 #include <QClipboard>
@@ -37,7 +39,9 @@
 #include <QString>
 #include <QScrollBar>
 #include <QToolTip>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool isDebugConsole, bool isSplitScreen )

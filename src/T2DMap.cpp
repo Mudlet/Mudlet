@@ -33,7 +33,9 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QtEvents>
 #include <QtUiTools>
 #include <QAction>
@@ -56,7 +58,9 @@
 #include <QSignalMapper>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 T2DMap::T2DMap(QWidget * parent)

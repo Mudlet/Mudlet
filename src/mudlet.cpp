@@ -46,7 +46,9 @@
 #include "TTextEdit.h"
 #include "XMLimport.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QtEvents>
 #include <QApplication>
 #include <QDesktopServices>
@@ -58,7 +60,9 @@
 #include <QTextCharFormat>
 #include <QToolBar>
 #include <QtUiTools/quiloader.h>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 using namespace std;

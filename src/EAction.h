@@ -23,10 +23,14 @@
  ***************************************************************************/
 
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QAction>
 #include <QPointer>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 class Host;
 class mudlet;
@@ -37,7 +41,7 @@ class EAction : public QAction
     Q_OBJECT
 
 public:
-                    EAction( QIcon &, QString & );
+    EAction( QIcon &, QString & );
 
     int mID;
     QPointer<Host> mpHost;

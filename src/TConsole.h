@@ -26,13 +26,17 @@
 
 #include "TBuffer.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QFile>
 #include <QTextStream>
 #include <QDataStream>
 #include <QPointer>
 #include <QWidget>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <list>
 #include <map>

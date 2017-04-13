@@ -22,9 +22,13 @@
  ***************************************************************************/
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_vars_main_area.h"
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 class dlgVarsMainArea : public QWidget, public Ui::vars_main_area

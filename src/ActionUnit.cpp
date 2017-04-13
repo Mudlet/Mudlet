@@ -461,7 +461,6 @@ void ActionUnit::hideToolBar(const QString & name )
         }
     }
     mudlet::self()->processEventLoopHack();
-
 }
 
 void ActionUnit::constructToolbar( TAction * pA, TToolBar * pTB )
@@ -554,7 +553,6 @@ void ActionUnit::constructToolbar( TAction * pA, TEasyButtonBar * pTB )
 
     pTB->setStyleSheet( pTB->mpTAction->css );
     pTB->show();
-
 }
 
 

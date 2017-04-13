@@ -47,7 +47,9 @@
 #include "XMLexport.h"
 #include "XMLimport.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QHeaderView>
@@ -59,7 +61,9 @@
 #include <QTextDocument>
 #include <QTextOption>
 #include <QToolBar>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 using namespace std;

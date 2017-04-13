@@ -22,9 +22,13 @@
  ***************************************************************************/
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_color_trigger.h"
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 class Host;
 class TTrigger;

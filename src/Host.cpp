@@ -35,12 +35,16 @@
 #include "XMLexport.h"
 #include "XMLimport.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QApplication>
 #include <QtUiTools>
 #include <QDir>
 #include <QMessageBox>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <zip.h>
 

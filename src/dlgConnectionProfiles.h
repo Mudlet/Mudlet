@@ -22,9 +22,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_connection_profiles.h"
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
 {

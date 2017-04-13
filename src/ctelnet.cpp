@@ -38,7 +38,9 @@
 #include "TEvent.h"
 #include "TMap.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QDebug>
 #include <QDir>
 #include <QNetworkAccessManager>
@@ -46,7 +48,9 @@
 #include <QStringBuilder>
 #include <QTextCodec>
 #include <QTimer>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <iostream>
 #include <memory>

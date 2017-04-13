@@ -24,9 +24,13 @@
 
 #include "Host.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QDir>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 dlgNotepad::dlgNotepad( Host * pH )

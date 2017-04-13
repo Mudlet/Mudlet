@@ -25,13 +25,17 @@
 
 #include "Host.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QList>
 #include <QMap>
 #include <QReadWriteLock>
 #include <QString>
 #include <QStringList>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 class TEvent;

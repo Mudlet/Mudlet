@@ -27,10 +27,14 @@
 #include "TConsole.h"
 #include "TFlipButton.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QDebug>
 #include <QGridLayout>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
