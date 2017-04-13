@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -49,35 +49,6 @@ class TCommandLine;
 class TLabel;
 class TSplitter;
 class dlgNotepad;
-
-
-class TFontSpecsLogger
-{
-public:
-    TFontSpecsLogger(){ reset(); }
-    QString getFontWeight() { return (bold) ? QString("bold") : QString("normal"); }
-    QString getFontStyle() { return (italics) ? QString("italic") : QString("normal"); }
-    QString getTextDecoration() { return (underline) ? QString("underline") : QString("normal"); }
-    void reset()
-    {
-        bold = false;
-        italics = false;
-        underline = false;
-        m_bgColorHasChanged = false;
-        m_fgColorHasChanged = false;
-    }
-    void bg_color_change(){ m_bgColorHasChanged=true; }
-    void fg_color_change(){ m_fgColorHasChanged=true; }
-    QColor fgColor;
-    QColor fgColorLight;
-    QColor bgColor;
-    bool m_bgColorHasChanged;
-    bool m_fgColorHasChanged;
-    bool bold;
-    bool italics;
-    bool underline;
-
-};
 
 
 class TConsole : public QWidget
@@ -135,7 +106,7 @@ public:
       TConsole *        createBuffer(const QString & name );
       void              scrollDown( int lines );
       void              scrollUp( int lines );
-      void              print(const QString &, int, int, int, int, int, int );
+      void              print(const QString &, const QColor fgColor, const QColor bgColor);
       void              print(const QString & msg );
       void              print( const char * );
       void              printDebug( QColor &, QColor &, const QString & );
@@ -177,12 +148,9 @@ public:
       void              _luaWrapLine( int );
       QString           getCurrentLine();
       void              selectCurrentLine();
-      bool              saveMap(const QString& location);
-      bool              loadMap(const QString& location);
-      bool              importMap(const QString& location, QString *errMsg = Q_NULLPTR );
-      QString           logger_translate( QString & );
-      void              logger_set_text_properties(const QString& );
-      QString           assemble_html_font_specs();
+      bool              saveMap(const QString&);
+      bool              loadMap(const QString&);
+      bool              importMap(const QString&, QString *errMsg = Q_NULLPTR );
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
       void              toggleLogging(bool);
 
@@ -198,7 +166,6 @@ public:
       QWidget *         layer;
       QWidget *         layerCommandLine;
       QWidget *         layerEdit;
-      TFontSpecsLogger  m_LoggerfontSpecs;
       QColor            mBgColor;
       int               mButtonState;
       TBuffer           mClipboard;

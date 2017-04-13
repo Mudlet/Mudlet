@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -462,7 +462,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     QString newname = tr( "new profile name" );
 
-    QListWidgetItem * pItem = new QListWidgetItem( newname );
+    auto pItem = new QListWidgetItem( newname );
     if( ! pItem ) {
         return;
     }
@@ -1084,7 +1084,7 @@ void dlgConnectionProfiles::fillout_form()
             continue;
         }
 
-        QListWidgetItem * pItem = new QListWidgetItem( mProfileList.at(i) );
+        auto pItem = new QListWidgetItem( mProfileList.at(i) );
         pItem->setFont(font);
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
@@ -1189,7 +1189,7 @@ void dlgConnectionProfiles::slot_copy_profile()
         profile_name = profile_name2;
     }
 
-    QListWidgetItem * pItem = new QListWidgetItem( profile_name );
+    auto pItem = new QListWidgetItem( profile_name );
     if( ! pItem )
     {
         return;
@@ -1257,7 +1257,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
-        importer.importPackage( & file, 0);
+        importer.importPackage( & file, 0 ); // TODO: Missing false return value handler
     }
     else
     {
@@ -1316,44 +1316,6 @@ void dlgConnectionProfiles::slot_connectToServer()
 
     emit signal_establish_connection( profile_name, 0 );
 }
-
-// Not Used:
-//void dlgConnectionProfiles::slot_chose_history()
-//{
-//    QString profile_name = profile_name_entry->text().trimmed();
-//    if( profile_name.size() < 1 )
-//    {
-//        QMessageBox::warning(this, tr("Browse Profile History:"),
-//                             tr("You have not selected a profile yet.\nWhich profile history do you want to browse?\nPlease select a profile first."));
-//        return;
-//    }
-//    QString fileName = QFileDialog::getOpenFileName(this, tr("Chose Mudlet Profile"),
-//                                                    QStringLiteral( "%1/.config/mudlet/profiles/%2" )
-//                                                        .arg( QDir::homePath() )
-//                                                        .arg( profile_name ),
-//                                                    tr("*.xml"));
-
-//    if( fileName.isEmpty() ) return;
-
-//    QFile file(fileName);
-//    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-//    {
-//        QMessageBox::warning(this, tr("Import Mudlet Package:"),
-//                             tr("Cannot read file %1:\n%2.")
-//                             .arg(fileName)
-//                             .arg(file.errorString()));
-//        return;
-//    }
-
-//    mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
-//    Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
-//    if( ! pHost ) return;
-//    XMLimport importer( pHost );
-//    importer.importPackage( & file );
-
-//    emit signal_establish_connection( profile_name, -1 );
-//    QDialog::accept();
-//}
 
 bool dlgConnectionProfiles::validateConnect()
 {

@@ -42,7 +42,7 @@
     </rect>
    </property>
    <property name="title">
-    <string>chose color to trigger on</string>
+    <string>choose color to trigger on</string>
    </property>
    <layout class="QGridLayout" name="gridLayout_8">
     <item row="0" column="0">

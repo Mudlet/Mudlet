@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -76,8 +76,32 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
     }
 }
 
+// "mMudletXmlDefaultFormat" number represents a major (integer part) and minor
+// (1000ths, range 0 to 999) that is used as a "version" attribute number when
+// writing the <MudletPackage ...> element of all (but maps if I ever get around
+// to doing a Map Xml file exporter/writer) Xml files used to export/save Mudlet
+// button/menu/toolbars; aliases. keys, scripts, timers, triggers and variables
+// and collections of these as modules/packages and entire profiles as "game
+// saves".  Mudlet versions up to 3.0.1 never bothered checking the version
+// detail and it had been hard coded as "1.0" back as far as history can
+// determine.  From that version a check was coded to test that the version
+// was less than 2.000f with the intention to loudly and clearly fail if a
+// higher version was encountered. Values above 1.000f have not yet been
+// codified but should be accepted so it should be possible to raise the number
+// a little and to use that to extend the Xml data format in a manner that older
+// versions ignore (possibly with some noise) but which they can still get the
+// details they can handle yet allow a later upgraded version to get extra
+// information they want.
+//
+// Taking this number to 2.000f or more WILL prevent old versions from reading
+// Xml files and should be considered a step associated with a major version
+// number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
+// agreement and consideration from the Project management, even a minor part
+// increment should not be done without justification...!
+const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.0f, 'f', 3 );
+
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
-QMainWindow* mudlet::mpDebugArea;
+QMainWindow* mudlet::mpDebugArea = 0;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 
@@ -131,7 +155,7 @@ mudlet::mudlet()
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
-    QWidget * frame = new QWidget( this );
+    auto frame = new QWidget( this );
     frame->setFocusPolicy( Qt::NoFocus );
     setCentralWidget( frame );
     mpTabBar = new QTabBar( frame );
@@ -143,7 +167,7 @@ mudlet::mudlet()
     mpTabBar->setMovable(true);
 #endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
-    QVBoxLayout * layoutTopLevel = new QVBoxLayout(frame);
+    auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
     layoutTopLevel->addWidget( mpTabBar );
     mainPane = new QWidget( frame );
@@ -152,7 +176,7 @@ mudlet::mudlet()
     mainPane->setAutoFillBackground(true);
     mainPane->setFocusPolicy( Qt::NoFocus );
     layoutTopLevel->addWidget( mainPane );
-    QHBoxLayout * layout = new QHBoxLayout( mainPane );
+    auto layout = new QHBoxLayout( mainPane );
     layout->setContentsMargins(0,0,0,0);
 
     mainPane->setContentsMargins(0,0,0,0);
@@ -273,7 +297,7 @@ mudlet::mudlet()
     mpDebugArea->setWindowTitle( tr( "Central Debug Console" ) );
     mpDebugArea->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_debug.png" ) ) );
 
-    TConsoleMonitor * consoleCloser = new TConsoleMonitor(mpDebugArea);
+    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
     mpDebugArea->installEventFilter(consoleCloser);
 
     QSize generalRule( qApp->desktop()->size() );
@@ -372,7 +396,7 @@ mudlet::mudlet()
 
     readSettings();
 
-    QTimer * timerAutologin = new QTimer( this );
+    auto timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
@@ -438,10 +462,10 @@ void mudlet::layoutModules(){
         for(int i=0;i<pModules.size();i++){
             int row = moduleTable->rowCount();
             moduleTable->insertRow(row);
-            QTableWidgetItem *masterModule = new QTableWidgetItem ();
-            QTableWidgetItem *itemEntry = new QTableWidgetItem ();
-            QTableWidgetItem *itemLocation = new QTableWidgetItem ();
-            QTableWidgetItem *itemPriority = new QTableWidgetItem ();
+            auto masterModule = new QTableWidgetItem ();
+            auto itemEntry = new QTableWidgetItem ();
+            auto itemLocation = new QTableWidgetItem ();
+            auto itemPriority = new QTableWidgetItem ();
             masterModule->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
             QStringList moduleInfo = pH->mInstalledModules[pModules[i]];
             masterModule->setText("sync?");
@@ -668,7 +692,7 @@ void mudlet::slot_uninstall_package()
 void mudlet::slot_package_exporter(){
     Host * pH = getActiveHost();
     if( ! pH ) return;
-    dlgPackageExporter *d = new dlgPackageExporter(this, pH);
+    auto d = new dlgPackageExporter(this, pH);
     // don't show the dialog if the user cancelled the wizard
     if (d->filePath.isEmpty()) {
         return;
@@ -804,7 +828,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
 {
     if( mConsoleMap.contains( pH ) ) return;
     pH->mLogStatus = mAutolog;
-    TConsole * pConsole = new TConsole( pH, false );
+    auto pConsole = new TConsole( pH, false );
     if( ! pConsole ) return;
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle( pH->getName() );
@@ -830,7 +854,7 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pConsole->show();
     connect( pConsole->emergencyStop, SIGNAL(pressed()), this , SLOT(slot_stopAllTriggers()));
 
-    dlgTriggerEditor * pEditor = new dlgTriggerEditor( pH );
+    auto pEditor = new dlgTriggerEditor( pH );
     pH->mpEditorDialog = pEditor;
     pEditor->fillout_form();
 
@@ -932,12 +956,12 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
-        QDockWidget * pD = new QDockWidget;
+        auto pD = new QDockWidget;
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        TConsole * pC = new TConsole( pHost, false );
+        auto pC = new TConsole( pHost, false );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
@@ -1056,7 +1080,10 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
         return false;
 }
 
-bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, int b1, int r2, int g2, int b2, bool bold, bool underline, bool italics, bool strikeout )
+bool mudlet::setTextFormat( Host * pHost, const QString & name,
+                            int r1, int g1, int b1,
+                            int r2, int g2, int b2,
+                            bool bold, bool underline, bool italics, bool strikeout )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
@@ -1069,25 +1096,43 @@ bool mudlet::setTextFormat( Host * pHost, const QString & name, int r1, int g1, 
         pC->mFormatCurrent.fgG = g2;
         pC->mFormatCurrent.fgB = b2;
         if( bold )
+        {
             pC->mFormatCurrent.flags |= TCHAR_BOLD;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_BOLD);
+        }
         if( underline )
+        {
             pC->mFormatCurrent.flags |= TCHAR_UNDERLINE;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_UNDERLINE);
+        }
         if( italics )
+        {
             pC->mFormatCurrent.flags |= TCHAR_ITALICS;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_ITALICS);
+        }
         if( strikeout )
+        {
             pC->mFormatCurrent.flags |= TCHAR_STRIKEOUT;
+        }
         else
+        {
             pC->mFormatCurrent.flags &= ~(TCHAR_STRIKEOUT);
+        }
         return true;
     }
     else
+    {
         return false;
+    }
 }
 
 void mudlet::showEvent( QShowEvent * event )
@@ -1686,19 +1731,15 @@ void mudlet::closeEvent(QCloseEvent *event)
 
 void mudlet::readSettings()
 {
-    QSettings settings("mudlet", "Mudlet");
-    
-    /*In case sensitive environments, two different config directories 
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
     Furthermore, we skip the version from the application name to follow the convention.
-    For compatibility with older settings, if no config is loaded 
-    from the config directory "mudlet", application "Mudlet", we try to load from the config 
+    For compatibility with older settings, if no config is loaded
+    from the config directory "mudlet", application "Mudlet", we try to load from the config
     directory "Mudlet", application "Mudlet 1.0". */
-    if(settings.value("pos") == 0)
-    {
-        QSettings settings("Mudlet","Mudlet 1.0");
-    }
-    
+    QSettings settings_new("mudlet","Mudlet");
+    QSettings settings((settings_new.contains("pos")? "mudlet":"Mudlet"),(settings_new.contains("pos")? "Mudlet":"Mudlet 1.0"));
+
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize",QVariant(3)).toInt();
@@ -1754,7 +1795,7 @@ void mudlet::setIcoSize( int s )
 
 void mudlet::writeSettings()
 {
-    /*In case sensitive environments, two different config directories 
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
     Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
@@ -1772,7 +1813,7 @@ void mudlet::writeSettings()
 
 void mudlet::connectToServer()
 {
-    dlgConnectionProfiles * pDlg = new dlgConnectionProfiles(this);
+    auto pDlg = new dlgConnectionProfiles(this);
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
     pDlg->exec();
@@ -1787,7 +1828,7 @@ void mudlet::show_trigger_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_triggers();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_alias_dialog()
@@ -1798,7 +1839,7 @@ void mudlet::show_alias_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_aliases();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_timer_dialog()
@@ -1809,7 +1850,7 @@ void mudlet::show_timer_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_timers();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_script_dialog()
@@ -1820,7 +1861,7 @@ void mudlet::show_script_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_scripts();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_key_dialog()
@@ -1831,7 +1872,7 @@ void mudlet::show_key_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_keys();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_variable_dialog()
@@ -1842,7 +1883,7 @@ void mudlet::show_variable_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_vars();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_action_dialog()
@@ -1853,14 +1894,14 @@ void mudlet::show_action_dialog()
     if( ! pEditor ) return;
     pEditor->slot_show_actions();
     pEditor->raise();
-    pEditor->show();
+    pEditor->showNormal();
 }
 
 void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    dlgProfilePreferences * pDlg = new dlgProfilePreferences( this, pHost );
+    auto pDlg = new dlgProfilePreferences( this, pHost );
     connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
     connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
@@ -1983,7 +2024,7 @@ void mudlet::slot_show_help_dialog_download()
 
 void mudlet::slot_show_about_dialog()
 {
-    dlgAboutDialog * pDlg = new dlgAboutDialog( this );
+    auto pDlg = new dlgAboutDialog( this );
     pDlg->raise();
     pDlg->show();
 }
@@ -2123,6 +2164,9 @@ void mudlet::doAutoLogin( const QString & profile_name )
 
     if( ! pHost ) return;
 
+    LuaInterface * lI = pHost->getLuaInterface();
+    lI->getVars( true );
+
     QString folder = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current/";
     QDir dir( folder );
     dir.setSorting(QDir::Time);
@@ -2133,7 +2177,7 @@ void mudlet::doAutoLogin( const QString & profile_name )
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
-        importer.importPackage( & file );
+        importer.importPackage( & file ); // TODO: Missing false return value handler
     }
 
     QString login = "login";

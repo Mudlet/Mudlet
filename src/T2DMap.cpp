@@ -1174,17 +1174,16 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
             // draw exit stubs
             QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
-            for( int k=0; k<pR->exitStubs.size(); k++ )
+            for(int direction : pR->exitStubs)
             {
-                int direction = pR->exitStubs[k];
                 QVector3D uDirection = unitVectors[direction];
                 p.drawLine(rx+rSize*(int)uDirection.x()/2, ry+rSize*(int)uDirection.y(),rx+(int)uDirection.x()*(rSize*3/4*tx), ry+uDirection.y()*(rSize*3/4*ty));
             }
 
             QPen __pen;
-            for( int k=0; k<exitList.size(); k++ )
+            for(int & k : exitList)
             {
-                int rID = exitList[k];
+                int rID = k;
                 if( rID <= 0 ) continue;
 
                 bool areaExit;
@@ -1262,7 +1261,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     pen = p.pen();
                     pen.setWidthF(wegBreite);
                     pen.setCosmetic( mMapperUseAntiAlias );
-                    pen.setColor(getColor(exitList[k]));
+                    pen.setColor(getColor(k));
                     p.setPen( pen );
                     if( pR->getSouth() == rID )
                     {
@@ -1305,7 +1304,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                         _p = QPoint(p2.x()-tx/2, p2.y()+ty/2);
                     }
                     p.drawLine( _line );
-                    mAreaExitList[exitList[k]] = _p;
+                    mAreaExitList[k] = _p;
                     QLineF l0 = QLineF( _line );
                     l0.setLength(wegBreite*5);
                     QPointF _p1 = l0.p1();
@@ -1324,7 +1323,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     _poly.append( _p3 );
                     _poly.append( _p4 );
                     QBrush brush = p.brush();
-                    brush.setColor( getColor(exitList[k]) );
+                    brush.setColor( getColor(k) );
                     brush.setStyle( Qt::SolidPattern );
                     QPen arrowPen = p.pen();
                     arrowPen.setCosmetic( mMapperUseAntiAlias );
@@ -2343,7 +2342,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         if( mCustomLinesRoomFrom > 0 )
         {
             if( mDialogLock )
-                return; // Prevent any line drawing until ready
+            {
+                 return; // Prevent any line drawing until ready
+            }
 
             TRoom * pR = mpMap->mpRoomDB->getRoom( mCustomLinesRoomFrom );
             if( pR )
@@ -2591,7 +2592,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             mIsSelectionUsingNames = false;
             while( itRoom.hasNext() )
             {
-                QTreeWidgetItem * _item = new QTreeWidgetItem;
+                auto _item = new QTreeWidgetItem;
                 int multiSelectionRoomId = itRoom.next();
                 _item->setText(0,QStringLiteral("%1").arg(multiSelectionRoomId,7)); // Pad with spaces so sorting works
                 _item->setTextAlignment(0, Qt::AlignRight);
@@ -2631,12 +2632,14 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
 
     if( event->buttons() & Qt::RightButton )
     {
-        QMenu * popup = new QMenu( this );
+        auto popup = new QMenu( this );
 
         if( mCustomLinesRoomFrom > 0 )
         {
             if( mDialogLock )
-                return;
+            {
+                 return;
+            }
 
             TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if( pR )
@@ -2868,7 +2871,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
             it.next();
             QStringList menuInfo = it.value();
             QString displayName = menuInfo[1];
-            QMenu * userMenu = new QMenu(displayName, this);
+            auto userMenu = new QMenu(displayName, this);
             userMenus.insert(it.key(), userMenu);
         }
         it.toFront();
@@ -2885,11 +2888,11 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         }
         //add our actions
         QMapIterator<QString, QStringList> it2(mUserActions);
-        QSignalMapper* mapper = new QSignalMapper(this);
+        auto mapper = new QSignalMapper(this);
         while (it2.hasNext()){
             it2.next();
             QStringList actionInfo = it2.value();
-            QAction * action = new QAction(actionInfo[2], this );
+            auto action = new QAction(actionInfo[2], this );
             if (actionInfo[1] == "")//no parent
                 popup->addAction(action);
             else if (userMenus.contains(actionInfo[1]))
@@ -3210,9 +3213,9 @@ void T2DMap::slot_deleteLabel()
                 deleteList.push_back(it.key());
             }
         }
-        for( int i=0; i<deleteList.size(); i++ )
+        for(int & i : deleteList)
         {
-            mpMap->mapLabels[mAID].remove(deleteList[i]);
+            mpMap->mapLabels[mAID].remove(i);
         }
     }
     update();
@@ -3292,14 +3295,14 @@ void T2DMap::slot_movePosition()
     TRoom * pR_start = mpMap->mpRoomDB->getRoom( mMultiSelectionHighlightRoomId );
     // pR has already been validated by getCenterSelection()
 
-    QDialog * pD = new QDialog(this);
-    QGridLayout * pL = new QGridLayout;
+    auto pD = new QDialog(this);
+    auto pL = new QGridLayout;
     pD->setLayout( pL );
     pD->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     pD->setContentsMargins(0,0,0,0);
-    QLineEdit * pLEx = new QLineEdit(pD);
-    QLineEdit * pLEy = new QLineEdit(pD);
-    QLineEdit * pLEz = new QLineEdit(pD);
+    auto pLEx = new QLineEdit(pD);
+    auto pLEy = new QLineEdit(pD);
+    auto pLEz = new QLineEdit(pD);
 
     pLEx->setText(QString::number(pR_start->x));
     pLEy->setText(QString::number(pR_start->y));
@@ -3316,18 +3319,18 @@ void T2DMap::slot_movePosition()
     pL->addWidget(pLEy,2,1,Qt::AlignVCenter|Qt::AlignLeft);
     pL->addWidget(pLa3,3,0,Qt::AlignVCenter|Qt::AlignRight);
     pL->addWidget(pLEz,3,1,Qt::AlignVCenter|Qt::AlignLeft);
-    QWidget * pButtonBar = new QWidget(pD);
+    auto pButtonBar = new QWidget(pD);
 
-    QHBoxLayout * pL2 = new QHBoxLayout;
+    auto pL2 = new QHBoxLayout;
     pButtonBar->setLayout( pL2 );
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
 
-    QPushButton * pB_ok = new QPushButton(pButtonBar);
+    auto pB_ok = new QPushButton(pButtonBar);
     pB_ok->setText("Ok");
     pL2->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), pD, SLOT(accept()));
 
-    QPushButton * pB_abort = new QPushButton(pButtonBar);
+    auto pB_abort = new QPushButton(pButtonBar);
     pB_abort->setText("Cancel");
     connect(pB_abort, SIGNAL(clicked()), pD, SLOT(reject()));
     pL2->addWidget(pB_abort);
@@ -3611,24 +3614,24 @@ void T2DMap::slot_defineNewColor()
 void T2DMap::slot_changeColor()
 {
     mChosenRoomColor = 5;
-    QDialog * pD = new QDialog(this);
-    QVBoxLayout * pL = new QVBoxLayout;
+    auto pD = new QDialog(this);
+    auto pL = new QVBoxLayout;
     pD->setLayout( pL );
     pD->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     pD->setContentsMargins(0,0,0,0);
-    QListWidget * pLW = new QListWidget(pD);
+    auto pLW = new QListWidget(pD);
     pLW->setViewMode(QListView::IconMode);
 
     connect(pLW, SIGNAL(itemDoubleClicked(QListWidgetItem*)), pD, SLOT(accept()));
     connect(pLW, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_selectRoomColor(QListWidgetItem*)));
 
     pL->addWidget(pLW);
-    QWidget * pButtonBar = new QWidget(pD);
+    auto pButtonBar = new QWidget(pD);
 
-    QHBoxLayout * pL2 = new QHBoxLayout;
+    auto pL2 = new QHBoxLayout;
     pButtonBar->setLayout( pL2 );
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
-    QPushButton * pB_newColor = new QPushButton(pButtonBar);
+    auto pB_newColor = new QPushButton(pButtonBar);
     pB_newColor->setText("define new color");
 
     connect(pB_newColor, SIGNAL(clicked()), pD, SLOT(reject()));
@@ -3636,12 +3639,12 @@ void T2DMap::slot_changeColor()
 
     pL2->addWidget(pB_newColor);
 
-    QPushButton * pB_ok = new QPushButton(pButtonBar);
+    auto pB_ok = new QPushButton(pButtonBar);
     pB_ok->setText("ok");
     pL2->addWidget(pB_ok);
     connect(pB_ok, SIGNAL(clicked()), pD, SLOT(accept()));
 
-    QPushButton * pB_abort = new QPushButton(pButtonBar);
+    auto pB_abort = new QPushButton(pButtonBar);
     pB_abort->setText("abort");
     connect(pB_abort, SIGNAL(clicked()), pD, SLOT(reject()));
     pL2->addWidget(pB_abort);
@@ -3653,7 +3656,7 @@ void T2DMap::slot_changeColor()
         it.next();
         QColor c;
         c = it.value();
-        QListWidgetItem * pI = new QListWidgetItem( pLW );
+        auto pI = new QListWidgetItem( pLW );
         QPixmap pix = QPixmap(50,50);
         pix.fill( c );
         QIcon mi( pix );
@@ -3734,11 +3737,11 @@ void T2DMap::slot_spread()
         {
             itCustomLine.next();
             QList<QPointF> customLinePoints = itCustomLine.value();
-            for( int pointIndex=0; pointIndex< customLinePoints.size(); pointIndex++ )
+            for(auto & customLinePoint : customLinePoints)
             {
-                QPointF movingPoint = customLinePoints.at( pointIndex );
-                customLinePoints[pointIndex].setX( (float)(movingPoint.x()*spread+dx) );
-                customLinePoints[pointIndex].setY( (float)(movingPoint.y()*spread+dy) );
+                QPointF movingPoint = customLinePoint;
+                customLinePoint.setX( (float)(movingPoint.x()*spread+dx) );
+                customLinePoint.setY( (float)(movingPoint.y()*spread+dy) );
             }
             newCustomLinePointsMap.insert( itCustomLine.key(), customLinePoints );
         }
@@ -3801,11 +3804,11 @@ void T2DMap::slot_shrink()
         {
             itCustomLine.next();
             QList<QPointF> customLinePoints = itCustomLine.value();
-            for( int pointIndex=0; pointIndex< customLinePoints.size(); pointIndex++ )
+            for(auto & customLinePoint : customLinePoints)
             {
-                QPointF movingPoint = customLinePoints.at( pointIndex );
-                customLinePoints[pointIndex].setX( (float)(movingPoint.x()/spread+dx) );
-                customLinePoints[pointIndex].setY( (float)(movingPoint.y()/spread+dy) );
+                QPointF movingPoint = customLinePoint;
+                customLinePoint.setX( (float)(movingPoint.x()/spread+dx) );
+                customLinePoint.setY( (float)(movingPoint.y()/spread+dy) );
             }
             newCustomLinePointsMap.insert( itCustomLine.key(), customLinePoints );
         }
@@ -3823,7 +3826,7 @@ void T2DMap::slot_setExits()
     }
     if( mpMap->mpRoomDB->getRoom( mMultiSelectionHighlightRoomId ) )
     {
-        dlgRoomExits * pD = new dlgRoomExits( mpHost, this );
+        auto pD = new dlgRoomExits( mpHost, this );
         pD->init( mMultiSelectionHighlightRoomId );
         pD->show();
         pD->raise();
@@ -4271,7 +4274,7 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 mIsSelectionUsingNames = false;
                 while( itRoom.hasNext() )
                 {
-                    QTreeWidgetItem * _item = new QTreeWidgetItem;
+                    auto _item = new QTreeWidgetItem;
                     int multiSelectionRoomId = itRoom.next();
                     _item->setText(0,QStringLiteral("%1").arg(multiSelectionRoomId,7));
                     _item->setTextAlignment(0, Qt::AlignRight);
@@ -4368,11 +4371,11 @@ void T2DMap::mouseMoveEvent( QMouseEvent * event )
                 {
                     itk.next();
                     QList<QPointF> _pL = itk.value();
-                    for( int pk=0; pk<_pL.size(); pk++ )
+                    for(auto & point : _pL)
                     {
-                        QPointF op = _pL[pk];
-                        _pL[pk].setX( (float)(op.x()+dx) );
-                        _pL[pk].setY( (float)(op.y()+dy) );
+                        QPointF op = point;
+                        point.setX( (float)(op.x()+dx) );
+                        point.setY( (float)(op.y()+dy) );
                     }
                     newMap.insert(itk.key(), _pL );
                 }
@@ -4541,6 +4544,7 @@ void T2DMap::slot_setCustomLine()
         mpCustomLinesDialog->raise();
         return;
     }
+
     QUiLoader loader;
 
     QFile file(":/ui/custom_lines.ui");
@@ -4550,11 +4554,7 @@ void T2DMap::slot_setCustomLine()
     if( ! d ) {
         return;
     }
-
     d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-    mpCustomLinesDialog = d;
-    mpCustomLinesDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";
@@ -4791,7 +4791,7 @@ void T2DMap::slot_setCustomLine()
         if( dir.size() > 1 )
             if( dir.startsWith('0')|| dir.startsWith('1') )
                 dir = dir.mid(1);
-        QTreeWidgetItem * pI = new QTreeWidgetItem(specialExits);
+        auto pI = new QTreeWidgetItem(specialExits);
         if( pR->customLines.contains(dir) )
             pI->setCheckState( 0, Qt::Checked );
         else
@@ -4978,8 +4978,8 @@ void T2DMap::slot_roomSelectionChanged()
 {
     QList<QTreeWidgetItem *> _sl = mMultiSelectionListWidget.selectedItems();
     mMultiSelectionSet.clear();
-    for( uint i=0; i< _sl.size(); i++ ) {
-        int currentRoomId = _sl.at(i)->text(0).toInt();
+    for(auto treeWidgetItem : _sl) {
+        int currentRoomId = treeWidgetItem->text(0).toInt();
         mMultiSelectionSet.insert( currentRoomId );
     }
     switch( mMultiSelectionSet.size() ) {

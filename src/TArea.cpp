@@ -82,13 +82,12 @@ QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 {
     QMap<int,QMap<int,QMultiMap<int,int> > > kS;
     QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
-    for( int i=0; i<roomList.size(); i++ )
+    for(auto room : roomList)
     {
-        TRoom * pR = roomList[i];
-        int id = pR->getId();
-        int x = pR->x;
-        int y = pR->y;
-        int z = pR->z;
+        int id = room->getId();
+        int x = room->x;
+        int y = room->y;
+        int z = room->z;
         QMap<int,QMultiMap<int,int> > _y;
         QMultiMap<int,int> _z;
         if( ! kS.contains( x ) )
@@ -157,7 +156,7 @@ QList<int> TArea::getCollisionNodes()
                 {
                     if( ! problems.contains( node ) )
                     {
-                        QMultiMap<int, int>::iterator it4 = y_val.find(z);
+                        auto it4 = y_val.find(z);
                         problems.append( it4.value() );
                         //qDebug()<<"problem node="<<node;
                     }
@@ -260,9 +259,6 @@ void TArea::determineAreaExitsOfRoom( int id )
 
 void TArea::determineAreaExits()
 {
-    QElapsedTimer timer;
-    timer.start();
-
     exits.clear();
     QSetIterator<int> itRoom( rooms );
     while( itRoom.hasNext() ) {
@@ -346,8 +342,6 @@ void TArea::determineAreaExits()
             }
         }
     }
-    //qDebug()<<"exits:"<<exits.size();
-    qDebug() << "TArea::determineAreaExits() area"<< mpRoomDB->getAreaID(this) << "took:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TArea::fast_calcSpan( int id )

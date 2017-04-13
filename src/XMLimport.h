@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 // clang-format on
 #include <QApplication>
+#include <QFile>
 #include <QMap>
 #include <QMultiHash>
 #include <QPointer>
@@ -53,7 +54,7 @@ class XMLimport : public QXmlStreamReader
 
 public:
     XMLimport(Host*);
-    bool importPackage(QIODevice* device, QString packageName = QString(), int moduleFlag = 0);
+    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
     int importFromClipboard();
 
 private:
@@ -99,6 +100,8 @@ private:
     void readStringList(QStringList&);
     void readIntegerList(QList<int>&, const QString&);
     void readModulesDetailsMap(QMap<QString, QStringList>&);
+    void getVersionString(QString&);
+
 
     QPointer<Host> mpHost;
     QString mPackageName;
@@ -118,6 +121,8 @@ private:
     int module;
     int mMaxRoomId;
     int mMaxAreaId; // Could be useful when iterating through map data
+    quint8 mVersionMajor;
+    quint16 mVersionMinor; // Cannot be a quint8 as that only allows x.255 for the decimal
 };
 
 #endif // MUDLET_XMLEXPORT_H

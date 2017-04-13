@@ -4,9 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
  *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
- *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -52,25 +52,25 @@ class Host;
 class dlgComposer;
 
 
-const char TN_SE = 240;
-const char TN_NOP = 241;
-const char TN_DM = 242;
-const char TN_B = 243;
-const char TN_IP = 244;
-const char TN_AO = 245;
-const char TN_AYT = 246;
-const char TN_EC = 247;
-const char TN_EL = 248;
-const char TN_GA = 249;
-const char TN_SB = 250;
-const char TN_WILL = 251;
-const char TN_WONT = 252;
-const char TN_DO = 253;
-const char TN_DONT = 254;
-const char TN_IAC = 255;
-const char TN_EOR = 239;
+const char TN_SE = static_cast<char>(240);
+const char TN_NOP = static_cast<char>(241);
+const char TN_DM = static_cast<char>(242);
+const char TN_B = static_cast<char>(243);
+const char TN_IP = static_cast<char>(244);
+const char TN_AO = static_cast<char>(245);
+const char TN_AYT = static_cast<char>(246);
+const char TN_EC = static_cast<char>(247);
+const char TN_EL = static_cast<char>(248);
+const char TN_GA = static_cast<char>(249);
+const char TN_SB = static_cast<char>(250);
+const char TN_WILL = static_cast<char>(251);
+const char TN_WONT = static_cast<char>(252);
+const char TN_DO = static_cast<char>(253);
+const char TN_DONT = static_cast<char>(254);
+const char TN_IAC = static_cast<char>(255);
+const char TN_EOR = static_cast<char>(239);
 
-const char GMCP = 201; /* GMCP */
+const char GMCP = static_cast<char>(201); /* GMCP */
 const char MXP = 91; // MXP
 const char MSDP = 69; // MSDP, documented at http://tintin.sourceforge.net/msdp/
 

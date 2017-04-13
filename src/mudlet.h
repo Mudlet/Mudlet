@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -130,10 +130,11 @@ public:
    void                          showUnzipProgress( const QString& txt );
    bool                          openWebPage(const QString& path);
    void                          processEventLoopHack();
+   static const QString          scmMudletXmlDefaultVersion;
    static QPointer<TConsole>     mpDebugConsole;
    static QMainWindow*           mpDebugArea;
    static bool                   debugMode;
-   QMap<Host *, TConsole *>     mConsoleMap;
+   QMap<Host *, TConsole *>      mConsoleMap;
    QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
    QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
    QIcon *                       testicon;

@@ -141,7 +141,7 @@ static int qPointerGC ( lua_State * L ) {
 
 
 int TForkedProcess::startProcess( TLuaInterpreter * interpreter, lua_State * L ) {
-    TForkedProcess * process = new TForkedProcess(interpreter, L);
+    auto process = new TForkedProcess(interpreter, L);
 
     // The userdata for the closures.
     QPointer<TForkedProcess> ** luaMemory = (QPointer<TForkedProcess> **)lua_newuserdata (L, sizeof(QPointer<TForkedProcess> *));

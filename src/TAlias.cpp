@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -80,10 +81,9 @@ bool TAlias::match(const QString & toMatch )
             if( shouldBeActive() )
             {
                 bool matchCondition = false;
-                for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                for(auto alias : *mpMyChildrenList)
                 {
-                    TAlias * pChild = *it;
-                    if( pChild->match( toMatch ) ) matchCondition = true;
+                    if( alias->match( toMatch ) ) matchCondition = true;
                 }
                 return matchCondition;
             }
@@ -246,10 +246,9 @@ END:
     }
 
 MUD_ERROR:
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto childAlias : *mpMyChildrenList)
     {
-        TAlias * pChild = *it;
-        if( pChild->match( toMatch ) ) matchCondition = true;
+        if( childAlias->match( toMatch ) ) matchCondition = true;
     }
 
     free( subject );
@@ -264,8 +263,13 @@ static void pcre_deleter(pcre* pointer)
 void TAlias::setRegexCode(const QString& code )
 {
     mRegexCode = code;
+    compileRegex();
+}
+
+void TAlias::compileRegex()
+{
     const char *error;
-    const QByteArray& local8Bit = code.toLocal8Bit();
+    const QByteArray& local8Bit = mRegexCode.toLocal8Bit();
     int erroffset;
 
     QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, NULL), pcre_deleter);
@@ -273,6 +277,19 @@ void TAlias::setRegexCode(const QString& code )
     if( re == NULL )
     {
         mOK_init = false;
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "REGEX ERROR: failed to compile, reason:\n"
+                                                         << error
+                                                         << "\n"
+                                                         >> 0;
+            TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
+                                                        << mRegexCode
+                                                        << "\"\n"
+                                                        >> 0;
+        }
+        setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
+                  .arg( tr( "Error: in \"Pattern:\", faulty regular expression, reason: \"%1\"." )
+                        .arg( error ) ) );
     }
     else
     {
@@ -297,13 +314,18 @@ void TAlias::compileAll()
     mNeedsToBeCompiled = true;
     if( ! compileScript() )
     {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of alias:"<<mName<<"\n">>0;}
+        if( mudlet::debugMode ) {
+            TDebug( QColor(Qt::white), QColor(Qt::red) ) << "ERROR: Lua compile error. compiling script of alias:"
+                                                         << mName
+                                                         << "\n"
+                                                         >> 0;
+        }
         mOK_code = false;
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    compileRegex(); // Effectively will repost the error if there was a problem in the regex
+    for(auto alias : *mpMyChildrenList)
     {
-        TAlias * pChild = *it;
-        pChild->compileAll();
+        alias->compileAll();
     }
 }
 
@@ -317,14 +339,13 @@ void TAlias::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto alias : *mpMyChildrenList)
     {
-        TAlias * pChild = *it;
-        pChild->compile();
+        alias->compile();
     }
 }
 
-bool TAlias::setScript(const QString & script )
+bool TAlias::setScript( const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;

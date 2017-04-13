@@ -140,6 +140,7 @@ public slots:
     void                        slot_show_aliases();
     void                        slot_show_actions();
     void                        slot_show_keys();
+    void                        slot_tree_selection_changed();
     void                        slot_trigger_selected( QTreeWidgetItem *pItem );
     void                        slot_timer_selected( QTreeWidgetItem *pItem );
     void                        slot_scripts_selected( QTreeWidgetItem *pItem );
@@ -186,7 +187,7 @@ public slots:
     void                        slot_copy_xml();
     void                        slot_paste_xml();
     void                        slot_chose_action_icon();
-    void                        slot_show_search_area();
+    void                        slot_showSearchAreaResults(const bool);
     void                        slot_script_main_area_delete_handler();
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -201,6 +202,7 @@ public slots:
 
 private slots:
     void                        slot_changeEditorTextOptions( QTextOption::Flags );
+    void                        slot_toggle_isPushDownButton( const int );
 
 private:
 

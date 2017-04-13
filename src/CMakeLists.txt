@@ -214,6 +214,10 @@ ELSE()
   ENDIF()
 ENDIF()
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
 SET(YAJL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "YAJL install directory.")
@@ -263,6 +267,11 @@ IF(WIN32)
       SET(ZLIB_LIBRARY ${ZLIB_LIBRARY_DEBUG} )
     ENDIF()
   ENDIF()
+ENDIF()
+
+IF(WIN32)
+  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
+  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
 ENDIF()
 
 # Break each step into a separate command so any status message is output straigh away
@@ -337,6 +346,10 @@ IF((APPLE) AND (PKG_CONFIG_FOUND))
 ENDIF()
 
 FIND_PACKAGE(Qt5Core REQUIRED)
+IF (Qt5Core_VERSION VERSION_LESS 5.6)
+  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+ENDIF()
+
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)

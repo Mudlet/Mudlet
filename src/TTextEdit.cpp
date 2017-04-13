@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -441,16 +441,19 @@ inline void TTextEdit::drawBackground( QPainter & painter,
 }
 
 inline void TTextEdit::drawCharacters( QPainter & painter,
-                                const QRect & rect,
-                                QString & text,
-                                bool isBold,
-                                bool isUnderline,
-                                bool isItalics,
-                                bool isStrikeOut,
-                                QColor & fgColor,
-                                QColor & bgColor )
+                                       const QRect & rect,
+                                       QString & text,
+                                       bool isBold,
+                                       bool isUnderline,
+                                       bool isItalics,
+                                       bool isStrikeOut,
+                                       QColor & fgColor,
+                                       QColor & bgColor )
 {
-    if( ( painter.font().bold() != isBold ) || ( painter.font().underline() != isUnderline ) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut))
+    if( ( painter.font().bold() != isBold )
+     || ( painter.font().underline() != isUnderline )
+     || ( painter.font().italic() != isItalics )
+     || ( painter.font().strikeOut() != isStrikeOut) )
     {
         QFont font = painter.font();
         font.setBold( isBold );
@@ -566,7 +569,10 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                     else
                         drawBackground( p, textRect, bgColor );
                 }
-                if( ( p.font().bold() != bool(f.flags & TCHAR_BOLD) ) || ( p.font().underline() != bool(f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != bool(f.flags & TCHAR_ITALICS)) || (p.font().strikeOut() != bool(f.flags & TCHAR_STRIKEOUT)))
+                if( ( p.font().bold() != static_cast<bool>(f.flags & TCHAR_BOLD) )
+                 || ( p.font().underline() != static_cast<bool>(f.flags & TCHAR_UNDERLINE) )
+                 || ( p.font().italic() != static_cast<bool>(f.flags & TCHAR_ITALICS) )
+                 || ( p.font().strikeOut() != static_cast<bool>(f.flags & TCHAR_STRIKEOUT) ) )
                 {
                     QFont font = p.font();
                     font.setBold( f.flags & TCHAR_BOLD );
@@ -1007,15 +1013,15 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
         
         if( oldAY < mPA.y() ){
           for( int y = oldAY; y < mPA.y(); y++ ){
-            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            for(auto & x : mpBuffer->buffer[y]){
+              x.flags &= ~(TCHAR_INVERSE);
             }
           }
         }
         if( oldBY > mPB.y() ){
             for( int y = mPB.y()+1; y <= oldBY; y++ ){
-                for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-                    mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                for(auto & x : mpBuffer->buffer[y]){
+                    x.flags &= ~(TCHAR_INVERSE);
                 }
             }
         }
@@ -1226,7 +1232,9 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     break;
                 xind++;
             }
-            if ( mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)) )
+            // For ignoring user specified characters, we first stop at space boundaries, then we
+            // proceed to search within these spaces for ignored characters and chop off any we find.
+            while(xind>0 && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)))
                 xind--;
             mPB.setX ( xind-1 );
             mPB.setY ( yind );
@@ -1236,8 +1244,10 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                 if (c == ' ')
                     break;
             }
-            if ( xind > 0 ||
-                 mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at( xind ) ) )
+            int lsize = mpBuffer->lineBuffer[yind].size();
+            while(xind+1 < lsize && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind+1)))
+                xind++;
+            if ( xind > 0 )
                 mPA.setX ( xind+1 );
             else
                 mPA.setX ( qMax( 0, xind ) );
@@ -1291,7 +1301,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
                     if( command.size() > 1 )
                     {
-                        QMenu * popup = new QMenu( this );
+                        auto popup = new QMenu( this );
                         for( int i=0; i<command.size(); i++ )
                         {
                             QAction * pA;
@@ -1322,7 +1332,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         QAction * action2 = new QAction("copy HTML", this );
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect( action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
-        QMenu * popup = new QMenu( this );
+        auto popup = new QMenu( this );
         popup->addAction( action );
         popup->addAction( action2 );
         popup->popup( mapToGlobal( event->pos() ), action );
@@ -1417,7 +1427,10 @@ void TTextEdit::copySelectionToClipboardHTML()
     }
     else if( this->mIsMiniConsole ) {
         if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
-            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin(); it != this->mpHost->mpConsole->mSubConsoleMap.cend(); ++it ) {
+            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin();
+                 it != this->mpHost->mpConsole->mSubConsoleMap.cend();
+                 ++it ) {
+
                 if( (*it).second == this->mpConsole ) {
                     title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
                     break;

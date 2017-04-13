@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,8 +72,7 @@ public:
     void             fillMenu( TEasyButtonBar * pT, QMenu * menu );
     void             compile();
     bool             compileScript();
-    void             execute(QStringList &);
-    void             _execute(QStringList &);
+    void             execute();
     QString          getIcon()                                 { return mIcon; }
     void             setIcon(const QString & icon )           { mIcon = icon; }
     QString          getScript()                               { return mScript; }
@@ -86,21 +86,22 @@ public:
     void             setIsPushDownButton( bool b )             { mIsPushDownButton = b; }
     void             setIsFolder( bool b )                     { mIsFolder = b; }
     bool             registerAction();
-    void             insertActions( mudlet * pMainWindow,
-                                    TToolBar * pT,
+    void             insertActions( TToolBar * pT,
                                     QMenu * menu );
-    void             expandToolbar( mudlet * pMainWindow,
-                                    TToolBar * pT,
+    void             expandToolbar( TToolBar * pT );
+    void             insertActions( TEasyButtonBar * pT,
                                     QMenu * menu );
-    void             insertActions( mudlet * pMainWindow,
-                                    TEasyButtonBar * pT,
-                                    QMenu * menu );
-    void             expandToolbar( mudlet * pMainWindow,
-                                    TEasyButtonBar * pT,
-                                    QMenu * menu );
+    void             expandToolbar( TEasyButtonBar * pT );
     TToolBar *       mpToolBar;
     TEasyButtonBar * mpEasyButtonBar;
-    int              mButtonState;
+    // The following was an int but there was confusion over:
+    // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
+    // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
+    // The Wiki says it should be "1" and "2" but the code sort of did "0"/"1"
+    // in some places.
+    // Now uses a boolean:
+    // "true" = pressed/clicked/down & "false" = released/unclicked/up
+    bool             mButtonState;
     int              mPosX;
     int              mPosY;
     int              mOrientation;
