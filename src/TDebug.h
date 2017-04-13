@@ -42,7 +42,6 @@ public:
     TDebug & operator>>( const int );
     TDebug & operator<<( const QString & t );
     TDebug & operator<<( const int & t );
-    TDebug & operator<<( QString & t );
     TDebug & operator<<( const QMap<QString, QString> &map );
     TDebug & operator<<( const QMap<QString, int> &map );
     TDebug & operator<<( const QMap<int, QString> &map );
