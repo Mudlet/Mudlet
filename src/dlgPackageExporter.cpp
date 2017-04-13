@@ -32,12 +32,16 @@
 #include "TTimer.h"
 #include "XMLexport.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_dlgPackageExporter.h"
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QInputDialog>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <zip.h>
 

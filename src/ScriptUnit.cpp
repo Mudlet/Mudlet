@@ -25,9 +25,13 @@
 #include "Host.h"
 #include "TScript.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QMapIterator>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 using namespace std;

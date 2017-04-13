@@ -22,9 +22,13 @@
  ***************************************************************************/
 
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QProcess>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include "TLuaInterpreter.h"
 

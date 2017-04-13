@@ -34,7 +34,9 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QDebug>
 #include <QDir>
 #include <QElapsedTimer>
@@ -44,7 +46,9 @@
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
 #include <QSslConfiguration>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 TMap::TMap( Host * pH )

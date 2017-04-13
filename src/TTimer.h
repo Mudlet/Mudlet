@@ -25,11 +25,15 @@
 #include "Tree.h"
 
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QMutex>
 #include <QPointer>
 #include <QTime>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 class Host;
 

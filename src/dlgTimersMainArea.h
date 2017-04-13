@@ -22,9 +22,13 @@
  ***************************************************************************/
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_timers_main_area.h"
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 class dlgTimersMainArea : public QWidget, public Ui::timers_main_area

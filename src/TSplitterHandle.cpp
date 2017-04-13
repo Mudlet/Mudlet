@@ -23,10 +23,14 @@
 
 #include "TSplitter.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QtEvents>
 #include <QPainter>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 TSplitterHandle::TSplitterHandle( Qt::Orientation orientation, TSplitter * parent )

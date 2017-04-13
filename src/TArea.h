@@ -25,12 +25,16 @@
 
 #include "TMap.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QList>
 #include <QMap>
 #include <QPair>
 #include <QVector3D>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 class TRoomDB;
 

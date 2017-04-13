@@ -26,7 +26,9 @@
 
 #include "HostManager.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_main_window.h"
 #include <QFlags>
 #include <QMainWindow>
@@ -36,7 +38,9 @@
 #include <QQueue>
 #include <QTime>
 #include <QTextOption>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <assert.h>
 

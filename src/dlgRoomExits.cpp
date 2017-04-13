@@ -40,9 +40,13 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QDebug>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW ): QDialog( pW ), mpHost( pH ), mpEditItem( 0 )
 {

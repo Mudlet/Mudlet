@@ -22,9 +22,13 @@
  ***************************************************************************/
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include "ui_scripts_main_area.h"
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area

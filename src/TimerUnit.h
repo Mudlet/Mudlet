@@ -22,12 +22,16 @@
  ***************************************************************************/
 
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QMutex>
 #include <QMultiMap>
 #include <QPointer>
 #include <QString>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <list>
 

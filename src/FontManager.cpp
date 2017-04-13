@@ -21,12 +21,16 @@
 
 #include "FontManager.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QFontDatabase>
 #include <QString>
 #include <QStringList>
 #include <QDir>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <iostream>
 #include <ostream>

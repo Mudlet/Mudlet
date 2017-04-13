@@ -23,11 +23,15 @@
 #include "dlgAboutDialog.h"
 
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QPainter>
 #include <QTextLayout>
 #include <QStringBuilder>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 dlgAboutDialog::dlgAboutDialog(QWidget * parent) : QDialog(parent)

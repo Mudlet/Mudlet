@@ -28,11 +28,15 @@
 #include "TSplitter.h"
 #include "TTextEdit.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QAction>
 #include <QApplication>
 #include <QMenu>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent )

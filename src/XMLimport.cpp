@@ -46,8 +46,10 @@
 #else
 #include <QtCore/qmath.h>
 #endif
+// clang-format: off
 #include "post_guard.h"
 // clang-format: on
+
 
 XMLimport::XMLimport(Host* pH)
     : mpHost(pH)

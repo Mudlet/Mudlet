@@ -25,7 +25,9 @@
 
 #include "TAstar.h"
 
+// clang-format: off
 #include "pre_guard.h"
+// clang-format: on
 #include <QApplication>
 #include <QColor>
 #include <QMap>
@@ -35,7 +37,9 @@
 #include <QPointer>
 #include <QSizeF>
 #include <QVector3D>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #include <stdlib.h>
 

@@ -29,13 +29,17 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QListWidget>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QProgressDialog>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )

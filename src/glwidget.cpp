@@ -30,9 +30,13 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+// clang-format off
 #include "pre_guard.h"
+// clang-format on
 #include <QtEvents>
+// clang-format: off
 #include "post_guard.h"
+// clang-format: on
 
 #if QT_VERSION >= 0x040800
     #ifdef __APPLE__
