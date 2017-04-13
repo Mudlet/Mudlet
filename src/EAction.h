@@ -37,7 +37,7 @@ class EAction : public QAction
     Q_OBJECT
 
 public:
-                    EAction( QIcon &, QString & );
+    EAction( QIcon &, QString & );
 
     int mID;
     QPointer<Host> mpHost;

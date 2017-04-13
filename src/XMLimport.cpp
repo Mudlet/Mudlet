@@ -1426,7 +1426,8 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                            "convert: \"%s\" to a number when reading the "
                            "'regexCodePropertyList' element of the 'Trigger' "
                            "or 'TriggerGroup' element \"%s\"!",
-                           numberText.toUtf8().constData(), parentName.toUtf8().constData());
+                           numberText.toUtf8().constData(),
+                           parentName.toUtf8().constData());
                 }
             } else {
                 readUnknownTriggerElement();
