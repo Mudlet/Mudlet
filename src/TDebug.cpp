@@ -54,12 +54,6 @@ TDebug & TDebug::operator<<( const int & t )
     return *this;
 }
 
-TDebug & TDebug::operator<<( QString & t )
-{
-    msg += t;
-    return *this;
-}
-
 TDebug & TDebug::operator<<( const QMap<QString, QString> &map )
 {
     for( QMap<QString, QString>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it)
