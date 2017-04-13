@@ -641,17 +641,16 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_triggers->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto treeWidgetItem : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
-            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
                 slot_show_triggers();
-                slot_trigger_selected( pI );
-                treeWidget_triggers->setCurrentItem( pI, 0 );
-                treeWidget_triggers->scrollToItem( pI );
+                slot_trigger_selected( treeWidgetItem );
+                treeWidget_triggers->setCurrentItem( treeWidgetItem, 0 );
+                treeWidget_triggers->scrollToItem( treeWidgetItem );
                 return;
             }
         }
@@ -660,17 +659,16 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_aliases->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto treeWidgetItem : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
-            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
                 slot_show_aliases();
-                slot_alias_selected( pI );
-                treeWidget_aliases->setCurrentItem( pI, 0 );
-                treeWidget_aliases->scrollToItem( pI );
+                slot_alias_selected( treeWidgetItem );
+                treeWidget_aliases->setCurrentItem( treeWidgetItem, 0 );
+                treeWidget_aliases->scrollToItem( treeWidgetItem );
                 return;
             }
         }
@@ -679,17 +677,16 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_scripts->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto treeWidgetItem : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
-            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
                 slot_show_scripts();
-                slot_scripts_selected( pI );
-                treeWidget_scripts->setCurrentItem( pI, 0 );
-                treeWidget_scripts->scrollToItem( pI );
+                slot_scripts_selected( treeWidgetItem );
+                treeWidget_scripts->setCurrentItem( treeWidgetItem, 0 );
+                treeWidget_scripts->scrollToItem( treeWidgetItem );
                 return;
             }
         }
@@ -700,17 +697,16 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_actions->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto treeWidgetitem : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
-            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetitem->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
                 slot_show_actions();
-                slot_action_selected( pI );
-                treeWidget_actions->setCurrentItem( pI, 0 );
-                treeWidget_actions->scrollToItem( pI );
+                slot_action_selected( treeWidgetitem );
+                treeWidget_actions->setCurrentItem( treeWidgetitem, 0 );
+                treeWidget_actions->scrollToItem( treeWidgetitem );
                 return;
             }
         }
@@ -721,17 +717,16 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_timers->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto treeWidgetItem : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
-            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
                 slot_show_timers();
-                slot_timer_selected( pI );
-                treeWidget_timers->setCurrentItem( pI, 0 );
-                treeWidget_timers->scrollToItem( pI );
+                slot_timer_selected( treeWidgetItem );
+                treeWidget_timers->setCurrentItem( treeWidgetItem, 0 );
+                treeWidget_timers->scrollToItem( treeWidgetItem );
                 return;
             }
         }
@@ -742,17 +737,16 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     {
         QList<QTreeWidgetItem *> foundItemsList = treeWidget_keys->findItems( pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
 
-        for( int i=0; i<foundItemsList.size(); i++ )
+        for(auto treeWidgetItem : foundItemsList)
         {
-            QTreeWidgetItem * pI = foundItemsList[i];
-            int idTree = pI->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
             int idSearch = pItem->data(0, Qt::UserRole).toInt();
             if( idTree == idSearch )
             {
                 slot_show_keys();
-                slot_key_selected( pI );
-                treeWidget_keys->setCurrentItem( pI, 0 );
-                treeWidget_keys->scrollToItem( pI );
+                slot_key_selected( treeWidgetItem );
+                treeWidget_keys->setCurrentItem( treeWidgetItem, 0 );
+                treeWidget_keys->scrollToItem( treeWidgetItem );
                 return;
             }
         }
@@ -799,377 +793,371 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
     if( true )
     {
         std::list<TTrigger *> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto trigger : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TTrigger * pChild = *it;
-            QString n = pChild->getName();
+            QString n = trigger->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
                 QStringList sl;
-                sl << "Trigger" << pChild->getName() << "name";
+                sl << "Trigger" << trigger->getName() << "name";
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, trigger->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, trigger->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList scriptList = trigger->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Trigger" << pChild->getName() << "script" << resultList[i];
+                sl << "Trigger" << trigger->getName() << "script" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, trigger->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, trigger->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList regexList = pChild->getRegexCodeList();
+            QStringList regexList = trigger->getRegexCodeList();
             resultList = regexList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Trigger" << pChild->getName() << "pattern" << resultList[i];
+                sl << "Trigger" << trigger->getName() << "pattern" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, trigger->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, trigger->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            recursiveSearchTriggers( pChild, s );
+            recursiveSearchTriggers( trigger, s );
         }
     }
 
     if( true )
     {
         std::list<TAlias *> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto alias : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TAlias * pChild = *it;
-            QString n = pChild->getName();
+            QString n = alias->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
                 QStringList sl;
-                sl << "Alias" << pChild->getName() << "name";
+                sl << "Alias" << alias->getName() << "name";
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, alias->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, alias->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList scriptList = alias->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Alias" << pChild->getName() << "script" << resultList[i];
+                sl << "Alias" << alias->getName() << "script" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, alias->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, alias->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
 
-            if( pChild->getRegexCode().indexOf( s, 0, Qt::CaseInsensitive ) > -1 )
+            if( alias->getRegexCode().indexOf( s, 0, Qt::CaseInsensitive ) > -1 )
             {
                 QStringList sl;
-                sl << "Alias" << pChild->getName() << "pattern" << pChild->getRegexCode();
+                sl << "Alias" << alias->getName() << "pattern" << alias->getRegexCode();
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, alias->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, alias->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            recursiveSearchAlias( pChild, s );
+            recursiveSearchAlias( alias, s );
         }
     }
 
     if( true )
     {
         std::list<TScript *> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto script : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TScript * pChild = *it;
-            QString n = pChild->getName();
+            QString n = script->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
                 QStringList sl;
-                sl << "Script" << pChild->getName() << "name";
+                sl << "Script" << script->getName() << "name";
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, script->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, script->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList scriptList = script->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Script" << pChild->getName() << "script" << resultList[i];
+                sl << "Script" << script->getName() << "script" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, script->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, script->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
 
-            recursiveSearchScripts( pChild, s );
+            recursiveSearchScripts( script, s );
         }
     }
 
     if( true )
     {
         std::list<TAction *> nodes = mpHost->getActionUnit()->getActionRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto action : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TAction * pChild = *it;
-            QString n = pChild->getName();
+            QString n = action->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
                 QStringList sl;
-                sl << "Button" << pChild->getName() << "name";
+                sl << "Button" << action->getName() << "name";
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, action->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, action->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList scriptList = action->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Button" << pChild->getName() << "script" << resultList[i];
+                sl << "Button" << action->getName() << "script" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, action->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, action->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
 
-            recursiveSearchActions( pChild, s );
+            recursiveSearchActions( action, s );
         }
     }
 
     if( true )
     {
         std::list<TTimer *> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto timer : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TTimer * pChild = *it;
-            QString n = pChild->getName();
+            QString n = timer->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
                 QStringList sl;
-                sl << "Timer" << pChild->getName() << "name";
+                sl << "Timer" << timer->getName() << "name";
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, timer->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, timer->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList scriptList = timer->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Timer" << pChild->getName() << "script" << resultList[i];
+                sl << "Timer" << timer->getName() << "script" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, timer->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, timer->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
 
-            recursiveSearchTimers( pChild, s );
+            recursiveSearchTimers( timer, s );
         }
     }
 
     if( true )
     {
         std::list<TKey *> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
-        for(auto it = nodes.begin(); it != nodes.end(); it++)
+        for(auto key : nodes)
         {
             QTreeWidgetItem * pItem;
             QTreeWidgetItem * parent = 0;
-            TKey * pChild = *it;
-            QString n = pChild->getName();
+            QString n = key->getName();
             if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
             {
                 QStringList sl;
-                sl << "Key" << pChild->getName() << "name";
+                sl << "Key" << key->getName() << "name";
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, key->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, key->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
-            QStringList scriptList = pChild->getScript().split("\n");
+            QStringList scriptList = key->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
             for( int i=0; i<resultList.size(); i++ )
             {
                 QStringList sl;
-                sl << "Key" << pChild->getName() << "script" << resultList[i];
+                sl << "Key" << key->getName() << "script" << resultList[i];
                 if( ! parent )
                 {
                     parent = new QTreeWidgetItem( sl );
                     parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, pChild->getID() );
+                    parent->setData(0, Qt::UserRole, key->getID() );
                     treeWidget_searchResults->addTopLevelItem( parent );
                 }
                 else
                 {
                     pItem = new QTreeWidgetItem( parent, sl );
                     pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, pChild->getID() );
+                    pItem->setData(0, Qt::UserRole, key->getID() );
                     parent->addChild( pItem );
                     parent->setExpanded( true );
                 }
             }
 
-            recursiveSearchKeys( pChild, s );
+            recursiveSearchKeys( key, s );
         }
     }
 
@@ -1224,79 +1212,78 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
 void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const QString & s )
 {
     list<TTrigger *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto trigger : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TTrigger * pChild = *it;
-        QString n = pChild->getName();
+        QString n = trigger->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
             QStringList sl;
-            sl << "Trigger" << pChild->getName() << "name";
+            sl << "Trigger" << trigger->getName() << "name";
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, trigger->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, trigger->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList scriptList = trigger->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Trigger" << pChild->getName() << "script" << resultList[i];
+            sl << "Trigger" << trigger->getName() << "script" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, trigger->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, trigger->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList regexList = pChild->getRegexCodeList();
+        QStringList regexList = trigger->getRegexCodeList();
         resultList = regexList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Trigger" << pChild->getName() << "pattern" << resultList[i];
+            sl << "Trigger" << trigger->getName() << "pattern" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, trigger->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, trigger->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        if( pChild->hasChildren() )
+        if( trigger->hasChildren() )
         {
-            recursiveSearchTriggers( pChild, s );
+            recursiveSearchTriggers( trigger, s );
         }
     }
 }
@@ -1304,79 +1291,78 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
 void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QString & s )
 {
     list<TAlias *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto alias : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TAlias * pChild = *it;
-        QString n = pChild->getName();
+        QString n = alias->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
             QStringList sl;
-            sl << "Alias" << pChild->getName() << "name";
+            sl << "Alias" << alias->getName() << "name";
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, alias->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, alias->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList scriptList = alias->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Alias" << pChild->getName() << "script" << resultList[i];
+            sl << "Alias" << alias->getName() << "script" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, alias->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, alias->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
 
 
-        if( pChild->getRegexCode().indexOf( s, 0, Qt::CaseInsensitive ) > -1 )
+        if( alias->getRegexCode().indexOf( s, 0, Qt::CaseInsensitive ) > -1 )
         {
             QStringList sl;
-            sl << "Alias" << pChild->getName() << "pattern" << pChild->getRegexCode();
+            sl << "Alias" << alias->getName() << "pattern" << alias->getRegexCode();
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, alias->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, alias->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        if( pChild->hasChildren() )
+        if( alias->hasChildren() )
         {
-            recursiveSearchAlias( pChild, s );
+            recursiveSearchAlias( alias, s );
         }
     }
 }
@@ -1384,58 +1370,57 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
 void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const QString & s )
 {
     list<TScript *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto script : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TScript * pChild = *it;
-        QString n = pChild->getName();
+        QString n = script->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
             QStringList sl;
-            sl << "Script" << pChild->getName() << "name";
+            sl << "Script" << script->getName() << "name";
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, script->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, script->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList scriptList = script->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Script" << pChild->getName() << "script" << resultList[i];
+            sl << "Script" << script->getName() << "script" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, script->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, script->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
 
-        if( pChild->hasChildren() )
+        if( script->hasChildren() )
         {
-            recursiveSearchScripts( pChild, s );
+            recursiveSearchScripts( script, s );
         }
     }
 }
@@ -1443,58 +1428,57 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
 void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const QString & s )
 {
     list<TAction *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto action : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TAction * pChild = *it;
-        QString n = pChild->getName();
+        QString n = action->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
             QStringList sl;
-            sl << "Button" << pChild->getName() << "name";
+            sl << "Button" << action->getName() << "name";
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, action->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, action->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList scriptList = action->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Button" << pChild->getName() << "script" << resultList[i];
+            sl << "Button" << action->getName() << "script" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, action->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, action->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
 
-        if( pChild->hasChildren() )
+        if( action->hasChildren() )
         {
-            recursiveSearchActions( pChild, s );
+            recursiveSearchActions( action, s );
         }
     }
 }
@@ -1502,58 +1486,57 @@ void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const Q
 void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QString & s )
 {
     list<TTimer *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto timer : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TTimer * pChild = *it;
-        QString n = pChild->getName();
+        QString n = timer->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
             QStringList sl;
-            sl << "Timer" << pChild->getName() << "name";
+            sl << "Timer" << timer->getName() << "name";
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, timer->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, timer->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList scriptList = timer->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Timer" << pChild->getName() << "script" << resultList[i];
+            sl << "Timer" << timer->getName() << "script" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, timer->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, timer->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
 
-        if( pChild->hasChildren() )
+        if( timer->hasChildren() )
         {
-            recursiveSearchTimers( pChild, s );
+            recursiveSearchTimers( timer, s );
         }
     }
 }
@@ -1561,58 +1544,57 @@ void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QSt
 void dlgTriggerEditor::recursiveSearchKeys( TKey * pTriggerParent, const QString & s )
 {
     list<TKey *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto key : *childrenList)
     {
         QTreeWidgetItem * pItem;
         QTreeWidgetItem * parent = 0;
-        TKey * pChild = *it;
-        QString n = pChild->getName();
+        QString n = key->getName();
         if( n.indexOf( s, 0, Qt::CaseInsensitive ) != -1 )
         {
             QStringList sl;
-            sl << "Key" << pChild->getName() << "name";
+            sl << "Key" << key->getName() << "name";
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, key->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, key->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
-        QStringList scriptList = pChild->getScript().split("\n");
+        QStringList scriptList = key->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
         for( int i=0; i<resultList.size(); i++ )
         {
             QStringList sl;
-            sl << "Key" << pChild->getName() << "script" << resultList[i];
+            sl << "Key" << key->getName() << "script" << resultList[i];
             if( ! parent )
             {
                 parent = new QTreeWidgetItem( sl );
                 parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, pChild->getID() );
+                parent->setData(0, Qt::UserRole, key->getID() );
                 treeWidget_searchResults->addTopLevelItem( parent );
             }
             else
             {
                 pItem = new QTreeWidgetItem( parent, sl );
                 pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, pChild->getID() );
+                pItem->setData(0, Qt::UserRole, key->getID() );
                 parent->addChild( pItem );
                 parent->setExpanded( true );
             }
         }
 
-        if( pChild->hasChildren() )
+        if( key->hasChildren() )
         {
-            recursiveSearchKeys( pChild, s );
+            recursiveSearchKeys( key, s );
         }
     }
 }
@@ -3718,10 +3700,10 @@ void dlgTriggerEditor::saveScript()
         itemList << pItem;
     }
     QStringList handlerList;
-    for( int i=0; i<itemList.size(); i++ )
+    for(auto & listWidgetItem : itemList)
     {
-        if( itemList[i]->text().size() < 1 ) continue;
-        handlerList << itemList[i]->text();
+        if( listWidgetItem->text().size() < 1 ) continue;
+        handlerList << listWidgetItem->text();
     }
 
     if( pItem )
@@ -4475,20 +4457,20 @@ void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem *pItem){
         vu->addSavedVar( var );
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Checked ||
+                        treeWidgetItem->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
         list.clear();
         recurseVariablesDown( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Checked ||
+                        treeWidgetItem->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
     }
@@ -4499,20 +4481,20 @@ void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem *pItem){
         vu->removeSavedVar(var);
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Checked ||
+                        treeWidgetItem->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->removeSavedVar( v );
         }
         list.clear();
         recurseVariablesDown( pItem, list );
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Checked ||
+                        treeWidgetItem->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->removeSavedVar( v );
         }
     }
@@ -4538,20 +4520,20 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
             vu->addSavedVar( var );
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Checked ||
+                        treeWidgetItem->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
         list.clear();
         recurseVariablesDown( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Checked ||
-                        list[i]->checkState( column ) == Qt::PartiallyChecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Checked ||
+                        treeWidgetItem->checkState( column ) == Qt::PartiallyChecked ) )
                 vu->addSavedVar( v );
         }
     }
@@ -4564,20 +4546,20 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
             vu->removeSavedVar( var );
         QList< QTreeWidgetItem * > list;
         recurseVariablesUp( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Unchecked ) )
             {
                 vu->removeSavedVar( v );
             }
         }
         list.clear();
         recurseVariablesDown( pItem, list ); // This does NOT modify pItem or what it points at
-        for(int i=0;i<list.size();i++)
+        for(auto & treeWidgetItem : list)
         {
-            TVar * v = vu->getWVar( list[i] );
-            if ( v && ( list[i]->checkState( column ) == Qt::Unchecked ) )
+            TVar * v = vu->getWVar( treeWidgetItem );
+            if ( v && ( treeWidgetItem->checkState( column ) == Qt::Unchecked ) )
             {
                 vu->removeSavedVar( v );
             }
@@ -4946,28 +4928,27 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setIcon( 0, mainIcon );
     treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
     list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-    for(auto it=baseNodeList.begin(); it!=baseNodeList.end(); it++ )
+    for(auto trigger : baseNodeList)
     {
-        TTrigger * pT = *it;
-        if( pT->isTempTrigger() ) continue;
-        QString s = pT->getName();
+        if( trigger->isTempTrigger() ) continue;
+        QString s = trigger->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( mpTriggerBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant(trigger->getID()) );
         mpTriggerBaseItem->addChild( pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( trigger->hasChildren() )
         {
-            expand_child_triggers( pT, pItem );
+            expand_child_triggers( trigger, pItem );
         }
-        if( pT->state() )
+        if( trigger->state() )
         {
-            if( pT->isFilterChain() )
+            if( trigger->isFilterChain() )
             {
-                if( pT->isActive() )
+                if( trigger->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -4978,7 +4959,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -4988,11 +4969,11 @@ void dlgTriggerEditor::fillout_form()
                     }
                 }
             }
-            else if( pT->isFolder() )
+            else if( trigger->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! trigger->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( trigger->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5001,9 +4982,9 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( pT->isActive() )
+                else if( trigger->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5014,7 +4995,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue-locked.png"),0,Qt::MonoOnly), QIcon::Normal, QIcon::Off);
                     }
@@ -5026,9 +5007,9 @@ void dlgTriggerEditor::fillout_form()
             }
             else
             {
-                if( pT->isActive() )
+                if( trigger->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5039,7 +5020,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5056,7 +5037,7 @@ void dlgTriggerEditor::fillout_form()
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( trigger->getError() );
         }
     }
 
@@ -5072,29 +5053,27 @@ void dlgTriggerEditor::fillout_form()
     treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
     mpTriggerBaseItem->setExpanded( true );
     list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
-
-    for( auto it = baseNodeList_timers.begin(); it!=baseNodeList_timers.end(); it++ )
+    for(auto timer : baseNodeList_timers)
     {
-        TTimer * pT = *it;
-        if( pT->isTempTimer() ) continue;
-        QString s = pT->getName();
+        if( timer->isTempTimer() ) continue;
+        QString s = timer->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( mpTimerBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant(timer->getID()) );
         mpTimerBaseItem->addChild( pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( timer->hasChildren() )
         {
-            expand_child_timers( pT, pItem );
+            expand_child_timers( timer, pItem );
         }
-        if( pT->state() )
+        if( timer->state() )
         {
-            if( pT->isFolder() )
+            if( timer->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! timer->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( timer->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5103,7 +5082,7 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( pT->shouldBeActive() )
+                else if( timer->shouldBeActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-green.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5114,9 +5093,9 @@ void dlgTriggerEditor::fillout_form()
             }
             else
             {
-                if( pT->isOffsetTimer() )
+                if( timer->isOffsetTimer() )
                 {
-                    if( pT->shouldBeActive() )
+                    if( timer->shouldBeActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-on.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5127,7 +5106,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->shouldBeActive() )
+                    if( timer->shouldBeActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5145,7 +5124,7 @@ void dlgTriggerEditor::fillout_form()
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( timer->getError() );
         }
     }
     mpTimerBaseItem->setExpanded( true );
@@ -5160,29 +5139,27 @@ void dlgTriggerEditor::fillout_form()
     treeWidget_scripts->insertTopLevelItem( 0, mpScriptsBaseItem );
     mpScriptsBaseItem->setExpanded( true );
     list<TScript *> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
-
-    for( auto it = baseNodeList_scripts.begin(); it!=baseNodeList_scripts.end(); it++ )
+    for(auto script : baseNodeList_scripts)
     {
-        TScript * pT = *it;
-        QString s = pT->getName();
+        QString s = script->getName();
 
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( mpScriptsBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant(script->getID()) );
         mpScriptsBaseItem->addChild( pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( script->hasChildren() )
         {
-            expand_child_scripts( pT, pItem );
+            expand_child_scripts( script, pItem );
         }
-        if( pT->state() )
+        if( script->state() )
         {
-            if( pT->isFolder() )
+            if( script->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! script->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( script->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5191,7 +5168,7 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( pT->isActive() )
+                else if( script->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-orange.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5202,7 +5179,7 @@ void dlgTriggerEditor::fillout_form()
             }
             else
             {
-                if( pT->isActive() )
+                if( script->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5218,7 +5195,7 @@ void dlgTriggerEditor::fillout_form()
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( script->getError() );
         }
     }
     mpScriptsBaseItem->setExpanded( true );
@@ -5233,28 +5210,26 @@ void dlgTriggerEditor::fillout_form()
     treeWidget_aliases->insertTopLevelItem( 0, mpAliasBaseItem );
     mpAliasBaseItem->setExpanded( true );
     list<TAlias *> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
-
-    for( auto it = baseNodeList_alias.begin(); it!=baseNodeList_alias.end(); it++ )
+    for(auto alias : baseNodeList_alias)
     {
-        TAlias * pT = *it;
-        QString s = pT->getName();
+        QString s = alias->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( mpAliasBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant(alias->getID()) );
         mpAliasBaseItem->addChild( pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( alias->hasChildren() )
         {
-            expand_child_alias( pT, pItem );
+            expand_child_alias( alias, pItem );
         }
-        if( pT->state() )
+        if( alias->state() )
         {
-            if( pT->isFolder() )
+            if( alias->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! alias->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( alias->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5263,9 +5238,9 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( pT->isActive() )
+                else if( alias->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-violet.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5276,7 +5251,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-violet-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5288,9 +5263,9 @@ void dlgTriggerEditor::fillout_form()
             }
             else
             {
-                if( pT->isActive() )
+                if( alias->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5301,7 +5276,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5318,7 +5293,7 @@ void dlgTriggerEditor::fillout_form()
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( alias->getError() );
         }
     }
     mpAliasBaseItem->setExpanded( true );
@@ -5333,28 +5308,26 @@ void dlgTriggerEditor::fillout_form()
     treeWidget_actions->insertTopLevelItem( 0, mpActionBaseItem );
     mpActionBaseItem->setExpanded( true );
     list<TAction *> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
-
-    for( auto it = baseNodeList_action.begin(); it!=baseNodeList_action.end(); it++ )
+    for(auto action : baseNodeList_action)
     {
-        TAction * pT = *it;
-        QString s = pT->getName();
+        QString s = action->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( mpActionBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant(action->getID()) );
         mpActionBaseItem->addChild( pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( action->hasChildren() )
         {
-            expand_child_action( pT, pItem );
+            expand_child_action( action, pItem );
         }
-        if( pT->state() )
+        if( action->state() )
         {
-            if( pT->isFolder() )
+            if( action->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! action->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( action->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5363,10 +5336,10 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent()
-                      || ! pT->getParent()->mPackageName.isEmpty() )
+                else if( ! action->getParent()
+                      || ! action->getParent()->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( action->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5377,7 +5350,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->isActive() )
+                    if( action->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5389,7 +5362,7 @@ void dlgTriggerEditor::fillout_form()
             }
             else
             {
-                if( pT->isActive() )
+                if( action->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5405,7 +5378,7 @@ void dlgTriggerEditor::fillout_form()
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( action->getError() );
         }
     }
     mpActionBaseItem->setExpanded( true );
@@ -5420,28 +5393,26 @@ void dlgTriggerEditor::fillout_form()
     treeWidget_keys->insertTopLevelItem( 0, mpKeyBaseItem );
     mpKeyBaseItem->setExpanded( true );
     list<TKey *> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
-
-    for( auto it = baseNodeList_key.begin(); it!=baseNodeList_key.end(); it++ )
+    for(auto key : baseNodeList_key)
     {
-        TKey * pT = *it;
-        QString s = pT->getName();
+        QString s = key->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( mpKeyBaseItem, sList);
-        pItem->setData( 0, Qt::UserRole, QVariant(pT->getID()) );
+        pItem->setData( 0, Qt::UserRole, QVariant(key->getID()) );
         mpKeyBaseItem->addChild( pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( key->hasChildren() )
         {
-            expand_child_key( pT, pItem );
+            expand_child_key( key, pItem );
         }
-        if( pT->state() )
+        if( key->state() )
         {
-            if( pT->isFolder() )
+            if( key->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! key->mPackageName.isEmpty() )
                 {
-                    if( pT->isActive() )
+                    if( key->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5450,9 +5421,9 @@ void dlgTriggerEditor::fillout_form()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( pT->isActive() )
+                else if( key->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5463,7 +5434,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5475,9 +5446,9 @@ void dlgTriggerEditor::fillout_form()
             }
             else
             {
-                if( pT->isActive() )
+                if( key->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5488,7 +5459,7 @@ void dlgTriggerEditor::fillout_form()
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5505,7 +5476,7 @@ void dlgTriggerEditor::fillout_form()
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( key->getError() );
         }
     }
     mpKeyBaseItem->setExpanded( true );
@@ -5537,28 +5508,27 @@ void dlgTriggerEditor::repopulateVars()
 void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TTrigger *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto trigger : *childrenList)
     {
-        TTrigger * pT = *it;
-        QString s = pT->getName();
+        QString s = trigger->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
-        pItem->setData( 0, Qt::UserRole, pT->getID() );
+        pItem->setData( 0, Qt::UserRole, trigger->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( trigger->hasChildren() )
         {
-            expand_child_triggers( pT, pItem );
+            expand_child_triggers( trigger, pItem );
         }
-        if( pT->state() )
+        if( trigger->state() )
         {
-            if( pT->isFilterChain() )
+            if( trigger->isFilterChain() )
             {
-                if( pT->isActive() )
+                if( trigger->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5569,7 +5539,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/filter-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5579,11 +5549,11 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
                     }
                 }
             }
-            else if( pT->isFolder() )
+            else if( trigger->isFolder() )
             {
-                if( pT->isActive() )
+                if( trigger->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5594,7 +5564,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5606,9 +5576,9 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
             }
             else
             {
-                if( pT->isActive() )
+                if( trigger->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5620,7 +5590,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( trigger->ancestorsActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png"),0,Qt::MonoOnly), QIcon::Normal, QIcon::Off);
                     }
@@ -5630,7 +5600,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
                     }
                 }
             }
-            //pItem->setDisabled(!pT->ancestorsActive());
+            //pItem->setDisabled(!trigger->ancestorsActive());
             pItem->setIcon(0, icon);
         }
         else
@@ -5638,7 +5608,7 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( trigger->getError() );
         }
     }
 
@@ -5647,35 +5617,34 @@ void dlgTriggerEditor::expand_child_triggers( TTrigger * pTriggerParent, QTreeWi
 void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TKey *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto key : *childrenList)
     {
-        TKey * pT = *it;
-        QString s = pT->getName();
+        QString s = key->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
-        pItem->setData( 0, Qt::UserRole, pT->getID() );
+        pItem->setData( 0, Qt::UserRole, key->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( key->hasChildren() )
         {
-            expand_child_key( pT, pItem );
+            expand_child_key( key, pItem );
         }
-        if( pT->state() )
+        if( key->state() )
         {
-            if( pT->isFolder() )
+            if( key->isFolder() )
             {
-                if( pT->isActive() )
+                if( key->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey.png" ) ), QIcon::Normal, QIcon::Off );
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-blue-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey-locked.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5683,16 +5652,16 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
             }
             else
             {
-                if( pT->isActive() )
+                if( key->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( key->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox-grey.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5705,7 +5674,7 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( key->getError() );
         }
     }
 }
@@ -5714,26 +5683,25 @@ void dlgTriggerEditor::expand_child_key( TKey * pTriggerParent, QTreeWidgetItem 
 void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TScript *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto script : *childrenList)
     {
-        TScript * pT = *it;
-        QString s = pT->getName();
+        QString s = script->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
-        pItem->setData( 0, Qt::UserRole, pT->getID() );
+        pItem->setData( 0, Qt::UserRole, script->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( script->hasChildren() )
         {
-            expand_child_scripts( pT, pItem );
+            expand_child_scripts( script, pItem );
         }
-        if( pT->state() )
+        if( script->state() )
         {
-            if( pT->isFolder() )
+            if( script->isFolder() )
             {
-                if( pT->isActive() )
+                if( script->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-orange.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5744,7 +5712,7 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
             }
             else
             {
-                if( pT->isActive() )
+                if( script->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5760,7 +5728,7 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( script->getError() );
         }
     }
 }
@@ -5768,35 +5736,34 @@ void dlgTriggerEditor::expand_child_scripts( TScript * pTriggerParent, QTreeWidg
 void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TAlias *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto alias : *childrenList)
     {
-        TAlias * pT = *it;
-        QString s = pT->getName();
+        QString s = alias->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
-        pItem->setData( 0, Qt::UserRole, pT->getID() );
+        pItem->setData( 0, Qt::UserRole, alias->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( alias->hasChildren() )
         {
-            expand_child_alias( pT, pItem );
+            expand_child_alias( alias, pItem );
         }
-        if( pT->state() )
+        if( alias->state() )
         {
-            if( pT->isFolder() )
+            if( alias->isFolder() )
             {
-                if( pT->isActive() )
+                if( alias->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-violet.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey.png" ) ), QIcon::Normal, QIcon::Off );
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-violet-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-grey-locked.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5804,16 +5771,16 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
             }
             else
             {
-                if( pT->isActive() )
+                if( alias->isActive() )
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked_grey.png" ) ), QIcon::Normal, QIcon::Off );
                 }
                 else
                 {
-                    if( pT->ancestorsActive() )
+                    if( alias->ancestorsActive() )
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox.png" ) ), QIcon::Normal, QIcon::Off );
                     else
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox-grey.png" ) ), QIcon::Normal, QIcon::Off );
@@ -5826,7 +5793,7 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( alias->getError() );
         }
     }
 }
@@ -5834,28 +5801,27 @@ void dlgTriggerEditor::expand_child_alias( TAlias * pTriggerParent, QTreeWidgetI
 void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TAction *> * childrenList = pTriggerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto action : *childrenList)
     {
-        TAction * pT = *it;
-        QString s = pT->getName();
+        QString s = action->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
-        pItem->setData( 0, Qt::UserRole, pT->getID() );
+        pItem->setData( 0, Qt::UserRole, action->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( action->hasChildren() )
         {
-            expand_child_action( pT, pItem );
+            expand_child_action( action, pItem );
         }
-        if( pT->state() )
+        if( action->state() )
         {
-            if( ! pT->getParent()->mPackageName.isEmpty() )
+            if( ! action->getParent()->mPackageName.isEmpty() )
             {
                 // Must have a parent (or would not be IN this method) and the
                 // parent has a package name - this is a toolbar
-                if( pT->isActive() )
+                if( action->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5864,10 +5830,10 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow-locked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
             }
-            else if( pT->isFolder() )
+            else if( action->isFolder() )
             {
                 // Is a folder and is not a toolbar - this is a menu
-                if( pT->isActive() )
+                if( action->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5879,7 +5845,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
             else
             {
                 // Is a button
-                if( pT->isActive() )
+                if( action->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5895,7 +5861,7 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( action->getError() );
         }
     }
 }
@@ -5904,26 +5870,25 @@ void dlgTriggerEditor::expand_child_action( TAction * pTriggerParent, QTreeWidge
 void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetItem * pWidgetItemParent )
 {
     list<TTimer *> * childrenList = pTimerParent->getChildrenList();
-    for(auto it=childrenList->begin(); it!=childrenList->end(); it++ )
+    for(auto timer : *childrenList)
     {
-        TTimer * pT = *it;
-        QString s = pT->getName();
+        QString s = timer->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem( pWidgetItemParent, sList);
-        pItem->setData( 0, Qt::UserRole, pT->getID() );
+        pItem->setData( 0, Qt::UserRole, timer->getID() );
 
         pWidgetItemParent->insertChild( 0, pItem );
         QIcon icon;
-        if( pT->hasChildren() )
+        if( timer->hasChildren() )
         {
-            expand_child_timers( pT, pItem );
+            expand_child_timers( timer, pItem );
         }
-        if( pT->state() )
+        if( timer->state() )
         {
-            if( pT->isFolder() )
+            if( timer->isFolder() )
             {
-                if( pT->shouldBeActive() )
+                if( timer->shouldBeActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-green.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -5934,9 +5899,9 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
             }
             else
             {
-                if( pT->isOffsetTimer() )
+                if( timer->isOffsetTimer() )
                 {
-                    if( pT->shouldBeActive() )
+                    if( timer->shouldBeActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/offsettimer-on.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5947,7 +5912,7 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
                 }
                 else
                 {
-                    if( pT->shouldBeActive() )
+                    if( timer->shouldBeActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -5964,7 +5929,7 @@ void dlgTriggerEditor::expand_child_timers( TTimer * pTimerParent, QTreeWidgetIt
             QIcon iconError;
             iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
             pItem->setIcon( 0, iconError );
-            showError( pT->getError() );
+            showError( timer->getError() );
         }
     }
 }
@@ -7100,11 +7065,11 @@ bool dlgTriggerEditor::event( QEvent * event )
             {
                 case 0x01000000:
                     mIsGrabKey = false;
-                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-                        if ( actionList.at(i)->text() == "Save Item" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+S"));
-                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                    for(auto & action : actionList) {
+                        if ( action->text() == "Save Item" ) {
+                            action->setShortcut(tr("Ctrl+S"));
+                        } else if ( action->text() == "Save Profile" ) {
+                            action->setShortcut(tr("Ctrl+Shift+S"));
                         }
                     }
                     ke->accept();
@@ -7118,11 +7083,11 @@ bool dlgTriggerEditor::event( QEvent * event )
                 default:
                     grab_key_callback( ke->key(), ke->modifiers() );
                     mIsGrabKey = false;
-                    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-                        if ( actionList.at(i)->text() == "Save Item" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+S"));
-                        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-                            actionList[i]->setShortcut(tr("Ctrl+Shift+S"));
+                    for(auto & action : actionList) {
+                        if ( action->text() == "Save Item" ) {
+                            action->setShortcut(tr("Ctrl+S"));
+                        } else if ( action->text() == "Save Profile" ) {
+                            action->setShortcut(tr("Ctrl+Shift+S"));
                         }
                     }
                     ke->accept();
@@ -7138,11 +7103,11 @@ void dlgTriggerEditor::slot_grab_key()
 {
     mIsGrabKey = true;
     QList<QAction *> actionList = toolBar->actions();
-    for(int i = 0, total = actionList.size(); i < total; ++i ) {
-        if ( actionList.at(i)->text() == "Save Item" ) {
-            actionList[i]->setShortcut(tr(""));
-        } else if ( actionList.at(i)->text() == "Save Profile" ) {
-            actionList[i]->setShortcut(tr(""));
+    for(auto & action : actionList) {
+        if ( action->text() == "Save Item" ) {
+            action->setShortcut(tr(""));
+        } else if ( action->text() == "Save Profile" ) {
+            action->setShortcut(tr(""));
         }
     }
 }

@@ -569,18 +569,18 @@ inline void TTrigger::updateMultistates( int regexNumber,
     else
     {
         int k=0;
-        for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
+        for(auto & matchStatePair : mConditionMap)
         {
             k++;
-            if( (*it).second->nextCondition() == regexNumber )
+            if( matchStatePair.second->nextCondition() == regexNumber )
             {
                 if( mudlet::debugMode )
                 {
                     TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << k << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] <<"\n" >> 0;
                 }
-                (*it).second->conditionMatched();
-                (*it).second->multiCaptureList.push_back( captureList );
-                (*it).second->multiCapturePosList.push_back( posList );
+                matchStatePair.second->conditionMatched();
+                matchStatePair.second->multiCaptureList.push_back( captureList );
+                matchStatePair.second->multiCapturePosList.push_back( posList );
             }
         }
     }
@@ -599,9 +599,9 @@ inline void TTrigger::filter( std::string & capture, int & posOffset )
         return;
     }
     QString text = capture.c_str();
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto & trigger : *mpMyChildrenList)
     {
-        (*it)->match( filterSubject, text, -1, posOffset );
+        trigger->match( filterSubject, text, -1, posOffset );
     }
     free( filterSubject );
 }
@@ -791,23 +791,23 @@ bool TTrigger::match_line_spacer( int regexNumber )
     {
         int k=0;
 
-        for( map<TMatchState *, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); it++ )
+        for(auto & matchStatePair : mConditionMap)
         {
             k++;
-            if( (*it).second->nextCondition() == regexNumber )
+            if( matchStatePair.second->nextCondition() == regexNumber )
             {
-                if( (*it).second->lineSpacerMatch( mRegexCodeList.value(regexNumber).toInt() ) )
+                if( matchStatePair.second->lineSpacerMatch( mRegexCodeList.value(regexNumber).toInt() ) )
                 {
                     if( mudlet::debugMode )
                     {
                         TDebug(QColor(Qt::yellow),QColor(Qt::black))<<"Trigger name="<<mName<<"("<<mRegexCodeList.value(regexNumber)<<") condition #"<<regexNumber<<"=true ">>0;
                         TDebug(QColor(Qt::darkYellow),QColor(Qt::black)) << "match state " << k << "/" << mConditionMap.size() <<" condition #" << regexNumber << "=true (" << regexNumber+1 << "/" << mRegexCodeList.size() << ") line spacer=" << mRegexCodeList.value(regexNumber) <<"lines\n" >> 0;
                     }
-                    (*it).second->conditionMatched();
+                    matchStatePair.second->conditionMatched();
                     std::list<string> captureList;
                     std::list<int> posList;
-                    (*it).second->multiCaptureList.push_back( captureList );
-                    (*it).second->multiCapturePosList.push_back( posList );
+                    matchStatePair.second->multiCaptureList.push_back( captureList );
+                    matchStatePair.second->multiCapturePosList.push_back( posList );
                 }
             }
         }
@@ -923,11 +923,11 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
         int highestCondition = 0;
         if( mIsMultiline )
         {
-            for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
+            for(auto & matchStatePair : mConditionMap)
             {
 
-                (*it).second->newLineArrived();
-                int next = (*it).second->nextCondition();
+                matchStatePair.second->newLineArrived();
+                int next = matchStatePair.second->nextCondition();
                 if( next > highestCondition )
                 {
                     highestCondition = next;
@@ -994,23 +994,23 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
             conditionMet = false; //invalidate conditionMet as it has no meaning for multiline triggers
             list<TMatchState*> removeList;
 
-            for( map<TMatchState*, TMatchState *>::iterator it=mConditionMap.begin(); it!=mConditionMap.end(); ++it )
+            for(auto & matchStatePair : mConditionMap)
             {
                 k++;
-                if( (*it).second->isComplete() )
+                if( matchStatePair.second->isComplete() )
                 {
                     mKeepFiring = mStayOpen;
                     if( mudlet::debugMode ){ TDebug(QColor(Qt::yellow),QColor(Qt::darkMagenta))<<"multiline trigger name="<<mName<<" *FIRES* all conditons are fullfilled. Executing script.\n">>0;}
-                    removeList.push_back( (*it).first );
+                    removeList.push_back( matchStatePair.first );
                     conditionMet = true;
                     TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-                    pL->setMultiCaptureGroups( (*it).second->multiCaptureList, (*it).second->multiCapturePosList );
+                    pL->setMultiCaptureGroups( matchStatePair.second->multiCaptureList, matchStatePair.second->multiCapturePosList );
                     execute();
                     pL->clearCaptureGroups();
                     if( mFilterTrigger )
                     {
                         std::list< std::list<std::string> > multiCaptureList;
-                        multiCaptureList = (*it).second->multiCaptureList;
+                        multiCaptureList = matchStatePair.second->multiCaptureList;
                         if( multiCaptureList.size() > 0 )
                         {
                             for( auto mit = multiCaptureList.begin(); mit!=multiCaptureList.end(); mit++, k++ )
@@ -1038,21 +1038,21 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
                     }
                 }
 
-                if( ! (*it).second->newLine() )
+                if( ! matchStatePair.second->newLine() )
                 {
-                    removeList.push_back( (*it).first );
+                    removeList.push_back( matchStatePair.first );
                 }
             }
-            for( auto it=removeList.begin(); it!=removeList.end(); it++ )
+            for(auto & matchState : removeList)
             {
-                if( mConditionMap.find( *it ) != mConditionMap.end() )
+                if( mConditionMap.find( matchState ) != mConditionMap.end() )
                 {
-                    delete mConditionMap[*it];
+                    delete mConditionMap[matchState];
                     if( mudlet::debugMode )
                     {
                         TDebug(QColor(Qt::darkBlue),QColor(Qt::black))<< "removing condition from conditon table.\n">>0;
                     }
-                    mConditionMap.erase( *it );
+                    mConditionMap.erase( matchState );
                 }
             }
         }
@@ -1068,10 +1068,9 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
         {
             if( conditionMet || ( mRegexCodeList.size() < 1 ) )
             {
-                for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                for(auto trigger : *mpMyChildrenList)
                 {
-                    TTrigger * pChild = *it;
-                    ret = pChild->match( subject, toMatch, line );
+                    ret = trigger->match( subject, toMatch, line );
                     if( ret ) conditionMet = true;
                 }
             }
@@ -1084,10 +1083,9 @@ bool TTrigger::match( char * subject, const QString & toMatch, int line, int pos
             {
                 execute();
             }
-            for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+            for(auto trigger : *mpMyChildrenList)
             {
-                TTrigger * pChild = *it;
-                ret = pChild->match( subject, toMatch, line );
+                ret = trigger->match( subject, toMatch, line );
                 if( ret ) conditionMet = true;
             }
             return true;
@@ -1310,10 +1308,9 @@ void TTrigger::compileAll()
         mOK_code = false;
     }
     setRegexCodeList(  mRegexCodeList, mRegexCodePropertyList );
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto trigger : *mpMyChildrenList)
     {
-        TTrigger * pChild = *it;
-        pChild->compileAll();
+        trigger->compileAll();
     }
 }
 
@@ -1328,10 +1325,9 @@ void TTrigger::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto trigger : *mpMyChildrenList)
     {
-        TTrigger * pChild = *it;
-        pChild->compile();
+        trigger->compile();
     }
 }
 
@@ -1395,10 +1391,9 @@ void TTrigger::enableTrigger( const QString & name )
     {
         setIsActive( true );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto trigger : *mpMyChildrenList)
     {
-        TTrigger * pChild = *it;
-        pChild->enableTrigger( name );
+        trigger->enableTrigger( name );
     }
 }
 
@@ -1408,10 +1403,9 @@ void TTrigger::disableTrigger( const QString & name )
     {
         setIsActive( false );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto trigger : *mpMyChildrenList)
     {
-        TTrigger * pChild = *it;
-        pChild->disableTrigger( name );
+        trigger->disableTrigger( name );
     }
 }
 
@@ -1421,10 +1415,9 @@ TTrigger * TTrigger::killTrigger( const QString & name )
     {
         setIsActive( false );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto trigger : *mpMyChildrenList)
     {
-        TTrigger * pChild = *it;
-        pChild->killTrigger( name );
+        trigger->killTrigger( name );
     }
     return 0;
 }

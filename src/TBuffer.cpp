@@ -1967,9 +1967,9 @@ QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int f
     if( y >= static_cast<int>(buffer.size()) ) return P;
 
 
-    for( int i=0; i<text.size(); i++ )
+    for(auto character : text)
     {
-        if( text.at(i) == QChar('\n') )
+        if( character == QChar('\n') )
         {
             std::deque<TChar> newLine;
             TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
@@ -1986,7 +1986,7 @@ QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int f
             y++;
             continue;
         }
-        lineBuffer[y].insert( x, text.at( i ) );
+        lineBuffer[y].insert( x, character );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
         auto it = buffer[y].begin();
         buffer[y].insert( it+x, c );

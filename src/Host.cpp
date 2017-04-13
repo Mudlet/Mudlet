@@ -374,14 +374,13 @@ const unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for(unsigned int i=0; i<mpMap->mPathList.size(); i++ ) {
-        QString n = QString::number( mpMap->mPathList.at(i) );
+    for(int i : mpMap->mPathList) {
+        QString n = QString::number( i );
         pathList.append( n );
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for(unsigned int i=0; i<mpMap->mWeightList.size(); i++ ) {
-        unsigned int stepWeight = mpMap->mWeightList.at(i);
+    for(int stepWeight : mpMap->mWeightList) {
         totalWeight += stepWeight;
         QString n = QString::number( stepWeight );
         weightList.append( n );
@@ -642,9 +641,9 @@ void Host::raiseEvent( const TEvent & pE )
     if( mEventHandlerMap.contains( pE.mArgumentList.at( 0 ) ) )
     {
         QList<TScript *> scriptList = mEventHandlerMap.value( pE.mArgumentList.at( 0 ) );
-        for( int i=0, total = scriptList.size(); i<total; ++i )
+        for(auto & script : scriptList)
         {
-            scriptList[i]->callEventHandler( pE );
+            script->callEventHandler( pE );
         }
     }
 
@@ -1071,9 +1070,9 @@ bool Host::installPackage( const QString& fileName, int module )
         QStringList _filterList;
         _filterList << QStringLiteral( "*.xml" ) << QStringLiteral( "*.trigger" );
         QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
-        for( int i=0; i<entries.size(); i++ )
+        for(auto & entry : entries)
         {
-            file2.setFileName( entries[i].absoluteFilePath() );
+            file2.setFileName( entry.absoluteFilePath() );
             file2.open(QFile::ReadOnly | QFile::Text);
             QString profileName = getName();
             QString login = getLogin();

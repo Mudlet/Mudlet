@@ -82,13 +82,12 @@ QMap<int,QMap<int,QMultiMap<int,int> > > TArea::koordinatenSystem()
 {
     QMap<int,QMap<int,QMultiMap<int,int> > > kS;
     QList<TRoom*> roomList = mpRoomDB->getRoomPtrList();
-    for( int i=0; i<roomList.size(); i++ )
+    for(auto room : roomList)
     {
-        TRoom * pR = roomList[i];
-        int id = pR->getId();
-        int x = pR->x;
-        int y = pR->y;
-        int z = pR->z;
+        int id = room->getId();
+        int x = room->x;
+        int y = room->y;
+        int z = room->z;
         QMap<int,QMultiMap<int,int> > _y;
         QMultiMap<int,int> _z;
         if( ! kS.contains( x ) )

@@ -489,40 +489,40 @@ void TMap::audit()
             int areaID = itArea.key();
             if( mapLabels.contains(areaID) ) {
                 QList<int> labelIDList = mapLabels.value(areaID).keys();
-                for( int i=0; i<labelIDList.size(); i++ ) {
-                    TMapLabel l = mapLabels.value(areaID).value(labelIDList.at(i));
+                for(int & i : labelIDList) {
+                    TMapLabel l = mapLabels.value(areaID).value(i);
                     if( l.pix.isNull() ) {
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
                         if( newID > -1 ) {
                             if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
                                 QString msg = tr( "[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2." )
                                               .arg(areaID)
-                                              .arg(labelIDList.at(i) );
+                                              .arg(i );
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg( areaID, tr( "[ INFO ] - Converting old style label id: %1." )
-                                                            .arg( labelIDList.at(i) ) );
-                            mapLabels[areaID][labelIDList.at(i)] = mapLabels[areaID][newID];
+                                                            .arg( i ) );
+                            mapLabels[areaID][i] = mapLabels[areaID][newID];
                             deleteMapLabel( areaID, newID );
                         }
                         else {
                             if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
                                 QString msg = tr( "[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2." )
                                               .arg(areaID)
-                                              .arg(labelIDList.at(i));
+                                              .arg(i);
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg( areaID, tr( "[ WARN ] - CONVERTING: cannot convert old style label with id: %1." )
-                                                            .arg( labelIDList.at(i) ) );
+                                                            .arg( i ) );
                         }
                     }
                     if (    ( l.size.width() >  std::numeric_limits<qreal>::max() )
                          || ( l.size.width() < -std::numeric_limits<qreal>::max() ) ) {
-                        mapLabels[areaID][labelIDList[i]].size.setWidth(l.pix.width());
+                        mapLabels[areaID][i].size.setWidth(l.pix.width());
                     }
                     if (    ( l.size.height() >  std::numeric_limits<qreal>::max() )
                          || ( l.size.height() < -std::numeric_limits<qreal>::max() ) ) {
-                        mapLabels[areaID][labelIDList[i]].size.setHeight(l.pix.height());
+                        mapLabels[areaID][i].size.setHeight(l.pix.height());
                     }
                 }
             }

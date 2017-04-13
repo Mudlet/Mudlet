@@ -770,8 +770,8 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mShowPanel = (attributes().value("mShowPanel") == "yes");
     pHost->mHaveMapperScript = (attributes().value("mHaveMapperScript") == "yes");
     QStringRef ignore = attributes().value("mDoubleClickIgnore");
-    for (int i = 0, total = ignore.size(); i < total; ++i) {
-        pHost->mDoubleClickIgnore.insert(ignore.at(i));
+    for (auto character : ignore) {
+        pHost->mDoubleClickIgnore.insert(character);
     }
 
     while (!atEnd()) {

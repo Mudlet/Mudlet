@@ -35,40 +35,36 @@ using namespace std;
 void ScriptUnit::_uninstall( TScript * pChild, QString packageName )
 {
     list<TScript*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto script : *childrenList)
     {
-        TScript * pT = *it2;
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( script, packageName );
+        uninstallList.append( script );
     }
 }
 
 
 void ScriptUnit::uninstall( QString packageName )
 {
-    for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it ++ )
+    for(auto rootScript : mScriptRootNodeList)
     {
-        TScript * pT = *it;
-
-        if( pT->mPackageName == packageName )
+        if( rootScript->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootScript, packageName );
+            uninstallList.append( rootScript );
         }
     }
-    for( int i=0; i<uninstallList.size(); i++ )
+    for(auto & script : uninstallList)
     {
-        unregisterScript(uninstallList[i]);
+        unregisterScript(script);
     }
      uninstallList.clear();
 }
 
 void ScriptUnit::stopAllTriggers()
 {
-    for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
+    for(auto script : mScriptRootNodeList)
     {
-        TScript * pChild = *it;
-        pChild->setIsActive( false );
+        script->setIsActive( false );
     }
 }
 
@@ -230,12 +226,11 @@ int ScriptUnit::getNewID()
 
 void ScriptUnit::compileAll()
 {
-    for(auto it = mScriptRootNodeList.begin(); it != mScriptRootNodeList.end(); it++)
+    for(auto script : mScriptRootNodeList)
     {
-        TScript * pChild = *it;
-        if( pChild->isActive() )
+        if( script->isActive() )
         {
-            pChild->compileAll();
+            script->compileAll();
         }
     }
 }

@@ -810,8 +810,8 @@ bool XMLexport::writeTrigger( TTrigger * pT )
             writeEndElement(); // </regexCodeList>
 
             writeStartElement( "regexCodePropertyList" );
-            for( int i = 0; i < pT->mRegexCodePropertyList.size(); ++i ) {
-                writeTextElement( "integer", QString::number( pT->mRegexCodePropertyList.at(i) ) );
+            for(int i : pT->mRegexCodePropertyList) {
+                writeTextElement( "integer", QString::number( i ) );
             }
             writeEndElement(); // </regexCodePropertyList>
         }

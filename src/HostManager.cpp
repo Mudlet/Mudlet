@@ -162,11 +162,11 @@ void HostManager::postIrcMessage( QString a, QString b, QString c )
     const QList<QSharedPointer<Host> > hostList = mHostPool.values();
     mPoolReadWriteLock.unlock();
     qDebug() << "HostManager::postIrcMessage(...) INFO: ...got read access and sending IRC message to" << hostList.count() << "Hosts.";
-    for( int i=0; i<hostList.size(); i++ )
+    for(const auto & i : hostList)
     {
-        if( hostList.at( i ) )
+        if( i )
         {
-            hostList.at( i )->postIrcMessage( a, b, c );
+            i->postIrcMessage( a, b, c );
         }
     }
 }
@@ -214,8 +214,8 @@ void HostManager::postInterHostEvent( const Host * pHost, const TEvent & event )
     allValidHosts = afterSendingHost;
     allValidHosts.append( beforeSendingHost );
 
-    for( int j = 0, total = allValidHosts.size(); j < total; ++j ) {
-        hostList.at( allValidHosts.at( j ) )->raiseEvent( event );
+    for(int validHost : allValidHosts) {
+        hostList.at( validHost )->raiseEvent( event );
     }
 }
 

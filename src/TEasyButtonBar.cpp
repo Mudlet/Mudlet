@@ -199,9 +199,9 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
 void TEasyButtonBar::clear()
 {
     auto pW = new QWidget;
-    for(auto it = mButtonList.begin(); it != mButtonList.end(); it++ )
+    for(auto & flipButton : mButtonList)
     {
-        disconnect( *it, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
+        disconnect( flipButton, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)) );
     }
     mButtonList.clear();
     mpWidget->deleteLater();

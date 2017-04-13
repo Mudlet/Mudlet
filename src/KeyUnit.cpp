@@ -39,40 +39,36 @@ KeyUnit::KeyUnit( Host * pHost )
 void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
 {
     list<TKey*> * childrenList = pChild->mpMyChildrenList;
-    for(auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
+    for(auto key : *childrenList)
     {
-        TKey * pT = *it2;
-        _uninstall( pT, packageName );
-        uninstallList.append( pT );
+        _uninstall( key, packageName );
+        uninstallList.append( key );
     }
 }
 
 
 void KeyUnit::uninstall(const QString& packageName )
 {
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
+    for(auto rootKey : mKeyRootNodeList)
     {
-        TKey * pT = *it;
-
-        if( pT->mPackageName == packageName )
+        if( rootKey->mPackageName == packageName )
         {
-            _uninstall( pT, packageName );
-            uninstallList.append( pT );
+            _uninstall( rootKey, packageName );
+            uninstallList.append( rootKey );
         }
     }
-    for( int i=0; i<uninstallList.size(); i++ )
+    for(auto & key : uninstallList)
     {
-        unregisterKey(uninstallList[i]);
+        unregisterKey(key);
     }
      uninstallList.clear();
 }
 
 bool KeyUnit::processDataStream( int key, int modifier )
 {
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto keyObject : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
-        if( pChild->match( key, modifier ) ) return true;
+        if( keyObject->match( key, modifier ) ) return true;
     }
 
     return false;
@@ -80,12 +76,11 @@ bool KeyUnit::processDataStream( int key, int modifier )
 
 void KeyUnit::compileAll()
 {
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto key : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
-        if( pChild->isActive() )
+        if( key->isActive() )
         {
-            pChild->compileAll();
+            key->compileAll();
         }
     }
 }
@@ -94,10 +89,9 @@ bool KeyUnit::enableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto key : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
-        pChild->enableKey( name );
+        key->enableKey( name );
         found = true;
     }
     return found;
@@ -107,10 +101,9 @@ bool KeyUnit::disableKey(const QString & name )
 {
     bool found = false;
     QMutexLocker locker(& mKeyUnitLock);
-    for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
+    for(auto key : mKeyRootNodeList)
     {
-        TKey * pChild = *it;
-        pChild->disableKey( name );
+        key->disableKey( name );
         found = true;
     }
     return found;

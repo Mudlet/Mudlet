@@ -1013,15 +1013,15 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
         
         if( oldAY < mPA.y() ){
           for( int y = oldAY; y < mPA.y(); y++ ){
-            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            for(auto & x : mpBuffer->buffer[y]){
+              x.flags &= ~(TCHAR_INVERSE);
             }
           }
         }
         if( oldBY > mPB.y() ){
             for( int y = mPB.y()+1; y <= oldBY; y++ ){
-                for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-                    mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                for(auto & x : mpBuffer->buffer[y]){
+                    x.flags &= ~(TCHAR_INVERSE);
                 }
             }
         }
