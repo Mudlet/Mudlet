@@ -24,13 +24,9 @@
 
 #include "TVar.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QTreeWidgetItem>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 VarUnit::VarUnit()

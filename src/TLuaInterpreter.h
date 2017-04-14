@@ -23,18 +23,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QMutex>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #ifndef LUA_CPP
 extern "C"

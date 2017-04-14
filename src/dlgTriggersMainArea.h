@@ -22,13 +22,9 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include "ui_triggers_main_area.h"
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 class dlgTriggersMainArea : public QWidget, public Ui::trigger_main_area

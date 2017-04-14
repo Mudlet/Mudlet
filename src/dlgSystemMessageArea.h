@@ -22,13 +22,9 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include "ui_system_message_area.h"
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 class dlgSystemMessageArea : public QWidget, public Ui::systemMessageArea

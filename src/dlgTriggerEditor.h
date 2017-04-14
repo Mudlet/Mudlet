@@ -23,14 +23,10 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include "ui_trigger_editor.h"
 #include <QPointer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
@@ -46,9 +42,7 @@
 #include "TTrigger.h"
 #include "TVar.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QFile>
 #include <QDialog>
 #include <QListWidgetItem>
@@ -56,9 +50,7 @@
 #include <QScrollArea>
 #include <QTableWidget>
 #include <QTableWidgetItem>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 class dlgTimersMainArea;
 class dlgSystemMessageArea;

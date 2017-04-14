@@ -25,17 +25,13 @@
 
 #include "TMap.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QApplication>
 #include <QColor>
 #include <QMap>
 #include <QVector3D>
 #include <QHash>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 #define DIR_NORTH 1

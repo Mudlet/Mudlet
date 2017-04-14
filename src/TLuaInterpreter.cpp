@@ -47,9 +47,7 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
@@ -58,9 +56,7 @@
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <list>
 #include <string>

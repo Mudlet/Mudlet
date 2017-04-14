@@ -25,15 +25,11 @@
 
 #include "Tree.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QColor>
 #include <QIcon>
 #include <QPointer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 class Host;
 class mudlet;
