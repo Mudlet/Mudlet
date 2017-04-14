@@ -33,13 +33,9 @@
 
 #include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QDebug>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 bool HostManager::deleteHost( QString hostname )

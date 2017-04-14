@@ -23,18 +23,14 @@
  ***************************************************************************/
 
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QDebug>
 #if QT_VERSION >= 0x050100
 #include <QDebugStateSaver>
 #endif
 #include <QStringList>
 #include <QList>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #define ARGUMENT_TYPE_NUMBER 0
 #define ARGUMENT_TYPE_STRING 1

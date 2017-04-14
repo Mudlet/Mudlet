@@ -29,13 +29,9 @@
 #include "TDebug.h"
 #include "TMatchState.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QRegExp>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <assert.h>
 

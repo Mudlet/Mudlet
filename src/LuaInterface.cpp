@@ -25,13 +25,9 @@
 #include "Host.h"
 #include "VarUnit.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QTime>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <setjmp.h>
 

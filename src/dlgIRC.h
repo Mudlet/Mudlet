@@ -22,9 +22,7 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include "ui_irc.h"
 #ifdef Q_CC_MSVC
 #include <irc.h>
@@ -37,9 +35,7 @@
 #include "irc/include/irccommand.h"
 #include "irc/include/ircmessage.h"
 #endif
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 class dlgIRC : public QMainWindow, public Ui::irc_dlg

@@ -34,9 +34,7 @@
 #include "TRoomDB.h"
 #include "TTextEdit.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
@@ -46,9 +44,7 @@
 #include <QTextOption>
 #include <QToolBar>
 #include <QVariant>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )

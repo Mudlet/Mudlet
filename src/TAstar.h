@@ -25,27 +25,19 @@
 #include "TRoom.h"
 
 #ifndef Q_MOC_RUN
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 #endif
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QDebug>
 #include <QString>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <math.h>    // for sqrt
 

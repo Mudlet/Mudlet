@@ -25,9 +25,7 @@
 #include "HostManager.h"
 #include "mudlet.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QApplication>
 #include <QDir>
 #include <QFile>
@@ -35,9 +33,7 @@
 #include <QSplashScreen>
 #include <QStringBuilder>
 #include <QTextLayout>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and

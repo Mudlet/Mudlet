@@ -23,13 +23,9 @@
  ***************************************************************************/
 
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QWidget>
-// clang-format: off
-#include "pre_guard.h"
-// clang-format: on
+#include "post_guard.h"
 
 #include <list>
 

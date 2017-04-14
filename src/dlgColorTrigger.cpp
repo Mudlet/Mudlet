@@ -28,13 +28,9 @@
 #include "mudlet.h"
 #include "TTextEdit.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QPalette>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 dlgColorTrigger::dlgColorTrigger( QWidget * pF, TTrigger * pT, int mode )
