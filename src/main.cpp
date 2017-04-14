@@ -38,8 +38,8 @@
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
 // leak detection does not work when it is not defined.
-#include <pcre.h>
 #include <Windows.h>
+#include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
 #include <iostream>

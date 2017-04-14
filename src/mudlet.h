@@ -34,8 +34,8 @@
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QQueue>
-#include <QTime>
 #include <QTextOption>
+#include <QTime>
 #include "post_guard.h"
 
 #include <assert.h>

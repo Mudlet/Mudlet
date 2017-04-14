@@ -26,15 +26,15 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "XMLimport.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtUiTools>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
-#include <QtUiTools>
 #include "post_guard.h"
 
 

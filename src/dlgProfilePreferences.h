@@ -24,8 +24,8 @@
 
 #include "pre_guard.h"
 #include "ui_profile_preferences.h"
-#include <QDialog>
 #include <QtCore>
+#include <QDialog>
 #include <QDir>
 #include "post_guard.h"
 

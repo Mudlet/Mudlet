@@ -23,10 +23,10 @@
 #include "dlgColorTrigger.h"
 
 
-#include "TTrigger.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TTextEdit.h"
+#include "TTrigger.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QPalette>

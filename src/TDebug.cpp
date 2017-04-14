@@ -21,8 +21,8 @@
 
 #include "TDebug.h"
 
-#include "mudlet.h"
 #include "TConsole.h"
+#include "mudlet.h"
 
 
 TDebug::TDebug(QColor c, QColor d)

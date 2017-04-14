@@ -25,16 +25,15 @@
 
 #include "pre_guard.h"
 #include <QMutex>
-#include <QNetworkReply>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
 #include "post_guard.h"
 
 #ifndef LUA_CPP
-extern "C"
-{
+extern "C" {
 #endif
     #include <lua.h>
     #include <lualib.h>

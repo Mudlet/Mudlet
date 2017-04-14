@@ -24,8 +24,8 @@
 
 #include "pre_guard.h"
 #include <QMap>
-#include <QStringList>
 #include <QSet>
+#include <QStringList>
 #include "post_guard.h"
 
 

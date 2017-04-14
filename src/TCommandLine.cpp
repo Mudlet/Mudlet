@@ -22,11 +22,11 @@
 #include "TCommandLine.h"
 
 
-#include "mudlet.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QAction>

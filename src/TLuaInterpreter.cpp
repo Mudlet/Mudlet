@@ -25,14 +25,8 @@
 #include "TLuaInterpreter.h"
 
 
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
-#include "glwidget.h"
 #include "Host.h"
 #include "HostManager.h"
-#include "mudlet.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -46,6 +40,12 @@
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "dlgComposer.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "glwidget.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -73,8 +73,7 @@
 
 
 #ifndef LUA_CPP
-extern "C"
-{
+extern "C" {
 #endif
 int luaopen_yajl(lua_State*);
 #ifndef LUA_CPP

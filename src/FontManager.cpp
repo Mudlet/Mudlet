@@ -22,10 +22,10 @@
 #include "FontManager.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFontDatabase>
 #include <QString>
 #include <QStringList>
-#include <QDir>
 #include "post_guard.h"
 
 #include <iostream>

@@ -34,8 +34,8 @@
 #include <QClipboard>
 #include <QMenu>
 #include <QPainter>
-#include <QString>
 #include <QScrollBar>
+#include <QString>
 #include <QToolTip>
 #include "post_guard.h"
 

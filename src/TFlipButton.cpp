@@ -24,9 +24,9 @@
 
 
 #include "Host.h"
+#include "TAction.h"
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
-#include "TAction.h"
 
 #include "pre_guard.h"
 #include <QMenu>

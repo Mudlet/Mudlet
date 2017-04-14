@@ -25,13 +25,12 @@
 #include "TVar.h"
 
 #include "pre_guard.h"
-#include <QSet>
 #include <QScopedPointer>
+#include <QSet>
 #include "post_guard.h"
 
 #ifndef LUA_CPP
-extern "C"
-{
+extern "C" {
 #endif
 #include <lua.h>
 #ifndef LUA_CPP

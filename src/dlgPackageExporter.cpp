@@ -28,8 +28,8 @@
 #include "TAlias.h"
 #include "TKey.h"
 #include "TScript.h"
-#include "TTrigger.h"
 #include "TTimer.h"
+#include "TTrigger.h"
 #include "XMLexport.h"
 
 #include "pre_guard.h"

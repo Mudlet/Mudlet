@@ -24,15 +24,15 @@
 #include "dlgProfilePreferences.h"
 
 
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>

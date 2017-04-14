@@ -26,14 +26,14 @@
 #include "ui_irc.h"
 #ifdef Q_CC_MSVC
 #include <irc.h>
-#include <ircsession.h>
 #include <irccommand.h>
 #include <ircmessage.h>
+#include <ircsession.h>
 #else
 #include "irc/include/irc.h"
-#include "irc/include/ircsession.h"
 #include "irc/include/irccommand.h"
 #include "irc/include/ircmessage.h"
+#include "irc/include/ircsession.h"
 #endif
 #include "post_guard.h"
 

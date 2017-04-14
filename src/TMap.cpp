@@ -23,9 +23,6 @@
 #include "TMap.h"
 
 
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
-#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -33,6 +30,9 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDebug>

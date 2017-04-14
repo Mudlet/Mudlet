@@ -24,10 +24,10 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QRegExp>

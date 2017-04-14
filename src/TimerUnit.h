@@ -23,8 +23,8 @@
 
 
 #include "pre_guard.h"
-#include <QMutex>
 #include <QMultiMap>
+#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
