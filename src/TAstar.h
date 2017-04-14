@@ -39,7 +39,7 @@
 #include <QString>
 #include "post_guard.h"
 
-#include <math.h>    // for sqrt
+#include <math.h> // for sqrt
 
 class TRoom;
 

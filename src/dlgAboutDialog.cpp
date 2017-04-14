@@ -25,8 +25,8 @@
 
 #include "pre_guard.h"
 #include <QPainter>
-#include <QTextLayout>
 #include <QStringBuilder>
+#include <QTextLayout>
 #include "post_guard.h"
 
 

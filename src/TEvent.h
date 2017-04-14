@@ -28,8 +28,8 @@
 #if QT_VERSION >= 0x050100
 #include <QDebugStateSaver>
 #endif
-#include <QStringList>
 #include <QList>
+#include <QStringList>
 #include "post_guard.h"
 
 #define ARGUMENT_TYPE_NUMBER 0

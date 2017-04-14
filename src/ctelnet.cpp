@@ -28,15 +28,15 @@
 #include "ctelnet.h"
 
 
-#include "dlgComposer.h"
-#include "dlgMapper.h"
-#include "glwidget.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "dlgComposer.h"
+#include "dlgMapper.h"
+#include "glwidget.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -52,8 +52,8 @@
 #include <memory>
 #include <sstream>
 
-#include <sys/types.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <time.h>
 
 

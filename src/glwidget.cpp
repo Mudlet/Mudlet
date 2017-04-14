@@ -23,12 +23,12 @@
 #include "glwidget.h"
 
 
-#include "dlgMapper.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgMapper.h"
 
 #include "pre_guard.h"
 #include <QtEvents>

@@ -24,9 +24,7 @@
 #include "Host.h"
 
 
-#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMap.h"
@@ -34,10 +32,12 @@
 #include "TScript.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
 #include <QtUiTools>
+#include <QApplication>
 #include <QDir>
 #include <QMessageBox>
 #include "post_guard.h"

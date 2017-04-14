@@ -26,12 +26,12 @@
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
-#include "ctelnet.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
-#include "TimerUnit.h"
 #include "TLuaInterpreter.h"
+#include "TimerUnit.h"
 #include "TriggerUnit.h"
+#include "ctelnet.h"
 
 #include "pre_guard.h"
 #include <QColor>

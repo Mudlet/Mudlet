@@ -26,9 +26,9 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QPointer>
 #include <QSharedPointer>
-#include <QApplication>
 #include "post_guard.h"
 
 #include <pcre.h>

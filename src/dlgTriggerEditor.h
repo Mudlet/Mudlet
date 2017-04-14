@@ -28,25 +28,25 @@
 #include <QPointer>
 #include "post_guard.h"
 
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTreeWidget.h"
+#include "TTrigger.h"
+#include "TVar.h"
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
-#include "TScript.h"
-#include "TTreeWidget.h"
-#include "TTimer.h"
-#include "TTrigger.h"
-#include "TVar.h"
 
 #include "pre_guard.h"
-#include <QFile>
 #include <QDialog>
-#include <QListWidgetItem>
+#include <QFile>
 #include <QListWidget>
+#include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTableWidget>
 #include <QTableWidgetItem>

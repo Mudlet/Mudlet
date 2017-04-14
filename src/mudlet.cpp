@@ -24,14 +24,6 @@
 #include "mudlet.h"
 
 
-#include "dlgAboutDialog.h"
-#include "dlgConnectionProfiles.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgNotepad.h"
-#include "dlgPackageExporter.h"
-#include "dlgProfilePreferences.h"
-#include "dlgTriggerEditor.h"
 #include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -45,9 +37,18 @@
 #include "TRoomDB.h"
 #include "TTextEdit.h"
 #include "XMLimport.h"
+#include "dlgAboutDialog.h"
+#include "dlgConnectionProfiles.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgNotepad.h"
+#include "dlgPackageExporter.h"
+#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
+#include <QtUiTools/quiloader.h>
 #include <QApplication>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -57,7 +58,6 @@
 #include <QScrollBar>
 #include <QTextCharFormat>
 #include <QToolBar>
-#include <QtUiTools/quiloader.h>
 #include "post_guard.h"
 
 

@@ -23,8 +23,6 @@
 #include "T2DMap.h"
 
 
-#include "dlgMapper.h"
-#include "dlgRoomExits.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -32,14 +30,16 @@
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgMapper.h"
+#include "dlgRoomExits.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
 #include <QAction>
+#include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
-#include <QCheckBox>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFileDialog>

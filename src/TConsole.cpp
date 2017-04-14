@@ -24,9 +24,7 @@
 #include "TConsole.h"
 
 
-#include "dlgMapper.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -36,12 +34,14 @@
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "XMLexport.h"
+#include "dlgMapper.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDateTime>
 #include <QDir>
-#include <QMessageBox>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QToolButton>

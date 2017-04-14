@@ -28,9 +28,9 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
+#include <QHash>
 #include <QMap>
 #include <QVector3D>
-#include <QHash>
 #include "post_guard.h"
 
 

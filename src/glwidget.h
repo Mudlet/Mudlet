@@ -24,8 +24,8 @@
 
 
 #include "pre_guard.h"
-#include <QPointer>
 #include <QtOpenGL/qgl.h> //problem with git
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
