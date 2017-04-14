@@ -128,7 +128,7 @@ bool TScript::setScript(const QString & script )
 {
     mScript = script;
     mNeedsToBeCompiled = true;
-    if( ! mpHost->blockScripts() ) mOK_code = compileScript();
+    mOK_code = compileScript();
     return mOK_code;
 }
 

@@ -2231,7 +2231,6 @@ void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyV
     if( ! pHost ) return;
     pHost->mIsProfileLoadingSequence = true;
     addConsoleForNewHost( pHost );
-    pHost->mBlockScriptCompile = false;
     pHost->mLuaInterpreter.loadGlobal();
     LuaInterface * lI = pHost->getLuaInterface();
     lI->getVars( true );
