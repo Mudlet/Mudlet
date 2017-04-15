@@ -167,6 +167,29 @@ public:
     static int getRooms( lua_State * );
     static int connectToServer( lua_State *L );
     static int sendIrc( lua_State * );
+    
+    static int ircReconnect( lua_State * );
+    static int ircGetHost( lua_State * );
+    static int ircGetNick( lua_State * );
+    static int ircGetChannel( lua_State * );
+    static int ircSetHost( lua_State * );
+    static int ircSetNick( lua_State * );
+    static int ircSetChannel( lua_State * );
+    static int ircSaveSessionConfigs( lua_State * );
+    static int ircJoin( lua_State * );
+    static int ircPart( lua_State * );
+    static int ircGetChannels( lua_State * );
+    static int ircGetNicks( lua_State * );
+    static int ircWhoIs( lua_State * );
+    static int ircWhoWas( lua_State * );
+    static int ircOper( lua_State * );
+    static int ircIsOper( lua_State * );
+    static int ircOp( lua_State * );
+    static int ircDeOp( lua_State * );
+    static int ircIsChanOp( lua_State * );
+    static int ircTopic( lua_State * );
+    static int ircMode( lua_State * );
+    
     static int showUnzipProgress( lua_State * );
     static int setAppStyleSheet( lua_State * );
     static int setMainWindowSize( lua_State * L );
@@ -247,6 +270,12 @@ public:
     static int setFgColor( lua_State * L );
     static int setBgColor( lua_State * L );
     static int tempTimer( lua_State * L );
+    
+    static int saveWindowLayout( lua_State * L );
+    static int loadWindowLayout( lua_State * L );
+    static int saveProfile( lua_State * L );
+    static int closeMudlet( lua_State * L );
+    
     static int openUserWindow( lua_State * L );
     static int echoUserWindow( lua_State * L );
     static int clearUserWindow( lua_State * L );

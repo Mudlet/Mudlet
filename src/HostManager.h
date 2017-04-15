@@ -56,6 +56,7 @@ public:
 // Not Used:    bool               renameHost( QString );
 // Not Used:    Host *             getHostFromHostID( int id );
     void               postIrcMessage(QString, QString, QString );
+    void               postIrcStatusMessage(QString, QString, QString );
     void               postInterHostEvent( const Host *, const TEvent & );
 
 private:

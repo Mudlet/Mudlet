@@ -105,6 +105,7 @@ public:
     LuaInterface *     getLuaInterface() { return mLuaInterface.data(); }
     void               incomingStreamProcessor(const QString & paragraph, int line );
     void               postIrcMessage(const QString&, const QString&, const QString& );
+    void               postIrcStatusMessage(const QString&, const QString&, const QString& );
     void               enableTimer(const QString & );
     void               disableTimer(const QString & );
     void               enableTrigger(const QString & );

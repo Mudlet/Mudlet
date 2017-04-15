@@ -244,20 +244,60 @@
          <property name="title">
           <string>IRC</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QLabel" name="label_58">
+         <layout class="QGridLayout" name="gridLayout_25">
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="ircNick"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_16">
             <property name="text">
-             <string>Nickname in Mudlet IRC channel:</string>
+             <string>Default Server:</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QLineEdit" name="ircNick"/>
+          <item row="2" column="2">
+           <widget class="QLineEdit" name="ircServerName"/>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_58">
+            <property name="text">
+             <string>Default Nickname:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_15">
+            <property name="text">
+             <string>Default Channel:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLineEdit" name="ircChannel"/>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLineEdit" name="ircServerPort">
+            <property name="inputMethodHints">
+             <set>Qt::ImhDigitsOnly</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_36">
+            <property name="text">
+             <string>Default Port:</string>
+            </property>
+           </widget>
           </item>
          </layout>
          <zorder>ircNick</zorder>
          <zorder>label_58</zorder>
+         <zorder>label_15</zorder>
+         <zorder>ircChannel</zorder>
+         <zorder>label_16</zorder>
+         <zorder>ircServerName</zorder>
+         <zorder>ircServerPort</zorder>
+         <zorder>label_36</zorder>
         </widget>
        </item>
       </layout>
