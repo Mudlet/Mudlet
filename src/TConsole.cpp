@@ -1031,8 +1031,8 @@ void TConsole::changeColors()
     }
     else if( mIsSubConsole )
     {
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality ) );
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
         QPixmap pixmap = QPixmap( 2000, 600 );
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing( QFont::AbsoluteSpacing, 0 );
@@ -1076,7 +1076,7 @@ void TConsole::changeColors()
             mpHost->mDisplayFont.setStyleStrategy( (QFont::StyleStrategy)( QFont::PreferAntialias | QFont::PreferQuality ) );
         mpHost->mDisplayFont.setFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( 2000, 600 );
         QPainter p(&pixmap);
         QFont _font = mpHost->mDisplayFont;

@@ -184,14 +184,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     pVB1->addWidget( mpSourceEditorArea );
     mpSourceEditor = mpSourceEditorArea->editor;
     mpSourceEditor->setWordWrapMode( QTextOption::NoWrap );
-#if QT_VERSION >= 0x050300
-    // Only added in Qt 5.3 (even though the built-into Qt Creator form designer
-    // for Qt 5.1.1. allows it to be entered) - the work around for older
-    // versions involve reimplementing the paint Event which is a bit too much
-    // effort for something just to put up some helpful dummy text when the
-    // editor widget is empty! - Slysven
     mpSourceEditor->setPlaceholderText( tr( "Enter your Lua code (or value for variable) here..." ) );
-#endif
     mpSourceEditorDocument = mpSourceEditor->document();
     QTextOption _options = mpSourceEditorDocument->defaultTextOption();
     QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );

@@ -101,9 +101,7 @@ T2DMap::T2DMap(QWidget * parent)
     mMultiSelectionListWidget.setRootIsDecorated(false);
     QSizePolicy multiSelectionSizePolicy( QSizePolicy::Maximum, QSizePolicy::Expanding );
     mMultiSelectionListWidget.setSizePolicy( multiSelectionSizePolicy );
-#if QT_VERSION >= 0x050200
     mMultiSelectionListWidget.setSizeAdjustPolicy( QAbstractScrollArea::AdjustToContents );
-#endif
     mMultiSelectionListWidget.setFrameShape(QFrame::NoFrame);
     mMultiSelectionListWidget.setFrameShadow(QFrame::Plain);
     mMultiSelectionListWidget.header()->setProperty("showSortIndicator",QVariant(true));

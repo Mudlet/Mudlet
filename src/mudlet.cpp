@@ -161,11 +161,9 @@ mudlet::mudlet()
     mpTabBar = new QTabBar( frame );
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy( Qt::NoFocus );
-#if QT_VERSION >= 0x040500
     mpTabBar->setTabsClosable ( true );
     connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
     mpTabBar->setMovable(true);
-#endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);

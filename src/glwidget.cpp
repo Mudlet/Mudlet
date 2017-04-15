@@ -34,16 +34,13 @@
 #include <QtEvents>
 #include "post_guard.h"
 
-#if QT_VERSION >= 0x040800
-    #ifdef __APPLE__
-        #include <OpenGL/glu.h>
-    #else
-        #include <GL/glu.h>
-    #endif
-#endif
-
 #include <math.h>
 
+#ifdef Q_OS_MACOS
+    #include <OpenGL/glu.h>
+#else
+    #include <GL/glu.h>
+#endif
 
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
