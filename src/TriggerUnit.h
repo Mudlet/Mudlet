@@ -41,7 +41,7 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-                          TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
+                          TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats();}
     std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
     TTrigger *            getTrigger( int id );
     void                  removeAllTempTriggers();

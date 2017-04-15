@@ -36,6 +36,8 @@ static jmp_buf buf;
 
 LuaInterface::LuaInterface(Host * pH)
     :mpHost(pH)
+, L()
+, depth()
 {
     interpreter = mpHost->getLuaInterpreter();
     mHostID = mpHost->getHostID();

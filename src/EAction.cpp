@@ -29,7 +29,7 @@
 
 
 EAction::EAction( QIcon & icon, QString & name )
-    : QAction( icon, name, mudlet::self() )
+    : QAction( icon, name, mudlet::self() ), mID()
 {
     setText( name );
     setObjectName( name );

@@ -66,6 +66,7 @@ TRoom::TRoom(TRoomDB * pRDB)
 , in( -1 )
 , out( -1 )
 , mpRoomDB( pRDB )
+, highlightRadius()
 {
 }
 

@@ -49,6 +49,9 @@ using namespace std;
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
+, treeWidget()
+, exportButton()
+, closeButton()
 {
     ui->setupUi(this);
 }

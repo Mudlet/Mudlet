@@ -36,6 +36,9 @@ TKey::TKey( TKey * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mKeyCode()
+, mKeyModifier()
+, mIsFolder()
 {
 }
 
