@@ -57,6 +57,11 @@ float zmax, zmin;
 
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+, mShowInfo()
+, dehnung()
+, rotTri()
+, rotQuad()
+, mTarget()
 {
     mpMap = 0;
     xDist=0.0;
@@ -87,6 +92,20 @@ GLWidget::GLWidget(QWidget *parent)
 
 GLWidget::GLWidget(TMap * pM, QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+, mShowInfo()
+, xRot()
+, yRot()
+, zRot()
+, xDist()
+, yDist()
+, zDist()
+, dehnung()
+, mShowTopLevels()
+, mShowBottomLevels()
+, rotTri()
+, rotQuad()
+, mScale()
+, mTarget()
 {
     mpHost = 0;
     mpMap = pM;
