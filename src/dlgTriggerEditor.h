@@ -23,42 +23,34 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include "ui_trigger_editor.h"
 #include <QPointer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTreeWidget.h"
+#include "TTrigger.h"
+#include "TVar.h"
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
-#include "TScript.h"
-#include "TTreeWidget.h"
-#include "TTimer.h"
-#include "TTrigger.h"
-#include "TVar.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
-#include <QFile>
 #include <QDialog>
-#include <QListWidgetItem>
+#include <QFile>
 #include <QListWidget>
+#include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTableWidget>
 #include <QTableWidgetItem>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 class dlgTimersMainArea;
 class dlgSystemMessageArea;

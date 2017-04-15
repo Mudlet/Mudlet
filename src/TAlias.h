@@ -25,15 +25,11 @@
 
 #include "Tree.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
+#include <QApplication>
 #include <QPointer>
 #include <QSharedPointer>
-#include <QApplication>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <pcre.h>
 

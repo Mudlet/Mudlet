@@ -24,18 +24,14 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QtEvents>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )

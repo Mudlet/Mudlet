@@ -22,14 +22,10 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include "ui_notes_editor.h"
 #include <QPointer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 class Host;
 

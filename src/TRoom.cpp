@@ -23,21 +23,17 @@
 #include "TRoom.h"
 
 
-#include "mudlet.h"
 #include "TArea.h"
 #include "TRoomDB.h"
+#include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QApplication>
 #include <QDataStream>
 #include <QDebug>
-#include <QStringBuilder>
 #include <QElapsedTimer>
-// clang-format: off
+#include <QStringBuilder>
 #include "post_guard.h"
-// clang-format: on
 
 
 TRoom::TRoom(TRoomDB * pRDB)

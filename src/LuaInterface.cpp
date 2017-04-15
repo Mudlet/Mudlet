@@ -25,13 +25,9 @@
 #include "Host.h"
 #include "VarUnit.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QTime>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <setjmp.h>
 
@@ -155,7 +151,7 @@ bool LuaInterface::loadValue(lua_State * L, TVar * var, int index){
 bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
     //get the old parent on the stack
     if (setjmp(buf) == 0){
-        if ((!from && !to) || (from==to))//moving from global to global or nowhere
+        if (!from || !to || (from==to))//moving from global to global or nowhere
             return true;
         int stackSize = lua_gettop(L);
         bool isSaved = varUnit->isSaved(curVar);

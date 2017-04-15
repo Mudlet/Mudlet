@@ -24,18 +24,14 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
+#include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QRegExp>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <assert.h>
 
@@ -74,6 +70,9 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
 , mModuleMember(false)
+, mColorTriggerFgAnsi()
+, mColorTriggerBgAnsi()
+, mIsFolder()
 {
 }
 

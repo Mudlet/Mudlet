@@ -26,20 +26,16 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "XMLimport.h"
+#include "mudlet.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
+#include <QtUiTools>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
-#include <QtUiTools>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 #define _DEBUG_

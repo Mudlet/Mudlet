@@ -24,19 +24,17 @@
 #include "dlgProfilePreferences.h"
 
 
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
@@ -46,9 +44,7 @@
 #include <QTextOption>
 #include <QToolBar>
 #include <QVariant>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )

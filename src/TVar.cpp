@@ -21,7 +21,7 @@
 
 
 #include "TVar.h"
-#include <lua.h>  // Needed for LUA_TNONE in Constructors!
+#include <lua.h> // Needed for LUA_TNONE in Constructors!
 
 /*
  * LUA type values from lua.h for lua 5.1:

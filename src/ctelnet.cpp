@@ -28,19 +28,17 @@
 #include "ctelnet.h"
 
 
-#include "dlgComposer.h"
-#include "dlgMapper.h"
-#include "glwidget.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "dlgComposer.h"
+#include "dlgMapper.h"
+#include "glwidget.h"
+#include "mudlet.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QDebug>
 #include <QDir>
 #include <QNetworkAccessManager>
@@ -48,16 +46,14 @@
 #include <QStringBuilder>
 #include <QTextCodec>
 #include <QTimer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <iostream>
 #include <memory>
 #include <sstream>
 
-#include <sys/types.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <time.h>
 
 
@@ -94,6 +90,15 @@ cTelnet::cTelnet( Host * pH )
 , enableGMCP( false )
 , enableChannel102( false )
 , loadingReplay( false )
+, networkLatency()
+, mpProgressDialog()
+, hostPort()
+, networkLatencyMin()
+, networkLatencyMax()
+, mWaitingForResponse()
+, mZstream()
+, recvdGA()
+, lastTimeOffset()
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -243,10 +248,10 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing );
     mConnectionTime.start();
-    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
+    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
         mTimerLogin->start(2000);
-    if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
+    }
     //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
     TEvent me;
     me.mArgumentList.append( "sysConnectionEvent" );

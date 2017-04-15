@@ -22,16 +22,12 @@
  ***************************************************************************/
 
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
-#include <QMutex>
 #include <QMultiMap>
+#include <QMutex>
 #include <QPointer>
 #include <QString>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <list>
 
@@ -45,7 +41,7 @@ class AliasUnit
     friend class XMLimport;
 
 public:
-                                    AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
+                                    AliasUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), mModuleMember() { initStats();}
     std::list<TAlias *>             getAliasRootNodeList()   { return mAliasRootNodeList; }
     TAlias *                        getAlias( int id );
     void                            compileAll();

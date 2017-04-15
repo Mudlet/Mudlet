@@ -24,9 +24,7 @@
 #include "TConsole.h"
 
 
-#include "dlgMapper.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -36,21 +34,19 @@
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "XMLexport.h"
+#include "dlgMapper.h"
+#include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QDateTime>
 #include <QDir>
-#include <QMessageBox>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QToolButton>
 #include <QVBoxLayout>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <assert.h>
 

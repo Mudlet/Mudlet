@@ -22,16 +22,12 @@
  ***************************************************************************/
 
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
-#include <QMutex>
 #include <QMultiMap>
+#include <QMutex>
 #include <QPointer>
 #include <QString>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <list>
 
@@ -45,7 +41,7 @@ class TimerUnit
     friend class XMLimport;
 
 public:
-                          TimerUnit( Host * pHost ) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0) {;}
+                          TimerUnit( Host * pHost ) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0), mModuleMember() {;}
     void                  removeAllTempTimers();
     std::list<TTimer *>   getTimerRootNodeList()   { return mTimerRootNodeList; }
     TTimer *              getTimer( int id );

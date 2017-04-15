@@ -2140,7 +2140,7 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     }
 }
 
-void TBuffer::appendBuffer( TBuffer chunk )
+void TBuffer::appendBuffer( const TBuffer& chunk )
 {
     if( chunk.buffer.size() < 1 )
     {

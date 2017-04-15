@@ -25,18 +25,14 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
-#include <QStringList>
 
 #include <zlib.h>
 

@@ -24,19 +24,15 @@
 
 
 #include "Host.h"
+#include "TAction.h"
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
-#include "TAction.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QMenu>
 #include <QStyleOptionButton>
 #include <QStylePainter>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 TFlipButton::TFlipButton( TAction * pTAction, Host * pHost )
 : QPushButton( 0 )

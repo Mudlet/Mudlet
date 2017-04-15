@@ -23,14 +23,10 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
-#include <QPointer>
 #include <QtOpenGL/qgl.h> //problem with git
-// clang-format: off
+#include <QPointer>
 #include "post_guard.h"
-// clang-format: on
 
 class Host;
 class TMap;

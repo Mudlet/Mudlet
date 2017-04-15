@@ -23,18 +23,14 @@
 #include "dlgColorTrigger.h"
 
 
-#include "TTrigger.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TTextEdit.h"
+#include "TTrigger.h"
+#include "mudlet.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QPalette>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 dlgColorTrigger::dlgColorTrigger( QWidget * pF, TTrigger * pT, int mode )

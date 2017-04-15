@@ -26,24 +26,20 @@
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
-#include "ctelnet.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
-#include "TimerUnit.h"
 #include "TLuaInterpreter.h"
+#include "TimerUnit.h"
 #include "TriggerUnit.h"
+#include "ctelnet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QColor>
 #include <QFile>
 #include <QFont>
 #include <QPointer>
 #include <QTextStream>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 class QDialog;
 class QPushButton;

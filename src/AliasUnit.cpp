@@ -1,7 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slyons@virginmedia.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,13 +25,9 @@
 #include "TAlias.h"
 #include "TLuaInterpreter.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QStringList>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 using namespace std;

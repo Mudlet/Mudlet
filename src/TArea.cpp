@@ -28,15 +28,11 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QApplication>
 #include <QDebug>
 #include <QElapsedTimer>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without

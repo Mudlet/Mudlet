@@ -25,14 +25,8 @@
 #include "TLuaInterpreter.h"
 
 
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
-#include "glwidget.h"
 #include "Host.h"
 #include "HostManager.h"
-#include "mudlet.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -46,10 +40,14 @@
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "dlgComposer.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "glwidget.h"
+#include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
@@ -58,9 +56,7 @@
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 #include <list>
 #include <string>
@@ -77,8 +73,7 @@
 
 
 #ifndef LUA_CPP
-extern "C"
-{
+extern "C" {
 #endif
 int luaopen_yajl(lua_State*);
 #ifndef LUA_CPP
@@ -8920,9 +8915,11 @@ int TLuaInterpreter::addCustomLine( lua_State * L )
         id_to = lua_tointeger( L, 2 );
         Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
         TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_to );
-        x.append((qreal)pR->x);
-        y.append((qreal)pR->y);
-        z.append(pR->z);
+        if (pR) {
+            x.append((qreal)pR->x);
+            y.append((qreal)pR->y);
+            z.append(pR->z);
+        }
     }
     else if ( lua_istable( L, 2 ) )
     {

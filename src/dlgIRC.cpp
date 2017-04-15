@@ -24,9 +24,7 @@
 #include "Host.h"
 #include "mudlet.h"
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QDebug>
 #include <QDateTime>
 #include <QDesktopServices>
@@ -36,9 +34,7 @@
 #include <QTimer>
 #include <QRegExp>
 #include <QString>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 dlgIRC::dlgIRC( Host * pH ) : mpHost( pH )

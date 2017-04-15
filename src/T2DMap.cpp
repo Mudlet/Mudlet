@@ -23,8 +23,6 @@
 #include "T2DMap.h"
 
 
-#include "dlgMapper.h"
-#include "dlgRoomExits.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -32,16 +30,16 @@
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgMapper.h"
+#include "dlgRoomExits.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
 #include <QtEvents>
 #include <QtUiTools>
 #include <QAction>
+#include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
-#include <QCheckBox>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFileDialog>
@@ -58,9 +56,7 @@
 #include <QSignalMapper>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 
 T2DMap::T2DMap(QWidget * parent)
@@ -308,6 +304,7 @@ QColor T2DMap::getColor( int id )
         break;
     case 16:
         c = mpHost->mLightBlack_2;
+        break;
     default: //user defined room color
         if( ! mpMap->customEnvColors.contains(env) ) break;
         c = mpMap->customEnvColors[env];
