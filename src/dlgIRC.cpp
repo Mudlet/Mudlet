@@ -820,6 +820,8 @@ void dlgIRC::sendMsg()
     
     session->sendCommand( IrcCommand::createMessage(mChannel, txt) );
     session->sendCommand( IrcCommand::createNames(mChannel) );
+    
+    dlgWriteMsg(txt, mChannel);
 }
 
 void dlgIRC::onConnected() {
