@@ -1,4 +1,3 @@
-
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
@@ -37,7 +36,7 @@
 
 #include <math.h>
 
-#ifdef __APPLE__
+#ifdef Q_OS_MACOS
     #include <OpenGL/glu.h>
 #else
     #include <GL/glu.h>
