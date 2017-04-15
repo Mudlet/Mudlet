@@ -7261,7 +7261,7 @@ int TLuaInterpreter::tempKey( lua_State *L )
     string luaFunction = "";
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, tr( "permKey: bad argument #3 type (key lua code as string expected, got %1!)" )
+        lua_pushstring( L, tr( "permKey: bad argument #3 type (lua code as string expected, got %1!)" )
             .arg( luaL_typename( L, 3 ) )
             .toUtf8().constData() );
         lua_error( L );
