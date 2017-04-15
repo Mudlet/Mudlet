@@ -933,11 +933,7 @@ void dlgProfilePreferences::saveMap()
 
     // Temporarily use whatever version is currently set
     int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
-#if QT_VERSION >= 0x050200
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-#else
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
-#endif
 
     // Ensure the setting is already made as the saveMap(...) uses the set value
     bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
@@ -1091,11 +1087,7 @@ void dlgProfilePreferences::copyMap()
 
     // Temporarily use whatever version is currently set
     int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
-#if QT_VERSION >= 0x050200
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-#else
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
-#endif
 
     if ( ! pHost->mpConsole->saveMap( QString() ) ) {
         label_mapFileActionResult->setText( tr( "Could not backup the map - saving it failed." ) );
@@ -1255,13 +1247,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mDoubleClickIgnore.insert(character);
     }
 
-#if QT_VERSION >= 0x050200
     mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->currentData().toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-#else
-    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->itemData( comboBox_statusBarSetting->currentIndex() ).toInt() );
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
-#endif
     //pHost->mIRCNick = ircNick->text();
     QString old_nick = mudlet::self()->mIrcNick;
     QString new_nick = ircNick->text();

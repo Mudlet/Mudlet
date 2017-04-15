@@ -1,3 +1,4 @@
+
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
@@ -34,16 +35,13 @@
 #include <QtEvents>
 #include "post_guard.h"
 
-#if QT_VERSION >= 0x040800
-    #ifdef __APPLE__
-        #include <OpenGL/glu.h>
-    #else
-        #include <GL/glu.h>
-    #endif
-#endif
-
 #include <math.h>
 
+#ifdef __APPLE__
+    #include <OpenGL/glu.h>
+#else
+    #include <GL/glu.h>
+#endif
 
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
