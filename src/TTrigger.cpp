@@ -106,6 +106,9 @@ TTrigger::TTrigger( const QString& name, QStringList regexList, QList<int> regex
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
 , mModuleMember(false)
+, mColorTriggerFgAnsi()
+, mColorTriggerBgAnsi()
+, mIsFolder()
 {
     setRegexCodeList( regexList, regexProperyList );
 }

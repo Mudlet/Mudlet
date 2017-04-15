@@ -491,7 +491,7 @@ class TLuaMainThread : public QThread
 
 public:
 
-  TLuaMainThread( TLuaInterpreter * pL ){ pLuaInterpreter = pL;  }
+  TLuaMainThread( TLuaInterpreter * pL ) : exit() { pLuaInterpreter = pL;  }
 
 // Not Used:
 //  void run() override

@@ -45,7 +45,7 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-                          ActionUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
+                          ActionUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), mpToolBar(), mpEasyButtonBar(), mModuleMember() {;}
     std::list<TAction *>  getActionRootNodeList()   { QMutexLocker locker(& mActionUnitLock); return mActionRootNodeList; }
     TAction *             getAction( int id );
     TAction *            findAction(const QString & );

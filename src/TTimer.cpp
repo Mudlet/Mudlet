@@ -39,6 +39,7 @@ TTimer::TTimer( TTimer * parent, Host * pHost )
 , mIsTempTimer( false )
 , mpTimer( new QTimer )
 , mModuleMember(false)
+, mIsFolder()
 {
     mpTimer->stop();
 }
@@ -55,6 +56,7 @@ TTimer::TTimer(const QString& name, QTime time, Host * pHost )
 , mIsTempTimer( false )
 , mpTimer( new QTimer )
 , mModuleMember(false)
+, mIsFolder()
 {
     mpTimer->stop();
 }

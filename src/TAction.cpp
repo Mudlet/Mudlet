@@ -51,6 +51,14 @@ TAction::TAction( TAction * parent, Host * pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mModuleMember(false)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
+, mIsFolder()
+, mButtonRotation()
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 {
 }
 
@@ -71,6 +79,14 @@ TAction::TAction(const QString& name, Host * pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mModuleMember(false)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
+, mIsFolder()
+, mButtonRotation()
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 {
 }
 
