@@ -45,6 +45,7 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "glwidget.h"
+#include "XMLexport.h" 
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -2521,7 +2522,6 @@ int TLuaInterpreter::loadWindowLayout( lua_State *L ) {
     return 1;
 }
 
-#include "XMLexport.h"
 int TLuaInterpreter::saveProfile( lua_State *L ) {
     Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
     QString profile_name = mpHost->getName();
@@ -2536,36 +2536,16 @@ int TLuaInterpreter::saveProfile( lua_State *L ) {
     QFile file_xml( filename_xml );
     if( file_xml.open( QIODevice::WriteOnly ) )
     {
-        /*XMLexport writer( mpHost );
-        writer.exportHost( & file_xml );
-        file_xml.close();*/
-        mpHost->modulesToWrite.clear();
         XMLexport writer( mpHost );
         writer.exportHost( & file_xml );
         file_xml.close();
-        mpHost->saveModules(0);
-        if( mpHost->mpMap->mpRoomDB->size() > 0 )
-        {
-            QDir dir_map;
-            QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
-            QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-            if( ! dir_map.exists( directory_map ) )
-            {
-                dir_map.mkpath( directory_map );
-            }
-            QFile file_map( filename_map );
-            if ( file_map.open( QIODevice::WriteOnly ) )
-            {
-                QDataStream out( & file_map );
-                mpHost->mpMap->serialize( out );
-                file_map.close();
-            }
-        }
+        mpHost->saveModules(1);
+        
         return 0;
     }
     else
     {
-        QString errStr = "ERROR: Failed to save profile '"+profile_name+"' to location "+filename_xml+" because of the following error: "+file_xml.errorString();
+        QString errStr = "saveProfile() Failed to save profile '"+profile_name+"' due to file error: "+file_xml.errorString();
         lua_pushstring( L, errStr.toStdString().c_str() );
         lua_error( L );
         return 1;
