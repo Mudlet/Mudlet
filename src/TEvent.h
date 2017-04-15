@@ -25,9 +25,7 @@
 
 #include "pre_guard.h"
 #include <QDebug>
-#if QT_VERSION >= 0x050100
 #include <QDebugStateSaver>
-#endif
 #include <QList>
 #include <QStringList>
 #include "post_guard.h"
@@ -48,9 +46,7 @@ public:
 // Note "inline" is REQUIRED:
 inline QDebug & operator<<( QDebug & debug, const TEvent & event )
 {
-#if QT_VERSION >= 0x050100
     QDebugStateSaver saver(debug);
-#endif
     const int argCount = event.mArgumentList.count();
     const int typeCount = event.mArgumentTypeList.count();
     int i = 0;
