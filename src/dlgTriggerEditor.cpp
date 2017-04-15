@@ -339,10 +339,10 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     connect( copyAction, SIGNAL(triggered()), this, SLOT( slot_copy_xml() ));
 
-    QAction * pasteAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-paste.png" ) ), tr("Paste (from XML)"), this);
+    QAction * pasteAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-paste.png" ) ), tr("Paste"), this);
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
-    pasteAction->setToolTip(tr("Pastes triggers/scripts/aliases/etc from XML."));
-    pasteAction->setStatusTip(tr("Pastes triggers/scripts/aliases/etc from XML."));
+    pasteAction->setToolTip(tr("Pastes triggers/scripts/aliases/etc from the clipboard."));
+    pasteAction->setStatusTip(tr("Pastes triggers/scripts/aliases/etc from the clipboard."));
 
     connect( pasteAction, SIGNAL(triggered()), this, SLOT( slot_paste_xml() ));
 
