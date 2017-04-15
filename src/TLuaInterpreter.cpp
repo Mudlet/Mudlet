@@ -12305,13 +12305,14 @@ int TLuaInterpreter::sendIrc( lua_State * L )
         return 1;
 
     } else {
+        /* May not be needed with communi 1.2.1+
         // wait until the server has welcomed our client. Return 0 for error.
         if( ! mudlet::self()->mpIRC->mIrcWelcomed ) {
             qDebug() << "Lua::sendIrc() Tried to send but not yet welcomed.";
             
             lua_pushinteger( L, 0 );
             return 1;
-        }
+        } /**/
         
         // send the message.
         //mudlet::self()->mpIRC->session->cmdMessage( chan, txt );

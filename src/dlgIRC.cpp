@@ -47,7 +47,6 @@ dlgIRC::dlgIRC( Host * pH ) : mpHost( pH )
     
     mIsOper = false;
     eventOperCount = 0;
-    mIrcWelcomed = false;
     mIrcConnected = false;
     ircReconnectCalled = false;
     ircReconnectActive = false;
@@ -826,7 +825,6 @@ void dlgIRC::sendMsg()
 void dlgIRC::onConnected() {
     qDebug()<<"dlgIRC::onConnected() -- Connection should be ready now.";
     ircReconnectCalled = false;
-    mIrcWelcomed = false;
     mIrcConnected = true;
     ircReconnectCur = 0;
     
@@ -840,7 +838,6 @@ void dlgIRC::onConnected() {
 
 void dlgIRC::onDisconnected(){
     mIrcConnected = false;
-    mIrcWelcomed = false;
     mIsOper = false;
     mChannels.clear();
     qDebug()<<"dlgIRC::onDisconnected() :: reconnect_pending:"<< ircReconnectCalled ;
@@ -852,16 +849,6 @@ void dlgIRC::onDisconnected(){
         ircReconnectCalled = false;
         reconnect();
     }
-}
-
-// This may be depricated with communi 1.2.1
-void dlgIRC::slot_welcomed() {
-    
-    dlgWriteMsg( "<font color=#aa00aa>Auto Joining & Setting Nick...</font>", "" );
-    ircJoin( mChannel );
-    setNick( mNick );
-    
-    mIrcWelcomed = true;
 }
 
 void dlgIRC::hardReconnect() {

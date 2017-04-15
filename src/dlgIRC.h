@@ -58,7 +58,6 @@ public:
     quint16 mHostPort;
     bool mUseIrcClient;
     bool mIrcConnected;
-    bool mIrcWelcomed;
     bool ircReconnectCalled;
     bool ircReconnectActive;
     int mIrcSocketState;
@@ -138,8 +137,6 @@ private:
     void irc_gotMsg( QString, QString, QString );
     void irc_gotMsg2( QString a, QStringList c );
     void irc_gotMsg3( QString a, uint code, QStringList c );
-    
-    void slot_welcomed();
     
     void slot_joined(QString, QString);
     void slot_parted(QString, QString, QString);
