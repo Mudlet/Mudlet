@@ -733,7 +733,11 @@ void dlgIRC::sendMsg()
         qDebug() << "dlgIRC::sendMsg( '/topic' ) To: "<< target << "  str: " << mStr ; 
         
         //session->topic( target, mStr );
-        session->sendCommand( IrcCommand::createTopic(target, mStr ) );
+        if( mStr == "" ) {
+            session->sendCommand( IrcCommand::createTopic(target) );
+        } else {
+            session->sendCommand( IrcCommand::createTopic(target, mStr) );
+        }
         
         return;
     }
@@ -1152,12 +1156,15 @@ void dlgIRC::ircTopic( QString target, QString newTopic = "" ) {
     eventTopicActiveFor.append( target );
     
     //session->topic( target, newTopic );
-    session->sendCommand( IrcCommand::createTopic(target, newTopic ) );
-    
+    if( newTopic == "" ) {
+        session->sendCommand( IrcCommand::createTopic(target) );
+    } else {
+        session->sendCommand( IrcCommand::createTopic(target, newTopic ) );
+    }
     // get new topic if we set one.  This ensures the event is raised.
     if( newTopic.size() > 0 ) {
         //session->topic( target );
-        session->sendCommand( IrcCommand::createTopic(target ) );
+        session->sendCommand( IrcCommand::createTopic(target) );
     }
 }
 
@@ -1180,6 +1187,8 @@ void dlgIRC::ircMode( QString target, QString newModes = "" ) {
 
 void dlgIRC::onMessageReceived( IrcMessage * msg ) 
 {
+    qDebug() << "dlgIRC::onMessageReceived() - " << msg->toString();
+    
     switch( msg->type() )
     {
     case IrcMessage::Type::Join: {
