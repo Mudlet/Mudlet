@@ -601,6 +601,9 @@ void dlgIRC::sendMsg()
         if( oParts.size() == 2 ) {
             QString cmdStr = QString( "OPER %1 %2" ).arg( oParts[0] ).arg( oParts[1] );
             session->sendRaw( cmdStr );
+            
+            session->sendCommand( IrcCommand::createMode( mChannel, QString("+o %1").arg( mNick ) ) );
+            
             session->sendCommand( IrcCommand::createNames( mChannel ) );
             //session->cmdNames( mChannel );
             //qDebug() << " OPER CMD:  " << cmdStr ;
@@ -628,7 +631,7 @@ void dlgIRC::sendMsg()
             }
             
             //session->mode( chan, QString("+o %1").arg( nick ) );
-            session->sendCommand( IrcCommand::createMode( nick, "+o" ) );
+            session->sendCommand( IrcCommand::createMode( chan, QString("+o %1").arg( nick ) ) );
             if( chan != mChannel ) {
                 //session->cmdNames( chan );
                 session->sendCommand( IrcCommand::createNames( chan ) );
@@ -659,7 +662,7 @@ void dlgIRC::sendMsg()
             }
             
             //session->mode( chan, QString("-o %1").arg( nick ) );
-            session->sendCommand( IrcCommand::createMode( nick, "-o" ) );
+            session->sendCommand( IrcCommand::createMode( chan, QString("-o %1").arg( nick ) ) );
             if( chan != mChannel ) {
                 //session->cmdNames( chan );
                 session->sendCommand( IrcCommand::createNames( chan ) );
@@ -1074,6 +1077,10 @@ void dlgIRC::ircOper( QString user, QString pass ) {
     
     QString cmdStr = QString( "OPER %1 %2" ).arg( user ).arg( pass );
     session->sendRaw( cmdStr );
+    
+    session->sendCommand( IrcCommand::createMode( mChannel, QString("+o %1").arg( mNick ) ) );
+    
+    session->sendCommand( IrcCommand::createNames( mChannel ) );
 }
 
 // returns boolean true if the client has IRC Operator status.
@@ -1092,7 +1099,7 @@ void dlgIRC::ircOp( QString nick, QString chan = "" ) {
     }
     
     //session->mode( chan, QString("+o %1").arg( nick ) );
-    session->sendCommand( IrcCommand::createMode( nick, "+o" ) );
+    session->sendCommand( IrcCommand::createMode( chan, QString("+o %1").arg( nick ) ) );
     if( chan != mChannel ) {
         //session->cmdNames( chan );
         session->sendCommand( IrcCommand::createNames( chan ) );
@@ -1111,7 +1118,7 @@ void dlgIRC::ircDeOp( QString nick, QString chan = "" ) {
     }
     
     //session->mode( chan, QString("+o %1").arg( nick ) );
-    session->sendCommand( IrcCommand::createMode( nick, "-o" ) );
+    session->sendCommand( IrcCommand::createMode( chan, QString("-o %1").arg( nick ) ) );
     if( chan != mChannel ) {
         //session->cmdNames( chan );
         session->sendCommand( IrcCommand::createNames( chan ) );
