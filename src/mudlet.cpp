@@ -152,6 +152,7 @@ mudlet::mudlet()
     // On at least my platform (Linux) the status bar does not seem to exist
     // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar( this );
+    mpMainToolBar->setObjectName("mpMainToolBar"); // added name to allow for window layout saving, as per docs here: http://doc.qt.io/qt-5/qmainwindow.html#saveState
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
@@ -998,6 +999,8 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
     if( ! dockWindowMap.contains( name ) )
     {
         auto pD = new QDockWidget;
+        // added name to allow for window layout saving, as per docs here: http://doc.qt.io/qt-5/qmainwindow.html#saveState
+        pD->setObjectName( QString("ConsoleWindow_%1").arg(name) ); 
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
