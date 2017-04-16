@@ -1169,7 +1169,7 @@ bool Host::installPackage( const QString& fileName, int module )
     // Thus the package itself can auto-initialize without having to reopen the
     // session.
     TEvent installEvent;
-    installEvent.mArgumentList.append( tr( "sysInstallPackageEvent", "This string may not want/need to be translated" ) );
+    installEvent.mArgumentList.append( QStringLiteral( "sysInstallPackageEvent" ) );
     installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     installEvent.mArgumentList.append( packageName );
     installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -1247,7 +1247,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     // So the package itself can eliminate what you need without having to
     // reopen the session.
     TEvent uninstallEvent;
-    uninstallEvent.mArgumentList.append( tr( "sysUninstallPackageEvent", "This string may not want/need to be translated" ) );
+    uninstallEvent.mArgumentList.append( QStringLiteral( "sysUninstallPackageEvent" ) );
     uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     uninstallEvent.mArgumentList.append( packageName );
     uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
