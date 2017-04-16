@@ -99,7 +99,7 @@ public slots:
     void loadMap();
     void saveMap();
     void copyMap();
-    void slot_chooseProfilesChanged(QAction *);
+    void slot_chooseProfilesChanged(QAction*);
 
     // Save.
     void slot_save_and_exit();
