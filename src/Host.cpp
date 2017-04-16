@@ -1147,6 +1147,38 @@ bool Host::installPackage( const QString& fileName, int module )
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
+
+    // This event was inspired by "Zoilder" in a Mudlet derivative in 2015
+    // Their version appended the packageName and "Event" to
+    // "sysInstallPackage", but I have revised it to pass the packageName as a
+    // separate argument.
+    // Due to the range of circumstances in which this method can be called
+    // I have also included:
+    // * the invoking "module" argument in case it is necesary to differentiate
+    // the way in which the installPackage code is called - I think this could
+    // be a factor in some use cases that Zoilder would not have experienced in
+    // their usage.
+    // * the original package filename
+    //
+    // The originators comment was (ES):
+    // Se ejecuta el evento que indica que se ha instalado el paquete.
+    // Así el propio paquete puede auto-inicializarse sin tener que reabrir la
+    // sesión.
+    // which I think translates to (EN):
+    // The event that indicates that the package is installed runs.
+    // Thus the package itself can auto-initialize without having to reopen the
+    // session.
+    TEvent installEvent;
+    installEvent.mArgumentList.append( tr( "sysInstallPackageEvent", "This string may not want/need to be translated" ) );
+    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    installEvent.mArgumentList.append( packageName );
+    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    installEvent.mArgumentList.append( QString::number( module ) );
+    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+    installEvent.mArgumentList.append( fileName );
+    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    raiseEvent( installEvent );
+
     return true;
 }
 
@@ -1192,15 +1224,42 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     if (module)
     {
-        if( ! mInstalledModules.contains( packageName ) ) return false;
+        if( ! mInstalledModules.contains( packageName ) )
+        {
+            return false;
+        }
     }
     else
     {
-        if( ! mInstalledPackages.contains( packageName ) ) return false;
+        if( ! mInstalledPackages.contains( packageName ) )
+        {
+            return false;
+        }
     }
+
+    // Like "sysInstallPackageEvent" this was inspired by Zoilder (2015)
+    // Their original comment was (ES):
+    // Se ejecuta el evento que indica que se va a desinstalar el paquete.
+    // Así el propio paquete puede eliminar lo que necesite sin tener que
+    // reabrir la sesión.
+    // Which translates to (EN):
+    // The event that indicates that the package is to be uninstalled is run.
+    // So the package itself can eliminate what you need without having to
+    // reopen the session.
+    TEvent uninstallEvent;
+    uninstallEvent.mArgumentList.append( tr( "sysUninstallPackageEvent", "This string may not want/need to be translated" ) );
+    uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    uninstallEvent.mArgumentList.append( packageName );
+    uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+    uninstallEvent.mArgumentList.append( QString::number( module ) );
+    uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+    raiseEvent( uninstallEvent );
+
     int dualInstallations=0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
+    {
         dualInstallations=1;
+    }
     //we check for the module=3 because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
     if( mpEditorDialog && module != 3 )
@@ -1220,7 +1279,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         mInstalledModules.remove( packageName );
         mActiveModules.removeAll(packageName);
         if ( module == 2 )
+        {
             return true;
+        }
         //if module == 1/3, we actually uninstall it.
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations)
