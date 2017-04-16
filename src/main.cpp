@@ -421,6 +421,8 @@ int main(int argc, char *argv[])
         splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
         app->processEvents();
     }
+    else
+        mudlet::start();
 
     mudlet::debugMode = false;
     FontManager fm;
