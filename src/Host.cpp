@@ -123,7 +123,7 @@ Host::Host( int port, const QString& hostname, const QString& login, const QStri
 , mFgColor           (Qt::lightGray)
 , mBgColor           (Qt::black)
 , mCommandBgColor    (Qt::black)
-, mCommandFgColor    (QColor(113, 113, 0))
+, mCommandFgColor    (Qt::darkYellow)
 , mBlack_2             (Qt::black)
 , mLightBlack_2        (Qt::darkGray)
 , mRed_2               (Qt::darkRed)
