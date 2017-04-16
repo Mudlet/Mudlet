@@ -1983,7 +1983,7 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
 
     check_for_mappingscript();
     TEvent mapOpenEvent;
-    mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
+    mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent( mapOpenEvent );
 }
@@ -2267,7 +2267,7 @@ void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyV
     packagesToInstallList.clear();
 
     TEvent event;
-    event.mArgumentList.append( "sysLoadEvent" );
+    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent( event );
 

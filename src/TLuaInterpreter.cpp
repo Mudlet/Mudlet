@@ -167,80 +167,80 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
     }
 
     QString localFileName = downloadMap.value( reply );
-    TEvent e;
+    TEvent event;
     if( reply->error() != QNetworkReply::NoError ) {
-        e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e.mArgumentList << reply->errorString();
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e.mArgumentList << localFileName;
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QLatin1String("sysDownloadError");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->errorString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << localFileName;
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
         reply->deleteLater();
         downloadMap.remove( reply );
-        pHost->raiseEvent( e );
+        pHost->raiseEvent( event );
         return;
     }
     else { // reply IS ok...
         QFile localFile( localFileName );
         if( ! localFile.open( QFile::WriteOnly ) ) {
-            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "unableToOpenLocalFileForWriting", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr( "unableToOpenLocalFileForWriting", "This string might not need to be translated!" );
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
             downloadMap.remove( reply );
-            pHost->raiseEvent( e );
+            pHost->raiseEvent( event );
             return;
         }
 
         qint64 bytesWritten = localFile.write( reply->readAll() );
         if( bytesWritten == -1 ) {
-            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "unableToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr( "unableToWriteLocalFile", "This string might not need to be translated!" );
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
             downloadMap.remove( reply );
-            pHost->raiseEvent( e );
+            pHost->raiseEvent( event );
             return;
         }
 
         localFile.flush();
 
         if( localFile.error() == QFile::NoError ) {
-            e.mArgumentList << "sysDownloadDone";
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << QString::number( bytesWritten );
-            e.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+            event.mArgumentList << QStringLiteral("sysDownloadDone");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QString::number( bytesWritten );
+            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
         }
         else {
-            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFile.errorString();
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFile.errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         }
 
         localFile.close();
         reply->deleteLater();
         downloadMap.remove( reply );
-        pHost->raiseEvent( e );
+        pHost->raiseEvent( event );
     }
 }
 
@@ -3265,202 +3265,322 @@ int TLuaInterpreter::setBackgroundImage( lua_State *L )
 
 int TLuaInterpreter::setLabelClickCallback( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelClickCallback( pHost, text, name, pE );
+    if(! pHost) {
+        lua_pushstring( L, tr( "setLabelClickCallback: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
 
-    return 0;
+    QString labelName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "setLabelClickCallback: bad argument #1 type (label name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        labelName = QString::fromUtf8( lua_tostring( L, 1 ) );
+        if( labelName.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setLabelClickCallback: bad argument #1 value (label name cannot be an empty string.)" )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setLabelClickCallback: bad argument #2 type (event name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        eventName = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    TEvent event;
+    int n = lua_gettop( L );
+    for( int i = 3; i <= n; ++i ) {
+        if( lua_isnumber( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) ) {
+            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+        else if( lua_isboolean( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        }
+        else if( lua_isnil( L, i ) ) {
+            event.mArgumentList.append( QString() );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else {
+            lua_pushstring( L, tr( "setLabelClickCallback: bad argument #%1 type (boolean, number, string or nil\n"
+                                   "expected, got a %2!)" )
+                            .arg( i )
+                            .arg( luaL_typename( L, i ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    if( L, mudlet::self()->setLabelClickCallback( pHost, labelName, eventName, event ) ) {
+        lua_pushboolean( L, true );
+        return 1;
+    } else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setLabelClickCallback: bad argument #1 value (label name \"%1\" not found.)" )
+                        .arg( labelName )
+                        .toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelReleaseCallback( pHost, text, name, pE );
+    if(! pHost) {
+        lua_pushstring( L, tr( "setLabelReleaseCallback: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
 
-    return 0;
+    QString labelName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "setLabelReleaseCallback: bad argument #1 type (label name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        labelName = QString::fromUtf8( lua_tostring( L, 1 ) );
+        if( labelName.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setLabelReleaseCallback: bad argument #1 value (label name cannot be an empty string.)" )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setLabelReleaseCallback: bad argument #2 type (event name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        eventName = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    TEvent event;
+    int n = lua_gettop( L );
+    for( int i = 3; i <= n; ++i ) {
+        if( lua_isnumber( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) ) {
+            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+        else if( lua_isboolean( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        }
+        else if( lua_isnil( L, i ) ) {
+            event.mArgumentList.append( QString() );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else {
+            lua_pushstring( L, tr( "setLabelReleaseCallback: bad argument #%1 type (boolean, number, string or nil\n"
+                                   "expected, got a %2!)" )
+                            .arg( i )
+                            .arg( luaL_typename( L, i ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    if( L, mudlet::self()->setLabelReleaseCallback( pHost, labelName, eventName, event ) ) {
+        lua_pushboolean( L, true );
+        return 1;
+    } else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setLabelReleaseCallback: bad argument #1 value (label name \"%1\" not found.)" )
+                        .arg( labelName )
+                        .toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelOnEnter: wrong first argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelOnEnter: wrong second argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelOnEnter( pHost, text, name, pE );
+    if(! pHost) {
+        lua_pushstring( L, tr( "setLabelOnEnter: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
 
-    return 0;
+    QString labelName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "setLabelOnEnter: bad argument #1 type (label name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        labelName = QString::fromUtf8( lua_tostring( L, 1 ) );
+        if( labelName.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setLabelOnEnter: bad argument #1 value (label name cannot be an empty string.)" )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setLabelOnEnter: bad argument #2 type (event name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        eventName = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    TEvent event;
+    int n = lua_gettop( L );
+    for( int i = 3; i <= n; ++i ) {
+        if( lua_isnumber( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) ) {
+            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+        else if( lua_isboolean( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        }
+        else if( lua_isnil( L, i ) ) {
+            event.mArgumentList.append( QString() );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else {
+            lua_pushstring( L, tr( "setLabelOnEnter: bad argument #%1 type (boolean, number, string or nil expected,"
+                                   "got a %2!)" )
+                            .arg( i )
+                            .arg( luaL_typename( L, i ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    if( L, mudlet::self()->setLabelOnEnter( pHost, labelName, eventName, event ) ) {
+        lua_pushboolean( L, true );
+        return 1;
+    } else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setLabelOnEnter: bad argument #1 value (label name \"%1\" not found.)" )
+                        .arg( labelName )
+                        .toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelOnLeave: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelOnLeave: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelOnLeave( pHost, text, name, pE );
+    if(! pHost) {
+        lua_pushstring( L, tr( "setLabelOnLeave: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
 
-    return 0;
+    QString labelName;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushstring( L, tr( "setLabelOnLeave: bad argument #1 type (label name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 1 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        labelName = QString::fromUtf8( lua_tostring( L, 1 ) );
+        if( labelName.isEmpty() ) {
+            lua_pushnil( L );
+            lua_pushstring( L, tr( "setLabelOnLeave: bad argument #1 value (label name cannot be an empty string.)" )
+                            .toUtf8().constData() );
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushstring( L, tr( "setLabelOnLeave: bad argument #2 type (event name as string expected, got %1!)" )
+                        .arg( luaL_typename( L, 2 ) )
+                        .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    } else {
+        eventName = QString::fromUtf8( lua_tostring( L, 2 ) );
+    }
+
+    TEvent event;
+    int n = lua_gettop( L );
+    for( int i = 3; i <= n; ++i ) {
+        if( lua_isnumber( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_tonumber( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        }
+        else if( lua_isstring( L, i ) ) {
+            event.mArgumentList.append( QString::fromUtf8( lua_tostring( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        }
+        else if( lua_isboolean( L, i ) ) {
+            event.mArgumentList.append( QString::number( lua_toboolean( L, i ) ) );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_BOOLEAN );
+        }
+        else if( lua_isnil( L, i ) ) {
+            event.mArgumentList.append( QString() );
+            event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
+        }
+        else {
+            lua_pushstring( L, tr( "setLabelOnLeave: bad argument type #%1 (boolean, number, string or nil expected,"
+                                   "got a %2!)" )
+                            .arg( i )
+                            .arg( luaL_typename( L, i ) )
+                            .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+    }
+
+    if( L, mudlet::self()->setLabelOnLeave( pHost, labelName, eventName, event ) ) {
+        lua_pushboolean( L, true );
+        return 1;
+    } else {
+        lua_pushnil( L );
+        lua_pushstring( L, tr( "setLabelOnLeave: bad argument #1 value (label name \"%1\" not found.)" )
+                        .arg( labelName )
+                        .toUtf8().constData() );
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setTextFormat( lua_State * L )
@@ -12308,7 +12428,7 @@ void TLuaInterpreter::setAtcpTable(const QString & var, const QString & arg )
 {
     lua_State * L = pGlobalLua;
     lua_getglobal( L, "atcp" ); //defined in LuaGlobal.lua
-    lua_pushstring( L, var.toLatin1().data() );
+    lua_pushstring( L, var.toLatin1().data() ); // CHECK: Does ATCP use utf-8?
     lua_pushstring( L, arg.toLatin1().data() );
     lua_rawset( L, -3 );
     lua_pop( L, 1 );
@@ -12643,8 +12763,7 @@ void TLuaInterpreter::setChannel102Table( int & var, int & arg )
     lua_pop( L, 1 );
 
     TEvent event;
-    QString e = "channel102Message";
-    event.mArgumentList.append( e );
+    event.mArgumentList.append( QStringLiteral("channel102Message") );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     event.mArgumentList.append( QString::number(var) );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );

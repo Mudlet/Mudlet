@@ -1156,30 +1156,30 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
     if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
     {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMousePressEvent" );
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append( QLatin1String("sysWindowMousePressEvent") );
         switch( event->button() )
         {
         case Qt::LeftButton:
-            me.mArgumentList.append( QString::number(1) );
+            mudletEvent.mArgumentList.append( QString::number(1) );
             break;
         case Qt::RightButton:
-            me.mArgumentList.append( QString::number(2) );
+            mudletEvent.mArgumentList.append( QString::number(2) );
             break;
         case Qt::MidButton:
-            me.mArgumentList.append( QString::number(3) );
+            mudletEvent.mArgumentList.append( QString::number(3) );
             break;
-        default:
-            me.mArgumentList.append( 0 );
+        default: // TODO: What about those of us with more than three mouse buttons?
+            mudletEvent.mArgumentList.append( 0 );
             break;
         }
-        me.mArgumentList.append( QString::number(event->x()) );
-        me.mArgumentList.append( QString::number(event->y()) );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        mudletEvent.mArgumentList.append( QString::number(event->x()) );
+        mudletEvent.mArgumentList.append( QString::number(event->y()) );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mpHost->raiseEvent( mudletEvent );
     }
     if( event->button() == Qt::LeftButton )
     {
@@ -1536,30 +1536,30 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
     }
     if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
     {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMouseReleaseEvent" );
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append( QLatin1String("sysWindowMouseReleaseEvent") );
         switch( event->button() )
         {
         case Qt::LeftButton:
-            me.mArgumentList.append( QString::number(1) );
+            mudletEvent.mArgumentList.append( QString::number(1) );
             break;
         case Qt::RightButton:
-            me.mArgumentList.append( QString::number(2) );
+            mudletEvent.mArgumentList.append( QString::number(2) );
             break;
         case Qt::MidButton:
-            me.mArgumentList.append( QString::number(3) );
+            mudletEvent.mArgumentList.append( QString::number(3) );
             break;
         default:
-            me.mArgumentList.append( QString::number(0) );
+            mudletEvent.mArgumentList.append( QString::number(0) );
             break;
         }
-        me.mArgumentList.append( QString::number(event->x()) );
-        me.mArgumentList.append( QString::number(event->y()) );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        mudletEvent.mArgumentList.append( QString::number(event->x()) );
+        mudletEvent.mArgumentList.append( QString::number(event->y()) );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mudletEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
+        mpHost->raiseEvent( mudletEvent );
     }
 }
 

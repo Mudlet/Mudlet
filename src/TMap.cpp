@@ -2391,7 +2391,7 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
 
                     if( readXmlMapFile( file ) ) {
                         TEvent mapDownloadEvent;
-                        mapDownloadEvent.mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
+                        mapDownloadEvent.mArgumentList.append( QLatin1String( "sysMapDownloadEvent" ) );
                         mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
                         pHost->raiseEvent( mapDownloadEvent );
                     }
