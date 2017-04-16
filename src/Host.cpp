@@ -1148,26 +1148,6 @@ bool Host::installPackage( const QString& fileName, int module )
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
-    // This event was inspired by "Zoilder" in a Mudlet derivative in 2015
-    // Their version appended the packageName and "Event" to
-    // "sysInstallPackage", but I have revised it to pass the packageName as a
-    // separate argument.
-    // Due to the range of circumstances in which this method can be called
-    // I have also included:
-    // * the invoking "module" argument in case it is necesary to differentiate
-    // the way in which the installPackage code is called - I think this could
-    // be a factor in some use cases that Zoilder would not have experienced in
-    // their usage.
-    // * the original package filename
-    //
-    // The originators comment was (ES):
-    // Se ejecuta el evento que indica que se ha instalado el paquete.
-    // Así el propio paquete puede auto-inicializarse sin tener que reabrir la
-    // sesión.
-    // which I think translates to (EN):
-    // The event that indicates that the package is installed runs.
-    // Thus the package itself can auto-initialize without having to reopen the
-    // session.
     TEvent installEvent;
     installEvent.mArgumentList.append( QStringLiteral( "sysInstallPackageEvent" ) );
     installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -1237,15 +1217,6 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         }
     }
 
-    // Like "sysInstallPackageEvent" this was inspired by Zoilder (2015)
-    // Their original comment was (ES):
-    // Se ejecuta el evento que indica que se va a desinstalar el paquete.
-    // Así el propio paquete puede eliminar lo que necesite sin tener que
-    // reabrir la sesión.
-    // Which translates to (EN):
-    // The event that indicates that the package is to be uninstalled is run.
-    // So the package itself can eliminate what you need without having to
-    // reopen the session.
     TEvent uninstallEvent;
     uninstallEvent.mArgumentList.append( QStringLiteral( "sysUninstallPackageEvent" ) );
     uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
