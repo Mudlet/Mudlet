@@ -777,76 +777,76 @@ void GLWidget::paintGL()
                         switch( env )
                         {
                         case 1:
-                            glColor4b(128,50,50,200);
+                            glColor4ub(128,50,50,200);
                             mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 2:
-                            glColor4b(128,128,50, 200);
+                            glColor4ub(128,128,50, 200);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 3:
-                            glColor4b(50,128,50,200);
+                            glColor4ub(50,128,50,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 4:
-                            glColor4b(50,50,128,200);
+                            glColor4ub(50,50,128,200);
                             mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 5:
-                            glColor4b(128,50,128,200);
+                            glColor4ub(128,50,128,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 6:
-                            glColor4b(50,128,128,200);
+                            glColor4ub(50,128,128,200);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 7:
-                            glColor4b(52,38,78,200);
+                            glColor4ub(52,38,78,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 8:
-                            glColor4b(65, 55, 35, 200);
+                            glColor4ub(65, 55, 35, 200);
                             mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 9:
-                            glColor4b(175,50,50,200);
+                            glColor4ub(175,50,50,200);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 10:
-                            glColor4b(255,255,50,200);
+                            glColor4ub(255,255,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
                         case 11:
-                            glColor4b(50,175,175,200);
+                            glColor4ub(50,175,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 12:
-                            glColor4b(175,175,50,200);
+                            glColor4ub(175,175,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 13:
-                            glColor4b(175,50,175,200);
+                            glColor4ub(175,50,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 14:
-                            glColor4b(50,175,50,200);
+                            glColor4ub(50,175,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 15:
-                            glColor4b(50,50,175,200);
+                            glColor4ub(50,50,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         default: //user defined room color
                             if( ! mpMap->customEnvColors.contains(env) ) break;
                             QColor &_c = mpMap->customEnvColors[env];
-                            glColor4b(_c.red(),_c.green(),_c.blue(),25);
+                            glColor4ub(_c.red(),_c.green(),_c.blue(),25);
                             mc3[0]=_c.redF();
                             mc3[1]=_c.greenF();
                             mc3[2]=_c.blueF();
@@ -1128,76 +1128,76 @@ void GLWidget::paintGL()
                         switch( env )
                         {
                         case 1:
-                            glColor4b(128,50,50,2);
+                            glColor4ub(128,50,50,2);
                             mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 2:
-                            glColor4b(128,128,50, 2);
+                            glColor4ub(128,128,50, 2);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 3:
-                            glColor4b(50,128,50,2);
+                            glColor4ub(50,128,50,2);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 4:
-                            glColor4b(50,50,128,2);
+                            glColor4ub(50,50,128,2);
                             mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 5:
-                            glColor4b(128,50,128,2);
+                            glColor4ub(128,50,128,2);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 6:
-                            glColor4b(50,128,128,2);
+                            glColor4ub(50,128,128,2);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 7:
-                            glColor4b(52,38,78,2);
+                            glColor4ub(52,38,78,2);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 8:
-                            glColor4b(65, 55, 35, 2);
+                            glColor4ub(65, 55, 35, 2);
                             mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 9:
-                            glColor4b(175,50,50,2);
+                            glColor4ub(175,50,50,2);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 10:
-                            glColor4b(255,255,50,2);
+                            glColor4ub(255,255,50,2);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
                         case 11:
-                            glColor4b(50,175,175,2);
+                            glColor4ub(50,175,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 12:
-                            glColor4b(175,175,50,2);
+                            glColor4ub(175,175,50,2);
                             mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 13:
-                            glColor4b(175,50,175,2);
+                            glColor4ub(175,50,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 14:
-                            glColor4b(50,175,50,2);
+                            glColor4ub(50,175,50,2);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 15:
-                            glColor4b(50,50,175,2);
+                            glColor4ub(50,50,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         default: //user defined room color
                             if( ! mpMap->customEnvColors.contains(env) ) break;
                             QColor &_c = mpMap->customEnvColors[env];
-                            glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                            glColor4ub(_c.red(),_c.green(),_c.blue(),255);
                             mc3[0]=_c.redF();
                             mc3[1]=_c.greenF();
                             mc3[2]=_c.blueF();
@@ -1469,76 +1469,76 @@ void GLWidget::paintGL()
                 switch( env )
                 {
                 case 1:
-                    glColor4b(128,50,50,2);
+                    glColor4ub(128,50,50,2);
                     mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 2:
-                    glColor4b(128,128,50, 2);
+                    glColor4ub(128,128,50, 2);
                     mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
                 case 3:
-                    glColor4b(50,128,50,2);
+                    glColor4ub(50,128,50,2);
                     mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 4:
-                    glColor4b(50,50,128,2);
+                    glColor4ub(50,50,128,2);
                     mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 5:
-                    glColor4b(128,50,128,2);
+                    glColor4ub(128,50,128,2);
                     mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
                 case 6:
-                    glColor4b(50,128,128,2);
+                    glColor4ub(50,128,128,2);
                     mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                     break;
                 case 7:
-                    glColor4b(52,38,78,2);
+                    glColor4ub(52,38,78,2);
                     mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                     break;
                 case 8:
-                    glColor4b(65, 55, 35, 2);
+                    glColor4ub(65, 55, 35, 2);
                     mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 9:
-                    glColor4b(175,50,50,2);
+                    glColor4ub(175,50,50,2);
                     mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 10:
-                    glColor4b(255,255,50,2);
+                    glColor4ub(255,255,50,2);
                     mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                     break;
                 case 11:
-                    glColor4b(50,175,175,2);
+                    glColor4ub(50,175,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 12:
-                    glColor4b(175,175,50,2);
+                    glColor4ub(175,175,50,2);
                     mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 13:
-                    glColor4b(175,50,175,2);
+                    glColor4ub(175,50,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
                 case 14:
-                    glColor4b(50,175,50,2);
+                    glColor4ub(50,175,50,2);
                     mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
                 case 15:
-                    glColor4b(50,50,175,2);
+                    glColor4ub(50,50,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
                 default: //user defined room color
                     if( ! mpMap->customEnvColors.contains(env) ) break;
                     QColor &_c = mpMap->customEnvColors[env];
-                    glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                    glColor4ub(_c.red(),_c.green(),_c.blue(),255);
                     mc3[0]=_c.redF();
                     mc3[1]=_c.greenF();
                     mc3[2]=_c.blueF();
@@ -1714,76 +1714,76 @@ void GLWidget::paintGL()
             switch( env )
             {
             case 1:
-                glColor4b(128,50,50,255);
+                glColor4ub(128,50,50,255);
                 mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 2:
-                glColor4b(128,128,50, 255);
+                glColor4ub(128,128,50, 255);
                 mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 3:
-                glColor4b(50,128,50,255);
+                glColor4ub(50,128,50,255);
                 mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 4:
-                glColor4b(50,50,128,255);
+                glColor4ub(50,50,128,255);
                 mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 5:
-                glColor4b(128,50,128,255);
+                glColor4ub(128,50,128,255);
                 mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 6:
-                glColor4b(50,128,128,255);
+                glColor4ub(50,128,128,255);
                 mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 7:
-                glColor4b(52,38,78,255);
+                glColor4ub(52,38,78,255);
                 mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 8:
-                glColor4b(65, 55, 35, 255);
+                glColor4ub(65, 55, 35, 255);
                 mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 9:
-                glColor4b(175,50,50,255);
+                glColor4ub(175,50,50,255);
                 mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 10:
-                glColor4b(255,255,50,255);
+                glColor4ub(255,255,50,255);
                 mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 11:
-                glColor4b(50,175,175,255);
+                glColor4ub(50,175,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 12:
-                glColor4b(175,175,50,255);
+                glColor4ub(175,175,50,255);
                 mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 13:
-                glColor4b(175,50,175,255);
+                glColor4ub(175,50,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 14:
-                glColor4b(50,175,50,255);
+                glColor4ub(50,175,50,255);
                 mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 15:
-                glColor4b(50,50,175,255);
+                glColor4ub(50,50,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
             default: //user defined room color
                 if( ! mpMap->customEnvColors.contains(env) ) break;
                 QColor &_c = mpMap->customEnvColors[env];
-                glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                glColor4ub(_c.red(),_c.green(),_c.blue(),255);
                 mc3[0]=_c.redF();
                 mc3[1]=_c.greenF();
                 mc3[2]=_c.blueF();
@@ -1876,7 +1876,7 @@ void GLWidget::paintGL()
             glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
             glEnd();
 
-            glColor4b(128,128,128,255);
+            glColor4ub(128,128,128,255);
 
 
             glBegin( GL_TRIANGLES );
