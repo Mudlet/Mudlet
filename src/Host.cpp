@@ -409,7 +409,7 @@ void Host::startSpeedWalk()
     int totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
     QString f = QStringLiteral("doSpeedWalk");
-    QString n = QStringLiteral("");
+    QString n = QString();
     mLuaInterpreter.call( f, n );
 }
 
