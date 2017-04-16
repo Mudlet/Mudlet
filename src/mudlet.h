@@ -61,7 +61,7 @@ class dlgIRC;
 
 class mudlet : public QMainWindow, public Ui::MainWindow
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
 
@@ -198,127 +198,125 @@ public:
 
 public slots:
 
-   void                          processEventLoopHack_timerRun();
-   void                          slot_mapper();
-   void                          slot_replayTimeChanged();
-   void                          slot_replaySpeedUp();
-   void                          slot_replaySpeedDown();
-   void                          toggleFullScreenView();
-   void                          slot_userToolBar_orientation_changed(Qt::Orientation);
-   void                          slot_show_about_dialog();
-   void                          slot_show_help_dialog_video();
-   void                          slot_show_help_dialog_forum();
-   void                          slot_show_help_dialog_irc();
-   void                          slot_show_help_dialog_download();
-   void                          slot_open_mappingscripts_page();
-   void                          slot_module_clicked(QTableWidgetItem*);
-   void                          slot_module_changed(QTableWidgetItem*);
-   void                          slot_multi_view();
-   void                          slot_stopAllTriggers();
-   void                          slot_userToolBar_hovered( QAction* pA );
-   void                          slot_connection_dlg_finnished( const QString& profile, int historyVersion );
-   void                          slot_timer_fires();
-   void                          slot_send_login();
-   void                          slot_send_pass();
-   void                          slot_replay();
-   void                          slot_disconnect();
-   void                          slot_notes();
-   void                          slot_reconnect();
-   void                          slot_close_profile_requested(int);
-   void                          startAutoLogin();
-   void                          slot_irc();
-   void                          slot_uninstall_package();
-   void                          slot_install_package();
-   void                          slot_package_manager();
-   void                          slot_package_exporter();
-   void                          slot_uninstall_module();
-   void                          slot_install_module();
-   void                          slot_module_manager();
-   void                          layoutModules();
-   void                          slot_help_module();
+    void processEventLoopHack_timerRun();
+    void slot_mapper();
+    void slot_replayTimeChanged();
+    void slot_replaySpeedUp();
+    void slot_replaySpeedDown();
+    void toggleFullScreenView();
+    void slot_userToolBar_orientation_changed(Qt::Orientation);
+    void slot_show_about_dialog();
+    void slot_show_help_dialog_video();
+    void slot_show_help_dialog_forum();
+    void slot_show_help_dialog_irc();
+    void slot_show_help_dialog_download();
+    void slot_open_mappingscripts_page();
+    void slot_module_clicked(QTableWidgetItem*);
+    void slot_module_changed(QTableWidgetItem*);
+    void slot_multi_view();
+    void slot_stopAllTriggers();
+    void slot_userToolBar_hovered(QAction* pA);
+    void slot_connection_dlg_finnished(const QString& profile, int historyVersion);
+    void slot_timer_fires();
+    void slot_send_login();
+    void slot_send_pass();
+    void slot_replay();
+    void slot_disconnect();
+    void slot_notes();
+    void slot_reconnect();
+    void slot_close_profile_requested(int);
+    void startAutoLogin();
+    void slot_irc();
+    void slot_uninstall_package();
+    void slot_install_package();
+    void slot_package_manager();
+    void slot_package_exporter();
+    void slot_uninstall_module();
+    void slot_install_module();
+    void slot_module_manager();
+    void layoutModules();
+    void slot_help_module();
 
 protected:
-
-   void                          closeEvent(QCloseEvent *event) override;
+    void closeEvent(QCloseEvent* event) override;
 
 signals:
 
-   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
-   void                         signal_profileMapReloadRequested( QList<QString> );
+    void signal_editorTextOptionsChanged(QTextOption::Flags);
+    void signal_profileMapReloadRequested(QList<QString>);
 
 private slots:
 
-   void                          slot_close_profile();
-   void                          slot_tab_changed( int );
-   void                          show_help_dialog();
-   void                          connectToServer();
-   void                          show_trigger_dialog();
-   void                          show_alias_dialog();
-   void                          show_script_dialog();
-   void                          show_timer_dialog();
-   void                          show_action_dialog();
-   void                          show_key_dialog();
-   void                          show_variable_dialog();
-   void                          show_options_dialog();
-   void                         slot_statusBarMessageChanged( QString );
+    void slot_close_profile();
+    void slot_tab_changed(int);
+    void show_help_dialog();
+    void connectToServer();
+    void show_trigger_dialog();
+    void show_alias_dialog();
+    void show_script_dialog();
+    void show_timer_dialog();
+    void show_action_dialog();
+    void show_key_dialog();
+    void show_variable_dialog();
+    void show_options_dialog();
+    void slot_statusBarMessageChanged(QString);
 
 private:
+    void goingDown() { mIsGoingDown = true; }
+    QMap<QString, TConsole*> mTabMap;
+    QWidget* mainPane;
 
-   void                          goingDown() { mIsGoingDown = true; }
-   QMap<QString, TConsole *>         mTabMap;
-   QWidget *                     mainPane;
-
-   QPointer<Host>                mpDefaultHost;
-   QQueue<QString>               tempLoginQueue;
-   QQueue<QString>               tempPassQueue;
-   QQueue<Host *>                tempHostQueue;
-   static                        QPointer<mudlet> _self;
-   QMap<QString, QDockWidget *>  dockWindowMap;
-   QMap<Host *, QToolBar *>      mUserToolbarMap;
+    QPointer<Host> mpDefaultHost;
+    QQueue<QString> tempLoginQueue;
+    QQueue<QString> tempPassQueue;
+    QQueue<Host*> tempHostQueue;
+    static QPointer<mudlet> _self;
+    QMap<QString, QDockWidget*> dockWindowMap;
+    QMap<Host*, QToolBar*> mUserToolbarMap;
 
 
-   QMenu *                       restoreBar;
-   bool                          mIsGoingDown;
+    QMenu* restoreBar;
+    bool mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
-   QAction *                     actionSpeedDisplay;
-   QAction *                     actionReplayTime;
-   QLabel *                      replaySpeedDisplay;
-   QLabel *                      replayTime;
-   QTimer *                      replayTimer;
-   QToolBar *                    replayToolBar;
+    QAction* actionReplaySpeedDown;
+    QAction* actionReplaySpeedUp;
+    QAction* actionSpeedDisplay;
+    QAction* actionReplayTime;
+    QLabel* replaySpeedDisplay;
+    QLabel* replayTime;
+    QTimer* replayTimer;
+    QToolBar* replayToolBar;
 
-   QAction *                     actionReconnect;
+    QAction* actionReconnect;
 
-   void                          check_for_mappingscript();
+    void check_for_mappingscript();
 
-   QListWidget *                 packageList;
-   QPushButton *                 uninstallButton;
-   QPushButton *                 installButton;
+    QListWidget* packageList;
+    QPushButton* uninstallButton;
+    QPushButton* installButton;
 
-   QTableWidget *                 moduleTable;
-   QPushButton *                 moduleUninstallButton;
-   QPushButton *                 moduleInstallButton;
-   QPushButton *                 moduleHelpButton;
+    QTableWidget* moduleTable;
+    QPushButton* moduleUninstallButton;
+    QPushButton* moduleInstallButton;
+    QPushButton* moduleHelpButton;
 
-   HostManager                   mHostManager;
-   QStatusBar *                 mpMainStatusBar;
+    HostManager mHostManager;
+    QStatusBar* mpMainStatusBar;
 
-   bool                         mIsToDisplayMapAuditErrorsToConsole;
+    bool mIsToDisplayMapAuditErrorsToConsole;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 
 class TConsoleMonitor : public QObject
- {
-     Q_OBJECT
+{
+    Q_OBJECT
 
 public:
     TConsoleMonitor(QObject* parent) : QObject(parent) {}
 
- protected:
-     bool eventFilter(QObject *obj, QEvent *event) override;
- };
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+};
 
 #endif // MUDLET_MUDLET_H

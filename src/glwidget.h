@@ -37,11 +37,11 @@ class GLWidget : public QGLWidget
     Q_OBJECT
 
 public:
-    GLWidget(QWidget *parent = 0);
-    GLWidget(TMap * pM, QWidget *parent = 0);
+    GLWidget(QWidget* parent = 0);
+    GLWidget(TMap* pM, QWidget* parent = 0);
     ~GLWidget();
-    void wheelEvent( QWheelEvent * e ) override;
-    void setViewCenter( int, int, int, int );
+    void wheelEvent(QWheelEvent* e) override;
+    void setViewCenter(int, int, int, int);
 
     bool is2DView;
 
@@ -73,7 +73,7 @@ public slots:
     void setYDist(int angle);
     void setZDist(int angle);
     void setScale(int);
-    void goRoom(const QString &);
+    void goRoom(const QString&);
     void fullView();
     void singleView();
     void increaseTop();
@@ -96,9 +96,9 @@ protected:
     void initializeGL() override;
     void paintGL() override;
     void resizeGL(int width, int height) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
 
 public:
     float xRot;
@@ -116,7 +116,7 @@ public:
 
     GLfloat rotTri, rotQuad;
     float mScale;
-    TMap * mpMap;
+    TMap* mpMap;
     int mTarget;
     QPointer<Host> mpHost;
     QMap<int, int> mQuads;

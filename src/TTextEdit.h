@@ -43,7 +43,7 @@ class QString;
 
 class TTextEdit : public QWidget
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
 
@@ -97,21 +97,21 @@ public:
     void              setIsMiniConsole(){ mIsMiniConsole = true; }
     void              copySelectionToClipboardHTML();
 
-    QColor            mBgColor;
-    int               mCursorY;
-    QFont             mDisplayFont;
-    QColor            mFgColor;
-    int               mFontAscent;
-    int               mFontDescent;
-    bool              mIsCommandPopup;
-    bool              mIsTailMode;
+    QColor mBgColor;
+    int mCursorY;
+    QFont mDisplayFont;
+    QColor mFgColor;
+    int mFontAscent;
+    int mFontDescent;
+    bool mIsCommandPopup;
+    bool mIsTailMode;
     QMap<QString, QString> mPopupCommands;
-    int               mScrollVector;
-    QRegion           mSelectedRegion;
-    bool              mShowTimeStamps;
-    int               mWrapAt;
-    int               mWrapIndentCount;
-    qreal             mLetterSpacing;
+    int mScrollVector;
+    QRegion mSelectedRegion;
+    bool mShowTimeStamps;
+    int mWrapAt;
+    int mWrapIndentCount;
+    qreal mLetterSpacing;
 
 signals:
 
@@ -127,41 +127,40 @@ private:
 
     void              initDefaultSettings();
 
-    QFont             mCommandLineFont;
-    QFont             mCommandSeperator;
-    int               mFontHeight;
-    int               mFontWidth;
-    bool              mForceUpdate;
-    bool              mHighlight_on;
-    bool              mHighlightingBegin;
-    bool              mHighlightingEnd;
-    bool              mInit_OK;
-    bool              mInversOn;
-    bool              mIsDebugConsole;
-    bool              mIsMiniConsole;
-    bool              mIsSplitScreen;
-    int               mLastRenderBottom;
-    int               mLeftMargin;
-    bool              mMouseTracking;
-    bool              mCtrlSelecting;
-    int               mDragStartY;
-    int               mOldScrollPos;
-    QPoint            mP_aussen;
-    QPoint            mPA;
-    bool              mPainterInit;
-    QPoint            mPB;
-    TBuffer *         mpBuffer;
-    TConsole *        mpConsole;
-    QPointer<Host>    mpHost;
-    QScrollBar *      mpScrollBar;
-    int               mScreenHeight;
-    QPixmap           mScreenMap;
-    int               mScreenWidth;
-    bool              mScrollUp;
-    int               mTopMargin;
-    bool              mUpdateSlice;
-    QTime             mLastClickTimer;
-
+    QFont mCommandLineFont;
+    QFont mCommandSeperator;
+    int mFontHeight;
+    int mFontWidth;
+    bool mForceUpdate;
+    bool mHighlight_on;
+    bool mHighlightingBegin;
+    bool mHighlightingEnd;
+    bool mInit_OK;
+    bool mInversOn;
+    bool mIsDebugConsole;
+    bool mIsMiniConsole;
+    bool mIsSplitScreen;
+    int mLastRenderBottom;
+    int mLeftMargin;
+    bool mMouseTracking;
+    bool mCtrlSelecting;
+    int mDragStartY;
+    int mOldScrollPos;
+    QPoint mP_aussen;
+    QPoint mPA;
+    bool mPainterInit;
+    QPoint mPB;
+    TBuffer* mpBuffer;
+    TConsole* mpConsole;
+    QPointer<Host> mpHost;
+    QScrollBar* mpScrollBar;
+    int mScreenHeight;
+    QPixmap mScreenMap;
+    int mScreenWidth;
+    bool mScrollUp;
+    int mTopMargin;
+    bool mUpdateSlice;
+    QTime mLastClickTimer;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

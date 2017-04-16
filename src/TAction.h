@@ -92,8 +92,8 @@ public:
     void             insertActions( TEasyButtonBar * pT,
                                     QMenu * menu );
     void             expandToolbar( TEasyButtonBar * pT );
-    TToolBar *       mpToolBar;
-    TEasyButtonBar * mpEasyButtonBar;
+    TToolBar* mpToolBar;
+    TEasyButtonBar* mpEasyButtonBar;
     // The following was an int but there was confusion over:
     // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
     // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
@@ -101,41 +101,40 @@ public:
     // in some places.
     // Now uses a boolean:
     // "true" = pressed/clicked/down & "false" = released/unclicked/up
-    bool             mButtonState;
-    int              mPosX;
-    int              mPosY;
-    int              mOrientation;
-    int              mLocation;
-    QString          mName;
-    QString          mCommandButtonUp;
-    QString          mCommandButtonDown;
-    QRegExp          mRegex;
-    QString          mScript;
-    bool             mIsPushDownButton;
-    bool             mIsFolder;
+    bool mButtonState;
+    int mPosX;
+    int mPosY;
+    int mOrientation;
+    int mLocation;
+    QString mName;
+    QString mCommandButtonUp;
+    QString mCommandButtonDown;
+    QRegExp mRegex;
+    QString mScript;
+    bool mIsPushDownButton;
+    bool mIsFolder;
 
-    bool             mNeedsToBeCompiled;
-    QString          mIcon;
-    QIcon            mIconPix;
+    bool mNeedsToBeCompiled;
+    QString mIcon;
+    QIcon mIconPix;
 
-    int              mButtonRotation;
-    int              mButtonColumns;
-    bool             mButtonFlat;
-    int              mSizeX;
-    int              mSizeY;
-    bool             mIsLabel;
-    bool             mUseCustomLayout;
-    QString          css;
-    QColor           mButtonColor;
-    QPointer<Host>   mpHost;
-    bool             exportItem;
-    bool            mModuleMasterFolder;
+    int mButtonRotation;
+    int mButtonColumns;
+    bool mButtonFlat;
+    int mSizeX;
+    int mSizeY;
+    bool mIsLabel;
+    bool mUseCustomLayout;
+    QString css;
+    QColor mButtonColor;
+    QPointer<Host> mpHost;
+    bool exportItem;
+    bool mModuleMasterFolder;
+
 private:
-
-                    TAction(){}
-    QString          mFuncName;
-    bool                  mModuleMember;
-
+    TAction() {}
+    QString mFuncName;
+    bool mModuleMember;
 };
 
 #endif // MUDLET_TACTION_H

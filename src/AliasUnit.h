@@ -63,22 +63,22 @@ public:
     void                            markCleanup( TAlias * pT );
     void                            doCleanup();
 
-    QMultiMap<QString, TAlias *>    mLookupTable;
-    std::list<TAlias *>             mCleanupList;
-    QMutex                          mAliasUnitLock;
-    int                             statsAliasTotal;
-    int                             statsTempAliass;
-    int                             statsActiveAliass;
-    int                             statsActiveAliassMax;
-    int                             statsActiveAliassMin;
-    int                             statsActiveAliassAverage;
-    int                             statsTempAliassCreated;
-    int                             statsTempAliassKilled;
-    int                             statsAverageLineProcessingTime;
-    int                             statsMaxLineProcessingTime;
-    int                             statsMinLineProcessingTime;
-    int                             statsRegexAliass;
-    QList<TAlias*>                  uninstallList;
+    QMultiMap<QString, TAlias*> mLookupTable;
+    std::list<TAlias*> mCleanupList;
+    QMutex mAliasUnitLock;
+    int statsAliasTotal;
+    int statsTempAliass;
+    int statsActiveAliass;
+    int statsActiveAliassMax;
+    int statsActiveAliassMin;
+    int statsActiveAliassAverage;
+    int statsTempAliassCreated;
+    int statsTempAliassKilled;
+    int statsAverageLineProcessingTime;
+    int statsMaxLineProcessingTime;
+    int statsMinLineProcessingTime;
+    int statsRegexAliass;
+    QList<TAlias*> uninstallList;
 
 
 private:
@@ -91,11 +91,11 @@ private:
     void                            removeAliasRootNode( TAlias * pT );
     void                            removeAlias( TAlias *);
 
-    QPointer<Host>                  mpHost;
-    QMap<int, TAlias *>             mAliasMap;
-    std::list<TAlias *>             mAliasRootNodeList;
-    int                             mMaxID;
-    bool                            mModuleMember;
+    QPointer<Host> mpHost;
+    QMap<int, TAlias*> mAliasMap;
+    std::list<TAlias*> mAliasRootNodeList;
+    int mMaxID;
+    bool mModuleMember;
 };
 
 #endif // MUDLET_ALIASUNIT_H

@@ -64,69 +64,65 @@ class TTrigger;
 #define RAWDATA 4
 
 
-
-
-class TLuaInterpreter : public QThread  {
-
+class TLuaInterpreter : public QThread
+{
     friend class TForkedProcess;
     friend class LuaInterface;
 
-Q_OBJECT
+    Q_OBJECT
 
 public:
-
-    TLuaInterpreter( Host * mpHost, int id );
+    TLuaInterpreter(Host* mpHost, int id);
     ~TLuaInterpreter();
-    void setMSDPTable(QString & key, const QString & string_data);
-    void parseJSON(QString & key, const QString & string_data, const QString& protocol);
+    void setMSDPTable(QString& key, const QString& string_data);
+    void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void startLuaExecThread();
-    void msdp2Lua(char *src, int srclen);
+    void msdp2Lua(char* src, int srclen);
 // Not Used:    void threadLuaInterpreterExec( std::string code );
     void initLuaGlobals();
-    bool call(const QString & function, const QString & mName );
-    bool callMulti(const QString & function, const QString & mName );
-    bool callConditionFunction( std::string & function, const QString & mName );
-    bool call_luafunction( void * );
-    bool compile(const QString & code, QString & error, const QString & name );
-    bool compileScript(const QString & );
-    void setAtcpTable(const QString &, const QString & );
-    void setGMCPTable(QString &, const QString & );
-    void setChannel102Table( int & var, int & arg );
-    bool compileAndExecuteScript(const QString & );
+    bool call(const QString& function, const QString& mName);
+    bool callMulti(const QString& function, const QString& mName);
+    bool callConditionFunction(std::string& function, const QString& mName);
+    bool call_luafunction(void*);
+    bool compile(const QString& code, QString& error, const QString& name);
+    bool compileScript(const QString&);
+    void setAtcpTable(const QString&, const QString&);
+    void setGMCPTable(QString&, const QString&);
+    void setChannel102Table(int& var, int& arg);
+    bool compileAndExecuteScript(const QString&);
     void loadGlobal();
     //void execLuaCode( QString code );
-    QString get_lua_string(const QString & stringName );
-    int check_for_mappingscript( );
-    void set_lua_string( const QString & varName, const QString & varValue );
-    void set_lua_table(const QString & tableName, QStringList & variableList );
-    void setCaptureGroups( const std::list<std::string> &, const std::list<int> & );
-    void setMultiCaptureGroups( const std::list< std::list<std::string> > & captureList,
-                                const std::list< std::list<int> > & posList );
+    QString get_lua_string(const QString& stringName);
+    int check_for_mappingscript();
+    void set_lua_string(const QString& varName, const QString& varValue);
+    void set_lua_table(const QString& tableName, QStringList& variableList);
+    void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
+    void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList);
 
     void startLuaSessionInterpreter();
-    void adjustCaptureGroups( int x, int a );
+    void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString & function, const TEvent & pE );
-    static QString dirToString( lua_State *, int );
-    static int dirToNumber( lua_State *, int );
+    bool callEventHandler(const QString& function, const TEvent& pE);
+    static QString dirToString(lua_State*, int);
+    static int dirToNumber(lua_State*, int);
 
 
-    int startTempTimer( double, const QString & );
-    int startTempAlias(const QString &, const QString & );
-    int startTempTrigger(const QString &, const QString & );
-    int startTempBeginOfLineTrigger(const QString &, const QString & );
-    int startTempExactMatchTrigger(const QString &, const QString & );
-    int startTempLineTrigger( int, int, const QString & );
-    int startTempRegexTrigger(const QString &, const QString & );
-    int startTempColorTrigger( int, int, const QString & );
-    int startPermRegexTrigger(const QString & name, const QString & parent, QStringList & regex, const QString & function );
-    int startPermSubstringTrigger(const QString & name, const QString & parent, const QStringList & regex, const QString & function );
-    int startPermBeginOfLineStringTrigger(const QString & name, const QString & parent, QStringList & regex, const QString & function );
-    int startPermTimer(const QString & name, const QString & parent, double timeout, const QString & function );
-    int startPermAlias(const QString & name, const QString & parent, const QString & regex, const QString & function );
+    int startTempTimer(double, const QString&);
+    int startTempAlias(const QString&, const QString&);
+    int startTempTrigger(const QString&, const QString&);
+    int startTempBeginOfLineTrigger(const QString&, const QString&);
+    int startTempExactMatchTrigger(const QString&, const QString&);
+    int startTempLineTrigger(int, int, const QString&);
+    int startTempRegexTrigger(const QString&, const QString&);
+    int startTempColorTrigger(int, int, const QString&);
+    int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
+    int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
 
-    TGatekeeperThread * mpGatekeeperThread;
-    QNetworkAccessManager * mpFileDownloader;
+    TGatekeeperThread* mpGatekeeperThread;
+    QNetworkAccessManager* mpFileDownloader;
 
     static int getCustomLines( lua_State * );
     static int addCustomLine( lua_State * );
@@ -408,12 +404,12 @@ public:
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
-    std::list< std::list<std::string> > mMultiCaptureGroupList;
-    std::list< std::list<int> > mMultiCaptureGroupPosList;
-    void logError( std::string & e, const QString &, const QString & function );
+    std::list<std::list<std::string>> mMultiCaptureGroupList;
+    std::list<std::list<int>> mMultiCaptureGroupPosList;
+    void logError(std::string& e, const QString&, const QString& function);
 
-    static std::map<lua_State *, Host *> luaInterpreterMap;
-    QMap<QNetworkReply *, QString> downloadMap;
+    static std::map<lua_State*, Host*> luaInterpreterMap;
+    QMap<QNetworkReply*, QString> downloadMap;
 
 
 signals:
@@ -456,12 +452,12 @@ private:
 
 // Not Used:    lua_State * getLuaExecutionUnit( int unit );
     lua_State* pGlobalLua;
-    TLuaMainThread * mpLuaSessionThread;
+    TLuaMainThread* mpLuaSessionThread;
 
     QPointer<Host> mpHost;
     int mHostID;
     //std::list<std::string> mCaptureList;
-    QList<QObject *> objectsToDelete;
+    QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
 
 
@@ -488,10 +484,8 @@ private:
 
 class TLuaMainThread : public QThread
 {
-
 public:
-
-  TLuaMainThread( TLuaInterpreter * pL ) : exit() { pLuaInterpreter = pL;  }
+    TLuaMainThread(TLuaInterpreter* pL) : exit() { pLuaInterpreter = pL; }
 
 // Not Used:
 //  void run() override
@@ -537,13 +531,11 @@ public:
 // Not Used:  void callExit(){ exit = true; }
 
 private:
-
-  TLuaInterpreter * pLuaInterpreter;
-  QString code;
+    TLuaInterpreter* pLuaInterpreter;
+    QString code;
 // Not Used:  QMutex mutex;
 // Not Used:  std::queue<std::string> mJobQueue;
-
-  bool exit;
+    bool exit;
 };
 
 /*

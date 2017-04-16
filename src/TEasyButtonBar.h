@@ -37,7 +37,7 @@ class QGridLayout;
 
 class TEasyButtonBar : public QWidget
 {
-Q_OBJECT
+    Q_OBJECT
 
 public:
                      TEasyButtonBar( TAction *, QString, QWidget * pW = 0 );
@@ -51,14 +51,14 @@ public:
 
 //private:
 
-    bool             mVerticalOrientation;
-    QWidget *        mpWidget;
-    QString          mName;
-    bool             mRecordMove;
-    QGridLayout *    mpLayout;
-    int              mItemCount;
-    QWidget *        mpBar;
-    std::list<TFlipButton *> mButtonList;
+    bool mVerticalOrientation;
+    QWidget* mpWidget;
+    QString mName;
+    bool mRecordMove;
+    QGridLayout* mpLayout;
+    int mItemCount;
+    QWidget* mpBar;
+    std::list<TFlipButton*> mButtonList;
 
 signals:
 
