@@ -3446,7 +3446,7 @@ void T2DMap::slot_setCharacter()
                                                tr("Enter new (not space)\n"
                                                   "marker letter:"), // const QString & label
                                                QLineEdit::Normal, // QLineEdit::EchoMode mode = QLineEdit::Normal
-                                               QStringLiteral(""), // const QString & text = QString()
+                                               QString(), // const QString & text = QString()
                                                &isOk, // bool * ok = 0
                                                0, // Qt::WindowFlags flags = 0
                                                Qt::ImhLatinOnly ); // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
@@ -3474,7 +3474,7 @@ void T2DMap::slot_setCharacter()
                                                tr("Enter new (not space)\n"
                                                   "marker letter:"),
                                                QLineEdit::Normal,
-                                               QStringLiteral(""),
+                                               QString(),
                                                &isOk,
                                                0,
                                                Qt::ImhLatinOnly );
