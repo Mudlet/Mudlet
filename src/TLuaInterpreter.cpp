@@ -88,6 +88,8 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 : mpHost( pH )
 , mHostID( id )
 , purgeTimer(this)
+, mpGatekeeperThread()
+, mpLuaSessionThread()
 {
     pGlobalLua = 0;
 

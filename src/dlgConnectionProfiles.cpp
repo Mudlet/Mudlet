@@ -46,6 +46,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , connect_button( Q_NULLPTR )
 , delete_profile_lineedit( Q_NULLPTR )
 , delete_button( Q_NULLPTR )
+, validName()
+, validUrl()
+, validPort()
 {
     setupUi( this );
 

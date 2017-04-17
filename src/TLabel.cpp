@@ -33,6 +33,7 @@
 TLabel::TLabel( QWidget * pW )
 : QLabel( pW )
 , mpHost( 0 )
+, mouseInside()
 {
     setMouseTracking( true );
 }
