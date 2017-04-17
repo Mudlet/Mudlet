@@ -4913,7 +4913,7 @@ int TLuaInterpreter::getRooms( lua_State *L )
 // returned.
 int TLuaInterpreter::getAreaExits( lua_State *L )
 {
-    int area;
+    int area = 0;
     int n = lua_gettop( L );
     bool isFullDataRequired = false;
     if( ! lua_isnumber( L, 1 ) ) {
