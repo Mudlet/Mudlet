@@ -49,8 +49,6 @@ using namespace std;
 
 TConsole *  spDebugConsole = 0;
 
-extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
-
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
 
