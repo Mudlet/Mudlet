@@ -44,7 +44,7 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW ): QDialog( pW ), mpHost( pH ), mpEditItem( 0 )
+dlgRoomExits::dlgRoomExits( Host * pH, QWidget * pW ): QDialog( pW ), mpHost( pH ), mpEditItem( 0 ), pR(), mRoomID(), mEditColumn()
 {
     setupUi(this);
 }
