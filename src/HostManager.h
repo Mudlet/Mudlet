@@ -43,19 +43,14 @@ public:
     HostManager() /* : mpActiveHost() - Not needed */ {}
     Host* getHost(QString hostname);
     QStringList getHostList();
-// Not Used:    QList<QString>     getHostNameList();
-// Not Used:    Host *             getFirstHost();
     bool addHost(QString name, QString port, QString login, QString pass);
     bool deleteHost(QString);
-// Not Used:    bool               renameHost( QString );
-// Not Used:    Host *             getHostFromHostID( int id );
     void postIrcMessage(QString, QString, QString);
     void postInterHostEvent(const Host*, const TEvent&);
 
 private:
     QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
     QMap<QString, QSharedPointer<Host>> mHostPool;
-// Not Used:    Host *             mpActiveHost;
 };
 
 #endif // MUDLET_HOSTMANAGER_H

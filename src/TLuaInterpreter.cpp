@@ -91,18 +91,6 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 {
     pGlobalLua = 0;
 
-// Not Used:    connect(this, SIGNAL(signalEchoMessage(int, QString)), this, SLOT(slotEchoMessage(int, QString)));
-// Not Used:    connect(this, SIGNAL(signalNewCommand(int, QString)), this, SLOT(slotNewCommand(int, QString)));
-
-// Not Used:    connect(this, SIGNAL(signalOpenUserWindow(int, QString)), this, SLOT(slotOpenUserWindow(int, QString)));
-// Not Used:    connect(this, SIGNAL(signalEchoUserWindow(int, QString, QString)), this, SLOT(slotEchoUserWindow(int, QString, QString)));
-// Not Used:    connect(this, SIGNAL(signalEnableTimer(int, QString)), this, SLOT(slotEnableTimer(int, QString)));
-// Not Used:    connect(this, SIGNAL(signalDisableTimer(int, QString)), this, SLOT(slotDisableTimer(int, QString)));
-// Not Used:    connect(this, SIGNAL(signalClearUserWindow(int, QString)), this, SLOT(slotClearUserWindow(int, QString)));
-
-// Not Used:    connect(this, SIGNAL(signalTempTimer(int, double, QString, QString)), this, SLOT(slotTempTimer(int, double, QString, QString)));
-// Not Used:    connect(this, SIGNAL(signalReplace(int, QString)), this, SLOT(slotReplace(int, QString)));
-
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
     mpFileDownloader = new QNetworkAccessManager( this );
@@ -117,25 +105,6 @@ TLuaInterpreter::~TLuaInterpreter()
 {
     lua_close(pGlobalLua);
 }
-
-// Not Used:
-//lua_State * TLuaInterpreter::getLuaExecutionUnit( int unit )
-//{
-//    switch( unit )
-//    {
-//    case 1:
-//        return pGlobalLua;
-//    case 2:
-//        return pGlobalLua;
-//    case 3:
-//        return pGlobalLua;
-//    case 4:
-//        return pGlobalLua;
-//    case 5:
-//        return pGlobalLua;
-//    };
-//    return 0;
-//}
 
 // Previous code didn't tell the Qt libraries when we had finished with a
 // QNetworkReply so all the data downloaded would be held in memory until the
@@ -13032,47 +13001,8 @@ int TLuaInterpreter::check_for_mappingscript()
     return r;
 }
 
-// Not Used:
-//void TLuaInterpreter::threadLuaInterpreterExec( string code )
-//{
-//    /* cout << "TLuaMainThread::threadLuaInterpreterExec(code) executing following code:" << endl;
-//     cout << "--------------------------------------------snip<" <<endl;
-//     cout << code << endl;
-//     cout << ">snip--------------------------------------------" <<endl;*/
-//     lua_State * L = pGlobalLua;
-//     int error = luaL_dostring(L,code.c_str());
-//     QString n;
-//     if( error != 0 )
-//     {
-//        string e = "no error message available from Lua";
-//        if( lua_isstring( L, 1 ) )
-//        {
-//            e = "Lua error:";
-//            e += lua_tostring( L, 1 );
-//        }
-//        emit signalEchoMessage( mHostID, QString( e.c_str() ) );
-//        qDebug()<< "LUA_ERROR:"<<e.c_str();
-//     }
-
-//     cout << "cRunningScript::threadLuaInterpreterExec() done" << endl;
-//}
-
-
-
 void TLuaInterpreter::startLuaSessionInterpreter()
 {
-    //connect(this,SIGNAL(signalOpenWindow(int,QString)), this,SLOT(slotOpenWindow(int,QString)));
-    //connect(this,SIGNAL(signalEchoWindow(int,QString,QString)), this,SLOT(slotEchoWindow(int,QString,QString)));
-    //connect(this,SIGNAL(signalClearWindow(int,QString)), this,SLOT(slotClearWindow(int,QString)));
-    //connect(this,SIGNAL(signalNewTrigger(QString,QString, int, QString)), this,SLOT(slotNewTrigger(QString,QString, int, QString)));
-    //connect(this,SIGNAL(signalAddTimer(int,int,QString,QString)),this,SLOT(slotAddTimer(int,int,QString,QString)));
-    //connect(this,SIGNAL(signalDeleteTrigger(int,QString)), this,SLOT(slotDeleteTrigger(int,QString)));
-
-
-    //connect(this,SIGNAL(signalEchoMessage(int,QString)), this,SLOT(slotEchoMessage(int,QString)));//,Qt::DirectConnection);
-    //connect(this,SIGNAL(signalNewEcho(int,QString)), this,SLOT(slotNewEcho(int,QString)));
-    //connect(this,SIGNAL(signalNewCommand(int,QString)), this,SLOT(slotNewCommand(int,QString)));//,Qt::QueuedConnection);
-
     mpLuaSessionThread = new TLuaMainThread(this);
     mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
@@ -13622,73 +13552,6 @@ void TLuaInterpreter::loadGlobal()
         return;
     }
 }
-
-// Not Used:
-//void TLuaInterpreter::slotEchoMessage(int hostID, const QString& msg)
-//{
-//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-//    mudlet::self()->print( pHost, msg );
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotNewCommand(int hostID, const QString& cmd)
-//{
-//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-//    pHost->send( cmd );
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotOpenUserWindow(int hostID, const QString& windowName )
-//{
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotClearUserWindow(int hostID, const QString& windowName )
-//{
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotEnableTimer(int hostID, const QString& windowName )
-//{
-//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-//    pHost->enableTimer( windowName );
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotDisableTimer(int hostID, const QString& windowName )
-//{
-//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-//    pHost->disableTimer( windowName );
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotReplace(int hostID, const QString& text)
-//{
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotEchoUserWindow(int hostID, const QString& windowName, const QString& text )
-//{
-//}
-
-// Not Used:
-//void TLuaInterpreter::slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName )
-//{
-//    Host * pHost = mudlet::self()->getHostManager()->getHostFromHostID( hostID );
-//    QTime time(0,0,0,0);
-//    int msec = static_cast<int>(timeout * 1000);
-//    QTime time2 = time.addMSecs( msec );
-//    TTimer * pT;
-//    pT = new TTimer( timerName, time2, pHost );
-//    pT->setName( timerName );
-//    pT->setTime( time2 );
-//    //qDebug()<<"setting time of tempTimer to "<<time2.minute()<<":"<<time2.second()<<":"<<time2.msec()<<" timeout="<<timeout;
-//    pT->setScript( function );
-//    pT->setIsFolder( false );
-//    pT->setIsActive( true );
-//    pT->setIsTempTimer( true );
-//    pT->registerTimer();
-//}
 
 int TLuaInterpreter::startPermTimer(const QString & name, const QString & parent, double timeout, const QString & function )
 {

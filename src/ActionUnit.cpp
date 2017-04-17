@@ -423,12 +423,10 @@ TAction * ActionUnit::getHeadAction( TToolBar * pT )
 {
     for(auto & action : mActionRootNodeList)
     {
-// N/U:         bool found = false;
         for(auto it2 = mToolBarList.begin(); it2!=mToolBarList.end(); it2++ )
         {
             if( pT == action->mpToolBar )
             {
-// N/U:                 found = true;
                 return action;
             }
         }
@@ -514,12 +512,10 @@ TAction * ActionUnit::getHeadAction( TEasyButtonBar * pT )
 {
     for(auto & action : mActionRootNodeList)
     {
-// N/U:         bool found = false;
         for(auto it2 = mEasyButtonBarList.begin(); it2!=mEasyButtonBarList.end(); it2++ )
         {
             if( pT == action->mpEasyButtonBar )
             {
-// N/U:                 found = true;
                 return action;
             }
         }

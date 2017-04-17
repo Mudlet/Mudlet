@@ -95,12 +95,6 @@ public:
     int createNewRoomID(int minimumId = 1);
     void logError(QString& msg);
     void tidyMap(int area);
-// Not used:    void getConnectedNodesGreaterThanX( int id, int x );
-// Not used:    void getConnectedNodesSmallerThanX( int id, int x );
-// Not used:    void getConnectedNodesGreaterThanY( int id, int x );
-// Not used:    void getConnectedNodesSmallerThanY( int id, int x );
-// Not used:    void astBreitenAnpassung( int id, int );
-// Not used:    void astHoehenAnpassung( int id, int );
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!

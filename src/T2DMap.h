@@ -113,7 +113,6 @@ public:
     int mFontHeight;
     bool mShowRoomID;
     QMap<int, QPixmap> mPixMap;
-//    QMap<int, QPixmap > mGridPix;
     int gzoom;
     double rSize;
     double eSize;
