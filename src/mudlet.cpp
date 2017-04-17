@@ -1814,8 +1814,9 @@ void mudlet::connectToServer()
     auto pDlg = new dlgConnectionProfiles(this);
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
-    pDlg->exec();
-    enableToolbarButtons();
+    if (pDlg->exec() == QDialog::Accepted) {
+         enableToolbarButtons();
+    }
 }
 
 void mudlet::show_trigger_dialog()
