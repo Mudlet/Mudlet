@@ -1726,6 +1726,15 @@ void mudlet::closeEvent(QCloseEvent *event)
     qApp->quit();
 }
 
+void mudlet::shutDown()
+{
+    for (auto console : mConsoleMap) {
+        console->mUserAgreedToCloseConsole = true;
+    }
+
+    //closeEvent();
+    close();
+}
 
 void mudlet::readSettings()
 {
