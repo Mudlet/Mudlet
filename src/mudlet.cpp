@@ -1731,8 +1731,7 @@ void mudlet::shutDown()
     for (auto console : mConsoleMap) {
         console->mUserAgreedToCloseConsole = true;
     }
-
-    //closeEvent();
+    
     close();
 }
 
