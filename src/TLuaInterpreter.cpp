@@ -3174,9 +3174,19 @@ int TLuaInterpreter::calcFontSize( lua_State *L )
 //   -2 = logging was already not in progress so no change in logging state
 int TLuaInterpreter::startLogging( lua_State *L )
 {
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring( L, tr( "startLogging: NULL Host pointer - something is wrong!" )
+                        .toUtf8().constData() );
+        lua_error(L);
+        return 2;
+    }
+
     bool logOn = true;
     if( ! lua_isboolean( L, 1 ) ) {
-        lua_pushfstring( L, tr( "startLogging: bad argument #1 (turn logging on/off, as boolean expected, got %s)", luaL_typename(L, 1) ).toUtf8().constData() );
+        lua_pushfstring( L, tr( "startLogging: bad argument #1 type (turn logging on/off, as boolean expected, got %1!)")
+                         .arg(luaL_typename(L, 1))
+                         .toUtf8().constData());
         lua_error( L );
         return 1;
     }
@@ -3184,7 +3194,6 @@ int TLuaInterpreter::startLogging( lua_State *L )
         logOn = lua_toboolean( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString savedLogFileName;
     if( pHost->mpConsole->mLogToLogFile ) {
         savedLogFileName = pHost->mpConsole->mLogFileName;
