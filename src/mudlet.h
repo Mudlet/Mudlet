@@ -82,6 +82,7 @@ public:
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * );
    void                          unregisterTimer( QTimer * );
+   void                          forceClose();
    bool                          openWindow( Host *, const QString & );
    bool                          createMiniConsole( Host *, const QString &, int, int, int, int );
    bool                          createLabel( Host *, const QString &, int, int, int, int, bool );

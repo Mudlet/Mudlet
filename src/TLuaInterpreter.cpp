@@ -2468,6 +2468,12 @@ int TLuaInterpreter::killTrigger( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::closeMudlet(lua_State* L)
+{
+    mudlet::self()->forceClose();
+    return 0;
+}
+
 // openUserWindow( session, string window_name )
 int TLuaInterpreter::openUserWindow( lua_State *L )
 {
@@ -13081,6 +13087,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempTimer", TLuaInterpreter::tempTimer );
     lua_register( pGlobalLua, "tempTrigger", TLuaInterpreter::tempTrigger );
     lua_register( pGlobalLua, "tempRegexTrigger", TLuaInterpreter::tempRegexTrigger );
+    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
     lua_register( pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow );
     lua_register( pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow );
     lua_register( pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer );
