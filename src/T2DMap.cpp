@@ -2408,9 +2408,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                             // The way this code is structured means that EARLIER
                             // points are selected in preference to later ones!
                             // This might not be intuative to the users...
+                            float olx, oly, lx, ly;
                             for( int j=0; j<_pL.size(); j++ )
                             {
-                                float olx, oly, lx, ly;
                                 if( j==0 )
                                 {  // First segment of a custom line
                                    // start it at the centre of the room
