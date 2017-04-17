@@ -4388,12 +4388,12 @@ int TLuaInterpreter::getRoomExits( lua_State *L )
 // TODO: Provide exit details:
 int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
 {
-    int roomId;
+    int roomId = 0;
     if( ! lua_isnumber( L, 1 ) ) {
         lua_pushstring( L, tr( "getAllRoomEntrances: bad argument #1 type (room id as number expected, got %1!)" )
                         .arg( luaL_typename( L, 1 ) )
                         .toUtf8().constData());
-        lua_error( L );
+        return lua_error( L );
     }
     else {
        roomId = lua_tonumber( L, 1 );
@@ -4920,7 +4920,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
         lua_pushstring( L, tr( "getAreaExits: bad argument #1 type (area id as number expected, got %1!)" )
                         .arg( luaL_typename( L, 1 ) )
                         .toUtf8().constData() );
-        lua_error( L );
+        return lua_error( L );
     }
     else {
         area = lua_tonumber( L, 1 );
