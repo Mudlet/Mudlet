@@ -152,6 +152,7 @@ mudlet::mudlet()
     // On at least my platform (Linux) the status bar does not seem to exist
     // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar( this );
+    mpMainToolBar->setObjectName("mpMainToolBar"); // added name to allow for window layout saving, as per docs here: http://doc.qt.io/qt-5/qmainwindow.html#saveState
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
@@ -950,11 +951,54 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[14]->setEnabled( true );
 }
 
+bool mudlet::saveWindowLayout( int version = 0 ) {
+    Host * pHost = getActiveHost();
+    if( ! pHost ) { 
+        return false;
+    }
+    
+    QByteArray winLayout = saveState( version );
+    
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/" + pHost->getName() + "/_windowLayout_" + QString::number( version ) );
+    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
+    QDataStream ofs( & file );
+    ofs << winLayout;
+    file.close();
+    
+    return true;
+}
+
+bool mudlet::loadWindowLayout( int version = 0 ) {
+    Host * pHost = getActiveHost();
+    if( ! pHost ) { 
+        return false;
+    }
+    
+    bool rv = false;
+    QByteArray winLayout;
+    
+    // Read layout from file if it exists.
+    QFile file( QDir::homePath()+"/.config/mudlet/profiles/" + pHost->getName() + "/_windowLayout_" + QString::number( version ) );
+    if( file.exists() ) {
+        file.open( QIODevice::ReadOnly );
+        QDataStream ifs( & file );
+        ifs >> winLayout;
+        file.close();
+        
+        // Attempt to apply the window layout
+        rv = restoreState( winLayout, version );
+    }
+    
+    return rv;
+}
+
 bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
         auto pD = new QDockWidget;
+        // added name to allow for window layout saving, as per docs here: http://doc.qt.io/qt-5/qmainwindow.html#saveState
+        pD->setObjectName( QString("ConsoleWindow_%1").arg(name) ); 
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
@@ -1726,6 +1770,15 @@ void mudlet::closeEvent(QCloseEvent *event)
     qApp->quit();
 }
 
+void mudlet::closeEventLua() {
+    foreach( TConsole * pC, mConsoleMap )
+    {
+        pC->mUserAgreedToCloseConsole = true;
+    }
+    
+    //closeEvent();
+    close();
+}
 
 void mudlet::readSettings()
 {
@@ -2051,10 +2104,15 @@ void mudlet::slot_notes()
 
 void mudlet::slot_irc()
 {
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
+
     if( ! mpIRC )
     {
-        mpIRC = new dlgIRC();
-        mpIRC->setWindowTitle( tr( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" ) );
+        qDebug() << "mudlet::slot_irc() - Created IRC client!";
+                
+        mpIRC = new dlgIRC( pHost );
+        mpIRC->setWindowTitle( tr( "Mudlet Built-in IRC Client." ) );
         mpIRC->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
         mpIRC->resize(660,380);
     }

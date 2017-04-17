@@ -58,15 +58,18 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
-    QString nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
-    QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
-    file.open( QIODevice::ReadOnly );
-    QDataStream ifs( & file );
-    ifs >> nick;
-    file.close();
-    if( nick.isEmpty() )
-        nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
-    ircNick->setText( nick );
+    
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "dlgProfilePreferences() - Created IRC client!";
+        
+        mudlet::self()->mpIRC = new dlgIRC( pH );
+    }
+
+    ircNick->setText( mudlet::self()->mpIRC->getNick() );
+    ircChannel->setText( mudlet::self()->mpIRC->getMainChannel() );
+    ircServerName->setText( mudlet::self()->mpIRC->getServerName() );
+    ircServerPort->setText( QString::number( mudlet::self()->mpIRC->getServerPort() ) );
 
     dictList->setSelectionMode( QAbstractItemView::SingleSelection );
     enableSpellCheck->setChecked( pH->mEnableSpellCheck );
@@ -1249,18 +1252,52 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->currentData().toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
+
     //pHost->mIRCNick = ircNick->text();
-    QString old_nick = mudlet::self()->mIrcNick;
-    QString new_nick = ircNick->text();
-    if( new_nick.isEmpty() )
-        new_nick = tr("Mudlet%1").arg(QString::number(rand()%10000));
-    QFile file( QDir::homePath()+"/.config/mudlet/irc_nick" );
-    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
-    QDataStream ofs( & file );
-    ofs << new_nick;
-    file.close();
-    if( mudlet::self()->mpIRC )
-        mudlet::self()->mpIRC->session->setNickName( new_nick );
+    //QString old_nick = mudlet::self()->mIrcNick;
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "dlgProfilePreferences::slot_save_and_exit() - Created IRC client!";
+        
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+
+    QString oldNick = mudlet::self()->mpIRC->getNick();
+    QString oldChan =  mudlet::self()->mpIRC->getMainChannel();
+    QString oldServerName = mudlet::self()->mpIRC->getServerName();
+    QString oldServerPort =  QString::number( mudlet::self()->mpIRC->getServerPort() );
+
+    QString newNick = ircNick->text();
+    QString newChan = ircChannel->text();
+    QString newServerName = ircServerName->text();
+    QString newServerPort = ircServerPort->text();
+
+    if( oldNick != newNick && ! newNick.isEmpty() ) {
+        mudlet::self()->mpIRC->saveNick( newNick );
+    }
+
+    if( oldChan != newChan && ! newChan.isEmpty() ) {
+        mudlet::self()->mpIRC->saveMainChannel( newChan );
+    }
+
+    if( oldServerName != newServerName && ! newServerName.isEmpty() ) {
+        mudlet::self()->mpIRC->saveServerName( newServerName );
+    }
+
+    if( oldServerPort != newServerPort && ! newServerPort.isEmpty() ) {
+        int serverPort = newServerPort.toInt();
+        if( serverPort <= 0 || serverPort >= 65535 ) {
+            serverPort = 6667;
+        }
+
+        mudlet::self()->mpIRC->saveServerPort( serverPort );
+    }
+
+    // restart IRC for changes to host or port..
+    if( oldServerPort != newServerPort  ||  oldServerName != newServerName ) {
+        mudlet::self()->mpIRC->reconnect();
+    }
+    
 
     if( checkBox_USE_SMALL_SCREEN->isChecked() )
     {

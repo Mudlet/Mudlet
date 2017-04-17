@@ -45,6 +45,7 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "glwidget.h"
+#include "XMLexport.h" 
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -2499,6 +2500,65 @@ int TLuaInterpreter::killTrigger( lua_State *L )
     return 1;
 }
 
+int TLuaInterpreter::saveWindowLayout( lua_State *L ) {
+    int version = 0;
+    if( ! lua_isnoneornil( L, 1 ) && lua_isnumber( L, 1 ) ) {
+        version = lua_tointeger( L, 1 );
+    }
+    
+    lua_pushboolean( L, mudlet::self()->saveWindowLayout( version ) );
+    
+    return 1;
+}
+
+int TLuaInterpreter::loadWindowLayout( lua_State *L ) {
+    int version = 0;
+    if( ! lua_isnoneornil( L, 1 ) && lua_isnumber( L, 1 ) ) {
+        version = lua_tointeger( L, 1 );
+    }
+    
+    lua_pushboolean( L, mudlet::self()->loadWindowLayout( version ) );
+    
+    return 1;
+}
+
+int TLuaInterpreter::saveProfile( lua_State *L ) {
+    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString profile_name = mpHost->getName();
+    
+    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
+    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
+    QDir dir_xml;
+    if( ! dir_xml.exists( directory_xml ) )
+    {
+        dir_xml.mkpath( directory_xml );
+    }
+    QFile file_xml( filename_xml );
+    if( file_xml.open( QIODevice::WriteOnly ) )
+    {
+        XMLexport writer( mpHost );
+        writer.exportHost( & file_xml );
+        file_xml.close();
+        mpHost->saveModules(1);
+        
+        return 0;
+    }
+    else
+    {
+        QString errStr = "saveProfile() Failed to save profile '"+profile_name+"' due to file error: "+file_xml.errorString();
+        lua_pushstring( L, errStr.toStdString().c_str() );
+        lua_error( L );
+        return 1;
+    }
+    
+    return 0;
+}
+
+int TLuaInterpreter::closeMudlet( lua_State *L ) {
+    mudlet::self()->closeEventLua();
+    return 0;
+}
+
 // openUserWindow( session, string window_name )
 int TLuaInterpreter::openUserWindow( lua_State *L )
 {
@@ -3957,9 +4017,13 @@ int TLuaInterpreter::connectToServer( lua_State *L )
 {
     int port;
     string url;
+    bool saveToProfile = false;
+    
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
+        lua_pushstring( L, "TLuaInterpreter::connectToServer() - wrong argument type for Hostname, must be string." );
         lua_error( L );
         return 1;
     }
@@ -3970,16 +4034,46 @@ int TLuaInterpreter::connectToServer( lua_State *L )
 
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
+        lua_pushstring( L, "TLuaInterpreter::connectToServer() - wrong argument type for port number, must be integer." );
         lua_error( L );
         return 1;
     }
     else
     {
         port = lua_tonumber( L, 2 );
+        
+        if( port <= 0 || port > 65536 ) {
+            lua_pushstring( L, "TLuaInterpreter::connectToServer() - bad port number given, port out of range." );
+            lua_error( L );
+            return 1;
+        }
     }
+    
+    // Optional boolean save flag, default is false.
+    if( ! lua_isnoneornil( L, 3 ) && lua_isboolean( L, 3 ) ) {
+        saveToProfile = lua_toboolean( L, 3 );
+        if( saveToProfile ) {
+            qDebug() << "TLuaInterpreter::connectToServer() - saving new configs - url: " << url.c_str() << " port: " << port ;
+            
+            QFile urlFile( QDir::homePath()+"/.config/mudlet/profiles/"+pHost->getName()+"/url" );
+            QFile portFile( QDir::homePath()+"/.config/mudlet/profiles/"+pHost->getName()+"/port" );
+            
+            QString newUrlStr = url.c_str();
+            urlFile.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
+            QDataStream ofsu( & urlFile );
+            ofsu << newUrlStr;
+            urlFile.close();
+            
+            QString newPortStr = QString::number( port );
+            portFile.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
+            QDataStream ofsp( & portFile );
+            ofsp << newPortStr;
+            portFile.close();
+        }
+    }
+    
     QString _url = url.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    //Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mTelnet.connectIt( _url, port );
     return 0;
 }
@@ -12094,6 +12188,7 @@ int TLuaInterpreter::sendSocket( lua_State * L )
     return 0;
 }
 
+/* Legacy code * /
 int TLuaInterpreter::sendIrc( lua_State * L )
 {
     string who;
@@ -12123,6 +12218,953 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     QString txt = text.c_str();
     if( ! mudlet::self()->mpIRC ) return 0;
     mudlet::self()->mpIRC->session->sendCommand( IrcCommand::createMessage( chan, txt ) );
+    return 0;
+}/**/
+/** Lua Function:  sendIrc( To, Message )
+ * @arg string To - A valid channel name or IRC Nick.
+ * @arg string Message - Any String.
+ * @return int - In Lua, returns a signed integer; 1 for successful send and 0 for not sent.
+ * 
+ * Sends a message to IRC via current profile IRC connection.
+ **/
+int TLuaInterpreter::sendIrc( lua_State * L )
+{
+    string who;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "sendIrc: wrong argument type, To argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        who = lua_tostring( L, 1 );
+    }
+    string text;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "sendIrc: wrong argument type, Message argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        text = lua_tostring( L, 2 );
+    }
+    // N/U:     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    QString chan = who.c_str();
+    QString txt = text.c_str();
+    
+    qDebug() << "Lua::sendIrc() to=" << chan << " msg=" << txt;
+
+    /* Check for Mudlets IRC Client, create an instance if needed. */
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::sendIrc() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+
+        /* Check if IRC is enabled before opening the client window on send from lua. */
+        if( mudlet::self()->mpIRC->mUseIrcClient ) {
+            // TODO: Move the window title and size to the window constructor.
+            mudlet::self()->mpIRC->setWindowTitle( "Mudlet IRC Client" );
+            mudlet::self()->mpIRC->resize(660,380);
+
+            mudlet::self()->mpIRC->raise();
+            mudlet::self()->mpIRC->show();
+        }
+    }
+
+    /* If we aren't connected, try a reconnect but return 0 for connect error */
+    if( ! mudlet::self()->mpIRC->mIrcConnected ) {
+        mudlet::self()->mpIRC->reconnect();
+        
+        qDebug() << "Lua::sendIrc() Tried to send but not yet connected.";
+
+        lua_pushinteger( L, 0 );
+        return 1;
+
+    } else {
+        /* May not be needed with communi 1.2.1+
+        // wait until the server has welcomed our client. Return 0 for error.
+        if( ! mudlet::self()->mpIRC->mIrcWelcomed ) {
+            qDebug() << "Lua::sendIrc() Tried to send but not yet welcomed.";
+            
+            lua_pushinteger( L, 0 );
+            return 1;
+        } /**/
+        
+        // send the message.
+        //mudlet::self()->mpIRC->session->cmdMessage( chan, txt );
+        mudlet::self()->mpIRC->session->sendCommand( IrcCommand::createMessage(chan, txt) );
+
+        lua_pushinteger( L, 1 );  // returns 1 from sendIrc in lua to denote successful send.
+        return 1;
+    }
+}
+
+/** Lua Function:  ircReconnect()
+ * @return nil - In Lua, returns nil.
+ * 
+ * Simply disconnects and reconnects from IRC using the current profile's IRC connection settings.
+ **/
+int TLuaInterpreter::ircReconnect( lua_State * L ) {
+    qDebug() << "Lua::ircReconnect() called.";
+
+    /* Check for Mudlets IRC Client, create an instance if needed. */
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircReconnect() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+
+        /* Check if IRC is enabled before opening the client window on send from lua. */
+        if( mudlet::self()->mpIRC->mUseIrcClient ) {
+            // TODO: Move the window title and size to the window constructor.
+            mudlet::self()->mpIRC->setWindowTitle( "Mudlet IRC Client" );
+            mudlet::self()->mpIRC->resize(660,380);
+
+            mudlet::self()->mpIRC->raise();
+            mudlet::self()->mpIRC->show();
+        }
+    }
+
+    // do a hard reconnect and let the client delegates handle states.
+    mudlet::self()->mpIRC->hardReconnect();
+}
+
+/** Lua Function:  ircSetHost( Host, Port )
+ * @arg string Host - A valid IP address or Hostname.
+ * @arg int Port - a valid port number, not already in use.
+ * @return nil - In Lua, returns nil.
+ * 
+ * Sets the current profile's IRC connection.
+ **/
+int TLuaInterpreter::ircSetHost( lua_State * L ) {
+    string newHost = "localhost";
+    int newPort = 6667;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircSetHost: wrong argument type, new Host must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        newHost = lua_tostring( L, 1 );
+        if( newHost.length() == 0 ) {
+            newHost = "localhost";
+        }
+    }
+
+    if( ! lua_isnoneornil( L, 2 ) ) {
+        if( lua_isnumber( L, 2 ) ) {
+            newPort = lua_tointeger( L, 2 );
+            if( newPort <= 0 || newPort >= 65535 ) {
+                newPort = 6667;
+            }
+        } else {
+            lua_pushstring( L, "ircSetHost: wrong argument type, new Port must be integter.");
+            lua_error(L);
+            return 1;
+        }
+    }
+    
+    QString host = newHost.c_str();
+    
+    qDebug()<<"ircSetHost :: newHost"<<host<<" newPort="<<newPort;
+
+    // Set the irc window/session object if needed.
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircSetHost() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    // check for actual changes before forcing a reconnection.
+    bool reconn = false;
+    if( mudlet::self()->mpIRC->mHostName != host || mudlet::self()->mpIRC->mHostPort != newPort ) {
+        reconn = true;
+    }
+
+    mudlet::self()->mpIRC->setServerName( host );
+    mudlet::self()->mpIRC->setServerPort( newPort );
+    
+    if( reconn ) {
+        mudlet::self()->mpIRC->reconnect();
+    }
+    
+    return 0;
+}
+
+/** Lua Function:  ircSetNick( NickName )
+ * @arg string NickName - A valid IRC Nickname.
+ * @return nil - In Lua, returns nil.
+ * 
+ * Sets the nickname of the current profile's IRC connection.
+ **/
+int TLuaInterpreter::ircSetNick( lua_State * L ) {
+    string newNick;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircSetNick: wrong argument type, new Nick must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        newNick = lua_tostring( L, 1 );
+
+        if( newNick.length() == 0 ) {
+            lua_pushstring( L, "ircSetNick: new Nick must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircSetNick() - Created IRC client!";
+
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+
+        mudlet::self()->mpIRC->setNick( QString::fromStdString( newNick ) );
+    }
+
+    return 0;
+}
+
+/** Lua Function:  ircSetChannel( Channel )
+ * @arg string Channel - A valid channel name.
+ * @return nil - In Lua, returns nil.
+ * 
+ * Sets the Main working channel of the current profile's IRC connection.
+ **/
+int TLuaInterpreter::ircSetChannel( lua_State * L ) {
+    string newChannel;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircSetChannel: wrong argument type, new Channel must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        newChannel = lua_tostring( L, 1 );
+        QString nChan = QString::fromStdString( newChannel );
+
+        if( newChannel.length() == 0 ) {
+            lua_pushstring( L, "ircSetChannel: new Channel must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircSetChannel() - Created IRC client!";
+
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+        
+        if( ! mudlet::self()->mpIRC->isValidChannel( nChan ) ) {
+            lua_pushstring( L, "ircSetChannel: new Channel must be a valid channel name starting with #, & or +." );
+            lua_error( L );
+            return 1;
+        }
+
+        mudlet::self()->mpIRC->setMainChannel( nChan );
+    }
+
+    return 0;
+}
+
+/** Lua Function:  ircJoin( Channel )
+ * @arg string Channel - A valid channel name, not already joined.
+ * @return int - In Lua, returns 1 for joined 0 for not joined.
+ * 
+ * Joins an additional channel using the current profile's IRC connection.
+ **/
+int TLuaInterpreter::ircJoin( lua_State * L ) {
+    string jChan;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircJoin: wrong argument type, channel name must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        jChan = lua_tostring( L, 1 );
+
+        if( jChan.length() == 0 ) {
+            lua_pushstring( L, "ircJoin: channel name must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircJoin() - Created IRC client!";
+            
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+        
+        if( ! mudlet::self()->mpIRC->isValidChannel( QString::fromStdString( jChan ) ) ) {
+            lua_pushstring( L, "ircJoin: channel name must be a valid channel name starting with #, & or +." );
+            lua_error( L );
+            return 1;
+        }
+
+        bool joined = mudlet::self()->mpIRC->ircJoin( QString::fromStdString( jChan ) );
+        
+        if( joined ) {
+            lua_pushinteger( L, 1 );  
+            return 1;
+        } else {
+            lua_pushinteger( L, 0 );  
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+
+/** Lua Function:  ircPart( Channel )
+ * @arg string Channel - A valid channel name, previously joined or Main channel name.
+ * @return int - In Lua, returns 1 for parted 0 for not parted.
+ * 
+ * Joins an additional channel using the current profile's IRC connection.
+ **/
+int TLuaInterpreter::ircPart( lua_State * L ) {
+    string pChan;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircPart: wrong argument type, channel name must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        pChan = lua_tostring( L, 1 );
+
+        if( pChan.length() == 0 ) {
+            lua_pushstring( L, "ircPart: channel name must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircPart() - Created IRC client!";
+            
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+        
+        if( ! mudlet::self()->mpIRC->isValidChannel( QString::fromStdString( pChan ) ) ) {
+            lua_pushstring( L, "ircPart: channel name must be a valid channel name starting with #, & or +." );
+            lua_error( L );
+            return 1;
+        }
+
+        bool parted = mudlet::self()->mpIRC->ircPart( QString::fromStdString( pChan ) );
+        
+        if( parted ) {
+            lua_pushinteger( L, 1 );  
+            return 1;
+        } else {
+            lua_pushinteger( L, 0 );  
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+
+/** Lua Function: ircGetChannels()
+ * @return string - A string of names, separated by spaces.
+ * 
+ * Gets a list of currently joined channels as a string, delimited by spaces.
+ *  Can return an empty string if not yet connected to IRC or any channels.
+ **/
+int TLuaInterpreter::ircGetChannels( lua_State * L ) {
+    string rStr = "";
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircGetChannels() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        QString qrStr = mudlet::self()->mpIRC->mChannels.join( " " );
+        rStr = qrStr.toStdString();
+    } 
+    
+    lua_pushstring( L, rStr.c_str() );
+    
+    return 1;
+}
+
+/** Lua Function: ircGetNicks( Channel )
+ * @arg string Channel - A valid channel to query.
+ * @return string - A list of nicknames, delimited by spaces.
+ * 
+ * This function will return a list of nicks joined to the specified channel.
+ *  Can return an empty string if not yet connected to IRC or any channels.
+ **/
+int TLuaInterpreter::ircGetNicks( lua_State * L ) {
+    string rStr = "";
+    
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircGetNicks: wrong argument type, channel name must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        string lChan = lua_tostring( L, 1 );
+
+        if( lChan.length() == 0 ) {
+            lua_pushstring( L, "ircGetNicks: channel name must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircGetNicks() - Created IRC client!";
+            
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+        
+        if( ! mudlet::self()->mpIRC->isValidChannel( QString::fromStdString(lChan) ) ) {
+            lua_pushstring( L, "ircGetNicks: channel name must be a valid channel name starting with #, & or +." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( mudlet::self()->mpIRC->mIrcConnected ) {
+            qDebug() << "Lua::ircGetNicks() started";
+            QString qrStr = mudlet::self()->mpIRC->ircGetNicks( QString::fromStdString( lChan ) );
+            rStr = qrStr.toStdString();
+        } 
+        
+    }
+    
+    lua_pushstring( L, rStr.c_str() );
+    
+    return 1;
+}
+
+/** Lua Function: ircWhoIs( Nick )
+ * @arg string Nick - A user nickname, joined to server.
+ * @return nil 
+ * 
+ * Requests Whois info on given Nick.
+ * Activates sysIrcStatusMessage with each reply from the server.
+ **/
+int TLuaInterpreter::ircWhoIs( lua_State * L ) {
+    
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircWhoIs: wrong argument type, Nick name must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        string lNick = lua_tostring( L, 1 );
+
+        if( lNick.length() == 0 ) {
+            lua_pushstring( L, "ircWhoIs: Nick name must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircWhoIs() - Created IRC client!";
+            
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+        
+        if( mudlet::self()->mpIRC->mIrcConnected ) {
+            mudlet::self()->mpIRC->ircWhoIs( QString::fromStdString( lNick ) );
+        } 
+    }
+    
+    return 0;
+}
+
+/** Lua Function: ircWhoWas( Nick )
+ * @arg string Nick - A user nickname, joined to server.
+ * @return nil 
+ * 
+ * Requests Whowas info on given Nick.
+ * Activates sysIrcStatusMessage with each reply from the server.
+ **/
+int TLuaInterpreter::ircWhoWas( lua_State * L ) {
+    
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircWhoWas: wrong argument type, Nick name must be string." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        string lNick = lua_tostring( L, 1 );
+
+        if( lNick.length() == 0 ) {
+            lua_pushstring( L, "ircWhoWas: Nick name must not be empty." );
+            lua_error( L );
+            return 1;
+        }
+        
+        if( ! mudlet::self()->mpIRC ) {
+            qDebug() << "TLuaInterpreter::ircWhoWas() - Created IRC client!";
+            
+            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+            mudlet::self()->mpIRC = new dlgIRC( pHost );
+        }
+        
+        if( mudlet::self()->mpIRC->mIrcConnected ) {
+            mudlet::self()->mpIRC->ircWhoWas( QString::fromStdString( lNick ) );
+        } 
+    }
+    
+    return 0;
+}
+
+/** Lua Function: ircGetHost( )
+ * @return string - A hostname or ip with port number attached.
+ * 
+ * Gets the current sessions Host configuration values for lua.
+ **/
+int TLuaInterpreter::ircGetHost( lua_State * L ) {
+    string rStr = "";
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircGetHost() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        QString qrStr = QString( "%1:%2" )
+                            .arg( mudlet::self()->mpIRC->mHostName )
+                            .arg( mudlet::self()->mpIRC->mHostPort );
+        rStr = qrStr.toStdString();
+    } 
+    
+    lua_pushstring( L, rStr.c_str() );
+    
+    return 1;
+}
+
+/** Lua Function: ircGetNick( )
+ * @return string - An irc Nick name.  
+ * 
+ * Gets the current sessions Nick name configuration value for lua.
+ **/
+int TLuaInterpreter::ircGetNick( lua_State * L ) {
+    string rStr = "";
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircGetNick() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        QString qrStr = mudlet::self()->mpIRC->mNick;
+        rStr = qrStr.toStdString();
+    } 
+    
+    lua_pushstring( L, rStr.c_str() );
+    
+    return 1;
+}
+
+/** Lua Function: ircGetChannel( )
+ * @return string - An irc Channel name.
+ * 
+ * Gets the current sessions Main Channel configuration value for lua.
+ **/
+int TLuaInterpreter::ircGetChannel( lua_State * L ) {
+    string rStr = "";
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircGetChannel() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        QString qrStr = mudlet::self()->mpIRC->mChannel;
+        rStr = qrStr.toStdString();
+    } 
+    
+    lua_pushstring( L, rStr.c_str() );
+    
+    return 1;
+}
+
+/** Lua Function: ircSaveSessionConfigs( )
+ * @return nil
+ * 
+ * Saves current sessions irc configuration to the profile config files.
+ **/
+int TLuaInterpreter::ircSaveSessionConfigs( lua_State * L ) {
+    if( ! mudlet::self()->mpIRC ) {
+        return 0;
+    }
+    
+    mudlet::self()->mpIRC->saveSessionConfigs(); 
+    
+    return 0;
+}
+
+/** Lua Function: ircOper( User, Pass )
+ * @arg string User - the Oper Username.
+ * @arg string Pass - the Oper Password.
+ * @return nil
+ * 
+ * Requests OPER status using given User and Password credentials. The sysIrcStatusMessage event is raised on response.
+ **/
+int TLuaInterpreter::ircOper( lua_State * L ) {
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircOper() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    string user;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircOper: wrong argument type, User argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        user = lua_tostring( L, 1 );
+    }
+    string pass;
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushstring( L, "ircOper: wrong argument type, Password argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        pass = lua_tostring( L, 2 );
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        mudlet::self()->mpIRC->ircOper( QString::fromStdString(user), QString::fromStdString(pass) );
+    } 
+    
+    return 0;
+}
+
+/** Lua Function: ircIsOper( )
+ * @return boolean - True if the client is an OPER, false otherwise.
+ * 
+ * Returns the state of the client's "mIsOper" member.
+ **/
+int TLuaInterpreter::ircIsOper( lua_State * L ) {
+    bool rVal = false;
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircIsOper() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        rVal = mudlet::self()->mpIRC->ircIsOper();
+    }
+    
+    lua_pushboolean( L, rVal );
+    
+    return 1;
+}
+
+/** Lua Function: ircOp( Nick, [Channel] )
+ * @arg string Nick - The usernick to give CHANOP to.
+ * @arg string Channel - Optional. The channel in which Nick resides and will be given CHANOP. Defaults to main channel.
+ * @return nil.
+ * 
+ * Sends a command to the IRC server to give CHANOP to the given Nick in Channel. 
+ * Raises an sysIrcStatusMessage event. 
+ * Requires CHANOP or OPER status.
+ **/
+int TLuaInterpreter::ircOp( lua_State * L ) {
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircOp() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    string nick;
+    QString qNick;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircOp: wrong argument type, Nick argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        nick = lua_tostring( L, 1 );
+        qNick = QString::fromStdString( nick );
+    }
+    
+    string chan = "";
+    QString qChan = "";
+    if( ! lua_isnoneornil( L, 2 ) ) {
+        if( ! lua_isstring( L, 2 ) )
+        {
+            lua_pushstring( L, "ircOp: wrong argument type, Channel argument must be a String." );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            chan = lua_tostring( L, 2 );
+            qChan = QString::fromStdString( chan );
+        }
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        mudlet::self()->mpIRC->ircOp( qNick, qChan );
+    } 
+    
+    return 0;
+}
+
+
+int TLuaInterpreter::ircDeOp( lua_State * L ) {
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircDeOp() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    string nick;
+    QString qNick;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircDeOp: wrong argument type, Nick argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        nick = lua_tostring( L, 1 );
+        qNick = QString::fromStdString( nick );
+    }
+    
+    string chan = "";
+    QString qChan = "";
+    if( ! lua_isnoneornil( L, 2 ) ) {
+        if( ! lua_isstring( L, 2 ) )
+        {
+            lua_pushstring( L, "ircDeOp: wrong argument type, Channel argument must be a String." );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            chan = lua_tostring( L, 2 );
+            qChan = QString::fromStdString( chan );
+        }
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        mudlet::self()->mpIRC->ircDeOp( qNick, qChan );
+    } 
+    
+    return 0;
+}
+
+/** Lua Function: ircIsChanOp( [Channel] )
+ * @arg string Channel - Optional. Channel in which to check for CHANOP status. Defaults to main Channel.
+ * @return boolean - true if client has CHANOP in Channel.
+ * 
+ * Returns the boolean state of CHANOP status for the channel given, or the main channel if none are given.
+ **/
+int TLuaInterpreter::ircIsChanOp( lua_State * L ) {
+    bool rVal = false;
+    
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircIsChanOp() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    string chan = "";
+    QString qchan = "";
+    if( ! lua_isnoneornil( L, 1 ) ) {
+        if( ! lua_isstring( L, 1 ) )
+        {
+            lua_pushstring( L, "ircIsChanOp: wrong argument type, Channel argument must be a String." );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            chan = lua_tostring( L, 1 );
+            qchan = QString::fromStdString( chan );
+            
+            if( ! mudlet::self()->mpIRC->isValidChannel( qchan ) ) {
+                lua_pushstring( L, "ircIsChanOp: Channel must be a valid channel name starting with #, & or +." );
+                lua_error( L );
+                return 1;
+            }
+        }
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        rVal = mudlet::self()->mpIRC->ircIsChanOp( qchan );
+    } 
+    
+    lua_pushboolean( L, rVal );
+    
+    return 1;
+}
+
+/** Lua Function: ircMode( Target, Modes )
+ * @arg string Target - a valid Channel or the current client Nick name.
+ * @arg string Modes - Optional. Used to set modes on Target.
+ * @return nil
+ * 
+ * Used to get or set Mode settings on a Target Channel.
+ * Can also get or set User Mode settings on self if Target is set to irc Nick.
+ * This function will raise the sysIrcStatusMessage event when the server replies.
+ **/
+int TLuaInterpreter::ircMode( lua_State * L ) {
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircMode() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    string target;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircMode: wrong argument type, Target argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        target = lua_tostring( L, 1 );
+        QString QsTarget = QString::fromStdString( target );
+        
+        if( ! mudlet::self()->mpIRC->isValidChannel( QsTarget ) && 
+            mudlet::self()->mpIRC->mNick != QsTarget ) {
+            lua_pushstring( L, "ircMode: Target must be a valid Channel name or the Nick used by this IRC Client." );
+            lua_error( L );
+            return 1;
+        }
+    }
+    
+    string modes = "";
+    if( ! lua_isnoneornil( L, 2 ) ) {
+        if( ! lua_isstring( L, 2 ) )
+        {
+            lua_pushstring( L, "ircMode: wrong argument type, Modes argument must be a String." );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            modes = lua_tostring( L, 2 );
+        }
+    }
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        mudlet::self()->mpIRC->ircMode( QString::fromStdString(target), QString::fromStdString(modes) );
+    }
+    
+    return 0;
+}
+
+/** Lua Function: ircTopic( Target, Message )
+ * @arg string Target - a valid Channel name.
+ * @arg string Message - Optional. A new Topic Message to set on Target Channel.
+ * @return nil.
+ * 
+ * When supplied without a message, will fetch the current topic on the Target Channel.
+ * Otherwise used to set the topic on the Target Channel.
+ * This function will raise the sysIrcStatusMessage event when the server replies.
+ **/
+int TLuaInterpreter::ircTopic( lua_State * L ) {
+    if( ! mudlet::self()->mpIRC ) {
+        qDebug() << "TLuaInterpreter::ircTopic() - Created IRC client!";
+        
+        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        mudlet::self()->mpIRC = new dlgIRC( pHost );
+    }
+    
+    string target;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushstring( L, "ircTopic: wrong argument type, Target argument must be a String." );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        target = lua_tostring( L, 1 );
+        QString QsTarget = QString::fromStdString( target );
+        
+        if( ! mudlet::self()->mpIRC->isValidChannel( QsTarget ) ) {
+            lua_pushstring( L, "ircTopic: Target must be a valid Channel name." );
+            lua_error( L );
+            return 1;
+        }
+    }
+    
+    string msg = "";
+    if( ! lua_isnoneornil( L, 2 ) ) {
+        qDebug() << "ircTopic() #2 in";
+        if( ! lua_isstring( L, 2 ) )
+        {
+            lua_pushstring( L, "ircTopic: wrong argument type, Message argument must be a String." );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            msg = lua_tostring( L, 2 );
+        }
+    }
+    
+    QString qTarget = QString::fromStdString(target);
+    QString qMsg = QString::fromStdString(msg);
+    
+    qDebug() << "ircTopic() - T: " << qTarget << " M: " << qMsg ;
+    
+    if( mudlet::self()->mpIRC->mIrcConnected ) {
+        mudlet::self()->mpIRC->ircTopic( qTarget, qMsg );
+    }
+    
     return 0;
 }
 
@@ -13142,6 +14184,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempTimer", TLuaInterpreter::tempTimer );
     lua_register( pGlobalLua, "tempTrigger", TLuaInterpreter::tempTrigger );
     lua_register( pGlobalLua, "tempRegexTrigger", TLuaInterpreter::tempRegexTrigger );
+    
+    lua_register( pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout );
+    lua_register( pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout );
+    lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet );
+    
     lua_register( pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow );
     lua_register( pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow );
     lua_register( pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer );
@@ -13342,6 +14390,29 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
     lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
+    
+    lua_register( pGlobalLua, "ircReconnect", TLuaInterpreter::ircReconnect );
+    lua_register( pGlobalLua, "ircGetHost", TLuaInterpreter::ircGetHost );
+    lua_register( pGlobalLua, "ircGetNick", TLuaInterpreter::ircGetNick );
+    lua_register( pGlobalLua, "ircGetChannel", TLuaInterpreter::ircGetChannel );    
+    lua_register( pGlobalLua, "ircSetHost", TLuaInterpreter::ircSetHost );
+    lua_register( pGlobalLua, "ircSetNick", TLuaInterpreter::ircSetNick );
+    lua_register( pGlobalLua, "ircSetChannel", TLuaInterpreter::ircSetChannel );
+    lua_register( pGlobalLua, "ircSaveSessionConfigs", TLuaInterpreter::ircSaveSessionConfigs );
+    lua_register( pGlobalLua, "ircJoin", TLuaInterpreter::ircJoin );
+    lua_register( pGlobalLua, "ircPart", TLuaInterpreter::ircPart );
+    lua_register( pGlobalLua, "ircGetChannels", TLuaInterpreter::ircGetChannels );
+    lua_register( pGlobalLua, "ircGetNicks", TLuaInterpreter::ircGetNicks );
+    lua_register( pGlobalLua, "ircWhoIs", TLuaInterpreter::ircWhoIs );
+    lua_register( pGlobalLua, "ircWhoWas", TLuaInterpreter::ircWhoWas );
+    lua_register( pGlobalLua, "ircOper", TLuaInterpreter::ircOper );
+    lua_register( pGlobalLua, "ircIsOper", TLuaInterpreter::ircIsOper );
+    lua_register( pGlobalLua, "ircOp", TLuaInterpreter::ircOp );
+    lua_register( pGlobalLua, "ircDeOp", TLuaInterpreter::ircDeOp );
+    lua_register( pGlobalLua, "ircIsChanOp", TLuaInterpreter::ircIsChanOp );
+    lua_register( pGlobalLua, "ircMode", TLuaInterpreter::ircMode );
+    lua_register( pGlobalLua, "ircTopic", TLuaInterpreter::ircTopic );
+    
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
     lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
     lua_register( pGlobalLua, "createMapLabel", TLuaInterpreter::createMapLabel );

@@ -666,6 +666,15 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c )
     raiseEvent( pE );
 }
 
+void Host::postIrcStatusMessage( const QString& a, const QString& b, const QString& c )
+{
+    TEvent pE;
+    pE.mArgumentList << "sysIrcStatusMessage";
+    pE.mArgumentList << a << b << c;
+    pE.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent( pE );
+}
+
 void Host::enableTimer(const QString & name )
 {
     mTimerUnit.enableTimer( name );

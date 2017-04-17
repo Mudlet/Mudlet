@@ -171,6 +171,23 @@ void HostManager::postIrcMessage( QString a, QString b, QString c )
     }
 }
 
+void HostManager::postIrcStatusMessage( QString a, QString b, QString c )
+{
+    qDebug() << "HostManager::postIrcMessage(...) INFO: trying to read host pool, getting shared read access...";
+    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
+
+    const QList<QSharedPointer<Host> > hostList = mHostPool.values();
+    mPoolReadWriteLock.unlock();
+    qDebug() << "HostManager::postIrcMessage(...) INFO: ...got read access and sending IRC message to" << hostList.count() << "Hosts.";
+    for(const auto & i : hostList)
+    {
+        if( i )
+        {
+            i->postIrcStatusMessage( a, b, c );
+        }
+    }
+}
+
 // The slightly convoluted way we step through the list of hosts is so that we
 // send out the events to the other hosts in a predictable and consistant order
 // and so that no one host gets an unfair advantage when emitting events. The
