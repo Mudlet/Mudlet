@@ -55,8 +55,7 @@ inline QDebug& operator<<(QDebug& debug, const TEvent& event)
     while (i < argCount && i < typeCount) {
         if (Q_UNLIKELY(i >= typeCount)) {
             result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{missing}") % event.mArgumentList.at(i) % QLatin1String("]"));
-        }
-        else {
+        } else {
             if (Q_UNLIKELY(i >=argCount)) {
                 switch (event.mArgumentTypeList.at(i)) {
                 case ARGUMENT_TYPE_NUMBER:
