@@ -184,7 +184,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
     else { // reply IS ok...
         QFile localFile( localFileName );
         if( ! localFile.open( QFile::WriteOnly ) ) {
-            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -201,7 +201,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
 
         qint64 bytesWritten = localFile.write( reply->readAll() );
         if( bytesWritten == -1 ) {
-            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -219,7 +219,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
         localFile.flush();
 
         if( localFile.error() == QFile::NoError ) {
-            event.mArgumentList << QStringLiteral("sysDownloadDone");
+            event.mArgumentList << QLatin1String("sysDownloadDone");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -227,7 +227,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
             event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
         }
         else {
-            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
