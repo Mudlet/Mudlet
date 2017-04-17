@@ -1149,15 +1149,28 @@ bool Host::installPackage( const QString& fileName, int module )
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
     TEvent installEvent;
-    installEvent.mArgumentList.append( QStringLiteral( "sysInstallPackageEvent" ) );
-    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    installEvent.mArgumentList.append( packageName );
-    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    installEvent.mArgumentList.append( QString::number( module ) );
-    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-    installEvent.mArgumentList.append( fileName );
-    installEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    raiseEvent( installEvent );
+    installEvent.mArgumentList.append(QLatin1String("sysInstallPackageEvent"));
+    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    installEvent.mArgumentList.append(packageName);
+    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    switch (module) {
+    case 0:
+        installEvent.mArgumentList.append(QLatin1String("package"));
+        break;
+    case 1:
+        installEvent.mArgumentList.append(QLatin1String("moduleUserOrSystem"));
+        break;
+    case 2:
+        installEvent.mArgumentList.append(QLatin1String("moduleSync"));
+        break;
+    case 3:
+        installEvent.mArgumentList.append(QLatin1String("moduleScript"));
+        break;
+    }
+    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    installEvent.mArgumentList.append(fileName);
+    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(installEvent);
 
     return true;
 }
@@ -1218,13 +1231,26 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     }
 
     TEvent uninstallEvent;
-    uninstallEvent.mArgumentList.append( QStringLiteral( "sysUninstallPackageEvent" ) );
-    uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    uninstallEvent.mArgumentList.append( packageName );
-    uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    uninstallEvent.mArgumentList.append( QString::number( module ) );
-    uninstallEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-    raiseEvent( uninstallEvent );
+    uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackageEvent"));
+    uninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    uninstallEvent.mArgumentList.append(packageName);
+    uninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    switch (module) {
+    case 0:
+        uninstallEvent.mArgumentList.append(QLatin1String("package"));
+        break;
+    case 1:
+        uninstallEvent.mArgumentList.append(QLatin1String("moduleUserOrSystem"));
+        break;
+    case 2:
+        uninstallEvent.mArgumentList.append(QLatin1String("moduleSync"));
+        break;
+    case 3:
+        uninstallEvent.mArgumentList.append(QLatin1String("moduleScript"));
+        break;
+    }
+    uninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(uninstallEvent);
 
     int dualInstallations=0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
