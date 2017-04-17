@@ -84,7 +84,7 @@ inline QDebug& operator<<(QDebug& debug, const TEvent& event)
                     break;
                 default:
                     result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{string}") % event.mArgumentList.at(i) % QLatin1String("]"));
-==              }
+                }
             }
             ++i;
         }
