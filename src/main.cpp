@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014, 2016 by Stephen Lyons                        *
  *                                            - slysven@virginmedia.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -165,8 +165,7 @@ int main(int argc, char *argv[])
         _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
         // Create a log file for writing leaks.
-        HANDLE hLogFile;
-        hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
+        HANDLE hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
             FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL, NULL);
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);

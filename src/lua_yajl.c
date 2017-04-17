@@ -32,17 +32,17 @@ static int got_map_value(lua_State* L);
 
 static void* yajl_malloc_dbg(void* ctx, size_t size)
 {
-    return ::_malloc_dbg(size, LUAYAJL_CLIENT_TYPE, __FILE__, __LINE__);
+    return _malloc_dbg(size, LUAYAJL_CLIENT_TYPE, __FILE__, __LINE__);
 }
 
 static void* yajl_realloc_dbg(void* ctx, void* ptr, size_t size)
 {
-    return ::_realloc_dbg(ptr, size, LUAYAJL_CLIENT_TYPE, __FILE__, __LINE__);
+    return _realloc_dbg(ptr, size, LUAYAJL_CLIENT_TYPE, __FILE__, __LINE__);
 }
 
 static void yajl_free_dbg(void* ctx, void* ptr)
 {
-    return ::_free_dbg(ptr, LUAYAJL_CLIENT_TYPE);
+    _free_dbg(ptr, LUAYAJL_CLIENT_TYPE);
 }
 
 yajl_alloc_funcs yajl_alloc_funcs_dbg = {
