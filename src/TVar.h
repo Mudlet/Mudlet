@@ -45,7 +45,6 @@ public:
     bool setName(const QString);
     bool setName(const QString, int);
     void setNewName(const QString, int);
-// Not used:    void    setNewName(const QString);
     void setReference(const bool);
     QList<TVar*> getChildren(const bool isToSort = true);
     TVar* getParent();

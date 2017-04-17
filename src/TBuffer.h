@@ -78,11 +78,7 @@ public:
     int bgG;
     int bgB;
     unsigned flags;
-//    bool   italics;
-//    bool   bold;
-//    bool   underline;
     int link;
-//    bool   invers;
 };
 
 const QChar cLF = QChar('\n');

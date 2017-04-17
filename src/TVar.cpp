@@ -159,12 +159,6 @@ int TVar::getValueType()
     return vType;
 }
 
-// Not Used:
-//void TVar::setNewName( const QString n )
-//{
-//    nName = n;
-//}
-
 void TVar::setNewName( const QString n, const int t )
 {
     nName = n;

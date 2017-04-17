@@ -60,28 +60,6 @@ bool HostManager::deleteHost( QString hostname )
     }
 }
 
-// Not Used - if resurrected MUST re-write to use mPoolReadWriteLock.lockForWrite() as in deleteHost(...)/addHost(...)!
-//bool HostManager::renameHost( QString hostname )
-//{
-//    QMutexLocker locker(& mPoolLock);
-
-//    // make sure this is really a new host
-//    if( mHostPool.find( hostname ) == mHostPool.end() )
-//    {
-//        return false;
-//    }
-//    else
-//    {
-//        //Host * pNewHost = getHost( hostname ); // see why it doesn't work
-//        QSharedPointer<Host> pNewHost = mHostPool[hostname];
-//        mHostPool.remove( hostname );
-//        mHostPool.insert(pNewHost->getName(), pNewHost);
-//    }
-
-//    return true;
-
-//}
-
 bool HostManager::addHost( QString hostname, QString port, QString login, QString pass )
 {
     if( hostname.isEmpty() )
@@ -123,7 +101,6 @@ bool HostManager::addHost( QString hostname, QString port, QString login, QStrin
     }
 
     mHostPool.insert( hostname, pNewHost );
-// Not Used:    mpActiveHost = mHostPool.begin().value().data();
     mPoolReadWriteLock.unlock();
     qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") INFO: new Host created and added to host pool... releasing lock and returning true!";
     return true;
@@ -144,15 +121,6 @@ QStringList HostManager::getHostList()
     qDebug() << "HostManager::getHostList() INFO: ...got read access, and returning" << hostList.count() << "Host name(s).";
     return strlist;
 }
-
-// Not Used - if resurrected MUST re-write to use mPoolReadWriteLock.lockForRead()
-// and take a const local copy of mHostPool.keys() to return!
-//QList<QString> HostManager::getHostNameList()
-//{
-//    QMutexLocker locker(& mPoolLock);
-
-//    return mHostPool.keys();
-//}
 
 void HostManager::postIrcMessage( QString a, QString b, QString c )
 {
@@ -236,27 +204,3 @@ Host * HostManager::getHost( QString hostname )
 
     return pHost;
 }
-
-// Not Used:
-//Host * HostManager::getHostFromHostID( int id )
-//{
-//    QMutexLocker locker( & mPoolLock );
-//    QMapIterator<QString, QSharedPointer<Host> > it(mHostPool);
-//    while( it.hasNext() )
-//    {
-//        it.next();
-//        if( it.value()->getHostID() == id )
-//        {
-//            return it.value().data();
-//        }
-//    }
-//    qDebug()<<"ERROR: didnt find requested id in hostpool";
-//    return 0;
-//}
-
-// Not Used:
-//Host * HostManager::getFirstHost()
-//{
-//    QMutexLocker locker(& mPoolLock);
-//    return mHostPool.begin().value().data();
-//}

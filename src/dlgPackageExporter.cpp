@@ -129,9 +129,6 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem * pItem, QList<QTreeWidgetI
 
 
 void dlgPackageExporter::slot_export_package(){
-//#ifndef Q_OS_WIN
-//    filePath = ui->filePath->text();
-//#endif
     QFile file_xml( filePath );
     if( file_xml.open( QIODevice::WriteOnly ) )
     {
@@ -269,11 +266,9 @@ void dlgPackageExporter::slot_export_package(){
         }
 
 
-        //#ifdef Q_OS_WIN
         int err = 0;
         char buf[100];
         zip* archive;
-        //archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
         archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE, &err);
         if ( err != 0 )
         {
@@ -298,7 +293,6 @@ void dlgPackageExporter::slot_export_package(){
                 zip_error_to_str(buf, sizeof(buf), err, errno);
                 //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
             }
-//            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
             err = zip_add( archive, fname.toStdString().c_str(), s);
             if ( err == -1 )
             {
@@ -315,10 +309,6 @@ void dlgPackageExporter::slot_export_package(){
             close();
             return;
         }
-            //JlCompress::compressDir(zip, tempDir );
-//        #else
-//            ui->infoLabel->setText("Exported package to "+filePath);
-//        #endif
     } else {
         ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
     }
@@ -329,25 +319,6 @@ void dlgPackageExporter::slot_addFiles(){
     QString _pn = "file:///"+tempDir;
     QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
 }
-
-// Not Used - otherwise might need to tweak search for *.xml to ensure it worked
-// on MacOS:
-//void dlgPackageExporter::slot_browse_button(){
-//    QFileDialog dialog(this);
-//    dialog.setFileMode(QFileDialog::AnyFile);
-//    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
-//    dialog.setViewMode(QFileDialog::Detail);
-//    QString fileName;
-//    if (dialog.exec()) {
-//        fileName = dialog.selectedFiles().first();
-
-//        if (!fileName.endsWith(".xml"))
-//            fileName.append(".xml");
-
-//        ui->filePath->setText(fileName);
-//        exportButton->setDisabled(false);
-//    }
-//}
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig){
     list<TTrigger *> * childList = trig->getChildrenList();
