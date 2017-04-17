@@ -2501,7 +2501,7 @@ int TLuaInterpreter::killTrigger( lua_State *L )
 
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
-    mudlet::self()->shutDown();
+    mudlet::self()->forceClose();
     return 0;
 }
 
