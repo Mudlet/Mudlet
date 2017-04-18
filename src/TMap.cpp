@@ -1842,25 +1842,27 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
     label.size = s;
     label.clickSize = s;
-    if( ! mpRoomDB->getArea(area) ) return -1;
-    int labelID;
-    if( !mapLabels.contains( area ) )
-    {
+    if( ! mpRoomDB->getArea(area) ) { return -1; }
+
+    int label_id;
+
+    // No labels exist for this area, so start from zero.
+    if (!mapLabels.contains(area)) {
         QMap<int, TMapLabel> m;
-        m[0] = label;
+        label_id = 0;
+        m[label_id] = label;
         mapLabels[area] = m;
-    }
-    else
-    {
-        labelID = createMapLabelID( area );
-        if( labelID > -1 )
-        {
-            mapLabels[area].insert(labelID, label);
+    } else {
+        label_id = createMapLabelID(area);
+        if (label_id > -1) {
+            mapLabels[area].insert(label_id, label);
         }
     }
 
-    if( mpMapper ) mpMapper->mp2dMap->update();
-    return labelID;
+    if (mpMapper) {
+        mpMapper->mp2dMap->update();
+    }
+    return label_id;
 }
 
 int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling )
