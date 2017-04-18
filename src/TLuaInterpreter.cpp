@@ -463,7 +463,7 @@ int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
     event.mArgumentList.append( pHost->getName() );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
 
-    mudlet::self()->getHostManager()->postInterHostEvent( pHost, event );
+    mudlet::self()->getHostManager().postInterHostEvent(pHost, event);
 
     return 0;
 }
