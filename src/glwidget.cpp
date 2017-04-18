@@ -1299,11 +1299,6 @@ void GLWidget::paintGL()
             zEbene += 1.0;
     }
 
-    if( zRot <= 0 )
-        zEbene = zmax;
-    else
-        zEbene = zmin;
-
     quads = 0;
     zEbene = zmin;
     glDisable(GL_DEPTH_TEST);
