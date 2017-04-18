@@ -162,7 +162,7 @@ void dlgIRC::onMessageReceived( IrcMessage* msg )
 void dlgIRC::irc_gotMsg( QString a, QString b, QString c )
 {
     qDebug()<<"a<"<<a<<"> b<"<<b<<">"<<" c<"<<c<<">";
-    mudlet::self()->getHostManager()->postIrcMessage( a, b, c );
+    mudlet::self()->getHostManager().postIrcMessage(a, b, c);
     c.replace("<","&#60;");
     c.replace(">","&#62;");
     const QString _t = QTime::currentTime().toString();
