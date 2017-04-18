@@ -576,8 +576,10 @@ void T2DMap::slot_switchArea(QString name)
                     }
                 }
 
-                mOx = pClosestRoom->x;
-                mOy = - pClosestRoom->y;  // Map y coordinates are reversed on 2D map!
+                if (pClosestRoom) {
+                    mOx = pClosestRoom->x;
+                    mOy = -pClosestRoom->y; // Map y coordinates are reversed on 2D map!
+                }
             }
             repaint();
             mpMap->set3DViewCenter( mAID, mOx, -mOy, mOz ); // Pass the coordinates to the TMap instance to pass to the 3D mapper

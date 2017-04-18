@@ -7214,6 +7214,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     if( ! pT ) return;
 
     QPushButton * pB = (QPushButton *) sender();
+    if( ! pB ) return;
     int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     dlgTriggerPatternEdit * pI = mTriggerPatternEdit[row];
     if( ! pI ) return;
@@ -7247,7 +7248,6 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
 
 
-    if( ! pB ) return;
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
     pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
@@ -7266,6 +7266,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     if( ! pT ) return;
 
     QPushButton * pB = (QPushButton *) sender();
+    if( ! pB ) return;
     int row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     dlgTriggerPatternEdit * pI = mTriggerPatternEdit[row];
     if( ! pI ) return;
@@ -7299,7 +7300,6 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     palette.setColor( QPalette::Button, color );
     QString styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
 
-    if( ! pB ) return;
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
     if( ! pI ) return;

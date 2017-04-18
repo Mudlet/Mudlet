@@ -566,7 +566,8 @@ void dlgRoomExits::save()
         else
             pR->setExitWeight( QStringLiteral("out"), 0);
     } else {
-        if( originalExits.value( DIR_OUT )->destination > 0 ) {
+        auto exit = originalExits.value(DIR_OUT);
+        if (exit && exit->destination > 0) {
             pR->setExit( -1, DIR_OUT );
         }
         if (stub_out->isChecked() != pR->hasExitStub(DIR_OUT))
@@ -1960,7 +1961,10 @@ void dlgRoomExits::init( int id )
         //7 is new, but holds the script that was in 2
         pI->setText( 7, dir );
         // Not relevent for special exits but better initialise it
-        originalSpecialExits.value( dir )->hasStub = false;
+        auto exit = originalSpecialExits.value(dir);
+        if (exit) {
+            exit->hasStub = false;
+        }
     }
     mRoomID = id;
     button_save->setEnabled( false );
@@ -2145,95 +2149,107 @@ void dlgRoomExits::slot_checkModified()
     TExit * originalExit = originalExits.value(DIR_NORTHWEST);
     TExit * currentExit = makeExitFromControls(DIR_NORTHWEST);
 
-    if( * originalExit != * currentExit )
+    if (originalExit && currentExit && *originalExit != *currentExit) {
         isModified = true;
+    }
     delete currentExit;
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_NORTH);
         currentExit = makeExitFromControls(DIR_NORTH);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_NORTHEAST);
         currentExit = makeExitFromControls(DIR_NORTHEAST);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_UP);
         currentExit = makeExitFromControls(DIR_UP);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_WEST);
         currentExit = makeExitFromControls(DIR_WEST);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_EAST);
         currentExit = makeExitFromControls(DIR_EAST);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_DOWN);
         currentExit = makeExitFromControls(DIR_DOWN);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_SOUTHWEST);
         currentExit = makeExitFromControls(DIR_SOUTHWEST);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_SOUTH);
         currentExit = makeExitFromControls(DIR_SOUTH);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_SOUTHEAST);
         currentExit = makeExitFromControls(DIR_SOUTHEAST);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_IN);
         currentExit = makeExitFromControls(DIR_IN);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
     if( ! isModified ) {
         originalExit = originalExits.value(DIR_OUT);
         currentExit = makeExitFromControls(DIR_OUT);
-        if( * originalExit != * currentExit )
+        if (originalExit && currentExit && *originalExit != *currentExit) {
             isModified = true;
+        }
         delete currentExit;
     }
 
@@ -2286,13 +2302,14 @@ void dlgRoomExits::slot_checkModified()
                                            ? 1 : 0 ;
                     currentExit.weight = pI->text(2).toInt();
                     currentExit.hasStub = false;
-                    if( foundMap.contains( currentCmd )
-                        && foundMap.value( currentCmd )->destination == currentExit.destination
-                        && foundMap.value( currentCmd )->door        == currentExit.door
-                        && foundMap.value( currentCmd )->hasNoRoute  == currentExit.hasNoRoute
-                        && foundMap.value( currentCmd )->weight      == currentExit.weight      )
+                    auto exit = foundMap.value(currentCmd);
+                    if (exit
+                        && exit->destination == currentExit.destination
+                        && exit->door        == currentExit.door
+                        && exit->hasNoRoute  == currentExit.hasNoRoute
+                        && exit->weight      == currentExit.weight      ) {
                         foundMap.remove( currentCmd );
-                    else {
+                    } else {
                         isModified = true;
                         break;
                     }

@@ -92,7 +92,7 @@ int TForkedProcess::sendMessage( lua_State * L ) {
 
     if(forkedProcess == 0 || forkedProcess->isNull() || !(*forkedProcess)->running) {
         lua_pushstring(L, "Unable to send data to process. Process has ended.");
-        lua_error(L);
+        return lua_error(L);
     }
 
     size_t stringLength = 0;

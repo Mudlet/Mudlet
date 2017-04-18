@@ -554,8 +554,10 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem){
     qDebug()<<itemPath->text();
     if (!entry || !checkStatus || !itemPriority || !pH->mInstalledModules.contains(entry->text())){
         moduleHelpButton->setDisabled(true);
-        checkStatus->setCheckState(Qt::Unchecked);
-        checkStatus->setFlags(Qt::NoItemFlags);
+        if (checkStatus) {
+            checkStatus->setCheckState(Qt::Unchecked);
+            checkStatus->setFlags(Qt::NoItemFlags);
+        }
         return;
     }
     if (pH->moduleHelp.contains(entry->text()))
@@ -1908,7 +1910,6 @@ void mudlet::show_options_dialog()
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
     connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    if( ! pDlg ) return;
     pDlg->show();
 }
 
