@@ -1151,16 +1151,16 @@ bool Host::installPackage( const QString& fileName, int module )
     TEvent installEvent;
     switch (module) {
     case 0:
-        installEvent.mArgumentList.append(QLatin1String("sysInstallPackageEvent"));
+        installEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
         break;
     case 1:
-        installEvent.mArgumentList.append(QLatin1String("sysInstallModuleEvent"));
+        installEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
         break;
     case 2:
-        installEvent.mArgumentList.append(QLatin1String("sysSyncInstallModuleEvent"));
+        installEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
         break;
     case 3:
-        installEvent.mArgumentList.append(QLatin1String("sysLuaInstallModuleEvent"));
+        installEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
         break;
     default:
         Q_UNREACHABLE();
@@ -1233,16 +1233,16 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     TEvent uninstallEvent;
     switch (module) {
     case 0:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackageEvent"));
+        uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
         break;
     case 1:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModuleEvent"));
+        uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
         break;
     case 2:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModuleEvent"));
+        uninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
         break;
     case 3:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModuleEvent"));
+        uninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
         break;
     default:
         Q_UNREACHABLE();
