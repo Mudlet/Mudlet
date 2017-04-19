@@ -28,48 +28,41 @@
 
 using namespace std;
 
-KeyUnit::KeyUnit( Host * pHost )
-: mpHost(pHost)
-, mMaxID(0)
-, mModuleMember()
+KeyUnit::KeyUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mModuleMember()
 {
     setupKeyNames();
 }
 
 
-void KeyUnit::_uninstall( TKey * pChild, const QString& packageName )
+void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
-    list<TKey*> * childrenList = pChild->mpMyChildrenList;
-    for(auto key : *childrenList)
-    {
-        _uninstall( key, packageName );
-        uninstallList.append( key );
+    list<TKey*>* childrenList = pChild->mpMyChildrenList;
+    for (auto key : *childrenList) {
+        _uninstall(key, packageName);
+        uninstallList.append(key);
     }
 }
 
 
-void KeyUnit::uninstall(const QString& packageName )
+void KeyUnit::uninstall(const QString& packageName)
 {
-    for(auto rootKey : mKeyRootNodeList)
-    {
-        if( rootKey->mPackageName == packageName )
-        {
-            _uninstall( rootKey, packageName );
-            uninstallList.append( rootKey );
+    for (auto rootKey : mKeyRootNodeList) {
+        if (rootKey->mPackageName == packageName) {
+            _uninstall(rootKey, packageName);
+            uninstallList.append(rootKey);
         }
     }
-    for(auto & key : uninstallList)
-    {
+    for (auto& key : uninstallList) {
         unregisterKey(key);
     }
-     uninstallList.clear();
+    uninstallList.clear();
 }
 
-bool KeyUnit::processDataStream( int key, int modifier )
+bool KeyUnit::processDataStream(int key, int modifier)
 {
-    for(auto keyObject : mKeyRootNodeList)
-    {
-        if( keyObject->match( key, modifier ) ) return true;
+    for (auto keyObject : mKeyRootNodeList) {
+        if (keyObject->match(key, modifier))
+            return true;
     }
 
     return false;
@@ -77,186 +70,167 @@ bool KeyUnit::processDataStream( int key, int modifier )
 
 void KeyUnit::compileAll()
 {
-    for(auto key : mKeyRootNodeList)
-    {
-        if( key->isActive() )
-        {
+    for (auto key : mKeyRootNodeList) {
+        if (key->isActive()) {
             key->compileAll();
         }
     }
 }
 
-bool KeyUnit::enableKey(const QString & name )
+bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
-    QMutexLocker locker(& mKeyUnitLock);
-    for(auto key : mKeyRootNodeList)
-    {
-        key->enableKey( name );
+    QMutexLocker locker(&mKeyUnitLock);
+    for (auto key : mKeyRootNodeList) {
+        key->enableKey(name);
         found = true;
     }
     return found;
 }
 
-bool KeyUnit::disableKey(const QString & name )
+bool KeyUnit::disableKey(const QString& name)
 {
     bool found = false;
-    QMutexLocker locker(& mKeyUnitLock);
-    for(auto key : mKeyRootNodeList)
-    {
-        key->disableKey( name );
+    QMutexLocker locker(&mKeyUnitLock);
+    for (auto key : mKeyRootNodeList) {
+        key->disableKey(name);
         found = true;
     }
     return found;
 }
 
-void KeyUnit::addKeyRootNode( TKey * pT, int parentPosition, int childPosition )
+void KeyUnit::addKeyRootNode(TKey* pT, int parentPosition, int childPosition)
 {
-    if( ! pT ) return;
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT) {
+        return;
+    }
+    if (!pT->getID()) {
+        pT->setID(getNewID());
     }
 
-    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mKeyRootNodeList.size()) ) )
-    {
-        mKeyRootNodeList.push_back( pT );
-    }
-    else
-    {
+    if ((parentPosition == -1) || (childPosition >= static_cast<int>(mKeyRootNodeList.size()))) {
+        mKeyRootNodeList.push_back(pT);
+    } else {
         // insert item at proper position
         int cnt = 0;
-        for(auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it ++ )
-        {
-            if( cnt >= childPosition )
-            {
-                mKeyRootNodeList.insert( it, pT );
+        for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
+            if (cnt >= childPosition) {
+                mKeyRootNodeList.insert(it, pT);
                 break;
             }
             cnt++;
         }
     }
 
-    if( mKeyMap.find( pT->getID() ) == mKeyMap.end() )
-    {
-        mKeyMap.insert( pT->getID(), pT );
+    if (mKeyMap.find(pT->getID()) == mKeyMap.end()) {
+        mKeyMap.insert(pT->getID(), pT);
     }
 }
 
-void KeyUnit::reParentKey( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
+void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
-    QMutexLocker locker(& mKeyUnitLock);
+    QMutexLocker locker(&mKeyUnitLock);
 
-    TKey * pOldParent = getKeyPrivate( oldParentID );
-    TKey * pNewParent = getKeyPrivate( newParentID );
-    TKey * pChild = getKeyPrivate( childID );
-    if( ! pChild )
-    {
+    TKey* pOldParent = getKeyPrivate(oldParentID);
+    TKey* pNewParent = getKeyPrivate(newParentID);
+    TKey* pChild = getKeyPrivate(childID);
+    if (!pChild) {
         return;
     }
-    if( pOldParent )
-    {
-        pOldParent->popChild( pChild );
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
     }
-    if( ! pOldParent )
-    {
-        removeKeyRootNode( pChild );
+    if (!pOldParent) {
+        removeKeyRootNode(pChild);
     }
-    if( pNewParent )
-    {
-        pNewParent->addChild( pChild, parentPosition, childPosition );
-        if( pChild )
-        {
-            pChild->setParent( pNewParent );
+    if (pNewParent) {
+        pNewParent->addChild(pChild, parentPosition, childPosition);
+        if (pChild) {
+            pChild->setParent(pNewParent);
         }
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
-    }
-    else
-    {
-        pChild->Tree<TKey>::setParent( 0 );
-        addKeyRootNode( pChild, parentPosition, childPosition );
+    } else {
+        pChild->Tree<TKey>::setParent(0);
+        addKeyRootNode(pChild, parentPosition, childPosition);
     }
 }
 
-void KeyUnit::removeKeyRootNode( TKey * pT )
+void KeyUnit::removeKeyRootNode(TKey* pT)
 {
-    if( ! pT ) return;
-    mKeyRootNodeList.remove( pT );
+    if (!pT) {
+        return;
+    }
+    mKeyRootNodeList.remove(pT);
 }
 
-TKey * KeyUnit::getKey( int id )
+TKey* KeyUnit::getKey(int id)
 {
-    QMutexLocker locker(& mKeyUnitLock);
-    if( mKeyMap.find( id ) != mKeyMap.end() )
-    {
-        return mKeyMap.value( id );
-    }
-    else
-    {
+    QMutexLocker locker(&mKeyUnitLock);
+    if (mKeyMap.find(id) != mKeyMap.end()) {
+        return mKeyMap.value(id);
+    } else {
         return 0;
     }
 }
 
 
-
-TKey * KeyUnit::getKeyPrivate( int id )
+TKey* KeyUnit::getKeyPrivate(int id)
 {
-    if( mKeyMap.find( id ) != mKeyMap.end() )
-    {
-        return mKeyMap.value( id );
-    }
-    else
-    {
+    if (mKeyMap.find(id) != mKeyMap.end()) {
+        return mKeyMap.value(id);
+    } else {
         return 0;
     }
 }
 
-bool KeyUnit::registerKey( TKey * pT )
+bool KeyUnit::registerKey(TKey* pT)
 {
-    if( ! pT ) return false;
+    if (!pT) {
+        return false;
+    }
 
-    if( pT->getParent() )
-    {
-        addKey( pT );
+    if (pT->getParent()) {
+        addKey(pT);
+        return true;
+    } else {
+        addKeyRootNode(pT);
         return true;
     }
-    else
-    {
-        addKeyRootNode( pT );
-        return true;
-    }
 }
 
-void KeyUnit::unregisterKey( TKey * pT )
+void KeyUnit::unregisterKey(TKey* pT)
 {
-    if( ! pT ) return;
-    if( pT->getParent() )
-    {
-        removeKey( pT );
+    if (!pT) {
         return;
     }
-    else
-    {
-        removeKeyRootNode( pT );
+    if (pT->getParent()) {
+        removeKey(pT);
+        return;
+    } else {
+        removeKeyRootNode(pT);
         return;
     }
 }
 
 
-void KeyUnit::addKey( TKey * pT )
+void KeyUnit::addKey(TKey* pT)
 {
-    if( ! pT ) return;
+    if (!pT) {
+        return;
+    }
 
-    pT->setID( getNewID() );
+    pT->setID(getNewID());
 
-    mKeyMap.insert( pT->getID(), pT );
+    mKeyMap.insert(pT->getID(), pT);
 }
 
-void KeyUnit::removeKey( TKey * pT )
+void KeyUnit::removeKey(TKey* pT)
 {
-    if( ! pT ) return;
-    mKeyMap.remove( pT->getID() );
+    if (!pT) {
+        return;
+    }
+    mKeyMap.remove(pT->getID());
 }
 
 
@@ -265,7 +239,7 @@ int KeyUnit::getNewID()
     return ++mMaxID;
 }
 
-QString KeyUnit::getKeyName( int keyCode, int modifierCode )
+QString KeyUnit::getKeyName(int keyCode, int modifierCode)
 {
     QString name;
     /*
@@ -277,21 +251,34 @@ QString KeyUnit::getKeyName( int keyCode, int modifierCode )
      Qt::KeypadModifier  0x20000000 A keypad button is pressed.
      Qt::GroupSwitchModifier 0x40000000 X11 only. A Mode_switch key on the keyboard is pressed.
     */
-    if( modifierCode == 0x00000000 ) name += "no modifiers + ";
-    if( modifierCode & 0x02000000 ) name += "shift + ";
-    if( modifierCode & 0x04000000 ) name += "control + ";
-    if( modifierCode & 0x08000000 ) name += "alt + ";
-    if( modifierCode & 0x10000000 ) name += "meta + ";
-    if( modifierCode & 0x20000000 ) name += "keypad + ";
-    if( modifierCode & 0x40000000 ) name += "groupswitch + ";
-    if( mKeys.contains( keyCode ) )
-    {
+    if (modifierCode == 0x00000000) {
+        name += "no modifiers + ";
+    }
+    if (modifierCode & 0x02000000) {
+        name += "shift + ";
+    }
+    if (modifierCode & 0x04000000) {
+        name += "control + ";
+    }
+    if (modifierCode & 0x08000000) {
+        name += "alt + ";
+    }
+    if (modifierCode & 0x10000000) {
+        name += "meta + ";
+    }
+    if (modifierCode & 0x20000000) {
+        name += "keypad + ";
+    }
+    if (modifierCode & 0x40000000) {
+        name += "groupswitch + ";
+    }
+    if (mKeys.contains(keyCode)) {
         name += mKeys[keyCode];
         return name;
+    } else {
+        return QString("undefined key");
     }
-    else return QString("undefined key");
 }
-
 
 
 void KeyUnit::setupKeyNames()

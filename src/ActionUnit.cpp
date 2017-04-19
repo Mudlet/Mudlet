@@ -34,29 +34,25 @@
 
 using namespace std;
 
-void ActionUnit::_uninstall( TAction * pChild, const QString& packageName )
+void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
 {
-    list<TAction*> * childrenList = pChild->mpMyChildrenList;
-    for(auto action : *childrenList)
-    {
-        _uninstall( action, packageName );
-        uninstallList.append( action );
+    list<TAction*>* childrenList = pChild->mpMyChildrenList;
+    for (auto action : *childrenList) {
+        _uninstall(action, packageName);
+        uninstallList.append(action);
     }
 }
 
 
-void ActionUnit::uninstall(const QString& packageName )
+void ActionUnit::uninstall(const QString& packageName)
 {
-    for(auto rootAction : mActionRootNodeList)
-    {
-        if( rootAction->mPackageName == packageName )
-        {
-            _uninstall( rootAction, packageName );
-            uninstallList.append( rootAction );
+    for (auto rootAction : mActionRootNodeList) {
+        if (rootAction->mPackageName == packageName) {
+            _uninstall(rootAction, packageName);
+            uninstallList.append(rootAction);
         }
     }
-    for(auto & action : uninstallList)
-    {
+    for (auto& action : uninstallList) {
         delete action;
     }
     uninstallList.clear();
@@ -64,213 +60,202 @@ void ActionUnit::uninstall(const QString& packageName )
 
 void ActionUnit::compileAll()
 {
-    for(auto action : mActionRootNodeList)
-    {
-        if( action->isActive() )
-        {
+    for (auto action : mActionRootNodeList) {
+        if (action->isActive()) {
             action->compileAll();
         }
     }
 }
 
-TAction * ActionUnit::findAction(const QString & name )
+TAction* ActionUnit::findAction(const QString& name)
 {
     //QMap<int, TAction *>  mActionMap;
 
-    QMapIterator<int,TAction *> it(mActionMap);
-    while( it.hasNext() )
-    {
+    QMapIterator<int, TAction*> it(mActionMap);
+    while (it.hasNext()) {
         it.next();
-        if (it.value()->getName() == name){
-            qDebug()<<it.value()->getName();
-            TAction * pT = it.value();
+        if (it.value()->getName() == name) {
+            qDebug() << it.value()->getName();
+            TAction* pT = it.value();
             return pT;
         }
     }
     return 0;
 }
 
-void ActionUnit::addActionRootNode( TAction * pT, int parentPosition, int childPosition )
+void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)
 {
-    if( ! pT ) return;
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT) {
+        return;
     }
-    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mActionRootNodeList.size()) ) )
-    {
-        mActionRootNodeList.push_back( pT );
+    if (!pT->getID()) {
+        pT->setID(getNewID());
     }
-    else
-    {
-         // insert item at proper position
+    if ((parentPosition == -1) || (childPosition >= static_cast<int>(mActionRootNodeList.size()))) {
+        mActionRootNodeList.push_back(pT);
+    } else {
+        // insert item at proper position
         int cnt = 0;
-        for(auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it ++ )
-        {
-            if( cnt >= childPosition )
-            {
-                mActionRootNodeList.insert( it, pT );
+        for (auto it = mActionRootNodeList.begin(); it != mActionRootNodeList.end(); it++) {
+            if (cnt >= childPosition) {
+                mActionRootNodeList.insert(it, pT);
                 break;
             }
             cnt++;
         }
     }
 
-    mActionMap.insert( pT->getID(), pT );
-
+    mActionMap.insert(pT->getID(), pT);
 }
 
-void ActionUnit::reParentAction( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
+void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
-    TAction * pOldParent = getActionPrivate( oldParentID );
-    TAction * pNewParent = getActionPrivate( newParentID );
-    TAction * pChild = getActionPrivate( childID );
-    if( ! pChild )
-    {
+    TAction* pOldParent = getActionPrivate(oldParentID);
+    TAction* pNewParent = getActionPrivate(newParentID);
+    TAction* pChild = getActionPrivate(childID);
+    if (!pChild) {
         return;
     }
-    if( pOldParent )
-    {
-        pOldParent->popChild( pChild );
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
     }
-    if( ! pOldParent )
-    {
-        removeActionRootNode( pChild );
+    if (!pOldParent) {
+        removeActionRootNode(pChild);
     }
 
-    if( pNewParent )
-    {
-        pNewParent->Tree<TAction>::addChild( pChild, parentPosition, childPosition );
-        if( pChild )
-            pChild->Tree<TAction>::setParent( pNewParent );
+    if (pNewParent) {
+        pNewParent->Tree<TAction>::addChild(pChild, parentPosition, childPosition);
+        if (pChild) {
+            pChild->Tree<TAction>::setParent(pNewParent);
+        }
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
-    }
-    else
-    {
-        pChild->Tree<TAction>::setParent( 0 );
-        addActionRootNode( pChild, parentPosition, childPosition );
+    } else {
+        pChild->Tree<TAction>::setParent(0);
+        addActionRootNode(pChild, parentPosition, childPosition);
     }
 
 
-
-    if( ( ! pOldParent ) && ( pNewParent ) )
-    {
-        if( pChild->mpEasyButtonBar )
-        {
-            if( pChild->mLocation == 0 ) mpHost->mpConsole->mpTopToolBar->layout()->removeWidget( pChild->mpEasyButtonBar );
-            if( pChild->mLocation == 2 ) mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget( pChild->mpEasyButtonBar );
-            if( pChild->mLocation == 3 ) mpHost->mpConsole->mpRightToolBar->layout()->removeWidget( pChild->mpEasyButtonBar );
-            if( pChild->mLocation == 4 )
-            {
-                if( pChild->mpToolBar )
-                {
-                    pChild->mpToolBar->setFloating( false );
-                    mudlet::self()->removeDockWidget( pChild->mpToolBar );
+    if ((!pOldParent) && (pNewParent)) {
+        if (pChild->mpEasyButtonBar) {
+            if (pChild->mLocation == 0) {
+                mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
+            }
+            if (pChild->mLocation == 2) {
+                mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
+            }
+            if (pChild->mLocation == 3) {
+                mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
+            }
+            if (pChild->mLocation == 4) {
+                if (pChild->mpToolBar) {
+                    pChild->mpToolBar->setFloating(false);
+                    mudlet::self()->removeDockWidget(pChild->mpToolBar);
                 }
             }
         }
     }
 }
 
-void ActionUnit::removeActionRootNode( TAction * pT )
+void ActionUnit::removeActionRootNode(TAction* pT)
 {
-    if( ! pT ) return;
-    mActionRootNodeList.remove( pT );
-}
-
-TAction * ActionUnit::getAction( int id )
-{
-    if( mActionMap.contains( id ) )
-    {
-        return mActionMap.value( id );
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-TAction * ActionUnit::getActionPrivate( int id )
-{
-    if( mActionMap.find( id ) != mActionMap.end() )
-    {
-        return mActionMap.value( id );
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-bool ActionUnit::registerAction( TAction * pT )
-{
-    if( ! pT ) return false;
-
-    if( pT->getParent() )
-    {
-        addAction( pT );
-        return true;
-    }
-    else
-    {
-        addActionRootNode( pT );
-        return true;
-    }
-}
-
-void ActionUnit::unregisterAction( TAction * pT )
-{
-    if( ! pT ) return;
-    if( pT->getParent() && pT->getParent()->mPackageName.isEmpty() )
-    {
-        removeAction( pT );
-        updateToolbar();
+    if (!pT) {
         return;
     }
-    else
-    {
-        if( pT->mpEasyButtonBar && pT->mPackageName.isEmpty() )
-        {
-            if( pT->mLocation == 0 ) mpHost->mpConsole->mpTopToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
-            if( pT->mLocation == 2 ) mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
-            if( pT->mLocation == 3 ) mpHost->mpConsole->mpRightToolBar->layout()->removeWidget( pT->mpEasyButtonBar );
-            if( pT->mLocation == 4 )
-            {
-                if( pT->mpToolBar )
-                {
-                    pT->mpToolBar->setFloating( false );
-                    mudlet::self()->removeDockWidget( pT->mpToolBar );
+    mActionRootNodeList.remove(pT);
+}
+
+TAction* ActionUnit::getAction(int id)
+{
+    if (mActionMap.contains(id)) {
+        return mActionMap.value(id);
+    } else {
+        return 0;
+    }
+}
+
+TAction* ActionUnit::getActionPrivate(int id)
+{
+    if (mActionMap.find(id) != mActionMap.end()) {
+        return mActionMap.value(id);
+    } else {
+        return 0;
+    }
+}
+
+bool ActionUnit::registerAction(TAction* pT)
+{
+    if (!pT) {
+        return false;
+    }
+
+    if (pT->getParent()) {
+        addAction(pT);
+        return true;
+    } else {
+        addActionRootNode(pT);
+        return true;
+    }
+}
+
+void ActionUnit::unregisterAction(TAction* pT)
+{
+    if (!pT) {
+        return;
+    }
+    if (pT->getParent() && pT->getParent()->mPackageName.isEmpty()) {
+        removeAction(pT);
+        updateToolbar();
+        return;
+    } else {
+        if (pT->mpEasyButtonBar && pT->mPackageName.isEmpty()) {
+            if (pT->mLocation == 0) {
+                mpHost->mpConsole->mpTopToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+            }
+            if (pT->mLocation == 2) {
+                mpHost->mpConsole->mpLeftToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+            }
+            if (pT->mLocation == 3) {
+                mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pT->mpEasyButtonBar);
+            }
+            if (pT->mLocation == 4) {
+                if (pT->mpToolBar) {
+                    pT->mpToolBar->setFloating(false);
+                    mudlet::self()->removeDockWidget(pT->mpToolBar);
                 }
             }
         }
-        if( ! pT->getParent() )
-            removeActionRootNode( pT );
-        else
-            removeAction( pT );
+        if (!pT->getParent()) {
+            removeActionRootNode(pT);
+        } else {
+            removeAction(pT);
+        }
         updateToolbar();
         return;
     }
 }
 
 
-void ActionUnit::addAction( TAction * pT )
+void ActionUnit::addAction(TAction* pT)
 {
-    if( ! pT ) return;
+    if (!pT) {
+        return;
+    }
 
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT->getID()) {
+        pT->setID(getNewID());
     }
 
     mActionMap.insert(pT->getID(), pT);
 }
 
-void ActionUnit::removeAction( TAction * pT )
+void ActionUnit::removeAction(TAction* pT)
 {
-    if( ! pT ) return;
+    if (!pT) {
+        return;
+    }
 
-    mActionMap.remove( pT->getID() );
+    mActionMap.remove(pT->getID());
 }
 
 

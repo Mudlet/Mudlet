@@ -64,14 +64,15 @@ public:
     bool isSaved( TVar * );
     void addPointer( const void* );
 public:
-    QSet< QString > hidden;
-    QSet< QString > hiddenByUser;
+    QSet<QString> hidden;
+    QSet<QString> hiddenByUser;
+
 private:
-    TVar * base;
-    QSet< QString > varList;
-    QMap< QTreeWidgetItem *, TVar * > wVars;
-    QMap< QTreeWidgetItem *, TVar * > tVars;
-    QSet< QString > savedVars;
+    TVar* base;
+    QSet<QString> varList;
+    QMap<QTreeWidgetItem*, TVar*> wVars;
+    QMap<QTreeWidgetItem*, TVar*> tVars;
+    QSet<QString> savedVars;
     QSet<const void*> pointers;
 };
 
