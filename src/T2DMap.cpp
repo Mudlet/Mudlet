@@ -3259,7 +3259,7 @@ void T2DMap::slot_setPlayerLocation()
         mpMap->mRoomIdHash[ mpHost->getName() ] = _newRoomId;
         mpMap->mNewMove = true;
         TEvent manualSetEvent;
-        manualSetEvent.mArgumentList.append( QStringLiteral( "sysManualLocationSetEvent" ) );
+        manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
         manualSetEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         manualSetEvent.mArgumentList.append( QString::number( _newRoomId ) );
         manualSetEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );

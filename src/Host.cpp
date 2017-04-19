@@ -363,7 +363,7 @@ void Host::resetProfile()
     mTimerUnit.reenableAllTriggers();
 
     TEvent event;
-    event.mArgumentList.append( "sysLoadEvent" );
+    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent( event );
     qDebug()<<"resetProfile() DONE";
@@ -660,7 +660,7 @@ void Host::raiseEvent( const TEvent & pE )
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c )
 {
     TEvent pE;
-    pE.mArgumentList << "sysIrcMessage";
+    pE.mArgumentList << QLatin1String("sysIrcMessage");
     pE.mArgumentList << a << b << c;
     pE.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent( pE );
