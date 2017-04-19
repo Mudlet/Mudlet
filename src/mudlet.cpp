@@ -1672,6 +1672,53 @@ void mudlet::addSubWindow( TConsole* pConsole )
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
 
+void mudlet::closeEvent(QCloseEvent *event)
+{
+    foreach( TConsole * pC, mConsoleMap )
+    {
+        if( ! pC->close() )
+        {
+            event->ignore();
+            return;
+        }
+        else
+            pC->mUserAgreedToCloseConsole = true;
+    }
+
+    writeSettings();
+
+    goingDown();
+    if( mpDebugConsole )
+    {
+        mpDebugConsole->close();
+    }
+    foreach( TConsole * pC, mConsoleMap )
+    {
+        if( pC->mpHost->getName() != "default_host" )
+        {
+            // close script-editor
+            if( pC->mpHost->mpEditorDialog )
+            {
+                pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
+                pC->mpHost->mpEditorDialog->close();
+            }
+            if( pC->mpHost->mpNotePad )
+            {
+                pC->mpHost->mpNotePad->save();
+                pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
+                pC->mpHost->mpNotePad->close();
+            }
+
+
+            // close console
+            pC->close();
+        }
+    }
+
+    event->accept();
+    qApp->quit();
+}
+
 void mudlet::forceClose()
 {
     for (auto console : mConsoleMap) {

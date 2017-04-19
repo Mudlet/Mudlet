@@ -236,6 +236,9 @@ public slots:
     void layoutModules();
     void slot_help_module();
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
