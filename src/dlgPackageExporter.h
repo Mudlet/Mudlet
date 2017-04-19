@@ -72,6 +72,11 @@ public:
     QMap<QTreeWidgetItem *, TTimer*> timerMap;
     QMap<QTreeWidgetItem *, TTimer*> modTimerMap;
     QString filePath;
+
+public slots:
+    void slot_addFiles();
+    void slot_export_package();
+
 private:
     Ui::dlgPackageExporter *ui;
     QPointer<Host> mpHost;
@@ -81,9 +86,6 @@ private:
     QString tempDir;
     QString packageName;
     QString zipFile;
-public slots:
-    void slot_addFiles();
-    void slot_export_package();
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

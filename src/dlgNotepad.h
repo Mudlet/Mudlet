@@ -40,6 +40,8 @@ public:
     dlgNotepad(Host*);
     void save();
     void restore();
+
+private:
     QPointer<Host> mpHost;
 };
 

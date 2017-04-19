@@ -51,8 +51,7 @@ public:
     TAction *        mpTAction;
     void             recordMove(){ mRecordMove = true; }
 
-//private:
-
+private:
     bool mVerticalOrientation;
     QWidget* mpWidget;
     QString mName;

@@ -41,14 +41,15 @@ class EAction : public QAction
 public:
     EAction(QIcon&, QString&);
 
-    int mID;
-    QPointer<Host> mpHost;
-
 public slots:
     void slot_execute(bool checked);
 
 signals:
     void triggered(QAction*);
+
+public://private:
+    int mID;
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_EACTION_H

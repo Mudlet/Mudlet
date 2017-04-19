@@ -41,9 +41,6 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 public:
     dlgProfilePreferences(QWidget*, Host*);
 
-    int mFontSize;
-
-
 public slots:
     // Fonts.
     void setFontSize();
@@ -111,6 +108,8 @@ public slots:
 private:
     void setColors();
     void setColor(QPushButton* b, QColor& c);
+
+    int mFontSize;
     QPointer<Host> mpHost;
 };
 
