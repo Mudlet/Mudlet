@@ -659,11 +659,11 @@ void Host::raiseEvent( const TEvent & pE )
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c )
 {
-    TEvent pE;
-    pE.mArgumentList << QLatin1String("sysIrcMessage");
-    pE.mArgumentList << a << b << c;
-    pE.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent( pE );
+    TEvent event;
+    event.mArgumentList << QLatin1String("sysIrcMessage");
+    event.mArgumentList << a << b << c;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent(event);
 }
 
 void Host::enableTimer(const QString & name )

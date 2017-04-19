@@ -128,91 +128,89 @@ TLuaInterpreter::~TLuaInterpreter()
 void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
 {
     Host * pHost = mpHost;
-    if( ! pHost ) {
+    if (! pHost) {
         qWarning() << "TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!";
         return; // Uh, oh!
     }
 
-    if( ! downloadMap.contains(reply) ) {
+    if (! downloadMap.contains(reply)) {
         reply->deleteLater();
         return;
     }
 
-    QString localFileName = downloadMap.value( reply );
-    TEvent e;
-    if( reply->error() != QNetworkReply::NoError ) {
-        e.mArgumentList << QLatin1String("sysDownloadError");
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e.mArgumentList << reply->errorString();
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        e.mArgumentList << localFileName;
-        e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+    QString localFileName = downloadMap.value(reply);
+    TEvent event;
+    if (reply->error() != QNetworkReply::NoError) {
+        event.mArgumentList << QLatin1String("sysDownloadError");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->errorString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << localFileName;
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
         reply->deleteLater();
-        downloadMap.remove( reply );
-        pHost->raiseEvent( e );
+        downloadMap.remove(reply);
+        pHost->raiseEvent(event);
         return;
-    }
-    else { // reply IS ok...
-        QFile localFile( localFileName );
-        if( ! localFile.open( QFile::WriteOnly ) ) {
-            e.mArgumentList << QLatin1String("sysDownloadError");
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "unableToOpenLocalFileForWriting", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+    } else { // reply IS ok...
+        QFile localFile(localFileName);
+        if (! localFile.open(QFile::WriteOnly)) {
+            event.mArgumentList << QLatin1String("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr("unableToOpenLocalFileForWriting", "This string might not need to be translated!");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
-            downloadMap.remove( reply );
-            pHost->raiseEvent( e );
+            downloadMap.remove(reply);
+            pHost->raiseEvent(event);
             return;
         }
 
         qint64 bytesWritten = localFile.write( reply->readAll() );
-        if( bytesWritten == -1 ) {
-            e.mArgumentList << QLatin1String("sysDownloadError");
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "unableToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        if (bytesWritten == -1) {
+            event.mArgumentList << QLatin1String("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr("unableToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
-            downloadMap.remove( reply );
-            pHost->raiseEvent( e );
+            downloadMap.remove(reply);
+            pHost->raiseEvent(event);
             return;
         }
 
         localFile.flush();
 
-        if( localFile.error() == QFile::NoError ) {
-            e.mArgumentList << QLatin1String("sysDownloadDone");
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << QString::number( bytesWritten );
-            e.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-        }
-        else {
-            e.mArgumentList << QLatin1String("sysDownloadError");
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFileName;
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            e.mArgumentList << localFile.errorString();
-            e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        if (localFile.error() == QFile::NoError) {
+            event.mArgumentList << QLatin1String("sysDownloadDone");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QString::number(bytesWritten);
+            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+        } else {
+            event.mArgumentList << QLatin1String("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << tr("failureToWriteLocalFile", "This string might not need to be translated!");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFile.errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         }
 
         localFile.close();
         reply->deleteLater();
-        downloadMap.remove( reply );
-        pHost->raiseEvent( e );
+        downloadMap.remove(reply);
+        pHost->raiseEvent(event);
     }
 }
 
