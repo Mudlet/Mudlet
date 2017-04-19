@@ -249,7 +249,7 @@ void cTelnet::handle_socket_signal_connected()
     }
     //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
     TEvent me;
-    me.mArgumentList.append( "sysConnectionEvent" );
+    me.mArgumentList.append(QLatin1String("sysConnectionEvent"));
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     mpHost->raiseEvent( me );
 
@@ -259,7 +259,7 @@ void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
     TEvent me;
-    me.mArgumentList.append( "sysDisconnectionEvent" );
+    me.mArgumentList.append(QLatin1String("sysDisconnectionEvent"));
     me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     mpHost->raiseEvent( me );
     QString msg;
@@ -304,7 +304,7 @@ bool cTelnet::sendData( QString & data )
         data.replace(QChar('\n'),"");
     }
     TEvent pE;
-    pE.mArgumentList.append( "sysDataSendRequest" );
+    pE.mArgumentList.append(QLatin1String("sysDataSendRequest"));
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     pE.mArgumentList.append( data );
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
@@ -1036,7 +1036,7 @@ void cTelnet::processTelnetCommand( const string & command )
       QString msg = command.c_str();
       if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
       TEvent me;
-      me.mArgumentList.append( "sysTelnetEvent" );
+      me.mArgumentList.append(QLatin1String("sysTelnetEvent"));
       me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
       me.mArgumentList.append( QString::number(type) );
       me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );

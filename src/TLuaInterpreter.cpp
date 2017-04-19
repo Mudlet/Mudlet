@@ -135,7 +135,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
     QString localFileName = downloadMap.value( reply );
     TEvent e;
     if( reply->error() != QNetworkReply::NoError ) {
-        e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+        e.mArgumentList << QLatin1String("sysDownloadError");
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         e.mArgumentList << reply->errorString();
         e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -150,7 +150,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
     else { // reply IS ok...
         QFile localFile( localFileName );
         if( ! localFile.open( QFile::WriteOnly ) ) {
-            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+            e.mArgumentList << QLatin1String("sysDownloadError");
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -167,7 +167,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
 
         qint64 bytesWritten = localFile.write( reply->readAll() );
         if( bytesWritten == -1 ) {
-            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+            e.mArgumentList << QLatin1String("sysDownloadError");
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -185,7 +185,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
         localFile.flush();
 
         if( localFile.error() == QFile::NoError ) {
-            e.mArgumentList << "sysDownloadDone";
+            e.mArgumentList << QLatin1String("sysDownloadDone");
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << localFileName;
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -193,7 +193,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply * reply )
             e.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
         }
         else {
-            e.mArgumentList << tr( "sysDownloadError", "This string might not need to be translated!" );
+            e.mArgumentList << QLatin1String("sysDownloadError");
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             e.mArgumentList << tr( "failureToWriteLocalFile", "This string might not need to be translated!" );
             e.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -12472,8 +12472,7 @@ void TLuaInterpreter::setChannel102Table( int & var, int & arg )
     lua_pop( L, 1 );
 
     TEvent event;
-    QString e = "channel102Message";
-    event.mArgumentList.append( e );
+    event.mArgumentList.append(QLatin1String("channel102Message"));
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     event.mArgumentList.append( QString::number(var) );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );

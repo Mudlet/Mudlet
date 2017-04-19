@@ -1156,7 +1156,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
     if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
     {
         TEvent me;
-        me.mArgumentList.append( "sysWindowMousePressEvent" );
+        me.mArgumentList.append(QLatin1String("sysWindowMousePressEvent"));
         switch( event->button() )
         {
         case Qt::LeftButton:
@@ -1536,7 +1536,7 @@ void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
     if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
     {
         TEvent me;
-        me.mArgumentList.append( "sysWindowMouseReleaseEvent" );
+        me.mArgumentList.append(QLatin1String("sysWindowMouseReleaseEvent"));
         switch( event->button() )
         {
         case Qt::LeftButton:
