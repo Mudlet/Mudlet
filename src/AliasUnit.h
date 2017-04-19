@@ -55,7 +55,6 @@ public:
     void                            _uninstall( TAlias * pChild, QString packageName );
     void                            reParentAlias( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
     bool                            processDataStream(const QString & );
-    void                            setAliasStayOpen( QString, int );
     void                            stopAllTriggers();
     void                            reenableAllTriggers();
     QString                         assembleReport();

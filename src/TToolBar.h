@@ -58,7 +58,6 @@ public:
     QGridLayout* mpLayout;
     int mItemCount;
 
-
 public slots:
     void slot_pressed(const bool);
 };

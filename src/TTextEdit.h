@@ -71,7 +71,6 @@ public:
                                       bool isStrikeOut,
                                       QColor & fgColor,
                                       QColor & bgColor );
-    std::string       getCurrentTime();
     void              showNewLines();
     void              forceUpdate();
     void              needUpdate( int, int );
@@ -115,10 +114,7 @@ public:
     int mWrapIndentCount;
     qreal mLetterSpacing;
 
-signals:
-
 public slots:
-
     void              slot_toggleTimeStamps();
     void              slot_copySelectionToClipboard();
     void              slot_scrollBarMoved( int );
@@ -126,7 +122,6 @@ public slots:
     void              slot_copySelectionToClipboardHTML();
 
 private:
-
     void              initDefaultSettings();
 
     QFont mCommandLineFont;

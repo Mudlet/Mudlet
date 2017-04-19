@@ -60,7 +60,6 @@ public:
 
 
 public slots:
-
     void showInfo();
     void shiftUp();
     void shiftDown();

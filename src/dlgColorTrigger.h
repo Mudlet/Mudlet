@@ -38,11 +38,8 @@ class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
 
 public:
     dlgColorTrigger(QWidget*, TTrigger*, int);
-signals:
-
 
 public slots:
-
     void setColorBlack();
     void setColorLightBlack();
     void setColorRed();

@@ -72,8 +72,6 @@ public:
     QPointer<Host> mpHost;
     QTreeWidgetItem * mpEditItem;
 
-signals:
-
 public slots:
     void save();
     void slot_addSpecialExit();

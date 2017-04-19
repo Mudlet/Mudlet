@@ -121,7 +121,6 @@ public:
    void                          setStrikeOut( Host *, const QString & name, bool );
    void                          setFgColor( Host *, const QString & name, int, int, int );
    void                          setBgColor( Host *, const QString & name, int, int, int );
-   bool                          userWindowLineWrap( Host * pHost, const QString & name, bool on );
    QString                       readProfileData( const QString& profile, const QString& item );
    bool                          setWindowWrap( Host * pHost, const QString & name, int & wrap );
    bool                          setWindowWrapIndent( Host * pHost, const QString & name, int & wrap );
@@ -131,7 +130,6 @@ public:
    int                           getLastLineNumber( Host *, const QString & );
    void                          readSettings();
    void                          writeSettings();
-   void                          showUnzipProgress( const QString& txt );
    bool                          openWebPage(const QString& path);
    void                          processEventLoopHack();
    static const QString          scmMudletXmlDefaultVersion;
@@ -242,12 +240,10 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 signals:
-
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
 
 private slots:
-
     void slot_close_profile();
     void slot_tab_changed(int);
     void show_help_dialog();

@@ -35,11 +35,6 @@ class dlgVarsMainArea : public QWidget, public Ui::vars_main_area
 
 public:
     dlgVarsMainArea(QWidget*);
-
-signals:
-
-
-public slots:
 };
 
 #endif // MUDLET_DLGVARSMAINAREA_H

@@ -1648,8 +1648,6 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 }
 
-
-
 void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
 {
 }
@@ -1663,8 +1661,6 @@ Host * mudlet::getActiveHost()
     else
         return 0;
 }
-
-
 
 void mudlet::addSubWindow( TConsole* pConsole )
 {
@@ -1777,7 +1773,6 @@ void mudlet::readSettings()
         showMaximized();
     }
 }
-
 
 void mudlet::setIcoSize( int s )
 {
@@ -1908,7 +1903,6 @@ void mudlet::show_options_dialog()
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
     pDlg->show();
 }
-
 
 void mudlet::show_help_dialog()
 {
@@ -2112,7 +2106,6 @@ void mudlet::print( Host * pH, const QString & s )
 {
     mConsoleMap[pH]->print( s );
 }
-
 
 QString mudlet::readProfileData( const QString& profile, const QString& item )
 {

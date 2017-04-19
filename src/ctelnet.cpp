@@ -119,9 +119,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize the socket
     connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    //connect(&socket, SIGNAL(error()), this, SLOT (handle_socket_signal_error()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT (handle_socket_signal_readyRead()));
-    //connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
 
     // initialize telnet session
     reset();
@@ -209,9 +207,6 @@ void cTelnet::connectIt(const QString &address, int port)
 
     hostName = address;
     hostPort = port;
-    // QChar(0x2714));//'?'
-    // QChar(0x2718));//'?'
-    // QChar(0x24d8));//info i im kreis
     QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
     postMessage( server );
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
@@ -337,21 +332,10 @@ bool cTelnet::socketOutRaw(string & data)
 {
     if( ! socket.isWritable() )
     {
-        //qDebug()<<"MUDLET SOCKET ERROR: socket not connected, but wants to send data="<<data.c_str();
         return false;
     }
     int dataLength = data.length();
     int remlen = dataLength;
-
-    /*cout << "SOCKET OUT RAW: [ ";
-    for(unsigned int i=0;i<data.size();i++)
-    {
-        unsigned char c = data[i];
-        int ci = 0;
-        ci = (int)c;
-        cout << "<" << ci << "> ";
-    }
-    cout << " ]" << endl;*/
 
     do
     {
@@ -387,7 +371,6 @@ void cTelnet::setDisplayDimensions()
     int y = mpHost->mScreenHeight;
     if(myOptionState[static_cast<int>(OPT_NAWS)])
     {
-        //cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
         string s;
         s = TN_IAC;
         s += TN_SB;
@@ -600,16 +583,12 @@ void cTelnet::processTelnetCommand( const string & command )
               if( ! mpHost->mFORCE_MXP_NEGOTIATION_OFF )
               {
                 sendTelnetOption( TN_DO, 91 );
-                //mpHost->mpConsole->print("\n<MXP enabled>\n");
 
                 raiseProtocolEvent( "sysProtocolEnabled", "MXP" );
                 break;
               }
-              //else
-                  //mpHost->mpConsole->print("\n<MXP declined because of user setting: force MXP off>");
           }
 
-          //option = command[2];
           if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
           {
               qDebug() << "Aardwulf channel 102 support enabled";
@@ -633,7 +612,7 @@ void cTelnet::processTelnetCommand( const string & command )
                    //(according to telnet specification, option announcement may not be
                    //unless explicitly requested)
 
-                   if( //( option == OPT_SUPPRESS_GA ) ||
+                   if(
                        ( option == OPT_STATUS ) ||
                        ( option == OPT_TERMINAL_TYPE) ||
                        ( option == OPT_ECHO ) ||
@@ -661,13 +640,11 @@ void cTelnet::processTelnetCommand( const string & command )
                            if( option == OPT_COMPRESS )
                            {
                                mMCCP_version_1 = true;
-                               //MCCP->setMCCP1(true);
                                qDebug() << "MCCP v1 negotiated.";
                            }
                            else
                            {
                                mMCCP_version_2 = true;
-                               //MCCP->setMCCP2( true );
                                qDebug() << "MCCP v2 negotiated!";
                            }
                        }
@@ -737,7 +714,6 @@ void cTelnet::processTelnetCommand( const string & command )
 
                   if( option == OPT_COMPRESS )
                   {
-                      //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
                       mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       qDebug() << "MCCP v1 disabled !";
@@ -746,7 +722,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   {
                       mMCCP_version_2 = false;
                       mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
-                      //MCCP->setMCCP2 (false);
                       qDebug() << "MCCP v1 disabled !";
                   }
               }
@@ -814,7 +789,7 @@ void cTelnet::processTelnetCommand( const string & command )
           else if (!myOptionState[255])
           //only if the option is currently disabled
           {
-              if( //( option == OPT_SUPPRESS_GA ) ||
+              if(
                   ( option == OPT_STATUS ) ||
                   ( option == OPT_NAWS ) ||
                   ( option == OPT_TERMINAL_TYPE ) )
@@ -920,8 +895,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   version = version.section(' ', 0, 0);
 
                   int newVersion = version.toInt();
-                  //QString __mkp = QString("<old version:'%1' new version:'%2' name:'%3' msg:'%4'>\n").arg(mpHost->mServerGUI_Package_version).arg(newVersion).arg(mpHost->mServerGUI_Package_name).arg(version);
-                  //mpHost->mpConsole->print(__mkp);
                   if( mpHost->mServerGUI_Package_version != newVersion )
                   {
                       QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
@@ -1146,12 +1119,10 @@ void cTelnet::setGMCPVariables(const QString & msg )
 {
     QString var;
     QString arg;
-// N/U:    bool single = true;
     if( msg.indexOf( '\n' ) > -1 )
     {
         var = msg.section( "\n", 0, 0 );
         arg = msg.section( "\n", 1 );
-// N/U:        single = false;
     }
     else
     {
@@ -1159,7 +1130,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
         arg = msg.section( " ", 1 );
     }
 
-    //printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
     if( msg.startsWith( "Client.GUI" ) )
     {
         if( ! mpHost->mAcceptServerGUI ) return;
@@ -1170,8 +1140,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
         version = version.section(' ', 0, 0);
 
         int newVersion = version.toInt();
-        //QString __mkp = QString("<old version:'%1' new version:'%2' name:'%3' msg:'%4'>\n").arg(mpHost->mServerGUI_Package_version).arg(newVersion).arg(mpHost->mServerGUI_Package_name).arg(version);
-        //mpHost->mpConsole->print(__mkp);
         if( mpHost->mServerGUI_Package_version != newVersion )
         {
             QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
@@ -1284,23 +1252,6 @@ void cTelnet::atcpComposerSave( QString txt )
     mpComposer->close();
     mpComposer = 0;
 }
-
-/*string cTelnet::getCurrentTime()
-{
-    time_t t;
-    time(&t);
-    tm lt;
-    ostringstream s;
-    s.str("");
-    struct timeval tv;
-    struct timezone tz;
-    gettimeofday(&tv, &tz);
-    localtime_r( &t, &lt );
-    s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
-    string time = s.str();
-    return time;
-} */
-
 
 // Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent
 // additional lines (ending with '\n') to last space character after "-"
@@ -1504,7 +1455,6 @@ void cTelnet::gotRest( string & mud_data )
     {
         return;
     }
-    //if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
     if( ! mGA_Driver )
     {
         size_t i = mud_data.rfind('\n');
@@ -1534,14 +1484,11 @@ void cTelnet::gotRest( string & mud_data )
         }
 
     }
-    else if( mGA_Driver )// if( ( mud_data[mud_data.size()-1] == '\n' ) )
+    else if( mGA_Driver )
     {
-
-        //mpPostingTimer->stop();
         mMudData += mud_data;
         postData();
         mMudData = "";
-        //mIsTimerPosting = false;
     }
     else
     {
@@ -1566,7 +1513,6 @@ void cTelnet::slot_timerPosting()
 
 void cTelnet::postData()
 {
-    //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData);
     }
@@ -1728,7 +1674,6 @@ void cTelnet::readPipe()
             }
             else if( iac && (!insb) && (ch == TN_SB))
             {
-                //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
                 iac = false;
                 insb = true;
@@ -1831,9 +1776,6 @@ void cTelnet::handle_socket_signal_readyRead()
         buffer = out_buffer;
     }
     buffer[datalen] = '\0';
-    #ifdef DEBUG
-        //qDebug()<<"got<"<<pBuffer<<">";
-    #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
         mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;
@@ -1848,9 +1790,6 @@ void cTelnet::handle_socket_signal_readyRead()
 
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            #ifdef DEBUG
-                //qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
-            #endif
             if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
@@ -1893,21 +1832,6 @@ void cTelnet::handle_socket_signal_readyRead()
             }
             else if( insb )
             {
-                /*if( buffer[i] == static_cast<char>(200) )
-                {
-                    cout << "got atcp? ";
-                    if( i > 1 )
-                    {
-                        if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) )
-                        {
-                            atcp_msg = true;
-                            cout << " yes"<<endl;
-                        }
-                        else
-                            cout << "no"<<endl;
-                    }
-                }
-                else*/
                 if( ! mNeedDecompression )
                 {
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
@@ -1938,7 +1862,6 @@ void cTelnet::handle_socket_signal_readyRead()
                                 mNeedDecompression = true;
                                 // from this position in stream onwards, data will be compressed by zlib
                                 gotRest( cleandata );
-                                //mpHost->mpConsole->print("\n<starting MCCP data compression>\n");
                                 cleandata = "";
                                 initStreamDecompressor();
                                 buffer += i + 3;//bugfix: BenH

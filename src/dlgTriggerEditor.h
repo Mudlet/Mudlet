@@ -75,7 +75,6 @@ class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
     Q_DISABLE_COPY(dlgTriggerEditor)
 
 public:
-
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
     void                        closeEvent(QCloseEvent *event) override;
@@ -103,7 +102,6 @@ public:
     void                        recurseVariablesDown( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, bool );
     void                        show_vars( );
-
 
 public slots:
     void                        slot_toggleHiddenVariables( bool );

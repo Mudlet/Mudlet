@@ -91,7 +91,6 @@ public:
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
     bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);
-    // void deleteRoom( int id );
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(QString& msg);
@@ -110,8 +109,6 @@ public:
     bool restore(QString);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
     void initGraph();
-// Not used:    void exportMapToDatabase();
-// Not used:    void importMapFromDatabase();
     void connectExitStub(int roomId, int dirType);
     void postMessage(const QString text);
     void set3DViewCenter(const int, const int, const int, const int);
@@ -141,7 +138,6 @@ public:
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
-// Not used:    QVector3D span;
     QPointer<Host> mpHost;
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -151,7 +147,6 @@ public:
     bool mRightDown;
     float m2DPanXStart;
     float m2DPanYStart;
-// Not used:    int mViewArea;
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
@@ -162,10 +157,7 @@ public:
     GLWidget* mpM;
     dlgMapper* mpMapper;
     QMap<int, int> roomidToIndex;
-    // QMap<int, int> indexToRoomid;
 
-// Not used:        QMap<QString, int> pixNameTable;
-// Not used:        QMap<int, QPixmap> pixTable;
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;

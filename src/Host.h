@@ -113,8 +113,6 @@ public:
     double             getStopWatchTime( int );
     int                createStopWatch();
     void               startSpeedWalk();
-    //QStringList        getBufferTable( int, int );
-    //QString            getBufferLine( int );
     void               saveModules(int);
     void               reloadModule(const QString& moduleName);
     bool               blockScripts() { return mBlockScriptCompile; }
@@ -303,8 +301,6 @@ public:
     QStringList mActiveModules;
     bool mModuleSaveBlock;
 
-    // There was a QDialog *          mpUnzipDialog; but to avoid issues of
-    // reentrancy it needed to be made local to the method that used it.
     QPushButton* uninstallButton;
     QListWidget* packageList;
     QListWidget* moduleList;
