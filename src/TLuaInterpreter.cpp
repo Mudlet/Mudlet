@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -5300,6 +5301,7 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
+
     QString sound = luaSendText.c_str();
     if( QDir::homePath().contains('\\') )
     {
@@ -5309,7 +5311,8 @@ int TLuaInterpreter::playSoundFile( lua_State * L )
     {
         sound.replace('\\', "/");
     }
-    mudlet::self()->playSound( sound );
+    /* if no volume provided, substitute 100 (maximum) */
+    mudlet::self()->playSound( sound, lua_isnumber( L, 2) ? lua_tointeger(L, 2) : 100 );
     return 0;
 }
 

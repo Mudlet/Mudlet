@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -79,8 +80,8 @@ public:
    void                          printSystemMessage( Host * pH, const QString & s );
    void                          print( Host *, const QString & );
    void                          addConsoleForNewHost( Host * pH );
-   void							 disableToolbarButtons();
-   void							 enableToolbarButtons();
+   void                          disableToolbarButtons();
+   void                          enableToolbarButtons();
    Host *                        getActiveHost();
    void                          registerTimer( TTimer *, QTimer * );
    void                          unregisterTimer( QTimer * );
@@ -158,7 +159,7 @@ public:
    void                          doAutoLogin( const QString & );
    bool                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
-   void                          playSound( QString s );
+   void                          playSound( QString s, int );
    QTime                         mReplayTime;
    int                           mReplaySpeed;
    QToolBar *                    mpMainToolBar;
@@ -168,10 +169,7 @@ public:
    QPointer<Host>                mpCurrentActiveHost;
    bool                          mAutolog;
    QString                       mIrcNick;
-   QMediaPlayer *                mpMusicBox1;
-   QMediaPlayer *                mpMusicBox2;
-   QMediaPlayer *                mpMusicBox3;
-   QMediaPlayer *                mpMusicBox4;
+   QList<QMediaPlayer *>         MusicBoxList;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
    QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
