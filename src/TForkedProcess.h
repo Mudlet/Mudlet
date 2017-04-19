@@ -29,7 +29,8 @@
 #include "TLuaInterpreter.h"
 
 
-class TForkedProcess : public QProcess {
+class TForkedProcess : public QProcess
+{
     Q_OBJECT
 
     Q_DISABLE_COPY(TForkedProcess)

@@ -43,10 +43,10 @@ class dlgPackageExporter : public QDialog
     Q_DISABLE_COPY(dlgPackageExporter)
 
 public:
-    explicit dlgPackageExporter(QWidget *parent = 0);
-    explicit dlgPackageExporter(QWidget *parent, Host*);
+    explicit dlgPackageExporter(QWidget* parent = 0);
+    explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
-    void recurseTree(QTreeWidgetItem *, QList<QTreeWidgetItem *>&);
+    void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
     void listTriggers();
     void recurseTriggers(TTrigger*, QTreeWidgetItem*);
     void listAliases();
@@ -59,18 +59,18 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
-    QMap<QTreeWidgetItem *, TTrigger*> triggerMap;
-    QMap<QTreeWidgetItem *, TTrigger*> modTriggerMap;
-    QMap<QTreeWidgetItem *, TAlias*> aliasMap;
-    QMap<QTreeWidgetItem *, TAlias*> modAliasMap;
-    QMap<QTreeWidgetItem *, TScript*> scriptMap;
-    QMap<QTreeWidgetItem *, TScript*> modScriptMap;
-    QMap<QTreeWidgetItem *, TKey*> keyMap;
-    QMap<QTreeWidgetItem *, TKey*> modKeyMap;
-    QMap<QTreeWidgetItem *, TAction*> actionMap;
-    QMap<QTreeWidgetItem *, TAction*> modActionMap;
-    QMap<QTreeWidgetItem *, TTimer*> timerMap;
-    QMap<QTreeWidgetItem *, TTimer*> modTimerMap;
+    QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
+    QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
+    QMap<QTreeWidgetItem*, TAlias*> aliasMap;
+    QMap<QTreeWidgetItem*, TAlias*> modAliasMap;
+    QMap<QTreeWidgetItem*, TScript*> scriptMap;
+    QMap<QTreeWidgetItem*, TScript*> modScriptMap;
+    QMap<QTreeWidgetItem*, TKey*> keyMap;
+    QMap<QTreeWidgetItem*, TKey*> modKeyMap;
+    QMap<QTreeWidgetItem*, TAction*> actionMap;
+    QMap<QTreeWidgetItem*, TAction*> modActionMap;
+    QMap<QTreeWidgetItem*, TTimer*> timerMap;
+    QMap<QTreeWidgetItem*, TTimer*> modTimerMap;
     QString filePath;
 
 public slots:
@@ -78,11 +78,11 @@ public slots:
     void slot_export_package();
 
 private:
-    Ui::dlgPackageExporter *ui;
+    Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
-    QTreeWidget * treeWidget;
-    QPushButton *exportButton;
-    QPushButton *closeButton;
+    QTreeWidget* treeWidget;
+    QPushButton* exportButton;
+    QPushButton* closeButton;
     QString tempDir;
     QString packageName;
     QString zipFile;

@@ -29,8 +29,7 @@
 #include "post_guard.h"
 
 
-dlgNotepad::dlgNotepad( Host * pH )
-: mpHost( pH )
+dlgNotepad::dlgNotepad(Host* pH) : mpHost(pH)
 
 {
     setupUi(this);
@@ -39,32 +38,31 @@ dlgNotepad::dlgNotepad( Host * pH )
 
 void dlgNotepad::save()
 {
-    QString directoryFile = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName();
+    QString directoryFile = QDir::homePath() + "/.config/mudlet/profiles/" + mpHost->getName();
     QString fileName = directoryFile + "/notes.txt";
     QDir dirFile;
-    if( ! dirFile.exists( directoryFile ) )
-    {
-        dirFile.mkpath( directoryFile );
+    if (!dirFile.exists(directoryFile)) {
+        dirFile.mkpath(directoryFile);
     }
     QFile file;
-    file.setFileName( fileName );
-    file.open( QIODevice::WriteOnly );
+    file.setFileName(fileName);
+    file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
-    fileStream.setDevice( &file );
+    fileStream.setDevice(&file);
     fileStream << notesEdit->toPlainText();
     file.close();
 }
 
 void dlgNotepad::restore()
 {
-    QString directoryFile = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName();
+    QString directoryFile = QDir::homePath() + "/.config/mudlet/profiles/" + mpHost->getName();
     QString fileName = directoryFile + "/notes.txt";
     QDir dirFile;
     QFile file;
-    file.setFileName( fileName );
-    file.open( QIODevice::ReadOnly );
+    file.setFileName(fileName);
+    file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
-    fileStream.setDevice( &file );
+    fileStream.setDevice(&file);
     QString txt = fileStream.readAll();
     notesEdit->setPlainText(txt);
 }
