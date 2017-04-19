@@ -247,21 +247,22 @@ void cTelnet::handle_socket_signal_connected()
         mTimerLogin->start(2000);
         mTimerPass->start(3000);
     }
-    //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
-    TEvent me;
-    me.mArgumentList.append(QLatin1String("sysConnectionEvent"));
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
 
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysConnectionEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
-    TEvent me;
-    me.mArgumentList.append(QLatin1String("sysDisconnectionEvent"));
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysDisconnectionEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+
     QString msg;
     QTime timeDiff(0,0,0,0);
     msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
@@ -303,12 +304,14 @@ bool cTelnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-    TEvent pE;
-    pE.mArgumentList.append(QLatin1String("sysDataSendRequest"));
-    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    pE.mArgumentList.append( data );
-    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( pE );
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysDataSendRequest"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(data);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+
     if( mpHost->mAllowToSendCommand )
     {
         string outdata = (outgoingDataCodec->fromUnicode(data)).data();
@@ -1029,23 +1032,25 @@ void cTelnet::processTelnetCommand( const string & command )
   };//end switch 1
   // raise sysTelnetEvent for all unhandled protocols
   // EXCEPT TN_GA (performance)
-  if( command[1] != TN_GA )
-  {
-      unsigned char type = static_cast<unsigned char>(command[1]);
-      unsigned char telnetOption = static_cast<unsigned char>(command[2]);
-      QString msg = command.c_str();
-      if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
-      TEvent me;
-      me.mArgumentList.append(QLatin1String("sysTelnetEvent"));
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-      me.mArgumentList.append( QString::number(type) );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-      me.mArgumentList.append( QString::number(telnetOption) );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-      me.mArgumentList.append( msg );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-      mpHost->raiseEvent( me );
-  }
+    if (command[1] != TN_GA) {
+        unsigned char type = static_cast<unsigned char>(command[1]);
+        unsigned char telnetOption = static_cast<unsigned char>(command[2]);
+        QString msg = command.c_str();
+        if (command.size() >= 6) {
+            msg = msg.mid(3, command.size() - 5);
+        }
+
+        TEvent event;
+        event.mArgumentList.append(QLatin1String("sysTelnetEvent"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QString::number(type));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        event.mArgumentList.append(QString::number(telnetOption));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        event.mArgumentList.append(msg);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 }
 
 void cTelnet::setATCPVariables(const QString & msg )
@@ -1951,10 +1956,10 @@ MAIN_LOOP_END: ;
 
 void cTelnet::raiseProtocolEvent( const QString & name, const QString & protocol )
 {
-    TEvent me;
-    me.mArgumentList.append( name );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    me.mArgumentList.append( protocol );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+    TEvent event;
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(protocol);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
