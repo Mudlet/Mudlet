@@ -42,6 +42,8 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TCommandLine)
+
 public:
     TCommandLine(Host*, TConsole*, QWidget*);
     ~TCommandLine();

@@ -79,6 +79,7 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TMap)
 
 public:
     TMap(Host*);

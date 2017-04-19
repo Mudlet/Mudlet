@@ -36,6 +36,8 @@ class EAction : public QAction
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(EAction)
+
 public:
     EAction(QIcon&, QString&);
 

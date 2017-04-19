@@ -34,6 +34,8 @@ class THighlighter : public QSyntaxHighlighter
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(THighlighter)
+
 public:
     THighlighter(QTextDocument* parent = 0);
     void setSearchPattern(QString p);

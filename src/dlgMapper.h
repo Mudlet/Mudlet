@@ -37,7 +37,9 @@ class TMap;
 
 class dlgMapper : public QWidget , public Ui::mapper
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(dlgMapper)
 
 public:
         dlgMapper( QWidget *, Host *, TMap * );

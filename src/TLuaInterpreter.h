@@ -66,10 +66,12 @@ class TTrigger;
 
 class TLuaInterpreter : public QThread
 {
+    Q_OBJECT
+
+    Q_DISABLE_COPY(TLuaInterpreter)
+
     friend class TForkedProcess;
     friend class LuaInterface;
-
-    Q_OBJECT
 
 public:
     TLuaInterpreter(Host* mpHost, int id);

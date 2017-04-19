@@ -63,6 +63,8 @@ class mudlet : public QMainWindow, public Ui::MainWindow
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(mudlet)
+
 public:
 
                                  mudlet();
@@ -312,6 +314,8 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 class TConsoleMonitor : public QObject
 {
     Q_OBJECT
+
+    Q_DISABLE_COPY(TConsoleMonitor)
 
 public:
     TConsoleMonitor(QObject* parent) : QObject(parent) {}

@@ -34,6 +34,8 @@ class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgColorTrigger)
+
 public:
     dlgColorTrigger(QWidget*, TTrigger*, int);
 signals:

@@ -36,6 +36,8 @@ class TToolBar : public QDockWidget
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TToolBar)
+
 public:
     TToolBar(TAction*, const QString&, QWidget* pW = 0);
     void addButton(TFlipButton* pW);

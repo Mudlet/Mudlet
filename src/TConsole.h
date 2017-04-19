@@ -55,6 +55,8 @@ class TConsole : public QWidget
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TConsole)
+
 public:
 
                         TConsole( Host *, bool isDebugConsole, QWidget * parent=0 );

@@ -155,6 +155,7 @@ SET(mudlet_MOC_HDRS
     TLuaInterpreter.h
     TMap.h
     TSplitter.h
+    TSplitterHandle.h
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h

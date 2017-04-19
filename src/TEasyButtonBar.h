@@ -39,6 +39,8 @@ class TEasyButtonBar : public QWidget
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TEasyButtonBar)
+
 public:
                      TEasyButtonBar( TAction *, QString, QWidget * pW = 0 );
     void             addButton( TFlipButton * pW );

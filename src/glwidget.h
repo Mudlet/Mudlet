@@ -36,6 +36,8 @@ class GLWidget : public QGLWidget
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(GLWidget)
+
 public:
     GLWidget(QWidget* parent = 0);
     GLWidget(TMap* pM, QWidget* parent = 0);
