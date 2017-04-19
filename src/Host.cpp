@@ -1148,29 +1148,39 @@ bool Host::installPackage( const QString& fileName, int module )
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
-    TEvent installEvent;
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the install event") and a more specific need
+    // ("I specifically need to know when the module was synced")
+    TEvent genericInstallEvent;
+    genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericInstallEvent.mArgumentList.append(packageName);
+    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericInstallEvent);
+
+    TEvent detailedInstallEvent;
     switch (module) {
     case 0:
-        installEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
         break;
     case 1:
-        installEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
         break;
     case 2:
-        installEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
         break;
     case 3:
-        installEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
         break;
     default:
         Q_UNREACHABLE();
     }
-    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    installEvent.mArgumentList.append(packageName);
-    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    installEvent.mArgumentList.append(fileName);
-    installEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(installEvent);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedInstallEvent.mArgumentList.append(packageName);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedInstallEvent.mArgumentList.append(fileName);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedInstallEvent);
 
     return true;
 }
@@ -1230,27 +1240,37 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         }
     }
 
-    TEvent uninstallEvent;
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the uninstall event") and a more specific need
+    // ("I specifically need to know when the module was uninstalled via Lua")
+    TEvent genericUninstallEvent;
+    genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericUninstallEvent.mArgumentList.append(packageName);
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericUninstallEvent);
+
+    TEvent detailedUninstallEvent;
     switch (module) {
     case 0:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
         break;
     case 1:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
         break;
     case 2:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
         break;
     case 3:
-        uninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
         break;
     default:
         Q_UNREACHABLE();
     }
-    uninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    uninstallEvent.mArgumentList.append(packageName);
-    uninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(uninstallEvent);
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedUninstallEvent.mArgumentList.append(packageName);
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedUninstallEvent);
 
     int dualInstallations=0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
