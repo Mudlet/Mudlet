@@ -92,6 +92,8 @@ class cTelnet : public QObject
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(cTelnet)
+
 public:
                       cTelnet( Host * pH );
                       ~cTelnet();

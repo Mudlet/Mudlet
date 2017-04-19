@@ -31,6 +31,8 @@ class dlgTriggersMainArea : public QWidget, public Ui::trigger_main_area
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgTriggersMainArea)
+
 public:
     dlgTriggersMainArea(QWidget*);
 };

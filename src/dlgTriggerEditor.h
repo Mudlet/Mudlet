@@ -70,7 +70,9 @@ class dlgVarsMainArea;
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(dlgTriggerEditor)
 
 public:
 

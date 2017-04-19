@@ -34,6 +34,8 @@ class TTreeWidget : public QTreeWidget
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TTreeWidget)
+
 public:
     TTreeWidget(QWidget* pW);
     Qt::DropActions supportedDropActions() const override;

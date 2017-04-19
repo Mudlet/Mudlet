@@ -42,6 +42,8 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgIRC)
+
 public:
     dlgIRC();
     IrcSession* session;

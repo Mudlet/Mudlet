@@ -40,6 +40,8 @@ class TLabel : public QLabel
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TLabel)
+
 public:
     TLabel(QWidget* pW = 0);
     void setClick(Host* pHost, const QString& func, const TEvent& args);

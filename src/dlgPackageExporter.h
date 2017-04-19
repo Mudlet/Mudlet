@@ -40,6 +40,8 @@ class dlgPackageExporter : public QDialog
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgPackageExporter)
+
 public:
     explicit dlgPackageExporter(QWidget *parent = 0);
     explicit dlgPackageExporter(QWidget *parent, Host*);

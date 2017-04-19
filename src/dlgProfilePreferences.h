@@ -36,6 +36,8 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgProfilePreferences)
+
 public:
     dlgProfilePreferences(QWidget*, Host*);
 

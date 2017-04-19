@@ -31,6 +31,8 @@ class dlgSystemMessageArea : public QWidget, public Ui::systemMessageArea
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgSystemMessageArea)
+
 public:
     dlgSystemMessageArea(QWidget*);
 };

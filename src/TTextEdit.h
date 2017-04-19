@@ -45,6 +45,8 @@ class TTextEdit : public QWidget
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TTextEdit)
+
 public:
 
                       TTextEdit( TConsole *,

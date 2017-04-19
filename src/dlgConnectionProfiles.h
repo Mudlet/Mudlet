@@ -30,6 +30,8 @@ class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgConnectionProfiles)
+
 public:
 
     dlgConnectionProfiles(QWidget * parent = 0);
