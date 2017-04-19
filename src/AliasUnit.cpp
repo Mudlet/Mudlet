@@ -290,46 +290,42 @@ void AliasUnit::stopAllTriggers()
 
 void AliasUnit::reenableAllTriggers()
 {
-    for(auto alias : mAliasRootNodeList)
-    {
+    for (auto alias : mAliasRootNodeList) {
         alias->enableFamily();
     }
 }
 
-TAlias * AliasUnit::findAlias(const QString & name )
+TAlias* AliasUnit::findAlias(const QString& name)
 {
     //TAlias * pT = 0;
-    QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TAlias * pT = it.value();
+    QMap<QString, TAlias*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TAlias* pT = it.value();
         return pT;
     }
     return 0;
 }
 
-bool AliasUnit::enableAlias(const QString & name )
+bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TAlias * pT = it.value();
-        pT->setIsActive( true );
+    QMap<QString, TAlias*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TAlias* pT = it.value();
+        pT->setIsActive(true);
         ++it;
         found = true;
     }
     return found;
 }
 
-bool AliasUnit::disableAlias(const QString & name )
+bool AliasUnit::disableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TAlias * pT = it.value();
-        pT->setIsActive( false );
+    QMap<QString, TAlias*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TAlias* pT = it.value();
+        pT->setIsActive(false);
         ++it;
         found = true;
     }
@@ -337,21 +333,16 @@ bool AliasUnit::disableAlias(const QString & name )
 }
 
 
-bool AliasUnit::killAlias(const QString & name )
+bool AliasUnit::killAlias(const QString& name)
 {
-    for(auto alias : mAliasRootNodeList)
-    {
-        if( alias->getName() == name )
-        {
+    for (auto alias : mAliasRootNodeList) {
+        if (alias->getName() == name) {
             // only temporary Aliass can be killed
-            if( ! alias->isTempAlias() )
-            {
+            if (!alias->isTempAlias()) {
                 return false;
-            }
-            else
-            {
-                alias->setIsActive( false );
-                markCleanup( alias );
+            } else {
+                alias->setIsActive(false);
+                markCleanup(alias);
                 return true;
             }
         }
@@ -359,14 +350,17 @@ bool AliasUnit::killAlias(const QString & name )
     return false;
 }
 
-void AliasUnit::_assembleReport( TAlias * pChild )
+void AliasUnit::_assembleReport(TAlias* pChild)
 {
-    list<TAlias*> * childrenList = pChild->mpMyChildrenList;
-    for(auto alias : *childrenList)
-    {
-        _assembleReport( alias );
-        if( alias->isActive() ) statsActiveAliass++;
-        if( alias->isTempAlias() ) statsTempAliass++;
+    list<TAlias*>* childrenList = pChild->mpMyChildrenList;
+    for (auto alias : *childrenList) {
+        _assembleReport(alias);
+        if (alias->isActive()) {
+            statsActiveAliass++;
+        }
+        if (alias->isTempAlias()) {
+            statsTempAliass++;
+        }
         statsAliasTotal++;
     }
 }
@@ -376,17 +370,23 @@ QString AliasUnit::assembleReport()
     statsActiveAliass = 0;
     statsAliasTotal = 0;
     statsTempAliass = 0;
-    for(auto alias : mAliasRootNodeList)
-    {
-        if( alias->isActive() ) statsActiveAliass++;
-        if( alias->isTempAlias() ) statsTempAliass++;
+    for (auto alias : mAliasRootNodeList) {
+        if (alias->isActive()) {
+            statsActiveAliass++;
+        }
+        if (alias->isTempAlias()) {
+            statsTempAliass++;
+        }
         statsAliasTotal++;
-        list<TAlias*> * childrenList = alias->mpMyChildrenList;
-        for(auto childAlias : *childrenList)
-        {
-            _assembleReport( childAlias );
-            if( childAlias->isActive() ) statsActiveAliass++;
-            if( childAlias->isTempAlias() ) statsTempAliass++;
+        list<TAlias*>* childrenList = alias->mpMyChildrenList;
+        for (auto childAlias : *childrenList) {
+            _assembleReport(childAlias);
+            if (childAlias->isActive()) {
+                statsActiveAliass++;
+            }
+            if (childAlias->isTempAlias()) {
+                statsTempAliass++;
+            }
             statsAliasTotal++;
         }
     }
@@ -404,26 +404,22 @@ QString AliasUnit::assembleReport()
         //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
         //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
     return msg.join("");
-
 }
 
 void AliasUnit::doCleanup()
 {
-    for(auto alias : mCleanupList)
-    {
+    for (auto alias : mCleanupList) {
         delete alias;
     }
     mCleanupList.clear();
 }
 
-void AliasUnit::markCleanup( TAlias * pT )
+void AliasUnit::markCleanup(TAlias* pT)
 {
-    for(auto alias : mCleanupList)
-    {
-        if( alias == pT )
-        {
+    for (auto alias : mCleanupList) {
+        if (alias == pT) {
             return;
         }
     }
-    mCleanupList.push_back( pT );
+    mCleanupList.push_back(pT);
 }
