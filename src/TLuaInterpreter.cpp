@@ -12104,7 +12104,6 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     {
         text = lua_tostring( L, 2 );
     }
-// N/U:     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString chan = who.c_str();
     QString txt = text.c_str();
     if( ! mudlet::self()->mpIRC ) return 0;

@@ -81,7 +81,6 @@ private:
     QString zipFile;
 public slots:
     void slot_addFiles();
-// Not used:    void slot_browse_button();
     void slot_export_package();
 };
 

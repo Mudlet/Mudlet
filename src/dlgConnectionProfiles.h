@@ -31,21 +31,17 @@ class dlgConnectionProfiles : public QDialog , public Ui::profile_dialog
     Q_OBJECT
 
 public:
-
     dlgConnectionProfiles(QWidget * parent = 0);
     void fillout_form();
-    void copy_profile( QString );
     void writeProfileData( QString, QString, QString );
     QString readProfileData( QString, QString );
     QStringList readProfileHistory( QString, QString );
     void accept() override;
 
 signals:
-
     void signal_establish_connection( QString profile_name, int historyVersion );
 
 public slots:
-
     void slot_update_name( const QString ) ;
     void slot_save_name() ;
     void slot_update_url( const QString ) ;
@@ -66,9 +62,7 @@ public slots:
     void slot_cancel();
     void slot_copy_profile();
 
-
 private:
-    bool removeDir( QString dirName, QString originalPath );
     void copyFolder(QString sourceFolder, QString destFolder);
 
     bool validName;

@@ -60,11 +60,7 @@ public:
     QWidget* mpBar;
     std::list<TFlipButton*> mButtonList;
 
-signals:
-
-
 public slots:
-
     void            slot_pressed( const bool );
 };
 

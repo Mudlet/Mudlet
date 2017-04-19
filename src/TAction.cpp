@@ -99,7 +99,6 @@ TAction::~TAction()
     mpHost->getActionUnit()->unregisterAction(this);
 }
 
-
 bool TAction::registerAction()
 {
     if( ! mpHost )
@@ -403,7 +402,6 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         //FIXME: Heiko April 2012 -> expandToolBar()
         if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
         {
-//            qDebug()<<"fillMenu() name="<<action->mName<<" executing script";
             action->execute();
         }
 
@@ -427,7 +425,6 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
 
 // This only has code corresponding to the first part of:
 //   TAction::insertActions( TToolBar * pT, QMenu * menu )
-//
 void TAction::insertActions( TEasyButtonBar * pT, QMenu * menu )
 {
     mpEasyButtonBar = pT;

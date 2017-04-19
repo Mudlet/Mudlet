@@ -46,7 +46,6 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mIsCommandPopup( false )
 , mIsTailMode( true )
 , mShowTimeStamps( isDebugConsole )
-//private
 , mForceUpdate( false )
 , mHighlight_on( false )
 , mHighlightingBegin( false )

@@ -1652,8 +1652,6 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 }
 
-
-
 void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
 {
 }
@@ -1668,59 +1666,10 @@ Host * mudlet::getActiveHost()
         return 0;
 }
 
-
-
 void mudlet::addSubWindow( TConsole* pConsole )
 {
     mainPane->layout()->addWidget( pConsole );
     pConsole->show();//NOTE: this is important for Apple OSX otherwise the console isnt displayed
-}
-
-void mudlet::closeEvent(QCloseEvent *event)
-{
-    foreach( TConsole * pC, mConsoleMap )
-    {
-        if( ! pC->close() )
-        {
-            event->ignore();
-            return;
-        }
-        else
-            pC->mUserAgreedToCloseConsole = true;
-    }
-
-    writeSettings();
-
-    goingDown();
-    if( mpDebugConsole )
-    {
-        mpDebugConsole->close();
-    }
-    foreach( TConsole * pC, mConsoleMap )
-    {
-        if( pC->mpHost->getName() != "default_host" )
-        {
-            // close script-editor
-            if( pC->mpHost->mpEditorDialog )
-            {
-                pC->mpHost->mpEditorDialog->setAttribute( Qt::WA_DeleteOnClose );
-                pC->mpHost->mpEditorDialog->close();
-            }
-            if( pC->mpHost->mpNotePad )
-            {
-                pC->mpHost->mpNotePad->save();
-                pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
-                pC->mpHost->mpNotePad->close();
-            }
-
-
-            // close console
-            pC->close();
-        }
-    }
-
-    event->accept();
-    qApp->quit();
 }
 
 void mudlet::forceClose()
@@ -1781,7 +1730,6 @@ void mudlet::readSettings()
         showMaximized();
     }
 }
-
 
 void mudlet::setIcoSize( int s )
 {
@@ -1912,7 +1860,6 @@ void mudlet::show_options_dialog()
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
     pDlg->show();
 }
-
 
 void mudlet::show_help_dialog()
 {
@@ -2116,7 +2063,6 @@ void mudlet::print( Host * pH, const QString & s )
 {
     mConsoleMap[pH]->print( s );
 }
-
 
 QString mudlet::readProfileData( const QString& profile, const QString& item )
 {

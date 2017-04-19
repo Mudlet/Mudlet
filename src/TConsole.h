@@ -140,7 +140,6 @@ public:
       void              showStatistics();
       void              showEvent( QShowEvent * event ) override;
       void              hideEvent( QHideEvent * event ) override;
-      void              echoConsole( QString & msg );
       void              setConsoleBgColor( int, int, int );
       void              setConsoleFgColor( int, int, int );
       std::list<int>    _getFgColor();

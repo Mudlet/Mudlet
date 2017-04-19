@@ -80,7 +80,6 @@ public:
     QPoint mPHighlight;
     bool mPick;
     int mTarget;
-    //int      mRoomSelection;
     bool mStartSpeedWalk;
     QMap<int, QPoint> mAreaExitList;
 
@@ -149,8 +148,6 @@ public:
     bool isCenterViewCall;
     QString mHelpMsg;
 
-signals:
-
 public slots:
 
     void slot_roomSelectionChanged();
@@ -198,7 +195,6 @@ public slots:
 
 private:
     void resizeMultiSelectionWidget();
-
 
     bool mDialogLock;
 
