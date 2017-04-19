@@ -50,3 +50,13 @@ try to consolidate identical literals so that they are not duplicated. For QStri
 cannot be merged.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
+
+# Internationalization do's and don'ts
+
+Do:
+* enable strings visible in the Mudlet GUI to be translateable
+
+Don't:
+* translate Mudlet API functions, events, or error messages
+* use numbers in the API - English words are preferred instead
+* try to assemble a sentence on the fly - English grammar does not translate into other languages. Present the full sentence to translators instead
