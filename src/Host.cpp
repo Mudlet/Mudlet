@@ -1147,6 +1147,41 @@ bool Host::installPackage( const QString& fileName, int module )
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
+
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the install event") and a more specific need
+    // ("I specifically need to know when the module was synced")
+    TEvent genericInstallEvent;
+    genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericInstallEvent.mArgumentList.append(packageName);
+    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericInstallEvent);
+
+    TEvent detailedInstallEvent;
+    switch (module) {
+    case 0:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
+        break;
+    case 1:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
+        break;
+    case 2:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+        break;
+    case 3:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
+        break;
+    default:
+        Q_UNREACHABLE();
+    }
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedInstallEvent.mArgumentList.append(packageName);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedInstallEvent.mArgumentList.append(fileName);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedInstallEvent);
+
     return true;
 }
 
@@ -1192,15 +1227,56 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     if (module)
     {
-        if( ! mInstalledModules.contains( packageName ) ) return false;
+        if( ! mInstalledModules.contains( packageName ) )
+        {
+            return false;
+        }
     }
     else
     {
-        if( ! mInstalledPackages.contains( packageName ) ) return false;
+        if( ! mInstalledPackages.contains( packageName ) )
+        {
+            return false;
+        }
     }
+
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the uninstall event") and a more specific need
+    // ("I specifically need to know when the module was uninstalled via Lua")
+    TEvent genericUninstallEvent;
+    genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericUninstallEvent.mArgumentList.append(packageName);
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericUninstallEvent);
+
+    TEvent detailedUninstallEvent;
+    switch (module) {
+    case 0:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
+        break;
+    case 1:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
+        break;
+    case 2:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
+        break;
+    case 3:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
+        break;
+    default:
+        Q_UNREACHABLE();
+    }
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedUninstallEvent.mArgumentList.append(packageName);
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedUninstallEvent);
+
     int dualInstallations=0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
+    {
         dualInstallations=1;
+    }
     //we check for the module=3 because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
     if( mpEditorDialog && module != 3 )
@@ -1220,7 +1296,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         mInstalledModules.remove( packageName );
         mActiveModules.removeAll(packageName);
         if ( module == 2 )
+        {
             return true;
+        }
         //if module == 1/3, we actually uninstall it.
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations)
