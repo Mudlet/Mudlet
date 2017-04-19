@@ -351,17 +351,20 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
 
        if( action->mIsFolder )
        {
-           auto newMenu = new QMenu( button );
            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
-           newMenu->setStyleSheet( css );
+           auto newMenu = new QMenu( button );
+
            // CHECK: consider using the Child's CSS instead for a menu on it
            // - Slysven:
            // newMenu->setStyleSheet( action->css );
-           action->fillMenu( pT, newMenu );
+           newMenu->setStyleSheet( css );
+
            // This has been moved until AFTER the child's menu has been
            // populated, it was being done straight after newMenu was created,
            // but I think we ought to insert the items into the menu before
            // applying the menu to the button - Slysven
+           action->fillMenu( pT, newMenu );
+
            button->setMenu( newMenu );
        }
 
@@ -412,10 +415,12 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
             // find the item that it is attached to - ah ha, try the toolbar...
             auto newMenu = new QMenu( pT );
             newAction->setMenu( newMenu );
-            newMenu->setStyleSheet( css );
+
             // CHECK: consider using the Child's CSS instead for a menu on it
             // - Slysven:
             // newMenu->setStyleSheet( action->css );
+            newMenu->setStyleSheet( css );
+
             action->fillMenu( pT, newMenu );
         }
 
