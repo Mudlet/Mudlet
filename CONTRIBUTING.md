@@ -58,6 +58,6 @@ Do:
 * minimise use of HTML styling tags in strings to be translated
 
 Don't:
-* translate Mudlet API functions, events, or error messages
+* translate the Mudlet API: functions, events, or error messages
 * use numbers in the API - English words are preferred instead
 * try to assemble a sentence on the fly - English grammar does not translate into other languages. Present the full sentence to translators instead
