@@ -2482,8 +2482,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
     if (!pHost) {
         lua_pushstring(L, QLatin1String("saveProfile: NULL Host pointer - something is wrong!").data());
-        lua_error(L);
-        return 2;
+        return lua_error(L);
     }
 
     auto result = pHost->saveProfile();
