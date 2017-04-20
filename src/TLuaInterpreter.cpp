@@ -1365,20 +1365,25 @@ int TLuaInterpreter::paste( lua_State * L )
 
 int TLuaInterpreter::feedTriggers( lua_State * L )
 {
-    string luaWindowName="";
-    if( lua_isstring( L, 1 ) )
-    {
-        luaWindowName = lua_tostring( L, 1 );
-    }
-    else
-    {
-        lua_pushstring( L, "feedTriggers: wrong argument type" );
-        lua_error( L );
-        return 1;
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, tr("feedTriggers: NULL Host pointer - something is wrong!")
+                       .toUtf8().constData());
+        return lua_error(L);
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->printOnDisplay( luaWindowName );
+    std::string text;
+    if (!lua_isstring(L, 1)) {
+        lua_pushstring(L, tr("feedTriggers: bad argument #1 type (imitation MUD server text as string\n"
+                             "expected, got %1!)")
+                             .arg(luaL_typename(L, 1))
+                             .toUtf8().constData());
+        return lua_error(L);
+    } else {
+        text = lua_tostring( L, 1 );
+    }
+
+    pHost->mpConsole->printOnDisplay(text);
     return 0;
 }
 
@@ -11098,58 +11103,78 @@ int TLuaInterpreter::addSupportedTelnetOption( lua_State *L )
     return 0;
 }
 
+// Although this is coded here as "Echo" it is registered in the Lua system as
+// "echo" - so THAT is the name that should be displayed as the function name!
 int TLuaInterpreter::Echo( lua_State *L )
 {
-    string a1;
-    string a2;
-    int s = 1;
-    int n = lua_gettop( L );
-
-    if( ! lua_isstring( L, s ) )
-    {
-        lua_pushstring( L, "Echo: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        a1 = lua_tostring( L, s );
-        s++;
-    }
-    if( n > 1 )
-    {
-        if( ! lua_isstring( L, s ) )
-        {
-            lua_pushstring( L, "Echo: wrong argument type" );
-            lua_error( L );
-            return 1;
-        }
-        else
-        {
-            a2 = lua_tostring( L, s );
-        }
-    }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString txt;
-    QString name;
-    if( n == 1 )
-    {
-        txt = a1.c_str();
+    if (! pHost) {
+        lua_pushstring(L, tr("echo: NULL Host pointer - something is wrong!")
+                       .toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString consoleName;
+    QString displayText;
+    int n = lua_gettop(L);
+
+    if (n > 1) {
+        if (! lua_isstring(L, 1)) {
+            lua_pushstring(L, tr("echo: bad argument #1 type (console name as string, is optional, got %1!)")
+                           .arg(luaL_typename(L, 1))
+                           .toUtf8().constData());
+            return lua_error(L);
+        } else {
+            consoleName = QString::fromUtf8(lua_tostring(L, 1));
+            if (!consoleName.isEmpty()) {
+                if (!consoleName.compare(tr("main","This text is used programmatically, ensure all translations are the same."),
+                                         Qt::CaseSensitive)) {
+
+                    // QString::compare is zero for a match on the "default"
+                    // case so clear the variable - to flag this as the main
+                    // window case - as is the case for an empty string
+                    consoleName.clear();
+                }
+            }
+        }
+    } else if (!n) {
+        // Handle case with NO arguments
+        lua_pushstring(L, tr("echo: bad argument #1 type (text to display as string expected, got nil!)")
+                       .toUtf8().constData());
+        return lua_error(L);
+    }
+
+    if (! lua_isstring(L, n)) {
+        lua_pushstring(L, tr("echo: bad argument #%1 type (text to display as string expected, got %2!)")
+                       .arg(n)
+                       .arg(luaL_typename(L, n))
+                       .toUtf8().constData()); // Cannot combine the 2 args, is ambiguous
+        return lua_error(L);
+    } else {
+        displayText = QString::fromUtf8(lua_tostring(L, n));
+    }
+
+    if (consoleName.isEmpty()) {
         pHost->mpConsole->buffer.mEchoText = true;
-        pHost->mpConsole->echo( txt );
+        pHost->mpConsole->echo(displayText);
         pHost->mpConsole->buffer.mEchoText = false;
+        // Writing to the main window must always succeed, but for consistent
+        // results, we now return a true for that
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        if (mudlet::self()->echoWindow(pHost, consoleName, displayText)) {
+            lua_pushboolean(L, true);
+            return 1;
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, tr("echo: bad argument #1 value (console name \"%1\" does not exist, omit this"
+                                 "{or use the default \"main\"} to send text to main console!)")
+                           .arg(consoleName)
+                           .toUtf8().constData());
+            return 2;
+        }
     }
-
-
-
-    else
-    {
-        txt = a2.c_str();
-        name = a1.c_str();
-        mudlet::self()->echoWindow( pHost, name, txt );
-    }
-
-    return 0;
 }
 
 int TLuaInterpreter::echoPopup( lua_State *L )
