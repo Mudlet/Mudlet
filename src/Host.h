@@ -180,12 +180,14 @@ public:
 
     // To cover the corner case of the user changing the mode
     // whilst a log is being written, this stores the mode of
-    // the current log file. See mIsNextLogFileInHtmlFormat.
+    // the current log file and is set from
+    // mIsNextLogFileInHtmlFormat at the point that a log is started.
     bool mIsCurrentLogFileInHtmlFormat;
 
     // To cover the corner case of the user changing the mode
     // whilst a log is being written, this stores the mode of
-    // the next log file. See mIsCurrentLogFileInHtmlFormat.
+    // future logs file as set in the profile preferences. See
+    // also mIsCurrentLogFileInHtmlFormat.
     bool mIsNextLogFileInHtmlFormat;
 
     bool mResetProfile;
