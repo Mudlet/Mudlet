@@ -1,0 +1,81 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \page usage Using Communi
+
+    \section using-as-a-library Using as a library
+
+    In order to use Communi as a library, build and install Communi using the standard mantra:
+    \code
+    $ qmake
+    $ make
+    $ sudo make install
+    \endcode
+
+    This integrates Communi with qmake from the corresponding %Qt installation. To take Communi
+    in use in your application, add the following lines to your qmake project (.pro) file:
+    \code
+    CONFIG += communi
+    COMMUNI += core model util
+    \endcode
+
+    This sets up the necessary include paths and linker rules in order to use the library.
+    Notice that the needed Communi <a href="modules.html">modules</a> can be controlled via
+    the \c COMMUNI qmake variable. The above example enables all available
+    <a href="modules.html">modules</a>.
+
+    \section buiding-into-application Building into application
+
+    In order to embed the whole Communi to an application, add the following line to your
+    qmake project (.pro) file:
+    \code
+    include(path/to/libcommuni/src/src.pri)
+    \endcode
+
+    Alternatively, only specific module(s) can be included, for example:
+    \code
+    include(path/to/libcommuni/src/core/core.pri)
+    include(path/to/libcommuni/src/util/util.pri)
+    \endcode
+
+    This sets up the necessary include paths, and builds Communi sources into the application
+    for convenient deployment on systems that do not have Communi installed. This option is
+    also convenient when adding Communi as a Git submodule to your project tree.
+
+    \section namespace-support Namespace support
+
+    The Communi source code can be compiled into a namespace to for example
+    avoid symbol conflicts. In order to embed a namespaced Communi to an
+    application, add the following lines to your qmake project (.pro) file:
+
+    \code
+    DEFINES += IRC_NAMESPACE=Communi
+    include(path/to/libcommuni/src/src.pri)
+    \endcode
+ */

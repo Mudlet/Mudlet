@@ -1,58 +1,84 @@
 /*
-* Copyright (C) 2008-2012 J-P Nurmi <jpnurmi@gmail.com>
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (C) 2008-2016 The Communi Project
+ *
+ * This example is free, and not covered by the BSD license. There is no
+ * restriction applied to their modification, redistribution, using and so on.
+ * You can study them, modify them, use them in your own program - either
+ * completely or partially.
+ */
 
 #include "ircbot.h"
-#include <IrcCommand>
 #include <IrcMessage>
+#include <IrcCommand>
+#include <QCoreApplication>
+#include <QTimer>
 
-IrcBot::IrcBot(QObject* parent) : IrcSession(parent)
+IrcBot::IrcBot(QObject* parent) : IrcConnection(parent)
 {
-    connect(this, SIGNAL(connected()), this, SLOT(onConnected()));
-    connect(this, SIGNAL(messageReceived(IrcMessage*)), this, SLOT(onMessageReceived(IrcMessage*)));
+//! [messages]
+    connect(this, SIGNAL(privateMessageReceived(IrcPrivateMessage*)), this, SLOT(processMessage(IrcPrivateMessage*)));
+//! [messages]
+
+//! [commands]
+    parser.addCommand(IrcCommand::CtcpAction, "ACT [target] <message...>");
+    parser.addCommand(IrcCommand::Custom, "HELP (<command...>)");
+    parser.addCommand(IrcCommand::Nick, "NICK <nick>");
+    parser.addCommand(IrcCommand::Join, "JOIN <#channel> (<key>)");
+    parser.addCommand(IrcCommand::Part, "PART (<#channel>) (<message...>)");
+    parser.addCommand(IrcCommand::Quit, "QUIT (<message...>)");
+    parser.addCommand(IrcCommand::Message, "SAY [target] <message...>");
+//! [commands]
+
+    bufferModel.setConnection(this);
+//! [channels]
+    connect(&bufferModel, SIGNAL(channelsChanged(QStringList)), &parser, SLOT(setChannels(QStringList)));
+//! [channels]
 }
 
-QString IrcBot::channel() const
+void IrcBot::join(QString channel)
 {
-    return m_channel;
+    sendCommand(IrcCommand::createJoin(channel));
 }
 
-void IrcBot::setChannel(const QString& channel)
+//![receive]
+void IrcBot::processMessage(IrcPrivateMessage* message)
 {
-    m_channel = channel;
-}
+    if (message->isPrivate()) {
+        // private message: reply to the message sender
+        // => triggers: "!<cmd> <params>" and "<cmd> <params>"
+        parser.setTarget(message->nick());
+        parser.setTriggers(QStringList() << "!" << "");
+    } else {
+        // channel message: reply to the target channel
+        // => triggers: "!<cmd> <params>" and "bot: <cmd> <params>"
+        parser.setTarget(message->target());
+        parser.setTriggers(QStringList() << "!" << nickName().append(":"));
+    }
 
-void IrcBot::onConnected()
-{
-    sendCommand(IrcCommand::createJoin(m_channel));
-}
+    IrcCommand* cmd = parser.parse(message->content());
+    if (cmd) {
+        if (cmd->type() == IrcCommand::Custom && cmd->parameters().value(0) == "HELP") {
+            help(cmd->parameters().mid(1));
+        } else {
+            sendCommand(cmd);
 
-void IrcBot::onMessageReceived(IrcMessage* message)
-{
-    if (message->type() == IrcMessage::Private)
-    {
-        IrcPrivateMessage* msg = static_cast<IrcPrivateMessage*>(message);
-
-        if (!msg->target().compare(nickName(), Qt::CaseInsensitive))
-        {
-            // echo private message
-            sendCommand(IrcCommand::createMessage(msg->sender().name(), msg->message()));
+            if (cmd->type() == IrcCommand::Quit) {
+                connect(this, SIGNAL(disconnected()), qApp, SLOT(quit()));
+                QTimer::singleShot(1000, qApp, SLOT(quit()));
+            }
         }
-        else if (msg->message().startsWith(nickName(), Qt::CaseInsensitive))
-        {
-            // echo prefixed channel message
-            QString reply = msg->message().mid(msg->message().indexOf(" "));
-            sendCommand(IrcCommand::createMessage(m_channel, msg->sender().name() + ":" + reply));
-        }
+    }
+}
+//![receive]
+
+void IrcBot::help(QStringList commands)
+{
+    if (commands.isEmpty())
+        commands = parser.commands();
+
+    QString target = parser.target();
+    foreach (const QString& command, commands) {
+        QString syntax = parser.syntax(command);
+        sendCommand(IrcCommand::createMessage(target, syntax));
     }
 }

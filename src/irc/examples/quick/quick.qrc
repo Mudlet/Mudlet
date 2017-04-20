@@ -1,0 +1,13 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="main.qml">qml/main.qml</file>
+    <file alias="BufferListView.qml">qml/BufferListView.qml</file>
+    <file alias="ChatPage.qml">qml/ChatPage.qml</file>
+    <file alias="ConnectPage.qml">qml/ConnectPage.qml</file>
+    <file alias="MessageFormatter.qml">qml/MessageFormatter.qml</file>
+    <file alias="TextBrowser.qml">qml/TextBrowser.qml</file>
+    <file alias="TextEntry.qml">qml/TextEntry.qml</file>
+    <file alias="TopicLabel.qml">qml/TopicLabel.qml</file>
+    <file alias="UserListView.qml">qml/UserListView.qml</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,85 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \file irccore.h
+    \brief \#include &lt;\ref core "IrcCore"&gt;
+ */
+
+/*!
+    \file ircmodel.h
+    \brief \#include &lt;\ref models "IrcModel"&gt;
+ */
+
+/*!
+    \file ircutil.h
+    \brief \#include &lt;\ref util "IrcUtil"&gt;
+ */
+
+/*!
+    \defgroup core IrcCore
+    \brief Core classes to manage IRC connections, receive messages and send commands.
+
+    In order to enable the module, add the following lines to your qmake project (.pro) file:
+    \code
+    CONFIG += communi
+    COMMUNI += core
+    \endcode
+
+    This sets up the necessary include paths and linker rules in order to use the module.
+ */
+
+/*!
+    \defgroup models IrcModel
+    \brief Model classes to keep track of queries, channels and users.
+
+    In order to enable the module, add the following lines to your qmake project (.pro) file:
+    \code
+    CONFIG += communi
+    COMMUNI += core model
+    \endcode
+
+    This sets up the necessary include paths and linker rules in order to use the module.
+
+    \note IrcModel depends on \ref core "IrcCore"
+ */
+
+/*!
+    \defgroup util IrcUtil
+    \brief Miscellaneous utility classes for common IRC client related needs.
+
+    In order to enable the module, add the following lines to your qmake project (.pro) file:
+    \code
+    CONFIG += communi
+    COMMUNI += core model util
+    \endcode
+
+    This sets up the necessary include paths and linker rules in order to use the module.
+
+    \note IrcUtil depends on \ref core "IrcCore" and \ref models "IrcModel"
+ */

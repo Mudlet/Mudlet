@@ -4,4 +4,9 @@
 
 TEMPLATE = subdirs
 
-!no_examples:SUBDIRS += messageformatter
+SUBDIRS += ircmessage
+SUBDIRS += irctextformat
+
+# - windows has problems with symbols
+# - mac with private headers (frameworks)
+!win32:!mac:SUBDIRS += ircmessagedecoder

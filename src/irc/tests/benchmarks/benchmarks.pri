@@ -2,8 +2,7 @@
 # Communi
 ######################################################################
 
-QT = core network gui testlib
-greaterThan(QT_MAJOR_VERSION, 4):QT += widgets
+QT = core network testlib
 CONFIG += testcase
 CONFIG -= app_bundle
 

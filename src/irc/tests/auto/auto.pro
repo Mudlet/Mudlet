@@ -4,9 +4,24 @@
 
 TEMPLATE = subdirs
 
+# IrcCore
+SUBDIRS += irc
+SUBDIRS += ircconnection
 SUBDIRS += irccommand
-SUBDIRS += ircdecoder
 SUBDIRS += ircmessage
-SUBDIRS += ircparser
-SUBDIRS += ircsender
-SUBDIRS += ircsession
+SUBDIRS += ircnetwork
+
+# IrcModel
+SUBDIRS += ircbuffer
+SUBDIRS += ircbuffermodel
+SUBDIRS += ircchannel
+SUBDIRS += ircuser
+SUBDIRS += ircusermodel
+
+# IrcUtil
+SUBDIRS += irccommandparser
+SUBDIRS += irccommandqueue
+SUBDIRS += irccompleter
+SUBDIRS += irclagtimer
+SUBDIRS += ircpalette
+SUBDIRS += irctextformat

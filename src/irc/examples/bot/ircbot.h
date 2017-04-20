@@ -1,39 +1,37 @@
 /*
-* Copyright (C) 2008-2012 J-P Nurmi <jpnurmi@gmail.com>
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (C) 2008-2016 The Communi Project
+ *
+ * This example is free, and not covered by the BSD license. There is no
+ * restriction applied to their modification, redistribution, using and so on.
+ * You can study them, modify them, use them in your own program - either
+ * completely or partially.
+ */
 
 #ifndef IRCBOT_H
 #define IRCBOT_H
 
-#include <IrcSession>
+#include <IrcConnection>
+#include <IrcBufferModel>
+#include <IrcCommandParser>
 
-class IrcBot : public IrcSession
+class IrcBot : public IrcConnection
 {
     Q_OBJECT
-    Q_PROPERTY(QString channel READ channel WRITE setChannel)
 
 public:
     IrcBot(QObject* parent = 0);
 
-    QString channel() const;
-    void setChannel(const QString& channel);
+public slots:
+    void join(QString channel);
 
 private slots:
-    void onConnected();
-    void onMessageReceived(IrcMessage* message);
+    void processMessage(IrcPrivateMessage* message);
 
 private:
-    QString m_channel;
+    void help(QStringList commands);
+
+    IrcCommandParser parser;
+    IrcBufferModel bufferModel;
 };
 
 #endif // IRCBOT_H

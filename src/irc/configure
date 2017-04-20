@@ -3,18 +3,20 @@
 BUILD_TREE=`/bin/pwd`
 SOURCE_TREE=`dirname $0`
 SOURCE_TREE=`cd "$SOURCE_TREE"; /bin/pwd`
+CONFIG_VARS="$BUILD_TREE/.config.vars"
 
+INSTALL_PREFIX=
 INSTALL_LIBS=
 INSTALL_BINS=
 INSTALL_HEADERS=
-INSTALL_PLUGINS=
+INSTALL_FEATURES=
 INSTALL_IMPORTS=
+INSTALL_QML=
 
-BUILD_PLUGINS=yes
 BUILD_EXAMPLES=yes
 BUILD_TESTS=yes
 
-BUILD_UCHARDET=yes
+BUILD_UCHARDET=auto
 BUILD_ICU=auto
 
 QMAKE_CONFIG=
@@ -23,7 +25,11 @@ QMAKE_DEBUG=
 QMAKE_SPEC=
 OPT_HELP=no
 
-QMAKE=`which qmake || which qmake-qt4` 2>/dev/null
+QMAKE=`which qmake || which qmake-qt5 || which qmake-qt4` 2>/dev/null
+
+if [ -f "$CONFIG_VARS" ]; then
+    rm "$CONFIG_VARS"
+fi
 
 #-------------------------------------------------------------------------------
 # parse command line arguments
@@ -34,19 +40,45 @@ while [ "$#" -gt 0 ]; do
     CURRENT_OPT="$1"
     UNKNOWN_ARG=no
     case "$1" in
+    #Autoconf style options
+    --enable-*)
+        VAR=`echo $1 | sed "s,^--enable-\(.*\),\1,"`
+        VAL=yes
+        ;;
+    --disable-*)
+        VAR=`echo $1 | sed "s,^--disable-\(.*\),\1,"`
+        VAL=no
+        ;;
+    --*=*)
+        VAR=`echo $1 | sed "s,^--\(.*\)=.*,\1,"`
+        VAL=`echo $1 | sed "s,^--.*=\(.*\),\1,"`
+        ;;
+    --nomake|--make|--prefix|--libdir|--bindir|--headerdir|--featuredir|--importdir|--qmldir|--qmake|--spec|--config|--var)
+        VAR=`echo $1 | sed "s,^--\(.*\),\1,"`
+        shift
+        VAL="$1"
+        ;;
+    --no-*)
+        VAR=`echo $1 | sed "s,^--no-\(.*\),\1,"`
+        VAL=no
+        ;;
+    --*)
+        VAR=`echo $1 | sed "s,^--\(.*\),\1,"`
+        VAL=yes
+        ;;
     #Qt style options that pass an argument
-    -libdir|-bindir|-headerdir|-plugindir|-importdir)
+    -nomake|-make|-prefix|-libdir|-bindir|-headerdir|-featuredir|-importdir|-qmldir|-qmake|-spec|-config|-var)
         VAR=`echo $1 | sed "s,^-\(.*\),\1,"`
         shift
         VAL="$1"
         ;;
     #Qt style no options
-    -no-*)
+    -no-uchardet|-no-icu)
         VAR=`echo $1 | sed 's,^-no-\(.*\),\1,'`
         VAL=no
         ;;
     #Qt style yes options
-    -uchardet|-icu|-static)
+    -uchardet|-icu)
         VAR=`echo $1 | sed 's,^-\(.*\),\1,'`
         VAL=yes
         ;;
@@ -69,6 +101,9 @@ while [ "$#" -gt 0 ]; do
 
     UNKNOWN_OPT=no
     case "$VAR" in
+    prefix)
+        INSTALL_PREFIX="$VAL"
+        ;;
     libdir)
         INSTALL_LIBS="$VAL"
         ;;
@@ -78,37 +113,31 @@ while [ "$#" -gt 0 ]; do
     headerdir)
         INSTALL_HEADERS="$VAL"
         ;;
-    plugindir)
-        INSTALL_PLUGINS="$VAL"
+    featuredir)
+        INSTALL_FEATURES="$VAL"
         ;;
     importdir)
         INSTALL_IMPORTS="$VAL"
         ;;
+    qmldir)
+        INSTALL_QML="$VAL"
+        ;;
     nomake)
-        case "$1" in
-        plugins)
-            BUILD_PLUGINS=no
-            shift
-            ;;
+        case "$VAL" in
         examples)
             BUILD_EXAMPLES=no
-            shift
             ;;
         tests)
             BUILD_TESTS=no
-            shift
             ;;
         *)
-            CURRENT_OPT="$1"
+            CURRENT_OPT="$VAL"
             UNKNOWN_OPT=yes
             ;;
         esac
         ;;
     make)
-        case "$1" in
-        plugins)
-            BUILD_PLUGINS=yes
-            ;;
+        case "$VAL" in
         examples)
             BUILD_EXAMPLES=yes
             ;;
@@ -116,26 +145,28 @@ while [ "$#" -gt 0 ]; do
             BUILD_TESTS=yes
             ;;
         *)
-            CURRENT_OPT="$1"
+            CURRENT_OPT="$VAL"
             UNKNOWN_OPT=yes
             ;;
         esac
-        shift
+        ;;
+    verbose)
+        QMAKE_CONFIG="$QMAKE_CONFIG verbose"
         ;;
     static)
         QMAKE_CONFIG="$QMAKE_CONFIG static"
         ;;
     qmake)
-        QMAKE="$1"
-        shift
+        QMAKE="$VAL"
         ;;
     spec)
-        QMAKE_SPEC="$1"
-        shift
+        QMAKE_SPEC="$VAL"
         ;;
     config)
-        QMAKE_CONFIG="$QMAKE_CONFIG $1"
-        shift
+        QMAKE_CONFIG="$QMAKE_CONFIG $VAL"
+        ;;
+    var)
+        echo "$VAL" >> "$CONFIG_VARS"
         ;;
     d)
         QMAKE_DEBUG="$QMAKE_DEBUG -d"
@@ -154,6 +185,9 @@ while [ "$#" -gt 0 ]; do
             UNKNOWN_OPT=yes
         fi
         ;;
+    h|help)
+        OPT_HELP=yes
+        ;;
     *)
         UNKNOWN_OPT=yes
         ;;
@@ -171,24 +205,31 @@ Usage:  configure [options]
 
 Installation options:
 
+    -prefix <dir> ............ The installation prefix
     -libdir <dir> ............ Libraries will be installed to <dir>
                                (default QT_INSTALL_LIBS)
     -bindir <dir> ............ Binaries will be installed to <dir>
                                (default QT_INSTALL_BINS)
     -headerdir <dir> ......... Headers will be installed to <dir>
                                (default QT_INSTALL_HEADERS/Communi)
-    -plugindir <dir> ......... Plugins will be installed to <dir>/communi
-                               (default QT_INSTALL_PLUGINS/communi)
-    -importdir <dir> ......... Imports for QML will be installed to <dir>/Communi
+    -featuredir <dir> ........ Features will be installed to <dir>
+                               (default QT_HOST_DATA/mkspecs/features)
+    -importdir <dir> ......... Imports for QML1 will be installed to <dir>/Communi
                                (default QT_INSTALL_IMPORTS/Communi)
+    -qmldir <dir> ............ Imports for QML2 will be installed to <dir>/Communi
+                               (default QT_INSTALL_QML/Communi)
 
 Configure options:
 
+    -verbose ................. Verbose build output
     -static .................. Build static library
     -qmake ................... qmake to use
     -config (config) ......... Additional configuration options recognized by qmake
+                               (eg. -config warn_off)
+    -var (value) ............. Additional variables recognized by qmake
+                               (eg. -var "QMAKE_LFLAGS += -L/path/to/icu")
     -make (part) ............. Add part to the list of parts to be built at
-                               make time (available parts: plugins examples tests)
+                               make time (available parts: examples tests)
     -nomake (part) ........... Exclude part from the list of parts to be built
 
 Additional options:
@@ -204,29 +245,54 @@ EOF
     exit 0
 fi
 
-[ "$INSTALL_LIBS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS COMMUNI_INSTALL_LIBS=$INSTALL_LIBS"
-[ "$INSTALL_BINS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS COMMUNI_INSTALL_BINS=$INSTALL_BINS"
-[ "$INSTALL_HEADERS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS COMMUNI_INSTALL_HEADERS=$INSTALL_HEADERS"
-[ "$INSTALL_PLUGINS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS COMMUNI_INSTALL_PLUGINS=$INSTALL_PLUGINS"
-[ "$INSTALL_IMPORTS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS COMMUNI_INSTALL_IMPORTS=$INSTALL_IMPORTS"
+if [ ! -f "$QMAKE" ]; then
+    echo "ERROR: Unable to find qmake. Try $0 -qmake /path/to/qmake."
+    exit 1
+fi
 
-[ "$BUILD_PLUGINS" = "no" ] && QMAKE_PARAMS="$QMAKE_PARAMS -config no_plugins"
+if [ "$INSTALL_PREFIX" != "" ]; then
+    [ "$INSTALL_LIBS" = "" ] && INSTALL_LIBS="$INSTALL_PREFIX/lib"
+    [ "$INSTALL_BINS" = "" ] && INSTALL_BINS="$INSTALL_PREFIX/bin"
+    [ "$INSTALL_HEADERS" = "" ] && INSTALL_HEADERS="$INSTALL_PREFIX/include"
+    [ "$INSTALL_FEATURES" = "" ] && INSTALL_FEATURES="$INSTALL_PREFIX/features"
+    [ "$INSTALL_IMPORTS" = "" ] && INSTALL_IMPORTS="$INSTALL_PREFIX/imports"
+    [ "$INSTALL_QML" = "" ] && INSTALL_QML="$INSTALL_PREFIX/qml"
+fi
+[ "$INSTALL_LIBS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS IRC_INSTALL_LIBS=$INSTALL_LIBS"
+[ "$INSTALL_BINS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS IRC_INSTALL_BINS=$INSTALL_BINS"
+[ "$INSTALL_HEADERS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS IRC_INSTALL_HEADERS=$INSTALL_HEADERS"
+[ "$INSTALL_FEATURES" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS IRC_INSTALL_FEATURES=$INSTALL_FEATURES"
+[ "$INSTALL_IMPORTS" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS IRC_INSTALL_IMPORTS=$INSTALL_IMPORTS"
+[ "$INSTALL_QML" != "" ] && QMAKE_PARAMS="$QMAKE_PARAMS IRC_INSTALL_QML=$INSTALL_QML"
+
+[ "$INSTALL_LIBS" = "" ] && INSTALL_LIBS=`$QMAKE -query QT_INSTALL_LIBS`
+[ "$INSTALL_BINS" = "" ] && INSTALL_BINS=`$QMAKE -query QT_INSTALL_BINS`
+[ "$INSTALL_HEADERS" = "" ] && INSTALL_HEADERS=`$QMAKE -query QT_INSTALL_HEADERS`/Communi
+
+if [ "$INSTALL_FEATURES" = "" ]; then
+    $QMAKE -query QT_HOST_DATA > /dev/null 2>&1
+    if [ $? != 0 ]; then
+        INSTALL_FEATURES=`$QMAKE -query QMAKE_MKSPECS`/features
+    else
+        INSTALL_FEATURES=`$QMAKE -query QT_HOST_DATA`/mkspecs/features
+    fi
+fi
+
+[ "$INSTALL_IMPORTS" = "" ] && INSTALL_IMPORTS=`$QMAKE -query QT_INSTALL_IMPORTS`
+[ "$INSTALL_QML" = "" ] && INSTALL_QML=`$QMAKE -query QT_INSTALL_QML`
+
 [ "$BUILD_EXAMPLES" = "no" ] && QMAKE_PARAMS="$QMAKE_PARAMS -config no_examples"
 [ "$BUILD_TESTS" = "no" ] && QMAKE_PARAMS="$QMAKE_PARAMS -config no_tests"
 
 [ "$BUILD_UCHARDET" = "no" ] && QMAKE_PARAMS="$QMAKE_PARAMS -config no_uchardet"
 [ "$BUILD_ICU" = "no" ] && QMAKE_PARAMS="$QMAKE_PARAMS -config no_icu"
 
-if [ ! -f "$QMAKE" ]; then
-    echo "ERROR: Unable to find qmake. Try $0 -qmake /path/to/qmake."
-    exit 1
-fi
 [ "$QMAKE_SPEC" != "" ] && QMAKE_SPEC="-spec $QMAKE_SPEC"
 
 echo
 echo "Running $QMAKE $QMAKE_SPEC..."
 
-$QMAKE $QMAKE_SPEC $QMAKE_DEBUG $QMAKE_PARAMS "CONFIG+=$QMAKE_CONFIG" -r $SOURCE_TREE/communi.pro
+$QMAKE $QMAKE_SPEC $QMAKE_DEBUG $QMAKE_PARAMS "CONFIG+=$QMAKE_CONFIG" -r $SOURCE_TREE/libcommuni.pro
 if [ $? != 0 ]; then
     echo "ERROR: qmake run failed."
     exit 1
@@ -237,13 +303,17 @@ echo "Communi build configuration:"
 if [ "$QMAKE_CONFIG" != "" ]; then
     echo "Configuration ...................$QMAKE_CONFIG"
 fi
-echo "Plugins ......................... $BUILD_PLUGINS"
-if [ "$BUILD_PLUGINS" = "yes" ]; then
-    echo "  uchardet support .............. $BUILD_UCHARDET"
-    echo "  ICU support ................... $BUILD_ICU"
-fi
+echo "uchardet support ................ $BUILD_UCHARDET"
+echo "ICU support ..................... $BUILD_ICU"
 echo "Examples ........................ $BUILD_EXAMPLES"
 echo "Tests ........................... $BUILD_TESTS"
+echo
+echo "Install libs .................... $INSTALL_LIBS"
+#echo "Install binaries ................ $INSTALL_BINS"
+echo "Install headers ................. $INSTALL_HEADERS"
+echo "Install features ................ $INSTALL_FEATURES"
+echo "Install QML1 imports ............ $INSTALL_IMPORTS"
+echo "Install QML2 imports ............ $INSTALL_QML"
 echo
 echo Communi is now configured for building. Just run \'make\'.
 echo

@@ -1,0 +1,90 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \page debugging Debugging techniques
+
+    Communi recognizes the following environment variables at runtime:
+
+    \section irc_debug_env IRC_DEBUG
+
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>\c 0</td>
+            <td>Disable all debug output.</td>
+        </tr>
+        <tr>
+            <td>\c 1</td>
+            <td>Enable debug output.</td>
+        </tr>
+    </table>
+
+    \section irc_debug_level IRC_DEBUG_LEVEL
+
+    <table>
+        <tr>
+            <th>Value</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>\c 0 (\c "none")</td>
+            <td>No debug output.</td>
+        </tr>
+        <tr>
+            <td>\c 1 (\c "error")</td>
+            <td>Output connection errors.</td>
+        </tr>
+        <tr>
+            <td>\c 2 (\c "status")</td>
+            <td>Output connection status changes.</td>
+        </tr>
+        <tr>
+            <td>\c 3 (\c "write")</td>
+            <td>Output written (sent) lines.</td>
+        </tr>
+        <tr>
+            <td>\c 4 (\c "read")</td>
+            <td>Output read (received) lines.</td>
+        </tr>
+    </table>
+
+    \section irc_debug_name IRC_DEBUG_NAME
+
+    The debug output can be filtered so that it only contains lines from specific
+    connections. The filter is case-insensitive and supports wildcards. The filter
+    is matched against the \ref IrcConnection::displayName "display name" of each
+    connection.
+
+    Examples:
+    \li \c \b IRC_DEBUG_NAME=Freenode matches connections that have a display name \c "Freenode"
+    \li \c \b IRC_DEBUG_NAME=*freenode* matches connections that have a display name \c "Freenode" or \c "irc.freenode.net"
+ */

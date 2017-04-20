@@ -3,7 +3,7 @@
 ######################################################################
 
 TEMPLATE = app
-TARGET = 
+TARGET = bot
 DEPENDPATH += .
 INCLUDEPATH += .
 CONFIG += console

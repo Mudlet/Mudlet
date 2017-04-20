@@ -4,4 +4,4 @@
 
 SOURCES += tst_ircmessage.cpp
 
-include (../auto.pri)
+include(../auto.pri)

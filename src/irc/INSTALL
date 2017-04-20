@@ -12,6 +12,14 @@ specifically in release or debug mode, you may pass additional
 Furthermore, in order to build a static version of Communi, you
 may pass "-config static".
 
+uchardet vs. ICU
+----------------
+The default encoding detection backend is uchardet. It is bundled
+with Communi and therefore requires no special build configuration.
+In order to configure Communi with the ICU encoding detection backend,
+pass "-config icu" parameters to qmake. This requires that the ICU
+libraries are installed on the system.
+
 Example
 -------
 A static library in release mode:

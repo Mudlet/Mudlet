@@ -1,0 +1,71 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \page qmlbot QML bot example
+
+    The QML bot example is a simplified version of the \ref bot "bot example",
+    written in QML. See the \ref qml article for more QML specific details.
+
+    \image html qmlbot.png "The QML bot example in action"
+
+    The following snippet illustrates how IrcConnection is prepared and opened,
+    and how a command is queued to automatically join a channel when connected.
+
+    \snippet qmlbot/qml/main.qml connection
+
+    The example utilizes IrcCommandParser for parsing commands from messages
+    received from other clients. In order to take the parser in use, the supported
+    commands must be teached, as illustrated below. Some of the commands are context
+    sensitive, and the parser must be therefore kept aware of the list of channels
+    the bot is on. This is easily achieved by binding the IrcCommandParser::channels
+    property to the value of the IrcBufferModel::channels property. Furthermore, like
+    a typical IRC bot, the commands are triggered using a slightly different syntax in
+    queries and channels.
+
+    \snippet qmlbot/qml/main.qml parser
+
+    The bot listens to incoming messages via \ref IrcConnection::messageReceived().
+    The current target is chosen based on whether the incoming message is a channel
+    or a private message. Each message content is parsed for commands that were
+    taught earlier.
+
+    \snippet qmlbot/qml/main.qml receive
+
+    Files:
+    \li \ref examples/qmlbot/main.cpp
+    \li \ref examples/qmlbot/qml/main.qml
+
+    \file examples/qmlbot/main.cpp
+    \brief \ref qmlbot
+    \include examples/qmlbot/main.cpp
+
+    \file examples/qmlbot/qml/main.qml
+    \brief \ref qmlbot
+    \include examples/qmlbot/qml/main.qml
+ */

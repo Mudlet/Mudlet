@@ -1,0 +1,3 @@
+module Communi
+plugin communiplugin
+classname CommuniPlugin

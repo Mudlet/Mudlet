@@ -1,0 +1,178 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \page ircv3 IRCv3 support
+
+    The IRCv3 specifications are available at <a href="http://ircv3.net">ircv3.net</a>.
+
+    Get started:
+    \li \ref capabilities "Capability management"
+    \li \ref Irc::supportedCapabilities
+
+    \note Communi does not automatically request any IRCv3 capabilities. It is left
+          up to client implementations to choose which capabilities are requested.
+
+    \section ircv31 IRCv3.1
+
+    <a href="http://ircv3.net/specs/core/capability-negotiation-3.1.html">Capability negotiation</a>
+    (as specified by IRCv3.1) is supported since Communi version 3.0.
+
+    <table>
+        <tr><th colspan=3>Base extensions</th></tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/multi-prefix-3.1.html">multi-prefix</a></td>
+            <td colspan>\checkmark Since 3.3</td>
+            <td>
+                \li \ref IrcUser::prefix
+                \li \ref IrcUser::mode
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/sasl-3.1.html">sasl</a></td>
+            <td>\checkmark Since 3.0</td>
+            <td>
+                \li \ref IrcConnection::saslMechanism
+                \li \ref IrcConnection::supportedSaslMechanisms
+            </td>
+        </tr>
+        <tr><th colspan=3>Optional extensions</th></tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/account-notify-3.1.html">account-notify</a></td>
+            <td>\checkmark Since 3.3</td>
+            <td>
+                \li \ref IrcAccountMessage
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/away-notify-3.1.html">away-notify</a></td>
+            <td>\checkmark Since 3.3</td>
+            <td>
+                \li \ref IrcAwayMessage::reply
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/extended-join-3.1.html">extended-join</a></td>
+            <td>\checkmark Since 3.3</td>
+            <td>
+                \li \ref IrcJoinMessage::account
+                \li \ref IrcJoinMessage::realName
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/tls-3.1.html">tls</a></td>
+            <td>\ballotx</td>
+            <td></td>
+        </tr>
+    </table>
+
+    \section ircv32 IRCv3.2
+
+    <a href="http://ircv3.net/specs/core/capability-negotiation-3.2.html">Capability negotiation</a>
+    (as specified by IRCv3.2) is supported since Communi version 3.4, and
+    <a href="http://ircv3.net/specs/core/message-tags-3.2.html">message tags</a> are supported since
+    Communi version 3.1.
+
+    <table>
+        <tr><th colspan=3>Base extensions</th></tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/core/metadata-3.2.html">metadata</a></td>
+            <td>\ballotx</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/core/monitor-3.2.html">monitor</a></td>
+            <td>\checkmark Since 3.4</td>
+            <td>
+                \li \ref IrcBufferModel::monitorEnabled
+                \li \ref IrcCommand::createMonitor()
+            </td>
+        </tr>
+        <tr><th colspan=3>Optional extensions</th></tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/account-tag-3.2.html">account-tag</a></td>
+            <td>\checkmark Since 3.4</td>
+            <td>
+                \li \ref IrcMessage::account
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/batch-3.2.html">batch</a></td>
+            <td>\checkmark Since 3.5</td>
+            <td>
+                \li \ref IrcBatchMessage
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/cap-notify-3.2.html">cap-notify</a></td>
+            <td>\checkmark Since 3.4</td>
+            <td>
+                \li \ref IrcNetwork::availableCapabilities
+                \li \ref IrcCapabilityMessage
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/chghost-3.2.html">chghost</a></td>
+            <td>\checkmark Since 3.4</td>
+            <td>
+                \li \ref IrcHostChangeMessage
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/echo-message-3.2.html">echo-message</a></td>
+            <td>N/A</td>
+            <td>\li <small>Should be handled in the client implementation.</small></td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/invite-notify-3.2.html">invite-notify</a></td>
+            <td>\checkmark Since 3.0</td>
+            <td>
+                \li \ref IrcInviteMessage::user
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/sasl-3.2.html">sasl</a></td>
+            <td>\ballotx</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/server-time-3.2.html">server-time</a></td>
+            <td>\checkmark Since 3.4</td>
+            <td>
+                \li \ref IrcMessage::timeStamp
+            </td>
+        </tr>
+        <tr>
+            <td><a href="http://ircv3.net/specs/extensions/userhost-in-names-3.2.html">userhost-in-names</a></td>
+            <td>\checkmark Since 3.0</td>
+            <td>
+                \li \ref IrcNamesMessage
+            </td>
+        </tr>
+    </table>
+ */

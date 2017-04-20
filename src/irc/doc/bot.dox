@@ -1,0 +1,99 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \page bot Bot example
+
+    The example presents a simple IRC bot that can handle half a dozen commands.
+    This article focuses on handling messages, and parsing and sending commands.
+    See the \ref minimal "Minimal example" for basics on setting up an IRC
+    connection.
+
+    \image html bot.png "The bot example in action"
+
+    The bot uses IrcCommandParser for parsing commands from messages received
+    from other clients. In order to take it in use, the desired commands must
+    be first introduced.
+
+    \snippet bot/ircbot.cpp commands
+
+    Some of the commands are context sensitive. Thus, the parser must know
+    the list of channels the bot is on. This is easily achieved with help of
+    IrcBufferModel.
+
+    \snippet bot/ircbot.cpp channels
+
+    Furthermore, the current target of the parser is later updated whenever
+    messages are received and parsed for commands.
+
+    In order for the bot to be able to process private and channel
+    messages, it connects to the \ref IrcConnection::messageReceived()
+    "IrcConnection::privateMessageReceived()" signal.
+
+    \snippet bot/ircbot.cpp messages
+
+    The current target of the parser, and command triggers are chosen depending
+    on whether the received message is a channel or private message. The next
+    snippet illustrates how the logic of the bot has been implemented using
+    IrcCommandParser.
+
+    \snippet bot/ircbot.cpp receive
+
+    Notice how the help command is implemented as a "custom" command. This is
+    because it does not correspond to any actual IRC command, but we want the
+    bot to reply with a help message instead of performing an actual command.
+
+    Finally, the last snippet shows the bot in action!
+
+    \code
+    [17:42:44] ! CommuniBot172375 (~communi@12.34.56.78) joined #communi
+    [17:42:59] <jpnurmi> !say Communi rocks!
+    [17:42:59] <CommuniBot172375> Communi rocks!
+    [17:44:05] <jpnurmi> CommuniBot172375: nick CommuniRocks
+    [17:44:05] ! CommuniBot172375 changed nick to CommuniRocks
+    [17:44:18] <jpnurmi> CommuniRocks: quit
+    [17:44:19] ! CommuniRocks (~communi@12.34.56.78) has quit (Client Quit)
+    \endcode
+
+    Files:
+    \li \ref examples/bot/main.cpp
+    \li \ref examples/bot/ircbot.h
+    \li \ref examples/bot/ircbot.cpp
+
+    \file examples/bot/main.cpp
+    \brief \ref bot
+    \include examples/bot/main.cpp
+
+    \file examples/bot/ircbot.h
+    \brief \ref bot
+    \include examples/bot/ircbot.h
+
+    \file examples/bot/ircbot.cpp
+    \brief \ref bot
+    \include examples/bot/ircbot.cpp
+ */

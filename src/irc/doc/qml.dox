@@ -1,0 +1,160 @@
+/*
+  Copyright (C) 2008-2016 The Communi Project
+
+  You may use this file under the terms of BSD license as follows:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR
+  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/*!
+    \page qml QML compatibility
+
+    Communi strives for full QML support. The property-based APIs have been
+    designed QML compatibility in mind. Almost all the types can be registered
+    to QML and used as is.
+
+    A ready-made QML plugin is also provided for convenience. The plugin does
+    QML type registration and is made available via the following import:
+
+    \code
+    import Communi 3.0
+    \endcode
+
+    \section qml-type-registration Type registration
+
+    The following snippet illustrates how the Communi QML plugin does the type
+    registration. The same can be done manually in application code to avoid
+    the need of deploying the Communi QML plugin.
+
+    \snippet src/imports/qml2/plugin.cpp qml-register-types
+
+    \section qml-connecting-to-irc Connecting to IRC
+
+    In order to connect to IRC in QML, declare an IrcConnection instance,
+    set the desired properties, and call \ref IrcConnection::open()
+    "connection.open()".
+
+    \code
+    IrcConnection {
+        id: freenode
+        host: "irc.freenode.net"
+        userName: "communi"
+        nickName: "Communi" + Math.round(Math.random() * 9999)
+        realName: "Communi QML example"
+    }
+    \endcode
+
+    \section qml-sending-commands Sending commands
+
+    Even though the IrcCommand::createXxx() methods are static, QML does not
+    provide a way to call them without an IrcCommand instance. Thus, in order
+    to create and send commands, declare an instance of IrcCommand, call any
+    createXxx() method to create a command, and finally send it via
+    IrcCommand::sendCommand().
+
+    \code
+    IrcCommand { id: command }
+
+    IrcConnection {
+        onConnected: {
+            var cmd = command.createJoin(channel)
+            sendCommand(cmd)
+        }
+    }
+    \endcode
+
+    \section qml-channels-and-queries Channels and queries
+
+    In order to keep track of channels and queries, declare an instance of
+    IrcBufferModel. Notice that it can be used directly as a data model for
+    QML types such as ListView and Repeater.
+
+    \code
+    IrcBufferModel {
+        id: bufferModel
+        connection: freenode
+    }
+    \endcode
+
+    IrcBufferModel creates channel and query buffers automatically when
+    the client joins channels and receives private messages, respectively.
+
+    A typical IRC client has a special server buffer for messages that
+    are not targeted to any specific channel or query. This can be easily
+    achieved by declaring an instance of IrcBuffer and forwarding the
+    messages ignored by IrcBufferModel to it.
+
+    \code
+    IrcBuffer {
+        id: serverBuffer
+        name: freenode.displayName
+        Component.onCompleted: bufferModel.add(serverBuffer)
+    }
+
+    IrcBufferModel {
+        id: bufferModel
+        connection: freenode
+        onMessageIgnored: serverBuffer.receiveMessage(message)
+    }
+    \endcode
+
+    \section qml-channel-users Channel users
+
+    In order to keep track of channel users, create an instance of IrcUserModel.
+    It can be also used directly as a data model for QML types such as ListView
+    and Repeater.
+
+    \code
+    IrcUserModel {
+        id: userModel
+        channel: currentBuffer.toChannel()
+    }
+    \endcode
+
+    \section qml-parsing-user-commands Parsing user commands
+
+    IrcCommandParser helps with parsing commands from user input. In order to
+    take it in use, declare an instance of IrcCommandParser and introduce the
+    desired commands.
+
+    Notice that commands are often context sensitive. While some command may
+    accept an optional parameter that is filled up with the current target
+    (channel/query) name when absent, another command may always inject the
+    current target name as a certain parameter. Therefore IrcCommandParser
+    must be kept up-to-date with the current target and the list of channels.
+
+    \code
+    IrcCommandParser {
+        id: parser
+        triggers: ["/"]
+        target: currentBuffer.title
+        channels: bufferModel.channels
+        Component.onCompleted: {
+            parser.addCommand(IrcCommand.Join, "JOIN <#channel> (<key>)");
+            parser.addCommand(IrcCommand.Part, "PART (<#channel>) (<message...>)");
+            parser.addCommand(IrcCommand.Kick, "KICK (<#channel>) <nick> (<reason...>)");
+            parser.addCommand(IrcCommand.CtcpAction, "ME [target] <message...>");
+        }
+    }
+    \endcode
+ */
