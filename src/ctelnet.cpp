@@ -844,7 +844,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
              raiseProtocolEvent( "sysProtocolDisabled", "channel102" );
           }
-          int idxOption = static_cast<int>(option);
+          int idxOption = option & 0xFF;
           if( myOptionState[idxOption] || ( !announcedState[idxOption] ) )
           {
               sendTelnetOption (TN_WONT, option);
