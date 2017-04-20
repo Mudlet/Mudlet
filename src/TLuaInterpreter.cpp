@@ -2493,7 +2493,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString(QLatin1String("saveProfile: ") % std::get<1>(result)).toUtf8().constData());
+        lua_pushstring(L, QString(std::get<1>(result)).arg(std::get<2>(result)).arg(std::get<3>(result)).arg(std::get<4>(result)).toUtf8().constData());
         return 2;
     }
 }
@@ -13377,7 +13377,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem );
     lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
-    lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
+    lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );    
+    lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
 
 
     luaopen_yajl(pGlobalLua);
