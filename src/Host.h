@@ -178,15 +178,15 @@ public:
 
     bool mPrintCommand;
 
-    // The following was incorrectly called mRawStreamDump
-    // and caused the log file to be in HTML format rather
-    // then plain text.  To cover the corner case of the user
-    // changing the mode whilst a log is being written it has
-    // been split into:
-    bool mIsNextLogFileInHtmlFormat;
-
-    // What the user has set as their preference
+    // To cover the corner case of the user changing the mode
+    // whilst a log is being written, this stores the mode of
+    // the current log file. See mIsNextLogFileInHtmlFormat.
     bool mIsCurrentLogFileInHtmlFormat;
+
+    // To cover the corner case of the user changing the mode
+    // whilst a log is being written, this stores the mode of
+    // the next log file. See mIsCurrentLogFileInHtmlFormat.
+    bool mIsNextLogFileInHtmlFormat;
 
     bool mResetProfile;
     int mScreenHeight;
@@ -306,13 +306,6 @@ private:
     int mPort;
     QString mPrompt;
 
-    // What the current file will use, set from the previous
-    // member at the point that logging starts.
-    // Ideally this ought to become a number so that we can
-    // support more than two logging format modes - phpBB
-    // format would be useful for those wanting to post to
-    // MUD forums...!  Problem will be reading and write the
-    // game save file in a compatible way.
     QString mReplacementCommand;
 
     QString mRest;
