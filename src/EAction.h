@@ -47,7 +47,7 @@ public slots:
 signals:
     void triggered(QAction*);
 
-public://private:
+public: // TODO: private:
     int mID;
     QPointer<Host> mpHost;
 };
