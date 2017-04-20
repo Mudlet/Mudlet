@@ -177,6 +177,7 @@ TBuffer::TBuffer( Host * pH )
 , maxx()
 , maxy()
 , hadLF()
+, mCode()
 {
     clear();
     newLines = 0;
