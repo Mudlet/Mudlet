@@ -371,7 +371,7 @@ void Host::resetProfile()
 
 // Saves profile to disk - does not save items dirty in the editor, however.
 // returns true if successful or false+error message if not
-std::pair<bool, QString> Host::saveProfile()
+std::tuple<bool, QString, QString> Host::saveProfile()
 {
     QString directory_xml = QDir::homePath() + "/.config/mudlet/profiles/" + getName() + "/current";
     QString filename_xml = directory_xml + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + ".xml";
@@ -385,9 +385,11 @@ std::pair<bool, QString> Host::saveProfile()
         writer.exportHost(&file_xml);
         file_xml.close();
         saveModules(1);
-        return std::make_pair(true, QString());
+        return std::make_tuple(true, QString(), QString());
     } else {
-        return std::make_pair(false, tr("Couldn't save %1 to %2 because: %3").arg(getName(), filename_xml, file_xml.errorString()));
+        return std::make_tuple(false,
+                               QLatin1String("Couldn't save ") % getName() % " to " % filename_xml % " because: " % file_xml.errorString(),
+                               tr("Couldn't save %1 to %2 because: %3").arg(getName(), filename_xml, file_xml.errorString()));
     }
 }
 

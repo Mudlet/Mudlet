@@ -57,6 +57,7 @@
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 #include <list>
@@ -2487,13 +2488,12 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 
     auto result = pHost->saveProfile();
 
-    if (result.first == true) {
+    if (std::get<0>(result) == true) {
         lua_pushboolean(L, true);
         return 1;
     } else {
         lua_pushnil(L);
-        QString msg = QLatin1String("saveProfile: ") + result.second;
-        lua_pushstring(L, msg.toUtf8().constData());
+        lua_pushstring(L, QString(QLatin1String("saveProfile: ") % std::get<1>(result)).toUtf8().constData());
         return 2;
     }
 }
