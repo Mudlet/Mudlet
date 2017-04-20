@@ -2477,6 +2477,28 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::saveProfile(lua_State* L)
+{
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost) {
+        lua_pushstring(L, QLatin1String("saveProfile: NULL Host pointer - something is wrong!").data());
+        lua_error(L);
+        return 2;
+    }
+
+    auto result = pHost->saveProfile();
+
+    if (result.first == true) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        QString msg = QLatin1String("saveProfile: ") + result.second;
+        lua_pushstring(L, msg.toUtf8().constData());
+        return 2;
+    }
+}
+
 // openUserWindow( session, string window_name )
 int TLuaInterpreter::openUserWindow( lua_State *L )
 {

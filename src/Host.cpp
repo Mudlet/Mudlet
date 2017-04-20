@@ -369,6 +369,28 @@ void Host::resetProfile()
     qDebug()<<"resetProfile() DONE";
 }
 
+// Saves profile to disk - does not save items dirty in the editor, however.
+// returns true if successful or false+error message if not
+std::pair<bool, QString> Host::saveProfile()
+{
+    QString directory_xml = QDir::homePath() + "/.config/mudlet/profiles/" + getName() + "/current";
+    QString filename_xml = directory_xml + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + ".xml";
+    QDir dir_xml;
+    if (!dir_xml.exists(directory_xml)) {
+        dir_xml.mkpath(directory_xml);
+    }
+    QFile file_xml(filename_xml);
+    if (file_xml.open(QIODevice::WriteOnly)) {
+        XMLexport writer(this);
+        writer.exportHost(&file_xml);
+        file_xml.close();
+        saveModules(1);
+        return std::make_pair(true, QString());
+    } else {
+        return std::make_pair(false, tr("Couldn't save %1 to %2 because: %3").arg(getName(), filename_xml, file_xml.errorString()));
+    }
+}
+
 // Now returns the total weight of the path
 const unsigned int Host::assemblePath()
 {
