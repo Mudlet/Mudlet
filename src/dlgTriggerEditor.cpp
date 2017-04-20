@@ -1111,21 +1111,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
             {
                 QStringList sl;
                 sl << "Key" << key->getName() << "name";
-                if( ! parent )
-                {
-                    parent = new QTreeWidgetItem( sl );
-                    parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, key->getID() );
-                    treeWidget_searchResults->addTopLevelItem( parent );
-                }
-                else
-                {
-                    pItem = new QTreeWidgetItem( parent, sl );
-                    pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, key->getID() );
-                    parent->addChild( pItem );
-                    parent->setExpanded( true );
-                }
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, key->getID() );
+                treeWidget_searchResults->addTopLevelItem( parent );
             }
             QStringList scriptList = key->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1214,21 +1203,10 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
         {
             QStringList sl;
             sl << "Trigger" << trigger->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, trigger->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, trigger->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, trigger->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = trigger->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1293,21 +1271,10 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
         {
             QStringList sl;
             sl << "Alias" << alias->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, alias->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, alias->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, alias->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = alias->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1372,21 +1339,10 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
         {
             QStringList sl;
             sl << "Script" << script->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, script->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, script->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, script->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = script->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1430,21 +1386,10 @@ void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const Q
         {
             QStringList sl;
             sl << "Button" << action->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, action->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, action->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, action->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = action->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1488,21 +1433,10 @@ void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QSt
         {
             QStringList sl;
             sl << "Timer" << timer->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, timer->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, timer->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, timer->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = timer->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1546,21 +1480,10 @@ void dlgTriggerEditor::recursiveSearchKeys( TKey * pTriggerParent, const QString
         {
             QStringList sl;
             sl << "Key" << key->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, key->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, key->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, key->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = key->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1804,8 +1727,6 @@ void dlgTriggerEditor::slot_deleteTimer()
     QTreeWidgetItem * pItem = treeWidget_timers->currentItem();
     if( ! pItem ) return;
     QTreeWidgetItem * pParent = pItem->parent();
-
-    if( ! pItem ) return;
 
     TTimer * pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;

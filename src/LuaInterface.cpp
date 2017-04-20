@@ -271,71 +271,10 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem * newP, QTreeWidgetItem * cI
         from = oldParent;
         to = varUnit->getBase();
     }
-    if ( !from && !to )
+    if (!from && !to) {
         return false;
+    }
     return reparentCVariable( from, to, curVar);
-    bool isSaved = varUnit->isSaved(curVar);
-    if (isSaved){
-        QList<TVar *> list;
-        getAllChildren(curVar, &list);
-        QListIterator<TVar *> it(list);
-        while (it.hasNext()){
-            TVar * t = it.next();
-            varUnit->removeSavedVar(t);
-        }
-    }
-    QList<TVar *> vars = varOrder(curVar);
-    QString oldName = vars[0]->getName();
-    for(int i=1;i<vars.size();i++){
-        if (vars[i]->isReference())
-            return reparentCVariable( from, to, curVar);
-        if (vars[i]->getKeyType() == LUA_TNUMBER){
-            oldName.append("["+vars[i]->getName()+"]");
-        }
-        else{
-            oldName.append("[\""+vars[i]->getName()+"\"]");
-        }
-    }
-    from->removeChild(curVar);
-    curVar->setParent(to);
-    to->addChild(curVar);
-
-    vars = varOrder(curVar);
-    QString newName = vars[0]->getName();
-    for(int i=1;i<vars.size();i++){
-        if (vars[i]->isReference())
-            return reparentCVariable( from, to, curVar);
-        if (vars[i]->getKeyType() == LUA_TNUMBER){
-            newName.append("["+vars[i]->getName()+"]");
-        }
-        else{
-            newName.append("[\""+vars[i]->getName()+"\"]");
-        }
-    }
-
-    QString addString = QString(newName+" = "+oldName);
-    int error = luaL_dostring(L, addString.toLatin1().data());
-    //FIXME: report error to user qDebug()<<"reparented with"<<error;
-    //delete it
-    oldName.append(QString(" = nil"));
-    luaL_loadstring(L, oldName.toLatin1().data());
-    error = lua_pcall(L, 0, LUA_MULTRET, 0);
-    if (error){
-        QString emsg = lua_tostring(L, -1);
-        //FIXME: report error to userqDebug()<<"error msg"<<emsg;
-        return false;
-    }
-    if (isSaved){
-        QList<TVar *> list;
-        list.append(to);
-        getAllChildren(curVar, &list);
-        QListIterator<TVar *> it(list);
-        while (it.hasNext()){
-            TVar * t = it.next();
-            varUnit->addSavedVar(t);
-        }
-    }
-    return true;
 }
 
 QList<TVar *> LuaInterface::varOrder(TVar * var){
