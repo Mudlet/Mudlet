@@ -139,9 +139,10 @@ public:
     // both at the same time thanks to mXmlImportMutex
     bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
 
-    // Use progresss dialog for post-download operations:
+    // Use progress dialog for post-download operations.
     void reportStringToProgressDialog(const QString);
 
+    // Use progress dialog for post-download operations.
     void reportProgressToProgressDialog(const int, const int);
 
 
