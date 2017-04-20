@@ -92,11 +92,6 @@ public:
     int                         canRecast( QTreeWidgetItem *, int, int );
     void                        saveVar();
     void                        repopulateVars();
-    QToolBar *                  toolBar;
-    QToolBar *                  toolBar2;
-    bool                        mNeedUpdateData;
-    bool                        showHiddenVars;
-    TConsole *                  mpErrorConsole;
     void                        changeView( int );
     void                        recurseVariablesUp( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
@@ -192,8 +187,11 @@ private slots:
     void                        slot_changeEditorTextOptions( QTextOption::Flags );
     void                        slot_toggle_isPushDownButton( const int );
 
-private:
+public:
+    TConsole *                  mpErrorConsole;
+    bool                        mNeedUpdateData;
 
+private:
     void                        saveOpenChanges();
     void                        saveTrigger();
     void                        saveAlias();
@@ -223,6 +221,10 @@ private:
     void                        exportAction( QFile & );
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
+
+    QToolBar *                  toolBar;
+    QToolBar *                  toolBar2;
+    bool                        showHiddenVars;
 
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;

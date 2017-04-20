@@ -48,10 +48,6 @@ public:
     bool                getDefaultAreaShown() { return mShowDefaultArea; }
     void                resetAreaComboBoxToPlayerRoomArea();
 
-    TMap *              mpMap;
-    QPointer<Host>      mpHost;
-
-
 public slots:
         void slot_bubbles();
         void slot_info();
@@ -65,6 +61,8 @@ public slots:
         void slot_lineSize(int d);
 
 private:
+    TMap *              mpMap;
+    QPointer<Host>      mpHost;
     bool                mShowDefaultArea;
 };
 

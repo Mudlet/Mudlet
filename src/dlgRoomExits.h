@@ -69,8 +69,6 @@ class dlgRoomExits : public QDialog, public Ui::roomExits
 public:
     explicit dlgRoomExits(Host *, QWidget *parent = 0);
     void init( int );
-    QPointer<Host> mpHost;
-    QTreeWidgetItem * mpEditItem;
 
 public slots:
     void save();
@@ -106,6 +104,8 @@ private slots:
     void slot_checkModified();
 
 private:
+    QPointer<Host> mpHost;
+    QTreeWidgetItem * mpEditItem;
     TRoom * pR;
     int mRoomID;
     int mEditColumn;

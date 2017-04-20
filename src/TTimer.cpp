@@ -246,7 +246,7 @@ void TTimer::execute()
             mpHost->mLuaInterpreter.compileAndExecuteScript( mScript );
         }
         mpTimer->stop();
-        mpHost->mTimerUnit.markCleanup( this );
+        mpHost->getTimerUnit()->markCleanup( this );
         return;
     }
 

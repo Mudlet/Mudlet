@@ -46,8 +46,8 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 
 public:
     dlgIRC();
+
     IrcSession* session;
-    QString mNick;
 
 public slots:
     void onMessageReceived(IrcMessage*);
@@ -61,6 +61,8 @@ private:
     void irc_gotMsg3(QString a, uint code, QStringList c);
     void slot_joined(QString, QString);
     void slot_parted(QString, QString, QString);
+
+    QString mNick;
 };
 
 #endif // MUDLET_DLGIRC_H
