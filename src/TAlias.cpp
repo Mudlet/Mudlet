@@ -143,11 +143,6 @@ bool TAlias::match(const QString & toMatch )
         qDebug()<<"CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
     }
 
-    if( rc < 0 )
-    {
-        goto MUD_ERROR;
-    }
-
     matchCondition = true; // alias has matched
 
     for( i=0; i < rc; i++ )

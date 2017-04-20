@@ -794,7 +794,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   ( option == OPT_NAWS ) ||
                   ( option == OPT_TERMINAL_TYPE ) )
               {
-                  if( option == OPT_SUPPRESS_GA ) qDebug() << "OK we are willing to enable option SUPPRESS_GA";
                   if( option == OPT_STATUS ) qDebug() << "OK we are willing to enable telnet option STATUS";
                   if( option == OPT_TERMINAL_TYPE ) qDebug() << "OK we are willing to enable telnet option TERMINAL_TYPE";
                   if( option == OPT_NAWS ) qDebug() << "OK we are willing to enable telnet option NAWS";
