@@ -49,201 +49,176 @@ void TriggerUnit::initStats()
     statsRegexTriggers = 0;
 }
 
-void TriggerUnit::_uninstall( TTrigger * pChild, QString packageName )
+void TriggerUnit::_uninstall(TTrigger* pChild, QString packageName)
 {
-    list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-    for(auto trigger : *childrenList)
-    {
-        _uninstall( trigger, packageName );
-        uninstallList.append( trigger );
+    list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
+    for (auto trigger : *childrenList) {
+        _uninstall(trigger, packageName);
+        uninstallList.append(trigger);
     }
 }
 
 
-void TriggerUnit::uninstall(const QString& packageName )
+void TriggerUnit::uninstall(const QString& packageName)
 {
-    for(auto rootTrigger : mTriggerRootNodeList)
-    {
-        if( rootTrigger->mPackageName == packageName )
-        {
-            _uninstall( rootTrigger, packageName );
-            uninstallList.append( rootTrigger );
+    for (auto rootTrigger : mTriggerRootNodeList) {
+        if (rootTrigger->mPackageName == packageName) {
+            _uninstall(rootTrigger, packageName);
+            uninstallList.append(rootTrigger);
         }
     }
-    for(auto & trigger : uninstallList)
-    {
+    for (auto& trigger : uninstallList) {
         unregisterTrigger(trigger);
-
     }
-     uninstallList.clear();
+    uninstallList.clear();
 }
 
 void TriggerUnit::removeAllTempTriggers()
 {
-    for(auto trigger : mTriggerRootNodeList)
-    {
-        if( trigger->isTempTrigger() )
-        {
-            trigger->setIsActive( false );
-            markCleanup( trigger );
+    for (auto trigger : mTriggerRootNodeList) {
+        if (trigger->isTempTrigger()) {
+            trigger->setIsActive(false);
+            markCleanup(trigger);
         }
     }
 }
 
-void TriggerUnit::addTriggerRootNode( TTrigger * pT, int parentPosition, int childPosition, bool moveTrigger )
+void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int childPosition, bool moveTrigger)
 {
-    if( ! pT ) return;
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT) {
+        return;
     }
-    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mTriggerRootNodeList.size()) ) )
-    {
-        mTriggerRootNodeList.push_back( pT );
+    if (!pT->getID()) {
+        pT->setID(getNewID());
     }
-    else
-    {
-         // insert item at proper position
+    if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
+        mTriggerRootNodeList.push_back(pT);
+    } else {
+        // insert item at proper position
         int cnt = 0;
-        for(auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it ++ )
-        {
-            if( cnt >= childPosition )
-            {
-                mTriggerRootNodeList.insert( it, pT );
+        for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
+            if (cnt >= childPosition) {
+                mTriggerRootNodeList.insert(it, pT);
                 break;
             }
             cnt++;
         }
     }
 
-    if( ! moveTrigger )
-    {
-        mTriggerMap.insert( pT->getID(), pT );
+    if (!moveTrigger) {
+        mTriggerMap.insert(pT->getID(), pT);
     }
 }
 
-void TriggerUnit::reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition, int childPosition )
+void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
-    TTrigger * pOldParent = getTriggerPrivate( oldParentID );
-    TTrigger * pNewParent = getTriggerPrivate( newParentID );
-    TTrigger * pChild = getTriggerPrivate( childID );
-    if( ! pChild )
-    {
+    TTrigger* pOldParent = getTriggerPrivate(oldParentID);
+    TTrigger* pNewParent = getTriggerPrivate(newParentID);
+    TTrigger* pChild = getTriggerPrivate(childID);
+    if (!pChild) {
         return;
     }
-    if( pOldParent )
-    {
-        pOldParent->popChild( pChild );
+    if (pOldParent) {
+        pOldParent->popChild(pChild);
+    } else {
+        mTriggerRootNodeList.remove(pChild);
     }
-    else
-    {
-        mTriggerRootNodeList.remove( pChild );
-    }
-    if( pNewParent )
-    {
-        pNewParent->addChild( pChild, parentPosition, childPosition );
-        if( pChild ) pChild->setParent( pNewParent );
-    }
-    else
-    {
-        pChild->Tree<TTrigger>::setParent( 0 );
-        addTriggerRootNode( pChild, parentPosition, childPosition, true );
+    if (pNewParent) {
+        pNewParent->addChild(pChild, parentPosition, childPosition);
+        if (pChild)
+            pChild->setParent(pNewParent);
+    } else {
+        pChild->Tree<TTrigger>::setParent(0);
+        addTriggerRootNode(pChild, parentPosition, childPosition, true);
     }
 }
 
-void TriggerUnit::removeTriggerRootNode( TTrigger * pT )
+void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
 {
-    if( ! pT ) return;
-    if( ! pT->mIsTempTrigger )
-    {
-        mLookupTable.remove( pT->mName, pT );
+    if (!pT) {
+        return;
     }
-    else
-    {
-        mLookupTable.remove( pT->getName() );
+    if (!pT->mIsTempTrigger) {
+        mLookupTable.remove(pT->mName, pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
-    mTriggerMap.remove( pT->getID() );
-    mTriggerRootNodeList.remove( pT );
+    mTriggerMap.remove(pT->getID());
+    mTriggerRootNodeList.remove(pT);
 }
 
-TTrigger * TriggerUnit::getTrigger( int id )
+TTrigger* TriggerUnit::getTrigger(int id)
 {
-    QMutexLocker locker(& mTriggerUnitLock);
-    if( mTriggerMap.find( id ) != mTriggerMap.end() )
-    {
-        return mTriggerMap.value( id );
-    }
-    else
-    {
+    QMutexLocker locker(&mTriggerUnitLock);
+    if (mTriggerMap.find(id) != mTriggerMap.end()) {
+        return mTriggerMap.value(id);
+    } else {
         return 0;
     }
 }
 
-TTrigger * TriggerUnit::getTriggerPrivate( int id )
+TTrigger* TriggerUnit::getTriggerPrivate(int id)
 {
-    if( mTriggerMap.find( id ) != mTriggerMap.end() )
-    {
-        return mTriggerMap.value( id );
-    }
-    else
-    {
+    if (mTriggerMap.find(id) != mTriggerMap.end()) {
+        return mTriggerMap.value(id);
+    } else {
         return 0;
     }
 }
 
-bool TriggerUnit::registerTrigger( TTrigger * pT )
+bool TriggerUnit::registerTrigger(TTrigger* pT)
 {
-    if( ! pT ) return false;
+    if (!pT) {
+        return false;
+    }
 
-    if( pT->getParent() )
-    {
-        addTrigger( pT );
+    if (pT->getParent()) {
+        addTrigger(pT);
+        return true;
+    } else {
+        addTriggerRootNode(pT);
         return true;
     }
-    else
-    {
-        addTriggerRootNode( pT );
-        return true;
-    }
 }
 
-void TriggerUnit::unregisterTrigger( TTrigger * pT )
+void TriggerUnit::unregisterTrigger(TTrigger* pT)
 {
-    if( ! pT ) return;
-    if( pT->getParent() )
-    {
-        removeTrigger( pT );
+    if (!pT) {
         return;
     }
-    else
-    {
-        removeTriggerRootNode( pT );
+    if (pT->getParent()) {
+        removeTrigger(pT);
+        return;
+    } else {
+        removeTriggerRootNode(pT);
         return;
     }
 }
 
 
-void TriggerUnit::addTrigger( TTrigger * pT )
+void TriggerUnit::addTrigger(TTrigger* pT)
 {
-    if( ! pT ) return;
-
-    if( ! pT->getID() )
-    {
-        pT->setID( getNewID() );
+    if (!pT) {
+        return;
     }
 
-    mTriggerMap.insert( pT->getID(), pT );
+    if (!pT->getID()) {
+        pT->setID(getNewID());
+    }
+
+    mTriggerMap.insert(pT->getID(), pT);
 }
 
-void TriggerUnit::removeTrigger( TTrigger * pT )
+void TriggerUnit::removeTrigger(TTrigger* pT)
 {
-    if( ! pT ) return;
-    if( ! pT->mIsTempTrigger )
-    {
-        mLookupTable.remove( pT->mName, pT );
+    if (!pT) {
+        return;
     }
-    else
-        mLookupTable.remove( pT->getName() );
+    if (!pT->mIsTempTrigger) {
+        mLookupTable.remove(pT->mName, pT);
+    } else {
+        mLookupTable.remove(pT->getName());
+    }
 
     mTriggerMap.remove(pT->getID());
 }
@@ -252,23 +227,18 @@ void TriggerUnit::removeTrigger( TTrigger * pT )
 // after package import or module sync this order needs to be reset
 void TriggerUnit::reorderTriggersAfterPackageImport()
 {
-    QList<TTrigger *> tempList;
-    for(auto trigger : mTriggerRootNodeList)
-    {
-        if( trigger->isTempTrigger() )
-        {
-            tempList.push_back( trigger );
+    QList<TTrigger*> tempList;
+    for (auto trigger : mTriggerRootNodeList) {
+        if (trigger->isTempTrigger()) {
+            tempList.push_back(trigger);
         }
     }
-    for(auto & trigger : tempList)
-    {
-        mTriggerRootNodeList.remove( trigger );
+    for (auto& trigger : tempList) {
+        mTriggerRootNodeList.remove(trigger);
     }
-    for(auto & trigger : tempList)
-    {
-        mTriggerRootNodeList.push_back( trigger );
+    for (auto& trigger : tempList) {
+        mTriggerRootNodeList.push_back(trigger);
     }
-
 }
 
 int TriggerUnit::getNewID()
@@ -276,34 +246,28 @@ int TriggerUnit::getNewID()
     return ++mMaxID;
 }
 
-void TriggerUnit::processDataStream(const QString & data, int line )
+void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if( data.size() > 0 )
-    {
-        char * subject = (char *) malloc( strlen( data.toLocal8Bit().data() ) + 1 );
-        strcpy( subject, data.toLocal8Bit().data() );
+    if (data.size() > 0) {
+        char* subject = (char*)malloc(strlen(data.toLocal8Bit().data()) + 1);
+        strcpy(subject, data.toLocal8Bit().data());
 
-        for(auto trigger : mTriggerRootNodeList)
-        {
-            trigger->match( subject, data, line );
+        for (auto trigger : mTriggerRootNodeList) {
+            trigger->match(subject, data, line);
         }
-        free( subject );
+        free(subject);
 
-        for(auto & trigger : mCleanupList)
-        {
+        for (auto& trigger : mCleanupList) {
             delete trigger;
         }
         mCleanupList.clear();
     }
-
 }
 
 void TriggerUnit::compileAll()
 {
-    for(auto trigger : mTriggerRootNodeList)
-    {
-        if( trigger->isActive() )
-        {
+    for (auto trigger : mTriggerRootNodeList) {
+        if (trigger->isActive()) {
             trigger->compileAll();
         }
     }
@@ -311,8 +275,7 @@ void TriggerUnit::compileAll()
 
 void TriggerUnit::stopAllTriggers()
 {
-    for(auto trigger : mTriggerRootNodeList)
-    {
+    for (auto trigger : mTriggerRootNodeList) {
         QString name = trigger->getName();
         trigger->disableFamily();
     }
@@ -320,72 +283,66 @@ void TriggerUnit::stopAllTriggers()
 
 void TriggerUnit::reenableAllTriggers()
 {
-    for(auto trigger : mTriggerRootNodeList)
-    {
+    for (auto trigger : mTriggerRootNodeList) {
         trigger->enableFamily();
     }
 }
 
-TTrigger * TriggerUnit::findTrigger(const QString & name )
+TTrigger* TriggerUnit::findTrigger(const QString& name)
 {
-    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTrigger * pT = it.value();
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TTrigger* pT = it.value();
         return pT;
     }
     return 0;
 }
 
-bool TriggerUnit::enableTrigger(const QString & name )
+bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTrigger * pT = it.value();
-        pT->setIsActive( true );
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TTrigger* pT = it.value();
+        pT->setIsActive(true);
         ++it;
         found = true;
     }
     return found;
 }
 
-bool TriggerUnit::disableTrigger(const QString & name )
+bool TriggerUnit::disableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTrigger * pT = it.value();
-        pT->setIsActive( false );
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TTrigger* pT = it.value();
+        pT->setIsActive(false);
         ++it;
         found = true;
     }
     return found;
 }
 
-void TriggerUnit::setTriggerStayOpen(const QString& name, int lines )
+void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 {
-    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTrigger * pT = it.value();
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TTrigger* pT = it.value();
         pT->mKeepFiring = lines;
         ++it;
     }
 }
 
-bool TriggerUnit::killTrigger(const QString & name )
+bool TriggerUnit::killTrigger(const QString& name)
 {
-    QMap<QString, TTrigger *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TTrigger * pT = it.value();
-        if( pT->isTempTrigger() ) //this function is only defined for tempTriggers, permanent objects cannot be removed
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TTrigger* pT = it.value();
+        if (pT->isTempTrigger()) //this function is only defined for tempTriggers, permanent objects cannot be removed
         {
             // there can only be a single tempTrigger by this name and this function ignores non-tempTriggers by definition
-            markCleanup( pT );
+            markCleanup(pT);
             return true;
         }
         it++;
@@ -393,14 +350,17 @@ bool TriggerUnit::killTrigger(const QString & name )
     return false;
 }
 
-void TriggerUnit::_assembleReport( TTrigger * pChild )
+void TriggerUnit::_assembleReport(TTrigger* pChild)
 {
-    list<TTrigger*> * childrenList = pChild->mpMyChildrenList;
-    for(auto trigger : *childrenList)
-    {
-        _assembleReport( trigger );
-        if( trigger->isActive() ) statsActiveTriggers++;
-        if( trigger->isTempTrigger() ) statsTempTriggers++;
+    list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
+    for (auto trigger : *childrenList) {
+        _assembleReport(trigger);
+        if (trigger->isActive()) {
+            statsActiveTriggers++;
+        }
+        if (trigger->isTempTrigger()) {
+            statsTempTriggers++;
+        }
         statsPatterns += trigger->mRegexCodeList.size();
         statsTriggerTotal++;
     }
@@ -412,18 +372,24 @@ QString TriggerUnit::assembleReport()
     statsTriggerTotal = 0;
     statsTempTriggers = 0;
     statsPatterns = 0;
-    for(auto rootTrigger : mTriggerRootNodeList)
-    {
-        if( rootTrigger->isActive() ) statsActiveTriggers++;
-        if( rootTrigger->isTempTrigger() ) statsTempTriggers++;
+    for (auto rootTrigger : mTriggerRootNodeList) {
+        if (rootTrigger->isActive()) {
+            statsActiveTriggers++;
+        }
+        if (rootTrigger->isTempTrigger()) {
+            statsTempTriggers++;
+        }
         statsPatterns += rootTrigger->mRegexCodeList.size();
         statsTriggerTotal++;
-        list<TTrigger*> * childrenList = rootTrigger->mpMyChildrenList;
-        for(auto childTrigger : *childrenList)
-        {
-            _assembleReport( childTrigger );
-            if( childTrigger->isActive() ) statsActiveTriggers++;
-            if( childTrigger->isTempTrigger() ) statsTempTriggers++;
+        list<TTrigger*>* childrenList = rootTrigger->mpMyChildrenList;
+        for (auto childTrigger : *childrenList) {
+            _assembleReport(childTrigger);
+            if (childTrigger->isActive()) {
+                statsActiveTriggers++;
+            }
+            if (childTrigger->isTempTrigger()) {
+                statsTempTriggers++;
+            }
             statsPatterns += childTrigger->mRegexCodeList.size();
             statsTriggerTotal++;
         }
@@ -434,26 +400,22 @@ QString TriggerUnit::assembleReport()
         << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
         << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
     return msg.join("");
-
 }
 
 void TriggerUnit::doCleanup()
 {
-    for(auto trigger : mCleanupList)
-    {
+    for (auto trigger : mCleanupList) {
         delete trigger;
     }
     mCleanupList.clear();
 }
 
-void TriggerUnit::markCleanup( TTrigger * pT )
+void TriggerUnit::markCleanup(TTrigger* pT)
 {
-    for(auto trigger : mCleanupList)
-    {
-        if( trigger == pT )
-        {
+    for (auto trigger : mCleanupList) {
+        if (trigger == pT) {
             return;
         }
     }
-    mCleanupList.push_back( pT );
+    mCleanupList.push_back(pT);
 }
