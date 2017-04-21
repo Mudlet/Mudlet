@@ -59,6 +59,6 @@ Do:
 * enable users to use language-specific Mudlet object names (triggers, aliases, labels, etc)
 
 Don't:
-* translate the Mudlet API: functions, events, error messages or constants (`main` console, mapper directions)
+* translate the Mudlet API: functions, events, error messages or constants (e.g. `main` console)
 * use numbers in the API - English words are preferred instead
 * try to assemble a sentence on the fly - English grammar does not translate into other languages. Present the full sentence to translators instead
