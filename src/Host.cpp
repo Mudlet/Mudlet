@@ -373,7 +373,7 @@ void Host::resetProfile()
 // takes a directory to save in or an empty string for the default location
 // as well as a boolean whenever to sync the modules or not
 // returns true+filepath if successful or false+error message otherwise
-std::tuple<bool, QString, QString, QString> Host::saveProfile(const QString& saveToDir, bool syncModules)
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveToDir, bool syncModules)
 {
     QString directory_xml;
     if (saveToDir.isEmpty()) {
@@ -393,9 +393,9 @@ std::tuple<bool, QString, QString, QString> Host::saveProfile(const QString& sav
         writer.exportHost(&file_xml);
         file_xml.close();
         saveModules(syncModules ? 1 : 0);
-        return std::make_tuple(true, filename_xml, QString(), QString());
+        return std::make_tuple(true, filename_xml, QString());
     } else {
-        return std::make_tuple(false, getName(), filename_xml, file_xml.errorString());
+        return std::make_tuple(false, filename_xml, file_xml.errorString());
     }
 }
 

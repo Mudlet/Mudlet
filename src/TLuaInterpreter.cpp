@@ -2499,7 +2499,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(std::get<1>(result)).arg(std::get<2>(result)).arg(std::get<3>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
         return 2;
     }
 }

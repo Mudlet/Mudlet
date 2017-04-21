@@ -7007,7 +7007,7 @@ void dlgTriggerEditor::slot_profileSaveAction()
     auto result = mpHost->saveProfile(nullptr, true);
 
     if (std::get<0>(result) == false) {
-        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<3>(result)));
+        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
     }
 }
 
