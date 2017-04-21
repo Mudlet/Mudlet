@@ -117,31 +117,31 @@ void dlgIRC::onMessageReceived( IrcMessage* msg )
     {
     case IrcMessage::Type::Join: {
         IrcJoinMessage *rmsg = static_cast<IrcJoinMessage*>(msg);
-        slot_joined( rmsg->sender().name(), rmsg->channel() );
+        slot_joined( rmsg->nick(), rmsg->channel() );
         break;
         }
     case IrcMessage::Type::Notice: {
         IrcNoticeMessage *rmsg = static_cast<IrcNoticeMessage*>(msg);
-        irc_gotMsg( rmsg->sender().name(), rmsg->target(), rmsg->message() );
+        irc_gotMsg( rmsg->nick(), rmsg->target(), rmsg->content() );
         break;
         }
     case IrcMessage::Type::Private: {
         IrcPrivateMessage *rmsg = static_cast<IrcPrivateMessage*>(msg);
-        irc_gotMsg( rmsg->sender().name(), rmsg->target(), rmsg->message() );
+        irc_gotMsg( rmsg->nick(), rmsg->target(), rmsg->content() );
         break;
         }
     case IrcMessage::Type::Numeric: {
         IrcNumericMessage *rmsg = static_cast<IrcNumericMessage*>(msg);
-        irc_gotMsg3( rmsg->sender().name(), rmsg->code(), rmsg->parameters() );
+        irc_gotMsg3( rmsg->nick(), rmsg->code(), rmsg->parameters() );
         break;
         }
     case IrcMessage::Type::Part: {
         IrcPartMessage *rmsg = static_cast<IrcPartMessage*>(msg);
-        slot_parted( rmsg->sender().name(), rmsg->channel(), rmsg->reason() );
+        slot_parted( rmsg->nick(), rmsg->channel(), rmsg->reason() );
         break;
         }
     case IrcMessage::Type::Unknown:
-        irc_gotMsg2( msg->sender().name(), msg->parameters() );
+        irc_gotMsg2( msg->nick(), msg->parameters() );
         break;
     default:
         break;
