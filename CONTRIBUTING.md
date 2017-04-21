@@ -56,8 +56,9 @@ cannot be merged.
 Do:
 * enable strings visible in the Mudlet GUI to be translateable
 * minimise use of HTML styling tags in strings to be translated
+* enable users to use language-specific Mudlet object names (triggers, aliases, labels, etc)
 
 Don't:
-* translate the Mudlet API: functions, events, or error messages
+* translate the Mudlet API: functions, events, error messages or constants (`main` console, mapper directions)
 * use numbers in the API - English words are preferred instead
 * try to assemble a sentence on the fly - English grammar does not translate into other languages. Present the full sentence to translators instead
