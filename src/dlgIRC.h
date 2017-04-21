@@ -30,10 +30,10 @@
 #include <ircmessage.h>
 #include <ircsession.h>
 #else
-#include "irc/include/irc.h"
-#include "irc/include/irccommand.h"
-#include "irc/include/ircmessage.h"
-#include "irc/include/ircsession.h"
+#include "irc/include/IrcCore/irc.h"
+#include "irc/include/IrcCore/irccommand.h"
+#include "irc/include/IrcCore/ircmessage.h"
+#include "irc/include/IrcCore/ircconnection.h"
 #endif
 #include "post_guard.h"
 
@@ -47,7 +47,7 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 public:
     dlgIRC();
 
-    IrcSession* session;
+    IrcConnection* connection;
 
 public slots:
     void onMessageReceived(IrcMessage*);
