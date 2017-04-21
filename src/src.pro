@@ -22,6 +22,9 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
     error("Mudlet requires Qt 5.6 or later")
 }
 
+# Including IRC Library
+include(irc/src/src.pri)
+
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
 VERSION = 3.0.1
@@ -161,8 +164,6 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
-INCLUDEPATH += irc/include
-
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -194,15 +195,6 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
-    irc/src/irc.cpp \
-    irc/src/irccodecplugin.cpp \
-    irc/src/irccommand.cpp \
-    irc/src/ircdecoder.cpp \
-    irc/src/ircmessage.cpp \
-    irc/src/ircparser.cpp \
-    irc/src/ircsender.cpp \
-    irc/src/ircsession.cpp \
-    irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -275,16 +267,6 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
-    irc/include/irc.h \
-    irc/include/irccodecplugin.h \
-    irc/include/irccommand.h \
-    irc/include/ircdecoder_p.h \
-    irc/include/ircglobal.h \
-    irc/include/ircmessage.h \
-    irc/include/ircparser_p.h \
-    irc/include/ircsender.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -463,7 +445,6 @@ DISTFILES += \
     ../.travis.yml \
     CMakeLists.txt \
     ../CMakeLists.txt \
-    irc/CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \
