@@ -50,3 +50,9 @@ try to consolidate identical literals so that they are not duplicated. For QStri
 cannot be merged.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
+
+# Git commit guidelines for core team
+
+## Merging Pull Requests (PRs)
+
+The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is: prefer rebase, else squash if you'd like to clean up the history before merging. Avoid doing a merge commit.
