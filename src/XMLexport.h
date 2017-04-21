@@ -47,13 +47,13 @@ class VarUnit;
 class XMLexport : public QXmlStreamWriter
 {
 public:
-                    XMLexport( Host * );
-                    XMLexport( TTrigger * );
-                    XMLexport( TTimer * );
-                    XMLexport( TAlias * );
-                    XMLexport( TAction * );
-                    XMLexport( TScript * );
-                    XMLexport( TKey * );
+    XMLexport(Host*);
+    XMLexport(TTrigger*);
+    XMLexport(TTimer*);
+    XMLexport(TAlias*);
+    XMLexport(TAction*);
+    XMLexport(TScript*);
+    XMLexport(TKey*);
 
     bool            writeHost( Host * );
 
@@ -99,13 +99,13 @@ public:
     bool            exportKeyToClipboard( TKey * );*/
 
 private:
-    QPointer<Host>  mpHost;
-    TTrigger *      mpTrigger;
-    TTimer *        mpTimer;
-    TAlias *        mpAlias;
-    TAction *       mpAction;
-    TScript *       mpScript;
-    TKey *          mpKey;
+    QPointer<Host> mpHost;
+    TTrigger* mpTrigger;
+    TTimer* mpTimer;
+    TAlias* mpAlias;
+    TAction* mpAction;
+    TScript* mpScript;
+    TKey* mpKey;
 };
 
 #endif // MUDLET_XMLEXPORT_H

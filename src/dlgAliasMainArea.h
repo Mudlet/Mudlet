@@ -31,6 +31,8 @@ class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgAliasMainArea)
+
 public:
     dlgAliasMainArea(QWidget*);
 };

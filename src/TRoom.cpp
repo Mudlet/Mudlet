@@ -23,16 +23,16 @@
 #include "TRoom.h"
 
 
-#include "mudlet.h"
 #include "TArea.h"
 #include "TRoomDB.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDataStream>
 #include <QDebug>
-#include <QStringBuilder>
 #include <QElapsedTimer>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 
@@ -66,6 +66,7 @@ TRoom::TRoom(TRoomDB * pRDB)
 , in( -1 )
 , out( -1 )
 , mpRoomDB( pRDB )
+, highlightRadius()
 {
 }
 

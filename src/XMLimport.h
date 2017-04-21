@@ -24,9 +24,7 @@
  ***************************************************************************/
 
 
-// clang-format off
 #include "pre_guard.h"
-// clang-format on
 #include <QApplication>
 #include <QFile>
 #include <QMap>
@@ -34,9 +32,7 @@
 #include <QPointer>
 #include <QXmlStreamReader>
 #include <QClipboard>
-// clang-format off
 #include "post_guard.h"
-// clang-format on
 
 class Host;
 class TAction;

@@ -26,15 +26,15 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "XMLimport.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtUiTools>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
-#include <QtUiTools>
 #include "post_guard.h"
 
 
@@ -46,6 +46,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , connect_button( Q_NULLPTR )
 , delete_profile_lineedit( Q_NULLPTR )
 , delete_button( Q_NULLPTR )
+, validName()
+, validUrl()
+, validPort()
 {
     setupUi( this );
 
@@ -811,7 +814,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     profile_history->setEnabled( static_cast<bool>(profile_history->count()) );
 
-    QStringList loadedProfiles = mudlet::self()->getHostManager()->getHostList();
+    QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
     if( loadedProfiles.contains( profile_name ) )
     {
         profile_name_entry->setReadOnly( true );
@@ -1227,7 +1230,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( profile_name.isEmpty() )
         return;
 
-    Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
+    Host* pHost = mudlet::self()->getHostManager().getHost(profile_name);
     if( pHost )
     {
         pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
@@ -1235,8 +1238,8 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
     // load an old profile if there is any
-    mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
-    pHost = mudlet::self()->getHostManager()->getHost( profile_name );
+    mudlet::self()->getHostManager().addHost(profile_name, port_entry->text().trimmed(), QString(), QString());
+    pHost = mudlet::self()->getHostManager().getHost(profile_name);
 
     if( ! pHost ) return;
 

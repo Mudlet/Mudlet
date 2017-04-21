@@ -51,7 +51,7 @@ class TMatchState;
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 
-#define OVECCOUNT 30    // should be a multiple of 3
+#define OVECCOUNT 30 // should be a multiple of 3
 
 struct TColorTable
 {
@@ -127,27 +127,28 @@ public:
     bool             setupColorTrigger( int, int );
     bool             setupTmpColorTrigger( int ansiFg, int ansiBg );
     TColorTable*     createColorPattern(int, int);
-    bool             mTriggerContainsPerlRegex;
-    bool             mPerlSlashGOption;
-    bool             mFilterTrigger;
-    bool             mSoundTrigger;
-    QString          mSoundFile;
-    int              mStayOpen;
-    bool             mColorTrigger;
-    QList<TColorTable *> mColorPatternList;
-    bool             mColorTriggerFg;
-    bool             mColorTriggerBg;
-    QColor           mColorTriggerFgColor;
-    QColor           mColorTriggerBgColor;
-    int              mColorTriggerFgAnsi;
-    int              mColorTriggerBgAnsi;
-    int              mKeepFiring;
-    QPointer<Host>   mpHost;
-    QString                                mName;
-    bool                                   mIsTempTrigger;
-    QStringList                            mRegexCodeList;
-    bool             exportItem;
-    bool            mModuleMasterFolder;
+    bool mTriggerContainsPerlRegex;
+    bool mPerlSlashGOption;
+    bool mFilterTrigger;
+    bool mSoundTrigger;
+    QString mSoundFile;
+    int mStayOpen;
+    bool mColorTrigger;
+    QList<TColorTable*> mColorPatternList;
+    bool mColorTriggerFg;
+    bool mColorTriggerBg;
+    QColor mColorTriggerFgColor;
+    QColor mColorTriggerBgColor;
+    int mColorTriggerFgAnsi;
+    int mColorTriggerBgAnsi;
+    int mKeepFiring;
+    QPointer<Host> mpHost;
+    QString mName;
+    bool mIsTempTrigger;
+    QStringList mRegexCodeList;
+    bool exportItem;
+    bool mModuleMasterFolder;
+
 private:
 
                                            TTrigger(){}

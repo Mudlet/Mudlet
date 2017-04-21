@@ -164,6 +164,19 @@ TBuffer::TBuffer( Host * pH )
 , mFgColorCode       ( false )
 , mBgColorCode       ( false )
 , mIsHighColorMode   ( false )
+, speedTP()
+, speedSequencer()
+, speedAppend()
+, msLength()
+, msPos()
+, mOpenMainQuote()
+, mEchoText()
+, mIsDefaultColor()
+, isUserScrollBack()
+, currentFgColorProperty()
+, maxx()
+, maxy()
+, hadLF()
 {
     clear();
     newLines = 0;
@@ -2140,7 +2153,7 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     }
 }
 
-void TBuffer::appendBuffer( TBuffer chunk )
+void TBuffer::appendBuffer( const TBuffer& chunk )
 {
     if( chunk.buffer.size() < 1 )
     {

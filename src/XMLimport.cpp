@@ -38,41 +38,34 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
+#include <QtMath>
 #include <QDebug>
 #include <QBuffer>
 #include <QStringList>
-#if QT_VERSION > 0x050002
-#include <QtMath>
-#else
-#include <QtCore/qmath.h>
-#endif
 #include "post_guard.h"
-// clang-format: on
 
 XMLimport::XMLimport(Host* pH)
-    : mpHost(pH)
-    , mPackageName(QString())
-    , mpTrigger(Q_NULLPTR)
-    , mpTimer(Q_NULLPTR)
-    , mpAlias(Q_NULLPTR)
-    , mpKey(Q_NULLPTR)
-    , mpAction(Q_NULLPTR)
-    , mpScript(Q_NULLPTR)
-    , mpVar(Q_NULLPTR)
-    , gotTrigger(false)
-    , gotTimer(false)
-    , gotAlias(false)
-    , gotKey(false)
-    , gotAction(false)
-    , gotScript(false)
-    , module(0)
-    , mMaxRoomId(0)
-    , mMaxAreaId(-1)
-    , mVersionMajor(1) // 0 to 255
-    , mVersionMinor(0) // 0 to 999 for 3 digit decimal value
+: mpHost(pH)
+, mPackageName(QString())
+, mpTrigger(Q_NULLPTR)
+, mpTimer(Q_NULLPTR)
+, mpAlias(Q_NULLPTR)
+, mpKey(Q_NULLPTR)
+, mpAction(Q_NULLPTR)
+, mpScript(Q_NULLPTR)
+, mpVar(Q_NULLPTR)
+, gotTrigger(false)
+, gotTimer(false)
+, gotAlias(false)
+, gotKey(false)
+, gotAction(false)
+, gotScript(false)
+, module(0)
+, mMaxRoomId(0)
+, mMaxAreaId(-1)
+, mVersionMajor(1) // 0 to 255
+, mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 
@@ -1477,7 +1470,8 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                            "convert: \"%s\" to a number when reading the "
                            "'regexCodePropertyList' element of the 'Trigger' "
                            "or 'TriggerGroup' element \"%s\"!",
-                           numberText.toUtf8().constData(), parentName.toUtf8().constData());
+                           numberText.toUtf8().constData(),
+                           parentName.toUtf8().constData());
                 }
             } else {
                 readUnknownTriggerElement();

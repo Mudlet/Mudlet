@@ -23,14 +23,14 @@
 #include "TAction.h"
 
 
-#include "Host.h"
 #include "EAction.h"
-#include "mudlet.h"
-#include "TDebug.h"
+#include "Host.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TFlipButton.h"
 #include "TToolBar.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -51,6 +51,14 @@ TAction::TAction( TAction * parent, Host * pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mModuleMember(false)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
+, mIsFolder()
+, mButtonRotation()
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 {
 }
 
@@ -71,6 +79,14 @@ TAction::TAction(const QString& name, Host * pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mModuleMember(false)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
+, mIsFolder()
+, mButtonRotation()
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 {
 }
 
@@ -82,7 +98,6 @@ TAction::~TAction()
     }
     mpHost->getActionUnit()->unregisterAction(this);
 }
-
 
 bool TAction::registerAction()
 {
@@ -336,17 +351,20 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
 
        if( action->mIsFolder )
        {
-           auto newMenu = new QMenu( button );
            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
-           newMenu->setStyleSheet( css );
+           auto newMenu = new QMenu( button );
+
            // CHECK: consider using the Child's CSS instead for a menu on it
            // - Slysven:
            // newMenu->setStyleSheet( action->css );
-           action->fillMenu( pT, newMenu );
+           newMenu->setStyleSheet( css );
+
            // This has been moved until AFTER the child's menu has been
            // populated, it was being done straight after newMenu was created,
            // but I think we ought to insert the items into the menu before
            // applying the menu to the button - Slysven
+           action->fillMenu( pT, newMenu );
+
            button->setMenu( newMenu );
        }
 
@@ -387,7 +405,6 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
         //FIXME: Heiko April 2012 -> expandToolBar()
         if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
         {
-//            qDebug()<<"fillMenu() name="<<action->mName<<" executing script";
             action->execute();
         }
 
@@ -398,10 +415,12 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
             // find the item that it is attached to - ah ha, try the toolbar...
             auto newMenu = new QMenu( pT );
             newAction->setMenu( newMenu );
-            newMenu->setStyleSheet( css );
+
             // CHECK: consider using the Child's CSS instead for a menu on it
             // - Slysven:
             // newMenu->setStyleSheet( action->css );
+            newMenu->setStyleSheet( css );
+
             action->fillMenu( pT, newMenu );
         }
 
@@ -411,7 +430,6 @@ void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
 
 // This only has code corresponding to the first part of:
 //   TAction::insertActions( TToolBar * pT, QMenu * menu )
-//
 void TAction::insertActions( TEasyButtonBar * pT, QMenu * menu )
 {
     mpEasyButtonBar = pT;

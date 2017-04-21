@@ -36,6 +36,8 @@ static jmp_buf buf;
 
 LuaInterface::LuaInterface(Host * pH)
     :mpHost(pH)
+, L()
+, depth()
 {
     interpreter = mpHost->getLuaInterpreter();
     mHostID = mpHost->getHostID();
@@ -151,7 +153,7 @@ bool LuaInterface::loadValue(lua_State * L, TVar * var, int index){
 bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
     //get the old parent on the stack
     if (setjmp(buf) == 0){
-        if ((!from && !to) || (from==to))//moving from global to global or nowhere
+        if (!from || !to || (from==to))//moving from global to global or nowhere
             return true;
         int stackSize = lua_gettop(L);
         bool isSaved = varUnit->isSaved(curVar);

@@ -35,6 +35,7 @@
 
 
 TTreeWidget::TTreeWidget( QWidget * pW ) : QTreeWidget( pW )
+, mChildID()
 {
     setSelectionMode( QAbstractItemView::SingleSelection );
     setSelectionBehavior( QAbstractItemView::SelectRows );

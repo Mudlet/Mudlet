@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,9 +23,6 @@
 #include "TMap.h"
 
 
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
-#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -33,6 +30,9 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -1842,25 +1842,27 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
     label.size = s;
     label.clickSize = s;
-    if( ! mpRoomDB->getArea(area) ) return -1;
-    int labelID;
-    if( !mapLabels.contains( area ) )
-    {
+    if( ! mpRoomDB->getArea(area) ) { return -1; }
+
+    int label_id;
+
+    // No labels exist for this area, so start from zero.
+    if (!mapLabels.contains(area)) {
         QMap<int, TMapLabel> m;
-        m[0] = label;
+        label_id = 0;
+        m[label_id] = label;
         mapLabels[area] = m;
-    }
-    else
-    {
-        labelID = createMapLabelID( area );
-        if( labelID > -1 )
-        {
-            mapLabels[area].insert(labelID, label);
+    } else {
+        label_id = createMapLabelID(area);
+        if (label_id > -1) {
+            mapLabels[area].insert(label_id, label);
         }
     }
 
-    if( mpMapper ) mpMapper->mp2dMap->update();
-    return labelID;
+    if (mpMapper) {
+        mpMapper->mp2dMap->update();
+    }
+    return label_id;
 }
 
 int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling )
@@ -1881,25 +1883,29 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
-    if( ! mpRoomDB->getArea(area) ) return -1;
-    int labelID;
-    if( !mapLabels.contains( area ) )
-    {
-        QMap<int, TMapLabel> m;
-        m[0] = label;
-        mapLabels[area] = m;
+    if (!mpRoomDB->getArea(area)) {
+        return -1;
     }
-    else
-    {
-        labelID = createMapLabelID( area );
-        if( labelID > -1 )
-        {
-            mapLabels[area].insert(labelID, label);
+
+    int label_id;
+
+    // No labels exist for this area, so start from zero.
+    if (!mapLabels.contains(area)) {
+        QMap<int, TMapLabel> m;
+        label_id = 0;
+        m[label_id] = label;
+        mapLabels[area] = m;
+    } else {
+        label_id = createMapLabelID(area);
+        if (label_id > -1) {
+            mapLabels[area].insert(label_id, label);
         }
     }
 
-    if( mpMapper ) mpMapper->mp2dMap->update();
-    return labelID;
+    if (mpMapper) {
+        mpMapper->mp2dMap->update();
+    }
+    return label_id;
 }
 
 

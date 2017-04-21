@@ -22,11 +22,11 @@
 #include "TCommandLine.h"
 
 
-#include "mudlet.h"
 #include "Host.h"
 #include "TConsole.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QAction>
@@ -41,7 +41,12 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 , mpConsole( pConsole )
 , mSelectedText( "" )
 , mSelectionStart( 0 )
-
+, mTabCompletion()
+, mTabCompletionCount()
+, mAutoCompletionCount()
+, mUserKeptOnTyping()
+, mHunspellSuggestionNumber()
+, mpHunspellSuggestionList()
 {
     QString path;
 #ifdef Q_OS_LINUX

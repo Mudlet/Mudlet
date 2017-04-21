@@ -23,6 +23,7 @@
 
 
 dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF) : QWidget(pF)
+, mRow()
 {
     // init generated dialog
     setupUi(this);

@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,14 +25,6 @@
 #include "mudlet.h"
 
 
-#include "dlgAboutDialog.h"
-#include "dlgConnectionProfiles.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgNotepad.h"
-#include "dlgPackageExporter.h"
-#include "dlgProfilePreferences.h"
-#include "dlgTriggerEditor.h"
 #include "EAction.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -45,9 +38,18 @@
 #include "TRoomDB.h"
 #include "TTextEdit.h"
 #include "XMLimport.h"
+#include "dlgAboutDialog.h"
+#include "dlgConnectionProfiles.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgNotepad.h"
+#include "dlgPackageExporter.h"
+#include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
+#include <QtUiTools/quiloader.h>
 #include <QApplication>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -57,7 +59,6 @@
 #include <QScrollBar>
 #include <QTextCharFormat>
 #include <QToolBar>
-#include <QtUiTools/quiloader.h>
 #include "post_guard.h"
 
 
@@ -161,11 +162,9 @@ mudlet::mudlet()
     mpTabBar = new QTabBar( frame );
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy( Qt::NoFocus );
-#if QT_VERSION >= 0x040500
     mpTabBar->setTabsClosable ( true );
     connect( mpTabBar, SIGNAL(tabCloseRequested(int)), this, SLOT(slot_close_profile_requested(int)));
     mpTabBar->setMovable(true);
-#endif
     connect( mpTabBar, SIGNAL(currentChanged(int)), this, SLOT(slot_tab_changed(int)));
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0,0,0,0);
@@ -401,11 +400,6 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start( 1000 );
 
-    mpMusicBox1 = new QMediaPlayer(this);
-    mpMusicBox2 = new QMediaPlayer(this);
-    mpMusicBox3 = new QMediaPlayer(this);
-    mpMusicBox4 = new QMediaPlayer(this);
-
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
     if(  mStatusBarState & statusBarAlwaysShown
@@ -416,11 +410,6 @@ mudlet::mudlet()
     else {
         mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
     }
-}
-
-HostManager * mudlet::getHostManager()
-{
-    return &mHostManager;
 }
 
 bool mudlet::moduleTableVisible()
@@ -561,8 +550,10 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem){
     qDebug()<<itemPath->text();
     if (!entry || !checkStatus || !itemPriority || !pH->mInstalledModules.contains(entry->text())){
         moduleHelpButton->setDisabled(true);
-        checkStatus->setCheckState(Qt::Unchecked);
-        checkStatus->setFlags(Qt::NoItemFlags);
+        if (checkStatus) {
+            checkStatus->setCheckState(Qt::Unchecked);
+            checkStatus->setFlags(Qt::NoItemFlags);
+        }
         return;
     }
     if (pH->moduleHelp.contains(entry->text()))
@@ -705,7 +696,7 @@ void mudlet::slot_package_exporter(){
 void mudlet::slot_close_profile_requested( int tab )
 {
     QString name = mpTabBar->tabText( tab );
-    Host * pH = getHostManager()->getHost( name );
+    Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
     if( ! pH->mpConsole->close() )
@@ -720,7 +711,7 @@ void mudlet::slot_close_profile_requested( int tab )
         mpTabBar->removeTab( tab );
         mConsoleMap.remove( pH );
         mTabMap.remove( pH->getName() );
-        getHostManager()->deleteHost( pH->getName() );
+        getHostManager().deleteHost(pH->getName());
     }
 
     // hide the tab bar if we only have 1 or no tabs available. saves screen space.
@@ -749,7 +740,7 @@ void mudlet::slot_close_profile()
                 {
                     mpTabBar->removeTab( mpTabBar->currentIndex() );
                     mConsoleMap.remove( pH );
-                    getHostManager()->deleteHost( name );
+                    getHostManager().deleteHost(name);
                     mTabMap.remove( name );
                 }
                 mpCurrentActiveHost = Q_NULLPTR;
@@ -1657,8 +1648,6 @@ void mudlet::slot_userToolBar_hovered( QAction* pA )
 
 }
 
-
-
 void mudlet::slot_userToolBar_orientation_changed( Qt::Orientation dir )
 {
 }
@@ -1672,8 +1661,6 @@ Host * mudlet::getActiveHost()
     else
         return 0;
 }
-
-
 
 void mudlet::addSubWindow( TConsole* pConsole )
 {
@@ -1728,6 +1715,14 @@ void mudlet::closeEvent(QCloseEvent *event)
     qApp->quit();
 }
 
+void mudlet::forceClose()
+{
+    for (auto console : mConsoleMap) {
+        console->mUserAgreedToCloseConsole = true;
+    }
+    
+    close();
+}
 
 void mudlet::readSettings()
 {
@@ -1747,11 +1742,13 @@ void mudlet::readSettings()
     mShowMenuBar = settings.value("showMenuBar",QVariant(0)).toBool();
     mShowToolbar = settings.value("showToolbar",QVariant(0)).toBool();
     mEditorTextOptions = QTextOption::Flags( settings.value( "editorTextOptions",QVariant(0)).toInt() );
-    mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarHidden ).toInt() );
+
     // By default the status bar will not be shown for new/upgraded
     // installations - if the user wants the status bar shown either all the
     // time or when it has something to show, they will have to enable that
     // themselves, but that only has to be done once! - Slysven
+    mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarHidden ).toInt() );
+
     mIsToDisplayMapAuditErrorsToConsole = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
     resize( size );
     move( pos );
@@ -1778,7 +1775,6 @@ void mudlet::readSettings()
         showMaximized();
     }
 }
-
 
 void mudlet::setIcoSize( int s )
 {
@@ -1816,8 +1812,9 @@ void mudlet::connectToServer()
     auto pDlg = new dlgConnectionProfiles(this);
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
     pDlg->fillout_form();
-    pDlg->exec();
-    enableToolbarButtons();
+    if (pDlg->exec() == QDialog::Accepted) {
+         enableToolbarButtons();
+    }
 }
 
 void mudlet::show_trigger_dialog()
@@ -1906,10 +1903,8 @@ void mudlet::show_options_dialog()
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
     connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
     connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    if( ! pDlg ) return;
     pDlg->show();
 }
-
 
 void mudlet::show_help_dialog()
 {
@@ -2114,7 +2109,6 @@ void mudlet::print( Host * pH, const QString & s )
     mConsoleMap[pH]->print( s );
 }
 
-
 QString mudlet::readProfileData( const QString& profile, const QString& item )
 {
     QFile file( QDir::homePath()+"/.config/mudlet/profiles/"+profile+"/"+item );
@@ -2152,15 +2146,15 @@ void mudlet::doAutoLogin( const QString & profile_name )
     if( profile_name.size() < 1 )
         return;
 
-    Host * pOH = getHostManager()->getHost( profile_name );
+    Host* pOH = getHostManager().getHost(profile_name);
     if( pOH )
     {
         pOH->mTelnet.connectIt( pOH->getUrl(), pOH->getPort() );
         return;
     }
     // load an old profile if there is any
-    getHostManager()->addHost( profile_name, "", "", "" );
-    Host * pHost = getHostManager()->getHost( profile_name );
+    getHostManager().addHost(profile_name, "", "", "");
+    Host* pHost = getHostManager().getHost(profile_name);
 
     if( ! pHost ) return;
 
@@ -2227,7 +2221,7 @@ void mudlet::processEventLoopHack_timerRun()
 
 void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyVersion )
 {
-    Host * pHost = getHostManager()->getHost( profile );
+    Host* pHost = getHostManager().getHost(profile);
     if( ! pHost ) return;
     pHost->mIsProfileLoadingSequence = true;
     addConsoleForNewHost( pHost );
@@ -2410,37 +2404,53 @@ void mudlet::slot_replaySpeedDown()
     replaySpeedDisplay->show();
 }
 
+/* loop through and stop all sounds */
 void mudlet::stopSounds()
 {
-    mpMusicBox1->stop();
-    mpMusicBox2->stop();
-    mpMusicBox3->stop();
-    mpMusicBox4->stop();
+    QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
+    
+    while( itMusicBox.hasNext() ) {
+        itMusicBox.next()->stop();
+    }
 }
 
-void mudlet::playSound( QString s )
+void mudlet::playSound( QString s, int soundVolume )
 {
-    if( mpMusicBox1->state() != QMediaPlayer::PlayingState )
-    {
-        mpMusicBox1->setMedia( QUrl::fromLocalFile( s ) );
-        mpMusicBox1->play();
+    QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
+    QMediaPlayer * pPlayer=0;
+    
+    /* find first available inactive QMediaPlayer */
+    while( itMusicBox.hasNext() ) {
+        QMediaPlayer * pTestPlayer=itMusicBox.next();
+        
+        if ( pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia ) {
+            pPlayer=pTestPlayer;
+            break;
+        }
     }
-    else if( mpMusicBox2->state() != QMediaPlayer::PlayingState )
-    {
-        mpMusicBox2->setMedia( QUrl::fromLocalFile( s ) );
-        mpMusicBox2->play();
+
+    /* no available QMediaPlayer, create a new one */
+    if (!pPlayer) {
+        pPlayer = new QMediaPlayer(this);
+
+        if (!pPlayer) {
+            /* It (should) be impossible to ever reach this */
+            Host * pH = getActiveHost();
+            
+            if (pH) {
+                pH->postMessage( "\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n" );    
+            }
+            
+            return;
+        }
+
+        MusicBoxList.append(pPlayer);
     }
-    else if( mpMusicBox3->state() != QMediaPlayer::PlayingState )
-    {
-        mpMusicBox3->setMedia( QUrl::fromLocalFile( s ) );
-        mpMusicBox3->play();
-    }
-    else
-    {
-        mpMusicBox4->stop();
-        mpMusicBox4->setMedia( QUrl::fromLocalFile( s ) );
-        mpMusicBox4->play();
-    }
+
+    /* set volume and play sound */
+    pPlayer->setMedia( QUrl::fromLocalFile( s ) );
+    pPlayer->setVolume(soundVolume);
+    pPlayer->play();
 }
 
 void mudlet::setEditorTextoptions( const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown )

@@ -29,10 +29,10 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
-#include <QStringList>
 
 #include <zlib.h>
 
@@ -92,19 +92,18 @@ class cTelnet : public QObject
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(cTelnet)
+
 public:
                       cTelnet( Host * pH );
                       ~cTelnet();
     void              connectIt(const QString &address, int port);
     void              disconnect();
     bool              sendData( QString & data );
-    void              setCommandEcho( bool cmdEcho );
     void              setATCPVariables(const QString & _msg );
     void              setGMCPVariables(const QString & _msg );
     void              atcpComposerCancel();
     void              atcpComposerSave( QString );
-    void              setLPMudStyle( bool lpmustyle );
-    void              setNegotiateOnStartup( bool startupneg );
     void              setDisplayDimensions();
     void              encodingChanged(QString encoding);
     void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
@@ -152,11 +151,9 @@ private:
     void              initStreamDecompressor();
     int               decompressBuffer( char *& in_buffer, int& length, char* out_buffer );
     void              reset();
-    void              connectionFailed();
 
     void              processTelnetCommand(const std::string &command);
     void              sendTelnetOption( char type, char option);
-    // string getCurrentTime(); //NOTE: not w32 compatible
     void              gotRest( std::string & );
     void              gotPrompt( std::string & );
     void              postData();

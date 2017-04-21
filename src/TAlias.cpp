@@ -24,8 +24,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -38,6 +38,7 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mIsFolder()
 {
 }
 
@@ -50,6 +51,7 @@ TAlias::TAlias(const QString& name, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mIsFolder()
 {
 }
 

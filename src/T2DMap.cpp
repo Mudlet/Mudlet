@@ -23,8 +23,6 @@
 #include "T2DMap.h"
 
 
-#include "dlgMapper.h"
-#include "dlgRoomExits.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -32,14 +30,16 @@
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgMapper.h"
+#include "dlgRoomExits.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
 #include <QAction>
+#include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
-#include <QCheckBox>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFileDialog>
@@ -67,6 +67,27 @@ T2DMap::T2DMap(QWidget * parent)
 , mIsSelectionSorting(true)
 , mIsSelectionSortByNames(false)
 , mIsSelectionUsingNames(false)
+, mpMap()
+, _rx()
+, _ry()
+, mTX()
+, mTY()
+, mChosenRoomColor()
+, xspan()
+, yspan()
+, mMultiSelection()
+, mPopupMenu()
+, mRID()
+, mAID()
+, mOx()
+, mOy()
+, mOz()
+, arealist_combobox()
+, mpCurrentLineStyle()
+, mpCurrentLineColor()
+, mpCurrentLineArrow()
+, mCurrentLineArrow()
+, mShowGrid()
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -80,9 +101,7 @@ T2DMap::T2DMap(QWidget * parent)
     mMultiSelectionListWidget.setRootIsDecorated(false);
     QSizePolicy multiSelectionSizePolicy( QSizePolicy::Maximum, QSizePolicy::Expanding );
     mMultiSelectionListWidget.setSizePolicy( multiSelectionSizePolicy );
-#if QT_VERSION >= 0x050200
     mMultiSelectionListWidget.setSizeAdjustPolicy( QAbstractScrollArea::AdjustToContents );
-#endif
     mMultiSelectionListWidget.setFrameShape(QFrame::NoFrame);
     mMultiSelectionListWidget.setFrameShadow(QFrame::Plain);
     mMultiSelectionListWidget.header()->setProperty("showSortIndicator",QVariant(true));
@@ -304,6 +323,7 @@ QColor T2DMap::getColor( int id )
         break;
     case 16:
         c = mpHost->mLightBlack_2;
+        break;
     default: //user defined room color
         if( ! mpMap->customEnvColors.contains(env) ) break;
         c = mpMap->customEnvColors[env];
@@ -556,8 +576,10 @@ void T2DMap::slot_switchArea(QString name)
                     }
                 }
 
-                mOx = pClosestRoom->x;
-                mOy = - pClosestRoom->y;  // Map y coordinates are reversed on 2D map!
+                if (pClosestRoom) {
+                    mOx = pClosestRoom->x;
+                    mOy = -pClosestRoom->y; // Map y coordinates are reversed on 2D map!
+                }
             }
             repaint();
             mpMap->set3DViewCenter( mAID, mOx, -mOy, mOz ); // Pass the coordinates to the TMap instance to pass to the 3D mapper
@@ -2388,9 +2410,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                             // The way this code is structured means that EARLIER
                             // points are selected in preference to later ones!
                             // This might not be intuative to the users...
+                            float olx, oly, lx, ly;
                             for( int j=0; j<_pL.size(); j++ )
                             {
-                                float olx, oly, lx, ly;
                                 if( j==0 )
                                 {  // First segment of a custom line
                                    // start it at the centre of the room
@@ -3424,7 +3446,7 @@ void T2DMap::slot_setCharacter()
                                                tr("Enter new (not space)\n"
                                                   "marker letter:"), // const QString & label
                                                QLineEdit::Normal, // QLineEdit::EchoMode mode = QLineEdit::Normal
-                                               QStringLiteral(""), // const QString & text = QString()
+                                               QString(), // const QString & text = QString()
                                                &isOk, // bool * ok = 0
                                                0, // Qt::WindowFlags flags = 0
                                                Qt::ImhLatinOnly ); // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
@@ -3452,7 +3474,7 @@ void T2DMap::slot_setCharacter()
                                                tr("Enter new (not space)\n"
                                                   "marker letter:"),
                                                QLineEdit::Normal,
-                                               QStringLiteral(""),
+                                               QString(),
                                                &isOk,
                                                0,
                                                Qt::ImhLatinOnly );

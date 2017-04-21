@@ -23,8 +23,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -39,6 +39,7 @@ TTimer::TTimer( TTimer * parent, Host * pHost )
 , mIsTempTimer( false )
 , mpTimer( new QTimer )
 , mModuleMember(false)
+, mIsFolder()
 {
     mpTimer->stop();
 }
@@ -55,6 +56,7 @@ TTimer::TTimer(const QString& name, QTime time, Host * pHost )
 , mIsTempTimer( false )
 , mpTimer( new QTimer )
 , mModuleMember(false)
+, mIsFolder()
 {
     mpTimer->stop();
 }
@@ -244,7 +246,7 @@ void TTimer::execute()
             mpHost->mLuaInterpreter.compileAndExecuteScript( mScript );
         }
         mpTimer->stop();
-        mpHost->mTimerUnit.markCleanup( this );
+        mpHost->getTimerUnit()->markCleanup( this );
         return;
     }
 

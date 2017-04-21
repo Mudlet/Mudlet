@@ -23,8 +23,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -36,6 +36,7 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mIsFolder()
 {
 }
 
@@ -47,6 +48,7 @@ TScript::TScript(const QString& name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mIsFolder()
 {
 }
 

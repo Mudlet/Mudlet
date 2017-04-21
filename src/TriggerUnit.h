@@ -23,8 +23,8 @@
 
 
 #include "pre_guard.h"
-#include <QMutex>
 #include <QMultiMap>
+#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -41,7 +41,7 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-                          TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) { initStats();}
+                          TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats();}
     std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
     TTrigger *            getTrigger( int id );
     void                  removeAllTempTriggers();
@@ -68,20 +68,20 @@ public:
     void                  uninstall(const QString& );
     void                  _uninstall( TTrigger * pChild, QString packageName );
 
-    int                   statsTriggerTotal;
-    int                   statsTempTriggers;
-    int                   statsPatterns;
-    int                   statsActiveTriggers;
-    int                   statsActiveTriggersMax;
-    int                   statsActiveTriggersMin;
-    int                   statsActiveTriggersAverage;
-    int                   statsTempTriggersCreated;
-    int                   statsTempTriggersKilled;
-    int                   statsAverageLineProcessingTime;
-    int                   statsMaxLineProcessingTime;
-    int                   statsMinLineProcessingTime;
-    int                   statsRegexTriggers;
-    QList<TTrigger*>        uninstallList;
+    int statsTriggerTotal;
+    int statsTempTriggers;
+    int statsPatterns;
+    int statsActiveTriggers;
+    int statsActiveTriggersMax;
+    int statsActiveTriggersMin;
+    int statsActiveTriggersAverage;
+    int statsTempTriggersCreated;
+    int statsTempTriggersKilled;
+    int statsAverageLineProcessingTime;
+    int statsMaxLineProcessingTime;
+    int statsMinLineProcessingTime;
+    int statsRegexTriggers;
+    QList<TTrigger*> uninstallList;
 
 private:
                               TriggerUnit(){;}
@@ -93,13 +93,11 @@ private:
     void                      removeTriggerRootNode( TTrigger * pT );
     void                      removeTrigger( TTrigger *);
 
-    QPointer<Host>            mpHost;
-    QMap<int, TTrigger *>     mTriggerMap;
-    std::list<TTrigger *>     mTriggerRootNodeList;
-    int                     mMaxID;
-    bool                  mModuleMember;
-
-
+    QPointer<Host> mpHost;
+    QMap<int, TTrigger*> mTriggerMap;
+    std::list<TTrigger*> mTriggerRootNodeList;
+    int mMaxID;
+    bool mModuleMember;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

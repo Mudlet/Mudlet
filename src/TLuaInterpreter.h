@@ -25,16 +25,15 @@
 
 #include "pre_guard.h"
 #include <QMutex>
-#include <QNetworkReply>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
 #include "post_guard.h"
 
 #ifndef LUA_CPP
-extern "C"
-{
+extern "C" {
 #endif
     #include <lua.h>
     #include <lualib.h>
@@ -65,69 +64,65 @@ class TTrigger;
 #define RAWDATA 4
 
 
+class TLuaInterpreter : public QThread
+{
+    Q_OBJECT
 
-
-class TLuaInterpreter : public QThread  {
+    Q_DISABLE_COPY(TLuaInterpreter)
 
     friend class TForkedProcess;
     friend class LuaInterface;
 
-Q_OBJECT
-
 public:
-
-    TLuaInterpreter( Host * mpHost, int id );
+    TLuaInterpreter(Host* mpHost, int id);
     ~TLuaInterpreter();
-    void setMSDPTable(QString & key, const QString & string_data);
-    void parseJSON(QString & key, const QString & string_data, const QString& protocol);
+    void setMSDPTable(QString& key, const QString& string_data);
+    void parseJSON(QString& key, const QString& string_data, const QString& protocol);
     void startLuaExecThread();
-    void msdp2Lua(char *src, int srclen);
-// Not Used:    void threadLuaInterpreterExec( std::string code );
+    void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
-    bool call(const QString & function, const QString & mName );
-    bool callMulti(const QString & function, const QString & mName );
-    bool callConditionFunction( std::string & function, const QString & mName );
-    bool call_luafunction( void * );
-    bool compile(const QString & code, QString & error, const QString & name );
-    bool compileScript(const QString & );
-    void setAtcpTable(const QString &, const QString & );
-    void setGMCPTable(QString &, const QString & );
-    void setChannel102Table( int & var, int & arg );
-    bool compileAndExecuteScript(const QString & );
+    bool call(const QString& function, const QString& mName);
+    bool callMulti(const QString& function, const QString& mName);
+    bool callConditionFunction(std::string& function, const QString& mName);
+    bool call_luafunction(void*);
+    bool compile(const QString& code, QString& error, const QString& name);
+    bool compileScript(const QString&);
+    void setAtcpTable(const QString&, const QString&);
+    void setGMCPTable(QString&, const QString&);
+    void setChannel102Table(int& var, int& arg);
+    bool compileAndExecuteScript(const QString&);
     void loadGlobal();
-    //void execLuaCode( QString code );
-    QString get_lua_string(const QString & stringName );
-    int check_for_mappingscript( );
-    void set_lua_string( const QString & varName, const QString & varValue );
-    void set_lua_table(const QString & tableName, QStringList & variableList );
-    void setCaptureGroups( const std::list<std::string> &, const std::list<int> & );
-    void setMultiCaptureGroups( const std::list< std::list<std::string> > & captureList,
-                                const std::list< std::list<int> > & posList );
+    QString get_lua_string(const QString& stringName);
+    int check_for_mappingscript();
+    void set_lua_string(const QString& varName, const QString& varValue);
+    void set_lua_table(const QString& tableName, QStringList& variableList);
+    void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
+    void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList);
 
     void startLuaSessionInterpreter();
-    void adjustCaptureGroups( int x, int a );
+    void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString & function, const TEvent & pE );
-    static QString dirToString( lua_State *, int );
-    static int dirToNumber( lua_State *, int );
+    bool callEventHandler(const QString& function, const TEvent& pE);
+    static QString dirToString(lua_State*, int);
+    static int dirToNumber(lua_State*, int);
 
 
-    int startTempTimer( double, const QString & );
-    int startTempAlias(const QString &, const QString & );
-    int startTempTrigger(const QString &, const QString & );
-    int startTempBeginOfLineTrigger(const QString &, const QString & );
-    int startTempExactMatchTrigger(const QString &, const QString & );
-    int startTempLineTrigger( int, int, const QString & );
-    int startTempRegexTrigger(const QString &, const QString & );
-    int startTempColorTrigger( int, int, const QString & );
-    int startPermRegexTrigger(const QString & name, const QString & parent, QStringList & regex, const QString & function );
-    int startPermSubstringTrigger(const QString & name, const QString & parent, const QStringList & regex, const QString & function );
-    int startPermBeginOfLineStringTrigger(const QString & name, const QString & parent, QStringList & regex, const QString & function );
-    int startPermTimer(const QString & name, const QString & parent, double timeout, const QString & function );
-    int startPermAlias(const QString & name, const QString & parent, const QString & regex, const QString & function );
+    int startTempTimer(double, const QString&);
+    int startTempAlias(const QString&, const QString&);
+    int startTempTrigger(const QString&, const QString&);
+    int startTempBeginOfLineTrigger(const QString&, const QString&);
+    int startTempExactMatchTrigger(const QString&, const QString&);
+    int startTempLineTrigger(int, int, const QString&);
+    int startTempRegexTrigger(const QString&, const QString&);
+    int startTempColorTrigger(int, int, const QString&);
+    int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
+    int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
 
-    TGatekeeperThread * mpGatekeeperThread;
-    QNetworkAccessManager * mpFileDownloader;
+    TGatekeeperThread* mpGatekeeperThread;
+    QNetworkAccessManager* mpFileDownloader;
 
     static int getCustomLines( lua_State * );
     static int addCustomLine( lua_State * );
@@ -243,6 +238,7 @@ public:
     static int setFgColor( lua_State * L );
     static int setBgColor( lua_State * L );
     static int tempTimer( lua_State * L );
+    static int closeMudlet( lua_State* L );
     static int openUserWindow( lua_State * L );
     static int echoUserWindow( lua_State * L );
     static int clearUserWindow( lua_State * L );
@@ -409,175 +405,40 @@ public:
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
-    std::list< std::list<std::string> > mMultiCaptureGroupList;
-    std::list< std::list<int> > mMultiCaptureGroupPosList;
-    void logError( std::string & e, const QString &, const QString & function );
+    std::list<std::list<std::string>> mMultiCaptureGroupList;
+    std::list<std::list<int>> mMultiCaptureGroupPosList;
+    void logError(std::string& e, const QString&, const QString& function);
 
-    static std::map<lua_State *, Host *> luaInterpreterMap;
-    QMap<QNetworkReply *, QString> downloadMap;
-
-
-signals:
-
-// Not Used:    void signalOpenUserWindow( int, const QString& );
-// Not Used:    void signalEchoUserWindow( int, const QString&, const QString& );
-// Not Used:    void signalClearUserWindow( int, const QString& );
-// Not Used:    void signalEnableTimer( int, const QString& );
-// Not Used:    void signalDisableTimer( int, const QString& );
-// Not Used:    void signalNewJob(const QString& );
-// Not Used:    void signalEchoMessage( int, const QString& );
-// Not Used:    void signalSelect( int, const QString&, int );
-// Not Used:    void signalSelectSection( int, int, int );
-// Not Used:    void signalReplace( int, const QString& );
-// Not Used:    void signalSetFgColor( int, int, int, int );
-// Not Used:    void signalSetBgColor( int, int, int, int );
-// Not Used:    void signalTempTimer( int, double, const QString&, const QString& );
-// Not Used:    void signalNewCommand( int, const QString& ); //signal of the lua thread unit command dispatcher for the main event loop to post events
-// Not Used:    void signalNewLuaCodeToExecute(const QString& );
+    static std::map<lua_State*, Host*> luaInterpreterMap;
+    QMap<QNetworkReply*, QString> downloadMap;
 
 public slots:
 
     void slot_replyFinished( QNetworkReply * );
-// Not Used:    void slotOpenUserWindow( int, const QString& );
-// Not Used:    void slotEchoUserWindow( int, const QString&, const QString& );
-// Not Used:    void slotClearUserWindow( int, const QString& );
-// Not Used:    void slotEnableTimer( int, const QString& );
-// Not Used:    void slotDisableTimer( int, const QString& );
-// Not Used:    void slotReplace( int, const QString& );
-// Not Used:    void slotEchoMessage( int, const QString& );
-// Not Used:    void slotNewCommand( int, const QString& );
-// Not Used:    void slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName );
     void slotPurge();
     void slotDeleteSender();
 
-// Not Used:    void slotNewEcho(int,QString);
-
-    //public:
 private:
 
-// Not Used:    lua_State * getLuaExecutionUnit( int unit );
     lua_State* pGlobalLua;
-    TLuaMainThread * mpLuaSessionThread;
+    TLuaMainThread* mpLuaSessionThread;
 
     QPointer<Host> mpHost;
     int mHostID;
-    //std::list<std::string> mCaptureList;
-    QList<QObject *> objectsToDelete;
+    QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
-
-
-// Not Used:    lua_State * pGlobalLuaAliasExecutionUnit;
-// Not Used:    lua_State * pGlobalLuaTriggerExecutionUnit;
-// Not Used:    lua_State * pGlobalLuaGuiExecutionUnit;
-// Not Used:    lua_State * pGlobalLuaScriptExecutionUnit;
-// Not Used:    lua_State * pGlobalLuaTimerExecutionUnit;
 };
-
-/*
-class TLuaThread : public QThread
-{
-public:
-
-    TLuaThread( TLuaInterpreter * s){ rs=s; }
-    void run(){ rs->threadRunLuaScript();}
-
-private:
-
-    TLuaInterpreter * rs;
-};
-*/
 
 class TLuaMainThread : public QThread
 {
-
 public:
+    TLuaMainThread(TLuaInterpreter* pL) : exit() { pLuaInterpreter = pL; }
 
-  TLuaMainThread( TLuaInterpreter * pL ){ pLuaInterpreter = pL;  }
-
-// Not Used:
-//  void run() override
-//  {
-//     std::cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<std::endl;
-//      //pLuaInterpreter->initLuaGlobals();
-//     exit=false;
-//     while( ! exit )
-//     {
-//         if( ! mJobQueue.empty() )
-//         {
-//             pLuaInterpreter->threadLuaInterpreterExec( getJob() );
-//         }
-//         else
-//         {
-//             msleep(100);
-//         }
-//     }
-//     std::cout << "TLuaMainThread::run() done exit." << std::endl;
-//  }
-
-// Not Used {was in code above}:
-//  std::string getJob()
-//  {
-//      mutex.lock();
-//      std::string job = mJobQueue.front();
-//      mJobQueue.pop();
-//      mutex.unlock();
-//      return job;
-//  }
-
-// Not Used:
-//  void postJob(QString code)
-//  {
-//     std::cout << "posting new job <"<<code.toLatin1().data()<<">"<<std::endl;
-//     std::string job = code.toLatin1().data();
-//     mutex.lock();
-//     mJobQueue.push(job);
-//     mutex.unlock();
-//     std::cout << "DONE posting new job"<<std::endl;
-//  }
-
-// Not Used:  void callExit(){ exit = true; }
 
 private:
-
-  TLuaInterpreter * pLuaInterpreter;
-  QString code;
-// Not Used:  QMutex mutex;
-// Not Used:  std::queue<std::string> mJobQueue;
-
-  bool exit;
+    TLuaInterpreter* pLuaInterpreter;
+    QString code;
+    bool exit;
 };
 
-/*
-class TLuaTimer : public QThread
-{
-public:
-
-   TLuaTimer( TLuaInterpreter * _rs, int _msec,int _session, QString _func, QString _p)
-   {
-       rs=_rs;
-       msec = _msec;
-       session = _session;
-       function = _func;
-       parameters = _p;
-   }
-
-   void run()
-   {
-       qDebug()<<"TLuaTimer::run() goingin to sleep for "<<msec<<" milliseconds...";
-       msleep(msec);
-       qDebug()<<"TLuaTimer::run() waking up! emitting signalLuaTimerTimeout("<<session<<","<<function<<","<<parameters;
-       QString code = function+"(\""+parameters+"\")";
-       rs->mpLuaSessionThread->postJob(code);
-       qDebug()<<"TLuaTimer::run() exiting thread";
-   }
-
-private:
-
-   TLuaInterpreter * rs;
-   int msec;
-   int session;
-   QString function;
-   QString parameters;
-};
-  */
 #endif // MUDLET_LUAINTERPRETER_H

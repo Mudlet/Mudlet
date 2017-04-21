@@ -22,11 +22,11 @@
 
 #include "TRoomDB.h"
 
-#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
+#include "mudlet.h"
 
 
 #include "pre_guard.h"
@@ -339,17 +339,19 @@ void TRoomDB::removeRoom( QSet<int> & ids )
 
 bool TRoomDB::removeArea( int id )
 {
-    if( areas.contains( id ) ) {
-        TArea * pA = areas.value( id );
+    if (TArea* pA = areas.value(id)) {
         if( ! rooms.isEmpty() ) {
-            removeRoom( pA->rooms ); // During map deletion rooms will already
-                                     // have been cleared so this would not
-                                     // be wanted to be done in that case.
+            // During map deletion rooms will already
+            // have been cleared so this would not
+            // be wanted to be done in that case.
+            removeRoom(pA->rooms);
         }
-        areaNamesMap.remove( id ); // During map deletion areaNamesMap will
-                                   // already have been cleared !!!
-        areas.remove( id ); // This means areas.clear() is not needed during map
-                            // deletion
+        // During map deletion areaNamesMap will
+        // already have been cleared !!!
+        areaNamesMap.remove(id);
+        // This means areas.clear() is not needed during map
+        // deletion
+        areas.remove(id);
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
@@ -643,16 +645,15 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
                                                              "  This suggests serious problems with the currently running version of Mudlet"
                                                              " - is your system running out of memory?"), true );
                 itRoom.remove();
+                continue;
+            }
+            if( itRoom.key() >= 1 ) {
+                validUsedRoomIds.insert( itRoom.key() );
             }
             else {
-                if( itRoom.key() >= 1 ) {
-                    validUsedRoomIds.insert( itRoom.key() );
-                }
-                else {
-                    roomRemapping.insert( itRoom.key(), itRoom.key() );
-                    //Store them for now, will assign new values when we have the
-                    // set of good ones already used
-                }
+                roomRemapping.insert( itRoom.key(), itRoom.key() );
+                //Store them for now, will assign new values when we have the
+                // set of good ones already used
             }
 
             int areaId = pR->getArea();

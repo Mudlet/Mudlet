@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,10 +25,10 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QRegExp>
@@ -70,6 +71,9 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
 , mModuleMember(false)
+, mColorTriggerFgAnsi()
+, mColorTriggerBgAnsi()
+, mIsFolder()
 {
 }
 
@@ -103,6 +107,9 @@ TTrigger::TTrigger( const QString& name, QStringList regexList, QList<int> regex
 , mBgColor( QColor(255,255,0) )
 , mIsColorizerTrigger( false )
 , mModuleMember(false)
+, mColorTriggerFgAnsi()
+, mColorTriggerBgAnsi()
+, mIsFolder()
 {
     setRegexCodeList( regexList, regexProperyList );
 }
@@ -1361,8 +1368,8 @@ bool TTrigger::compileScript()
 void TTrigger::execute()
 {
     if( mSoundTrigger )
-    {
-        mudlet::self()->playSound( mSoundFile );
+    {   /* eventually something should be added to the gui to change sound volumes. 100=full volume */
+        mudlet::self()->playSound( mSoundFile, 100 );
     }
     if( mCommand.size() > 0 )
     {

@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
+#    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
 #    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -155,6 +155,7 @@ SET(mudlet_MOC_HDRS
     TLuaInterpreter.h
     TMap.h
     TSplitter.h
+    TSplitterHandle.h
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
@@ -207,7 +208,6 @@ IF(MSVC)
 ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
   IF(APPLE)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
@@ -269,12 +269,7 @@ IF(WIN32)
   ENDIF()
 ENDIF()
 
-IF(WIN32)
-  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
-  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
-ENDIF()
-
-# Break each step into a separate command so any status message is output straigh away
+# Break each step into a separate command so any status message is output straight away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
   # we need the path to an interal header zipconf.g that it calls for using '<''>'s
@@ -355,6 +350,11 @@ FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
+
+IF(WIN32)
+  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
+  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
+ENDIF()
 
 IF(NOT(PC_ZIP_FOUND))
   FIND_PACKAGE(ZIP REQUIRED)

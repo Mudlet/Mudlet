@@ -435,7 +435,7 @@ function db:create(db_name, sheets)
 
    db_name = db:safe_name(db_name)
 
-   if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') then
+   if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
       db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
       db.__conn[db_name]:setautocommit(false)
       db.__autocommit[db_name] = true
@@ -498,7 +498,7 @@ function db:_migrate(db_name, s_name)
    -- have been added.
    local cur = conn:execute("PRAGMA table_info('"..s_name.."')") -- currently broken - LuaSQL bug, needs to be upgraded for new sqlite API
 
-   if type(cur) ~= "number" then
+   if type(cur) == "userdata" then
       local row = cur:fetch({}, "a")
       if row then
          while row do
@@ -1692,7 +1692,7 @@ end
 
 
 
-function db.Database._drop(s_name)
+function db.Database:_drop(s_name)
    local conn = db.__conn[self._db_name]
    local schema = db.__schema[self._db_name]
 
