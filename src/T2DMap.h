@@ -63,12 +63,14 @@ public:
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
-    bool getCenterSelection();
+
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via
     // an index in the same way - this function now sets
     // mMultiSelectionHighlightRoomId and returns a (bool) on success or failure
     // to do so.
+    bool getCenterSelection();
+
     void setRoomSize(double);
     void setExitSize(double);
     void createLabel(QRectF labelRect);
