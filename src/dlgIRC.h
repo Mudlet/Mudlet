@@ -28,7 +28,7 @@
 #include <irc.h>
 #include <irccommand.h>
 #include <ircmessage.h>
-#include <ircsession.h>
+#include <ircconnection.h>
 #else
 #include "irc/include/IrcCore/irc.h"
 #include "irc/include/IrcCore/irccommand.h"
