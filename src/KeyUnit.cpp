@@ -191,9 +191,9 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
     if( ! pT ) return;
-    if( ! pT->mIsTempKey )
+    if( ! pT->isTempKey() )
     {
-        mLookupTable.remove( pT->mName, pT );
+        mLookupTable.remove( pT->getName(), pT );
     }
     else
     {
@@ -267,9 +267,9 @@ void KeyUnit::addKey(TKey* pT)
 void KeyUnit::removeKey(TKey* pT)
 {
     if( ! pT ) return;
-    if( ! pT->mIsTempKey )
+    if( ! pT->isTempKey() )
     {
-        mLookupTable.remove( pT->mName, pT );
+        mLookupTable.remove( pT->getName(), pT );
     }
     else
     {

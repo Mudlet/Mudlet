@@ -121,6 +121,7 @@ public:
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
+    int startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function);
 
     TGatekeeperThread* mpGatekeeperThread;
     QNetworkAccessManager* mpFileDownloader;
