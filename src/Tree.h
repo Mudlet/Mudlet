@@ -116,7 +116,7 @@ Tree<T>::~Tree()
 {
     while( mpMyChildrenList->size() > 0 )
     {
-        typename std::list<T*>::iterator it = mpMyChildrenList->begin();
+        auto it = mpMyChildrenList->begin();
         T * pChild = *it;
         delete pChild;
     }

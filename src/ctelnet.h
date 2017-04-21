@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
  *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
@@ -29,10 +29,10 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringList>
 #include <QTcpSocket>
 #include <QTime>
 #include "post_guard.h"
-#include <QStringList>
 
 #include <zlib.h>
 
@@ -52,25 +52,25 @@ class Host;
 class dlgComposer;
 
 
-const char TN_SE = 240;
-const char TN_NOP = 241;
-const char TN_DM = 242;
-const char TN_B = 243;
-const char TN_IP = 244;
-const char TN_AO = 245;
-const char TN_AYT = 246;
-const char TN_EC = 247;
-const char TN_EL = 248;
-const char TN_GA = 249;
-const char TN_SB = 250;
-const char TN_WILL = 251;
-const char TN_WONT = 252;
-const char TN_DO = 253;
-const char TN_DONT = 254;
-const char TN_IAC = 255;
-const char TN_EOR = 239;
+const char TN_SE = static_cast<char>(240);
+const char TN_NOP = static_cast<char>(241);
+const char TN_DM = static_cast<char>(242);
+const char TN_B = static_cast<char>(243);
+const char TN_IP = static_cast<char>(244);
+const char TN_AO = static_cast<char>(245);
+const char TN_AYT = static_cast<char>(246);
+const char TN_EC = static_cast<char>(247);
+const char TN_EL = static_cast<char>(248);
+const char TN_GA = static_cast<char>(249);
+const char TN_SB = static_cast<char>(250);
+const char TN_WILL = static_cast<char>(251);
+const char TN_WONT = static_cast<char>(252);
+const char TN_DO = static_cast<char>(253);
+const char TN_DONT = static_cast<char>(254);
+const char TN_IAC = static_cast<char>(255);
+const char TN_EOR = static_cast<char>(239);
 
-const char GMCP = 201; /* GMCP */
+const char GMCP = static_cast<char>(201); /* GMCP */
 const char MXP = 91; // MXP
 const char MSDP = 69; // MSDP, documented at http://tintin.sourceforge.net/msdp/
 
@@ -92,19 +92,18 @@ class cTelnet : public QObject
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(cTelnet)
+
 public:
                       cTelnet( Host * pH );
                       ~cTelnet();
     void              connectIt(const QString &address, int port);
     void              disconnect();
     bool              sendData( QString & data );
-    void              setCommandEcho( bool cmdEcho );
     void              setATCPVariables(const QString & _msg );
     void              setGMCPVariables(const QString & _msg );
     void              atcpComposerCancel();
     void              atcpComposerSave( QString );
-    void              setLPMudStyle( bool lpmustyle );
-    void              setNegotiateOnStartup( bool startupneg );
     void              setDisplayDimensions();
     void              encodingChanged(QString encoding);
     void              set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX=b; }
@@ -152,11 +151,9 @@ private:
     void              initStreamDecompressor();
     int               decompressBuffer( char *& in_buffer, int& length, char* out_buffer );
     void              reset();
-    void              connectionFailed();
 
     void              processTelnetCommand(const std::string &command);
     void              sendTelnetOption( char type, char option);
-    // string getCurrentTime(); //NOTE: not w32 compatible
     void              gotRest( std::string & );
     void              gotPrompt( std::string & );
     void              postData();

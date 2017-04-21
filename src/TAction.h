@@ -47,53 +47,49 @@ class TAction : public Tree<TAction>, QObject
     friend class XMLimport;
 
 public:
+    virtual ~TAction();
+    TAction(TAction* parent, Host* pHost);
+    TAction(const QString& name, Host* pHost);
+    void compileAll();
+    QString getName() { return mName; }
+    void setName(const QString& name) { mName = name; }
+    void setButtonColor(QColor c) { mButtonColor = c; }
+    QColor getButtonColor() { return mButtonColor; }
+    void setButtonRotation(int r) { mButtonRotation = r; }
+    int getButtonRotation() { return mButtonRotation; }
+    void setButtonColumns(int c) { mButtonColumns = c; }
+    int getButtonColumns() { return mButtonColumns; }
+    bool getButtonFlat() { return mButtonFlat; }
+    void setButtonFlat(bool flat) { mButtonFlat = flat; }
 
+    void setSizeX(int s) { mSizeX = s; }
+    int getSizeX() { return mSizeX; }
+    void setSizeY(int s) { mSizeY = s; }
+    int getSizeY() { return mSizeY; }
 
-    virtual          ~TAction();
-                     TAction( TAction * parent, Host * pHost );
-                     TAction(const QString& name, Host * pHost );
-    void             compileAll();
-    QString          getName()                                 { return mName; }
-    void             setName(const QString& name )            { mName = name; }
-    void             setButtonColor( QColor c )                { mButtonColor = c; }
-    QColor           getButtonColor()                          { return mButtonColor; }
-    void             setButtonRotation( int r )                { mButtonRotation = r; }
-    int              getButtonRotation()                       { return mButtonRotation; }
-    void             setButtonColumns( int c )                 { mButtonColumns = c; }
-    int              getButtonColumns()                        { return mButtonColumns; }
-    bool             getButtonFlat()                           { return mButtonFlat; }
-    void             setButtonFlat( bool flat )                { mButtonFlat = flat; }
-
-    void             setSizeX( int s )                         { mSizeX = s; }
-    int              getSizeX()                                { return mSizeX; }
-    void             setSizeY( int s )                         { mSizeY = s; }
-    int              getSizeY()                                { return mSizeY; }
-
-    void             fillMenu( TEasyButtonBar * pT, QMenu * menu );
-    void             compile();
-    bool             compileScript();
-    void             execute();
-    QString          getIcon()                                 { return mIcon; }
-    void             setIcon(const QString & icon )           { mIcon = icon; }
-    QString          getScript()                               { return mScript; }
-    bool             setScript(const QString & script );
-    QString          getCommandButtonUp()                      { return mCommandButtonUp; }
-    void             setCommandButtonUp(const QString& cmd )  { mCommandButtonUp = cmd; }
-    void             setCommandButtonDown(const QString& command ) { mCommandButtonDown = command; }
-    QString          getCommandButtonDown()                    { return mCommandButtonDown; }
-    bool             isFolder()                                { return mIsFolder; }
-    bool             isPushDownButton()                        { return mIsPushDownButton; }
-    void             setIsPushDownButton( bool b )             { mIsPushDownButton = b; }
-    void             setIsFolder( bool b )                     { mIsFolder = b; }
-    bool             registerAction();
-    void             insertActions( TToolBar * pT,
-                                    QMenu * menu );
-    void             expandToolbar( TToolBar * pT );
-    void             insertActions( TEasyButtonBar * pT,
-                                    QMenu * menu );
-    void             expandToolbar( TEasyButtonBar * pT );
-    TToolBar *       mpToolBar;
-    TEasyButtonBar * mpEasyButtonBar;
+    void fillMenu(TEasyButtonBar* pT, QMenu* menu);
+    void compile();
+    bool compileScript();
+    void execute();
+    QString getIcon() { return mIcon; }
+    void setIcon(const QString& icon) { mIcon = icon; }
+    QString getScript() { return mScript; }
+    bool setScript(const QString& script);
+    QString getCommandButtonUp() { return mCommandButtonUp; }
+    void setCommandButtonUp(const QString& cmd) { mCommandButtonUp = cmd; }
+    void setCommandButtonDown(const QString& command) { mCommandButtonDown = command; }
+    QString getCommandButtonDown() { return mCommandButtonDown; }
+    bool isFolder() { return mIsFolder; }
+    bool isPushDownButton() { return mIsPushDownButton; }
+    void setIsPushDownButton(bool b) { mIsPushDownButton = b; }
+    void setIsFolder(bool b) { mIsFolder = b; }
+    bool registerAction();
+    void insertActions(TToolBar* pT, QMenu* menu);
+    void expandToolbar(TToolBar* pT);
+    void insertActions(TEasyButtonBar* pT, QMenu* menu);
+    void expandToolbar(TEasyButtonBar* pT);
+    TToolBar* mpToolBar;
+    TEasyButtonBar* mpEasyButtonBar;
     // The following was an int but there was confusion over:
     // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
     // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
@@ -101,41 +97,40 @@ public:
     // in some places.
     // Now uses a boolean:
     // "true" = pressed/clicked/down & "false" = released/unclicked/up
-    bool             mButtonState;
-    int              mPosX;
-    int              mPosY;
-    int              mOrientation;
-    int              mLocation;
-    QString          mName;
-    QString          mCommandButtonUp;
-    QString          mCommandButtonDown;
-    QRegExp          mRegex;
-    QString          mScript;
-    bool             mIsPushDownButton;
-    bool             mIsFolder;
+    bool mButtonState;
+    int mPosX;
+    int mPosY;
+    int mOrientation;
+    int mLocation;
+    QString mName;
+    QString mCommandButtonUp;
+    QString mCommandButtonDown;
+    QRegExp mRegex;
+    QString mScript;
+    bool mIsPushDownButton;
+    bool mIsFolder;
 
-    bool             mNeedsToBeCompiled;
-    QString          mIcon;
-    QIcon            mIconPix;
+    bool mNeedsToBeCompiled;
+    QString mIcon;
+    QIcon mIconPix;
 
-    int              mButtonRotation;
-    int              mButtonColumns;
-    bool             mButtonFlat;
-    int              mSizeX;
-    int              mSizeY;
-    bool             mIsLabel;
-    bool             mUseCustomLayout;
-    QString          css;
-    QColor           mButtonColor;
-    QPointer<Host>   mpHost;
-    bool             exportItem;
-    bool            mModuleMasterFolder;
+    int mButtonRotation;
+    int mButtonColumns;
+    bool mButtonFlat;
+    int mSizeX;
+    int mSizeY;
+    bool mIsLabel;
+    bool mUseCustomLayout;
+    QString css;
+    QColor mButtonColor;
+    QPointer<Host> mpHost;
+    bool exportItem;
+    bool mModuleMasterFolder;
+
 private:
-
-                    TAction(){}
-    QString          mFuncName;
-    bool                  mModuleMember;
-
+    TAction() {}
+    QString mFuncName;
+    bool mModuleMember;
 };
 
 #endif // MUDLET_TACTION_H

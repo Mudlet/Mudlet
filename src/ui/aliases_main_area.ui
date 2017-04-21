@@ -54,7 +54,7 @@
       </size>
      </property>
      <property name="toolTip">
-      <string>chose a unique name for your alias; it will show in the tree and is needed for scripting.</string>
+      <string>choose a unique name for your alias; it will show in the tree and is needed for scripting.</string>
      </property>
     </widget>
    </item>

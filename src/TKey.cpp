@@ -23,8 +23,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -37,6 +37,9 @@ TKey::TKey( TKey * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mKeyCode()
+, mKeyModifier()
+, mIsFolder()
 {
 }
 
@@ -48,7 +51,10 @@ TKey::TKey( QString name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mModuleMember( false )
+, mModuleMember(false)
+, mKeyCode()
+, mKeyModifier()
+, mIsFolder()
 {
 }
 
@@ -84,10 +90,9 @@ bool TKey::match( int key, int modifier )
             }
         }
 
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto childKey : *mpMyChildrenList)
         {
-            TKey * pChild = *it;
-            if( pChild->match( key, modifier ) ) return true;
+            if( childKey->match( key, modifier ) ) return true;
         }
     }
     return false;
@@ -111,10 +116,9 @@ void TKey::enableKey(const QString & name )
     {
         setIsActive( true );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto key : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
-        pChild->enableKey( name );
+        key->enableKey( name );
     }
 }
 
@@ -124,10 +128,9 @@ void TKey::disableKey(const QString & name )
     {
         setIsActive( false );
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto key : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
-        pChild->disableKey( name );
+        key->disableKey( name );
     }
 }
 
@@ -139,10 +142,9 @@ void TKey::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of key binding:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto key : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
-        pChild->compileAll();
+        key->compileAll();
     }
 }
 
@@ -156,10 +158,9 @@ void TKey::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto key : *mpMyChildrenList)
     {
-        TKey * pChild = *it;
-        pChild->compile();
+        key->compile();
     }
 }
 

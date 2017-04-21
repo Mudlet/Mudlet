@@ -28,8 +28,8 @@
 #include "TAlias.h"
 #include "TKey.h"
 #include "TScript.h"
-#include "TTrigger.h"
 #include "TTimer.h"
+#include "TTrigger.h"
 #include "XMLexport.h"
 
 #include "pre_guard.h"
@@ -49,6 +49,9 @@ using namespace std;
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
+, treeWidget()
+, exportButton()
+, closeButton()
 {
     ui->setupUi(this);
 }
@@ -126,9 +129,6 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem * pItem, QList<QTreeWidgetI
 
 
 void dlgPackageExporter::slot_export_package(){
-//#ifndef Q_OS_WIN
-//    filePath = ui->filePath->text();
-//#endif
     QFile file_xml( filePath );
     if( file_xml.open( QIODevice::WriteOnly ) )
     {
@@ -138,8 +138,7 @@ void dlgPackageExporter::slot_export_package(){
         QTreeWidgetItem * top = items.first();
         QList<QTreeWidgetItem *> trigList;
         recurseTree(top,trigList);
-        for (int i=0;i<trigList.size();i++){
-            QTreeWidgetItem * item = trigList.at(i);
+        for (auto item : trigList){
             if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)){
                 triggerMap[item]->exportItem = false;
             }
@@ -152,8 +151,7 @@ void dlgPackageExporter::slot_export_package(){
         top = items.first();
         QList<QTreeWidgetItem *> timerList;
         recurseTree(top,timerList);
-        for (int i=0;i<timerList.size();i++){
-            QTreeWidgetItem * item = timerList.at(i);
+        for (auto item : timerList){
             if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)){
                 timerMap[item]->exportItem = false;
             }
@@ -166,8 +164,7 @@ void dlgPackageExporter::slot_export_package(){
         top = items.first();
         QList<QTreeWidgetItem *> aliasList;
         recurseTree(top,aliasList);
-        for (int i=0;i<aliasList.size();i++){
-            QTreeWidgetItem * item = aliasList.at(i);
+        for (auto item : aliasList){
             if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)){
                 aliasMap[item]->exportItem = false;
             }
@@ -180,8 +177,7 @@ void dlgPackageExporter::slot_export_package(){
         top = items.first();
         QList<QTreeWidgetItem *> actionList;
         recurseTree(top,actionList);
-        for (int i=0;i<actionList.size();i++){
-            QTreeWidgetItem * item = actionList.at(i);
+        for (auto item : actionList){
             if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)){
                 actionMap[item]->exportItem = false;
             }
@@ -194,8 +190,7 @@ void dlgPackageExporter::slot_export_package(){
         top = items.first();
         QList<QTreeWidgetItem *> scriptList;
         recurseTree(top,scriptList);
-        for (int i=0;i<scriptList.size();i++){
-            QTreeWidgetItem * item = scriptList.at(i);
+        for (auto item : scriptList){
             if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)){
                 scriptMap[item]->exportItem = false;
             }
@@ -208,8 +203,7 @@ void dlgPackageExporter::slot_export_package(){
         top = items.first();
         QList<QTreeWidgetItem *> keyList;
         recurseTree(top,keyList);
-        for (int i=0;i<keyList.size();i++){
-            QTreeWidgetItem * item = keyList.at(i);
+        for (auto item : keyList){
             if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)){
                 keyMap[item]->exportItem = false;
             }
@@ -222,8 +216,7 @@ void dlgPackageExporter::slot_export_package(){
         file_xml.close();
         //now fix all the stuff we weren't exporting
         //trigger, timer, alias,action,script, keys
-        for (int i=0;i<trigList.size();i++){
-            QTreeWidgetItem * item = trigList.at(i);
+        for (auto item : trigList){
             if (triggerMap.contains(item)){
                 triggerMap[item]->exportItem = true;
             }
@@ -231,8 +224,7 @@ void dlgPackageExporter::slot_export_package(){
                 modTriggerMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<timerList.size();i++){
-            QTreeWidgetItem * item = timerList.at(i);
+        for (auto item : timerList){
             if (timerMap.contains(item)){
                 timerMap[item]->exportItem = true;
             }
@@ -240,8 +232,7 @@ void dlgPackageExporter::slot_export_package(){
                 modTimerMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<actionList.size();i++){
-            QTreeWidgetItem * item = actionList.at(i);
+        for (auto item : actionList){
             if (actionMap.contains(item)){
                 actionMap[item]->exportItem = true;
             }
@@ -249,8 +240,7 @@ void dlgPackageExporter::slot_export_package(){
                 modActionMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<scriptList.size();i++){
-            QTreeWidgetItem * item = scriptList.at(i);
+        for (auto item : scriptList){
             if (scriptMap.contains(item)){
                 scriptMap[item]->exportItem = true;
             }
@@ -258,8 +248,7 @@ void dlgPackageExporter::slot_export_package(){
                 modScriptMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<keyList.size();i++){
-            QTreeWidgetItem * item = keyList.at(i);
+        for (auto item : keyList){
             if (keyMap.contains(item)){
                 keyMap[item]->exportItem = true;
             }
@@ -267,8 +256,7 @@ void dlgPackageExporter::slot_export_package(){
                 modKeyMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<aliasList.size();i++){
-            QTreeWidgetItem * item = aliasList.at(i);
+        for (auto item : aliasList){
             if (aliasMap.contains(item)){
                 aliasMap[item]->exportItem = true;
             }
@@ -278,11 +266,9 @@ void dlgPackageExporter::slot_export_package(){
         }
 
 
-        //#ifdef Q_OS_WIN
         int err = 0;
         char buf[100];
         zip* archive;
-        //archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
         archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE, &err);
         if ( err != 0 )
         {
@@ -307,7 +293,6 @@ void dlgPackageExporter::slot_export_package(){
                 zip_error_to_str(buf, sizeof(buf), err, errno);
                 //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
             }
-//            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
             err = zip_add( archive, fname.toStdString().c_str(), s);
             if ( err == -1 )
             {
@@ -324,10 +309,6 @@ void dlgPackageExporter::slot_export_package(){
             close();
             return;
         }
-            //JlCompress::compressDir(zip, tempDir );
-//        #else
-//            ui->infoLabel->setText("Exported package to "+filePath);
-//        #endif
     } else {
         ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
     }
@@ -338,25 +319,6 @@ void dlgPackageExporter::slot_addFiles(){
     QString _pn = "file:///"+tempDir;
     QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
 }
-
-// Not Used - otherwise might need to tweak search for *.xml to ensure it worked
-// on MacOS:
-//void dlgPackageExporter::slot_browse_button(){
-//    QFileDialog dialog(this);
-//    dialog.setFileMode(QFileDialog::AnyFile);
-//    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
-//    dialog.setViewMode(QFileDialog::Detail);
-//    QString fileName;
-//    if (dialog.exec()) {
-//        fileName = dialog.selectedFiles().first();
-
-//        if (!fileName.endsWith(".xml"))
-//            fileName.append(".xml");
-
-//        ui->filePath->setText(fileName);
-//        exportButton->setDisabled(false);
-//    }
-//}
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig){
     list<TTrigger *> * childList = trig->getChildrenList();
@@ -369,7 +331,7 @@ void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         triggerMap.insert(pItem, pChild);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
@@ -391,7 +353,7 @@ void dlgPackageExporter::listTriggers()
         if( pChild->isTempTrigger() ) continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         top->addChild(pItem);
@@ -411,7 +373,7 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem){
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qItem->addChild(pItem);
@@ -434,7 +396,7 @@ void dlgPackageExporter::listAliases()
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         top->addChild(pItem);
@@ -452,7 +414,7 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem){
         TScript * pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         scriptMap.insert(pItem, pChild);
@@ -473,7 +435,7 @@ void dlgPackageExporter::listScripts()
         TScript * pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         scriptMap.insert(pItem, pChild);
@@ -493,7 +455,7 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem){
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
@@ -516,7 +478,7 @@ void dlgPackageExporter::listKeys()
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
@@ -534,7 +496,7 @@ void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem){
         TAction * pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
@@ -555,7 +517,7 @@ void dlgPackageExporter::listActions()
         TAction * pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
@@ -575,7 +537,7 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem){
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);
@@ -598,7 +560,7 @@ void dlgPackageExporter::listTimers()
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);

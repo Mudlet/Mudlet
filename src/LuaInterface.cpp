@@ -36,6 +36,8 @@ static jmp_buf buf;
 
 LuaInterface::LuaInterface(Host * pH)
     :mpHost(pH)
+, L()
+, depth()
 {
     interpreter = mpHost->getLuaInterpreter();
     mHostID = mpHost->getHostID();
@@ -151,7 +153,7 @@ bool LuaInterface::loadValue(lua_State * L, TVar * var, int index){
 bool LuaInterface::reparentCVariable(TVar * from , TVar * to, TVar * curVar){
     //get the old parent on the stack
     if (setjmp(buf) == 0){
-        if ((!from && !to) || (from==to))//moving from global to global or nowhere
+        if (!from || !to || (from==to))//moving from global to global or nowhere
             return true;
         int stackSize = lua_gettop(L);
         bool isSaved = varUnit->isSaved(curVar);
@@ -713,7 +715,7 @@ void LuaInterface::iterateTable(lua_State * L, int index, TVar * tVar, bool hide
         lua_pushvalue(L, -2);//we do this because extracting the key with tostring changes it
         QString keyName;
         QString valueName;
-        TVar * var = new TVar();
+        auto var = new TVar();
         if ( kType == LUA_TTABLE ){
             keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));//this function pops the top item
             lrefs.append(keyName.toInt());
@@ -798,7 +800,7 @@ void LuaInterface::getVars( bool hide ){
     L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
-    TVar * g = new TVar();
+    auto g = new TVar();
     g->setName("_G", LUA_TSTRING);
     g->setValue("{}", LUA_TTABLE);
     QListIterator<int> it(lrefs);

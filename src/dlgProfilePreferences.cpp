@@ -24,15 +24,15 @@
 #include "dlgProfilePreferences.h"
 
 
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QColorDialog>
@@ -94,7 +94,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
     for( int i=0; i<entries.size(); i++ )
     {
         QString n = entries[i].replace( ".dic", "" );
-        QListWidgetItem * item = new QListWidgetItem( entries[i] );
+        auto item = new QListWidgetItem( entries[i] );
         dictList->addItem( item );
         if( entries[i] == mpHost->mSpellDic )
         {
@@ -310,7 +310,7 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
                 continue;
             }
 
-            QAction * pItem = new QAction( s, 0 );
+            auto pItem = new QAction( s, 0 );
             pItem->setCheckable( true );
             pItem->setChecked( false );
             pMenu->addAction( pItem );
@@ -933,11 +933,7 @@ void dlgProfilePreferences::saveMap()
 
     // Temporarily use whatever version is currently set
     int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
-#if QT_VERSION >= 0x050200
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-#else
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
-#endif
 
     // Ensure the setting is already made as the saveMap(...) uses the set value
     bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
@@ -1091,11 +1087,7 @@ void dlgProfilePreferences::copyMap()
 
     // Temporarily use whatever version is currently set
     int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
-#if QT_VERSION >= 0x050200
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-#else
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
-#endif
 
     if ( ! pHost->mpConsole->saveMap( QString() ) ) {
         label_mapFileActionResult->setText( tr( "Could not backup the map - saving it failed." ) );
@@ -1251,17 +1243,12 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
     QString lIgnore = doubleclick_ignore_lineedit->text();
     pHost->mDoubleClickIgnore.clear();
-    for(int i=0;i<lIgnore.size();i++){
-        pHost->mDoubleClickIgnore.insert(lIgnore.at(i));
+    for(auto character : lIgnore){
+        pHost->mDoubleClickIgnore.insert(character);
     }
 
-#if QT_VERSION >= 0x050200
     mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->currentData().toInt() );
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-#else
-    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions( comboBox_statusBarSetting->itemData( comboBox_statusBarSetting->currentIndex() ).toInt() );
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->itemData( comboBox_mapFileSaveFormatVersion->currentIndex() ).toInt();
-#endif
     //pHost->mIRCNick = ircNick->text();
     QString old_nick = mudlet::self()->mIrcNick;
     QString new_nick = ircNick->text();

@@ -27,10 +27,10 @@
 #include "TBuffer.h"
 
 #include "pre_guard.h"
-#include <QFile>
-#include <QTextStream>
 #include <QDataStream>
+#include <QFile>
 #include <QPointer>
+#include <QTextStream>
 #include <QWidget>
 #include "post_guard.h"
 
@@ -53,7 +53,9 @@ class dlgNotepad;
 
 class TConsole : public QWidget
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(TConsole)
 
 public:
 
@@ -106,7 +108,7 @@ public:
       TConsole *        createBuffer(const QString & name );
       void              scrollDown( int lines );
       void              scrollUp( int lines );
-      void              print(const QString &, int, int, int, int, int, int );
+      void              print(const QString &, const QColor fgColor, const QColor bgColor);
       void              print(const QString & msg );
       void              print( const char * );
       void              printDebug( QColor &, QColor &, const QString & );
@@ -140,7 +142,6 @@ public:
       void              showStatistics();
       void              showEvent( QShowEvent * event ) override;
       void              hideEvent( QHideEvent * event ) override;
-      void              echoConsole( QString & msg );
       void              setConsoleBgColor( int, int, int );
       void              setConsoleFgColor( int, int, int );
       std::list<int>    _getFgColor();
@@ -154,103 +155,100 @@ public:
       QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
       void              toggleLogging(bool);
 
-      QPointer<Host>    mpHost;
+    QPointer<Host> mpHost;
 
-      TBuffer           buffer;
-      static const QString     cmLuaLineVariable;
-      TTextEdit *       console;
-      TTextEdit *       console2;
-      int               currentFgColorProperty;
-      QToolButton *     emergencyStop;
-      bool              isUserScrollBack;
-      QWidget *         layer;
-      QWidget *         layerCommandLine;
-      QWidget *         layerEdit;
-      QColor            mBgColor;
-      int               mButtonState;
-      TBuffer           mClipboard;
-      QColor            mCommandBgColor;
-      QColor            mCommandFgColor;
+    TBuffer buffer;
+    static const QString cmLuaLineVariable;
+    TTextEdit* console;
+    TTextEdit* console2;
+    int currentFgColorProperty;
+    QToolButton* emergencyStop;
+    bool isUserScrollBack;
+    QWidget* layer;
+    QWidget* layerCommandLine;
+    QWidget* layerEdit;
+    QColor mBgColor;
+    int mButtonState;
+    TBuffer mClipboard;
+    QColor mCommandBgColor;
+    QColor mCommandFgColor;
 
-      QString           mConsoleName;
-      QString           mCurrentLine;
-      int               mDeletedLines;
-      QFont             mDisplayFont;
-      int               mEngineCursor;
-      QColor            mFgColor;
-      TChar             mFormatBasic;
-      TChar             mFormatSystemMessage;
+    QString mConsoleName;
+    QString mCurrentLine;
+    int mDeletedLines;
+    QFont mDisplayFont;
+    int mEngineCursor;
+    QColor mFgColor;
+    TChar mFormatBasic;
+    TChar mFormatSystemMessage;
 
-      int               mIndentCount;
-      bool              mIsDebugConsole;
-      bool              mIsHighColorMode;
-      bool              mIsSubConsole;
-      std::map<std::string, TLabel *> mLabelMap;
-      QFile             mLogFile;
-      QString           mLogFileName;
-      QTextStream       mLogStream;
-      bool              mLogToLogFile;
-      int               mMainFrameBottomHeight;
-      int               mMainFrameLeftWidth;
-      int               mMainFrameRightWidth;
-      int               mMainFrameTopHeight;
-      int               mOldX;
-      int               mOldY;
-
-
-      TChar             mFormatCurrent;
-      QString           mFormatSequenceRest;
-      bool              mHighColorModeBackground;
-      bool              mHighColorModeForeground;
+    int mIndentCount;
+    bool mIsDebugConsole;
+    bool mIsHighColorMode;
+    bool mIsSubConsole;
+    std::map<std::string, TLabel*> mLabelMap;
+    QFile mLogFile;
+    QString mLogFileName;
+    QTextStream mLogStream;
+    bool mLogToLogFile;
+    int mMainFrameBottomHeight;
+    int mMainFrameLeftWidth;
+    int mMainFrameRightWidth;
+    int mMainFrameTopHeight;
+    int mOldX;
+    int mOldY;
 
 
-
-      QWidget *         mpBaseVFrame;
-      QWidget *         mpTopToolBar;
-      QWidget *         mpBaseHFrame;
-      QWidget *         mpLeftToolBar;
-      QWidget *         mpMainFrame;
-      QWidget *         mpRightToolBar;
-      QWidget *         mpMainDisplay;
-
-      dlgMapper *       mpMapper;
-      dlgNotepad *      mpNotePad;
-
-      QScrollBar *      mpScrollBar;
+    TChar mFormatCurrent;
+    QString mFormatSequenceRest;
+    bool mHighColorModeBackground;
+    bool mHighColorModeForeground;
 
 
+    QWidget* mpBaseVFrame;
+    QWidget* mpTopToolBar;
+    QWidget* mpBaseHFrame;
+    QWidget* mpLeftToolBar;
+    QWidget* mpMainFrame;
+    QWidget* mpRightToolBar;
+    QWidget* mpMainDisplay;
+
+    dlgMapper* mpMapper;
+    dlgNotepad* mpNotePad;
+
+    QScrollBar* mpScrollBar;
 
 
-      QTime             mProcessingTime;
-      bool              mRecordReplay;
-      QFile             mReplayFile;
-      QDataStream       mReplayStream;
-      TChar             mStandardFormat;
-      QList<TConsole *> mSubConsoleList;
-      std::map<std::string, TConsole *> mSubConsoleMap;
+    QTime mProcessingTime;
+    bool mRecordReplay;
+    QFile mReplayFile;
+    QDataStream mReplayStream;
+    TChar mStandardFormat;
+    QList<TConsole*> mSubConsoleList;
+    std::map<std::string, TConsole*> mSubConsoleMap;
 
-      QColor            mSystemMessageBgColor;
-      QColor            mSystemMessageFgColor;
-      bool              mTriggerEngineMode;
-      bool              mUserConsole;
-      QPoint            mUserCursor;
-      bool              mWaitingForHighColorCode;
-      bool              mWindowIsHidden;
-      int               mWrapAt;
-      QLineEdit *       networkLatency;
-      QPoint            P_begin;
-      QPoint            P_end;
-      QString           profile_name;
-      TSplitter *       splitter;
-      bool              mIsPromptLine;
-      QToolButton *     logButton;
-      bool              mUserAgreedToCloseConsole;
-      QLineEdit *       mpBufferSearchBox;
-      QToolButton *     mpBufferSearchUp;
-      QToolButton *     mpBufferSearchDown;
-      int               mCurrentSearchResult;
-      QList<int>        mSearchResults;
-      QString           mSearchQuery;
+    QColor mSystemMessageBgColor;
+    QColor mSystemMessageFgColor;
+    bool mTriggerEngineMode;
+    bool mUserConsole;
+    QPoint mUserCursor;
+    bool mWaitingForHighColorCode;
+    bool mWindowIsHidden;
+    int mWrapAt;
+    QLineEdit* networkLatency;
+    QPoint P_begin;
+    QPoint P_end;
+    QString profile_name;
+    TSplitter* splitter;
+    bool mIsPromptLine;
+    QToolButton* logButton;
+    bool mUserAgreedToCloseConsole;
+    QLineEdit* mpBufferSearchBox;
+    QToolButton* mpBufferSearchUp;
+    QToolButton* mpBufferSearchDown;
+    int mCurrentSearchResult;
+    QList<int> mSearchResults;
+    QString mSearchQuery;
 
 signals:
 

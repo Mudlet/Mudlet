@@ -22,11 +22,11 @@
 
 #include "TRoomDB.h"
 
-#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
+#include "mudlet.h"
 
 
 #include "pre_guard.h"
@@ -48,7 +48,7 @@ TRoom * TRoomDB::getRoom( int id )
 {
     if (id < 0)
         return 0;
-    QHash< int, TRoom * >::iterator i = rooms.find( id );
+    auto i = rooms.find(id );
     if ( i != rooms.end() && i.key() == id )
         return i.value();
     return 0;
@@ -119,8 +119,8 @@ void TRoomDB::deleteValuesFromEntranceMap( QSet<int> & valueSet )
             index = valueList.indexOf( roomId, index + 1 );
         }
     }
-    for (uint i = 0; i < deleteEntries.size(); ++i) {
-        entranceMap.remove( keyList.at(deleteEntries.at(i)), valueList.at(deleteEntries.at(i)) );
+    for (unsigned int entry : deleteEntries) {
+        entranceMap.remove( keyList.at(entry), valueList.at(entry) );
     }
     qDebug() << "TRoomDB::deleteValuesFromEntranceMap() with a list of:" << valueSet.size() << "items, run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
@@ -156,15 +156,15 @@ void TRoomDB::updateEntranceMap(TRoom * pR, bool isMapLoading)
         if( ! isMapLoading ) {
             deleteValuesFromEntranceMap( id ); // When LOADING a map, will never need to do this
         }
-        for( unsigned int i = 0; i < toExits.size(); i++) {
+        for(int toExit : toExits) {
             if( showDebug ) {
-                values.append( QStringLiteral("%1,").arg(toExits.at(i)) );
+                values.append( QStringLiteral("%1,").arg(toExit) );
             }
-            if( ! entranceMap.contains( toExits.at(i), id ) ) {
+            if( ! entranceMap.contains( toExit, id ) ) {
                 // entranceMap is a QMultiHash, so multiple, identical entries is
                 // more than possible - it was actually happening and making
                 // entranceMap get larger than needed...!
-                entranceMap.insert( toExits.at(i), id );
+                entranceMap.insert( toExit, id );
             }
         }
         if( showDebug ) {
@@ -339,17 +339,19 @@ void TRoomDB::removeRoom( QSet<int> & ids )
 
 bool TRoomDB::removeArea( int id )
 {
-    if( areas.contains( id ) ) {
-        TArea * pA = areas.value( id );
+    if (TArea* pA = areas.value(id)) {
         if( ! rooms.isEmpty() ) {
-            removeRoom( pA->rooms ); // During map deletion rooms will already
-                                     // have been cleared so this would not
-                                     // be wanted to be done in that case.
+            // During map deletion rooms will already
+            // have been cleared so this would not
+            // be wanted to be done in that case.
+            removeRoom(pA->rooms);
         }
-        areaNamesMap.remove( id ); // During map deletion areaNamesMap will
-                                   // already have been cleared !!!
-        areas.remove( id ); // This means areas.clear() is not needed during map
-                            // deletion
+        // During map deletion areaNamesMap will
+        // already have been cleared !!!
+        areaNamesMap.remove(id);
+        // This means areas.clear() is not needed during map
+        // deletion
+        areas.remove(id);
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
@@ -615,9 +617,6 @@ QList<int> TRoomDB::getAreaIDList()
  */
 void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & areaRemapping )
 {
-    QElapsedTimer timer;
-    timer.start();
-
     QSet<int> validUsedRoomIds; // Used good ids (>= 1)
     QSet<int> validUsedAreaIds; // As rooms
 
@@ -646,16 +645,15 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
                                                              "  This suggests serious problems with the currently running version of Mudlet"
                                                              " - is your system running out of memory?"), true );
                 itRoom.remove();
+                continue;
+            }
+            if( itRoom.key() >= 1 ) {
+                validUsedRoomIds.insert( itRoom.key() );
             }
             else {
-                if( itRoom.key() >= 1 ) {
-                    validUsedRoomIds.insert( itRoom.key() );
-                }
-                else {
-                    roomRemapping.insert( itRoom.key(), itRoom.key() );
-                    //Store them for now, will assign new values when we have the
-                    // set of good ones already used
-                }
+                roomRemapping.insert( itRoom.key(), itRoom.key() );
+                //Store them for now, will assign new values when we have the
+                // set of good ones already used
             }
 
             int areaId = pR->getArea();
@@ -1034,8 +1032,6 @@ void TRoomDB::auditRooms( QHash<int, int> & roomRemapping, QHash<int, int> & are
         }
     }
     // END OF TASK 8
-
-    qDebug() << "TRoomDB::auditRooms(...) run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
 void TRoomDB::clearMapDB()
@@ -1047,17 +1043,17 @@ void TRoomDB::clearMapDB()
     entranceMap.clear();
     areaNamesMap.clear();
     hashTable.clear();
-    for( uint i=0; i<rPtrL.size(); i++ )
+    for(auto room : rPtrL)
     {
-        delete rPtrL.at(i); // Uses the internally held value of the room Id
+        delete room; // Uses the internally held value of the room Id
                             // (TRoom::id) to call TRoomDB::__removeRoom(id)
     }
 //    assert( rooms.size() == 0 ); // Pointless as rooms.clear() will have achieved the test condition
 
     QList<TArea*> areaList = getAreaPtrList();
-    for( uint i=0; i<areaList.size(); i++ )
+    for(auto area : areaList)
     {
-        delete areaList.at(i);
+        delete area;
     }
     assert( areas.size() == 0 );
     // Must now reinsert areaId -1 name = "Default Area"

@@ -23,16 +23,16 @@
 #include "TRoom.h"
 
 
-#include "mudlet.h"
 #include "TArea.h"
 #include "TRoomDB.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDataStream>
 #include <QDebug>
-#include <QStringBuilder>
 #include <QElapsedTimer>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 
@@ -66,6 +66,7 @@ TRoom::TRoom(TRoomDB * pRDB)
 , in( -1 )
 , out( -1 )
 , mpRoomDB( pRDB )
+, highlightRadius()
 {
 }
 
@@ -636,10 +637,10 @@ void TRoom::calcRoomDimensions()
             min_y = _pL[0].y();
             max_y = min_y;
         }
-        for( int i=0; i<_pL.size(); i++ )
+        for(auto point : _pL)
         {
-            qreal _x = _pL[i].x();
-            qreal _y = _pL[i].y();
+            qreal _x = point.x();
+            qreal _y = point.y();
             if( _x < min_x )
                 min_x = _x;
             if( _x > max_x )
@@ -678,7 +679,7 @@ void TRoom::restore( QDataStream & ifs, int roomID, int version )
     ifs >> environment;
     ifs >> weight;
 
-    // force room weight >= 1 otherwise pathfinding choses random pathes.
+    // force room weight >= 1 otherwise pathfinding chooses random paths.
     if( weight < 1 )
     {
         weight = 1;

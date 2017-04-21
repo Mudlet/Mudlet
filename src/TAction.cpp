@@ -23,14 +23,14 @@
 #include "TAction.h"
 
 
-#include "Host.h"
 #include "EAction.h"
-#include "mudlet.h"
-#include "TDebug.h"
+#include "Host.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TFlipButton.h"
 #include "TToolBar.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -51,6 +51,14 @@ TAction::TAction( TAction * parent, Host * pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mModuleMember(false)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
+, mIsFolder()
+, mButtonRotation()
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 {
 }
 
@@ -71,6 +79,14 @@ TAction::TAction(const QString& name, Host * pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mModuleMember(false)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
+, mIsFolder()
+, mButtonRotation()
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 {
 }
 
@@ -82,7 +98,6 @@ TAction::~TAction()
     }
     mpHost->getActionUnit()->unregisterAction(this);
 }
-
 
 bool TAction::registerAction()
 {
@@ -102,10 +117,9 @@ void TAction::compileAll()
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of action:"<<mName<<"\n">>0;}
         mOK_code = false;
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto action : *mpMyChildrenList)
     {
-        TAction * pChild = *it;
-        pChild->compileAll();
+        action->compileAll();
     }
 }
 
@@ -119,10 +133,9 @@ void TAction::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto action : *mpMyChildrenList)
     {
-        TAction * pChild = *it;
-        pChild->compile();
+        action->compile();
     }
 }
 
@@ -202,10 +215,9 @@ void TAction::execute()
 
 void TAction::expandToolbar( TToolBar * pT )
 {
-   for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   for(auto action : *mpMyChildrenList)
    {
-       TAction * pChild = *it;
-       if( ! pChild->isActive() )
+       if( ! action->isActive() )
        {
            // This test and conditional loop abort was missing from this method
            // but is needed so that disabled buttons do not appear on
@@ -213,16 +225,16 @@ void TAction::expandToolbar( TToolBar * pT )
            // buttons show in a "greyed-out" state... - Slysven
            continue;
        }
-       QIcon icon( pChild->mIcon );
-       QString name = pChild->getName();
-       TFlipButton * button = new TFlipButton( pChild, mpHost );
+       QIcon icon( action->mIcon );
+       QString name = action->getName();
+       auto button = new TFlipButton( action, mpHost );
        button->setIcon( icon );
        button->setText( name );
-       button->setCheckable( pChild->mIsPushDownButton );
+       button->setCheckable( action->mIsPushDownButton );
 
-       if( pChild->mIsPushDownButton )
+       if( action->mIsPushDownButton )
        {
-           button->setChecked( pChild->mButtonState );
+           button->setChecked( action->mButtonState );
        }
        else
        {
@@ -238,22 +250,22 @@ void TAction::expandToolbar( TToolBar * pT )
 /*
  * CHECK: The other expandToolbar(...) has the following in this position:
  *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
- *       if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
+ *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
  *       {
- *          qDebug()<<"expandToolBar() name="<<pChild->mName<<" executing script";
- *          pChild->execute();
+ *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
+ *          action->execute();
  *       }
  * Why does it have this and we do not? - Slysven
  */
 
-       if( pChild->mIsFolder )
+       if( action->mIsFolder )
        {
-           QMenu * newMenu = new QMenu( pT );
+           auto newMenu = new QMenu( pT );
            // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
            newMenu->setStyleSheet( css );
            // CHECK: Use the Child's CSS instead for a menu on it? - Slysven:
-           // newMenu->setStyleSheet( pChild->css );
-           pChild->insertActions( pT, newMenu );
+           // newMenu->setStyleSheet( action->css );
+           action->insertActions( pT, newMenu );
            // This has been move until AFTER the child's menu has been
            // populated, it was being done straight after newMenu was created,
            // but I think we ought to insert the items into the menu before
@@ -261,7 +273,7 @@ void TAction::expandToolbar( TToolBar * pT )
            button->setMenu( newMenu );
        }
 
-       // Moved to be AFTER the pChild->mIsFolder test as I think we ought to
+       // Moved to be AFTER the action->mIsFolder test as I think we ought to
        // add the button to the toolbar AFTER any menu (children) items have
        // been put on the button - Slysven
        pT->addButton( button );
@@ -275,7 +287,7 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
 {
     mpToolBar = pT;
     QIcon icon( mIcon );
-    EAction * action = new EAction( icon, mName );
+    auto action = new EAction( icon, mName );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;
@@ -287,14 +299,13 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
         // The use of mudlet::self() here meant that the QMenu was not destroyed
         // until the mudlet instance is at the end of the application!
         // Changed to use pT, the toolbar
-        QMenu * newMenu = new QMenu( pT );
+        auto newMenu = new QMenu( pT );
         newMenu->setStyleSheet( css );
         action->setMenu( newMenu );
 
-        for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+        for(auto childAction : *mpMyChildrenList)
         {
-            TAction * pChild = *it;
-            pChild->insertActions( pT, newMenu );
+            childAction->insertActions( pT, newMenu );
         }
     }
 }
@@ -302,23 +313,22 @@ void TAction::insertActions( TToolBar * pT, QMenu * menu )
 
 void TAction::expandToolbar( TEasyButtonBar * pT )
 {
-   for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+   for(auto action : *mpMyChildrenList)
    {
-       TAction * pChild = *it;
-       if( ! pChild->isActive() )
+       if( ! action->isActive() )
        {
            continue;
        }
-       QIcon icon( pChild->mIcon );
-       QString name = pChild->getName();
-       TFlipButton * button = new TFlipButton( pChild, mpHost );
+       QIcon icon( action->mIcon );
+       QString name = action->getName();
+       auto button = new TFlipButton( action, mpHost );
        button->setIcon( icon );
        button->setText( name );
-       button->setCheckable( pChild->mIsPushDownButton );
+       button->setCheckable( action->mIsPushDownButton );
 
-       if( pChild->mIsPushDownButton )
+       if( action->mIsPushDownButton )
        {
-           button->setChecked( pChild->mButtonState );
+           button->setChecked( action->mButtonState );
        }
        else
        {
@@ -332,30 +342,33 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
        button->setStyleSheet( css );
 
        //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-       if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
+       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
        {
-           qDebug()<<"expandToolBar() name="<<pChild->mName<<" executing script";
-           pChild->execute();
+           qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
+           action->execute();
        }
 
 
-       if( pChild->mIsFolder )
+       if( action->mIsFolder )
        {
-           QMenu * newMenu = new QMenu( button );
            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
-           newMenu->setStyleSheet( css );
+           auto newMenu = new QMenu( button );
+
            // CHECK: consider using the Child's CSS instead for a menu on it
            // - Slysven:
-           // newMenu->setStyleSheet( pChild->css );
-           pChild->fillMenu( pT, newMenu );
+           // newMenu->setStyleSheet( action->css );
+           newMenu->setStyleSheet( css );
+
            // This has been moved until AFTER the child's menu has been
            // populated, it was being done straight after newMenu was created,
            // but I think we ought to insert the items into the menu before
            // applying the menu to the button - Slysven
+           action->fillMenu( pT, newMenu );
+
            button->setMenu( newMenu );
        }
 
-       // Moved to be AFTER the pChild->mIsFolder test as I think we ought to
+       // Moved to be AFTER the action->mIsFolder test as I think we ought to
        // add the button to the toolbar AFTER any menu (children) items have
        // been put on the button - Slysven
        pT->addButton( button );
@@ -367,62 +380,61 @@ void TAction::expandToolbar( TEasyButtonBar * pT )
 // the need for the split is not yet clear to me! - Slysven
 void TAction::fillMenu( TEasyButtonBar * pT, QMenu * menu )
 {
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto action : *mpMyChildrenList)
     {
-        TAction * pChild = *it;
-        if( ! pChild->isActive() )
+        if( ! action->isActive() )
         {
             continue;
         }
         mpEasyButtonBar = pT;
         QIcon icon( mIcon );
-        EAction * action = new EAction( icon, pChild->mName );
-        action->mID = pChild->mID;
-        action->mpHost = mpHost;
-        action->setStatusTip( pChild->mName );
-        action->setCheckable( pChild->mIsPushDownButton );
-        if( pChild->mIsPushDownButton )
+        auto newAction = new EAction( icon, action->mName );
+        newAction->mID = action->mID;
+        newAction->mpHost = mpHost;
+        newAction->setStatusTip( action->mName );
+        newAction->setCheckable( action->mIsPushDownButton );
+        if( action->mIsPushDownButton )
         {
-            action->setChecked( pChild->mButtonState );
+            newAction->setChecked( action->mButtonState );
         }
         else
         {
-            action->setChecked( false );
+            newAction->setChecked( false );
         }
 
         //FIXME: Heiko April 2012 -> expandToolBar()
-        if( pChild->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
+        if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
         {
-//            qDebug()<<"fillMenu() name="<<pChild->mName<<" executing script";
-            pChild->execute();
+            action->execute();
         }
 
-        if( pChild->mIsFolder )
+        if( action->mIsFolder )
         {
             // Adding a QWidget derived pointer to new QMenu() means the menu
             // will be destroyed when the pointed to item is, we just need to
             // find the item that it is attached to - ah ha, try the toolbar...
-            QMenu * newMenu = new QMenu( pT );
-            action->setMenu( newMenu );
-            newMenu->setStyleSheet( css );
+            auto newMenu = new QMenu( pT );
+            newAction->setMenu( newMenu );
+
             // CHECK: consider using the Child's CSS instead for a menu on it
             // - Slysven:
-            // newMenu->setStyleSheet( pChild->css );
-            pChild->fillMenu( pT, newMenu );
+            // newMenu->setStyleSheet( action->css );
+            newMenu->setStyleSheet( css );
+
+            action->fillMenu( pT, newMenu );
         }
 
-        menu->addAction( action ); // Menu is PARENT'S menu action, this line moved to be AFTER child builds it's own menu if it is a folder
+        menu->addAction( newAction ); // Menu is PARENT'S menu newAction, this line moved to be AFTER child builds it's own menu if it is a folder
     }
 }
 
 // This only has code corresponding to the first part of:
 //   TAction::insertActions( TToolBar * pT, QMenu * menu )
-//
 void TAction::insertActions( TEasyButtonBar * pT, QMenu * menu )
 {
     mpEasyButtonBar = pT;
     QIcon icon( mIcon );
-    EAction * action = new EAction( icon, mName );
+    auto action = new EAction( icon, mName );
     action->setCheckable( mIsPushDownButton );
     action->mID = mID;
     action->mpHost = mpHost;

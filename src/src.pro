@@ -18,13 +18,13 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5) {
-  error("requires Qt 5.0 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
+    error("Mudlet requires Qt 5.6 or later")
 }
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.0
+VERSION = 3.0.1
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -119,7 +119,7 @@ unix:!macx {
         -lopengl32 \
         -lglut \
         -lglu32
-    INCLUDEPATH += "C:\\mingw32\\include" 
+    INCLUDEPATH += "C:\\mingw32\\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)

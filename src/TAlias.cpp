@@ -24,8 +24,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -38,6 +38,7 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mIsFolder()
 {
 }
 
@@ -50,6 +51,7 @@ TAlias::TAlias(const QString& name, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mIsFolder()
 {
 }
 
@@ -81,10 +83,9 @@ bool TAlias::match(const QString & toMatch )
             if( shouldBeActive() )
             {
                 bool matchCondition = false;
-                for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+                for(auto alias : *mpMyChildrenList)
                 {
-                    TAlias * pChild = *it;
-                    if( pChild->match( toMatch ) ) matchCondition = true;
+                    if( alias->match( toMatch ) ) matchCondition = true;
                 }
                 return matchCondition;
             }
@@ -247,10 +248,9 @@ END:
     }
 
 MUD_ERROR:
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto childAlias : *mpMyChildrenList)
     {
-        TAlias * pChild = *it;
-        if( pChild->match( toMatch ) ) matchCondition = true;
+        if( childAlias->match( toMatch ) ) matchCondition = true;
     }
 
     free( subject );
@@ -325,10 +325,9 @@ void TAlias::compileAll()
         mOK_code = false;
     }
     compileRegex(); // Effectively will repost the error if there was a problem in the regex
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto alias : *mpMyChildrenList)
     {
-        TAlias * pChild = *it;
-        pChild->compileAll();
+        alias->compileAll();
     }
 }
 
@@ -342,10 +341,9 @@ void TAlias::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto alias : *mpMyChildrenList)
     {
-        TAlias * pChild = *it;
-        pChild->compile();
+        alias->compile();
     }
 }
 

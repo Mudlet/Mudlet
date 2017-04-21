@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014, 2016 by Stephen Lyons                        *
  *                                            - slysven@virginmedia.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,8 +38,8 @@
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
 // leak detection does not work when it is not defined.
-#include <pcre.h>
 #include <Windows.h>
+#include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
 #include <iostream>
@@ -48,8 +48,6 @@
 using namespace std;
 
 TConsole *  spDebugConsole = 0;
-
-extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -165,8 +163,7 @@ int main(int argc, char *argv[])
         _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
         // Create a log file for writing leaks.
-        HANDLE hLogFile;
-        hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
+        HANDLE hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
             FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL, NULL);
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -265,7 +262,7 @@ int main(int argc, char *argv[])
             std::cout << "                       and will make the application wait until a debugger"  << std::endl;
             std::cout << "                       connects to it." << std::endl;
             std::cout << std::endl;
-            std::cout << "Report bugs to: <https://bugs.launchpad.net/mudlet/+filebug>" << std::endl;
+            std::cout << "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>" << std::endl;
             std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
         }
         return 0;

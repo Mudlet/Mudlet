@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,9 +24,7 @@
 #include "Host.h"
 
 
-#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMap.h"
@@ -34,10 +32,12 @@
 #include "TScript.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QApplication>
 #include <QtUiTools>
+#include <QApplication>
 #include <QDir>
 #include <QMessageBox>
 #include "post_guard.h"
@@ -374,14 +374,13 @@ const unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for(unsigned int i=0; i<mpMap->mPathList.size(); i++ ) {
-        QString n = QString::number( mpMap->mPathList.at(i) );
+    for(int i : mpMap->mPathList) {
+        QString n = QString::number( i );
         pathList.append( n );
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for(unsigned int i=0; i<mpMap->mWeightList.size(); i++ ) {
-        unsigned int stepWeight = mpMap->mWeightList.at(i);
+    for(int stepWeight : mpMap->mWeightList) {
         totalWeight += stepWeight;
         QString n = QString::number( stepWeight );
         weightList.append( n );
@@ -410,7 +409,7 @@ void Host::startSpeedWalk()
     int totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
     QString f = QStringLiteral("doSpeedWalk");
-    QString n = QStringLiteral("");
+    QString n = QString();
     mLuaInterpreter.call( f, n );
 }
 
@@ -642,9 +641,9 @@ void Host::raiseEvent( const TEvent & pE )
     if( mEventHandlerMap.contains( pE.mArgumentList.at( 0 ) ) )
     {
         QList<TScript *> scriptList = mEventHandlerMap.value( pE.mArgumentList.at( 0 ) );
-        for( int i=0, total = scriptList.size(); i<total; ++i )
+        for(auto & script : scriptList)
         {
-            scriptList[i]->callEventHandler( pE );
+            script->callEventHandler( pE );
         }
     }
 
@@ -1071,9 +1070,9 @@ bool Host::installPackage( const QString& fileName, int module )
         QStringList _filterList;
         _filterList << QStringLiteral( "*.xml" ) << QStringLiteral( "*.trigger" );
         QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
-        for( int i=0; i<entries.size(); i++ )
+        for(auto & entry : entries)
         {
-            file2.setFileName( entries[i].absoluteFilePath() );
+            file2.setFileName( entry.absoluteFilePath() );
             file2.open(QFile::ReadOnly | QFile::Text);
             QString profileName = getName();
             QString login = getLogin();
@@ -1091,7 +1090,7 @@ bool Host::installPackage( const QString& fileName, int module )
             {
                 mInstalledPackages.append( packageName );
             }
-            reader.importPackage( & file2, packageName, module);
+            reader.importPackage( & file2, packageName, module ); // TODO: Missing false return value handler
             setName( profileName );
             setLogin( login );
             setPass( pass );
@@ -1119,7 +1118,7 @@ bool Host::installPackage( const QString& fileName, int module )
         {
             mInstalledPackages.append( packageName );
         }
-        reader.importPackage( & file2, packageName, module);
+        reader.importPackage( & file2, packageName, module ); // TODO: Missing false return value handler
         setName( profileName );
         setLogin( login );
         setPass( pass );
@@ -1148,6 +1147,41 @@ bool Host::installPackage( const QString& fileName, int module )
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
+
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the install event") and a more specific need
+    // ("I specifically need to know when the module was synced")
+    TEvent genericInstallEvent;
+    genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericInstallEvent.mArgumentList.append(packageName);
+    genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericInstallEvent);
+
+    TEvent detailedInstallEvent;
+    switch (module) {
+    case 0:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
+        break;
+    case 1:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallModule"));
+        break;
+    case 2:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+        break;
+    case 3:
+        detailedInstallEvent.mArgumentList.append(QLatin1String("sysLuaInstallModule"));
+        break;
+    default:
+        Q_UNREACHABLE();
+    }
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedInstallEvent.mArgumentList.append(packageName);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedInstallEvent.mArgumentList.append(fileName);
+    detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedInstallEvent);
+
     return true;
 }
 
@@ -1193,15 +1227,56 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     if (module)
     {
-        if( ! mInstalledModules.contains( packageName ) ) return false;
+        if( ! mInstalledModules.contains( packageName ) )
+        {
+            return false;
+        }
     }
     else
     {
-        if( ! mInstalledPackages.contains( packageName ) ) return false;
+        if( ! mInstalledPackages.contains( packageName ) )
+        {
+            return false;
+        }
     }
+
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the uninstall event") and a more specific need
+    // ("I specifically need to know when the module was uninstalled via Lua")
+    TEvent genericUninstallEvent;
+    genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericUninstallEvent.mArgumentList.append(packageName);
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericUninstallEvent);
+
+    TEvent detailedUninstallEvent;
+    switch (module) {
+    case 0:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
+        break;
+    case 1:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
+        break;
+    case 2:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
+        break;
+    case 3:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
+        break;
+    default:
+        Q_UNREACHABLE();
+    }
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedUninstallEvent.mArgumentList.append(packageName);
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedUninstallEvent);
+
     int dualInstallations=0;
     if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
+    {
         dualInstallations=1;
+    }
     //we check for the module=3 because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
     if( mpEditorDialog && module != 3 )
@@ -1221,7 +1296,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         mInstalledModules.remove( packageName );
         mActiveModules.removeAll(packageName);
         if ( module == 2 )
+        {
             return true;
+        }
         //if module == 1/3, we actually uninstall it.
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
         if (dualInstallations)

@@ -28,25 +28,25 @@
 #include <QPointer>
 #include "post_guard.h"
 
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTreeWidget.h"
+#include "TTrigger.h"
+#include "TVar.h"
 #include "dlgSourceEditorArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
-#include "TAction.h"
-#include "TAlias.h"
-#include "TKey.h"
-#include "TScript.h"
-#include "TTreeWidget.h"
-#include "TTimer.h"
-#include "TTrigger.h"
-#include "TVar.h"
 
 #include "pre_guard.h"
-#include <QFile>
 #include <QDialog>
-#include <QListWidgetItem>
+#include <QFile>
 #include <QListWidget>
+#include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -70,10 +70,11 @@ class dlgVarsMainArea;
 
 class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(dlgTriggerEditor)
 
 public:
-
                                 dlgTriggerEditor( Host * );
     void                        fillout_form();
     void                        closeEvent(QCloseEvent *event) override;
@@ -91,17 +92,11 @@ public:
     int                         canRecast( QTreeWidgetItem *, int, int );
     void                        saveVar();
     void                        repopulateVars();
-    QToolBar *                  toolBar;
-    QToolBar *                  toolBar2;
-    bool                        mNeedUpdateData;
-    bool                        showHiddenVars;
-    TConsole *                  mpErrorConsole;
     void                        changeView( int );
     void                        recurseVariablesUp( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( QTreeWidgetItem * const, QList< QTreeWidgetItem * > & );
     void                        recurseVariablesDown( TVar *, QList< TVar * > &, bool );
     void                        show_vars( );
-
 
 public slots:
     void                        slot_toggleHiddenVariables( bool );
@@ -175,7 +170,7 @@ public slots:
     void                        slot_deleteKey();
     void                        slot_save_edit();
     void                        slot_chose_action_icon();
-    void                        slot_show_search_area();
+    void                        slot_showSearchAreaResults(const bool);
     void                        slot_script_main_area_delete_handler();
     void                        slot_script_main_area_add_handler();
     void                        slot_script_main_area_edit_handler(QListWidgetItem*);
@@ -192,8 +187,11 @@ private slots:
     void                        slot_changeEditorTextOptions( QTextOption::Flags );
     void                        slot_toggle_isPushDownButton( const int );
 
-private:
+public:
+    TConsole *                  mpErrorConsole;
+    bool                        mNeedUpdateData;
 
+private:
     void                        saveOpenChanges();
     void                        saveTrigger();
     void                        saveAlias();
@@ -223,6 +221,10 @@ private:
     void                        exportAction( QFile & );
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
+
+    QToolBar *                  toolBar;
+    QToolBar *                  toolBar2;
+    bool                        showHiddenVars;
 
     QTreeWidgetItem *           mpAliasBaseItem;
     QTreeWidgetItem *           mpTriggerBaseItem;

@@ -24,8 +24,8 @@
 
 #include "pre_guard.h"
 #include "ui_profile_preferences.h"
-#include <QDialog>
 #include <QtCore>
+#include <QDialog>
 #include <QDir>
 #include "post_guard.h"
 
@@ -36,11 +36,10 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgProfilePreferences)
+
 public:
     dlgProfilePreferences(QWidget*, Host*);
-
-    int mFontSize;
-
 
 public slots:
     // Fonts.
@@ -99,7 +98,7 @@ public slots:
     void loadMap();
     void saveMap();
     void copyMap();
-    void slot_chooseProfilesChanged(QAction *);
+    void slot_chooseProfilesChanged(QAction*);
 
     // Save.
     void slot_save_and_exit();
@@ -109,6 +108,8 @@ public slots:
 private:
     void setColors();
     void setColor(QPushButton* b, QColor& c);
+
+    int mFontSize;
     QPointer<Host> mpHost;
 };
 

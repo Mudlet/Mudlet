@@ -23,8 +23,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -36,6 +36,7 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mIsFolder()
 {
 }
 
@@ -47,6 +48,7 @@ TScript::TScript(const QString& name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mIsFolder()
 {
 }
 
@@ -93,10 +95,9 @@ void TScript::setEventHandlerList( QStringList handlerList )
 void TScript::compileAll()
 {
     compile();
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto script : *mpMyChildrenList)
     {
-        TScript * pChild = *it;
-        pChild->compileAll();
+        script->compileAll();
     }
 }
 
@@ -119,10 +120,9 @@ void TScript::compile()
             mOK_code = false;
         }
     }
-    for(auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
+    for(auto script : *mpMyChildrenList)
     {
-        TScript * pChild = *it;
-        pChild->compile();
+        script->compile();
     }
 }
 

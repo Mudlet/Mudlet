@@ -36,41 +36,40 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
+#include <QtMath>
 #include <QDebug>
 #include <QStringList>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 XMLimport::XMLimport(Host* pH)
-    : mpHost(pH)
-    , mPackageName(QString())
-    , mpTrigger(Q_NULLPTR)
-    , mpTimer(Q_NULLPTR)
-    , mpAlias(Q_NULLPTR)
-    , mpKey(Q_NULLPTR)
-    , mpAction(Q_NULLPTR)
-    , mpScript(Q_NULLPTR)
-    , mpVar(Q_NULLPTR)
-    , gotTrigger(false)
-    , gotTimer(false)
-    , gotAlias(false)
-    , gotKey(false)
-    , gotAction(false)
-    , gotScript(false)
-    , module(0)
-    , mMaxRoomId(0)
-    , mMaxAreaId(-1)
+: mpHost(pH)
+, mPackageName(QString())
+, mpTrigger(Q_NULLPTR)
+, mpTimer(Q_NULLPTR)
+, mpAlias(Q_NULLPTR)
+, mpKey(Q_NULLPTR)
+, mpAction(Q_NULLPTR)
+, mpScript(Q_NULLPTR)
+, mpVar(Q_NULLPTR)
+, gotTrigger(false)
+, gotTimer(false)
+, gotAlias(false)
+, gotKey(false)
+, gotAction(false)
+, gotScript(false)
+, module(0)
+, mMaxRoomId(0)
+, mMaxAreaId(-1)
+, mVersionMajor(1) // 0 to 255
+, mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 
-bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFlag)
+bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
-    setDevice(device);
+    setDevice(pfile);
 
     module = moduleFlag;
 
@@ -149,7 +148,37 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
         readNext();
 
         if (isStartElement()) {
-            if (name() == "MudletPackage") {
+            if (name() == QStringLiteral("MudletPackage")) {
+                QString versionString;
+                if (attributes().hasAttribute(QStringLiteral("version"))) {
+                    versionString = attributes().value(QStringLiteral("version")).toString();
+                    if (!versionString.isEmpty()) {
+                        bool isOk = false;
+                        float versionNumber = versionString.toFloat(&isOk);
+                        if (isOk) {
+                            mVersionMajor = qFloor(versionNumber);
+                            mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
+                        }
+                        if (pVersionString) {
+                            *pVersionString = versionString;
+                        }
+                    }
+                }
+
+                if (mVersionMajor > 1
+                    /*||(mVersionMajor==1&&mVersionMinor)*/) {
+                    // Minor check is not currently relevant, just abort on 2.000f or more
+
+                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                                         "\"%1\"\n"
+                                         "reports it has a version (%2) it must have come from a later Mudlet version,\n"
+                                         "and this one cannot read it, you need a newer Mudlet!")
+                                          .arg(pfile->fileName())
+                                          .arg(versionString);
+                    mpHost->postMessage(moanMsg);
+                    return false;
+                }
+
                 readPackage();
             } else if (name() == "map") {
                 readMap();
@@ -206,7 +235,7 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
 
 void XMLimport::readVariableGroup(TVar* pParent)
 {
-    TVar* var = new TVar(pParent);
+    auto var = new TVar(pParent);
 
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
@@ -242,6 +271,8 @@ void XMLimport::readVariableGroup(TVar* pParent)
             }
         }
     }
+
+    delete var;
 }
 
 void XMLimport::readHiddenVariables()
@@ -393,7 +424,7 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
 {
-    TRoom* pT = new TRoom(mpHost->mpMap->mpRoomDB);
+    auto pT = new TRoom(mpHost->mpMap->mpRoomDB);
 
     pT->id = attributes().value(QStringLiteral("id")).toString().toInt();
     pT->area = attributes().value(QStringLiteral("area")).toString().toInt();
@@ -732,8 +763,8 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mShowPanel = (attributes().value("mShowPanel") == "yes");
     pHost->mHaveMapperScript = (attributes().value("mHaveMapperScript") == "yes");
     QStringRef ignore = attributes().value("mDoubleClickIgnore");
-    for (int i = 0, total = ignore.size(); i < total; ++i) {
-        pHost->mDoubleClickIgnore.insert(ignore.at(i));
+    for (auto character : ignore) {
+        pHost->mDoubleClickIgnore.insert(character);
     }
 
     while (!atEnd()) {
@@ -917,7 +948,7 @@ void XMLimport::readTriggerPackage()
 
 void XMLimport::readTriggerGroup(TTrigger* pParent)
 {
-    TTrigger* pT = new TTrigger(pParent, mpHost);
+    auto pT = new TTrigger(pParent, mpHost);
 
     if (module) {
         pT->mModuleMember = true;
@@ -1019,7 +1050,7 @@ void XMLimport::readTimerPackage()
 
 void XMLimport::readTimerGroup(TTimer* pParent)
 {
-    TTimer* pT = new TTimer(pParent, mpHost);
+    auto pT = new TTimer(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     pT->mIsTempTimer = (attributes().value("isTempTimer") == "yes");
@@ -1084,7 +1115,7 @@ void XMLimport::readAliasPackage()
 
 void XMLimport::readAliasGroup(TAlias* pParent)
 {
-    TAlias* pT = new TAlias(pParent, mpHost);
+    auto pT = new TAlias(pParent, mpHost);
 
     mpHost->getAliasUnit()->registerAlias(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
@@ -1140,7 +1171,7 @@ void XMLimport::readActionPackage()
 
 void XMLimport::readActionGroup(TAction* pParent)
 {
-    TAction* pT = new TAction(pParent, mpHost);
+    auto pT = new TAction(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     pT->mIsPushDownButton = (attributes().value("isPushButton") == "yes");
@@ -1188,7 +1219,7 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "mButtonState") {
                 // We now use a boolean but file must use original "1" (false)
                 // or "2" (true) for backward compatibility
-                pT->mButtonState = ( readElementText().toInt() == 2 );
+                pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
                 pT->mButtonColor.setNamedColor(readElementText());
             } else if (name() == "buttonColumn") {
@@ -1225,7 +1256,7 @@ void XMLimport::readScriptPackage()
 
 void XMLimport::readScriptGroup(TScript* pParent)
 {
-    TScript* pT = new TScript(pParent, mpHost);
+    auto pT = new TScript(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     mpHost->getScriptUnit()->registerScript(pT);
@@ -1280,7 +1311,7 @@ void XMLimport::readKeyPackage()
 
 void XMLimport::readKeyGroup(TKey* pParent)
 {
-    TKey* pT = new TKey(pParent, mpHost);
+    auto pT = new TKey(pParent, mpHost);
 
     mpHost->getKeyUnit()->registerKey(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
@@ -1388,11 +1419,19 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                            "convert: \"%s\" to a number when reading the "
                            "'regexCodePropertyList' element of the 'Trigger' "
                            "or 'TriggerGroup' element \"%s\"!",
-                           numberText.toUtf8().constData(), parentName.toUtf8().constData());
+                           numberText.toUtf8().constData(),
+                           parentName.toUtf8().constData());
                 }
             } else {
                 readUnknownTriggerElement();
             }
         }
     }
+}
+
+// This will be a string representation of a decimal float with three places of
+// decimals
+void XMLimport::getVersionString(QString& versionString)
+{
+    versionString = QString::number((mVersionMajor * 1000 + mVersionMinor) / 1000.0, 'f', 3);
 }

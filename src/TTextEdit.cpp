@@ -34,8 +34,8 @@
 #include <QClipboard>
 #include <QMenu>
 #include <QPainter>
-#include <QString>
 #include <QScrollBar>
+#include <QString>
 #include <QToolTip>
 #include "post_guard.h"
 
@@ -46,7 +46,6 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mIsCommandPopup( false )
 , mIsTailMode( true )
 , mShowTimeStamps( isDebugConsole )
-//private
 , mForceUpdate( false )
 , mHighlight_on( false )
 , mHighlightingBegin( false )
@@ -77,7 +76,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         }
 
         mpHost->mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mpHost->mDisplayFont);
@@ -97,7 +96,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mDisplayFont);
@@ -197,7 +196,7 @@ void TTextEdit::initDefaultSettings()
     mFgColor = QColor(192,192,192);
     mBgColor = QColor(0,0,0);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         int width = mScreenWidth*mFontWidth*2;
         int height = mFontHeight*2;
         // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -231,7 +230,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( 2000,600 );
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -254,7 +253,7 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -276,7 +275,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         int width = mScreenWidth*mFontWidth*2;
         int height = mFontHeight*2;
         // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -460,7 +459,7 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
         font.setUnderline( isUnderline );
         font.setItalic( isItalics );
         font.setStrikeOut( isStrikeOut );
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
         painter.setFont( font );
@@ -469,7 +468,7 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
     {
         painter.setPen( fgColor );
     }
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
     QPointF _p(rect.x(), rect.bottom()-mFontDescent);
     painter.drawText( _p, text );
 #else
@@ -1013,15 +1012,15 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
         
         if( oldAY < mPA.y() ){
           for( int y = oldAY; y < mPA.y(); y++ ){
-            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            for(auto & x : mpBuffer->buffer[y]){
+              x.flags &= ~(TCHAR_INVERSE);
             }
           }
         }
         if( oldBY > mPB.y() ){
             for( int y = mPB.y()+1; y <= oldBY; y++ ){
-                for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-                    mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                for(auto & x : mpBuffer->buffer[y]){
+                    x.flags &= ~(TCHAR_INVERSE);
                 }
             }
         }
@@ -1301,7 +1300,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
                     if( command.size() > 1 )
                     {
-                        QMenu * popup = new QMenu( this );
+                        auto popup = new QMenu( this );
                         for( int i=0; i<command.size(); i++ )
                         {
                             QAction * pA;
@@ -1332,7 +1331,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         QAction * action2 = new QAction("copy HTML", this );
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect( action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
-        QMenu * popup = new QMenu( this );
+        auto popup = new QMenu( this );
         popup->addAction( action );
         popup->addAction( action2 );
         popup->popup( mapToGlobal( event->pos() ), action );

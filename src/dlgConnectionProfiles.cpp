@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,15 +26,15 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "XMLimport.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtUiTools>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
-#include <QtUiTools>
 #include "post_guard.h"
 
 
@@ -46,6 +46,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , connect_button( Q_NULLPTR )
 , delete_profile_lineedit( Q_NULLPTR )
 , delete_button( Q_NULLPTR )
+, validName()
+, validUrl()
+, validPort()
 {
     setupUi( this );
 
@@ -462,7 +465,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     QString newname = tr( "new profile name" );
 
-    QListWidgetItem * pItem = new QListWidgetItem( newname );
+    auto pItem = new QListWidgetItem( newname );
     if( ! pItem ) {
         return;
     }
@@ -811,7 +814,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     profile_history->setEnabled( static_cast<bool>(profile_history->count()) );
 
-    QStringList loadedProfiles = mudlet::self()->getHostManager()->getHostList();
+    QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
     if( loadedProfiles.contains( profile_name ) )
     {
         profile_name_entry->setReadOnly( true );
@@ -1084,7 +1087,7 @@ void dlgConnectionProfiles::fillout_form()
             continue;
         }
 
-        QListWidgetItem * pItem = new QListWidgetItem( mProfileList.at(i) );
+        auto pItem = new QListWidgetItem( mProfileList.at(i) );
         pItem->setFont(font);
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
@@ -1189,7 +1192,7 @@ void dlgConnectionProfiles::slot_copy_profile()
         profile_name = profile_name2;
     }
 
-    QListWidgetItem * pItem = new QListWidgetItem( profile_name );
+    auto pItem = new QListWidgetItem( profile_name );
     if( ! pItem )
     {
         return;
@@ -1227,7 +1230,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( profile_name.isEmpty() )
         return;
 
-    Host * pHost = mudlet::self()->getHostManager()->getHost( profile_name );
+    Host* pHost = mudlet::self()->getHostManager().getHost(profile_name);
     if( pHost )
     {
         pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
@@ -1235,8 +1238,8 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
     // load an old profile if there is any
-    mudlet::self()->getHostManager()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
-    pHost = mudlet::self()->getHostManager()->getHost( profile_name );
+    mudlet::self()->getHostManager().addHost(profile_name, port_entry->text().trimmed(), QString(), QString());
+    pHost = mudlet::self()->getHostManager().getHost(profile_name);
 
     if( ! pHost ) return;
 
@@ -1257,7 +1260,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
-        importer.importPackage( & file, 0);
+        importer.importPackage( & file, 0 ); // TODO: Missing false return value handler
     }
     else
     {
