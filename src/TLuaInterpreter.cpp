@@ -2486,14 +2486,20 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return lua_error(L);
     }
 
-    auto result = pHost->saveProfile();
+    QString saveToDir;
+    if (lua_isstring(L, 1)) {
+        saveToDir = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    auto result = pHost->saveProfile(saveToDir);
 
     if (std::get<0>(result) == true) {
         lua_pushboolean(L, true);
-        return 1;
+        lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
+        return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString(std::get<1>(result)).arg(std::get<2>(result)).arg(std::get<3>(result)).arg(std::get<4>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(std::get<1>(result)).arg(std::get<2>(result)).arg(std::get<3>(result)).toUtf8().constData());
         return 2;
     }
 }

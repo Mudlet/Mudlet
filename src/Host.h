@@ -125,7 +125,7 @@ public:
     void               unregisterEventHandler(const QString&, TScript * );
     void               raiseEvent( const TEvent & event );
     void               resetProfile();
-    std::tuple<bool, QString, QString, QString, QString> saveProfile();
+    std::tuple<bool, QString, QString, QString> saveProfile(const QString &saveLocation, bool syncModules = false);
     void               callEventHandlers();
     void               stopAllTriggers();
     void               reenableAllTriggers();

@@ -745,23 +745,9 @@ void TConsole::closeEvent( QCloseEvent *event )
 
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-            QDir dir_xml;
-            if( ! dir_xml.exists( directory_xml ) )
-            {
-                dir_xml.mkpath( directory_xml );
-            }
-            QFile file_xml( filename_xml );
-            if( file_xml.open( QIODevice::WriteOnly ) )
-            {
-                mpHost->modulesToWrite.clear();
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-                mpHost->saveModules(0);
+            mpHost->modulesToWrite.clear();
+            mpHost->saveProfile(nullptr);
 
-            }
             if( mpHost->mpMap->mpRoomDB->size() > 0 )
             {
                 QDir dir_map;
@@ -793,55 +779,31 @@ void TConsole::closeEvent( QCloseEvent *event )
             event->ignore();
             return;
         }
-        if( choice == QMessageBox::Yes )
-        {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-            QDir dir_xml;
-            if( ! dir_xml.exists( directory_xml ) )
-            {
-                dir_xml.mkpath( directory_xml );
-            }
-            QFile file_xml( filename_xml );
-            if( file_xml.open( QIODevice::WriteOnly ) )
-            {
-                /*XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();*/
-                mpHost->modulesToWrite.clear();
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-                mpHost->saveModules(0);
-                if( mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0 )
-                {
-                    QDir dir_map;
-                    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
-                    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-                    if( ! dir_map.exists( directory_map ) )
-                    {
-                        dir_map.mkpath( directory_map );
-                    }
-                    QFile file_map( filename_map );
-                    if ( file_map.open( QIODevice::WriteOnly ) )
-                    {
-                        QDataStream out( & file_map );
-                        mpHost->mpMap->serialize( out );
-                        file_map.close();
-                    }
-                }
-                event->accept();
-                return;
-            }
-            else
-            {
-                QMessageBox::critical( this, "ERROR: Not closing profile.", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-                goto ASK;
-            }
+        if (choice == QMessageBox::Yes) {
+            mpHost->modulesToWrite.clear();
+            auto result = mpHost->saveProfile(nullptr);
 
-        }
-        else if( choice == QMessageBox::No )
-        {
+            if (std::get<0>(result) == false) {
+                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<3>(result)));
+                goto ASK;
+            } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
+                QDir dir_map;
+                QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
+                QString filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+                if (!dir_map.exists(directory_map)) {
+                    dir_map.mkpath(directory_map);
+                }
+                QFile file_map(filename_map);
+                if (file_map.open(QIODevice::WriteOnly)) {
+                    QDataStream out(&file_map);
+                    mpHost->mpMap->serialize(out);
+                    file_map.close();
+                }
+            }
+            event->accept();
+            return;
+
+        } else if (choice == QMessageBox::No) {
             event->accept();
             return;
         }
