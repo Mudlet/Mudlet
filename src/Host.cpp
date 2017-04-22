@@ -1159,7 +1159,7 @@ bool Host::installPackage( const QString& fileName, int module )
        mpEditorDialog->doCleanReset();
     }
     if (!module) {
-        saveProfile(nullptr);
+        saveProfile();
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
@@ -1348,7 +1348,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     _home.append( getName() );
     QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
     removeDir( _dest, _dest );
-    saveProfile(nullptr);
+    saveProfile();
     //NOW we reset if we're uninstalling a module
     if( mpEditorDialog && module == 3 )
     {

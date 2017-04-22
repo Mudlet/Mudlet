@@ -746,7 +746,7 @@ void TConsole::closeEvent( QCloseEvent *event )
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
             mpHost->modulesToWrite.clear();
-            mpHost->saveProfile(nullptr);
+            mpHost->saveProfile();
 
             if( mpHost->mpMap->mpRoomDB->size() > 0 )
             {
@@ -781,7 +781,7 @@ void TConsole::closeEvent( QCloseEvent *event )
         }
         if (choice == QMessageBox::Yes) {
             mpHost->modulesToWrite.clear();
-            auto result = mpHost->saveProfile(nullptr);
+            auto result = mpHost->saveProfile();
 
             if (std::get<0>(result) == false) {
                 QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
