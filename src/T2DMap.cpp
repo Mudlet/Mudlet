@@ -680,7 +680,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         if( !pRID || !pAID ) return;
         ox = mOx;
         oy = mOy;
-// N/U:         oz = mOz;
     }
     if( ox*tx > xspan/2*tx )
         _rx = -(tx*ox-xspan/2*tx);
@@ -695,7 +694,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
     py = oy*ty+_ry;
 
     TArea * pArea = pAID;
-    if( ! pArea ) return;
 
     int zEbene;
     zEbene = mOz;
