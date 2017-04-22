@@ -36,11 +36,11 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtUiTools>
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
 #include <QStringBuilder>
-#include <QtUiTools>
 #include "post_guard.h"
 
 #include <zip.h>
