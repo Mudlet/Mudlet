@@ -794,7 +794,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   ( option == OPT_NAWS ) ||
                   ( option == OPT_TERMINAL_TYPE ) )
               {
-                  if( option == OPT_SUPPRESS_GA ) qDebug() << "OK we are willing to enable option SUPPRESS_GA";
                   if( option == OPT_STATUS ) qDebug() << "OK we are willing to enable telnet option STATUS";
                   if( option == OPT_TERMINAL_TYPE ) qDebug() << "OK we are willing to enable telnet option TERMINAL_TYPE";
                   if( option == OPT_NAWS ) qDebug() << "OK we are willing to enable telnet option NAWS";
@@ -844,7 +843,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
              raiseProtocolEvent( "sysProtocolDisabled", "channel102" );
           }
-          int idxOption = static_cast<int>(option);
+          int idxOption = option & 0xFF;
           if( myOptionState[idxOption] || ( !announcedState[idxOption] ) )
           {
               sendTelnetOption (TN_WONT, option);

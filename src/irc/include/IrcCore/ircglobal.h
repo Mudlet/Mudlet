@@ -35,7 +35,7 @@
     \file ircglobal.h
     \brief \#include &lt;\ref ircglobal.h "IrcGlobal"&gt;
  */
-
+#define IRC_STATIC
 #if defined(IRC_SHARED)
 #
 #  if defined(BUILD_IRC_CORE)

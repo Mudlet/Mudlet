@@ -24,17 +24,10 @@
 
 #include "pre_guard.h"
 #include "ui_irc.h"
-#ifdef Q_CC_MSVC
-#include <irc.h>
-#include <irccommand.h>
-#include <ircmessage.h>
-#include <ircconnection.h>
-#else
-#include "irc/include/IrcCore/irc.h"
-#include "irc/include/IrcCore/irccommand.h"
-#include "irc/include/IrcCore/ircmessage.h"
-#include "irc/include/IrcCore/ircconnection.h"
-#endif
+#include <Irc>
+#include <IrcCommand>
+#include <IrcConnection>
+#include <IrcMessage>
 #include "post_guard.h"
 
 

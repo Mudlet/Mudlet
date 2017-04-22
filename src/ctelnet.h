@@ -75,7 +75,6 @@ const char MXP = 91; // MXP
 const char MSDP = 69; // MSDP, documented at http://tintin.sourceforge.net/msdp/
 
 const char OPT_ECHO = 1;
-const char OPT_SUPPRESS_GA = 3;
 const char OPT_STATUS = 5;
 const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;

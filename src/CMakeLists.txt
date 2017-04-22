@@ -427,7 +427,7 @@ INCLUDE_DIRECTORIES(
     ${Qt5Multimedia_INCLUDE_DIRS}
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include/IrcCore
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
