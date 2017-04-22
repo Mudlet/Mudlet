@@ -36,10 +36,11 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QtUiTools>
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
+#include <QStringBuilder>
+#include <QtUiTools>
 #include "post_guard.h"
 
 #include <zip.h>
@@ -377,12 +378,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 {
     QString directory_xml;
     if (saveLocation.isEmpty()) {
-        directory_xml = QDir::homePath() + QLatin1String("/.config/mudlet/profiles/") + getName() + QLatin1String("/current");
+        directory_xml = QStringLiteral("%1/.config/mudlet/profiles/%2/current").arg(QDir::homePath(), getName());
     } else {
         directory_xml = saveLocation;
     }
 
-    QString filename_xml = directory_xml + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + ".xml";
+    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
     QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
