@@ -2407,7 +2407,7 @@ void mudlet::slot_replaySpeedDown()
 /* loop through and stop all sounds */
 void mudlet::stopSounds()
 {
-    QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
+    QListIterator<QMediaPlayer *> itMusicBox( mMusicBoxList );
     
     while( itMusicBox.hasNext() ) {
         itMusicBox.next()->stop();
@@ -2416,7 +2416,7 @@ void mudlet::stopSounds()
 
 void mudlet::playSound( QString s, int soundVolume )
 {
-    QListIterator<QMediaPlayer *> itMusicBox( MusicBoxList );
+    QListIterator<QMediaPlayer *> itMusicBox( mMusicBoxList );
     QMediaPlayer * pPlayer=0;
     
     /* find first available inactive QMediaPlayer */
@@ -2444,7 +2444,7 @@ void mudlet::playSound( QString s, int soundVolume )
             return;
         }
 
-        MusicBoxList.append(pPlayer);
+        mMusicBoxList.append(pPlayer);
     }
 
     /* set volume and play sound */
