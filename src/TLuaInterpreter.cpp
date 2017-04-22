@@ -372,7 +372,7 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
             event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
         }
         else {
-            lua_pushfstring(L, "raiseEvent: bad argument #%i type (string, number, boolean, or nil\n"
+            lua_pushfstring(L, "raiseEvent: bad argument #%d type (string, number, boolean, or nil\n"
                               "expected, got a %s!)", i, luaL_typename(L, i));
             lua_error( L );
             return 1;
@@ -446,7 +446,7 @@ int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
             event.mArgumentTypeList.append( ARGUMENT_TYPE_NIL );
         }
         else {
-            lua_pushfstring(L, "raiseGlobalEvent: bad argument type #%i (boolean, number, string or nil\n"
+            lua_pushfstring(L, "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
                                "expected, got a %s!)",
                             i, luaL_typename(L, i));
             lua_error( L );
@@ -489,7 +489,7 @@ int TLuaInterpreter::selectString( lua_State * L )
     QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
     if( lua_gettop( L ) > 2 ) {
         if( ! lua_isstring( L, s ) ) {
-            lua_pushfstring(L, "selectString: bad argument #%i type (window name as string, is optional {defaults"
+            lua_pushfstring(L, "selectString: bad argument #%d type (window name as string, is optional {defaults"
                                "to \"main\" if omitted}, got %s!)",
                             s, luaL_typename(L, s));
             lua_error( L );
@@ -509,7 +509,7 @@ int TLuaInterpreter::selectString( lua_State * L )
 
     QString searchText;
     if( ! lua_isstring( L, s ) ) {
-        lua_pushfstring(L, "selectString: bad argument #%i type (text to select as string expected, got %s!)",
+        lua_pushfstring(L, "selectString: bad argument #%d type (text to select as string expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
         return 1;
@@ -522,7 +522,7 @@ int TLuaInterpreter::selectString( lua_State * L )
 
     qint64 numOfMatch = 0;
     if( ! lua_isnumber( L, s ) ) {
-        lua_pushfstring(L, "selectString: bad argument #%i type (match count as number {1 for first} expected, got %s!)",
+        lua_pushfstring(L, "selectString: bad argument #%d type (match count as number {1 for first} expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
         return 1;
@@ -1295,7 +1295,7 @@ int TLuaInterpreter::centerview( lua_State * L )
     }
     else {
         lua_pushnil( L );
-        lua_pushfstring(L, "centerview: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "centerview: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -2022,7 +2022,7 @@ int TLuaInterpreter::getExitStubs( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getExitStubs: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "getExitStubs: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -2039,7 +2039,7 @@ int TLuaInterpreter::getExitStubs( lua_State * L )
         }
         else {
             lua_pushnil( L );
-            lua_pushfstring(L, "getExitStubs: no stubs in this room with id %i.",
+            lua_pushfstring(L, "getExitStubs: no stubs in this room with id %d.",
                            roomId);
             return 2;
         }
@@ -2075,7 +2075,7 @@ int TLuaInterpreter::getExitStubs1( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getExitStubs1: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "getExitStubs1: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -2092,7 +2092,7 @@ int TLuaInterpreter::getExitStubs1( lua_State * L )
         }
         else {
             lua_pushnil( L );
-            lua_pushfstring(L, "getExitStubs1: no stubs in this room with id %i.",
+            lua_pushfstring(L, "getExitStubs1: no stubs in this room with id %d.",
                             roomId);
             return 2;
         }
@@ -3439,7 +3439,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     QString windowName;
     if( ! lua_isstring( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (window name as string {use \"main\" or\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (window name as string {use \"main\" or\n"
                            "empty string for main console} expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3453,7 +3453,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     QVector<int>colorComponents(6); // 0-2 RGB foreground, 3-5 RGB background
     if( ! lua_isnumber( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (red foreground color component as number\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (red foreground color component as number\n"
                            "expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3466,7 +3466,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     if( ! lua_isnumber( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (green foreground color component as number\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (green foreground color component as number\n"
                            "expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3479,7 +3479,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     if( ! lua_isnumber( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (blue foreground color component as number\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (blue foreground color component as number\n"
                            "expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3492,7 +3492,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     if( ! lua_isnumber( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (red background color component as number\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (red background color component as number\n"
                            "expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3505,7 +3505,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     if( ! lua_isnumber( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (green background color component as number\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (green background color component as number\n"
                            "expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3518,7 +3518,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     if( ! lua_isnumber( L, ++s ) )
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (blue background color component as number\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (blue background color component as number\n"
                            "expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3540,7 +3540,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     }
     else
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (bold format as boolean {or number,\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (bold format as boolean {or number,\n"
                            "non-zero is true} expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3558,7 +3558,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     }
     else
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (underline format as boolean {or number,\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (underline format as boolean {or number,\n"
                            "non-zero is true} expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
@@ -3576,7 +3576,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     }
     else
     {
-        lua_pushfstring(L, "setTextFormat: bad argument #%i type (italic format as boolean {or number,\n"
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (italic format as boolean {or number,\n"
                           "non-zero is true} expected, got %s!)",
                        s, luaL_typename(L, s));
         lua_error( L );
@@ -3596,7 +3596,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
         }
         else
         {
-            lua_pushfstring(L, "setTextFormat: bad argument #%i type (strikeout format as boolean {or number,\n"
+            lua_pushfstring(L, "setTextFormat: bad argument #%d type (strikeout format as boolean {or number,\n"
                                "non-zero is true} optional, got %s!)",
                             s, luaL_typename(L, s));
             lua_error( L );
@@ -3816,7 +3816,7 @@ int TLuaInterpreter::setRoomName( lua_State *L )
     }
     else {
         lua_pushnil( L );
-        lua_pushfstring(L, "setRoomName: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "setRoomName: bad argument #1 value (number %d is not a valid room id).",
                         id);
         return 2;
     }
@@ -3854,7 +3854,7 @@ int TLuaInterpreter::getRoomName( lua_State *L )
     }
     else {
         lua_pushnil( L );
-        lua_pushfstring(L, "getRoomName: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "getRoomName: bad argument #1 value (number %d is not a valid room id).",
                         id);
         return 2;
     }
@@ -4369,7 +4369,7 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
         TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
         if( ! pR ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %i is not a valid room id).",
+            lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %d is not a valid room id).",
                             roomId);
             return 2;
         }
@@ -4461,7 +4461,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
             return 1;
         }
         else {
-            lua_pushfstring(L, "searchRoom: bad argument #1 value (room id %i does not exist!)",
+            lua_pushfstring(L, "searchRoom: bad argument #1 value (room id %d does not exist!)",
                             room_id);
             // Should've been a nil with this as an second returned string!
             return 1;
@@ -4886,7 +4886,7 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
     if( !pA ) {
         lua_pushnil(L);
-        lua_pushfstring(L, "getAreaExits: bad argument #1 value (number %i is not a valid area id).",
+        lua_pushfstring(L, "getAreaExits: bad argument #1 value (number %d is not a valid area id).",
                         area);
         return 2;
     }
@@ -4992,7 +4992,7 @@ int TLuaInterpreter::gotoRoom( lua_State *L )
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "gotoRoom: bad argument #1 value (number %i is not a valid target room id).",
+        lua_pushfstring(L, "gotoRoom: bad argument #1 value (number %d is not a valid target room id).",
                         targetRoomId);
         return 2;
     }
@@ -5006,7 +5006,7 @@ int TLuaInterpreter::gotoRoom( lua_State *L )
         int totalWeight = pHost->assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
         Q_UNUSED(totalWeight);
         lua_pushboolean( L, false );
-        lua_pushfstring(L, "gotoRoom: no path found from current room to room with id %i!",
+        lua_pushfstring(L, "gotoRoom: no path found from current room to room with id %d!",
                         targetRoomId);
         return 2;
     }
@@ -5049,13 +5049,13 @@ int TLuaInterpreter::getPath( lua_State *L )
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoom( originRoomId ) ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getPath: bad argument #1 value (number %i is not a valid source room id).",
+        lua_pushfstring(L, "getPath: bad argument #1 value (number %d is not a valid source room id).",
                         originRoomId);
         return 2;
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getPath: bad argument #2 value (number %i is not a valid target room id).",
+        lua_pushfstring(L, "getPath: bad argument #2 value (number %d is not a valid target room id).",
                         targetRoomId);
         return 2;
     }
@@ -5071,7 +5071,7 @@ int TLuaInterpreter::getPath( lua_State *L )
     else {
         lua_pushboolean( L, false );
         lua_pushnumber( L, -1 );
-        lua_pushfstring(L, "getPath: no path found from room, with Id %i to room %i!",
+        lua_pushfstring(L, "getPath: no path found from room, with Id %d to room %d!",
                         originRoomId, targetRoomId);
         return 3;
     }
@@ -5569,7 +5569,7 @@ int TLuaInterpreter::setBold( lua_State * L )
     { // Have more than one argument so first must be a console name
         if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushfstring(L, "setBold: bad argument #%i type (more than one argument supplied and first,\n"
+            lua_pushfstring(L, "setBold: bad argument #%d type (more than one argument supplied and first,\n"
                                "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s, luaL_typename(L, s));
             lua_error( L );
@@ -5584,7 +5584,7 @@ int TLuaInterpreter::setBold( lua_State * L )
     bool isAtttributeEnabled;
     if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushfstring(L, "setBold: bad argument #%i type (enable bold attribute as boolean expected, got %s!)",
+        lua_pushfstring(L, "setBold: bad argument #%d type (enable bold attribute as boolean expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
         return 1;
@@ -5620,7 +5620,7 @@ int TLuaInterpreter::setItalics( lua_State * L )
     { // Have more than one argument so first must be a console name
         if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushfstring(L, "setItalics: bad argument #%i type (more than one argument supplied and first,\n"
+            lua_pushfstring(L, "setItalics: bad argument #%d type (more than one argument supplied and first,\n"
                                "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s, luaL_typename(L, s));
             lua_error( L );
@@ -5635,7 +5635,7 @@ int TLuaInterpreter::setItalics( lua_State * L )
     bool isAtttributeEnabled;
     if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushfstring(L, "setItalics: bad argument #%i type (enable italic attribute as boolean expected, got %s!)",
+        lua_pushfstring(L, "setItalics: bad argument #%d type (enable italic attribute as boolean expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
         return 1;
@@ -5671,7 +5671,7 @@ int TLuaInterpreter::setUnderline( lua_State *L )
     { // Have more than one argument so first must be a console name
         if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushfstring(L, "setUnderline: bad argument #%i type (more than one argument supplied and first,\n"
+            lua_pushfstring(L, "setUnderline: bad argument #%d type (more than one argument supplied and first,\n"
                                "window name, as string expected {omission selects \"main\" console window}, got %s!",
                             s, luaL_typename(L, s));
             lua_error( L );
@@ -5686,7 +5686,7 @@ int TLuaInterpreter::setUnderline( lua_State *L )
     bool isAtttributeEnabled;
     if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushfstring(L, "setUnderline: bad argument #%i type (enable underline attribute as boolean expected, got %s!)",
+        lua_pushfstring(L, "setUnderline: bad argument #%d type (enable underline attribute as boolean expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
         return 1;
@@ -5722,7 +5722,7 @@ int TLuaInterpreter::setStrikeOut( lua_State * L )
     { // Have more than one argument so first must be a console name
         if( ! lua_isstring( L, ++s ) )
         {
-            lua_pushfstring(L, "setStrikeOut: bad argument #%i type (more than one argument supplied and first,\n"
+            lua_pushfstring(L, "setStrikeOut: bad argument #%d type (more than one argument supplied and first,\n"
                                "window name, as string expected {omission selects \"main\" console window}, got %s!)",
                             s, luaL_typename(L, s));
             lua_error( L );
@@ -5737,7 +5737,7 @@ int TLuaInterpreter::setStrikeOut( lua_State * L )
     bool isAtttributeEnabled;
     if( ! lua_isboolean( L, ++s ) )
     {
-        lua_pushfstring(L, "setStrikeOut: bad argument #%i type (enable strikeout attribute as boolean expected, got %s!)",
+        lua_pushfstring(L, "setStrikeOut: bad argument #%d type (enable strikeout attribute as boolean expected, got %s!)",
                         s, luaL_typename(L, s));
         lua_error( L );
         return 1;
@@ -7450,7 +7450,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
         id = lua_tonumber( L, 1 );
         if( id < 1 ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "setAreaName: bad argument #1 value (number %i is not a valid area id as it is\n"
+            lua_pushfstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id as it is\n"
                                "less than 1).",
                             id);
             return 2;
@@ -7461,7 +7461,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
 // need to continue to allow this - Slysven
 //        else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
 //            lua_pushnil( L );
-//            lua_pushstring(L, "setAreaName: bad argument #1 value (number %i is not a valid area id)."
+//            lua_pushstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id)."
 //                           id);
 //            return 2;
 //        }
@@ -7522,7 +7522,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
             lua_pushnil( L );
             // And it isn't the trivial case, where the given areaID already IS that name
             lua_pushfstring(L, "setAreaName: bad argument #2 value (area names may not be duplicated and area\n"
-                               "id %i already has the name \"%s\").",
+                               "id %d already has the name \"%s\").",
                             pHost->mpMap->mpRoomDB->getAreaNamesMap().key(newName),
                             newName.toUtf8().constData());
             return 2;
@@ -7609,7 +7609,7 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
         }
         else {
             lua_pushnumber( L, -1 );
-            lua_pushfstring(L, "getRoomAreaName: bad argument #1 value (number %i is not a valid area id).",
+            lua_pushfstring(L, "getRoomAreaName: bad argument #1 value (number %d is not a valid area id).",
                             id);
             return 2;
         }
@@ -7653,7 +7653,7 @@ int TLuaInterpreter::addAreaName( lua_State *L )
         // That name is already IN the areaNamesMap
         lua_pushnil( L );
         lua_pushfstring(L, "addAreaName: bad argument #2 value (area names may not be duplicated and area\n"
-                           "id %i already has the name \"%s\").",
+                           "id %d already has the name \"%s\").",
                         pHost->mpMap->mpRoomDB->getAreaNamesMap().key(name),
                         name.toUtf8().constData());
         return 2;
@@ -7690,7 +7690,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         id = lua_tonumber( L, 1 );
         if( id < 1 ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "deleteArea: bad argument #1 value (number %i is not a valid area id greater\n"
+            lua_pushfstring(L, "deleteArea: bad argument #1 value (number %d is not a valid area id greater\n"
                                "than zero).",
                             id);
             return 2;
@@ -7698,7 +7698,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
         else if(    ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id )
                  && ! pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "deleteArea: bad argument #1 value (number %i is not a valid area id).",
+            lua_pushfstring(L, "deleteArea: bad argument #1 value (number %d is not a valid area id).",
                             id);
             return 2;
         }
@@ -7938,7 +7938,7 @@ int TLuaInterpreter::createRoomID( lua_State * L )
             int minId = lua_tointeger( L, 1 );
             if( minId <  1 ) {
                 lua_pushnil( L );
-                lua_pushfstring(L, "createRoomID: bad argument #1 value (minimum room id %i is an optional value\n"
+                lua_pushfstring(L, "createRoomID: bad argument #1 value (minimum room id %d is an optional value\n"
                                    "but if provided it must be greater than zero.)",
                                 minId);
                 return 2;
@@ -8493,7 +8493,7 @@ int TLuaInterpreter::setDoor( lua_State * L )
         pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
         if( ! pR ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "setDoor: bad argument #1 value (number %i is not a valid room id.)",
+            lua_pushfstring(L, "setDoor: bad argument #1 value (number %d is not a valid room id.)",
                             roomId);
             return 2;
         }
@@ -8530,7 +8530,7 @@ int TLuaInterpreter::setDoor( lua_State * L )
 
                         // And NOT a special one either
                         lua_pushnil( L );
-                        lua_pushfstring(L, "setDoor: bad argument #2 value (room with id %i does not have a special\n"
+                        lua_pushfstring(L, "setDoor: bad argument #2 value (room with id %d does not have a special\n"
                                            "exit in direction \"%s\".)",
                                         roomId, exitCmd.toUtf8().constData());
                         return 2;
@@ -8554,7 +8554,7 @@ int TLuaInterpreter::setDoor( lua_State * L )
 
                 // No there IS NOT a stub or real exit in the exitCmd direction
                 lua_pushnil( L );
-                lua_pushfstring(L, "setDoor: bad argument #2 value (room with id %i does not have a normal exit\n"
+                lua_pushfstring(L, "setDoor: bad argument #2 value (room with id %d does not have a normal exit\n"
                                    "or a stub exit in direction \"%s\".)",
                                 roomId, exitCmd.toUtf8().constData());
                 return 2;
@@ -8575,7 +8575,7 @@ int TLuaInterpreter::setDoor( lua_State * L )
         doorStatus = lua_tointeger( L, 3 );
         if( doorStatus < 0 || doorStatus > 3 ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "setDoor: bad argument #3 value (door type %i is not one of 0=\"none\", 1=\"open\",\n"
+            lua_pushfstring(L, "setDoor: bad argument #3 value (door type %d is not one of 0=\"none\", 1=\"open\",\n"
                                "2=\"closed\" or 3=\"locked\".)",
                             doorStatus);
             return 2;
@@ -8620,7 +8620,7 @@ int TLuaInterpreter::getDoors( lua_State * L )
         pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
         if( ! pR ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "getDoors: bad argument #1 value (number %i is not a valid room id).",
+            lua_pushfstring(L, "getDoors: bad argument #1 value (number %d is not a valid room id).",
                             roomId);
             return 2;
         }
@@ -9205,7 +9205,7 @@ int TLuaInterpreter::clearRoomUserData( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "clearRoomUserData: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "clearRoomUserData: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -9265,7 +9265,7 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "clearRoomUserDataItem: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "clearRoomUserDataItem: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -9316,7 +9316,7 @@ int TLuaInterpreter::clearAreaUserData( lua_State * L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "clearAreaUserData: bad argument #1 value (number %i is not a valid area id).",
+        lua_pushfstring(L, "clearAreaUserData: bad argument #1 value (number %d is not a valid area id).",
                         areaId);
         return 2;
     }
@@ -9372,7 +9372,7 @@ int TLuaInterpreter::clearAreaUserDataItem( lua_State * L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 value (number %i is not a valid area id).",
+        lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 value (number %d is not a valid area id).",
                         areaId);
         return 2;
     }
@@ -9659,7 +9659,7 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
         }
         else {
             lua_pushnil( L );
-            lua_pushfstring(L, "getRoomUserData: bad argument #1 value (number %i is not a valid room id).",
+            lua_pushfstring(L, "getRoomUserData: bad argument #1 value (number %d is not a valid room id).",
                             roomId);
             return 2;
         }
@@ -9676,7 +9676,7 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
             }
             else {
                 lua_pushnil( L );
-                lua_pushfstring(L, "getRoomUserData: bad argument #2 value (no user data with key:\"%s\" in room with id: %i).",
+                lua_pushfstring(L, "getRoomUserData: bad argument #2 value (no user data with key:\"%s\" in room with id: %d).",
                                 key.toUtf8().constData(), roomId);
                 return 2;
             }
@@ -9729,7 +9729,7 @@ int TLuaInterpreter::getAreaUserData( lua_State * L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getAreaUserData: bad argument #1 value (number %i is not a valid area id).",
+        lua_pushfstring(L, "getAreaUserData: bad argument #1 value (number %d is not a valid area id).",
                         areaId);
         return 2;
     }
@@ -9741,7 +9741,7 @@ int TLuaInterpreter::getAreaUserData( lua_State * L )
         else {
             lua_pushnil( L );
             lua_pushfstring(L, "getAreaUserData: bad argument #2 value (no user data with key:\"%s\"\n"
-                               "in area with id:%i).",
+                               "in area with id:%d).",
                             key.toUtf8().constData(), areaId);
             return 2;
         }
@@ -9838,7 +9838,7 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "setRoomUserData: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "setRoomUserData: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -9922,7 +9922,7 @@ int TLuaInterpreter::setAreaUserData( lua_State * L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "setAreaUserData: bad argument #1 value (number %i is not a valid area id).",
+        lua_pushfstring(L, "setAreaUserData: bad argument #1 value (number %d is not a valid area id).",
                         areaId);
         return 2;
     }
@@ -10032,7 +10032,7 @@ int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -10082,7 +10082,7 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getAllRoomUserData: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "getAllRoomUserData: bad argument #1 value (number %d is not a valid room id).",
                         roomId);
         return 2;
     }
@@ -10130,7 +10130,7 @@ int TLuaInterpreter::getAllAreaUserData( lua_State * L )
     TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "getAllAreaUserData: bad argument #1 value (number %i is not a valid area id).",
+        lua_pushfstring(L, "getAllAreaUserData: bad argument #1 value (number %d is not a valid area id).",
                         areaId);
         return 2;
     }
@@ -10267,7 +10267,7 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         id = lua_tointeger( L, 1 );
         if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %i is not a valid room id).",
+            lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %d is not a valid room id).",
                             id);
             return 2;
         }
@@ -10279,14 +10279,14 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         areaId = lua_tonumber( L, 2 );
         if( areaId < 1 ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %i is not a valid area id greater\n"
+            lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %d is not a valid area id greater\n"
                                "than zero.  To remove a room's area, use resetRoomArea( roomId ) ).",
                             areaId);
             return 2;
         }
         else if( !pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( areaId ) ) {
             lua_pushnil( L );
-            lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %i is not a valid area id as it does not exist).",
+            lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %d is not a valid area id as it does not exist).",
                             areaId);
             return 2;
         }
@@ -10358,7 +10358,7 @@ int TLuaInterpreter::resetRoomArea( lua_State * L )
     }
     else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
         lua_pushnil( L );
-        lua_pushfstring(L, "resetRoomArea: bad argument #1 value (number %i is not a valid room id).",
+        lua_pushfstring(L, "resetRoomArea: bad argument #1 value (number %d is not a valid room id).",
                         id);
         return 2;
     }
@@ -10964,7 +10964,7 @@ int TLuaInterpreter::Echo( lua_State *L )
     }
 
     if (! lua_isstring(L, n)) {
-        lua_pushfstring(L, "echo: bad argument #%i type (text to display as string expected, got %s!)",
+        lua_pushfstring(L, "echo: bad argument #%d type (text to display as string expected, got %s!)",
                         n, luaL_typename(L, n));
         return lua_error(L);
     } else {
