@@ -373,13 +373,13 @@ void Host::resetProfile()
 // takes a directory to save in or an empty string for the default location
 // as well as a boolean whenever to sync the modules or not
 // returns true+filepath if successful or false+error message otherwise
-std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveToDir, bool syncModules)
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
 {
     QString directory_xml;
-    if (saveToDir.isEmpty()) {
+    if (saveLocation.isEmpty()) {
         directory_xml = QDir::homePath() + QLatin1String("/.config/mudlet/profiles/") + getName() + QLatin1String("/current");
     } else {
-        directory_xml = saveToDir;
+        directory_xml = saveLocation;
     }
 
     QString filename_xml = directory_xml + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + ".xml";
