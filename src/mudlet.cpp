@@ -2414,17 +2414,17 @@ void mudlet::stopSounds()
     }
 }
 
-void mudlet::playSound( QString s, int soundVolume )
+void mudlet::playSound(QString s, int soundVolume)
 {
-    QListIterator<QMediaPlayer *> itMusicBox( mMusicBoxList );
-    QMediaPlayer * pPlayer=0;
-    
+    QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
+    QMediaPlayer* pPlayer = 0;
+
     /* find first available inactive QMediaPlayer */
-    while( itMusicBox.hasNext() ) {
-        QMediaPlayer * pTestPlayer=itMusicBox.next();
-        
-        if ( pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia ) {
-            pPlayer=pTestPlayer;
+    while (itMusicBox.hasNext()) {
+        QMediaPlayer* pTestPlayer = itMusicBox.next();
+
+        if (pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia) {
+            pPlayer = pTestPlayer;
             break;
         }
     }
@@ -2433,22 +2433,34 @@ void mudlet::playSound( QString s, int soundVolume )
     if (!pPlayer) {
         pPlayer = new QMediaPlayer(this);
 
+        auto pHost = getActiveHost();
+
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            Host * pH = getActiveHost();
-            
-            if (pH) {
-                pH->postMessage( "\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n" );    
+            if (pHost) {
+                pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
             }
-            
             return;
         }
+
+        connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
+            if (state == QMediaPlayer::StoppedState) {
+                TEvent soundFinished;
+                soundFinished.mArgumentList.append("sysSoundFinished");
+                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
+                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                pHost->raiseEvent(soundFinished);
+            }
+        });
 
         mMusicBoxList.append(pPlayer);
     }
 
     /* set volume and play sound */
-    pPlayer->setMedia( QUrl::fromLocalFile( s ) );
+    pPlayer->setMedia(QUrl::fromLocalFile(s));
     pPlayer->setVolume(soundVolume);
     pPlayer->play();
 }
