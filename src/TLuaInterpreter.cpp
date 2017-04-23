@@ -1256,19 +1256,19 @@ int TLuaInterpreter::centerview( lua_State * L )
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if( ! pHost ) {
         lua_pushnil( L );
-        lua_pushstring(L, "centerview: NULL Host pointer - something is wrong!");
+        lua_pushstring( L, "centerview: NULL Host pointer - something is wrong!" );
         return 2;
     }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB || ! pHost->mpMap->mpMapper ) {
         lua_pushnil( L );
-        lua_pushstring(L, "centerview: no map present or loaded!");
+        lua_pushstring( L, "centerview: you haven't opened a map yet" );
         return 2;
     }
 
     int roomId;
     if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring( L, "centerview: bad argument #1 type (room id as number expected, got %s!)",
+                         luaL_typename( L, 1 ) );
         lua_error( L );
         return 1;
     }
@@ -1295,8 +1295,7 @@ int TLuaInterpreter::centerview( lua_State * L )
     }
     else {
         lua_pushnil( L );
-        lua_pushfstring(L, "centerview: bad argument #1 value (number %d is not a valid room id).",
-                        roomId);
+        lua_pushfstring( L, "centerview: bad argument #1 value (%d is not a valid room id).", roomId );
         return 2;
     }
 }
