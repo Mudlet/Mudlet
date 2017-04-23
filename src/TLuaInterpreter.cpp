@@ -3226,32 +3226,28 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if (! pHost) {
-        lua_pushstring(L, tr("setLabelClickCallback: NULL Host pointer - something is wrong!")
-                       .toUtf8().constData());
+        lua_pushstring(L, "setLabelClickCallback: NULL Host pointer - something is wrong!");
         return lua_error(L);
     }
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
-        lua_pushstring(L, tr("setLabelClickCallback: bad argument #1 type (label name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 1))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelClickCallback: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
         labelName = QString::fromUtf8(lua_tostring(L, 1));
         if (labelName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushstring(L, tr("setLabelClickCallback: bad argument #1 value (label name cannot be an empty string.)")
-                           .toUtf8().constData());
+            lua_pushstring(L, "setLabelClickCallback: bad argument #1 value (label name cannot be an empty string.)");
             return 2;
         }
     }
 
     QString eventName;
     if (! lua_isstring(L, 2)) {
-        lua_pushstring(L, tr( "setLabelClickCallback: bad argument #2 type (event name as string expected, got %1!)" )
-                       .arg(luaL_typename(L, 2))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelClickCallback: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
         return lua_error(L);
     } else {
         eventName = QString::fromUtf8(lua_tostring(L, 2));
@@ -3273,11 +3269,9 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
         } else {
-            lua_pushstring(L, tr("setLabelClickCallback: bad argument #%1 type (boolean, number, string or nil\n"
-                                 "expected, got a %2!)")
-                           .arg(i)
-                           .arg(luaL_typename(L, i))
-                           .toUtf8().constData());
+            lua_pushfstring(L, "setLabelClickCallback: bad argument #%d type (boolean, number, string or nil\n"
+                               "expected, got a %s!)",
+                            i, luaL_typename(L, i));
             return lua_error(L);
         }
     }
@@ -3287,9 +3281,8 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, tr("setLabelClickCallback: bad argument #1 value (label name \"%1\" not found.)")
-                       .arg(labelName)
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelClickCallback: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
         return 2;
     }
 }
@@ -3298,32 +3291,28 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if (! pHost) {
-        lua_pushstring(L, tr("setLabelReleaseCallback: NULL Host pointer - something is wrong!")
-                       .toUtf8().constData());
+        lua_pushstring(L, "setLabelReleaseCallback: NULL Host pointer - something is wrong!");
         return lua_error(L);
     }
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
-        lua_pushstring(L, tr("setLabelReleaseCallback: bad argument #1 type (label name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 1))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelReleaseCallback: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
         labelName = QString::fromUtf8(lua_tostring(L, 1));
         if (labelName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushstring(L, tr("setLabelReleaseCallback: bad argument #1 value (label name cannot be an empty string.)")
-                           .toUtf8().constData());
+            lua_pushstring(L, "setLabelReleaseCallback: bad argument #1 value (label name cannot be an empty string.)");
             return 2;
         }
     }
 
     QString eventName;
     if (! lua_isstring(L, 2)) {
-        lua_pushstring(L, tr("setLabelReleaseCallback: bad argument #2 type (event name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 2))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelReleaseCallback: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
         return lua_error(L);
     } else {
         eventName = QString::fromUtf8(lua_tostring(L, 2));
@@ -3345,11 +3334,9 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
         } else {
-            lua_pushstring(L, tr("setLabelReleaseCallback: bad argument #%1 type (boolean, number, string or nil\n"
-                                 "expected, got a %2!)")
-                           .arg(i)
-                           .arg(luaL_typename(L, i))
-                           .toUtf8().constData());
+            lua_pushfstring(L, "setLabelReleaseCallback: bad argument #%d type (boolean, number, string or nil\n"
+                               "expected, got a %s!)",
+                            i, luaL_typename(L, i));
             return lua_error(L);
         }
     }
@@ -3359,9 +3346,8 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, tr("setLabelReleaseCallback: bad argument #1 value (label name \"%1\" not found.)")
-                       .arg(labelName)
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelReleaseCallback: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
         return 2;
     }
 }
@@ -3370,32 +3356,28 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if (! pHost) {
-        lua_pushstring(L, tr("setLabelOnEnter: NULL Host pointer - something is wrong!")
-                       .toUtf8().constData());
+        lua_pushstring(L, "setLabelOnEnter: NULL Host pointer - something is wrong!");
         return lua_error(L);
     }
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
-        lua_pushstring(L, tr("setLabelOnEnter: bad argument #1 type (label name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 1))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelOnEnter: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
         labelName = QString::fromUtf8(lua_tostring(L, 1));
         if (labelName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushstring(L, tr("setLabelOnEnter: bad argument #1 value (label name cannot be an empty string.)")
-                           .toUtf8().constData());
+            lua_pushstring(L, "setLabelOnEnter: bad argument #1 value (label name cannot be an empty string.)");
             return 2;
         }
     }
 
     QString eventName;
     if (! lua_isstring(L, 2)) {
-        lua_pushstring(L, tr("setLabelOnEnter: bad argument #2 type (event name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 2))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelOnEnter: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
         return lua_error(L);
     } else {
         eventName = QString::fromUtf8(lua_tostring(L, 2));
@@ -3417,11 +3399,9 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
         } else {
-            lua_pushstring(L, tr("setLabelOnEnter: bad argument #%1 type (boolean, number, string or nil expected,"
-                                 "got a %2!)")
-                           .arg(i)
-                           .arg(luaL_typename(L, i))
-                           .toUtf8().constData());
+            lua_pushfstring(L, "setLabelOnEnter: bad argument #%d type (boolean, number, string or nil expected,\n"
+                               "got a %s!)",
+                            i, luaL_typename(L, i));
             return lua_error(L);
         }
     }
@@ -3431,9 +3411,8 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, tr("setLabelOnEnter: bad argument #1 value (label name \"%1\" not found.)")
-                       .arg(labelName)
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelOnEnter: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
         return 2;
     }
 }
@@ -3442,32 +3421,28 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 {
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     if(! pHost) {
-        lua_pushstring(L, tr("setLabelOnLeave: NULL Host pointer - something is wrong!")
-                       .toUtf8().constData());
+        lua_pushstring(L, "setLabelOnLeave: NULL Host pointer - something is wrong!");
         return lua_error(L);
     }
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
-        lua_pushstring(L, tr("setLabelOnLeave: bad argument #1 type (label name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 1))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelOnLeave: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
         labelName = QString::fromUtf8(lua_tostring(L, 1));
         if (labelName.isEmpty()) {
             lua_pushnil(L);
-            lua_pushstring(L, tr("setLabelOnLeave: bad argument #1 value (label name cannot be an empty string.)")
-                           .toUtf8().constData());
+            lua_pushstring(L, "setLabelOnLeave: bad argument #1 value (label name cannot be an empty string.)");
             return 2;
         }
     }
 
     QString eventName;
     if (! lua_isstring(L, 2)) {
-        lua_pushstring(L, tr("setLabelOnLeave: bad argument #2 type (event name as string expected, got %1!)")
-                       .arg(luaL_typename(L, 2))
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelOnLeave: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
         return lua_error(L);
     } else {
         eventName = QString::fromUtf8(lua_tostring(L, 2));
@@ -3489,11 +3464,9 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
         } else {
-            lua_pushstring(L, tr("setLabelOnLeave: bad argument type #%1 (boolean, number, string or nil expected,"
-                                   "got a %2!)")
-                           .arg(i)
-                           .arg(luaL_typename(L, i))
-                           .toUtf8().constData());
+            lua_pushfstring(L, "setLabelOnLeave: bad argument type #%d (boolean, number, string or nil expected,\n"
+                               "got a %s!)",
+                            i, luaL_typename(L, i));
             return lua_error(L);
         }
     }
@@ -3503,9 +3476,8 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, tr("setLabelOnLeave: bad argument #1 value (label name \"%1\" not found.)")
-                       .arg(labelName)
-                       .toUtf8().constData());
+        lua_pushfstring(L, "setLabelOnLeave: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
         return 2;
     }
 }
