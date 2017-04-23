@@ -97,7 +97,10 @@ public:
     void tidyMap(int area);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
-    void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!
+
+    // Was init( Host * ) but host pointer was not used and it does not initialise a map!
+    void audit();
+
     QList<int> detectRoomCollisions(int id);
     void solveRoomCollision(int id, int creationDirection, bool PCheck = true);
     void setRoom(int);
@@ -111,34 +114,42 @@ public:
     void initGraph();
     void connectExitStub(int roomId, int dirType);
     void postMessage(const QString text);
-    void set3DViewCenter(const int, const int, const int, const int);
+
     // Used by the 2D mapper to send view center coordinates to 3D one
+    void set3DViewCenter(const int, const int, const int, const int);
 
     void appendRoomErrorMsg(const int, const QString, const bool isToSetFileViewingRecommended = false);
     void appendAreaErrorMsg(const int, const QString, const bool isToSetFileViewingRecommended = false);
     void appendErrorMsg(const QString, const bool isToSetFileViewingRecommended = false);
     void appendErrorMsgWithNoLf(const QString, const bool isToSetFileViewingRecommended = false);
-    void pushErrorMessagesToFile(const QString, const bool isACleanup = false);
+
     // If the argument is true does not write out any thing if there is no data
     // to dump, intended to be used before an operation like a map load so that
     // any messages previously recorded are not associated with a "fresh" batch
     // from the operation.
+    void pushErrorMessagesToFile(const QString, const bool isACleanup = false);
 
     // Moved and revised from dlgMapper:
     void downloadMap(const QString* remoteUrl = Q_NULLPTR, const QString* localFileName = Q_NULLPTR);
+
     // Also uses readXmlMapFile(...) but for local files:
     bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
+
     // Used at end of downloadMap(...) OR as part of importMap(...) but not by
     // both at the same time thanks to mXmlImportMutex
     bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
-    // Use progresss dialog for post-download operations:
+
+    // Use progress dialog for post-download operations.
     void reportStringToProgressDialog(const QString);
+
+    // Use progress dialog for post-download operations.
     void reportProgressToProgressDialog(const int, const int);
 
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
     QPointer<Host> mpHost;
+
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
     QHash<QString, int> mRoomIdHash;
@@ -153,7 +164,10 @@ public:
     QList<int> mWeightList;
     QMap<int, QColor> customEnvColors;
     QMap<int, QVector3D> unitVectors;
-    QMap<int, int> reverseDirections; // contains complementary directions of dirs on TRoom.h
+
+    // contains complementary directions of dirs on TRoom.h
+    QMap<int, int> reverseDirections;
+
     GLWidget* mpM;
     dlgMapper* mpMapper;
     QMap<int, int> roomidToIndex;
@@ -209,13 +223,21 @@ private:
 
     QStringList mStoredMessages;
 
-    QMap<int, QList<QString>> mMapAuditRoomErrors; // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
-    QMap<int, QList<QString>> mMapAuditAreaErrors; // As for the Room ones but with key as the area number
-    QList<QString> mMapAuditErrors;                // For the whole map
-    bool mIsFileViewingRecommended;                // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
+    // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
+    QMap<int, QList<QString>> mMapAuditRoomErrors;
+
+    // As for the Room ones but with key as the area number
+    QMap<int, QList<QString>> mMapAuditAreaErrors;
+
+    // For the whole map
+    QList<QString> mMapAuditErrors;
+
+    // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
+    bool mIsFileViewingRecommended;
 
     // Moved and revised from dlgMapper:
     QNetworkAccessManager* mpNetworkAccessManager;
+
     QProgressDialog* mpProgressDialog;
     QNetworkReply* mpNetworkReply;
     QString mLocalMapFileName;

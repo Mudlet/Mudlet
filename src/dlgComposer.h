@@ -40,11 +40,13 @@ public:
     dlgComposer(Host*);
 
     void init(QString title, QString txt);
-    QPointer<Host> mpHost;
 
 public slots:
     void save();
     void cancel();
+
+private:
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

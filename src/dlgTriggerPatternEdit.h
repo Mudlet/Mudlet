@@ -35,6 +35,8 @@ class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
 
 public:
     dlgTriggerPatternEdit(QWidget*);
+
+//private:
     int mRow;
 };
 

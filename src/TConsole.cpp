@@ -2423,7 +2423,6 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->mpM = mpMapper->glWidget;
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
-        mpMapper->mpHost = mpHost;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
         mpHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(2) report" ), true );
         QDateTime now( QDateTime::currentDateTime() );

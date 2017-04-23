@@ -140,17 +140,10 @@ public:
     void                readPackageConfig(const QString&, QString &);
     void                postMessage(const QString message) { mTelnet.postMessage(message); }
 
-
+public:
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
-    QScopedPointer<LuaInterface> mLuaInterface;
-    TriggerUnit mTriggerUnit;
-    TimerUnit mTimerUnit;
-    ScriptUnit mScriptUnit;
-    AliasUnit mAliasUnit;
-    ActionUnit mActionUnit;
-    KeyUnit mKeyUnit;
 
     int commandLineMinimumHeight;
     bool mAlertOnNewData;
@@ -162,77 +155,44 @@ public:
     int mBorderLeftWidth;
     int mBorderRightWidth;
     int mBorderTopHeight;
-    QString mBufferIncomingData;
-    bool mCodeCompletion;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    bool mDisableAutoCompletion;
     QFont mDisplayFont;
     bool mEnableGMCP;
     bool mEnableMSDP;
-    int mEncoding;
     QTextStream mErrorLogStream;
-    QFile mErrorLogFile;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
-    QMap<QString, TEvent*> mEventMap;
     bool mFORCE_GA_OFF;
     bool mFORCE_NO_COMPRESSION;
     bool mFORCE_SAVE_ON_EXIT;
-    int mHostID;
-    QString mHostName;
     bool mInsertedMissingLF;
-    bool mIsAutologin;
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
 
-    bool mIsClosingDown;
     bool mLF_ON_GA;
-    QString mLine;
-    QMutex mLock;
-    QString mLogin;
-    int mMainIconSize;
-    QString mMudOutputBuffer;
-    int mMXPMode;
     bool mNoAntiAlias;
 
-    QString mPass;
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     dlgNotepad* mpNotePad;
-    QStringList mParagraphList;
 
-    int mPort;
     bool mPrintCommand;
-    QString mPrompt;
 
-    // The following was incorrectly called mRawStreamDump
-    // and caused the log file to be in HTML format rather
-    // then plain text.  To cover the corner case of the user
-    // changing the mode whilst a log is being written it has
-    // been split into:
-    bool mIsNextLogFileInHtmlFormat;
-
-    // What the user has set as their preference
+    // To cover the corner case of the user changing the mode
+    // whilst a log is being written, this stores the mode of
+    // the current log file and is set from
+    // mIsNextLogFileInHtmlFormat at the point that a log is started.
     bool mIsCurrentLogFileInHtmlFormat;
 
-    // What the current file will use, set from the previous
-    // member at the point that logging starts.
-    // Ideally this ought to become a number so that we can
-    // support more than two logging format modes - phpBB
-    // format would be useful for those wanting to post to
-    // MUD forums...!  Problem will be reading and write the
-    // game save file in a compatible way.
-    QString mReplacementCommand;
+    // To cover the corner case of the user changing the mode
+    // whilst a log is being written, this stores the mode of
+    // future logs file as set in the profile preferences. See
+    // also mIsCurrentLogFileInHtmlFormat.
+    bool mIsNextLogFileInHtmlFormat;
 
-    QString mRest;
     bool mResetProfile;
-    int mRetries;
-    bool mSaveProfileOnExit;
     int mScreenHeight;
     int mScreenWidth;
-    bool mShowToolbar;
-    int mTEFolderIconSize;
-    QStringList mTextBufferList;
 
     int mTimeout;
 
@@ -241,7 +201,6 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
-    QString mUserDefinedName;
     int mWrapAt;
     int mWrapIndentCount;
 
@@ -266,8 +225,6 @@ public:
     QColor mCommandBgColor;
     QColor mCommandFgColor;
 
-    QMap<int, QTime> mStopWatchMap;
-
     QColor mBlack_2;
     QColor mLightBlack_2;
     QColor mRed_2;
@@ -288,24 +245,15 @@ public:
     QColor mBgColor_2;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
     QString mSpellDic;
     bool mLogStatus;
     bool mEnableSpellCheck;
-    QString mIRCNick;
     QStringList mInstalledPackages;
     QMap<QString, QStringList> mInstalledModules;
     QMap<QString, int> mModulePriorities;
     QMap<QString, QStringList> modulesToWrite;
     QMap<QString, QMap<QString, QString>> moduleHelp;
-    QStringList mActiveModules;
-    bool mModuleSaveBlock;
 
-    QPushButton* uninstallButton;
-    QListWidget* packageList;
-    QListWidget* moduleList;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
     double mLineSize;
     double mRoomSize;
     bool mShowInfo;
@@ -319,8 +267,75 @@ public:
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
     bool mFORCE_MXP_NEGOTIATION_OFF;
-    bool mHaveMapperScript;
     QSet<QChar> mDoubleClickIgnore;
+
+private:
+    QScopedPointer<LuaInterface> mLuaInterface;
+
+    TriggerUnit mTriggerUnit;
+    TimerUnit mTimerUnit;
+    ScriptUnit mScriptUnit;
+    AliasUnit mAliasUnit;
+    ActionUnit mActionUnit;
+    KeyUnit mKeyUnit;
+
+    QString mBufferIncomingData;
+    bool mCodeCompletion;
+
+    bool mDisableAutoCompletion;
+    int mEncoding;
+    QFile mErrorLogFile;
+
+    QMap<QString, TEvent*> mEventMap;
+
+    int mHostID;
+    QString mHostName;
+
+    bool mIsAutologin;
+
+    bool mIsClosingDown;
+
+    QString mLine;
+    QMutex mLock;
+    QString mLogin;
+    int mMainIconSize;
+    QString mMudOutputBuffer;
+    int mMXPMode;
+
+    QString mPass;
+    QStringList mParagraphList;
+
+    int mPort;
+    QString mPrompt;
+
+    QString mReplacementCommand;
+
+    QString mRest;
+
+    int mRetries;
+    bool mSaveProfileOnExit;
+    bool mShowToolbar;
+    int mTEFolderIconSize;
+    QStringList mTextBufferList;
+
+    QString mUserDefinedName;
+
+    QMap<int, QTime> mStopWatchMap;
+
+    QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
+
+    QString mIRCNick;
+
+    QStringList mActiveModules;
+    bool mModuleSaveBlock;
+
+    QPushButton* uninstallButton;
+    QListWidget* packageList;
+    QListWidget* moduleList;
+    QPushButton* moduleUninstallButton;
+    QPushButton* moduleInstallButton;
+
+    bool mHaveMapperScript;
 };
 
 #endif // MUDLET_HOST_H

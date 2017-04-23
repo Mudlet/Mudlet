@@ -90,7 +90,10 @@ private:
 };
 
 
-struct found_goal {}; // exception for termination
+// exception for termination
+struct found_goal
+{
+};
 
 // visitor that terminates when we find the goal
 template <class Vertex>
