@@ -120,9 +120,6 @@ public:
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
 
-    TGatekeeperThread* mpGatekeeperThread;
-    QNetworkAccessManager* mpFileDownloader;
-
     static int getCustomLines( lua_State * );
     static int addCustomLine( lua_State * );
     static int noop( lua_State * );
@@ -399,6 +396,14 @@ public:
     static int getProfileName( lua_State * );
     static int raiseGlobalEvent( lua_State * );
 
+public slots:
+    void slot_replyFinished( QNetworkReply * );
+    void slotPurge();
+    void slotDeleteSender();
+
+private:
+    TGatekeeperThread* mpGatekeeperThread;
+    QNetworkAccessManager* mpFileDownloader;
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
@@ -408,14 +413,6 @@ public:
 
     static std::map<lua_State*, Host*> luaInterpreterMap;
     QMap<QNetworkReply*, QString> downloadMap;
-
-public slots:
-
-    void slot_replyFinished( QNetworkReply * );
-    void slotPurge();
-    void slotDeleteSender();
-
-private:
 
     lua_State* pGlobalLua;
     TLuaMainThread* mpLuaSessionThread;
@@ -430,7 +427,6 @@ class TLuaMainThread : public QThread
 {
 public:
     TLuaMainThread(TLuaInterpreter* pL) : exit() { pLuaInterpreter = pL; }
-
 
 private:
     TLuaInterpreter* pLuaInterpreter;
