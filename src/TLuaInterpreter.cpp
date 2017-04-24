@@ -2491,7 +2491,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         saveToDir = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    auto result = pHost->saveProfile(saveToDir);
+    std::tuple<bool, QString, QString> result = pHost->saveProfile(saveToDir);
 
     if (std::get<0>(result) == true) {
         lua_pushboolean(L, true);
