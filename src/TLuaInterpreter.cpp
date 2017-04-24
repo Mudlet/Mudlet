@@ -1252,52 +1252,47 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
     return 0;
 }
 
-int TLuaInterpreter::centerview( lua_State * L )
+int TLuaInterpreter::centerview(lua_State* L)
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost) {
+        lua_pushnil(L);
         lua_pushstring(L, "centerview: NULL Host pointer - something is wrong!");
         return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "centerview: no map present or loaded!");
+    } else if (!pHost->mpMap || !pHost->mpMap->mpRoomDB || !pHost->mpMap->mpMapper) {
+        lua_pushnil(L);
+        lua_pushstring(L, "centerview: you haven't opened a map yet");
         return 2;
     }
 
     int roomId;
-    if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)",
-                        luaL_typename(L, 1));
-        lua_error( L );
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
         return 1;
-    }
-    else {
-        roomId = lua_tointeger( L, 1 );
+    } else {
+        roomId = lua_tointeger(L, 1);
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    if( pR ) {
-        pHost->mpMap->mRoomIdHash[ pHost->getName() ] = roomId;
+    TRoom* pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (pR) {
+        pHost->mpMap->mRoomIdHash[pHost->getName()] = roomId;
         pHost->mpMap->mNewMove = true;
-        if( pHost->mpMap->mpM ) {
+        if (pHost->mpMap->mpM) {
             pHost->mpMap->mpM->update();
         }
 
-        if( pHost->mpMap->mpMapper->mp2dMap ) {
+        if (pHost->mpMap->mpMapper->mp2dMap) {
             pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
             pHost->mpMap->mpMapper->mp2dMap->update();
             pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
             pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
-        lua_pushboolean( L, true );
+        lua_pushboolean(L, true);
         return 1;
-    }
-    else {
-        lua_pushnil( L );
-        lua_pushfstring(L, "centerview: bad argument #1 value (number %d is not a valid room id).",
-                        roomId);
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "centerview: bad argument #1 value (%d is not a valid room id).", roomId);
         return 2;
     }
 }
