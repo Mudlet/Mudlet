@@ -947,7 +947,6 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
-        //auto pD = new QDockWidget;
         auto pD = new TDockWidget();
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
@@ -2510,7 +2509,5 @@ void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
 
 // addition to help with dock widget closing.
 void TDockWidget::closeEvent( QCloseEvent * event ) {
-    //qDebug() << "TDockWidget::closeEvent() has fired. DockWidget Named: " << windowTitle();
-    
     mudlet::self()->closeWindow( mudlet::self()->getActiveHost(), windowTitle() );
 }
