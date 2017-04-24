@@ -57,6 +57,7 @@
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 #include <list>
@@ -2448,6 +2449,32 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
 {
     mudlet::self()->forceClose();
     return 0;
+}
+
+int TLuaInterpreter::saveProfile(lua_State* L)
+{
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost) {
+        lua_pushstring(L, QLatin1String("saveProfile: NULL Host pointer - something is wrong!").data());
+        return lua_error(L);
+    }
+
+    QString saveToDir;
+    if (lua_isstring(L, 1)) {
+        saveToDir = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    std::tuple<bool, QString, QString> result = pHost->saveProfile(saveToDir);
+
+    if (std::get<0>(result) == true) {
+        lua_pushboolean(L, true);
+        lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
+        return 2;
+    } else {
+        lua_pushnil(L);
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
+        return 2;
+    }
 }
 
 // openUserWindow( session, string window_name )
@@ -13198,6 +13225,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
+    lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
 
 
     luaopen_yajl(pGlobalLua);

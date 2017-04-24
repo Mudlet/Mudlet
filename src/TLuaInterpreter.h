@@ -239,6 +239,7 @@ public:
     static int setBgColor( lua_State * L );
     static int tempTimer( lua_State * L );
     static int closeMudlet( lua_State* L );
+    static int saveProfile(lua_State* L);
     static int openUserWindow( lua_State * L );
     static int echoUserWindow( lua_State * L );
     static int clearUserWindow( lua_State * L );

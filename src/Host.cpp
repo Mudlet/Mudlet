@@ -40,6 +40,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 #include <zip.h>
@@ -367,6 +368,36 @@ void Host::resetProfile()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent( event );
     qDebug()<<"resetProfile() DONE";
+}
+
+// Saves profile to disk - does not save items dirty in the editor, however.
+// takes a directory to save in or an empty string for the default location
+// as well as a boolean whenever to sync the modules or not
+// returns true+filepath if successful or false+error message otherwise
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
+{
+    QString directory_xml;
+    if (saveLocation.isEmpty()) {
+        directory_xml = QStringLiteral("%1/.config/mudlet/profiles/%2/current").arg(QDir::homePath(), getName());
+    } else {
+        directory_xml = saveLocation;
+    }
+
+    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+    QDir dir_xml;
+    if (!dir_xml.exists(directory_xml)) {
+        dir_xml.mkpath(directory_xml);
+    }
+    QFile file_xml(filename_xml);
+    if (file_xml.open(QIODevice::WriteOnly)) {
+        XMLexport writer(this);
+        writer.exportHost(&file_xml);
+        file_xml.close();
+        saveModules(syncModules ? 1 : 0);
+        return std::make_tuple(true, filename_xml, QString());
+    } else {
+        return std::make_tuple(false, filename_xml, file_xml.errorString());
+    }
 }
 
 // Now returns the total weight of the path
@@ -1128,22 +1159,8 @@ bool Host::installPackage( const QString& fileName, int module )
     {
        mpEditorDialog->doCleanReset();
     }
-    if (!module)
-    {
-        QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
-        QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-        QDir dir_xml;
-        if( ! dir_xml.exists( directory_xml ) )
-        {
-            dir_xml.mkpath( directory_xml );
-        }
-        QFile file_xml( filename_xml );
-        if ( file_xml.open( QIODevice::WriteOnly ) )
-        {
-            XMLexport writer( this );
-            writer.exportHost( & file_xml );
-            file_xml.close();
-        }
+    if (!module) {
+        saveProfile();
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
@@ -1332,20 +1349,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     _home.append( getName() );
     QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
     removeDir( _dest, _dest );
-    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-    QDir dir_xml;
-    if( ! dir_xml.exists( directory_xml ) )
-    {
-        dir_xml.mkpath( directory_xml );
-    }
-    QFile file_xml( filename_xml );
-    if ( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        XMLexport writer( this );
-        writer.exportHost( & file_xml );
-        file_xml.close();
-    }
+    saveProfile();
     //NOW we reset if we're uninstalling a module
     if( mpEditorDialog && module == 3 )
     {
