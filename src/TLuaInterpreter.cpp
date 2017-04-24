@@ -903,14 +903,6 @@ int TLuaInterpreter::getLines( lua_State * L )
     return 1;
 }
 
-// luaTable result[line_number, content] = getLines( from_cursorPos, to_cursorPos )
-int TLuaInterpreter::getBufferTable( lua_State * L )
-{
-    lua_pushstring( L, "getBufferTable: Currently commented out in source code" );
-    lua_error( L );
-    return 1;
-}
-
 int TLuaInterpreter::loadRawFile( lua_State * L )
 {
     string luaSendText="";
@@ -1744,13 +1736,6 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
         mudlet::self()->setConsoleBufferSize( pHost, windowName, luaFrom, luaTo );
     }
     return 0;
-}
-
-int TLuaInterpreter::getBufferLine( lua_State * L )
-{
-    lua_pushstring( L, "getBufferLine: Currently commented out in source code" );
-    lua_error( L );
-    return 1;
 }
 
 // replace( sessionID, replace_with )
@@ -12974,8 +12959,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger );
     lua_register( pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount );
     lua_register( pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber );
-    //lua_register( pGlobalLua, "getBufferTable", TLuaInterpreter::getBufferTable );
-    //lua_register( pGlobalLua, "getBufferLine", TLuaInterpreter::getBufferLine );
     lua_register( pGlobalLua, "send", TLuaInterpreter::sendRaw );
     lua_register( pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup );
     lua_register( pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger );
@@ -12985,7 +12968,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "cut", TLuaInterpreter::cut );
     lua_register( pGlobalLua, "paste", TLuaInterpreter::paste );
     lua_register( pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow );
-    //lua_register( pGlobalLua, "userWindowLineWrap", TLuaInterpreter::userWindowLineWrap );
     lua_register( pGlobalLua, "debugc", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
@@ -13116,8 +13098,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked );
     lua_register( pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor );
     lua_register( pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable );
-    //lua_register( pGlobalLua, "setLevelColor", TLuaInterpreter::setLevelColor );
-    //lua_register( pGlobalLua, "getLevelColorTable", TLuaInterpreter::getLevelColorTable );
     lua_register( pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv );
     lua_register( pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName );
     lua_register( pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName );
@@ -13133,7 +13113,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData );
     lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
     lua_register( pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition );
-    //lua_register( pGlobalLua, "dumpRoomUserData", TLuaInterpreter::dumpRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserDataItem", TLuaInterpreter::clearRoomUserDataItem );
     lua_register( pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile );

@@ -523,34 +523,6 @@ void Host::sendRaw( QString command )
     mTelnet.sendData( command );
 }
 
-
-/*QStringList Host::getBufferTable( int from, int to )
-{
-    QStringList bufList;
-    if( (mTextBufferList.size()-1-to<0) || (mTextBufferList.size()-1-from<0) || (mTextBufferList.size()-1-from>=mTextBufferList.size()) || mTextBufferList.size()-1-to>=mTextBufferList.size() )
-    {
-        return bufList << QString("ERROR: buffer out of range");
-    }
-    for( int i=mTextBufferList.size()-1-from; i>=0; i-- )
-    {
-        if( i < mTextBufferList.size()-1-to ) break;
-        bufList << mTextBufferList[i];
-    }
-    return bufList;
-}
-
-QString Host::getBufferLine( int line )
-{
-    QString text;
-    if( (line < 0) || (mTextBufferList.size()-1-line>=mTextBufferList.size()) )
-    {
-        text = "ERROR: buffer out of range";
-        return text;
-    }
-    text = mTextBufferList[mTextBufferList.size()-1-line];
-    return text;
-} */
-
 int Host::createStopWatch()
 {
     int newWatchID = mStopWatchMap.size()+1;

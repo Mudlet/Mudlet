@@ -78,7 +78,6 @@ public:
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
-    void startLuaExecThread();
     void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
     bool call(const QString& function, const QString& mName);
@@ -196,7 +195,6 @@ public:
     static int setCustomEnvColor( lua_State * );
     static int roomLocked( lua_State * );
     static int setAreaName( lua_State * );
-    static int setRoomColor( lua_State * );
     static int getRoomCoordinates( lua_State * );
     static int setRoomCoordinates( lua_State * );
     static int roomExists( lua_State * );
@@ -261,8 +259,6 @@ public:
     static int getLineCount( lua_State * L );
     static int getLineNumber( lua_State * L );
     static int getColumnNumber( lua_State * L );
-    static int getBufferTable( lua_State * L );
-    static int getBufferLine( lua_State * L );
     static int selectCaptureGroup( lua_State * L );
     static int tempLineTrigger( lua_State * L );
     static int raiseEvent( lua_State * L );

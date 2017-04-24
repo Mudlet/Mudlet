@@ -867,8 +867,6 @@ to parse output that is known to arrive in a certain line margin or to delete un
 tempLineTrigger( 20, 2, [[send("shout Help")]] )
 will fire 20 lines after the current line and fire twice on 2 consecutive lines.
 |trigger_id = tempRegexTrigger( regex, lua_code )|temorary trigger using perl regex pattern matching
-|userWindowLineWrap( window, boolean )|turns line wrap mode on or off in user dock windows
-userWindowLineWrap( "chat", true ) turns on line wrap for window "chat"
 |printTable( table_name )|Lua debug function that prints the content of a Lua table on the screen, split up in keys and values. Useful if you want to see what the capture groups contain i. e. the lua table "matches".
 This function is defined in luaglobal.lua.
 |showCaptureGroups()|Lua debug function that highlights all capture groups in your trigger regex on the screen. This is very handy if you make complex regex and want to see what really matches in the text. example: make a trigger with the regex (\w) and call this function in the trigger script. All words in the text will be highlighted in random colors. This function is defined in luaglobal.lua
