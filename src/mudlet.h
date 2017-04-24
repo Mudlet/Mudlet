@@ -167,7 +167,7 @@ public:
    QPointer<Host>                mpCurrentActiveHost;
    bool                          mAutolog;
    QString                       mIrcNick;
-   QList<QMediaPlayer *>         MusicBoxList;
+   QList<QMediaPlayer *>         mMusicBoxList;
    QTabBar *                     mpTabBar;
    QStringList                   packagesToInstallList;
    QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
