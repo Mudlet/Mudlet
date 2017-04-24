@@ -37,8 +37,6 @@
 #include <QQueue>
 #include <QTextOption>
 #include <QTime>
-#include <QDockWidget>
-#include <QWidget>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -56,6 +54,7 @@ class QTimer;
 
 class Host;
 class TConsole;
+class TDockWidget;
 class TEvent;
 class TLabel;
 class TTimer;
@@ -270,7 +269,7 @@ private:
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
-    QMap<QString, QDockWidget*> dockWindowMap;
+    QMap<QString, TDockWidget*> dockWindowMap;
     QMap<Host*, QToolBar*> mUserToolbarMap;
 
 
@@ -320,17 +319,5 @@ protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
 
-
-// TDockWidget contains helpers for User Windows QDockWidget.
-class TDockWidget : public QDockWidget 
-{
-
-public:
-    TDockWidget() : QDockWidget() {}
-    TDockWidget(QWidget* parent) : QDockWidget(parent) {}
-
-protected:
-    void closeEvent( QCloseEvent * );
-};
 
 #endif // MUDLET_MUDLET_H
