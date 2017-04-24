@@ -947,7 +947,8 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
-        auto pD = new QDockWidget;
+        //auto pD = new QDockWidget;
+        auto pD = new TDockWidget();
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
@@ -1279,9 +1280,14 @@ bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
 bool mudlet::closeWindow( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) )
+    if( dockWindowConsoleMap.contains( name ) && dockWindowMap.contains(name) )
     {
         dockWindowConsoleMap[name]->console->close();
+        dockWindowMap[name]->close();
+        
+        dockWindowConsoleMap.remove(name);
+        dockWindowMap.remove(name);
+        
         return true;
     }
     else
@@ -2499,4 +2505,12 @@ void mudlet::slot_statusBarMessageChanged( QString text )
 void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
 {
     emit signal_profileMapReloadRequested( affectedProfiles );
+}
+
+
+// addition to help with dock widget closing.
+void TDockWidget::closeEvent( QCloseEvent * event ) {
+    //qDebug() << "TDockWidget::closeEvent() has fired. DockWidget Named: " << windowTitle();
+    
+    mudlet::self()->closeWindow( mudlet::self()->getActiveHost(), windowTitle() );
 }

@@ -2801,7 +2801,7 @@ int TLuaInterpreter::closeUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->hideWindow( pHost, text );
+    mudlet::self()->closeWindow( pHost, text );
 
     return 0;
 }
