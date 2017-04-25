@@ -55,11 +55,16 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
 
-# Leave the value of the following empty, line should be "BUILD =" without quotes
-# (it is NOT a Qt built-in variable) for a release build or, if you are
-# distributing modified code, it would be useful if you could put something to
-# distinguish the version:
-BUILD = "-dev"
+# if you are distributing modified code, it would be useful if you
+# put something distinguishing into the BUILD environment variable to make
+# identification of the used version simple
+# the qmake BUILD variable is NO built-in
+BUILD = $$(BUILD)
+isEmpty( BUILD ) {
+# Leave the value of the following empty for a release build
+# i.e. the line should be "BUILD =" without quotes
+  BUILD = "-dev"
+}
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to

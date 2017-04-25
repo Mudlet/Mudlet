@@ -45,10 +45,14 @@ ELSE()
 ENDIF()
 
 SET(APP_VERSION 3.0.1)
-SET(APP_BUILD "-dev")
+IF(DEFINED ENV{BUILD} AND NOT $ENV{BUILD} STREQUAL "")
+  SET(APP_BUILD $ENV{BUILD})
+else()
+  SET(APP_BUILD "-dev")
+ENDIF()
 # APP_BUILD should only be empty/null in official "release" builds,
-# developers may like to set it to their user and branch names to make it easier
-# to tell different builds apart!
+# developers may like to set the BUILD environment variable to their
+# user and branch names to make it easier to tell different builds apart!
 #
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It will not necessarily cause
