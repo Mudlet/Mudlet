@@ -948,7 +948,7 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     if( ! dockWindowMap.contains( name ) )
     {
-        auto pD = new TDockWidget( pHost );
+        auto pD = new TDockWidget();
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
@@ -964,8 +964,11 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
         return true;
+    } else {
+        dockWindowMap[name]->show();
     }
-    else return false;
+    
+    return false;
 }
 
 bool mudlet::createMiniConsole( Host * pHost, const QString & name, int x, int y, int width, int height )
@@ -1280,13 +1283,9 @@ bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
 bool mudlet::closeWindow( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) && dockWindowMap.contains(name) )
+    if( dockWindowMap.contains(name) )
     {
-        dockWindowConsoleMap[name]->console->close();
-        dockWindowMap[name]->close();
-        
-        dockWindowConsoleMap.remove(name);
-        dockWindowMap.remove(name);
+        dockWindowMap[name]->hide();
         
         return true;
     }

@@ -19,29 +19,15 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
-#include <QPointer>
 #include <QDockWidget>
-#include <QWidget>
 #include "post_guard.h"
 
 class QCloseEvent;
 
-class Host;
-
 // TDockWidget contains helpers for User Windows QDockWidget.
-class TDockWidget : public QDockWidget 
-{
-
-public:
-    TDockWidget( Host * ) ;
-
+class TDockWidget : public QDockWidget {
 protected:
-    void closeEvent( QCloseEvent * );
-
-private:
-    QPointer<Host>      widgetHost;
-
+    void closeEvent(QCloseEvent *) override;
 };
-
 
 #endif // MUDLET_TDOCKWIDGET_H
