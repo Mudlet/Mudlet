@@ -41,7 +41,6 @@ public:
     bool setValue(const QString);
     bool setValue(const QString, const int);
     bool setValueType(const int);
-    bool setKeyType(const int);
     bool setName(const QString);
     bool setName(const QString, int);
     void setNewName(const QString, int);

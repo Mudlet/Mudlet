@@ -50,7 +50,6 @@ public:
     void setBase(TVar*);
     TVar* getBase();
     void clear();
-    void clearTemp();
     void buildVarTree(QTreeWidgetItem*, TVar*, bool);
     TVar* getWVar(QTreeWidgetItem*);
     TVar* getTVar(QTreeWidgetItem*);
