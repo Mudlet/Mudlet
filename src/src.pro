@@ -58,7 +58,7 @@ QT += network opengl uitools multimedia gui
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the BUILD environment variable to make
 # identification of the used version simple
-# the qmake BUILD variable is NO built-in
+# the qmake BUILD variable is NOT built-in
 BUILD = $$(BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
