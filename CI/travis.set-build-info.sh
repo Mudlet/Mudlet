@@ -17,10 +17,8 @@ VERSION=""
 
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^SET\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
-  perl -pi -e "s/SET\(APP_BUILD \"-dev\"\)/SET(APP_BUILD \"${BUILD}\")/" "${TRAVIS_BUILD_DIR}/CMakeLists.txt"
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/src.pro")
-  perl -pi -e "s/BUILD = \"-dev\"/BUILD = \"${BUILD}\"/" "${TRAVIS_BUILD_DIR}/src/src.pro"
 fi
 
 export VERSION
