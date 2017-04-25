@@ -406,7 +406,6 @@ public:
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     void logError(std::string& e, const QString&, const QString& function);
 
-    static std::map<lua_State*, Host*> luaInterpreterMap;
     QMap<QNetworkReply*, QString> downloadMap;
 
 public slots:
@@ -437,5 +436,7 @@ private:
     QString code;
     bool exit;
 };
+
+Host& host_from_lua_state(lua_State* L);
 
 #endif // MUDLET_LUAINTERPRETER_H
