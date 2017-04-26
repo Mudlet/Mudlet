@@ -90,8 +90,6 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 : mpHost( pH )
 , mHostID( id )
 , purgeTimer(this)
-, mpGatekeeperThread()
-, mpLuaSessionThread()
 {
     pGlobalLua = 0;
 
@@ -12857,12 +12855,6 @@ int TLuaInterpreter::check_for_mappingscript()
     int r = lua_toboolean(L, -1);
     lua_pop( L, 2 );
     return r;
-}
-
-void TLuaInterpreter::startLuaSessionInterpreter()
-{
-    mpLuaSessionThread = new TLuaMainThread(this);
-    mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
 }
 
 #if defined(_MSC_VER) && defined(_DEBUG)
