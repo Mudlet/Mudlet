@@ -455,7 +455,7 @@ void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
     if( wantPrint && mPrintCommand )
     {
         mInsertedMissingLF = true;
-        if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
+        if( cmd.isEmpty() && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
         {
             ;
         }
@@ -469,7 +469,7 @@ void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
     QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
     if( ! dontExpandAliases )
     {
-        if( commandList.size() == 0 )
+        if( commandList.isEmpty() )
         {
             sendRaw( "\n" );//NOTE: damit leerprompt moeglich sind
             return;
@@ -479,7 +479,7 @@ void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
     {
         if( commandList[i].size() < 1 ) continue;
         QString command = commandList[i];
-        command.replace("\n", "");
+        command.remove(QChar::LineFeed);
         mReplacementCommand = "";
         if( dontExpandAliases )
         {
