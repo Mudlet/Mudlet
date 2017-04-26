@@ -25,6 +25,8 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 # Including IRC Library
 include(../3rdparty/communi/src/core/core.pri)
 
+include(../3rdparty/lua_yajl/src.pri)
+
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
 VERSION = 3.0.1
@@ -73,7 +75,6 @@ macx {
 } else {
     TARGET = mudlet
 }
-msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
@@ -232,9 +233,6 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
-
-!msvc:SOURCES += lua_yajl.c
-msvc:SOURCES += lua_yajl.cpp
 
 
 HEADERS += \

@@ -73,14 +73,9 @@
 #include "luazip.h"
 #endif
 
-
-#ifndef LUA_CPP
 extern "C" {
-#endif
 int luaopen_yajl(lua_State*);
-#ifndef LUA_CPP
 }
-#endif
 
 using namespace std;
 
