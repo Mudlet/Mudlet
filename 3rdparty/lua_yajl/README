@@ -1,0 +1,271 @@
+**********************************************************************
+* Author  : Brian Maher <maherb at brimworks dot com>
+* Library : lua_yajl - Lua 5.1 interface to yajl.
+*
+* The MIT License
+*
+* Copyright (c) 2009 Brian Maher
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+**********************************************************************
+
+To use this library, you need yajl version 2.x, get it here:
+     http://lloyd.github.com/yajl/
+
+To build this library, you can use CMake (which is how yajl is built):
+    http://www.cmake.org/cmake/resources/software.html
+
+...or you can use lua rocks.
+
+...or you can use GNU Make.  If the headers and/or library are
+installed in non-standard locations, simply set the LIBDIR and/or
+INCDIR make variables.  For example:
+
+  make macosx \
+      LIBDIR='-L/opt/lua/lib -L/opt/yajl/lib' \
+      INCDIR='-I/opt/lua/include -I/opt/yajl/include'
+
+Loading the library:
+
+    If you built the library as a loadable package
+        [local] yajl = require 'yajl'
+
+    If you compiled the package statically into your application, call
+    the function "luaopen_yajl(L)". It will create a table with the yajl
+    functions and leave it on the stack.
+
+NOTE ON LARGE NUMBERS:
+
+    JSON integers and floating points are handled with the 'double' C
+    type, which is normally the native number format for Lua.  We do
+    NOT currently do error handling if a number is outside of range,
+    instead the number will be truncated as specified by the strtod()
+    C function.  At some point in the future perhaps we will add
+    support for custom error handlers if a double can not accurately
+    represent the JSON number.  (want to write this support!?)
+
+-- yajl functions --
+
+yajl.null
+
+    A light user data object that represents the JSON null value.  We
+    use this instead of nil to represent null since Lua tables can not
+    have a value of nil (that would delete the key-value pair), and
+    nil's can not exist at the end of an array.
+
+If you don't care about streaming, here are two convenience methods:
+
+string = yajl.to_string(lua_obj)
+
+    Translate a lua object into a JSON representation by creating a
+    generator and calling the 'value' method with the passed in
+    lua_obj and returns the result.  See generator:value() for more
+    information about this operation.  Note that information loss
+    may happen in certain situations.  For example, empty tables are
+    always translated into empty arrays.
+
+lua_obj = yajl.to_value(string)
+
+    Translate a string to a lua object.  This is done in C by running
+    code that is essentially the same as this (but faster):
+
+    function to_value(string)
+        local result
+        local stack = {
+            function(val) result = val end
+        }
+        local obj_key
+        local events = {
+            value: function(_, val)
+                stack[#stack](val)
+            end,
+            open_array: function()
+                local arr = {}
+                stack[#stack](arr)
+                table.insert(stack, function(val)
+                    table.insert(result, val)
+                end)
+            end,
+            open_object: function()
+                local obj = {}
+                stack[#stack](obj)
+                table.insert(stack, function(val)
+                    obj[obj_key] = val
+                end)
+            end,
+            object_key: function(_, val)
+                obj_key = val
+            end,
+            close: function()
+                stack[#stack] = nil
+            end,
+        }
+
+        yajl.parser({ events: events })(string)
+        return result
+    end
+
+parser = yajl.parser {
+        allow_comments:  true,
+        check_utf8:      false,
+        events:          {
+            value:       function(events, value, type) ... end,
+            open_object: function(events) ... end,
+            object_key:  function(events, string) ... end,
+            open_array:  function(events) ... end,
+            close:       function(events, type) ... end,
+        },
+    }
+
+    If allow_comments is true, then both // and /* ... */ javascript
+    comments are allowed.  If check_utf8 is true, then the parser will
+    make sure all input is valid UTF8.
+
+    The results of this function is a parser function:
+
+    parser(string)
+
+        Call it with a string to be parsed.
+
+    The events table has various callback functions that will be
+    called when the events happen.  All callbacks are passed the
+    events table as the first argument.  Note that the yajl.generator
+    conforms to this events interface.  Here is the details of each
+    callback function:
+
+    events:value(value, type)
+
+        Called when a JSON string, boolean, integer, double, or null
+        is found in the input stream.  The type parameter is one of
+        these strings depending on what was found in the input stream:
+
+            "string"  - A JSON string was found.
+            "boolean" - A JSON true or false was found.
+            "number"  - A JSON number was found.
+            "null"    - A JSON null was found.
+
+        Note that nulls are NOT represented as a Lua nil value,
+        instead they are the yajl.null value.
+
+    events:open_object()
+
+        An open object brace was found.
+
+    events:object_key(string)
+
+        If defined, instead of calling events:value(string, "string")
+        when an object key is found, this method is called instead.
+
+    events:open_array()
+
+        An open array brace was found.
+
+    events:close(type)
+
+        A close array or object brace was found.  Type is the string
+        "object" or "array" depending on what type is being
+        terminated.
+
+generator = yajl.generator {
+        printer: function(string) print(string) end,
+        indent:  "\t",
+    }
+
+    Create a new generator with the specified printer callback,
+    optionally specify a whitespace string to be used for indenting if
+    you want "pretty" output.  The printer must be a function that
+    takes a single string parameter:
+
+    printer(string)
+
+        The returned value is ignored, string is the text to be
+        written to the stream.  Single characters are "printed" to the
+        stream, so if writing to a file, be sure it is buffered.
+
+    The returned generator object has the following methods:
+
+    generator = generator:value(lua_object)
+
+        Traverse the lua_object and call the appropriate generator
+        methods.  lua_object can be any of these types:
+
+            number/boolean/string - Generates an appropriate JSON
+                representation.
+
+            nil/yajl.null - Generates a JSON null representation.
+
+            metatable(lua_object).__gen_json(lua_object, generator) -
+                If the lua_object has a metatable with a __gen_json
+                function in the metatable, then the work of generating
+                a JSON representation is delegated to that function.
+
+            table - If all keys in the table are positive integers,
+                generates a JSON array representation with element 1
+                being the first element of the array.  Otherwise, it
+                is reprsented as a JSON object, and all keys are
+                coorced into strings using tostring() lua function.
+                The values are recursively traversed in depth first
+                fashion.  All keys that begin with two underscores are
+                ignored.  An empty table is always treated as an empty
+                array.
+
+        All other types are ignored (thread, userdata) unless there is
+        an appropriate __gen_json metatable method.
+
+    generator = generator:integer(number)
+
+        Generate an integer JSON representation.
+
+    generator = generator:double(number)
+
+        Generate a floating point JSON representation.
+
+    generator = generator:number(number)
+
+        Generate a number JSON representation.  If the number is
+        infinity, we will generate the special 1e+666 number.  If the
+        number is NAN (not a number), then we generate -0.  At least
+        this way there is minimal information loss (since 1e+666 can
+        not be represented in a double, that will be re-encoded as
+        infinity).
+
+    generator = generator:string(string)
+
+        Generate a string JSON representation with proper escaping.
+
+    generator = generator:null()
+
+        Generate a null JSON representation.
+
+    generator = generator:boolean(boolean)
+
+        Generate a boolean JSON representation.
+
+    generator = generator:open_object()
+
+        Begin generating a JSON object.  May only be followed with a
+        call to generator:close() or generator:string().
+
+    generator = generator:open_array()
+
+        Begin generating an array.
+
+    generator = generator:close()
+
+        End generation of an array or object.
