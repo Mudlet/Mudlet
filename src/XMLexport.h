@@ -51,34 +51,34 @@ public:
     XMLexport(TScript*);
     XMLexport(TKey*);
 
-    bool            writeHost( Host * );
+    bool writeHost(Host*);
 
-    bool            writeTrigger( TTrigger * );
-    bool            writeTimer( TTimer * );
-    bool            writeAlias( TAlias * );
-    bool            writeAction( TAction * );
-    bool            writeScript( TScript * );
-    bool            writeKey( TKey * );
-    bool            writeVariable( TVar *, LuaInterface *, VarUnit * );
-    bool            writeModuleXML( QIODevice * device, QString moduleName);
-    bool            exportHost( Host * );
+    bool writeTrigger(TTrigger*);
+    bool writeTimer(TTimer*);
+    bool writeAlias(TAlias*);
+    bool writeAction(TAction*);
+    bool writeScript(TScript*);
+    bool writeKey(TKey*);
+    bool writeVariable(TVar*, LuaInterface*, VarUnit*);
+    bool writeModuleXML(QIODevice* device, QString moduleName);
+    bool exportHost(Host*);
 
-    bool            exportHost( QIODevice * );
-    bool            exportGenericPackage( QIODevice * device );
-    bool            writeGenericPackage( Host * );
-    bool            exportTrigger( QIODevice * );
-    bool            exportTimer( QIODevice * );
-    bool            exportAlias( QIODevice * );
-    bool            exportAction( QIODevice * );
-    bool            exportScript( QIODevice * );
-    bool            exportKey( QIODevice * );
+    bool exportHost(QIODevice*);
+    bool exportGenericPackage(QIODevice* device);
+    bool writeGenericPackage(Host*);
+    bool exportTrigger(QIODevice*);
+    bool exportTimer(QIODevice*);
+    bool exportAlias(QIODevice*);
+    bool exportAction(QIODevice*);
+    bool exportScript(QIODevice*);
+    bool exportKey(QIODevice*);
 
-    bool            exportTrigger( TTrigger * );
-    bool            exportTimer( TTimer * );
-    bool            exportAlias( TAlias * );
-    bool            exportAction( TAction * );
-    bool            exportScript( TScript * );
-    bool            exportKey( TKey * );
+    bool exportTrigger(TTrigger*);
+    bool exportTimer(TTimer*);
+    bool exportAlias(TAlias*);
+    bool exportAction(TAction*);
+    bool exportScript(TScript*);
+    bool exportKey(TKey*);
 
 private:
     QPointer<Host> mpHost;

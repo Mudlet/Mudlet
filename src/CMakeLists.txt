@@ -386,17 +386,6 @@ ENDIF()
 SET(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
 
-SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
-
-IF(LUA_CPP)
-  ADD_DEFINITIONS(-DLUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.cpp)
-ELSE(LUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
-ENDIF(LUA_CPP)
-
-ADD_SUBDIRECTORY(irc)
-
 ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
 IF(UNIX)
@@ -425,7 +414,6 @@ INCLUDE_DIRECTORIES(
     ${Qt5Multimedia_INCLUDE_DIRS}
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include/IrcCore
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
@@ -474,7 +462,8 @@ TARGET_LINK_LIBRARIES(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    irccqt
+    communi
+    lua_yajl
 )
 
 IF(PC_ZIP_FOUND)
