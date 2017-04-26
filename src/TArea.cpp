@@ -535,48 +535,22 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         QPair<QString, int> exitData;
         exitData.second = itAreaExit.value().first;
         switch (itAreaExit.value().second) {
-        case DIR_NORTH:
-            exitData.first = QString("north");
-            break;
-        case DIR_NORTHEAST:
-            exitData.first = QString("northeast");
-            break;
-        case DIR_NORTHWEST:
-            exitData.first = QString("northwest");
-            break;
-        case DIR_SOUTH:
-            exitData.first = QString("south");
-            break;
-        case DIR_WEST:
-            exitData.first = QString("west");
-            break;
-        case DIR_EAST:
-            exitData.first = QString("east");
-            break;
-        case DIR_SOUTHEAST:
-            exitData.first = QString("southeast");
-            break;
-        case DIR_SOUTHWEST:
-            exitData.first = QString("southwest");
-            break;
-        case DIR_UP:
-            exitData.first = QString("up");
-            break;
-        case DIR_DOWN:
-            exitData.first = QString("down");
-            break;
-        case DIR_IN:
-            exitData.first = QString("in");
-            break;
-        case DIR_OUT:
-            exitData.first = QString("out");
-            break;
-        case DIR_OTHER:
-            roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());
-            break;
+        case DIR_NORTH:     exitData.first = QString("north");                         break;
+        case DIR_NORTHEAST: exitData.first = QString("northeast");                     break;
+        case DIR_NORTHWEST: exitData.first = QString("northwest");                     break;
+        case DIR_SOUTH:     exitData.first = QString("south");                         break;
+        case DIR_WEST:      exitData.first = QString("west");                          break;
+        case DIR_EAST:      exitData.first = QString("east");                          break;
+        case DIR_SOUTHEAST: exitData.first = QString("southeast");                     break;
+        case DIR_SOUTHWEST: exitData.first = QString("southwest");                     break;
+        case DIR_UP:        exitData.first = QString("up");                            break;
+        case DIR_DOWN:      exitData.first = QString("down");                          break;
+        case DIR_IN:        exitData.first = QString("in");                            break;
+        case DIR_OUT:       exitData.first = QString("out");                           break;
+        case DIR_OTHER:     roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());   break;
         default:
             qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %i found for exit from room %i to room %i.",
-                     itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first);
+                     itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first );
         }
         if (!exitData.first.isEmpty()) {
             results.insert(itAreaExit.key(), exitData);
