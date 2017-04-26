@@ -34,51 +34,53 @@ template <class T>
 class Tree
 {
 public:
-                       Tree();
-                       Tree( T * parent );
-    virtual            ~Tree();
-    T *                getParent()                 { return mpParent; }
-    std::list<T *> *   getChildrenList();
-    bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
-    int                getChildCount()             { return mpMyChildrenList->size(); }
-    int                getID()                     { return mID; }
-    void               setID( int id )             { mID=id; }
-    void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );
-    bool               popChild( T * removeChild );
-    void               setParent( T * parent );
-    void               enableFamily();
-    void               disableFamily();
-    bool               isActive();
-    bool               activate();
-    void               deactivate();
-    bool               setIsActive( bool );
-    bool               shouldBeActive();
-    void               setShouldBeActive( bool b );
-    bool               ancestorsActive(); // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    Tree();
+    Tree(T* parent);
+    virtual ~Tree();
+    T* getParent() { return mpParent; }
+    std::list<T*>* getChildrenList();
+    bool hasChildren() { return (mpMyChildrenList->size() > 0); }
+    int getChildCount() { return mpMyChildrenList->size(); }
+    int getID() { return mID; }
+    void setID(int id) { mID = id; }
+    void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
+    bool popChild(T* removeChild);
+    void setParent(T* parent);
+    void enableFamily();
+    void disableFamily();
+    bool isActive();
+    bool activate();
+    void deactivate();
+    bool setIsActive(bool);
+    bool shouldBeActive();
+    void setShouldBeActive(bool b);
 
-    T *                mpParent;
-    std::list<T *> *   mpMyChildrenList;
-    int                mID;
-    QString &          getError();
-    void               setError( QString );
-    bool               state();
-    QString            getPackageName() { return mPackageName; }
-    void               setPackageName(const QString& n ){ mPackageName = n; }
-    void               setModuleName(const QString& n ){ mModuleName = n;}
-    QString            getModuleName() {return mModuleName;}
-    QString            mPackageName;
-    QString            mModuleName;
+    // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    bool ancestorsActive();
+
+    T* mpParent;
+    std::list<T*>* mpMyChildrenList;
+    int mID;
+    QString& getError();
+    void setError(QString);
+    bool state();
+    QString getPackageName() { return mPackageName; }
+    void setPackageName(const QString& n) { mPackageName = n; }
+    void setModuleName(const QString& n) { mModuleName = n; }
+    QString getModuleName() { return mModuleName; }
+    QString mPackageName;
+    QString mModuleName;
 
 
 protected:
-    virtual bool       canBeActivated();
-    bool               mOK_init;
-    bool               mOK_code;
+    virtual bool canBeActivated();
+    bool mOK_init;
+    bool mOK_code;
 
 private:
-    bool               mActive;
-    bool               mUserActiveState;
-    QString            mErrorMessage;
+    bool mActive;
+    bool mUserActiveState;
+    QString mErrorMessage;
 };
 
 template <class T>
