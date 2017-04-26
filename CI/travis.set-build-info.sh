@@ -1,15 +1,15 @@
 #!/bin/bash
 
-BUILD=""
+MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ]; then
-  BUILD="-testing"
+  MUDLET_VERSION_BUILD="-testing"
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
     COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
-    BUILD="${BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
   else
     COMMIT=$(git rev-parse --short HEAD)
-    BUILD="${BUILD}-${COMMIT}"
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
   fi
 fi
 
@@ -22,4 +22,4 @@ elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
 fi
 
 export VERSION
-export BUILD
+export MUDLET_VERSION_BUILD
