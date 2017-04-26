@@ -28,6 +28,8 @@ static int got_map_value(lua_State* L);
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds.
 
+#include <crtdbg.h>
+
 #define LUAYAJL_CLIENT_TYPE (_CLIENT_BLOCK | ((('L' << 8) | 'Y') << 16))
 
 static void* yajl_malloc_dbg(void* ctx, size_t size)

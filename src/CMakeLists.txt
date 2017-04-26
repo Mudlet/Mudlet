@@ -386,15 +386,6 @@ ENDIF()
 SET(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
 
-SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
-
-IF(LUA_CPP)
-  ADD_DEFINITIONS(-DLUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.cpp)
-ELSE(LUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
-ENDIF(LUA_CPP)
-
 ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
 IF(UNIX)
@@ -472,6 +463,7 @@ TARGET_LINK_LIBRARIES(mudlet
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
     communi
+    lua_yajl
 )
 
 IF(PC_ZIP_FOUND)

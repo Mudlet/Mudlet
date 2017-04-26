@@ -32,15 +32,11 @@
 #include <QTimer>
 #include "post_guard.h"
 
-#ifndef LUA_CPP
 extern "C" {
-#endif
-    #include <lua.h>
-    #include <lualib.h>
-    #include <lauxlib.h>
-#ifndef LUA_CPP
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 }
-#endif
 
 #include <iostream>
 #include <list>
