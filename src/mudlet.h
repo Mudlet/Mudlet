@@ -67,7 +67,6 @@ class mudlet : public QMainWindow, public Ui::MainWindow
     Q_DISABLE_COPY(mudlet)
 
 public:
-
                                  mudlet();
                                 ~mudlet();
    static                        mudlet * self();
@@ -132,19 +131,19 @@ public:
    void                          writeSettings();
    bool                          openWebPage(const QString& path);
    void                          processEventLoopHack();
-   static const QString          scmMudletXmlDefaultVersion;
-   static QPointer<TConsole>     mpDebugConsole;
-   static QMainWindow*           mpDebugArea;
-   static bool                   debugMode;
-   QMap<Host *, TConsole *>      mConsoleMap;
-   QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
-   QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
-   QIcon *                       testicon;
-   bool                          mShowMenuBar;
-   bool                          mShowToolbar;
+    static const QString scmMudletXmlDefaultVersion;
+    static QPointer<TConsole> mpDebugConsole;
+    static QMainWindow* mpDebugArea;
+    static bool debugMode;
+    QMap<Host*, TConsole*> mConsoleMap;
+    QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;
+    QMap<Host*, QMap<QString, TLabel*>> mHostLabelMap;
+    QIcon* testicon;
+    bool mShowMenuBar;
+    bool mShowToolbar;
    bool                          isGoingDown() { return mIsGoingDown; }
-   int                           mMainIconSize;
-   int                           mTEFolderIconSize;
+    int mMainIconSize;
+    int mTEFolderIconSize;
    void                          setIcoSize( int s );
    void                          replayStart();
    bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
@@ -153,27 +152,30 @@ public:
    void                          hideEvent( QHideEvent * event ) override;
    bool                          resetFormat( Host *, QString & name );
    bool                          moduleTableVisible();
-   bool                          mWindowMinimized;
+    bool mWindowMinimized;
    void                          doAutoLogin( const QString & );
    bool                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
    void                          playSound( QString s, int );
-   QTime                         mReplayTime;
-   int                           mReplaySpeed;
-   QToolBar *                    mpMainToolBar;
-   QMap<QTimer *, TTimer *>      mTimerMap;
-   dlgIRC *                      mpIRC;
-   QString                       version;
-   QPointer<Host>                mpCurrentActiveHost;
-   bool                          mAutolog;
-   QString                       mIrcNick;
-   QList<QMediaPlayer *>         mMusicBoxList;
-   QTabBar *                     mpTabBar;
-   QStringList                   packagesToInstallList;
-   QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
-                                                    // only ::ShowTabsAndSpaces
-                                                    // and ::ShowLineAndParagraphSeparators
-                                                    // are considered/used/stored
+    QTime mReplayTime;
+    int mReplaySpeed;
+    QToolBar* mpMainToolBar;
+    QMap<QTimer*, TTimer*> mTimerMap;
+    dlgIRC* mpIRC;
+    QString version;
+    QPointer<Host> mpCurrentActiveHost;
+    bool mAutolog;
+    QString mIrcNick;
+    QList<QMediaPlayer*> mMusicBoxList;
+    QTabBar* mpTabBar;
+    QStringList packagesToInstallList;
+
+    // Used for editor area, but
+    // only ::ShowTabsAndSpaces
+    // and ::ShowLineAndParagraphSeparators
+    // are considered/used/stored
+    QTextOption::Flags mEditorTextOptions;
+
    void                         setEditorTextoptions( const bool, const bool );
 
    enum StatusBarOption {
@@ -183,7 +185,7 @@ public:
    };
 
    Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
-   StatusBarOptions             mStatusBarState;
+    StatusBarOptions mStatusBarState;
 
    void                         requestProfilesToReloadMaps( QList<QString> );
                                 // Used by a profile to tell the mudlet class
@@ -194,9 +196,7 @@ public:
     void                        setAuditErrorsToConsoleEnabled( const bool state ) { mIsToDisplayMapAuditErrorsToConsole = state; }
     void                        createMapper( bool isToLoadDefaultMapFile = true );
 
-
 public slots:
-
     void processEventLoopHack_timerRun();
     void slot_mapper();
     void slot_replayTimeChanged();
