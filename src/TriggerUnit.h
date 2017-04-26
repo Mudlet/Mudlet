@@ -41,32 +41,38 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-                          TriggerUnit( Host * pHost ) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats();}
-    std::list<TTrigger *> getTriggerRootNodeList()   { QMutexLocker locker(& mTriggerUnitLock); return mTriggerRootNodeList; }
-    TTrigger *            getTrigger( int id );
-    void                  removeAllTempTriggers();
-    void                  reorderTriggersAfterPackageImport();
-    TTrigger *            findTrigger(const QString & );
-    bool                  enableTrigger(const QString & );
-    bool                  disableTrigger(const QString & );
-    bool                  killTrigger(const QString & name );
-    bool                  registerTrigger( TTrigger * pT );
-    void                  unregisterTrigger( TTrigger * pT );
-    void                  reParentTrigger( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    void                  processDataStream(const QString &, int );
-    void                  compileAll();
-    void                  setTriggerStayOpen(const QString&, int );
-    void                  stopAllTriggers();
-    void                  reenableAllTriggers();
-    QString               assembleReport();
-    std::list<TTrigger *> mCleanupList;
-    int                     getNewID();
-    QMultiMap<QString, TTrigger *> mLookupTable;
-    QMutex                mTriggerUnitLock;
-    void                  markCleanup( TTrigger * pT );
-    void                  doCleanup();
-    void                  uninstall(const QString& );
-    void                  _uninstall( TTrigger * pChild, QString packageName );
+    TriggerUnit(Host* pHost) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats(); }
+
+    std::list<TTrigger*> getTriggerRootNodeList()
+    {
+        QMutexLocker locker(&mTriggerUnitLock);
+        return mTriggerRootNodeList;
+    }
+
+    TTrigger* getTrigger(int id);
+    void removeAllTempTriggers();
+    void reorderTriggersAfterPackageImport();
+    TTrigger* findTrigger(const QString&);
+    bool enableTrigger(const QString&);
+    bool disableTrigger(const QString&);
+    bool killTrigger(const QString& name);
+    bool registerTrigger(TTrigger* pT);
+    void unregisterTrigger(TTrigger* pT);
+    void reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void processDataStream(const QString&, int);
+    void compileAll();
+    void setTriggerStayOpen(const QString&, int);
+    void stopAllTriggers();
+    void reenableAllTriggers();
+    QString assembleReport();
+    std::list<TTrigger*> mCleanupList;
+    int getNewID();
+    QMultiMap<QString, TTrigger*> mLookupTable;
+    QMutex mTriggerUnitLock;
+    void markCleanup(TTrigger* pT);
+    void doCleanup();
+    void uninstall(const QString&);
+    void _uninstall(TTrigger* pChild, QString packageName);
 
     int statsTriggerTotal;
     int statsTempTriggers;
@@ -84,14 +90,14 @@ public:
     QList<TTrigger*> uninstallList;
 
 private:
-                              TriggerUnit(){;}
-    void                      initStats();
-    void                      _assembleReport( TTrigger * );
-    TTrigger *                getTriggerPrivate( int id );
-    void                      addTriggerRootNode( TTrigger * pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false );
-    void                      addTrigger( TTrigger * pT );
-    void                      removeTriggerRootNode( TTrigger * pT );
-    void                      removeTrigger( TTrigger *);
+    TriggerUnit() {}
+    void initStats();
+    void _assembleReport(TTrigger*);
+    TTrigger* getTriggerPrivate(int id);
+    void addTriggerRootNode(TTrigger* pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false);
+    void addTrigger(TTrigger* pT);
+    void removeTriggerRootNode(TTrigger* pT);
+    void removeTrigger(TTrigger*);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;

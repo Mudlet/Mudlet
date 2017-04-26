@@ -68,7 +68,7 @@ class TConsole;
 class dlgVarsMainArea;
 
 
-class dlgTriggerEditor : public QMainWindow , private Ui::trigger_editor
+class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
     Q_OBJECT
 
@@ -188,8 +188,8 @@ private slots:
     void                        slot_toggle_isPushDownButton( const int );
 
 public:
-    TConsole *                  mpErrorConsole;
-    bool                        mNeedUpdateData;
+    TConsole* mpErrorConsole;
+    bool mNeedUpdateData;
 
 private:
     void                        saveOpenChanges();
@@ -222,54 +222,54 @@ private:
     void                        exportScript( QFile & );
     void                        exportKey( QFile & );
 
-    QToolBar *                  toolBar;
-    QToolBar *                  toolBar2;
-    bool                        showHiddenVars;
+    QToolBar* toolBar;
+    QToolBar* toolBar2;
+    bool showHiddenVars;
 
-    QTreeWidgetItem *           mpAliasBaseItem;
-    QTreeWidgetItem *           mpTriggerBaseItem;
-    QTreeWidgetItem *           mpScriptsBaseItem;
-    QTreeWidgetItem *           mpTimerBaseItem;
-    QTreeWidgetItem *           mpActionBaseItem;
-    QTreeWidgetItem *           mpKeyBaseItem;
-    QTreeWidgetItem *           mpVarBaseItem;
+    QTreeWidgetItem* mpAliasBaseItem;
+    QTreeWidgetItem* mpTriggerBaseItem;
+    QTreeWidgetItem* mpScriptsBaseItem;
+    QTreeWidgetItem* mpTimerBaseItem;
+    QTreeWidgetItem* mpActionBaseItem;
+    QTreeWidgetItem* mpKeyBaseItem;
+    QTreeWidgetItem* mpVarBaseItem;
 
-    QTreeWidgetItem *           mpCurrentActionItem;
-    QTreeWidgetItem *           mpCurrentKeyItem;
-    QTreeWidgetItem *           mpCurrentTimerItem;
-    QTreeWidgetItem *           mpCurrentScriptItem;
-    QTreeWidgetItem *           mpCurrentTriggerItem;
-    QTreeWidgetItem *           mpCurrentAliasItem;
-    QTreeWidgetItem *           mpCurrentVarItem;
-    QLineEdit *                 mpCursorPositionIndicator;
-    int                         mCurrentView;
-    static const int            cmTriggerView;
-    static const int            cmTimerView;
-    static const int            cmAliasView;
-    static const int            cmScriptView;
-    static const int            cmActionView;
-    static const int            cmKeysView;
-    static const int            cmVarsView;
+    QTreeWidgetItem* mpCurrentActionItem;
+    QTreeWidgetItem* mpCurrentKeyItem;
+    QTreeWidgetItem* mpCurrentTimerItem;
+    QTreeWidgetItem* mpCurrentScriptItem;
+    QTreeWidgetItem* mpCurrentTriggerItem;
+    QTreeWidgetItem* mpCurrentAliasItem;
+    QTreeWidgetItem* mpCurrentVarItem;
+    QLineEdit* mpCursorPositionIndicator;
+    int mCurrentView;
+    static const int cmTriggerView;
+    static const int cmTimerView;
+    static const int cmAliasView;
+    static const int cmScriptView;
+    static const int cmActionView;
+    static const int cmKeysView;
+    static const int cmVarsView;
 
-    QScrollArea *               mpScrollArea;
-    QWidget *                   HpatternList;
-    dlgTriggersMainArea *       mpTriggersMainArea;
-    dlgTimersMainArea *         mpTimersMainArea;
-    dlgSystemMessageArea *      mpSystemMessageArea;
-    dlgSourceEditorArea *       mpSourceEditorArea;
-    dlgAliasMainArea *          mpAliasMainArea;
-    dlgActionMainArea *         mpActionsMainArea;
-    dlgScriptsMainArea *        mpScriptsMainArea;
-    dlgKeysMainArea *           mpKeysMainArea;
-    bool                        mIsScriptsMainAreaEditHandler;
-    QListWidgetItem *           mpScriptsMainAreaEditHandlerItem;
-    bool                        mIsGrabKey;
-    QPointer<Host>              mpHost;
-    QList<dlgTriggerPatternEdit *> mTriggerPatternEdit;
-    dlgVarsMainArea *           mpVarsMainArea;
-    bool                        mChangingVar;
-    QPlainTextEdit *            mpSourceEditor;
-    QTextDocument *             mpSourceEditorDocument;
+    QScrollArea* mpScrollArea;
+    QWidget* HpatternList;
+    dlgTriggersMainArea* mpTriggersMainArea;
+    dlgTimersMainArea* mpTimersMainArea;
+    dlgSystemMessageArea* mpSystemMessageArea;
+    dlgSourceEditorArea* mpSourceEditorArea;
+    dlgAliasMainArea* mpAliasMainArea;
+    dlgActionMainArea* mpActionsMainArea;
+    dlgScriptsMainArea* mpScriptsMainArea;
+    dlgKeysMainArea* mpKeysMainArea;
+    bool mIsScriptsMainAreaEditHandler;
+    QListWidgetItem* mpScriptsMainAreaEditHandlerItem;
+    bool mIsGrabKey;
+    QPointer<Host> mpHost;
+    QList<dlgTriggerPatternEdit*> mTriggerPatternEdit;
+    dlgVarsMainArea* mpVarsMainArea;
+    bool mChangingVar;
+    QPlainTextEdit* mpSourceEditor;
+    QTextDocument* mpSourceEditorDocument;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
