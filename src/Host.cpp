@@ -40,6 +40,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 #include <zip.h>
@@ -47,133 +48,133 @@
 #include <errno.h>
 
 
-Host::Host( int port, const QString& hostname, const QString& login, const QString& pass, int id )
-: mTelnet( this )
-, mpConsole( 0 )
-, mLuaInterpreter    ( this, id )
-, mTriggerUnit       ( this )
-, mTimerUnit         ( this )
-, mScriptUnit        ( this )
-, mAliasUnit         ( this )
-, mActionUnit        ( this )
-, mKeyUnit           ( this )
-, commandLineMinimumHeight( 30 )
-, mAlertOnNewData( true )
-, mAllowToSendCommand( true )
-, mAutoClearCommandLineAfterSend( false )
-, mBlockScriptCompile( true )
-, mEchoLuaErrors( false )
-, mBorderBottomHeight( 0 )
-, mBorderLeftWidth( 0 )
-, mBorderRightWidth( 0 )
-, mBorderTopHeight( 0 )
-, mCodeCompletion( true )
+Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
+: mTelnet(this)
+, mpConsole(0)
+, mLuaInterpreter(this, id)
+, mTriggerUnit(this)
+, mTimerUnit(this)
+, mScriptUnit(this)
+, mAliasUnit(this)
+, mActionUnit(this)
+, mKeyUnit(this)
+, commandLineMinimumHeight(30)
+, mAlertOnNewData(true)
+, mAllowToSendCommand(true)
+, mAutoClearCommandLineAfterSend(false)
+, mBlockScriptCompile(true)
+, mEchoLuaErrors(false)
+, mBorderBottomHeight(0)
+, mBorderLeftWidth(0)
+, mBorderRightWidth(0)
+, mBorderTopHeight(0)
+, mCodeCompletion(true)
 , mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//( QFont("Monospace", 10, QFont::Courier) )
-, mCommandSeparator  ( QString(";") )
-, mDisableAutoCompletion( false )
+, mCommandSeparator(QString(";"))
+, mDisableAutoCompletion(false)
 , mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
-, mEnableGMCP( true )
-, mEnableMSDP( false )
-, mFORCE_GA_OFF( false )
-, mFORCE_NO_COMPRESSION( false )
-, mFORCE_SAVE_ON_EXIT( false )
-, mHostID( id )
-, mHostName( hostname )
-, mInsertedMissingLF( false )
-, mIsGoingDown( false )
-, mLF_ON_GA( true )
-, mLogin( login )
-, mMainIconSize( 3 )
-, mNoAntiAlias( false )
-, mPass( pass )
+, mEnableGMCP(true)
+, mEnableMSDP(false)
+, mFORCE_GA_OFF(false)
+, mFORCE_NO_COMPRESSION(false)
+, mFORCE_SAVE_ON_EXIT(false)
+, mHostID(id)
+, mHostName(hostname)
+, mInsertedMissingLF(false)
+, mIsGoingDown(false)
+, mLF_ON_GA(true)
+, mLogin(login)
+, mMainIconSize(3)
+, mNoAntiAlias(false)
+, mPass(pass)
 , mpEditorDialog(0)
-, mpMap( new TMap( this ) )
-, mpNotePad( 0 )
+, mpMap(new TMap(this))
+, mpNotePad(0)
 , mPort(port)
-, mPrintCommand( true )
-, mIsCurrentLogFileInHtmlFormat( false )
-, mResetProfile( false )
-, mRetries( 5 )
-, mSaveProfileOnExit( false )
-, mScreenHeight( 25 )
-, mScreenWidth( 90 )
-, mTEFolderIconSize( 3 )
-, mTimeout( 60 )
-, mUSE_FORCE_LF_AFTER_PROMPT( false )
-, mUSE_IRE_DRIVER_BUGFIX( true )
-, mUSE_UNIX_EOL( false )
-, mWrapAt( 100 )
-, mWrapIndentCount( 0 )
-, mBlack             (Qt::black)
-, mLightBlack        (Qt::darkGray)
-, mRed               (Qt::darkRed)
-, mLightRed          (Qt::red)
-, mLightGreen        (Qt::green)
-, mGreen             (Qt::darkGreen)
-, mLightBlue         (Qt::blue)
-, mBlue              (Qt::darkBlue)
-, mLightYellow       (Qt::yellow)
-, mYellow            (Qt::darkYellow)
-, mLightCyan         (Qt::cyan)
-, mCyan              (Qt::darkCyan)
-, mLightMagenta      (Qt::magenta)
-, mMagenta           (Qt::darkMagenta)
-, mLightWhite        (Qt::white)
-, mWhite             (Qt::lightGray)
-, mFgColor           (Qt::lightGray)
-, mBgColor           (Qt::black)
-, mCommandBgColor    (Qt::black)
-, mCommandFgColor    (QColor(113, 113, 0))
-, mBlack_2             (Qt::black)
-, mLightBlack_2        (Qt::darkGray)
-, mRed_2               (Qt::darkRed)
-, mLightRed_2          (Qt::red)
-, mLightGreen_2        (Qt::green)
-, mGreen_2             (Qt::darkGreen)
-, mLightBlue_2         (Qt::blue)
-, mBlue_2              (Qt::darkBlue)
-, mLightYellow_2       (Qt::yellow)
-, mYellow_2            (Qt::darkYellow)
-, mLightCyan_2         (Qt::cyan)
-, mCyan_2              (Qt::darkCyan)
-, mLightMagenta_2      (Qt::magenta)
-, mMagenta_2           (Qt::darkMagenta)
-, mLightWhite_2        (Qt::white)
-, mWhite_2             (Qt::lightGray)
-, mFgColor_2           (Qt::lightGray)
-, mBgColor_2           (Qt::black)
-, mSpellDic            ( "en_US" )
-, mLogStatus           ( false )
-, mEnableSpellCheck    ( true )
+, mPrintCommand(true)
+, mIsCurrentLogFileInHtmlFormat(false)
+, mResetProfile(false)
+, mRetries(5)
+, mSaveProfileOnExit(false)
+, mScreenHeight(25)
+, mScreenWidth(90)
+, mTEFolderIconSize(3)
+, mTimeout(60)
+, mUSE_FORCE_LF_AFTER_PROMPT(false)
+, mUSE_IRE_DRIVER_BUGFIX(true)
+, mUSE_UNIX_EOL(false)
+, mWrapAt(100)
+, mWrapIndentCount(0)
+, mBlack(Qt::black)
+, mLightBlack(Qt::darkGray)
+, mRed(Qt::darkRed)
+, mLightRed(Qt::red)
+, mLightGreen(Qt::green)
+, mGreen(Qt::darkGreen)
+, mLightBlue(Qt::blue)
+, mBlue(Qt::darkBlue)
+, mLightYellow(Qt::yellow)
+, mYellow(Qt::darkYellow)
+, mLightCyan(Qt::cyan)
+, mCyan(Qt::darkCyan)
+, mLightMagenta(Qt::magenta)
+, mMagenta(Qt::darkMagenta)
+, mLightWhite(Qt::white)
+, mWhite(Qt::lightGray)
+, mFgColor(Qt::lightGray)
+, mBgColor(Qt::black)
+, mCommandBgColor(Qt::black)
+, mCommandFgColor(QColor(113, 113, 0))
+, mBlack_2(Qt::black)
+, mLightBlack_2(Qt::darkGray)
+, mRed_2(Qt::darkRed)
+, mLightRed_2(Qt::red)
+, mLightGreen_2(Qt::green)
+, mGreen_2(Qt::darkGreen)
+, mLightBlue_2(Qt::blue)
+, mBlue_2(Qt::darkBlue)
+, mLightYellow_2(Qt::yellow)
+, mYellow_2(Qt::darkYellow)
+, mLightCyan_2(Qt::cyan)
+, mCyan_2(Qt::darkCyan)
+, mLightMagenta_2(Qt::magenta)
+, mMagenta_2(Qt::darkMagenta)
+, mLightWhite_2(Qt::white)
+, mWhite_2(Qt::lightGray)
+, mFgColor_2(Qt::lightGray)
+, mBgColor_2(Qt::black)
+, mSpellDic("en_US")
+, mLogStatus(false)
+, mEnableSpellCheck(true)
 , mModuleSaveBlock(false)
-, mLineSize            ( 10.0 )
-, mRoomSize            ( 0.5 )
-, mBubbleMode          ( false )
-, mShowRoomID          ( false )
-, mMapperUseAntiAlias  ( true )
-, mServerGUI_Package_version( -1 )
-, mServerGUI_Package_name( "nothing" )
-, mAcceptServerGUI     ( true )
+, mLineSize(10.0)
+, mRoomSize(0.5)
+, mBubbleMode(false)
+, mShowRoomID(false)
+, mMapperUseAntiAlias(true)
+, mServerGUI_Package_version(-1)
+, mServerGUI_Package_name("nothing")
+, mAcceptServerGUI(true)
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
-, mFORCE_MXP_NEGOTIATION_OFF( false )
-, mHaveMapperScript( false )
+, mFORCE_MXP_NEGOTIATION_OFF(false)
+, mHaveMapperScript(false)
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
-    QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/";
+    QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
     directoryLogFile.append("/log");
     QString logFileName = directoryLogFile + "/errors.txt";
     QDir dirLogFile;
-    if( ! dirLogFile.exists( directoryLogFile ) )
-    {
-        dirLogFile.mkpath( directoryLogFile );
+    if (!dirLogFile.exists(directoryLogFile)) {
+        dirLogFile.mkpath(directoryLogFile);
     }
-    mErrorLogFile.setFileName( logFileName );
-    mErrorLogFile.open( QIODevice::Append );
-    mErrorLogStream.setDevice( &mErrorLogFile ); // This is NOW used (for map
-                                                 // file auditing and other issues)
+    mErrorLogFile.setFileName(logFileName);
+    mErrorLogFile.open(QIODevice::Append);
+    // This is NOW used (for map
+    // file auditing and other issues)
+    mErrorLogStream.setDevice(&mErrorLogFile);
 
     // There was a map load attempt made here but it did not seem to be needed
     // and it caused issues being doing in the constructor (some other classes
@@ -196,19 +197,17 @@ Host::~Host()
 
 void Host::saveModules(int sync)
 {
-    if (mModuleSaveBlock)
-    {
+    if (mModuleSaveBlock) {
         //FIXME: This should generate an error to the user
         return;
     }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
-    QString dirName = QDir::homePath()+"/.config/mudlet/moduleBackups/";
+    QString dirName = QDir::homePath() + "/.config/mudlet/moduleBackups/";
     QDir savePath = QDir(dirName);
     if (!savePath.exists())
         savePath.mkpath(dirName);
-    while(it.hasNext())
-    {
+    while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
         QString filename_xml = entry[0];
@@ -216,91 +215,78 @@ void Host::saveModules(int sync)
         QString moduleName = it.key();
         QString tempDir;
         QString zipName;
-        zip * zipFile = 0;
+        zip* zipFile = 0;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if(  filename_xml.endsWith( QStringLiteral( "mpackage" ), Qt::CaseInsensitive )
           || filename_xml.endsWith( QStringLiteral( "zip" ), Qt::CaseInsensitive ) )
         {
-            tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mHostName+"/"+moduleName;
+            tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mHostName + "/" + moduleName;
             filename_xml = tempDir + "/" + moduleName + ".xml";
             int err;
-            zipFile = zip_open( entry[0].toStdString().c_str(), 0, &err);
+            zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
             zipName = filename_xml;
             QDir packageDir = QDir(tempDir);
-            if ( !packageDir.exists() ){
+            if (!packageDir.exists()) {
                 packageDir.mkpath(tempDir);
             }
+        } else {
+            savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
         }
-        else
-        {
-            savePath.rename(filename_xml,dirName+moduleName+time);//move the old file, use the key (module name) as the file
-        }
-        QFile file_xml( filename_xml );
-        if ( file_xml.open( QIODevice::WriteOnly ) )
-        {
+        QFile file_xml(filename_xml);
+        if (file_xml.open(QIODevice::WriteOnly)) {
             XMLexport writer(this);
-            writer.writeModuleXML( & file_xml, it.key() );
+            writer.writeModuleXML(&file_xml, it.key());
             file_xml.close();
 
             if (entry[1].toInt())
                 modulesToSync << it.key();
-        }
-        else
-        {
+        } else {
             file_xml.close();
             //FIXME: Should have an error reported to user
             //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
             mModuleSaveBlock = true;
             return;
         }
-        if( !zipName.isEmpty() )
-        {
-            struct zip_source *s = zip_source_file( zipFile, filename_xml.toStdString().c_str(), 0, 0 );
+        if (!zipName.isEmpty()) {
+            struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;
             t.start();
 //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            int err = zip_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s );
+            int err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
             //FIXME: error checking
-            if( zipFile )
-            {
-                err = zip_close( zipFile );
+            if (zipFile) {
+                err = zip_close(zipFile);
             }
             //FIXME: error checking
         }
     }
     modulesToWrite.clear();
-    if (sync)
-    {
+    if (sync) {
         //synchronize modules across sessions
-        QMap<Host *, TConsole *> activeSessions = mudlet::self()->mConsoleMap;
-        QMapIterator<Host *, TConsole *> it2(activeSessions);
-        while (it2.hasNext())
-        {
+        QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
+        QMapIterator<Host*, TConsole*> it2(activeSessions);
+        while (it2.hasNext()) {
             it2.next();
-            Host * host = it2.key();
+            Host* host = it2.key();
             if (host->mHostName == mHostName)
                 continue;
             QMap<QString, QStringList> installedModules = host->mInstalledModules;
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
             QMap<int, QStringList> moduleOrder;
-            while( it3.hasNext() )
-            {
+            while (it3.hasNext()) {
                 it3.next();
                 //QStringList moduleEntry = moduleOrder[it3.value()];
                 //moduleEntry.append(it3.key());
                 moduleOrder[it3.value()].append(it3.key());// = moduleEntry;
             }
             QMapIterator<int, QStringList> it4(moduleOrder);
-            while(it4.hasNext())
-            {
+            while (it4.hasNext()) {
                 it4.next();
                 QStringList moduleList = it4.value();
-                for(int i=0;i<moduleList.size();i++)
-                {
+                for (int i = 0; i < moduleList.size(); i++) {
                     QString moduleName = moduleList[i];
-                    if (modulesToSync.contains(moduleName))
-                    {
+                    if (modulesToSync.contains(moduleName)) {
                         host->reloadModule(moduleName);
                     }
                 }
@@ -313,20 +299,18 @@ void Host::reloadModule(const QString& moduleName)
 {
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> it(installedModules);
-    while(it.hasNext())
-    {
+    while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
-        if (it.key() == moduleName){
-            uninstallPackage(it.key(),2);
-            installPackage(entry[0],2);
+        if (it.key() == moduleName) {
+            uninstallPackage(it.key(), 2);
+            installPackage(entry[0], 2);
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.
     //both the installedModules and mInstalled should be in the same order now as well
     QMapIterator<QString, QStringList> it2(mInstalledModules);
-    while(it2.hasNext())
-    {
+    while (it2.hasNext()) {
         it2.next();
         QStringList entry = installedModules[it2.key()];
         mInstalledModules[it2.key()] = entry;
@@ -339,7 +323,6 @@ void Host::resetProfile()
     mudlet::self()->mTimerMap.clear();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
-
 
 
     mTimerUnit.doCleanup();
@@ -363,10 +346,40 @@ void Host::resetProfile()
     mTimerUnit.reenableAllTriggers();
 
     TEvent event;
-    event.mArgumentList.append( "sysLoadEvent" );
+    event.mArgumentList.append("sysLoadEvent");
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent( event );
-    qDebug()<<"resetProfile() DONE";
+    raiseEvent(event);
+    qDebug() << "resetProfile() DONE";
+}
+
+// Saves profile to disk - does not save items dirty in the editor, however.
+// takes a directory to save in or an empty string for the default location
+// as well as a boolean whenever to sync the modules or not
+// returns true+filepath if successful or false+error message otherwise
+std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation, bool syncModules)
+{
+    QString directory_xml;
+    if (saveLocation.isEmpty()) {
+        directory_xml = QStringLiteral("%1/.config/mudlet/profiles/%2/current").arg(QDir::homePath(), getName());
+    } else {
+        directory_xml = saveLocation;
+    }
+
+    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+    QDir dir_xml;
+    if (!dir_xml.exists(directory_xml)) {
+        dir_xml.mkpath(directory_xml);
+    }
+    QFile file_xml(filename_xml);
+    if (file_xml.open(QIODevice::WriteOnly)) {
+        XMLexport writer(this);
+        writer.exportHost(&file_xml);
+        file_xml.close();
+        saveModules(syncModules ? 1 : 0);
+        return std::make_tuple(true, filename_xml, QString());
+    } else {
+        return std::make_tuple(false, filename_xml, file_xml.errorString());
+    }
 }
 
 // Now returns the total weight of the path
@@ -374,23 +387,23 @@ const unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for(int i : mpMap->mPathList) {
-        QString n = QString::number( i );
-        pathList.append( n );
+    for (int i : mpMap->mPathList) {
+        QString n = QString::number(i);
+        pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for(int stepWeight : mpMap->mWeightList) {
+    for (int stepWeight : mpMap->mWeightList) {
         totalWeight += stepWeight;
-        QString n = QString::number( stepWeight );
-        weightList.append( n );
+        QString n = QString::number(stepWeight);
+        weightList.append(n);
     }
     QString tableName = QStringLiteral("speedWalkPath");
-    mLuaInterpreter.set_lua_table( tableName, pathList );
+    mLuaInterpreter.set_lua_table(tableName, pathList);
     tableName = QStringLiteral("speedWalkDir");
-    mLuaInterpreter.set_lua_table( tableName, directionList );
+    mLuaInterpreter.set_lua_table(tableName, directionList);
     tableName = QStringLiteral("speedWalkWeight");
-    mLuaInterpreter.set_lua_table( tableName, weightList );
+    mLuaInterpreter.set_lua_table(tableName, weightList);
     return totalWeight;
 }
 
@@ -410,7 +423,7 @@ void Host::startSpeedWalk()
     Q_UNUSED(totalWeight);
     QString f = QStringLiteral("doSpeedWalk");
     QString n = QString();
-    mLuaInterpreter.call( f, n );
+    mLuaInterpreter.call(f, n);
 }
 
 void Host::adjustNAWS()
@@ -418,7 +431,7 @@ void Host::adjustNAWS()
     mTelnet.setDisplayDimensions();
 }
 
-void Host::setReplacementCommand(const QString& s )
+void Host::setReplacementCommand(const QString& s)
 {
     mReplacementCommand = s;
 }
@@ -491,34 +504,6 @@ void Host::sendRaw( QString command )
 {
     mTelnet.sendData( command );
 }
-
-
-/*QStringList Host::getBufferTable( int from, int to )
-{
-    QStringList bufList;
-    if( (mTextBufferList.size()-1-to<0) || (mTextBufferList.size()-1-from<0) || (mTextBufferList.size()-1-from>=mTextBufferList.size()) || mTextBufferList.size()-1-to>=mTextBufferList.size() )
-    {
-        return bufList << QString("ERROR: buffer out of range");
-    }
-    for( int i=mTextBufferList.size()-1-from; i>=0; i-- )
-    {
-        if( i < mTextBufferList.size()-1-to ) break;
-        bufList << mTextBufferList[i];
-    }
-    return bufList;
-}
-
-QString Host::getBufferLine( int line )
-{
-    QString text;
-    if( (line < 0) || (mTextBufferList.size()-1-line>=mTextBufferList.size()) )
-    {
-        text = "ERROR: buffer out of range";
-        return text;
-    }
-    text = mTextBufferList[mTextBufferList.size()-1-line];
-    return text;
-} */
 
 int Host::createStopWatch()
 {
@@ -1128,22 +1113,8 @@ bool Host::installPackage( const QString& fileName, int module )
     {
        mpEditorDialog->doCleanReset();
     }
-    if (!module)
-    {
-        QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
-        QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-        QDir dir_xml;
-        if( ! dir_xml.exists( directory_xml ) )
-        {
-            dir_xml.mkpath( directory_xml );
-        }
-        QFile file_xml( filename_xml );
-        if ( file_xml.open( QIODevice::WriteOnly ) )
-        {
-            XMLexport writer( this );
-            writer.exportHost( & file_xml );
-            file_xml.close();
-        }
+    if (!module) {
+        saveProfile();
     }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
@@ -1332,20 +1303,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     _home.append( getName() );
     QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
     removeDir( _dest, _dest );
-    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+getName()+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-    QDir dir_xml;
-    if( ! dir_xml.exists( directory_xml ) )
-    {
-        dir_xml.mkpath( directory_xml );
-    }
-    QFile file_xml( filename_xml );
-    if ( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        XMLexport writer( this );
-        writer.exportHost( & file_xml );
-        file_xml.close();
-    }
+    saveProfile();
     //NOW we reset if we're uninstalling a module
     if( mpEditorDialog && module == 3 )
     {

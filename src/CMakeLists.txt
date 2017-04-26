@@ -18,8 +18,6 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
-
 SET(mudlet_RCCS mudlet_alpha.qrc)
 
 SET(mudlet_SRCS

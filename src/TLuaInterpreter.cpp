@@ -57,6 +57,7 @@
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 #include <list>
@@ -89,8 +90,6 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 : mpHost( pH )
 , mHostID( id )
 , purgeTimer(this)
-, mpGatekeeperThread()
-, mpLuaSessionThread()
 {
     pGlobalLua = 0;
 
@@ -902,14 +901,6 @@ int TLuaInterpreter::getLines( lua_State * L )
     return 1;
 }
 
-// luaTable result[line_number, content] = getLines( from_cursorPos, to_cursorPos )
-int TLuaInterpreter::getBufferTable( lua_State * L )
-{
-    lua_pushstring( L, "getBufferTable: Currently commented out in source code" );
-    lua_error( L );
-    return 1;
-}
-
 int TLuaInterpreter::loadRawFile( lua_State * L )
 {
     string luaSendText="";
@@ -1251,52 +1242,47 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
     return 0;
 }
 
-int TLuaInterpreter::centerview( lua_State * L )
+int TLuaInterpreter::centerview(lua_State* L)
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost) {
+        lua_pushnil(L);
         lua_pushstring(L, "centerview: NULL Host pointer - something is wrong!");
         return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "centerview: no map present or loaded!");
+    } else if (!pHost->mpMap || !pHost->mpMap->mpRoomDB || !pHost->mpMap->mpMapper) {
+        lua_pushnil(L);
+        lua_pushstring(L, "centerview: you haven't opened a map yet");
         return 2;
     }
 
     int roomId;
-    if( ! lua_isnumber( L, 1 ) ) {
-        lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)",
-                        luaL_typename(L, 1));
-        lua_error( L );
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
         return 1;
-    }
-    else {
-        roomId = lua_tointeger( L, 1 );
+    } else {
+        roomId = lua_tointeger(L, 1);
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
-    if( pR ) {
-        pHost->mpMap->mRoomIdHash[ pHost->getName() ] = roomId;
+    TRoom* pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (pR) {
+        pHost->mpMap->mRoomIdHash[pHost->getName()] = roomId;
         pHost->mpMap->mNewMove = true;
-        if( pHost->mpMap->mpM ) {
+        if (pHost->mpMap->mpM) {
             pHost->mpMap->mpM->update();
         }
 
-        if( pHost->mpMap->mpMapper->mp2dMap ) {
+        if (pHost->mpMap->mpMapper->mp2dMap) {
             pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
             pHost->mpMap->mpMapper->mp2dMap->update();
             pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
             pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
-        lua_pushboolean( L, true );
+        lua_pushboolean(L, true);
         return 1;
-    }
-    else {
-        lua_pushnil( L );
-        lua_pushfstring(L, "centerview: bad argument #1 value (number %d is not a valid room id).",
-                        roomId);
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "centerview: bad argument #1 value (%d is not a valid room id).", roomId);
         return 2;
     }
 }
@@ -1748,13 +1734,6 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
         mudlet::self()->setConsoleBufferSize( pHost, windowName, luaFrom, luaTo );
     }
     return 0;
-}
-
-int TLuaInterpreter::getBufferLine( lua_State * L )
-{
-    lua_pushstring( L, "getBufferLine: Currently commented out in source code" );
-    lua_error( L );
-    return 1;
 }
 
 // replace( sessionID, replace_with )
@@ -2448,6 +2427,32 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
 {
     mudlet::self()->forceClose();
     return 0;
+}
+
+int TLuaInterpreter::saveProfile(lua_State* L)
+{
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost) {
+        lua_pushstring(L, QLatin1String("saveProfile: NULL Host pointer - something is wrong!").data());
+        return lua_error(L);
+    }
+
+    QString saveToDir;
+    if (lua_isstring(L, 1)) {
+        saveToDir = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    std::tuple<bool, QString, QString> result = pHost->saveProfile(saveToDir);
+
+    if (std::get<0>(result) == true) {
+        lua_pushboolean(L, true);
+        lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
+        return 2;
+    } else {
+        lua_pushnil(L);
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
+        return 2;
+    }
 }
 
 // openUserWindow( session, string window_name )
@@ -12852,12 +12857,6 @@ int TLuaInterpreter::check_for_mappingscript()
     return r;
 }
 
-void TLuaInterpreter::startLuaSessionInterpreter()
-{
-    mpLuaSessionThread = new TLuaMainThread(this);
-    mpLuaSessionThread->start(); //calls initLuaGlobals() to initialize the interpreter for this session
-}
-
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds.
 
@@ -12952,8 +12951,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger );
     lua_register( pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount );
     lua_register( pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber );
-    //lua_register( pGlobalLua, "getBufferTable", TLuaInterpreter::getBufferTable );
-    //lua_register( pGlobalLua, "getBufferLine", TLuaInterpreter::getBufferLine );
     lua_register( pGlobalLua, "send", TLuaInterpreter::sendRaw );
     lua_register( pGlobalLua, "selectCaptureGroup", TLuaInterpreter::selectCaptureGroup );
     lua_register( pGlobalLua, "tempLineTrigger", TLuaInterpreter::tempLineTrigger );
@@ -12963,7 +12960,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "cut", TLuaInterpreter::cut );
     lua_register( pGlobalLua, "paste", TLuaInterpreter::paste );
     lua_register( pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow );
-    //lua_register( pGlobalLua, "userWindowLineWrap", TLuaInterpreter::userWindowLineWrap );
     lua_register( pGlobalLua, "debugc", TLuaInterpreter::debug );
     lua_register( pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap );
     lua_register( pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent );
@@ -13094,8 +13090,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked );
     lua_register( pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor );
     lua_register( pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable );
-    //lua_register( pGlobalLua, "setLevelColor", TLuaInterpreter::setLevelColor );
-    //lua_register( pGlobalLua, "getLevelColorTable", TLuaInterpreter::getLevelColorTable );
     lua_register( pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv );
     lua_register( pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName );
     lua_register( pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName );
@@ -13111,7 +13105,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setRoomUserData", TLuaInterpreter::setRoomUserData );
     lua_register( pGlobalLua, "searchRoomUserData", TLuaInterpreter::searchRoomUserData );
     lua_register( pGlobalLua, "getRoomsByPosition", TLuaInterpreter::getRoomsByPosition );
-    //lua_register( pGlobalLua, "dumpRoomUserData", TLuaInterpreter::dumpRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserData", TLuaInterpreter::clearRoomUserData );
     lua_register( pGlobalLua, "clearRoomUserDataItem", TLuaInterpreter::clearRoomUserDataItem );
     lua_register( pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile );
@@ -13198,6 +13191,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible );
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
+    lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
 
 
     luaopen_yajl(pGlobalLua);

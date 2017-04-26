@@ -52,8 +52,6 @@ extern "C" {
 
 class Host;
 class TEvent;
-class TGatekeeperThread;
-class TLuaMainThread;
 class TLuaThread;
 class TTrigger;
 
@@ -78,7 +76,6 @@ public:
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
-    void startLuaExecThread();
     void msdp2Lua(char* src, int srclen);
     void initLuaGlobals();
     bool call(const QString& function, const QString& mName);
@@ -99,7 +96,6 @@ public:
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList);
 
-    void startLuaSessionInterpreter();
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
@@ -120,9 +116,6 @@ public:
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-
-    TGatekeeperThread* mpGatekeeperThread;
-    QNetworkAccessManager* mpFileDownloader;
 
     static int getCustomLines( lua_State * );
     static int addCustomLine( lua_State * );
@@ -196,7 +189,6 @@ public:
     static int setCustomEnvColor( lua_State * );
     static int roomLocked( lua_State * );
     static int setAreaName( lua_State * );
-    static int setRoomColor( lua_State * );
     static int getRoomCoordinates( lua_State * );
     static int setRoomCoordinates( lua_State * );
     static int roomExists( lua_State * );
@@ -239,6 +231,7 @@ public:
     static int setBgColor( lua_State * L );
     static int tempTimer( lua_State * L );
     static int closeMudlet( lua_State* L );
+    static int saveProfile(lua_State* L);
     static int openUserWindow( lua_State * L );
     static int echoUserWindow( lua_State * L );
     static int clearUserWindow( lua_State * L );
@@ -260,8 +253,6 @@ public:
     static int getLineCount( lua_State * L );
     static int getLineNumber( lua_State * L );
     static int getColumnNumber( lua_State * L );
-    static int getBufferTable( lua_State * L );
-    static int getBufferLine( lua_State * L );
     static int selectCaptureGroup( lua_State * L );
     static int tempLineTrigger( lua_State * L );
     static int raiseEvent( lua_State * L );
@@ -402,6 +393,13 @@ public:
     static int getProfileName( lua_State * );
     static int raiseGlobalEvent( lua_State * );
 
+public slots:
+    void slot_replyFinished( QNetworkReply * );
+    void slotPurge();
+    void slotDeleteSender();
+
+private:
+    QNetworkAccessManager* mpFileDownloader;
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
@@ -412,33 +410,12 @@ public:
     static std::map<lua_State*, Host*> luaInterpreterMap;
     QMap<QNetworkReply*, QString> downloadMap;
 
-public slots:
-
-    void slot_replyFinished( QNetworkReply * );
-    void slotPurge();
-    void slotDeleteSender();
-
-private:
-
     lua_State* pGlobalLua;
-    TLuaMainThread* mpLuaSessionThread;
 
     QPointer<Host> mpHost;
     int mHostID;
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
-};
-
-class TLuaMainThread : public QThread
-{
-public:
-    TLuaMainThread(TLuaInterpreter* pL) : exit() { pLuaInterpreter = pL; }
-
-
-private:
-    TLuaInterpreter* pLuaInterpreter;
-    QString code;
-    bool exit;
 };
 
 #endif // MUDLET_LUAINTERPRETER_H
