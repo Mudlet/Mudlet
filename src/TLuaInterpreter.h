@@ -52,8 +52,6 @@ extern "C" {
 
 class Host;
 class TEvent;
-class TGatekeeperThread;
-class TLuaMainThread;
 class TLuaThread;
 class TTrigger;
 
@@ -98,7 +96,6 @@ public:
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList);
 
-    void startLuaSessionInterpreter();
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
@@ -402,7 +399,6 @@ public slots:
     void slotDeleteSender();
 
 private:
-    TGatekeeperThread* mpGatekeeperThread;
     QNetworkAccessManager* mpFileDownloader;
 
     std::list<std::string> mCaptureGroupList;
@@ -415,23 +411,11 @@ private:
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
-    TLuaMainThread* mpLuaSessionThread;
 
     QPointer<Host> mpHost;
     int mHostID;
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
-};
-
-class TLuaMainThread : public QThread
-{
-public:
-    TLuaMainThread(TLuaInterpreter* pL) : exit() { pLuaInterpreter = pL; }
-
-private:
-    TLuaInterpreter* pLuaInterpreter;
-    QString code;
-    bool exit;
 };
 
 #endif // MUDLET_LUAINTERPRETER_H
