@@ -65,101 +65,22 @@ public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
     ~Host();
 
-    QString getName()
-    {
-        QMutexLocker locker(&mLock);
-        return mHostName;
-    }
-
-    void setName(const QString& s)
-    {
-        QMutexLocker locker(&mLock);
-        mHostName = s;
-    }
-
-    QString getUrl()
-    {
-        QMutexLocker locker(&mLock);
-        return mUrl;
-    }
-
-    void setUrl(const QString& s)
-    {
-        QMutexLocker locker(&mLock);
-        mUrl = s;
-    }
-
-    QString getUserDefinedName()
-    {
-        QMutexLocker locker(&mLock);
-        return mUserDefinedName;
-    }
-
-    void setUserDefinedName(const QString& s)
-    {
-        QMutexLocker locker(&mLock);
-        mUserDefinedName = s;
-    }
-
-    int getPort()
-    {
-        QMutexLocker locker(&mLock);
-        return mPort;
-    }
-
-    void setPort(int p)
-    {
-        QMutexLocker locker(&mLock);
-        mPort = p;
-    }
-
-    QString& getLogin()
-    {
-        QMutexLocker locker(&mLock);
-        return mLogin;
-    }
-
-    void setLogin(const QString& s)
-    {
-        QMutexLocker locker(&mLock);
-        mLogin = s;
-    }
-
-    QString& getPass()
-    {
-        QMutexLocker locker(&mLock);
-        return mPass;
-    }
-
-    void setPass(const QString& s)
-    {
-        QMutexLocker locker(&mLock);
-        mPass = s;
-    }
-
-    int getRetries()
-    {
-        QMutexLocker locker(&mLock);
-        return mRetries;
-    }
-
-    void setRetries(int c)
-    {
-        QMutexLocker locker(&mLock);
-        mRetries = c;
-    }
-
-    int getTimeout()
-    {
-        QMutexLocker locker(&mLock);
-        return mTimeout;
-    }
-
-    void setTimeout(int seconds)
-    {
-        QMutexLocker locker(&mLock);
-        mTimeout = seconds;
-    }
+    QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
+    void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
+    QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
+    void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
+    QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
+    void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
+    int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
+    void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
+    QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
+    void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
+    QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
+    void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
+    int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
+    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
+    int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
+    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
 
     bool closingDown();
     const unsigned int assemblePath();
