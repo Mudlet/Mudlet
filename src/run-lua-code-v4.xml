@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.0">
-    <TriggerPackage/>
-    <TimerPackage/>
     <AliasPackage>
         <Alias isActive="yes" isFolder="no">
             <name>run lua code</name>
@@ -18,10 +16,4 @@ if r ~= nil then display(r) end</script>
             <regex>^lua (.*)$</regex>
         </Alias>
     </AliasPackage>
-    <ActionPackage/>
-    <ScriptPackage/>
-    <KeyPackage/>
-    <HelpPackage>
-        <helpURL></helpURL>
-    </HelpPackage>
 </MudletPackage>
