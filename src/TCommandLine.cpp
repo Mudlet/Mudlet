@@ -39,7 +39,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 : QPlainTextEdit( parent )
 , mpHost( pHost )
 , mpConsole( pConsole )
-, mSelectedText( "" )
+, mSelectedText( QString() )
 , mSelectionStart( 0 )
 , mTabCompletion()
 , mTabCompletionCount()
@@ -62,7 +62,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 
     QString spell_aff = path + pHost->mSpellDic + ".aff";
     QString spell_dic = path + pHost->mSpellDic + ".dic";
-    mpHunspell = Hunspell_create( spell_aff.toLatin1().data(), spell_dic.toLatin1().data() );//"en_US.aff", "en_US.dic");
+    mpHunspell = Hunspell_create( spell_aff.toLatin1().data(), spell_dic.toLatin1().data() );
     mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -132,7 +132,6 @@ bool TCommandLine::event( QEvent * event )
                 mLastCompletion = "";
                 break;
 
-
         case Qt::Key_Backtab:
             if( ke->modifiers() & Qt::ControlModifier )
             {
@@ -150,7 +149,6 @@ bool TCommandLine::event( QEvent * event )
             }
             ke->accept();
             return true;
-            break;
 
         case Qt::Key_Tab:
             if( ke->modifiers() & Qt::ControlModifier )
@@ -166,7 +164,6 @@ bool TCommandLine::event( QEvent * event )
                 handleTabCompletion( true );
             ke->accept();
             return true;
-            break;
 
             case Qt::Key_unknown:
                 qWarning()<<"ERROR: key unknown!";
@@ -224,7 +221,6 @@ bool TCommandLine::event( QEvent * event )
                 QPlainTextEdit::event(event);
                 adjustHeight();
                 return true;
-                break;
 
             case Qt::Key_Return:
                 if( ke->modifiers() & Qt::ControlModifier )
@@ -267,7 +263,6 @@ bool TCommandLine::event( QEvent * event )
                     ke->accept();
                     return true;
                 }
-                break;
 
             case Qt::Key_Enter:
                 enterCommand(ke);
@@ -289,37 +284,32 @@ bool TCommandLine::event( QEvent * event )
                 adjustHeight();
                 ke->accept();
                 return true;
-                break;
 
             case Qt::Key_Down:
                 if( ke->modifiers() & Qt::ControlModifier )
                 {
                     moveCursor(QTextCursor::Down, QTextCursor::MoveAnchor);
                     ke->accept();
-                    return true;
                 }
                 else
                 {
                     historyDown(ke);
                     ke->accept();
-                    return true;
                 }
-                break;
+                return true;
 
             case Qt::Key_Up:
                 if( ke->modifiers() & Qt::ControlModifier )
                 {
                     moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor );
                     ke->accept();
-                    return true;
                 }
                 else
                 {
                     historyUp(ke);
                     ke->accept();
-                    return true;
                 }
-                break;
+                return true;
 
             case Qt::Key_Escape:
 
@@ -338,19 +328,16 @@ bool TCommandLine::event( QEvent * event )
                     mHistoryBuffer = 0;
                 ke->accept();
                 return true;
-                break;
 
             case Qt::Key_PageUp:
                 mpConsole->scrollUp( mpHost->mScreenHeight );
                 ke->accept();
                 return true;
-                break;
 
             case Qt::Key_PageDown:
                 mpConsole->scrollDown( mpHost->mScreenHeight );
                 ke->accept();
                 return true;
-                break;
 
             case Qt::Key_C:
                 if( ke->modifiers() & Qt::ControlModifier )
@@ -419,7 +406,7 @@ void TCommandLine::focusOutEvent( QFocusEvent * event )
     else
     {
         mSelectionStart = 0;
-        mSelectedText = "";
+        mSelectedText.clear();
     }
     QPlainTextEdit::focusOutEvent( event );
 }
@@ -432,8 +419,9 @@ void TCommandLine::adjustHeight()
     if( lines > 10 ) lines = 10;
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
-    if( _height < mpHost->commandLineMinimumHeight )
+    if( _height < mpHost->commandLineMinimumHeight ) {
         _height = mpHost->commandLineMinimumHeight;
+    }
     if( _height > height() || _height < height() )
     {
         mpConsole->layerCommandLine->setMinimumHeight( _height );
@@ -534,7 +522,7 @@ void TCommandLine::enterCommand( QKeyEvent * event )
     {
         mpHost->send( _l[i] );
     }
-    if( toPlainText().size() > 0 )
+    if( !toPlainText().isEmpty() )
     {
         mHistoryBuffer = 0;
         setPalette( mRegularPalette );
@@ -633,7 +621,7 @@ void TCommandLine::handleTabCompletion( bool direction )
 
 // Hitting the cursor up key gets you in autocompletion mode.
 // in this mode mudlet tries to find matching substrings in the user's
-// command history. Repeated usage of the cursur up key cycles through
+// command history. Repeated usage of the cursor up key cycles through
 // all possible matches. If the user keeps on typing more letters the
 // the set of possible matches is getting smaller. The ESC key brings you back to regular mode
 
