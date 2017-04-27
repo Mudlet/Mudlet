@@ -47,8 +47,8 @@ ELSE()
 ENDIF()
 
 # APP_BUILD should only be empty/null in official "release" builds,
-# developers may like to set it to their user and branch names to make it easier
-# to tell different builds apart!
+# developers may like to set the MUDLET_VERSION_BUILD environment variable to
+# their user and branch names to make it easier to tell different builds apart!
 #
 # Changing this pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It will not necessarily cause
@@ -60,7 +60,11 @@ ENDIF()
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project file,
 # i.e. ./src/src.pro
 SET(APP_VERSION 3.0.1)
-SET(APP_BUILD "-dev")
+IF(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
+  SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+else()
+  SET(APP_BUILD "-dev")
+ENDIF()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
