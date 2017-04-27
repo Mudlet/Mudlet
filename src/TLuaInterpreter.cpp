@@ -5765,9 +5765,9 @@ int TLuaInterpreter::debug( lua_State *L )
     for (int i=0; i<nbargs; i++)
     {
         luaDebugText += (nbargs > 1 ? " (" + QString::number(i+1) + ") " : " ") + lua_tostring( L, i+1 );
-        QColor green = QColor(0,255,0);
-        QColor blue = QColor(0,0,255);
-        QColor black = QColor(0,0,0);
+        QColor green = QColor(Qt::green);
+        QColor blue = QColor(Qt::blue);
+        QColor black = QColor(Qt::black);
         QString s1 = QString("[DEBUG:]");
         QString s2 = QString("%1\n").arg(luaDebugText);
         Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -7299,7 +7299,7 @@ int TLuaInterpreter::setBorderColor( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QPalette framePalette;
-    framePalette.setColor( QPalette::Text, QColor(0,0,0) );
+    framePalette.setColor( QPalette::Text, QColor(Qt::black) );
     framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     framePalette.setColor( QPalette::Window, QColor( luaRed, luaGreen, luaBlue, 255 ) );
     pHost->mpConsole->mpMainFrame->setPalette( framePalette );
@@ -12587,10 +12587,10 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     //QDateTime time = QDateTime::currentDateTime();
     // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
     //mpHost->mErrorLogStream << entry << endl;
-    QColor blue = QColor(0,0,255);
-    QColor green = QColor(0,255,0);
-    QColor red = QColor(255,0,0);
-    QColor black = QColor(0,0,0);
+    QColor blue = QColor(Qt::blue);
+    QColor green = QColor(Qt::green);
+    QColor red = QColor(Qt::red);
+    QColor black = QColor(Qt::black);
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());

@@ -4051,13 +4051,13 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
     switch( type )
     {
     case 0:
-        palette.setColor( QPalette::Text, QColor(0,0,0) );
+        palette.setColor( QPalette::Text, QColor(Qt::black) );
         pItem->lineEdit->show();
         pItem->fgB->hide();
         pItem->bgB->hide();
         break;
     case 1:
-        palette.setColor( QPalette::Text, QColor(0,0,255) );
+        palette.setColor( QPalette::Text, QColor(Qt::blue) );
         pItem->lineEdit->show();
         pItem->fgB->hide();
         pItem->bgB->hide();
@@ -4137,14 +4137,14 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
             switch( propertyList[i] )
             {
             case REGEX_SUBSTRING:
-                palette.setColor( QPalette::Text, QColor(0,0,0) );
+                palette.setColor( QPalette::Text, QColor(Qt::black) );
                 pBox->setCurrentIndex( 0 );
                 pItem->fgB->hide();
                 pItem->bgB->hide();
                 pItem->lineEdit->show();
                 break;
             case REGEX_PERL:
-                palette.setColor( QPalette::Text, QColor(0,0,255) );
+                palette.setColor( QPalette::Text, QColor(Qt::blue) );
                 pBox->setCurrentIndex( 1 );
                 pItem->fgB->hide();
                 pItem->bgB->hide();

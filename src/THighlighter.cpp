@@ -96,12 +96,12 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
     commentEndExpression = QRegExp("\\]\\]");
 
 
-    searchFormat.setForeground(QColor(0, 0, 0));
-    searchFormat.setBackground(QColor(255, 255, 0));
+    searchFormat.setForeground(QColor(Qt::white));
+    searchFormat.setBackground(QColor(Qt::yellow));
     mSearchPattern = "MudletTheMUDClient";
 
-    searchFormat.setForeground(QColor(0, 0, 0));
-    searchFormat.setBackground(QColor(255, 255, 0));
+    searchFormat.setForeground(QColor(Qt::white));
+    searchFormat.setBackground(QColor(Qt::yellow));
 
     rule.pattern = QRegExp(mSearchPattern);
     rule.format = searchFormat;
@@ -112,8 +112,8 @@ void THighlighter::setSearchPattern(QString p)
 {
     HighlightingRule rule;
     mSearchPattern = QRegExp::escape(p);
-    searchFormat.setForeground(QColor(0, 0, 0));
-    searchFormat.setBackground(QColor(255, 255, 0));
+    searchFormat.setForeground(QColor(Qt::white));
+    searchFormat.setBackground(QColor(Qt::yellow));
 
     rule.pattern = QRegExp(mSearchPattern);
     rule.pattern.setCaseSensitivity(Qt::CaseInsensitive);

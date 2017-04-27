@@ -1294,7 +1294,7 @@ void cTelnet::postMessage( QString msg )
             body.removeFirst();
             if( prefix.contains("ERROR") )
             {
-                mpHost->mpConsole->print( prefix, QColor(255, 0, 0), Qt::black ); // Bright Red on black
+                mpHost->mpConsole->print( prefix, QColor(Qt::red), Qt::black ); // Bright Red on black
                 mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(255, 255, 50), Qt::black );  // Bright Yellow on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
