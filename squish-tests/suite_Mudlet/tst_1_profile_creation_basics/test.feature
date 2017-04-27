@@ -10,9 +10,9 @@ Feature: Profile basics (creating, editing, renaming, deleting them)
     Scenario: Selecting an existing profile loads profile information
 
         Given the connection dialog is open
-         When the 'Avalon.de' profile is selected
-         Then the profile name is 'Avalon.de'
-          And the server address is 'avalon.mud.de'
+         When the 'squish' profile is selected
+         Then the profile name is 'squish'
+          And the server address is 'fake-test-mud.com'
           And the port is '23'
           
     Scenario: Creating and loading a new profile saves the data for it
