@@ -1,8 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -603,10 +602,29 @@ inline int TBuffer::lookupColor(const QString & s, int pos )
     return -1; // unbeendete sequenz
 }
 
-
-void TBuffer::translateToPlainText( std::string & s )
+void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
 {
-    //cout << "TRANSLATE<"<<s<<">"<<endl;
+    std::string localBuffer; // As well as enabling the prepending of left-over
+                             // bytes from last packet from the MUD server this
+                             // may help in high frequency interactions to
+                             // protect this process from the supplied string s
+                             // being modified asynchronously by the QNetwork
+                             // code that runs in another thread. 8-O
+    Host * pHost = mpHost;
+    if (! pHost) {
+        qWarning() << "TBuffer::translateToPlainText(...) ERROR: Cannot access Host instance at this time - data has been lost.";
+        return; // We really have a problem
+    }
+
+    if (isFromServer
+        && pHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
+
+        localBuffer = mIncompleteUtf8SequenceBytes + s;
+        mIncompleteUtf8SequenceBytes.clear();
+    } else {
+        localBuffer = s;
+    }
+
     speedAppend = 0;
     speedTP = 0;
     int numCodes=0;
@@ -1784,7 +1802,214 @@ void TBuffer::translateToPlainText( std::string & s )
             }
             continue;
         }
-        mMudLine.append( ch );
+
+        // PLACEMARKER: Incoming text decoding
+        // Used to double up the TChars for Utf-8 byte sequences that produce
+        // a surrogate pair (non-BMP):
+        bool isTwoTCharsNeeded = false;
+        if      (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-1")) {
+            mMudLine.append(QString(QChar::fromLatin1(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-2")) {
+            mMudLine.append(QString(decodeByteToIso_8859_2(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-3")) {
+            mMudLine.append(QString(decodeByteToIso_8859_3(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-4")) {
+            mMudLine.append(QString(decodeByteToIso_8859_4(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-10")) {
+            mMudLine.append(QString(decodeByteToIso_8859_10(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-15")) {
+            mMudLine.append(QString(decodeByteToIso_8859_10(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-16")) {
+            mMudLine.append(QString(decodeByteToIso_8859_16(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("WINDOWS-1250")) {
+            mMudLine.append(QString(decodeByteToWindows_1250(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("WINDOWS-1251")) {
+            mMudLine.append(QString(decodeByteToWindows_1250(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("WINDOWS-1252")) {
+            mMudLine.append(QString(decodeByteToWindows_1252(ch)));
+        }
+        else if (mpHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
+            // In Utf-8 mode we have to process the data more than one byte at a
+            // time because there is not necessarily a one-byte to one TChar
+            // mapping, instead we use one TChar per QChar - and that has to be
+            // tweaked for non-BMP characters that use TWO QChars per codepoint.
+            if (localBuffer[msPos] & 0x80) {
+                // MSB is set, so if this is Utf-8 then assume this is the first byte
+                size_t utf8SequenceLength = 1;
+                if        ((localBuffer[msPos] & 0xE0) == 0xC0) {
+                    // 2 byte sequence - Unicode code-points: U+00000080 to U+000007FF
+                    utf8SequenceLength = 2;
+                } else if ((localBuffer[msPos] & 0xF0) == 0xE0) {
+                    // 3 byte sequence - Unicode code-points: U+00000800 to U+0000FFFF
+                    utf8SequenceLength = 3;
+                } else if ((localBuffer[msPos] & 0xF8) == 0xF0) {
+                    // 4 byte sequence - Unicode code-points: U+00010000 to U+001FFFFF (<= U+0010FFF LEGAL)
+                    utf8SequenceLength = 4;
+                } else if ((localBuffer[msPos] & 0xFC) == 0xF8) {
+                    // 5 byte sequence - Unicode code-points: U+00200000 to U+03FFFFFF (ALL ILLEGAL)
+                    utf8SequenceLength = 5;
+                } else if ((localBuffer[msPos] & 0xFE) == 0xFC) {
+                    // 6 byte sequence - Unicode code-points: U+04000000 to U+7FFFFFFF (ALL ILLEGAL)
+                    utf8SequenceLength = 6;
+                }
+
+                if (msPos + utf8SequenceLength >= msLength) {
+                    // Not enough bytes left in localBuffer to complete the utf-8
+                    // sequence - need to save and prepend onto incoming data next
+                    // time around.
+                    // The absence of a second argument takes all the available
+                    // bytes - this is only for data from the Server NOT from
+                    // locally generated material from Lua feedTriggers(...)
+                    if( isFromServer ) {
+                        mIncompleteUtf8SequenceBytes = localBuffer.substr(msPos);
+                    }
+                    return; // Bail out
+                }
+
+                // If we have got here we have enough bytes to work with:
+                bool isValid = true;
+                bool isToUseReplacementMark = false;
+                bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
+                switch( utf8SequenceLength ) {
+                case 4:
+                    if ((localBuffer[msPos+3] & 0xC0) != 0x80) {
+                        qDebug() << "TBuffer::translateToPlainText(...) byte 4 in sequence as UTF-8 rejected!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                    }
+                    else if((localBuffer[msPos+3] & 0x3F) > 0x04) {
+                        // For 4 byte values the bits are distributed:
+                        //  Byte 1    Byte 2    Byte 3    Byte 4
+                        // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
+                        // U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
+                        // So this (the maximum valid character) is:
+                        // -----100  --001111  --111111  --111111
+
+                        qDebug() << "TBuffer::translateToPlainText(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                    }
+
+                    // Fall-through
+                case 3:
+                    if ((localBuffer[msPos+2] & 0xC0) != 0x80) {
+                        qDebug() << "TBuffer::translateToPlainText(...) byte 3 in sequence as UTF-8 rejected!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                    } else if(   (static_cast<quint8>(localBuffer[msPos+2]) == 0xbf)
+                              && (static_cast<quint8>(localBuffer[msPos+1]) == 0xbb)
+                              && (static_cast<quint8>(localBuffer[msPos]  ) == 0xef)) {
+
+                        // Got caught out by this one - it is the Utf-8 BOM and
+                        // needs to be ignored as it transcodes to NO codepoints!
+                        qDebug() << "TBuffer::translateToPlainText(...) UTF-8 BOM sequence seen and handled!";
+                        isValid = false;
+                        isToUseByteOrderMark = true;
+                    }
+
+                    // Fall-through
+                case 2:
+                    if ((localBuffer[msPos+1] & 0xC0) != 0x80) {
+                        qDebug() << "TBuffer::translateToPlainText(...) byte 2 in sequence as UTF-8 rejected!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                    }
+
+                    // Also test for (and reject) overlong sequences - don't
+                    // need to check 5 or 6 ones as those are already rejected:
+                    if( (((localBuffer[msPos] & 0xFE) == 0xC0) && ((localBuffer[msPos+1] & 0xC0) == 0x80))
+                     || (( localBuffer[msPos]         == 0xE0) && ((localBuffer[msPos+1] & 0xE0) == 0x80))
+                     || (( localBuffer[msPos]         == 0xF0) && ((localBuffer[msPos+1] & 0xF0) == 0x80)) ){
+
+                        qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong "
+                                           << utf8SequenceLength
+                                           << "-byte sequence as UTF-8 rejected!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                    }
+                    break;
+
+                default:
+                    qDebug().nospace() << "TBuffer::translateToPlainText(...) "
+                                       << utf8SequenceLength
+                                       << "-byte sequence as UTF-8 rejected!";
+                    isValid = false;
+                    isToUseReplacementMark = true;
+                }
+
+                // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
+                if(isValid) {
+                    QString codePoint = QString(localBuffer.substr(msPos,utf8SequenceLength).c_str());
+                    switch(codePoint.size()) {
+                    default:
+                        Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
+                        // Fall-through
+                    case 2:
+                        isTwoTCharsNeeded = true;
+                        // Fall-through
+                    case 1:
+                        qDebug().nospace() << "TBuffer::translateToPlainText(...) "
+                                           << utf8SequenceLength
+                                           << "-byte UTF-8 sequence accepted, it was "
+                                           << codePoint.size()
+                                           << " QChar(s) long ["
+                                           << codePoint
+                                           << "]";
+                        mMudLine.append(codePoint);
+                        break;
+                    case 0:
+                        qWarning().nospace() << "TBuffer::translateToPlainText(...) "
+                                              << utf8SequenceLength
+                                              << "-byte UTF-8 sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                    }
+                } else {
+                    QString debugMsg;
+                    for(size_t i = 0; i < utf8SequenceLength; ++i) {
+                        debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[msPos+i]),2,16));
+                    }
+                    qDebug().nospace() << "    Sequence bytes are: "
+                                       << debugMsg.toLatin1().constData();
+                    if(isToUseReplacementMark) {
+                        mMudLine.append(QChar::ReplacementCharacter);
+                    }
+                    if(isToUseByteOrderMark) {
+                        mMudLine.append(QChar::ByteOrderMark);
+                    }
+                }
+
+                // As there is already a unit increment at the bottom of loop
+                // add one less than the sequence length:
+                msPos += utf8SequenceLength - 1;
+            } else {
+                // Single byte character i.e. Unicode points: U+00000000 to U+0000007F
+                mMudLine.append(ch);
+            }
+        }
+        else {
+            // Default - no encoding case - reject anything that has MS Bit set
+            // as that isn't ASCII!
+            if( ch & 0x80 ) {
+                // Was going to ignore this byte, not add a TChar instance
+                // either and move on:
+                // ++msPos;
+                // continue;
+                // but instead insert the "Replacement Character Marker"
+                mMudLine.append(QChar::ReplacementCharacter);
+            }
+            else {
+                mMudLine.append(ch);
+            }
+        }
+
         TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
                   ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
                   ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
@@ -1802,8 +2027,24 @@ void TBuffer::translateToPlainText( std::string & s )
             c.flags |= TCHAR_UNDERLINE;
         }
 
-
         mMudBuffer.push_back( c );
+
+        if (isTwoTCharsNeeded) {
+            TChar c2( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                      ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                      ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                      bgColorR,
+                      bgColorG,
+                      bgColorB,
+                      mIsDefaultColor ? mBold : false,
+                      mItalics,
+                      mUnderline,
+                      mStrikeOut );
+
+            // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE?
+            mMudBuffer.push_back( c2 );
+        }
+
         msPos++;
     }
 }
@@ -3288,4 +3529,689 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     // that editor!
 
     return s;
+}
+
+// These tables were gleaned by comparing side-by-side the given table and the
+// Iso-8859-1 one and picking out the DIFFERENCES on Wikipedia!
+// Tables at: https://en.wikipedia.org/wiki/ISO/IEC_8859-XX#Codepage_layout
+// replacing XX with "1" to "15" as required, each decoder defaults to using
+// the built-in single byte QChar::fromLatin1(...) decoding method except for
+// those that are different, sequences of differences are grouped for visual
+// convenience here:
+QChar TBuffer::decodeByteToIso_8859_2(const quint8 value)
+{
+    switch(value) {
+    case 161:   return QChar(0x0104);   break;
+    case 162:   return QChar(0x02D8);   break;
+    case 163:   return QChar(0x0141);   break;
+
+    case 165:   return QChar(0x013D);   break;
+    case 166:   return QChar(0x015A);   break;
+
+    case 169:   return QChar(0x0160);   break;
+    case 170:   return QChar(0x015E);   break;
+    case 171:   return QChar(0x0164);   break;
+    case 172:   return QChar(0x0179);   break;
+
+    case 174:   return QChar(0x017D);   break;
+    case 175:   return QChar(0x017B);   break;
+
+    case 177:   return QChar(0x0105);   break;
+    case 178:   return QChar(0x02DB);   break;
+    case 179:   return QChar(0x0142);   break;
+
+    case 181:   return QChar(0x013E);   break;
+    case 182:   return QChar(0x015B);   break;
+    case 183:   return QChar(0x02C7);   break;
+    case 184:   return QChar(0x00B8);   break;
+    case 185:   return QChar(0x0161);   break;
+    case 186:   return QChar(0x015F);   break;
+    case 187:   return QChar(0x0165);   break;
+    case 188:   return QChar(0x017A);   break;
+    case 189:   return QChar(0x02DD);   break;
+    case 190:   return QChar(0x017E);   break;
+    case 191:   return QChar(0x017C);   break;
+    case 192:   return QChar(0x0154);   break;
+
+    case 195:   return QChar(0x0102);   break;
+
+    case 197:   return QChar(0x0139);   break;
+    case 198:   return QChar(0x0106);   break;
+
+    case 200:   return QChar(0x010C);   break;
+
+    case 202:   return QChar(0x0118);   break;
+
+    case 204:   return QChar(0x011A);   break;
+
+    case 207:   return QChar(0x010E);   break;
+    case 208:   return QChar(0x0110);   break;
+    case 209:   return QChar(0x0143);   break;
+    case 210:   return QChar(0x0147);   break;
+
+    case 213:   return QChar(0x0150);   break;
+    case 214:   return QChar(0x00D6);   break;
+
+    case 216:   return QChar(0x0158);   break;
+    case 217:   return QChar(0x016E);   break;
+
+    case 219:   return QChar(0x0170);   break;
+
+    case 222:   return QChar(0x0162);   break;
+
+    case 224:   return QChar(0x0155);   break;
+
+    case 227:   return QChar(0x0103);   break;
+
+    case 229:   return QChar(0x013A);   break;
+    case 230:   return QChar(0x0107);   break;
+
+    case 232:   return QChar(0x010D);   break;
+
+    case 234:   return QChar(0x0119);   break;
+
+    case 236:   return QChar(0x011B);   break;
+
+    case 239:   return QChar(0x010F);   break;
+    case 240:   return QChar(0x0111);   break;
+    case 241:   return QChar(0x0144);   break;
+    case 242:   return QChar(0x0148);   break;
+
+    case 245:   return QChar(0x0151);   break;
+
+    case 248:   return QChar(0x0159);   break;
+    case 249:   return QChar(0x016F);   break;
+
+    case 251:   return QChar(0x0171);   break;
+
+    case 254:   return QChar(0x0163);   break;
+    case 255:   return QChar(0x02D9);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToIso_8859_3(const quint8 value)
+{
+    switch(value) {
+    case 161:   return QChar(0x0126);   break;
+    case 162:   return QChar(0x02D8);   break;
+
+    case 165:   return QChar::ReplacementCharacter;   break; // Unassigned?
+    case 166:   return QChar(0x0124);   break;
+
+    case 169:   return QChar(0x0130);   break;
+    case 170:   return QChar(0x015E);   break;
+    case 171:   return QChar(0x011E);   break;
+    case 172:   return QChar(0x0134);   break;
+
+    case 174:   return QChar::ReplacementCharacter;   break; // Unassigned?
+    case 175:   return QChar(0x017B);   break;
+
+    case 177:   return QChar(0x0127);   break;
+
+    case 182:   return QChar(0x0125);   break;
+
+    case 185:   return QChar(0x0131);   break;
+    case 186:   return QChar(0x015F);   break;
+    case 187:   return QChar(0x011F);   break;
+    case 188:   return QChar(0x0135);   break;
+
+    case 190:   return QChar::ReplacementCharacter;   break; // Unassigned?
+    case 191:   return QChar(0x017C);   break;
+
+    case 195:   return QChar::ReplacementCharacter;   break; // Unassigned?
+
+    case 197:   return QChar(0x010A);   break;
+    case 198:   return QChar(0x0108);   break;
+
+    case 208:   return QChar::ReplacementCharacter;   break; // Unassigned?
+
+    case 216:   return QChar(0x011C);   break;
+
+    case 221:   return QChar(0x016C);   break;
+    case 222:   return QChar(0x015C);   break;
+
+    case 227:   return QChar::ReplacementCharacter;   break; // Unassigned?
+
+    case 229:   return QChar(0x010B);   break;
+    case 230:   return QChar(0x0109);   break;
+
+    case 240:   return QChar::ReplacementCharacter;   break; // Unassigned?
+
+    case 245:   return QChar(0x0121);   break;
+
+    case 248:   return QChar(0x011D);   break;
+
+    case 253:   return QChar(0x016D);   break;
+    case 254:   return QChar(0x015D);   break;
+    case 255:   return QChar(0x02D9);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToIso_8859_4(const quint8 value)
+{
+    switch(value) {
+    case 161:   return QChar(0x0104);   break;
+    case 162:   return QChar(0x0138);   break;
+    case 163:   return QChar(0x0156);   break;
+
+    case 165:   return QChar(0x0128);   break;
+    case 166:   return QChar(0x013B);   break;
+
+    case 169:   return QChar(0x0160);   break;
+    case 170:   return QChar(0x0112);   break;
+    case 171:   return QChar(0x0122);   break;
+    case 172:   return QChar(0x0166);   break;
+
+    case 174:   return QChar(0x017D);   break;
+
+    case 177:   return QChar(0x0105);   break;
+    case 178:   return QChar(0x02DB);   break;
+    case 179:   return QChar(0x0157);   break;
+
+    case 181:   return QChar(0x0129);   break;
+    case 182:   return QChar(0x013C);   break;
+    case 183:   return QChar(0x02C7);   break;
+
+    case 185:   return QChar(0x0161);   break;
+    case 186:   return QChar(0x0113);   break;
+    case 187:   return QChar(0x0123);   break;
+    case 188:   return QChar(0x0167);   break;
+    case 189:   return QChar(0x014A);   break;
+    case 190:   return QChar(0x017E);   break;
+    case 191:   return QChar(0x014B);   break;
+    case 192:   return QChar(0x0100);   break;
+
+    case 199:   return QChar(0x012E);   break;
+    case 200:   return QChar(0x010C);   break;
+
+    case 202:   return QChar(0x0118);   break;
+
+    case 204:   return QChar(0x0116);   break;
+
+    case 207:   return QChar(0x012A);   break;
+    case 208:   return QChar(0x0110);   break;
+    case 209:   return QChar(0x0145);   break;
+    case 210:   return QChar(0x014C);   break;
+    case 211:   return QChar(0x0136);   break;
+
+    case 217:   return QChar(0x0172);   break;
+
+    case 221:   return QChar(0x0168);   break;
+    case 222:   return QChar(0x016A);   break;
+
+    case 224:   return QChar(0x0101);   break;
+
+    case 231:   return QChar(0x012F);   break;
+    case 232:   return QChar(0x010D);   break;
+
+    case 234:   return QChar(0x0119);   break;
+
+    case 236:   return QChar(0x0117);   break;
+
+    case 239:   return QChar(0x012B);   break;
+
+    case 240:   return QChar(0x0111);   break;
+    case 241:   return QChar(0x0146);   break;
+    case 242:   return QChar(0x014D);   break;
+    case 243:   return QChar(0x0137);   break;
+
+    case 249:   return QChar(0x0173);   break;
+
+    case 253:   return QChar(0x0169);   break;
+    case 254:   return QChar(0x016B);   break;
+    case 255:   return QChar(0x02D9);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToIso_8859_10(const quint8 value)
+{
+    switch(value) {
+    case 161:   return QChar(0x0104);   break;
+    case 162:   return QChar(0x0112);   break;
+    case 163:   return QChar(0x0122);   break;
+    case 164:   return QChar(0x012A);   break;
+    case 165:   return QChar(0x0128);   break;
+    case 166:   return QChar(0x0136);   break;
+
+    case 168:   return QChar(0x013B);   break;
+    case 169:   return QChar(0x0110);   break;
+    case 170:   return QChar(0x0160);   break;
+    case 171:   return QChar(0x0166);   break;
+    case 172:   return QChar(0x017D);   break;
+
+    case 174:   return QChar(0x016A);   break;
+    case 175:   return QChar(0x014A);   break;
+
+    case 177:   return QChar(0x0105);   break;
+    case 178:   return QChar(0x0113);   break;
+    case 179:   return QChar(0x0123);   break;
+    case 180:   return QChar(0x012B);   break;
+    case 181:   return QChar(0x0129);   break;
+    case 182:   return QChar(0x0137);   break;
+
+    case 184:   return QChar(0x013C);   break;
+    case 185:   return QChar(0x0111);   break;
+    case 186:   return QChar(0x0161);   break;
+    case 187:   return QChar(0x0167);   break;
+    case 188:   return QChar(0x017E);   break;
+    case 189:   return QChar(0x2015);   break;
+    case 190:   return QChar(0x016B);   break;
+    case 191:   return QChar(0x014B);   break;
+    case 192:   return QChar(0x0100);   break;
+
+    case 199:   return QChar(0x012E);   break;
+    case 200:   return QChar(0x010C);   break;
+
+    case 202:   return QChar(0x0118);   break;
+
+    case 204:   return QChar(0x0116);   break;
+
+    case 209:   return QChar(0x0145);   break;
+    case 210:   return QChar(0x014C);   break;
+
+    case 215:   return QChar(0x0168);   break;
+
+    case 217:   return QChar(0x0172);   break;
+
+    case 224:   return QChar(0x0101);   break;
+
+    case 231:   return QChar(0x012F);   break;
+    case 232:   return QChar(0x010D);   break;
+
+    case 234:   return QChar(0x0119);   break;
+
+    case 236:   return QChar(0x0117);   break;
+
+    case 239:   return QChar(0x012B);   break;
+
+    case 241:   return QChar(0x0146);   break;
+    case 242:   return QChar(0x014D);   break;
+
+    case 247:   return QChar(0x0169);   break;
+
+    case 249:   return QChar(0x0173);   break;
+
+    case 255:   return QChar(0x0138);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToIso_8859_15(const quint8 value)
+{
+    switch(value) {
+    case 164:   return QChar(0x20AC);   break;
+
+    case 166:   return QChar(0x0160);   break;
+
+    case 168:   return QChar(0x0161);   break;
+
+    case 180:   return QChar(0x017D);   break;
+
+    case 184:   return QChar(0x017E);   break;
+
+    case 188:   return QChar(0x0152);   break;
+    case 189:   return QChar(0x0153);   break;
+    case 190:   return QChar(0x0178);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToIso_8859_16(const quint8 value)
+{
+    switch(value) {
+    case 161:   return QChar(0x0104);   break;
+    case 162:   return QChar(0x0105);   break;
+    case 163:   return QChar(0x0141);   break;
+    case 164:   return QChar(0x20AC);   break;
+    case 165:   return QChar(0x201E);   break;
+    case 166:   return QChar(0x0160);   break;
+
+    case 168:   return QChar(0x0161);   break;
+
+    case 170:   return QChar(0x0218);   break;
+
+    case 172:   return QChar(0x0179);   break;
+
+    case 174:   return QChar(0x017A);   break;
+    case 175:   return QChar(0x017B);   break;
+
+    case 178:   return QChar(0x010C);   break;
+    case 179:   return QChar(0x0142);   break;
+    case 180:   return QChar(0x017D);   break;
+    case 181:   return QChar(0x201D);   break;
+
+    case 184:   return QChar(0x017E);   break;
+    case 185:   return QChar(0x010D);   break;
+    case 186:   return QChar(0x0219);   break;
+
+    case 188:   return QChar(0x0152);   break;
+    case 189:   return QChar(0x0153);   break;
+    case 190:   return QChar(0x0178);   break;
+    case 191:   return QChar(0x017C);   break;
+
+    case 195:   return QChar(0x0102);   break;
+
+    case 197:   return QChar(0x0106);   break;
+
+    case 208:   return QChar(0x0110);   break;
+    case 209:   return QChar(0x0143);   break;
+
+    case 213:   return QChar(0x0150);   break;
+
+    case 215:   return QChar(0x015A);   break;
+    case 216:   return QChar(0x0170);   break;
+
+    case 221:   return QChar(0x0118);   break;
+    case 222:   return QChar(0x021A);   break;
+
+    case 227:   return QChar(0x0103);   break;
+
+    case 229:   return QChar(0x0107);   break;
+
+    case 240:   return QChar(0x0111);   break;
+    case 241:   return QChar(0x0144);   break;
+
+    case 245:   return QChar(0x0151);   break;
+
+    case 247:   return QChar(0x015B);   break;
+    case 248:   return QChar(0x0171);   break;
+
+    case 253:   return QChar(0x0119);   break;
+    case 254:   return QChar(0x021B);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToWindows_1250(const quint8 value)
+{
+    switch(value) {
+    case 128:   return QChar(0x20AC);   break;
+    case 129:   return QChar::ReplacementCharacter; break;
+    case 130:   return QChar(0x201A);   break;
+    case 131:   return QChar::ReplacementCharacter; break;
+    case 132:   return QChar(0x201E);   break;
+    case 133:   return QChar(0x2026);   break;
+    case 134:   return QChar(0x2020);   break;
+    case 135:   return QChar(0x2021);   break;
+    case 136:   return QChar::ReplacementCharacter; break;
+    case 137:   return QChar(0x2030);   break;
+    case 138:   return QChar(0x0160);   break;
+    case 139:   return QChar(0x2039);   break;
+    case 140:   return QChar(0x015A);   break;
+    case 141:   return QChar(0x0164);   break;
+    case 142:   return QChar(0x017D);   break;
+    case 143:   return QChar(0x0179);   break;
+    case 144:   return QChar::ReplacementCharacter; break;
+    case 145:   return QChar(0x2018);   break;
+    case 146:   return QChar(0x2019);   break;
+    case 147:   return QChar(0x201C);   break;
+    case 148:   return QChar(0x201D);   break;
+    case 149:   return QChar(0x2022);   break;
+    case 150:   return QChar(0x2013);   break;
+    case 151:   return QChar(0x2014);   break;
+    case 152:   return QChar::ReplacementCharacter; break;
+    case 153:   return QChar(0x2122);   break;
+    case 154:   return QChar(0x0161);   break;
+    case 155:   return QChar(0x203A);   break;
+    case 156:   return QChar(0x015B);   break;
+    case 157:   return QChar(0x0165);   break;
+    case 158:   return QChar(0x017E);   break;
+    case 159:   return QChar(0x017A);   break;
+
+    case 161:   return QChar(0x02C7);   break;
+    case 162:   return QChar(0x02D8);   break;
+    case 163:   return QChar(0x0141);   break;
+
+    case 165:   return QChar(0x0104);   break;
+
+    case 170:   return QChar(0x015E);   break;
+
+    case 175:   return QChar(0x017B);   break;
+
+    case 178:   return QChar(0x02DB);   break;
+    case 179:   return QChar(0x0142);   break;
+
+    case 185:   return QChar(0x0105);   break;
+    case 186:   return QChar(0x015F);   break;
+
+    case 188:   return QChar(0x013D);   break;
+    case 189:   return QChar(0x02DD);   break;
+    case 190:   return QChar(0x013E);   break;
+    case 191:   return QChar(0x017C);   break;
+    case 192:   return QChar(0x0154);   break;
+
+    case 195:   return QChar(0x0102);   break;
+
+    case 197:   return QChar(0x0139);   break;
+    case 198:   return QChar(0x0106);   break;
+
+    case 200:   return QChar(0x010C);   break;
+
+    case 202:   return QChar(0x0118);   break;
+
+    case 204:   return QChar(0x011A);   break;
+
+    case 207:   return QChar(0x010E);   break;
+    case 208:   return QChar(0x0110);   break;
+    case 209:   return QChar(0x0143);   break;
+    case 210:   return QChar(0x0147);   break;
+
+    case 213:   return QChar(0x0150);   break;
+    case 214:   return QChar(0x00D6);   break;
+
+    case 216:   return QChar(0x0158);   break;
+    case 217:   return QChar(0x016E);   break;
+
+    case 219:   return QChar(0x0170);   break;
+
+    case 222:   return QChar(0x0162);   break;
+
+    case 224:   return QChar(0x0155);   break;
+
+    case 227:   return QChar(0x0103);   break;
+
+    case 229:   return QChar(0x013A);   break;
+    case 230:   return QChar(0x0107);   break;
+
+    case 232:   return QChar(0x010D);   break;
+
+    case 234:   return QChar(0x0119);   break;
+
+    case 236:   return QChar(0x011B);   break;
+
+    case 239:   return QChar(0x010F);   break;
+    case 240:   return QChar(0x0111);   break;
+    case 241:   return QChar(0x0144);   break;
+    case 242:   return QChar(0x0148);   break;
+
+    case 245:   return QChar(0x0151);   break;
+
+    case 248:   return QChar(0x0159);   break;
+    case 249:   return QChar(0x016F);   break;
+
+    case 251:   return QChar(0x0171);   break;
+
+    case 254:   return QChar(0x0163);   break;
+    case 255:   return QChar(0x02D9);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToWindows_1251(const quint8 value)
+{
+    switch(value) {
+    case 128:   return QChar(0x0402);   break;
+    case 129:   return QChar(0x0403);   break;
+    case 130:   return QChar(0x201A);   break;
+    case 131:   return QChar(0x0453);   break;
+    case 132:   return QChar(0x201E);   break;
+    case 133:   return QChar(0x2026);   break;
+    case 134:   return QChar(0x2020);   break;
+    case 135:   return QChar(0x2021);   break;
+    case 136:   return QChar(0x20AC);   break;
+    case 137:   return QChar(0x2030);   break;
+    case 138:   return QChar(0x0409);   break;
+    case 139:   return QChar(0x2039);   break;
+    case 140:   return QChar(0x040A);   break;
+    case 141:   return QChar(0x040C);   break;
+    case 142:   return QChar(0x040B);   break;
+    case 143:   return QChar(0x040F);   break;
+    case 144:   return QChar(0x0452);   break;
+    case 145:   return QChar(0x2018);   break;
+    case 146:   return QChar(0x2019);   break;
+    case 147:   return QChar(0x201C);   break;
+    case 148:   return QChar(0x201D);   break;
+    case 149:   return QChar(0x2022);   break;
+    case 150:   return QChar(0x2013);   break;
+    case 151:   return QChar(0x2014);   break;
+    case 152:   return QChar::ReplacementCharacter; break;
+    case 153:   return QChar(0x2122);   break;
+    case 154:   return QChar(0x0459);   break;
+    case 155:   return QChar(0x203A);   break;
+    case 156:   return QChar(0x045A);   break;
+    case 157:   return QChar(0x045C);   break;
+    case 158:   return QChar(0x045B);   break;
+    case 159:   return QChar(0x045F);   break;
+
+    case 161:   return QChar(0x040E);   break;
+    case 162:   return QChar(0x045E);   break;
+    case 163:   return QChar(0x0408);   break;
+
+    case 165:   return QChar(0x0490);   break;
+
+    case 168:   return QChar(0x0401);   break;
+
+    case 170:   return QChar(0x0404);   break;
+
+    case 175:   return QChar(0x0407);   break;
+
+    case 178:   return QChar(0x0406);   break;
+    case 179:   return QChar(0x0456);   break;
+    case 180:   return QChar(0x0491);   break;
+
+    case 184:   return QChar(0x0451);   break;
+    case 185:   return QChar(0x2116);   break;
+    case 186:   return QChar(0x0454);   break;
+
+    case 188:   return QChar(0x0458);   break;
+    case 189:   return QChar(0x0405);   break;
+    case 190:   return QChar(0x0455);   break;
+    case 191:   return QChar(0x0457);   break;
+    case 192:   return QChar(0x0410);   break;
+    case 193:   return QChar(0x0411);   break;
+    case 194:   return QChar(0x0412);   break;
+    case 195:   return QChar(0x0413);   break;
+    case 196:   return QChar(0x0414);   break;
+    case 197:   return QChar(0x0415);   break;
+    case 198:   return QChar(0x0416);   break;
+    case 199:   return QChar(0x0417);   break;
+    case 200:   return QChar(0x0418);   break;
+    case 201:   return QChar(0x0419);   break;
+    case 202:   return QChar(0x041A);   break;
+    case 203:   return QChar(0x041B);   break;
+    case 204:   return QChar(0x041C);   break;
+    case 205:   return QChar(0x041D);   break;
+    case 206:   return QChar(0x041E);   break;
+    case 207:   return QChar(0x041F);   break;
+    case 208:   return QChar(0x0420);   break;
+    case 209:   return QChar(0x0421);   break;
+    case 210:   return QChar(0x0422);   break;
+    case 211:   return QChar(0x0423);   break;
+    case 212:   return QChar(0x0424);   break;
+    case 213:   return QChar(0x0425);   break;
+    case 214:   return QChar(0x0426);   break;
+    case 215:   return QChar(0x0427);   break;
+    case 216:   return QChar(0x0428);   break;
+    case 217:   return QChar(0x0429);   break;
+    case 218:   return QChar(0x042A);   break;
+    case 219:   return QChar(0x042B);   break;
+    case 220:   return QChar(0x042C);   break;
+    case 221:   return QChar(0x042D);   break;
+    case 222:   return QChar(0x042E);   break;
+    case 223:   return QChar(0x042F);   break;
+    case 224:   return QChar(0x0430);   break;
+    case 225:   return QChar(0x0431);   break;
+    case 226:   return QChar(0x0432);   break;
+    case 227:   return QChar(0x0433);   break;
+    case 228:   return QChar(0x0434);   break;
+    case 229:   return QChar(0x0435);   break;
+    case 230:   return QChar(0x0436);   break;
+    case 231:   return QChar(0x0437);   break;
+    case 232:   return QChar(0x0438);   break;
+    case 233:   return QChar(0x0439);   break;
+    case 234:   return QChar(0x043A);   break;
+    case 235:   return QChar(0x043B);   break;
+    case 236:   return QChar(0x043C);   break;
+    case 237:   return QChar(0x043D);   break;
+    case 238:   return QChar(0x043E);   break;
+    case 239:   return QChar(0x043F);   break;
+    case 240:   return QChar(0x0440);   break;
+    case 241:   return QChar(0x0441);   break;
+    case 242:   return QChar(0x0442);   break;
+    case 243:   return QChar(0x0443);   break;
+    case 244:   return QChar(0x0444);   break;
+    case 245:   return QChar(0x0445);   break;
+    case 246:   return QChar(0x0446);   break;
+    case 247:   return QChar(0x0447);   break;
+    case 248:   return QChar(0x0448);   break;
+    case 249:   return QChar(0x0449);   break;
+    case 250:   return QChar(0x044A);   break;
+    case 251:   return QChar(0x044B);   break;
+    case 252:   return QChar(0x044C);   break;
+    case 253:   return QChar(0x044D);   break;
+    case 254:   return QChar(0x044E);   break;
+    case 255:   return QChar(0x044F);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
+}
+
+QChar TBuffer::decodeByteToWindows_1252(const quint8 value)
+{
+    switch(value) {
+    case 128:   return QChar(0x20AC);   break;
+    case 129:   return QChar::ReplacementCharacter; break;
+    case 130:   return QChar(0x201A);   break;
+    case 131:   return QChar(0x0192);   break;
+    case 132:   return QChar(0x201E);   break;
+    case 133:   return QChar(0x2026);   break;
+    case 134:   return QChar(0x2020);   break;
+    case 135:   return QChar(0x2021);   break;
+    case 136:   return QChar(0x02C6);   break;
+    case 137:   return QChar(0x2030);   break;
+    case 138:   return QChar(0x0160);   break;
+    case 139:   return QChar(0x2039);   break;
+    case 140:   return QChar(0x0152);   break;
+    case 141:   return QChar::ReplacementCharacter; break;
+    case 142:   return QChar(0x017D);   break;
+    case 143:   return QChar::ReplacementCharacter; break;
+    case 144:   return QChar::ReplacementCharacter; break;
+    case 145:   return QChar(0x2018);   break;
+    case 146:   return QChar(0x2019);   break;
+    case 147:   return QChar(0x201C);   break;
+    case 148:   return QChar(0x201D);   break;
+    case 149:   return QChar(0x2022);   break;
+    case 150:   return QChar(0x2013);   break;
+    case 151:   return QChar(0x2014);   break;
+    case 152:   return QChar(0x02DC);   break;
+    case 153:   return QChar(0x2122);   break;
+    case 154:   return QChar(0x0161);   break;
+    case 155:   return QChar(0x203A);   break;
+    case 156:   return QChar(0x0153);   break;
+    case 157:   return QChar::ReplacementCharacter; break;
+    case 158:   return QChar(0x017E);   break;
+    case 159:   return QChar(0x0178);   break;
+
+    default:    return QChar::fromLatin1(value);
+    }
 }

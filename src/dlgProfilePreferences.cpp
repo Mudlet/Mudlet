@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2014, 2016-2017 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -29,6 +30,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
+#include "ctelnet.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
@@ -287,7 +289,6 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         mFORCE_GA_OFF->setChecked( pHost->mFORCE_GA_OFF );
         mAlertOnNewData->setChecked( pHost->mAlertOnNewData );
         //mMXPMode->setCurrentIndex( pHost->mMXPMode );
-        //encoding->setCurrentIndex( pHost->mEncoding );
         mFORCE_SAVE_ON_EXIT->setChecked( pHost->mFORCE_SAVE_ON_EXIT );
         mEnableGMCP->setChecked( pHost->mEnableGMCP );
         mEnableMSDP->setChecked( pHost->mEnableMSDP );
@@ -374,6 +375,18 @@ dlgProfilePreferences::dlgProfilePreferences( QWidget * pF, Host * pH )
         else {
             checkBox_showDefaultArea->hide();
         }
+
+        comboBox_encoding->addItem(QLatin1String("ASCII"));
+        comboBox_encoding->addItems(pHost->mTelnet.csmAcceptableEncodings);
+        if(pHost->mTelnet.getEncoding().isEmpty()) {
+            // cTelnet::mEncoding is (or should be) empty for the default 7-bit
+            // ASCII case, so need to set the control specially to its (the
+            // first) value
+            comboBox_encoding->setCurrentIndex(0);
+        } else {
+            comboBox_encoding->setCurrentText(pHost->mTelnet.getEncoding());
+        }
+        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString &)), this, SLOT(slot_setEncoding(const QString &)));
     }
 }
 
@@ -1218,7 +1231,6 @@ void dlgProfilePreferences::slot_save_and_exit()
 //qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
-    //pHost->mEncoding = encoding->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
     mudlet::self()->mMainIconSize = MainIconSize->value();
     mudlet::self()->mTEFolderIconSize = TEFolderIconSize->value();
@@ -1313,4 +1325,9 @@ void dlgProfilePreferences::slot_chooseProfilesChanged( QAction * _action )
         pushButton_copyMap->setEnabled( false );
         pushButton_chooseProfiles->setText( tr( "Press to pick destination(s)" ) );
     }
+}
+
+void dlgProfilePreferences::slot_setEncoding( const QString & newEncoding )
+{
+    mpHost->mTelnet.setEncoding(newEncoding);
 }

@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2017 by Stephen Lyons                        *
+ *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
@@ -61,6 +62,19 @@
     #undef DEBUG
 #endif
 
+// These are the strings that we can plug into QTextCodec that we have handling
+// for, ("ASCII") is a special case and is handled differently.
+const QStringList cTelnet::csmAcceptableEncodings = { QLatin1String("ISO 8859-1"),
+                                                      QLatin1String("ISO 8859-2"),
+                                                      QLatin1String("ISO 8859-3"),
+                                                      QLatin1String("ISO 8859-4"),
+                                                      QLatin1String("ISO 8859-10"),
+                                                      QLatin1String("ISO 8859-15"),
+                                                      QLatin1String("ISO 8859-16"),
+                                                      QLatin1String("WINDOWS-1250"),
+                                                      QLatin1String("WINDOWS-1251"),
+                                                      QLatin1String("WINDOWS-1252"),
+                                                      QLatin1String("UTF-8") };
 //#ifdef QT_DEBUG
 //    #define DEBUG
 //#endif
@@ -103,9 +117,6 @@ cTelnet::cTelnet( Host * pH )
     mIsTimerPosting = false;
     mNeedDecompression = false;
     mWaitingForCompressedStreamToStart = false;
-    // initialize default encoding
-    encoding = "UTF-8";
-    encodingChanged(encoding);
     termType = QString("Mudlet %1").arg(APP_VERSION);
     if( QByteArray(APP_BUILD).trimmed().length() )
         termType.append( QString(APP_BUILD) );
@@ -171,22 +182,76 @@ cTelnet::~cTelnet()
 }
 
 
-void cTelnet::encodingChanged(QString encoding)
+void cTelnet::encodingChanged(const QString & encoding)
 {
-    encoding = encoding;
+    mEncoding = encoding;
 
     // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
+    // Not currently used as we do it by hand as we have to extract the data
+    // from the telnet protocol and all the out-of-band stuff.  It might be
+    // possible to use this in the future for non-UTF-8 traffic thought.
     incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
     incomingDataDecoder = incomingDataCodec->makeDecoder();
 
     outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
-    outgoingDataDecoder = outgoingDataCodec->makeEncoder();
+    outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+    // Do NOT create BOMs!
 }
 
+// Need to set the encoding at the start but it does not need to be written out
+// then. Return values are for Lua subsystem...!
+// newEncoding must be EITHER: one of the FIXED non-translatable values in
+// cTelnet::csmAcceptableEncodings
+// OR "ASCII"
+// OR an empty string (which means the same as the ASCII).
+QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const bool isToStore)
+{
+    bool isChanged = false;
+    QString reportedEncoding = newEncoding;
+    if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
+        reportedEncoding = QLatin1String("ASCII");
+        if (! mEncoding.isEmpty()) {
+            // This will disable trancoding on:
+            // input in TBuffer::translateToPlainText(...)
+            // output in cTelnet::sendData(...)
+            mEncoding.clear();
+            if (isToStore) {
+                mpHost->writeProfileData(QLatin1String("encoding"), reportedEncoding);
+            }
+            isChanged = true;
+        }
+    } else if (!csmAcceptableEncodings.contains(newEncoding)) {
+        // Not in list - so reject it
+        return qMakePair(false,
+                         QLatin1String("(encoding \"")
+                         % newEncoding
+                         % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
+                         % csmAcceptableEncodings.join(QLatin1String("\", \""))
+                         % QLatin1String("\")"));
+    } else if (mEncoding != newEncoding) {
+        encodingChanged(newEncoding);
+        isChanged = true;
+        if (isToStore) {
+            mpHost->writeProfileData(QLatin1String("encoding"), mEncoding);
+        }
+    }
+
+    if (isChanged) {
+        // Report on main console the change in ALL cases, as this can change
+        // things for the user (e.g. theoretically what characters are
+        // acceptable to the MUD Server).
+        QString message = tr("[ ALERT ] - Encoding/decoding of MUD Server traffic set to: \"%1\"...")
+                          .arg(reportedEncoding);
+        postMessage(message);
+        return qMakePair(true, QLatin1String("(encoding changed to: \"") % reportedEncoding % QLatin1String("\")"));
+    } else {
+        return qMakePair(false, QLatin1String("(no change to encoding, it already was: \"") % reportedEncoding % QLatin1String("\")"));
+    }
+}
 
 void cTelnet::connectIt(const QString &address, int port)
 {
@@ -309,19 +374,24 @@ bool cTelnet::sendData( QString & data )
     pE.mArgumentList.append( data );
     pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     mpHost->raiseEvent( pE );
-    if( mpHost->mAllowToSendCommand )
-    {
-        string outdata = (outgoingDataCodec->fromUnicode(data)).data();
-        if( ! mpHost->mUSE_UNIX_EOL )
-        {
-            outdata.append("\r\n");
+
+    if (mpHost->mAllowToSendCommand) {
+        string outData;
+        if (! mEncoding.isEmpty()) {
+            outData = outgoingDataEncoder->fromUnicode(data).constData();
         }
-        else
-            outdata += "\n";
-        return socketOutRaw( outdata );
-    }
-    else
-    {
+        else {
+            // Plain, raw ASCII, we hope!
+            outData = data.toStdString();
+        }
+
+        if (mpHost->mUSE_UNIX_EOL) {
+            outData += "\n";
+        } else {
+            outData.append("\r\n");
+        }
+        return socketOutRaw( outData );
+    } else {
         mpHost->mAllowToSendCommand = true;
         return false;
     }
@@ -1513,7 +1583,7 @@ void cTelnet::slot_timerPosting()
 void cTelnet::postData()
 {
     if (mpHost->mpConsole) {
-        mpHost->mpConsole->printOnDisplay(mMudData);
+        mpHost->mpConsole->printOnDisplay(mMudData, true);
     }
     if( mAlertOnNewData )
     {

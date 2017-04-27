@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -129,7 +129,7 @@ public:
     void clear();
     void resetFontSpecs();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s);
+    void translateToPlainText(std::string& s, const bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void appendLine(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     int lookupColor(const QString& s, int pos);
@@ -186,6 +186,15 @@ private:
     void shrinkBuffer();
     int calcWrapPos(int line, int begin, int end);
     void handleNewLine();
+    QChar decodeByteToIso_8859_2(const quint8);
+    QChar decodeByteToIso_8859_3(const quint8);
+    QChar decodeByteToIso_8859_4(const quint8);
+    QChar decodeByteToIso_8859_10(const quint8);
+    QChar decodeByteToIso_8859_15(const quint8);
+    QChar decodeByteToIso_8859_16(const quint8);
+    QChar decodeByteToWindows_1250(const quint8);
+    QChar decodeByteToWindows_1251(const quint8);
+    QChar decodeByteToWindows_1252(const quint8);
 
 
     bool gotESC;
@@ -301,6 +310,9 @@ private:
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
     int mCode[1024]; //FIXME: potential overflow bug
+    // Used to hold the incomplete bytes (1-3) that could be left at the end of
+    // a packet:
+    std::string mIncompleteUtf8SequenceBytes;
 };
 
 #endif // MUDLET_TBUFFER_H

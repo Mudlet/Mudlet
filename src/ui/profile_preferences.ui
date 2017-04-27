@@ -134,6 +134,28 @@
         </widget>
        </item>
        <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_encoding">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="title">
+          <string>Character Encoding</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <widget class="QComboBox" name="comboBox_encoding">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The way in which data is sent to and received from the MUD Server can vary in different parts of the World and usually has a relation to the language used by players on it. Whilst ASCII is the original form that the underlying Telnet protocol once used it (strictly speaking) only uses 7-bits and only supports 128 character codes (and a quarter of them are reserved for control purposes) so when it became possible to use all 8-bits in a byte various different encoding were developed. Most of these use the upper 128 character codes for extra characters needed for specific languages but which means that it is necessary to use the right encoding to get the right symbols for a particular language. This is the case for the &lt;b&gt;ISO 8859-*&lt;/b&gt;and &lt;b&gt;WINDOWS-*&lt;/b&gt; ranges; however the &lt;b&gt;UTF-8&lt;/b&gt; uses a much more advanced encoding system and uses those same 128 codes to provide for up to 1,112,064 characters in a more complex manner that uses up to four bytes but in a way that the original 128 characters are still represented by single bytes.&lt;/p&gt;&lt;p&gt;MUDs capable of operating with languages other than English will likely offer a choice of encodings, possibly with a &lt;i&gt;charset&lt;/i&gt; command or similar, review the choices that the MUD offers and choose a matching option from the list here. This setting can also be set and read via the Lua commands &lt;i&gt;setServerEncoding&lt;/i&gt;(&amp;quot;&lt;b&gt;encoding name&lt;/b&gt;&lt;i&gt;&amp;quot;)&lt;/i&gt; and &lt;i&gt;getServerEncoding()&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;In all cases Mudlet will spot incoming data that does not seem to fit the current encoding and each occurance will be marked with a &lt;b&gt;�&lt;/b&gt; if you see these then it is possible that this setting does not match what the MUD Server is sending out - or there is a defect in the way Mudlet is handling it.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This feature is planned to be introduced in Mudlet 3.1.0 and is currently not known to be bug-free - please report any defects (including consistantly incorrect single characters for any of the encodings other than &lt;b&gt;ASCII&lt;/b&gt;, &lt;b&gt;ISO 8859-&lt;u&gt;1&lt;/u&gt;&lt;/b&gt; or &lt;b&gt;UTF-8&lt;/b&gt; as it is possible for there to be errors in the other encoding).&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
           <string>Misc</string>

@@ -1138,14 +1138,12 @@ void TConsole::loadRawFile( std::string n )
     mpHost->mTelnet.loadReplay( fileName );
 }
 
-void TConsole::printOnDisplay( std::string & incomingSocketData )
+void TConsole::printOnDisplay( std::string & incomingSocketData, const bool isFromServer )
 {
-    //buffer.messen();
-    QString prompt ="";//FIXME
 
     mProcessingTime.restart();
     mTriggerEngineMode = true;
-    buffer.translateToPlainText( incomingSocketData );
+    buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
     double processT = mProcessingTime.elapsed();
