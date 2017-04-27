@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<VerificationPoint type="ObjectProperties" version="4">
+<Description/>
+<Verification object=":requiredArea.profile_name_entry_QLineEdit" property="text" type="QString" valueType="Value"><![CDATA[Avalon.de]]>
+<base64EncodedValue>QXZhbG9uLmRl</base64EncodedValue>
+</Verification>
+</VerificationPoint>
