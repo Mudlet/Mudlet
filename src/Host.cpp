@@ -450,267 +450,231 @@ void Host::reenableAllTriggers()
     mTimerUnit.reenableAllTriggers();
 }
 
-void Host::send( QString cmd, bool wantPrint, bool dontExpandAliases )
+void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if( wantPrint && mPrintCommand )
-    {
+    if (wantPrint && mPrintCommand) {
         mInsertedMissingLF = true;
-        if( (cmd == "") && ( mUSE_IRE_DRIVER_BUGFIX ) && ( ! mUSE_FORCE_LF_AFTER_PROMPT ) )
-        {
+        if ((cmd == "") && (mUSE_IRE_DRIVER_BUGFIX) && (!mUSE_FORCE_LF_AFTER_PROMPT)) {
             ;
-        }
-        else
-        {
-            mpConsole->printCommand( cmd ); // used to print the terminal <LF> that terminates a telnet command
-                                            // this is important to get the cursor position right
+        } else {
+            // used to print the terminal <LF> that terminates a telnet command
+            // this is important to get the cursor position right
+            mpConsole->printCommand(cmd);
         }
         mpConsole->update();
     }
-    QStringList commandList = cmd.split( QString( mCommandSeparator ), QString::SkipEmptyParts );
-    if( ! dontExpandAliases )
-    {
-        if( commandList.size() == 0 )
-        {
-            sendRaw( "\n" );//NOTE: damit leerprompt moeglich sind
+    QStringList commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    if (!dontExpandAliases) {
+        if (commandList.size() == 0) {
+            sendRaw("\n"); //NOTE: damit leerprompt moeglich sind
             return;
         }
     }
-    for( int i=0; i<commandList.size(); i++ )
-    {
-        if( commandList[i].size() < 1 ) continue;
+    for (int i = 0; i < commandList.size(); i++) {
+        if (commandList[i].size() < 1) {
+            continue;
+        }
         QString command = commandList[i];
         command.replace("\n", "");
         mReplacementCommand = "";
-        if( dontExpandAliases )
-        {
-            mTelnet.sendData( command );
+        if (dontExpandAliases) {
+            mTelnet.sendData(command);
             continue;
         }
-        if( ! mAliasUnit.processDataStream( command ) )
-        {
-            if( mReplacementCommand.size() > 0 )
-            {
-                mTelnet.sendData( mReplacementCommand );
-            }
-            else
-            {
-                mTelnet.sendData( command );
+        if (!mAliasUnit.processDataStream(command)) {
+            if (mReplacementCommand.size() > 0) {
+                mTelnet.sendData(mReplacementCommand);
+            } else {
+                mTelnet.sendData(command);
             }
         }
     }
 }
 
-void Host::sendRaw( QString command )
+void Host::sendRaw(QString command)
 {
-    mTelnet.sendData( command );
+    mTelnet.sendData(command);
 }
 
 int Host::createStopWatch()
 {
-    int newWatchID = mStopWatchMap.size()+1;
-    mStopWatchMap[newWatchID] = QTime(0,0,0,0);
+    int newWatchID = mStopWatchMap.size() + 1;
+    mStopWatchMap[newWatchID] = QTime(0, 0, 0, 0);
     return newWatchID;
 }
 
-double Host::getStopWatchTime( int watchID )
+double Host::getStopWatchTime(int watchID)
 {
-    if( mStopWatchMap.contains( watchID ) )
-    {
-        return static_cast<double>(mStopWatchMap[watchID].elapsed())/1000;
-    }
-    else
-    {
+    if (mStopWatchMap.contains(watchID)) {
+        return static_cast<double>(mStopWatchMap[watchID].elapsed()) / 1000;
+    } else {
         return -1.0;
     }
 }
 
-bool Host::startStopWatch( int watchID )
+bool Host::startStopWatch(int watchID)
 {
-    if( mStopWatchMap.contains( watchID ) )
-    {
+    if (mStopWatchMap.contains(watchID)) {
         mStopWatchMap[watchID].start();
         return true;
-    }
-    else
+    } else
         return false;
 }
 
-double Host::stopStopWatch( int watchID )
+double Host::stopStopWatch(int watchID)
 {
-    if( mStopWatchMap.contains( watchID ) )
-    {
-        return static_cast<double>(mStopWatchMap[watchID].elapsed())/1000;
-    }
-    else
-    {
+    if (mStopWatchMap.contains(watchID)) {
+        return static_cast<double>(mStopWatchMap[watchID].elapsed()) / 1000;
+    } else {
         return -1.0;
     }
 }
 
-bool Host::resetStopWatch( int watchID )
+bool Host::resetStopWatch(int watchID)
 {
-    if( mStopWatchMap.contains( watchID ) )
-    {
-        mStopWatchMap[watchID].setHMS(0,0,0,0);
+    if (mStopWatchMap.contains(watchID)) {
+        mStopWatchMap[watchID].setHMS(0, 0, 0, 0);
         return true;
-    }
-    else
+    } else
         return false;
 }
 
 void Host::callEventHandlers()
 {
-
 }
 
-void Host::incomingStreamProcessor(const QString & data, int line )
+void Host::incomingStreamProcessor(const QString& data, int line)
 {
-    mTriggerUnit.processDataStream( data, line );
+    mTriggerUnit.processDataStream(data, line);
 
     mTimerUnit.doCleanup();
-    if( mResetProfile )
-    {
+    if (mResetProfile) {
         resetProfile();
     }
 }
 
-void Host::registerEventHandler(const QString& name, TScript * pScript )
+void Host::registerEventHandler(const QString& name, TScript* pScript)
 {
-    if( mEventHandlerMap.contains( name ) )
-    {
-        if( ! mEventHandlerMap[name].contains( pScript ) )
-        {
-            mEventHandlerMap[name].append( pScript );
+    if (mEventHandlerMap.contains(name)) {
+        if (!mEventHandlerMap[name].contains(pScript)) {
+            mEventHandlerMap[name].append(pScript);
         }
-    }
-    else
-    {
-        QList<TScript *> scriptList;
-        scriptList.append( pScript );
-        mEventHandlerMap.insert( name, scriptList );
+    } else {
+        QList<TScript*> scriptList;
+        scriptList.append(pScript);
+        mEventHandlerMap.insert(name, scriptList);
     }
 }
-void Host::registerAnonymousEventHandler(const QString& name, const QString& fun )
+void Host::registerAnonymousEventHandler(const QString& name, const QString& fun)
 {
-
-    if( mAnonymousEventHandlerFunctions.contains( name ) )
-    {
-        if( ! mAnonymousEventHandlerFunctions[name].contains( fun ) )
-        {
-            mAnonymousEventHandlerFunctions[name].push_back( fun );
+    if (mAnonymousEventHandlerFunctions.contains(name)) {
+        if (!mAnonymousEventHandlerFunctions[name].contains(fun)) {
+            mAnonymousEventHandlerFunctions[name].push_back(fun);
         }
-    }
-    else
-    {
+    } else {
         QStringList newList;
         newList << fun;
         mAnonymousEventHandlerFunctions[name] = newList;
     }
 }
 
-void Host::unregisterEventHandler(const QString & name, TScript * pScript )
+void Host::unregisterEventHandler(const QString& name, TScript* pScript)
 {
-    if( mEventHandlerMap.contains( name ) )
-    {
-        mEventHandlerMap[name].removeAll( pScript );
+    if (mEventHandlerMap.contains(name)) {
+        mEventHandlerMap[name].removeAll(pScript);
     }
 }
 
-void Host::raiseEvent( const TEvent & pE )
+void Host::raiseEvent(const TEvent& pE)
 {
-    if( pE.mArgumentList.isEmpty() )
-    {
+    if (pE.mArgumentList.isEmpty()) {
         return;
     }
 
-    if( mEventHandlerMap.contains( pE.mArgumentList.at( 0 ) ) )
-    {
-        QList<TScript *> scriptList = mEventHandlerMap.value( pE.mArgumentList.at( 0 ) );
-        for(auto & script : scriptList)
-        {
-            script->callEventHandler( pE );
+    if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
+        QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
+        for (auto& script : scriptList) {
+            script->callEventHandler(pE);
         }
     }
 
-    if( mAnonymousEventHandlerFunctions.contains( pE.mArgumentList.at( 0 ) ) )
-    {
-        QStringList functionsList = mAnonymousEventHandlerFunctions.value( pE.mArgumentList.at( 0 ) );
-        for( int i=0, total = functionsList.size(); i<total; ++i )
-        {
-            mLuaInterpreter.callEventHandler( functionsList.at( i ), pE );
+    if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+        for (int i = 0, total = functionsList.size(); i < total; ++i) {
+            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
     }
 }
 
-void Host::postIrcMessage(const QString& a, const QString& b, const QString& c )
+void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
     TEvent pE;
     pE.mArgumentList << "sysIrcMessage";
     pE.mArgumentList << a << b << c;
     pE.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent( pE );
+    raiseEvent(pE);
 }
 
-void Host::enableTimer(const QString & name )
+void Host::enableTimer(const QString& name)
 {
-    mTimerUnit.enableTimer( name );
+    mTimerUnit.enableTimer(name);
 }
 
-void Host::disableTimer(const QString & name )
+void Host::disableTimer(const QString& name)
 {
-    mTimerUnit.disableTimer( name );
+    mTimerUnit.disableTimer(name);
 }
 
-bool Host::killTimer(const QString & name )
+bool Host::killTimer(const QString& name)
 {
-    return mTimerUnit.killTimer( name );
+    return mTimerUnit.killTimer(name);
 }
 
-void Host::enableKey(const QString & name )
+void Host::enableKey(const QString& name)
 {
-    mKeyUnit.enableKey( name );
+    mKeyUnit.enableKey(name);
 }
 
-void Host::disableKey(const QString & name )
+void Host::disableKey(const QString& name)
 {
-    mKeyUnit.disableKey( name );
+    mKeyUnit.disableKey(name);
 }
 
 
-void Host::enableTrigger(const QString & name )
+void Host::enableTrigger(const QString& name)
 {
-    mTriggerUnit.enableTrigger( name );
+    mTriggerUnit.enableTrigger(name);
 }
 
-void Host::disableTrigger(const QString & name )
+void Host::disableTrigger(const QString& name)
 {
-    mTriggerUnit.disableTrigger( name );
+    mTriggerUnit.disableTrigger(name);
 }
 
-bool Host::killTrigger(const QString & name )
+bool Host::killTrigger(const QString& name)
 {
-    return mTriggerUnit.killTrigger( name );
+    return mTriggerUnit.killTrigger(name);
 }
 
 
 void Host::connectToServer()
 {
-    mTelnet.connectIt( mUrl, mPort );
+    mTelnet.connectIt(mUrl, mPort);
 }
 
 bool Host::closingDown()
 {
-    QMutexLocker locker(& mLock);
+    QMutexLocker locker(&mLock);
     bool shutdown = mIsClosingDown;
     return shutdown;
 }
 
-bool Host::installPackage( const QString& fileName, int module )
+bool Host::installPackage(const QString& fileName, int module)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidently reenter this method in the future.
-    QDialog * pUnzipDialog = Q_NULLPTR;
+    QDialog* pUnzipDialog = Q_NULLPTR;
 
 //     Module notes:
 //     For the module install, a module flag of 0 is a package, a flag
@@ -720,45 +684,35 @@ bool Host::installPackage( const QString& fileName, int module )
 //     a script.  This separation is necessary to be able to reuse code
 //     while avoiding infinite loops from script installations.
 
-    if( fileName.isEmpty() )
-    {
+    if (fileName.isEmpty()) {
         return false;
     }
 
     QFile file(fileName);
-    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-    {
+    if (!file.open(QFile::ReadOnly | QFile::Text)) {
         return false;
     }
 
-    QString packageName = fileName.section( QStringLiteral( "/" ), -1 );
-    packageName.remove( QStringLiteral( ".trigger" ), Qt::CaseInsensitive );
-    packageName.remove( QStringLiteral( ".xml" ), Qt::CaseInsensitive );
-    packageName.remove( QStringLiteral( ".zip" ), Qt::CaseInsensitive );
-    packageName.remove( QStringLiteral( ".mpackage" ), Qt::CaseInsensitive );
-    packageName.remove( QLatin1Char( '\\' ) );
-    packageName.remove( QLatin1Char( '.' ) );
-    if ( module )
-    {
-        if( (module == 2) && (mActiveModules.contains( packageName ) ))
-        {
+    QString packageName = fileName.section(QStringLiteral("/"), -1);
+    packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1Char('\\'));
+    packageName.remove(QLatin1Char('.'));
+    if (module) {
+        if ((module == 2) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, 2);
+        } else if ((module == 3) && (mActiveModules.contains(packageName))) {
+            return false; //we're already installed
         }
-        else if ( (module == 3) && ( mActiveModules.contains(packageName) ) )
-        {
-            return false;//we're already installed
-        }
-    }
-    else
-    {
-        if( mInstalledPackages.contains( packageName ) )
-        {
+    } else {
+        if (mInstalledPackages.contains(packageName)) {
             return false;
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
-    if( mpEditorDialog && module != 3 )
-    {
+    if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
@@ -776,50 +730,43 @@ bool Host::installPackage( const QString& fileName, int module )
 
         // TODO: report failure to create destination folder for package/module in profile
 
-        QUiLoader loader( this );
-        QFile uiFile( QStringLiteral( ":/ui/package_manager_unpack.ui" ) );
+        QUiLoader loader(this);
+        QFile uiFile(QStringLiteral(":/ui/package_manager_unpack.ui"));
         uiFile.open(QFile::ReadOnly);
-        pUnzipDialog = dynamic_cast<QDialog *>(loader.load( &uiFile, 0 ) );
+        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, 0));
         uiFile.close();
-        if( ! pUnzipDialog )
-        {
+        if (!pUnzipDialog) {
             return false;
         }
 
-        QLabel * pLabel = pUnzipDialog->findChild<QLabel*>( QStringLiteral( "label" ) );
-        if( pLabel )
-        {
-            if( module )
-            {
-                pLabel->setText( tr( "Unpacking module:\n\"%1\"\nplease wait..." ).arg( packageName ) );
-            }
-            else
-            {
-                pLabel->setText( tr( "Unpacking package:\n\"%1\"\nplease wait..." ).arg( packageName ) );
+        QLabel* pLabel = pUnzipDialog->findChild<QLabel*>(QStringLiteral("label"));
+        if (pLabel) {
+            if (module) {
+                pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
+            } else {
+                pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
             }
         }
         pUnzipDialog->hide(); // Must hide to change WindowModality
-        pUnzipDialog->setWindowTitle( tr( "Unpacking" ) );
-        pUnzipDialog->setWindowModality( Qt::ApplicationModal );
+        pUnzipDialog->setWindowTitle(tr("Unpacking"));
+        pUnzipDialog->setWindowModality(Qt::ApplicationModal);
         pUnzipDialog->show();
         qApp->processEvents();
         pUnzipDialog->raise();
         pUnzipDialog->repaint(); // Force a redraw
-        qApp->processEvents(); // Try to ensure we are on top of any other dialogs and freshly drawn
+        qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
         int err = 0;
         //from: https://gist.github.com/mobius/1759816
         struct zip_stat zs;
-        struct zip_file *zf;
+        struct zip_file* zf;
         zip_uint64_t bytesRead = 0;
         char buf[4096]; // Was 100 but that seems unduely stingy...!
-        zip* archive = zip_open( fileName.toStdString().c_str(), 0, &err);
-        if ( err != 0 )
-        {
+        zip* archive = zip_open(fileName.toStdString().c_str(), 0, &err);
+        if (err != 0) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: Tell user error
-            if ( pUnzipDialog )
-            {
+            if (pUnzipDialog) {
                 pUnzipDialog->deleteLater();
                 pUnzipDialog = Q_NULLPTR;
             }
@@ -833,40 +780,31 @@ bool Host::installPackage( const QString& fileName, int module )
         QMap<QString, QString> directoriesNeededMap;
         //   Key is: relative path stored in archive
         // Value is: absolute path needed when extracting files
-        for ( zip_int64_t i = 0, total = zip_get_num_entries( archive, 0 ); i < total; ++i )
-        {
-            if ( ! zip_stat_index( archive, static_cast<zip_uint64_t>( i ), 0, &zs )  )
-            {
-                QString entryInArchive( QString::fromUtf8( zs.name ) );
-                QString pathInArchive( entryInArchive.section( QLatin1Literal( "/" ), 0, -2 ) );
+        for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
+            if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
+                QString entryInArchive(QString::fromUtf8(zs.name));
+                QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
                 // TODO: We are supposed to validate the fields (except the
                 // "valid" one itself) in zs before using them:
                 // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
-                if ( entryInArchive.endsWith( QLatin1Char( '/' ) ) )
-                {
+                if (entryInArchive.endsWith(QLatin1Char('/'))) {
 //                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a DIRECTORY...!";
-                    if ( ! directoriesNeededMap.contains( pathInArchive ) ) {
-                        QString pathInProfile( QStringLiteral( "%1/%2" )
-                                               .arg( packageName )
-                                               .arg( pathInArchive ) );
-                        directoriesNeededMap.insert( pathInArchive, pathInProfile );
+                    if (!directoriesNeededMap.contains(pathInArchive)) {
+                        QString pathInProfile(QStringLiteral("%1/%2").arg(packageName).arg(pathInArchive));
+                        directoriesNeededMap.insert(pathInArchive, pathInProfile);
 //                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
                     }
 //                    else
 //                    {
 //                        qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
 //                    }
-                }
-                else
-                {
+                } else {
 //                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a FILE...!";
                     // Extract needed path from name for archives that do NOT
                     // explicitly list directories
-                    if( ! pathInArchive.isEmpty() && ! directoriesNeededMap.contains( pathInArchive ) ) {
-                        QString pathInProfile( QStringLiteral( "%1/%2" )
-                                               .arg( packageName )
-                                               .arg( pathInArchive ) );
-                        directoriesNeededMap.insert( pathInArchive, pathInProfile );
+                    if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
+                        QString pathInProfile(QStringLiteral("%1/%2").arg(packageName).arg(pathInArchive));
+                        directoriesNeededMap.insert(pathInArchive, pathInProfile);
 //                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
                     }
 //                    else
@@ -874,31 +812,26 @@ bool Host::installPackage( const QString& fileName, int module )
 //                        qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
 //                    }
                 }
-            }
-            else
-            {
+            } else {
                 // TODO: Report failure to obtain an archive entry to parse
             }
         }
 
         // Now create the needed directories:
-        QMapIterator<QString, QString> itPath( directoriesNeededMap );
-        while( itPath.hasNext() )
-        {
+        QMapIterator<QString, QString> itPath(directoriesNeededMap);
+        while (itPath.hasNext()) {
             itPath.next();
 //            qDebug() << "Host::installPackage(...)    INFO testing for presence of:"
 //                     << itPath.value()
 //                     << "relative to:"
 //                     << _home;
-            if( ! _tmpDir.exists( itPath.value() ) )
-            {
-                if( ! _tmpDir.mkpath( itPath.value() ) )
-                {
+            if (!_tmpDir.exists(itPath.value())) {
+                if (!_tmpDir.mkpath(itPath.value())) {
                     // TODO: report failure to create needed sub-directory
                     // within package destination directory in profile directory
 
-                    zip_close( archive );
-                    if( pUnzipDialog ) {
+                    zip_close(archive);
+                    if (pUnzipDialog) {
                         pUnzipDialog->deleteLater();
                         pUnzipDialog = Q_NULLPTR;
                         // Previously we forgot to close the dialog if we aborted
@@ -910,37 +843,30 @@ bool Host::installPackage( const QString& fileName, int module )
         }
 
         // Now extract the files
-        for ( zip_int64_t i = 0, total = zip_get_num_entries( archive, 0 ); i < total; ++i )
-        {
+        for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
             // No need to check return value as we've already done it first time
-            zip_stat_index( archive, static_cast<zip_uint64_t>( i ), 0, &zs );
-            QString entryInArchive( QString::fromUtf8( zs.name ) );
-            if ( ! entryInArchive.endsWith( QLatin1Char( '/' ) ) )
-            {
+            zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
+            QString entryInArchive(QString::fromUtf8(zs.name));
+            if (!entryInArchive.endsWith(QLatin1Char('/'))) {
                 // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
-                zf = zip_fopen_index( archive, static_cast<zip_uint64_t>( i ), 0 );
-                if ( !zf )
-                {
+                zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
+                if (!zf) {
                     int sep = 0;
-                    zip_error_get( archive, &err, &sep );
+                    zip_error_get(archive, &err, &sep);
                     zip_error_to_str(buf, sizeof(buf), err, errno);
                     // FIXME: report error to user, zip_error_to_str(...) is
                     // already deprecated, if not obsoleted...! - Slysven
-                    zip_close( archive );
-                    if ( pUnzipDialog )
-                    {
+                    zip_close(archive);
+                    if (pUnzipDialog) {
                         pUnzipDialog->deleteLater();
                         pUnzipDialog = Q_NULLPTR;
                     }
                     return false;
                 }
 
-                QFile fd( QStringLiteral( "%1%2" )
-                          .arg( _dest )
-                          .arg( entryInArchive ) );
+                QFile fd(QStringLiteral("%1%2").arg(_dest).arg(entryInArchive));
 
-                if ( !fd.open( QIODevice::ReadWrite|QIODevice::Truncate ) )
-                {
+                if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                     //FIXME: report error to user
                     qDebug() << "Host::installPackage("
                              << fileName
@@ -950,10 +876,9 @@ bool Host::installPackage( const QString& fileName, int module )
                              << QStringLiteral( "%1%2" ).arg( _dest ).arg( entryInArchive )
                              << "!\n    Reported error was:"
                              << fd.errorString();
-                    zip_fclose( zf );
-                    zip_close( archive );
-                    if ( pUnzipDialog )
-                    {
+                    zip_fclose(zf);
+                    zip_close(archive);
+                    if (pUnzipDialog) {
                         pUnzipDialog->deleteLater();
                         pUnzipDialog = Q_NULLPTR;
                     }
@@ -962,57 +887,50 @@ bool Host::installPackage( const QString& fileName, int module )
 
                 bytesRead = 0;
                 zip_uint64_t bytesExpected = zs.size;
-                while( bytesRead < bytesExpected && fd.error() == QFileDevice::NoError )
-                {
-                    zip_int64_t len = zip_fread( zf, buf, sizeof( buf ) );
-                    if ( len < 0 )
-                    {
+                while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
+                    zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
+                    if (len < 0) {
                         //FIXME: report error to user qDebug()<<"zip_fread error"<<len;
                         fd.close();
-                        zip_fclose( zf );
-                        zip_close( archive );
-                        if ( pUnzipDialog )
-                        {
+                        zip_fclose(zf);
+                        zip_close(archive);
+                        if (pUnzipDialog) {
                             pUnzipDialog->deleteLater();
                             pUnzipDialog = Q_NULLPTR;
                         }
                         return false;
                     }
 
-                    if( fd.write( buf, len ) == -1 )
-                    {
+                    if (fd.write(buf, len) == -1) {
                         // TODO: Report failure to write data to actual file
                         fd.close();
-                        zip_fclose( zf );
-                        zip_close( archive );
-                        if ( pUnzipDialog )
-                        {
+                        zip_fclose(zf);
+                        zip_close(archive);
+                        if (pUnzipDialog) {
                             pUnzipDialog->deleteLater();
                             pUnzipDialog = Q_NULLPTR;
                         }
                         return false;
                     }
-                    bytesRead += static_cast<zip_uint64_t>( len );
+                    bytesRead += static_cast<zip_uint64_t>(len);
                 }
                 fd.close();
-                zip_fclose( zf );
+                zip_fclose(zf);
             }
         }
 
-        err = zip_close( archive );
-        if ( err ) {
+        err = zip_close(archive);
+        if (err) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to user qDebug()<<"close file error"<<buf;
-            if ( pUnzipDialog )
-            {
+            if (pUnzipDialog) {
                 pUnzipDialog->deleteLater();
                 pUnzipDialog = Q_NULLPTR;
             }
             return false;
         }
 
-        if ( pUnzipDialog )
-        {
+        if (pUnzipDialog) {
             pUnzipDialog->deleteLater();
             pUnzipDialog = Q_NULLPTR;
         }
@@ -1023,95 +941,79 @@ bool Host::installPackage( const QString& fileName, int module )
         // - there can only be a single xml file per package
         // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
 
-        QDir _dir( _dest );
+        QDir _dir(_dest);
         // before we start importing xmls in, see if the config.lua manifest file exists
         // - if it does, update the packageName from it
-        if ( _dir.exists( QStringLiteral( "config.lua" ) ) )
-        {
+        if (_dir.exists(QStringLiteral("config.lua"))) {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig( _dir.absoluteFilePath( QStringLiteral( "config.lua" ) ), packageName );
+            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName);
             // now that the packageName changed, redo relevant checks to make sure it's still valid
-            if (module)
-            {
-                if( mActiveModules.contains( packageName ) )
-                {
+            if (module) {
+                if (mActiveModules.contains(packageName)) {
                     uninstallPackage(packageName, 2);
                 }
-            }
-            else
-            {
-                if( mInstalledPackages.contains( packageName ) )
-                {
+            } else {
+                if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
-                    removeDir( _dir.absolutePath(),_dir.absolutePath() );
+                    removeDir(_dir.absolutePath(), _dir.absolutePath());
                     return false;
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath( QStringLiteral( "%1/%2/" ).arg( _home ).arg( packageName ));
+            QString newpath(QStringLiteral("%1/%2/").arg(_home).arg(packageName));
             _dir.rename(_dir.absolutePath(), newpath);
-            _dir = QDir( newpath );
+            _dir = QDir(newpath);
         }
         QStringList _filterList;
-        _filterList << QStringLiteral( "*.xml" ) << QStringLiteral( "*.trigger" );
-        QFileInfoList entries = _dir.entryInfoList( _filterList, QDir::Files );
-        for(auto & entry : entries)
-        {
-            file2.setFileName( entry.absoluteFilePath() );
+        _filterList << QStringLiteral("*.xml") << QStringLiteral("*.trigger");
+        QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
+        for (auto& entry : entries) {
+            file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
             QString profileName = getName();
             QString login = getLogin();
             QString pass = getPass();
-            XMLimport reader( this );
-            if (module)
-            {
+            XMLimport reader(this);
+            if (module) {
                 QStringList moduleEntry;
                 moduleEntry << fileName;
-                moduleEntry << QStringLiteral( "0" );
+                moduleEntry << QStringLiteral("0");
                 mInstalledModules[packageName] = moduleEntry;
                 mActiveModules.append(packageName);
+            } else {
+                mInstalledPackages.append(packageName);
             }
-            else
-            {
-                mInstalledPackages.append( packageName );
-            }
-            reader.importPackage( & file2, packageName, module ); // TODO: Missing false return value handler
-            setName( profileName );
-            setLogin( login );
-            setPass( pass );
+            reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+            setName(profileName);
+            setLogin(login);
+            setPass(pass);
             file2.close();
         }
-    }
-    else
-    {
-        file2.setFileName( fileName );
+    } else {
+        file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
         //mInstalledPackages.append( packageName );
         QString profileName = getName();
         QString login = getLogin();
         QString pass = getPass();
-        XMLimport reader( this );
-        if (module)
-        {
+        XMLimport reader(this);
+        if (module) {
             QStringList moduleEntry;
             moduleEntry << fileName;
-            moduleEntry << QStringLiteral( "0" );
+            moduleEntry << QStringLiteral("0");
             mInstalledModules[packageName] = moduleEntry;
             mActiveModules.append(packageName);
+        } else {
+            mInstalledPackages.append(packageName);
         }
-        else
-        {
-            mInstalledPackages.append( packageName );
-        }
-        reader.importPackage( & file2, packageName, module ); // TODO: Missing false return value handler
-        setName( profileName );
-        setLogin( login );
-        setPass( pass );
+        reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+        setName(profileName);
+        setLogin(login);
+        setPass(pass);
         file2.close();
     }
-    if( mpEditorDialog )
-    {
-       mpEditorDialog->doCleanReset();
+    if (mpEditorDialog) {
+        mpEditorDialog->doCleanReset();
     }
     if (!module) {
         saveProfile();
@@ -1157,30 +1059,24 @@ bool Host::installPackage( const QString& fileName, int module )
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
-bool Host::removeDir( const QString& dirName, const QString& originalPath )
+bool Host::removeDir(const QString& dirName, const QString& originalPath)
 {
     bool result = true;
     QDir dir(dirName);
-    if( dir.exists( dirName ) )
-    {
-        Q_FOREACH( QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden  | QDir::AllDirs | QDir::Files, QDir::DirsFirst))
-        {
+    if (dir.exists(dirName)) {
+        Q_FOREACH (QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
-            if( info.isDir() && info.absoluteFilePath().startsWith( originalPath ) )
-            {
-                result = removeDir( info.absoluteFilePath(), originalPath );
-            }
-            else
-            {
-                result = QFile::remove( info.absoluteFilePath() );
+            if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
+                result = removeDir(info.absoluteFilePath(), originalPath);
+            } else {
+                result = QFile::remove(info.absoluteFilePath());
             }
 
-            if( !result )
-            {
+            if (!result) {
                 return result;
             }
         }
-        result = dir.rmdir( dirName );
+        result = dir.rmdir(dirName);
     }
 
     return result;
@@ -1191,22 +1087,16 @@ bool Host::removeDir( const QString& dirName, const QString& originalPath )
 // again - Slysven
 bool Host::uninstallPackage(const QString& packageName, int module)
 {
-
 //     As with the installPackage, the module codes are:
 //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
 //     3=uninstall from a script
 
-    if (module)
-    {
-        if( ! mInstalledModules.contains( packageName ) )
-        {
+    if (module) {
+        if (!mInstalledModules.contains(packageName)) {
             return false;
         }
-    }
-    else
-    {
-        if( ! mInstalledPackages.contains( packageName ) )
-        {
+    } else {
+        if (!mInstalledPackages.contains(packageName)) {
             return false;
         }
     }
@@ -1243,132 +1133,123 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedUninstallEvent);
 
-    int dualInstallations=0;
-    if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName))
-    {
-        dualInstallations=1;
+    int dualInstallations = 0;
+    if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName)) {
+        dualInstallations = 1;
     }
     //we check for the module=3 because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
-    if( mpEditorDialog && module != 3 )
-    {
+    if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
-    mTriggerUnit.uninstall( packageName );
-    mTimerUnit.uninstall( packageName );
-    mAliasUnit.uninstall( packageName );
-    mActionUnit.uninstall( packageName );
-    mScriptUnit.uninstall( packageName );
-    mKeyUnit.uninstall( packageName );
-    if (module)
-    {
+    mTriggerUnit.uninstall(packageName);
+    mTimerUnit.uninstall(packageName);
+    mAliasUnit.uninstall(packageName);
+    mActionUnit.uninstall(packageName);
+    mScriptUnit.uninstall(packageName);
+    mKeyUnit.uninstall(packageName);
+    if (module) {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
-        mInstalledModules.remove( packageName );
+        mInstalledModules.remove(packageName);
         mActiveModules.removeAll(packageName);
-        if ( module == 2 )
-        {
+        if (module == 2) {
             return true;
         }
         //if module == 1/3, we actually uninstall it.
         //reinstall the package if it shared a module name.  This is a kludge, but it's cleaner than adding extra arguments/etc imo
-        if (dualInstallations)
-        {
+        if (dualInstallations) {
             //we're a dual install, reinstalling package
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
             installPackage(entry[0], 0);
         }
-    }
-    else
-    {
-        mInstalledPackages.removeAll( packageName );
-        if (dualInstallations)
-        {
+    } else {
+        mInstalledPackages.removeAll(packageName);
+        if (dualInstallations) {
             QStringList entry = mInstalledModules[packageName];
             installPackage(entry[0], 1);
             //restore the module edit flag
             mInstalledModules[packageName] = entry;
         }
     }
-    if( mpEditorDialog && module != 3 )
-    {
+    if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
 
     getActionUnit()->updateToolbar();
 
     QString _home = QDir::homePath();
-    _home.append( "/.config/mudlet/profiles/" );
-    _home.append( getName() );
-    QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
-    removeDir( _dest, _dest );
+    _home.append("/.config/mudlet/profiles/");
+    _home.append(getName());
+    QString _dest = QString("%1/%2/").arg(_home).arg(packageName);
+    removeDir(_dest, _dest);
     saveProfile();
     //NOW we reset if we're uninstalling a module
-    if( mpEditorDialog && module == 3 )
-    {
+    if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
     }
     return true;
 }
 
-void Host::readPackageConfig(const QString& luaConfig, QString & packageName )
+void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 {
-
     QFile configFile(luaConfig);
     QStringList strings;
-    if (configFile.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
+    if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
-        while (!in.atEnd())
-        {
+        while (!in.atEnd()) {
             strings += in.readLine();
         }
     }
 
-    lua_State *L = luaL_newstate();
+    lua_State* L = luaL_newstate();
     luaL_openlibs(L);
 
     int error = luaL_loadstring(L, strings.join("\n").toLatin1().data());
 
-    if( !error )
-        error = lua_pcall(L, 0,0,0);
+    if (!error) {
+        error = lua_pcall(L, 0, 0, 0);
+    }
 
-    if( !error )
-    {
+    if (!error) {
         // for now, only read the mpackage parameter
         // would be nice to read author, save & version too later
         lua_getglobal(L, "mpackage");
-        if (lua_isstring(L, -1))
-        {
+        if (lua_isstring(L, -1)) {
             packageName = QString(lua_tostring(L, -1));
         }
         lua_pop(L, -1);
         lua_close(L);
         return;
-    }
-    else // error
-    {
+    } else {
+        // error
         std::string e = "no error message available from Lua";
-        e = lua_tostring( L, -1 );
+        e = lua_tostring(L, -1);
         std::string reason;
-        switch (error)
-        {
-            case 4:
-                reason = "Out of memory"; break;
-            case 3:
-                reason = "Syntax error"; break;
-            case 2:
-                reason = "Runtime error"; break;
-            case 1:
-                reason = "Yield error"; break;
-            default:
-                reason = "Unknown error"; break;
+        switch (error) {
+        case 4:
+            reason = "Out of memory";
+            break;
+        case 3:
+            reason = "Syntax error";
+            break;
+        case 2:
+            reason = "Runtime error";
+            break;
+        case 1:
+            reason = "Yield error";
+            break;
+        default:
+            reason = "Unknown error";
+            break;
         }
 
-        if( mudlet::debugMode ) qDebug()<< reason.c_str() <<" in config.lua:"<<e.c_str();
+        if (mudlet::debugMode) {
+            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+        }
         // should print error to main display
-        QString msg = QString ("%1 in config.lua: %2\n").arg( reason.c_str() ).arg( e.c_str() );
+        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str()).arg(e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
