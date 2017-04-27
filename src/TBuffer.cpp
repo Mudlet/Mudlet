@@ -306,11 +306,13 @@ QPoint TBuffer::getEndPos()
 {
     int x = 0;
     int y = 0;
-    if( buffer.size() > 0 )
+    if (! buffer.empty()) {
         y = buffer.size()-1;
-    if( buffer[y].size() > 0 )
-        x = buffer[y].size()-1;
-    QPoint P_end( x, y );
+        if (! buffer.at(y).empty()) {
+            x = buffer.at(y).size() - 1;
+        }
+    }
+    QPoint P_end(x, y);
     return P_end;
 }
 
