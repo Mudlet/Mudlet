@@ -70,22 +70,22 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     QFont font = mpHost->mDisplayFont;
     setFont(font);
 
-    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
-    mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
 
     setPalette(mRegularPalette);
 
-    mTabCompletionPalette.setColor(QPalette::Text,QColor(0,0,192));
-    mTabCompletionPalette.setColor(QPalette::Highlight,QColor(0,0,192));
+    mTabCompletionPalette.setColor(QPalette::Text, QColor(0, 0, 192));
+    mTabCompletionPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
     mTabCompletionPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mTabCompletionPalette.setColor(QPalette::Base,QColor(235,255,235));
+    mTabCompletionPalette.setColor(QPalette::Base, QColor(235, 255, 235));
 
-    mAutoCompletionPalette.setColor(QPalette::Text,QColor(0,0,192));
-    mAutoCompletionPalette.setColor(QPalette::Highlight,QColor(0,0,192));
+    mAutoCompletionPalette.setColor(QPalette::Text, QColor(0, 0, 192));
+    mAutoCompletionPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
     mAutoCompletionPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mAutoCompletionPalette.setColor(QPalette::Base,QColor(255,235,235));
+    mAutoCompletionPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
 
     mHistoryBuffer = 0;
