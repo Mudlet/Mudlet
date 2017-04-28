@@ -23,7 +23,9 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 # Including IRC Library
-include(irc/src/core/core.pri)
+include(../3rdparty/communi/src/core/core.pri)
+
+include(../3rdparty/lua_yajl/src.pri)
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
@@ -55,11 +57,16 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
 
-# Leave the value of the following empty, line should be "BUILD =" without quotes
-# (it is NOT a Qt built-in variable) for a release build or, if you are
-# distributing modified code, it would be useful if you could put something to
-# distinguish the version:
-BUILD = "-dev"
+# if you are distributing modified code, it would be useful if you
+# put something distinguishing into the MUDLET_VERSION_BUILD environment
+# variable to make identification of the used version simple
+# the qmake BUILD variable is NOT built-in
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
+# Leave the value of the following empty for a release build
+# i.e. the line should be "BUILD =" without quotes
+  BUILD = "-dev"
+}
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -73,7 +80,6 @@ macx {
 } else {
     TARGET = mudlet
 }
-msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
@@ -233,9 +239,6 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
-
-!msvc:SOURCES += lua_yajl.c
-msvc:SOURCES += lua_yajl.cpp
 
 
 HEADERS += \
@@ -447,7 +450,6 @@ DISTFILES += \
     ../.travis.yml \
     CMakeLists.txt \
     ../CMakeLists.txt \
-    irc/CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \

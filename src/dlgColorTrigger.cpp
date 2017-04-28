@@ -33,10 +33,7 @@
 #include "post_guard.h"
 
 
-dlgColorTrigger::dlgColorTrigger( QWidget * pF, TTrigger * pT, int mode )
-: QDialog( pF )
-, mpTrigger( pT )
-, mMode( mode )
+dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, int mode) : QDialog(pF), mpTrigger(pT), mMode(mode)
 {
     // init generated dialog
     setupUi(this);
@@ -46,113 +43,112 @@ dlgColorTrigger::dlgColorTrigger( QWidget * pF, TTrigger * pT, int mode )
     QString styleSheet;
     QColor color;
     color = mpTrigger->mpHost->mBlack;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_black->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_black->setStyleSheet(styleSheet);
 
     connect(pushButton_Lblack, SIGNAL(clicked()), this, SLOT(setColorLightBlack()));
     color = mpTrigger->mpHost->mLightBlack;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblack->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lblack->setStyleSheet(styleSheet);
 
     connect(pushButton_green, SIGNAL(clicked()), this, SLOT(setColorGreen()));
     color = mpTrigger->mpHost->mGreen;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_green->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_green->setStyleSheet(styleSheet);
 
     connect(pushButton_Lgreen, SIGNAL(clicked()), this, SLOT(setColorLightGreen()));
     color = mpTrigger->mpHost->mLightGreen;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lgreen->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lgreen->setStyleSheet(styleSheet);
 
     connect(pushButton_red, SIGNAL(clicked()), this, SLOT(setColorRed()));
     color = mpTrigger->mpHost->mRed;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_red->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_red->setStyleSheet(styleSheet);
 
     connect(pushButton_Lred, SIGNAL(clicked()), this, SLOT(setColorLightRed()));
     color = mpTrigger->mpHost->mLightRed;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lred->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lred->setStyleSheet(styleSheet);
 
     connect(pushButton_blue, SIGNAL(clicked()), this, SLOT(setColorBlue()));
     color = mpTrigger->mpHost->mBlue;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_blue->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_blue->setStyleSheet(styleSheet);
 
     connect(pushButton_Lblue, SIGNAL(clicked()), this, SLOT(setColorLightBlue()));
     color = mpTrigger->mpHost->mLightBlue;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lblue->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lblue->setStyleSheet(styleSheet);
 
     connect(pushButton_yellow, SIGNAL(clicked()), this, SLOT(setColorYellow()));
     color = mpTrigger->mpHost->mYellow;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_yellow->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_yellow->setStyleSheet(styleSheet);
 
     connect(pushButton_Lyellow, SIGNAL(clicked()), this, SLOT(setColorLightYellow()));
     color = mpTrigger->mpHost->mLightYellow;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lyellow->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lyellow->setStyleSheet(styleSheet);
 
     connect(pushButton_cyan, SIGNAL(clicked()), this, SLOT(setColorCyan()));
     color = mpTrigger->mpHost->mCyan;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_cyan->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_cyan->setStyleSheet(styleSheet);
 
     connect(pushButton_Lcyan, SIGNAL(clicked()), this, SLOT(setColorLightCyan()));
     color = mpTrigger->mpHost->mLightCyan;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lcyan->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lcyan->setStyleSheet(styleSheet);
 
     connect(pushButton_magenta, SIGNAL(clicked()), this, SLOT(setColorMagenta()));
     color = mpTrigger->mpHost->mMagenta;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_magenta->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_magenta->setStyleSheet(styleSheet);
 
     connect(pushButton_Lmagenta, SIGNAL(clicked()), this, SLOT(setColorLightMagenta()));
     color = mpTrigger->mpHost->mLightMagenta;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lmagenta->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lmagenta->setStyleSheet(styleSheet);
 
     connect(pushButton_white, SIGNAL(clicked()), this, SLOT(setColorWhite()));
     color = mpTrigger->mpHost->mWhite;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_white->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_white->setStyleSheet(styleSheet);
 
     connect(pushButton_Lwhite, SIGNAL(clicked()), this, SLOT(setColorLightWhite()));
     color = mpTrigger->mpHost->mLightWhite;
-    palette.setColor( QPalette::Button, color );
-    styleSheet = QString("QPushButton{background-color:")+color.name()+QString(";}");
-    pushButton_Lwhite->setStyleSheet( styleSheet );
+    palette.setColor(QPalette::Button, color);
+    styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
+    pushButton_Lwhite->setStyleSheet(styleSheet);
 }
 
 void dlgColorTrigger::setColorBlack()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 2;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mBlack;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 2;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mBlack;
@@ -162,16 +158,15 @@ void dlgColorTrigger::setColorBlack()
 
 void dlgColorTrigger::setColorLightBlack()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 1;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightBlack;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 1;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightBlack;
@@ -181,16 +176,15 @@ void dlgColorTrigger::setColorLightBlack()
 
 void dlgColorTrigger::setColorRed()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 4;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mRed;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 4;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mRed;
@@ -200,16 +194,15 @@ void dlgColorTrigger::setColorRed()
 
 void dlgColorTrigger::setColorLightRed()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 3;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightRed;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 3;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightRed;
@@ -219,16 +212,15 @@ void dlgColorTrigger::setColorLightRed()
 
 void dlgColorTrigger::setColorGreen()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 6;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mGreen;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 6;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mGreen;
@@ -237,16 +229,15 @@ void dlgColorTrigger::setColorGreen()
 }
 void dlgColorTrigger::setColorLightGreen()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 5;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightGreen;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 5;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightGreen;
@@ -256,16 +247,15 @@ void dlgColorTrigger::setColorLightGreen()
 
 void dlgColorTrigger::setColorBlue()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 10;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mBlue;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 10;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mBlue;
@@ -274,16 +264,15 @@ void dlgColorTrigger::setColorBlue()
 }
 void dlgColorTrigger::setColorLightBlue()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 9;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightBlue;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 9;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightBlue;
@@ -293,16 +282,15 @@ void dlgColorTrigger::setColorLightBlue()
 
 void dlgColorTrigger::setColorYellow()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 8;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mYellow;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 8;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mYellow;
@@ -311,16 +299,15 @@ void dlgColorTrigger::setColorYellow()
 }
 void dlgColorTrigger::setColorLightYellow()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 7;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightYellow;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 7;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightYellow;
@@ -330,16 +317,15 @@ void dlgColorTrigger::setColorLightYellow()
 
 void dlgColorTrigger::setColorCyan()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 14;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mCyan;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 14;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mCyan;
@@ -348,16 +334,15 @@ void dlgColorTrigger::setColorCyan()
 }
 void dlgColorTrigger::setColorLightCyan()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 13;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightCyan;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 13;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightCyan;
@@ -367,16 +352,15 @@ void dlgColorTrigger::setColorLightCyan()
 
 void dlgColorTrigger::setColorMagenta()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 12;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mMagenta;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 12;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mMagenta;
@@ -385,16 +369,15 @@ void dlgColorTrigger::setColorMagenta()
 }
 void dlgColorTrigger::setColorLightMagenta()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 11;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightMagenta;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 11;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightMagenta;
@@ -404,16 +387,15 @@ void dlgColorTrigger::setColorLightMagenta()
 
 void dlgColorTrigger::setColorWhite()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 16;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mWhite;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 16;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mWhite;
@@ -422,16 +404,15 @@ void dlgColorTrigger::setColorWhite()
 }
 void dlgColorTrigger::setColorLightWhite()
 {
-    if( ! mpTrigger ) return;
+    if (!mpTrigger) {
+        return;
+    }
     mpTrigger->mColorTrigger = true;
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerFg = true;
         mpTrigger->mColorTriggerFgAnsi = 15;
         mpTrigger->mColorTriggerFgColor = mpTrigger->mpHost->mLightWhite;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerBg = true;
         mpTrigger->mColorTriggerBgAnsi = 15;
         mpTrigger->mColorTriggerBgColor = mpTrigger->mpHost->mLightWhite;
@@ -441,12 +422,9 @@ void dlgColorTrigger::setColorLightWhite()
 
 void dlgColorTrigger::slot_save_and_exit()
 {
-    if( mMode == 0 )
-    {
+    if (mMode == 0) {
         mpTrigger->mColorTriggerBg = false;
-    }
-    else
-    {
+    } else {
         mpTrigger->mColorTriggerFg = false;
     }
 
