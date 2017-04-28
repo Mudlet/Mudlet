@@ -550,7 +550,7 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         case DIR_OTHER:     roomsWithOtherAreaSpecialExits.insert(itAreaExit.key());   break;
         default:
             qWarning("TArea::getAreaExitRoomData() Warning: unrecognised exit code %i found for exit from room %i to room %i.",
-                     itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first );
+                     itAreaExit.value().second, itAreaExit.key(), itAreaExit.value().first);
         }
         if (!exitData.first.isEmpty()) {
             results.insert(itAreaExit.key(), exitData);
