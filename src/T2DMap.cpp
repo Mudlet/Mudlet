@@ -1076,7 +1076,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                         _color.setBlue( pR->customLinesColor[itk.key()][2] );
                     }
                     else
-                        _color = QColor(255,0,0);
+                        _color = QColor(Qt::red);
                     bool _arrow = pR->customLinesArrow[itk.key()];
                     QString _style = pR->customLinesStyle[itk.key()];
                     QPointF _cstartP;
@@ -1661,9 +1661,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 QPen __pen = p.pen();
                 QColor lc;
                 if( c.red()+c.green()+c.blue() > 200 )
-                    lc=QColor(0,0,0);
+                    lc=QColor(Qt::black);
                 else
-                    lc=QColor(255,255,255);
+                    lc=QColor(Qt::white);
                 p.setPen(QPen(lc));
                 p.drawText(dr, Qt::AlignHCenter|Qt::AlignVCenter,QString::number( currentAreaRoom ));
                 p.setPen(__pen);
@@ -1691,9 +1691,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
         QColor lc;
         if( c.red()+c.green()+c.blue() > 200 )
-            lc=QColor(0,0,0);
+            lc=QColor(Qt::black);
         else
-            lc=QColor(255,255,255);
+            lc=QColor(Qt::white);
         pen = p.pen();
         pen.setColor( lc );
         pen.setWidthF(0);//wegBreite?);
@@ -1721,7 +1721,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1 );
                 _poly.append( _pt );
                 QBrush brush = p.brush();
-                brush.setColor( QColor(0, 0 ,0) );
+                brush.setColor( Qt::black );
                 brush.setStyle( Qt::NoBrush );
                 p.setBrush( brush );
                 p.drawPolygon(_poly);
@@ -1739,7 +1739,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1756,7 +1756,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1773,7 +1773,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1790,7 +1790,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -3622,7 +3622,7 @@ void T2DMap::slot_selectRoomColor(QListWidgetItem * pI )
 
 void T2DMap::slot_defineNewColor()
 {
-    QColor color = QColorDialog::getColor( mpHost->mRed, this );
+    auto color = QColorDialog::getColor( mpHost->mRed, this );
     if ( color.isValid() )
     {
         mpMap->customEnvColors[mpMap->customEnvColors.size()+257+16] = color;
@@ -5444,7 +5444,7 @@ void T2DMap::paintMap()
 //                        _color.setBlue( mpMap->rooms[pArea->rooms[i]]->customLinesColor[itk.key()][2] );
 //                    }
 //                    else
-//                        _color = QColor(255,0,0);
+//                        _color = QColor(Qt::red);
 //                    bool _arrow = pR->customLinesArrow[itk.key()];
 //                    QString _style = pR->customLinesStyle[itk.key()];
 //                    QPointF _cstartP;
@@ -6013,9 +6013,9 @@ void T2DMap::paintMap()
 //                QPen __pen = p.pen();
 //                QColor lc;
 //                if( c.red()+c.green()+c.blue() > 200 )
-//                    lc=QColor(0,0,0);
+//                    lc=QColor(Qt::black);
 //                else
-//                    lc=QColor(255,255,255);
+//                    lc=QColor(Qt::white);
 //                p.setPen(QPen(lc));
 //                p.drawText(dr, Qt::AlignHCenter|Qt::AlignVCenter,QString::number(pArea->rooms[i]));
 //                p.setPen(__pen);
@@ -6042,9 +6042,9 @@ void T2DMap::paintMap()
 
 //        QColor lc;
 //        if( c.red()+c.green()+c.blue() > 200 )
-//            lc=QColor(0,0,0);
+//            lc=QColor(Qt::black);
 //        else
-//            lc=QColor(255,255,255);
+//            lc=QColor(Qt::white);
 //        pen = p.pen();
 //        pen.setColor( lc );
 //        pen.setWidthF(0);//wegBreite?);
@@ -6072,7 +6072,7 @@ void T2DMap::paintMap()
 //                _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1 );
 //                _poly.append( _pt );
 //                QBrush brush = p.brush();
-//                brush.setColor( QColor(0, 0 ,0) );
+//                brush.setColor( QColor(Qt::black) );
 //                brush.setStyle( Qt::NoBrush );
 //                p.setBrush( brush );
 //                p.drawPolygon(_poly);
@@ -6090,7 +6090,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);
@@ -6106,7 +6106,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);
@@ -6122,7 +6122,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);
@@ -6138,7 +6138,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);

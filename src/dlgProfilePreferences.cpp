@@ -467,7 +467,7 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
         return;
     }
 
-    QColor color = QColorDialog::getColor(c, this);
+    auto color = QColorDialog::getColor(c, this);
     if (color.isValid()) {
         c = color;
         if (mudlet::self()->mConsoleMap.contains(pHost)) {

@@ -194,7 +194,7 @@ void TTextEdit::slot_scrollBarMoved( int line )
 void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192,192,192);
-    mBgColor = QColor(0,0,0);
+    mBgColor = QColor(Qt::black);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
 #if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         int width = mScreenWidth*mFontWidth*2;
@@ -527,8 +527,8 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
                                         mFontHeight );
-                QColor bgTime = QColor(22,22,22);
-                QColor fgTime = QColor(200,150,0);
+                auto bgTime = QColor(22,22,22);
+                auto fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
                 drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
@@ -542,8 +542,8 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                 text = mpBuffer->lineBuffer[i+lineOffset].at(i2-timeOffset);
                 TChar & f = mpBuffer->buffer[i+lineOffset][i2-timeOffset];
                 int delta = 1;
-                QColor fgColor = QColor(f.fgR, f.fgG, f.fgB );
-                QColor bgColor = QColor(f.bgR, f.bgG, f.bgB );
+                auto fgColor = QColor(f.fgR, f.fgG, f.fgB );
+                auto bgColor = QColor(f.bgR, f.bgG, f.bgB );
                 while( i2+delta+timeOffset < lineLength )
                 {
                     if( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset] == f )
@@ -737,8 +737,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
                                         mFontHeight );
-                QColor bgTime = QColor(22,22,22);
-                QColor fgTime = QColor(200,150,0);
+                auto bgTime = QColor(22,22,22);
+                auto fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
                 drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
