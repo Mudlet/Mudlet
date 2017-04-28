@@ -213,7 +213,6 @@ bool TCommandLine::event(QEvent* event)
             QPlainTextEdit::event(event);
             adjustHeight();
             return true;
-            break;
 
         case Qt::Key_Return:
             if (ke->modifiers() & Qt::ControlModifier) {
@@ -243,8 +242,9 @@ bool TCommandLine::event(QEvent* event)
                 if (mpHost->mAutoClearCommandLineAfterSend) {
                     clear();
                     mHistoryBuffer = -1;
-                } else
+                } else {
                     mHistoryBuffer = 0;
+                }
                 adjustHeight();
                 ke->accept();
                 return true;
@@ -263,8 +263,9 @@ bool TCommandLine::event(QEvent* event)
             if (mpHost->mAutoClearCommandLineAfterSend) {
                 clear();
                 mHistoryBuffer = -1;
-            } else
+            } else {
                 mHistoryBuffer = 0;
+            }
             adjustHeight();
             ke->accept();
             return true;
@@ -298,10 +299,11 @@ bool TCommandLine::event(QEvent* event)
             mTabCompletionCount = -1;
             mAutoCompletionCount = -1;
             setPalette(mRegularPalette);
-            if (mpHost->mAutoClearCommandLineAfterSend)
+            if (mpHost->mAutoClearCommandLineAfterSend) {
                 mHistoryBuffer = -1;
-            else
+            } else {
                 mHistoryBuffer = 0;
+            }
             ke->accept();
             return true;
 
@@ -334,12 +336,12 @@ bool TCommandLine::event(QEvent* event)
                 QPlainTextEdit::event(event);
                 adjustHeight();
 
-                if (mpHost->mAutoClearCommandLineAfterSend)
+                if (mpHost->mAutoClearCommandLineAfterSend) {
                     mHistoryBuffer = -1;
-                else
+                } else {
                     mHistoryBuffer = 0;
-                if (mTabCompletionOld != toPlainText()) //text() )
-                {
+                }
+                if (mTabCompletionOld != toPlainText()) {
                     mUserKeptOnTyping = true;
                     mAutoCompletionCount = -1;
                 } else {
