@@ -86,6 +86,7 @@ TRoom::~TRoom()
 
 const QString TRoom::dirCodeToDisplayName(const int dirCode)
 {
+    switch (dirCode) {
     case DIR_NORTH:     return tr("North");       break;
     case DIR_NORTHEAST: return tr("North-east");  break;
     case DIR_NORTHWEST: return tr("North-west");  break;
