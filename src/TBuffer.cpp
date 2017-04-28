@@ -604,14 +604,14 @@ inline int TBuffer::lookupColor(const QString & s, int pos )
     return -1; // unbeendete sequenz
 }
 
-void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
+void TBuffer::translateToPlainText( std::string & incoming, const bool isFromServer )
 {
-    std::string localBuffer; // As well as enabling the prepending of left-over
-                             // bytes from last packet from the MUD server this
-                             // may help in high frequency interactions to
-                             // protect this process from the supplied string s
-                             // being modified asynchronously by the QNetwork
-                             // code that runs in another thread. 8-O
+    // As well as enabling the prepending of left-over bytes from last packet
+    // from the MUD server this may help in high frequency interactions to
+    // protect this process from the supplied string being modified
+    // asynchronously by the QNetwork code that runs in another thread:
+    std::string localBuffer;
+
     Host * pHost = mpHost;
     if (! pHost) {
         qWarning() << "TBuffer::translateToPlainText(...) ERROR: Cannot access Host instance at this time - data has been lost.";
@@ -621,10 +621,10 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
     if (isFromServer
         && pHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
 
-        localBuffer = mIncompleteUtf8SequenceBytes + s;
+        localBuffer = mIncompleteUtf8SequenceBytes + incoming;
         mIncompleteUtf8SequenceBytes.clear();
     } else {
-        localBuffer = s;
+        localBuffer = incoming;
     }
 
     speedAppend = 0;
@@ -632,11 +632,15 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
     int numCodes=0;
     speedSequencer = 0;
     mUntriggered = lineBuffer.size()-1;
-    msLength = s.length();
+    msLength = incoming.length();
     mFormatSequenceRest="";
     int msPos = 0;
     QString packetTime = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-    if( msLength < 1 ) return;
+    if (msLength < 1) {
+        return;
+    }
+
+    QString encoding = mpHost->mTelnet.getEncoding();
 
     while( true )
     {
@@ -645,7 +649,7 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
         {
             return;
         }
-        char & ch = s[msPos];
+        char & ch = localBuffer[msPos];
         if( ch == '\033' )
         {
             gotESC = true;
@@ -667,7 +671,7 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
         {
             while( msPos < msLength )
             {
-                QChar ch2 = s[msPos];
+                QChar ch2 = incoming[msPos];
 
                 if( ch2 == 'z' )
                 {
@@ -1655,25 +1659,25 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
             {
                 if( ( msPos+4 < msLength ) && ( mSkip.size() == 0 ) )
                 {
-                    if( s.substr( msPos, 4 ) == "&gt;" )
+                    if( incoming.substr( msPos, 4 ) == "&gt;" )
                     {
                         msPos += 3;
                         ch = '>';
                         mIgnoreTag = false;
                     }
-                    else if(  s.substr( msPos, 4 ) == "&lt;" )
+                    else if( incoming.substr( msPos, 4 ) == "&lt;" )
                     {
                         msPos += 3;
                         ch = '<';
                         mIgnoreTag = false;
                     }
-                    else if( s.substr( msPos, 5 ) == "&amp;" )
+                    else if( incoming.substr( msPos, 5 ) == "&amp;" )
                     {
                         mIgnoreTag = false;
                         msPos += 4;
                         ch = '&';
                     }
-                    else if( s.substr( msPos, 6 ) == "&quot;" )
+                    else if( incoming.substr( msPos, 6 ) == "&quot;" )
                     {
                         msPos += 5;
                         mIgnoreTag = false;
@@ -1809,37 +1813,33 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
         // Used to double up the TChars for Utf-8 byte sequences that produce
         // a surrogate pair (non-BMP):
         bool isTwoTCharsNeeded = false;
-        if      (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-1")) {
+
+        // TODO: It ought to be possible to store a pointer to the relevant
+        // decoder function for all but the ASCII, ISO 8859-1 and UTF-8 cases
+        // so that we do not have to go through this branching each time - as it
+        // is not going to change whilst processing a packet of data!
+
+        if        (encoding == QLatin1String("ISO 8859-1")) {
             mMudLine.append(QString(QChar::fromLatin1(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-2")) {
+        } else if (encoding == QLatin1String("ISO 8859-2")) {
             mMudLine.append(QString(decodeByteToIso_8859_2(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-3")) {
+        } else if (encoding == QLatin1String("ISO 8859-3")) {
             mMudLine.append(QString(decodeByteToIso_8859_3(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-4")) {
+        } else if (encoding == QLatin1String("ISO 8859-4")) {
             mMudLine.append(QString(decodeByteToIso_8859_4(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-10")) {
+        } else if (encoding == QLatin1String("ISO 8859-10")) {
+           mMudLine.append(QString(decodeByteToIso_8859_10(ch)));
+        } else if (encoding == QLatin1String("ISO 8859-15")) {
             mMudLine.append(QString(decodeByteToIso_8859_10(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-15")) {
-            mMudLine.append(QString(decodeByteToIso_8859_10(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("ISO 8859-16")) {
+        } else if (encoding == QLatin1String("ISO 8859-16")) {
             mMudLine.append(QString(decodeByteToIso_8859_16(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("WINDOWS-1250")) {
+        } else if (encoding == QLatin1String("WINDOWS-1250")) {
             mMudLine.append(QString(decodeByteToWindows_1250(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("WINDOWS-1251")) {
+        } else if (encoding == QLatin1String("WINDOWS-1251")) {
             mMudLine.append(QString(decodeByteToWindows_1250(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("WINDOWS-1252")) {
+        } else if (encoding == QLatin1String("WINDOWS-1252")) {
             mMudLine.append(QString(decodeByteToWindows_1252(ch)));
-        }
-        else if (mpHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
+        } else if (encoding == QLatin1String("UTF-8")) {
             // In Utf-8 mode we have to process the data more than one byte at a
             // time because there is not necessarily a one-byte to one TChar
             // mapping, instead we use one TChar per QChar - and that has to be
@@ -1884,7 +1884,7 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
                 switch( utf8SequenceLength ) {
                 case 4:
                     if ((localBuffer[msPos+3] & 0xC0) != 0x80) {
-                        qDebug() << "TBuffer::translateToPlainText(...) byte 4 in sequence as UTF-8 rejected!";
+                        qDebug() << "TBuffer::translateToPlainText(...) 4th byte in UTF-8 sequence is invalid!";
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
@@ -1904,7 +1904,7 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
                     // Fall-through
                 case 3:
                     if ((localBuffer[msPos+2] & 0xC0) != 0x80) {
-                        qDebug() << "TBuffer::translateToPlainText(...) byte 3 in sequence as UTF-8 rejected!";
+                        qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
                         isValid = false;
                         isToUseReplacementMark = true;
                     } else if(   (static_cast<quint8>(localBuffer[msPos+2]) == 0xbf)
@@ -1921,7 +1921,7 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
                     // Fall-through
                 case 2:
                     if ((localBuffer[msPos+1] & 0xC0) != 0x80) {
-                        qDebug() << "TBuffer::translateToPlainText(...) byte 2 in sequence as UTF-8 rejected!";
+                        qDebug() << "TBuffer::translateToPlainText(...) 2nd byte in UTF-8 sequence is invalid!";
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
@@ -1949,12 +1949,19 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
                 }
 
                 // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
-                if(isValid) {
+                if (isValid) {
                     QString codePoint = QString(localBuffer.substr(msPos,utf8SequenceLength).c_str());
                     switch(codePoint.size()) {
                     default:
                         Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                        // Fall-through
+                        qWarning().nospace() << "TBuffer::translateToPlainText(...) "
+                                              << utf8SequenceLength
+                                              << "-byte UTF-8 sequence accepted, but it encoded to "
+                                              << codePoint.size()
+                                              << " QChars which does not make sense!!!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                        break;
                     case 2:
                         isTwoTCharsNeeded = true;
                         // Fall-through
@@ -1972,14 +1979,19 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
                         qWarning().nospace() << "TBuffer::translateToPlainText(...) "
                                               << utf8SequenceLength
                                               << "-byte UTF-8 sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
                     }
-                } else {
+                }
+
+                if (! isValid) {
                     QString debugMsg;
                     for(size_t i = 0; i < utf8SequenceLength; ++i) {
                         debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[msPos+i]),2,16));
                     }
                     qDebug().nospace() << "    Sequence bytes are: "
                                        << debugMsg.toLatin1().constData();
+
                     if(isToUseReplacementMark) {
                         mMudLine.append(QChar::ReplacementCharacter);
                     }
@@ -1995,19 +2007,17 @@ void TBuffer::translateToPlainText( std::string & s, const bool isFromServer )
                 // Single byte character i.e. Unicode points: U+00000000 to U+0000007F
                 mMudLine.append(ch);
             }
-        }
-        else {
+        } else {
             // Default - no encoding case - reject anything that has MS Bit set
-            // as that isn't ASCII!
-            if( ch & 0x80 ) {
+            // as that isn't ASCII which is what no encoding specifies!
+            if (ch & 0x80) {
                 // Was going to ignore this byte, not add a TChar instance
                 // either and move on:
                 // ++msPos;
                 // continue;
                 // but instead insert the "Replacement Character Marker"
                 mMudLine.append(QChar::ReplacementCharacter);
-            }
-            else {
+            } else {
                 mMudLine.append(ch);
             }
         }

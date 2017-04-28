@@ -244,13 +244,11 @@ QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const boo
         // Report on main console the change in ALL cases, as this can change
         // things for the user (e.g. theoretically what characters are
         // acceptable to the MUD Server).
-        QString message = tr("[ ALERT ] - Encoding/decoding of MUD Server traffic set to: \"%1\"...")
+        QString message = tr("[  OK  ]  - Transcoding of MUD Server traffic set to: \"%1\".")
                           .arg(reportedEncoding);
         postMessage(message);
-        return qMakePair(true, QLatin1String("(encoding changed to: \"") % reportedEncoding % QLatin1String("\")"));
-    } else {
-        return qMakePair(false, QLatin1String("(no change to encoding, it already was: \"") % reportedEncoding % QLatin1String("\")"));
     }
+    return qMakePair(true, QString());
 }
 
 void cTelnet::connectIt(const QString &address, int port)
