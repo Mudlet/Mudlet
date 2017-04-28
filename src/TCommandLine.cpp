@@ -39,7 +39,7 @@ TCommandLine::TCommandLine( Host * pHost, TConsole * pConsole, QWidget * parent 
 : QPlainTextEdit( parent )
 , mpHost( pHost )
 , mpConsole( pConsole )
-, mSelectedText( QString() )
+, mSelectedText()
 , mSelectionStart( 0 )
 , mTabCompletion()
 , mTabCompletionCount()
@@ -289,26 +289,24 @@ bool TCommandLine::event( QEvent * event )
                 if( ke->modifiers() & Qt::ControlModifier )
                 {
                     moveCursor(QTextCursor::Down, QTextCursor::MoveAnchor);
-                    ke->accept();
                 }
                 else
                 {
                     historyDown(ke);
-                    ke->accept();
                 }
+                ke->accept();
                 return true;
 
             case Qt::Key_Up:
                 if( ke->modifiers() & Qt::ControlModifier )
                 {
                     moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor );
-                    ke->accept();
                 }
                 else
                 {
                     historyUp(ke);
-                    ke->accept();
                 }
+                ke->accept();
                 return true;
 
             case Qt::Key_Escape:
