@@ -1721,7 +1721,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1 );
                 _poly.append( _pt );
                 QBrush brush = p.brush();
-                brush.setColor( QColor(Qt::black) );
+                brush.setColor( Qt::black );
                 brush.setStyle( Qt::NoBrush );
                 p.setBrush( brush );
                 p.drawPolygon(_poly);
@@ -1739,7 +1739,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(Qt::black) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1756,7 +1756,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(Qt::black) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1773,7 +1773,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(Qt::black) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1790,7 +1790,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(Qt::black) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
