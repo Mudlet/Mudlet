@@ -423,7 +423,7 @@ void TCommandLine::spellCheck()
 
     QTextCursor oldCursor = textCursor();
     QTextCharFormat f;
-    QColor cred = QColor(Qt::red);
+    auto cred = QColor(Qt::red);
     f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
     f.setUnderlineColor(cred);
     QTextCursor c = textCursor();

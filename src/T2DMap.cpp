@@ -3622,7 +3622,7 @@ void T2DMap::slot_selectRoomColor(QListWidgetItem * pI )
 
 void T2DMap::slot_defineNewColor()
 {
-    QColor color = QColorDialog::getColor( mpHost->mRed, this );
+    auto color = QColorDialog::getColor( mpHost->mRed, this );
     if ( color.isValid() )
     {
         mpMap->customEnvColors[mpMap->customEnvColors.size()+257+16] = color;

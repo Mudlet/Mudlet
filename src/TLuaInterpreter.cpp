@@ -5765,9 +5765,9 @@ int TLuaInterpreter::debug( lua_State *L )
     for (int i=0; i<nbargs; i++)
     {
         luaDebugText += (nbargs > 1 ? " (" + QString::number(i+1) + ") " : " ") + lua_tostring( L, i+1 );
-        QColor green = QColor(Qt::green);
-        QColor blue = QColor(Qt::blue);
-        QColor black = QColor(Qt::black);
+        auto green = QColor(Qt::green);
+        auto blue = QColor(Qt::blue);
+        auto black = QColor(Qt::black);
         QString s1 = QString("[DEBUG:]");
         QString s2 = QString("%1\n").arg(luaDebugText);
         Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -8097,8 +8097,8 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
     TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
     if( pR )
     {
-        QColor fg = QColor(fgr,fgg,fgb,alpha1);
-        QColor bg = QColor(bgr,bgg,bgb,alpha2);
+        auto fg = QColor(fgr,fgg,fgb,alpha1);
+        auto bg = QColor(bgr,bgg,bgb,alpha2);
         pR->highlight = true;
         pR->highlightColor = fg;
         pR->highlightColor2 = bg;
@@ -8302,8 +8302,8 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
 
     QString _text = text.c_str();
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QColor fg = QColor(fgr,fgg,fgb);
-    QColor bg = QColor(bgr, bgg, bgb);
+    auto fg = QColor(fgr,fgg,fgb);
+    auto bg = QColor(bgr, bgg, bgb);
     lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, posz, fg, bg, showOnTop, noScaling, zoom, fontSize ) );
     return 1;
 }
@@ -12587,10 +12587,10 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     //QDateTime time = QDateTime::currentDateTime();
     // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
     //mpHost->mErrorLogStream << entry << endl;
-    QColor blue = QColor(Qt::blue);
-    QColor green = QColor(Qt::green);
-    QColor red = QColor(Qt::red);
-    QColor black = QColor(Qt::black);
+    auto blue = QColor(Qt::blue);
+    auto green = QColor(Qt::green);
+    auto red = QColor(Qt::red);
+    auto black = QColor(Qt::black);
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
