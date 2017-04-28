@@ -947,6 +947,7 @@ void mudlet::enableToolbarButtons()
 bool mudlet::openWindow( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
 
     if( ! dockWindowMap.contains(name) && ! dockWindowConsoleMap.contains(name) )
     {
@@ -1173,6 +1174,7 @@ bool mudlet::showWindow( Host * pHost, const QString & name )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
+        QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->show();
             dockWindowMap[name]->update();
@@ -1213,6 +1215,7 @@ bool mudlet::hideWindow( Host * pHost, const QString & name )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
+        QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->hide();
             dockWindowMap[name]->update();
@@ -1306,6 +1309,7 @@ bool mudlet::closeWindow( Host * pHost, const QString & name )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains(name) )
     {
+        QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->hide();
             dockWindowMap[name]->update();

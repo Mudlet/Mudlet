@@ -139,6 +139,7 @@ public:
    static bool                   debugMode;
    QMap<Host *, TConsole *>      mConsoleMap;
    QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
+   QMap<Host *, QMap<QString, TDockWidget * > > mHostDockConsoleMap;
    QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
    QIcon *                       testicon;
    bool                          mShowMenuBar;
@@ -269,7 +270,7 @@ private:
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
-    QMap<QString, TDockWidget*> dockWindowMap;
+//    QMap<QString, TDockWidget*> dockWindowMap;
     QMap<Host*, QToolBar*> mUserToolbarMap;
 
 
