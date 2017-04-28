@@ -70,5 +70,9 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 ADD_SUBDIRECTORY(3rdparty/communi)
 ADD_SUBDIRECTORY(3rdparty/lua_yajl)
+# Needed (just) on MacOs as an #include in luazip.h:
+IF(APPLE)
+  ADD_SUBDIRECTORY(3rdparty/luazip)
+ENDIF()
 
 ADD_SUBDIRECTORY(src)
