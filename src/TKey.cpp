@@ -120,7 +120,7 @@ void TKey::compileAll()
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> 0;
+            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> 0;
         }
         mOK_code = false;
     }
@@ -134,7 +134,7 @@ void TKey::compile()
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
             if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> 0;
+                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> 0;
             }
             mOK_code = false;
         }

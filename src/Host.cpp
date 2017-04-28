@@ -475,7 +475,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             continue;
         }
         QString command = commandList[i];
-        command.replace("\n", "");
+        command.remove(QChar::LineFeed);
         mReplacementCommand = "";
         if (dontExpandAliases) {
             mTelnet.sendData(command);

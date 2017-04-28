@@ -90,12 +90,10 @@ TAction::TAction(const QString& name, Host* pHost)
 {
 }
 
-TAction::~TAction()
-{
-    if (!mpHost) {
-        return;
+TAction::~TAction() {
+    if (mpHost) {
+        mpHost->getActionUnit()->unregisterAction(this);
     }
-    mpHost->getActionUnit()->unregisterAction(this);
 }
 
 bool TAction::registerAction()
