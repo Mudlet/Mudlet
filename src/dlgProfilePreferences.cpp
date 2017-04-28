@@ -365,7 +365,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
 
         comboBox_encoding->addItem(QLatin1String("ASCII"));
-        comboBox_encoding->addItems(pHost->mTelnet.csmAcceptableEncodings);
+        comboBox_encoding->addItems(pHost->mTelnet.getEncodingsList());
         if(pHost->mTelnet.getEncoding().isEmpty()) {
             // cTelnet::mEncoding is (or should be) empty for the default 7-bit
             // ASCII case, so need to set the control specially to its (the

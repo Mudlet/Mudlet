@@ -29,8 +29,10 @@
 #include <QMap>
 #include <QPoint>
 #include <QPointer>
+#include <QString>
 #include <QStringList>
 #include <QTime>
+#include <QVector>
 #include "post_guard.h"
 
 #include <deque>
@@ -93,6 +95,9 @@ struct TMxpElement
 
 class TBuffer
 {
+    static const QMap<QString, QVector<QChar>> csmEncodingTable; // private!
+
+
 public:
     TBuffer(Host* pH);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
@@ -140,6 +145,7 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
+    static const QList<QString> getHardCodedEncodingTableKeys() {return csmEncodingTable.keys();}
 
 
     std::deque<TChar> bufferLine;
@@ -186,15 +192,6 @@ private:
     void shrinkBuffer();
     int calcWrapPos(int line, int begin, int end);
     void handleNewLine();
-    QChar decodeByteToIso_8859_2(const quint8);
-    QChar decodeByteToIso_8859_3(const quint8);
-    QChar decodeByteToIso_8859_4(const quint8);
-    QChar decodeByteToIso_8859_10(const quint8);
-    QChar decodeByteToIso_8859_15(const quint8);
-    QChar decodeByteToIso_8859_16(const quint8);
-    QChar decodeByteToWindows_1250(const quint8);
-    QChar decodeByteToWindows_1251(const quint8);
-    QChar decodeByteToWindows_1252(const quint8);
 
 
     bool gotESC;

@@ -116,6 +116,7 @@ public:
     const QString & getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QString &, const bool isToStore = true);
     void postMessage(QString);
+    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -128,7 +129,6 @@ public:
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
-    static const QStringList csmAcceptableEncodings;
 
 public slots:
     void setDownloadProgress(qint64, qint64);
@@ -207,6 +207,7 @@ private:
     bool enableChannel102;
     QStringList messageStack;
     bool loadingReplay;
+    QStringList mAcceptableEncodings;
 };
 
 #endif // MUDLET_CTELNET_H

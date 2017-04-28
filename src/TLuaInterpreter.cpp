@@ -12016,9 +12016,9 @@ int TLuaInterpreter::getServerEncodingsList(lua_State * L)
     lua_pushnumber(L, 1);
     lua_pushstring(L, "ASCII");
     lua_settable( L, -3);
-    for (int i = 0, total = pHost->mTelnet.csmAcceptableEncodings.count(); i < total; ++i) {
+    for (int i = 0, total = pHost->mTelnet.getEncodingsList().count(); i < total; ++i) {
         lua_pushnumber(L, i+2); // Lua indexes start with 1 but we already have one entry
-        lua_pushstring(L, pHost->mTelnet.csmAcceptableEncodings.at(i).toLatin1().data());
+        lua_pushstring(L, pHost->mTelnet.getEncodingsList().at(i).toLatin1().data());
         lua_settable(L, -3);
     }
     return 1;

@@ -30,6 +30,7 @@
 
 
 #include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -56,30 +57,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
-
-
-#ifdef DEBUG
-    #undef DEBUG
-#endif
-
-// These are the strings that we can plug into QTextCodec that we have handling
-// for, ("ASCII") is a special case and is handled differently.
-const QStringList cTelnet::csmAcceptableEncodings = { QLatin1String("ISO 8859-1"),
-                                                      QLatin1String("ISO 8859-2"),
-                                                      QLatin1String("ISO 8859-3"),
-                                                      QLatin1String("ISO 8859-4"),
-                                                      QLatin1String("ISO 8859-10"),
-                                                      QLatin1String("ISO 8859-15"),
-                                                      QLatin1String("ISO 8859-16"),
-                                                      QLatin1String("WINDOWS-1250"),
-                                                      QLatin1String("WINDOWS-1251"),
-                                                      QLatin1String("WINDOWS-1252"),
-                                                      QLatin1String("UTF-8") };
-//#ifdef QT_DEBUG
-//    #define DEBUG
-//#endif
-
-
 
 #define DEBUG
 
@@ -126,6 +103,12 @@ cTelnet::cTelnet( Host * pH )
     command = "";
     curX = 80;
     curY = 25;
+
+    if (mAcceptableEncodings.isEmpty()) {
+        mAcceptableEncodings << QLatin1String("ISO 8859-1");
+        mAcceptableEncodings << TBuffer::getHardCodedEncodingTableKeys();
+        mAcceptableEncodings << QLatin1String("UTF-8");
+    }
 
     // initialize the socket
     connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
@@ -224,13 +207,13 @@ QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const boo
             }
             isChanged = true;
         }
-    } else if (!csmAcceptableEncodings.contains(newEncoding)) {
+    } else if (!mAcceptableEncodings.contains(newEncoding)) {
         // Not in list - so reject it
         return qMakePair(false,
                          QLatin1String("(encoding \"")
                          % newEncoding
                          % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
-                         % csmAcceptableEncodings.join(QLatin1String("\", \""))
+                         % mAcceptableEncodings.join(QLatin1String("\", \""))
                          % QLatin1String("\")"));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
