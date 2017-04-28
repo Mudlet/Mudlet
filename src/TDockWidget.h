@@ -18,16 +18,29 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "pre_guard.h"
-#include <QDockWidget>
-#include "post_guard.h"
+#include "mudlet.h"
+#include "Host.h"
+#include "TConsole.h"
 
-class QCloseEvent;
+#include "pre_guard.h"
+#include <QtEvents>
+#include <QDockWidget>
+#include <QPointer>
+#include <QString>
+#include "post_guard.h"
 
 // TDockWidget contains helpers for User Windows QDockWidget.
 class TDockWidget : public QDockWidget {
+public:
+    QString widgetConsoleName;
+
+    TDockWidget(Host * , const QString &);
+
 protected:
     void closeEvent(QCloseEvent *) override;
+
+private:
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_TDOCKWIDGET_H

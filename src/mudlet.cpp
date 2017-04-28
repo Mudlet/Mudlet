@@ -946,9 +946,11 @@ void mudlet::enableToolbarButtons()
 
 bool mudlet::openWindow( Host * pHost, const QString & name )
 {
-    if( ! dockWindowMap.contains( name ) )
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
+
+    if( ! dockWindowMap.contains(name) && ! dockWindowConsoleMap.contains(name) )
     {
-        auto pD = new TDockWidget();
+        auto pD = new TDockWidget(pHost, name);
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
@@ -960,14 +962,17 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
-        QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
         return true;
-    } else {
+    } else if( dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name) ) {
         dockWindowMap[name]->show();
+        dockWindowMap[name]->update();
+        dockWindowConsoleMap[name]->console->show();
+        dockWindowConsoleMap[name]->console->forceUpdate();
+        return true;
     }
-    
+
     return false;
 }
 
@@ -1168,9 +1173,16 @@ bool mudlet::showWindow( Host * pHost, const QString & name )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        dockWindowConsoleMap[name]->console->show();
-        dockWindowConsoleMap[name]->console->forceUpdate();
-        return true;
+        if( dockWindowMap.contains(name) ) {
+            dockWindowMap[name]->show();
+            dockWindowMap[name]->update();
+            dockWindowConsoleMap[name]->console->show();
+            dockWindowConsoleMap[name]->console->forceUpdate();
+
+            return true;
+        }
+
+        return pHost->mpConsole->showWindow(name);
     }
 
     return false;
@@ -1201,9 +1213,18 @@ bool mudlet::hideWindow( Host * pHost, const QString & name )
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains( name ) )
     {
-        dockWindowConsoleMap[name]->console->hide();
-        dockWindowConsoleMap[name]->console->forceUpdate();
-        return true;
+        if( dockWindowMap.contains(name) ) {
+            dockWindowMap[name]->hide();
+            dockWindowMap[name]->update();
+            dockWindowConsoleMap[name]->console->hide();
+            dockWindowConsoleMap[name]->console->forceUpdate();
+
+            return true;
+        }
+
+        //dockWindowConsoleMap[name]->console->hide();
+        //dockWindowConsoleMap[name]->console->forceUpdate();
+        return pHost->mpConsole->hideWindow(name);
     }
 
     return false;
@@ -1283,11 +1304,20 @@ bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
 bool mudlet::closeWindow( Host * pHost, const QString & name )
 {
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowMap.contains(name) )
+    if( dockWindowConsoleMap.contains(name) )
     {
-        dockWindowMap[name]->hide();
-        
-        return true;
+        if( dockWindowMap.contains(name) ) {
+            dockWindowMap[name]->hide();
+            dockWindowMap[name]->update();
+            dockWindowConsoleMap[name]->console->hide();
+            dockWindowConsoleMap[name]->console->forceUpdate();
+
+            return true;
+        }
+
+        //dockWindowConsoleMap[name]->console->hide();
+        //dockWindowConsoleMap[name]->console->forceUpdate();
+        return pHost->mpConsole->hideWindow(name);
     }
     else
         return false;
@@ -1725,7 +1755,7 @@ void mudlet::forceClose()
     for (auto console : mConsoleMap) {
         console->mUserAgreedToCloseConsole = true;
     }
-    
+
     close();
 }
 
@@ -2413,7 +2443,7 @@ void mudlet::slot_replaySpeedDown()
 void mudlet::stopSounds()
 {
     QListIterator<QMediaPlayer *> itMusicBox( mMusicBoxList );
-    
+
     while( itMusicBox.hasNext() ) {
         itMusicBox.next()->stop();
     }

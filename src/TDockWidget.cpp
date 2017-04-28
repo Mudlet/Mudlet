@@ -18,12 +18,13 @@
 
 #include "TDockWidget.h"
 
-#include "pre_guard.h"
-#include <QtEvents>
-#include "post_guard.h"
-
+TDockWidget::TDockWidget( Host * pH, const QString & consoleName ) : QDockWidget()
+{
+    mpHost = pH;
+    widgetConsoleName = consoleName;
+}
 
 void TDockWidget::closeEvent(QCloseEvent * event) {
-    hide();
+    mudlet::self()->hideWindow(mpHost, widgetConsoleName);
     event->ignore();
 }

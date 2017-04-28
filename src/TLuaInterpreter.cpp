@@ -2821,7 +2821,8 @@ int TLuaInterpreter::hideUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    pHost->mpConsole->hideWindow( text );
+    //pHost->mpConsole->hideWindow( text );
+    mudlet::self()->hideWindow(pHost, text);
 
     return 0;
 }
@@ -3705,7 +3706,8 @@ int TLuaInterpreter::showUserWindow( lua_State *L )
     }
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    lua_pushboolean( L, pHost->mpConsole->showWindow( text ));
+    //lua_pushboolean( L, pHost->mpConsole->showWindow( text ));
+    lua_pushboolean( L, mudlet::self()->showWindow(pHost, text));
     return 1;
 }
 
