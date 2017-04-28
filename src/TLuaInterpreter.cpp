@@ -13391,14 +13391,14 @@ void TLuaInterpreter::initLuaGlobals()
 
 void TLuaInterpreter::loadGlobal()
 {
-# // Load relatively to MacOS inside Resources when we're in a .app bundle,
-# // as mudlet-lua always gets copied in by the build script into the bundle
 #if defined(Q_OS_MAC)
+    // Load relatively to MacOS inside Resources when we're in a .app bundle,
+    // as mudlet-lua always gets copied in by the build script into the bundle
     QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
 #else
-    QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
     // Additional "../src/" allows location of lua code when object code is in a
     // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
+    QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
 #endif
 
     int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
