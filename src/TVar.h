@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,49 +33,45 @@ class TVar
 {
 public:
     TVar();
-    TVar(TVar *);
-    TVar(TVar *, QString, int, QString, int);
-    void    addChild(TVar *);
-    void    setParent(TVar *);
-    void    removeChild(TVar *);
-    bool    setValue(QString);
-    bool    setValue(QString, int);
-    bool    setValueType(int);
-    bool    setKeyType(int);
-    bool    setName(QString);
-    bool    setName(QString, int);
-    void    setNewName(QString, int);
-    void    setNewName(QString);
-    void    setReference(bool);
-    QList<TVar *> getChildren(int);
-    TVar *  getParent();
+    TVar(TVar*);
+    TVar(TVar*, const QString, const int, const QString, const int);
+    void addChild(TVar*);
+    void setParent(TVar*);
+    void removeChild(TVar*);
+    bool setValue(const QString);
+    bool setValue(const QString, const int);
+    bool setValueType(const int);
+    bool setName(const QString);
+    bool setName(const QString, int);
+    void setNewName(const QString, int);
+    void setReference(const bool);
+    QList<TVar*> getChildren(const bool isToSort = true);
+    TVar* getParent();
     QString getValue();
     QString getName();
     QString getNewName();
     void clearNewName();
-    int     getKeyType();
-    int     getNewKeyType();
-    int     getValueType();
-    bool    isReference();
+    int getKeyType();
+    int getNewKeyType();
+    int getValueType();
+    bool isReference();
 
 public:
-    bool    hidden;
+    bool hidden;
     const void* kpointer;
     const void* vpointer;
-    bool    saved;
+    bool saved;
 
 private:
-    bool    reference;
-    QList<TVar *> children;
-    TVar * parent;
+    bool reference;
+    QList<TVar*> children;
+    TVar* parent;
     QString name;
-    int     kType;
+    int kType;
     QString value;
-    int     vType;
-    int     nkType;
-    int     nvType;
+    int vType;
+    int nkType;
     QString nName;
-    QString nValue;
 };
 
 #endif // MUDLET_TVAR_H

@@ -24,8 +24,8 @@
 
 
 #include "pre_guard.h"
-#include <QPointer>
 #include <QtOpenGL/qgl.h> //problem with git
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -36,29 +36,19 @@ class GLWidget : public QGLWidget
 {
     Q_OBJECT
 
-public:
-    GLWidget(QWidget *parent = 0);
-    GLWidget(TMap * pM, QWidget *parent = 0);
-    ~GLWidget();
-    void wheelEvent( QWheelEvent * e ) override;
-    void setViewCenter( int, int, int, int );
+    Q_DISABLE_COPY(GLWidget)
 
-    bool is2DView;
+public:
+    GLWidget(QWidget* parent = 0);
+    GLWidget(TMap* pM, QWidget* parent = 0);
+    ~GLWidget();
+    void wheelEvent(QWheelEvent* e) override;
+    void setViewCenter(int, int, int, int);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
 
-    int mRID;
-    int mAID;
-    int mOx;
-    int mOy;
-    int mOz;
-    bool mShiftMode;
-    bool mShowInfo;
-
-
 public slots:
-
     void showInfo();
     void shiftUp();
     void shiftDown();
@@ -73,7 +63,7 @@ public slots:
     void setYDist(int angle);
     void setZDist(int angle);
     void setScale(int);
-    void goRoom(const QString &);
+    void goRoom(const QString&);
     void fullView();
     void singleView();
     void increaseTop();
@@ -96,11 +86,24 @@ protected:
     void initializeGL() override;
     void paintGL() override;
     void resizeGL(int width, int height) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
 
 public:
+    TMap* mpMap;
+
+private:
+    bool is2DView;
+
+    int mRID;
+    int mAID;
+    int mOx;
+    int mOy;
+    int mOz;
+    bool mShiftMode;
+    bool mShowInfo;
+
     float xRot;
     float yRot;
     float zRot;
@@ -116,7 +119,6 @@ public:
 
     GLfloat rotTri, rotQuad;
     float mScale;
-    TMap * mpMap;
     int mTarget;
     QPointer<Host> mpHost;
     QMap<int, int> mQuads;

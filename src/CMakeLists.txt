@@ -1,6 +1,6 @@
 ############################################################################
-#    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         #
+#    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
+#    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -17,8 +17,6 @@
 #    Free Software Foundation, Inc.,                                       #
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
-
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
 SET(mudlet_RCCS mudlet_alpha.qrc)
 
@@ -66,6 +64,7 @@ SET(mudlet_SRCS
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
+    TDockWidget.cpp
     TEasyButtonBar.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
@@ -85,7 +84,6 @@ SET(mudlet_SRCS
     TTimer.cpp
     TToolBar.cpp
     TTreeWidget.cpp
-    TTreeWidgetItem.cpp
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
@@ -154,7 +152,9 @@ SET(mudlet_MOC_HDRS
     THighlighter.h
     TLabel.h
     TLuaInterpreter.h
+    TMap.h
     TSplitter.h
+    TSplitterHandle.h
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
@@ -177,12 +177,12 @@ SET(mudlet_HDRS
     TAstar.h
     TBuffer.h
     TDebug.h
+    TDockWidget.h
     testdbg.h
     TEvent.h
     TFlipButton.h
     TimerUnit.h
     TKey.h
-    TMap.h
     TMatchState.h
     Tree.h
     TriggerUnit.h
@@ -191,7 +191,6 @@ SET(mudlet_HDRS
     TScript.h
     TSplitterHandle.h
     TTimer.h
-    TTreeWidgetItem.h
     TTrigger.h
     TVar.h
     VarUnit.h
@@ -209,12 +208,15 @@ IF(MSVC)
 ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
   IF(APPLE)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
   ENDIF()
 ENDIF()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
@@ -267,7 +269,7 @@ IF(WIN32)
   ENDIF()
 ENDIF()
 
-# Break each step into a separate command so any status message is output straigh away
+# Break each step into a separate command so any status message is output straight away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
   # we need the path to an interal header zipconf.g that it calls for using '<''>'s
@@ -339,11 +341,20 @@ IF((APPLE) AND (PKG_CONFIG_FOUND))
 ENDIF()
 
 FIND_PACKAGE(Qt5Core REQUIRED)
+IF (Qt5Core_VERSION VERSION_LESS 5.6)
+  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+ENDIF()
+
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
+
+IF(WIN32)
+  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
+  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
+ENDIF()
 
 IF(NOT(PC_ZIP_FOUND))
   FIND_PACKAGE(ZIP REQUIRED)
@@ -374,19 +385,7 @@ ELSE()
   FIND_PACKAGE(HUNSPELL REQUIRED)
 ENDIF()
 
-SET(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
-
-SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
-
-IF(LUA_CPP)
-  ADD_DEFINITIONS(-DLUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.cpp)
-ELSE(LUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
-ENDIF(LUA_CPP)
-
-ADD_SUBDIRECTORY(irc)
 
 ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
@@ -416,7 +415,6 @@ INCLUDE_DIRECTORIES(
     ${Qt5Multimedia_INCLUDE_DIRS}
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
@@ -465,7 +463,8 @@ TARGET_LINK_LIBRARIES(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    irccqt
+    communi
+    lua_yajl
 )
 
 IF(PC_ZIP_FOUND)

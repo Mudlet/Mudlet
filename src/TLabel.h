@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,26 +38,31 @@ class QMouseEvent;
 
 class TLabel : public QLabel
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(TLabel)
 
 public:
+    TLabel(QWidget* pW = 0);
+    void setClick(Host* pHost, const QString& func, const TEvent& args);
+    void setRelease(Host* pHost, const QString& func, const TEvent& args);
+    void setEnter(Host* pHost, const QString& func, const TEvent& args);
+    void setLeave(Host* pHost, const QString& func, const TEvent& args);
+    void mousePressEvent(QMouseEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
+    void leaveEvent(QEvent*) override;
+    void enterEvent(QEvent*) override;
 
-                  TLabel( QWidget * pW=0 );
-void              setScript( Host * pHost, const QString & func, const TEvent & args );
-void              setEnter( Host * pHost, const QString & func, const TEvent & args );
-void              setLeave( Host * pHost, const QString & func, const TEvent & args );
-void              mousePressEvent( QMouseEvent *  ) override;
-void              leaveEvent(QEvent *) override;
-void              enterEvent(QEvent *) override;
-
-QPointer<Host>    mpHost;
-QString           mScript;
-QString           mEnter;
-QString           mLeave;
-TEvent            mpParameters;
-TEvent            mLeaveParams;
-TEvent            mEnterParams;
-bool              mouseInside;
+    QPointer<Host> mpHost;
+    QString mClick;
+    QString mRelease;
+    QString mEnter;
+    QString mLeave;
+    TEvent mClickParams;
+    TEvent mReleaseParams;
+    TEvent mLeaveParams;
+    TEvent mEnterParams;
+    bool mouseInside;
 };
 
 #endif // MUDLET_TLABEL_H

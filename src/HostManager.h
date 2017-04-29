@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,34 +28,29 @@
 #include "pre_guard.h"
 #include <QList>
 #include <QMap>
-#include <QMutex>
+#include <QReadWriteLock>
 #include <QString>
 #include <QStringList>
 #include "post_guard.h"
 
 
+class TEvent;
+
+
 class HostManager
 {
 public:
-
-                       HostManager() : mpActiveHost() {}
-    Host *             getHost( QString hostname );
-    QStringList        getHostList();
-    QList<QString>     getHostNameList();
-    Host *             getFirstHost();
-    bool               addHost( QString name, QString port, QString login, QString pass );
-    bool               deleteHost( QString );
-    bool               renameHost( QString );
-    Host *             getHostFromHostID( int id );
-    void               postIrcMessage(QString, QString, QString );
+    HostManager() /* : mpActiveHost() - Not needed */ {}
+    Host* getHost(QString hostname);
+    QStringList getHostList();
+    bool addHost(QString name, QString port, QString login, QString pass);
+    bool deleteHost(QString);
+    void postIrcMessage(QString, QString, QString);
+    void postInterHostEvent(const Host*, const TEvent&);
 
 private:
-    int createNewHostID();
-
-    QMutex              mPoolLock;
-    QMap<QString, QSharedPointer<Host> > mHostPool;
-    Host *              mpActiveHost;
-
+    QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
+    QMap<QString, QSharedPointer<Host>> mHostPool;
 };
 
 #endif // MUDLET_HOSTMANAGER_H

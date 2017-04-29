@@ -2,8 +2,11 @@
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
+ *   Copyright (C) 2017 by Colton Rasbury - rasbury.colton@gmail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,15 +28,15 @@
 #include "ctelnet.h"
 
 
-#include "dlgComposer.h"
-#include "dlgMapper.h"
-#include "glwidget.h"
 #include "Host.h"
-#include "mudlet.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "dlgComposer.h"
+#include "dlgMapper.h"
+#include "glwidget.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -49,8 +52,8 @@
 #include <memory>
 #include <sstream>
 
-#include <sys/types.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <time.h>
 
 
@@ -87,6 +90,15 @@ cTelnet::cTelnet( Host * pH )
 , enableGMCP( false )
 , enableChannel102( false )
 , loadingReplay( false )
+, networkLatency()
+, mpProgressDialog()
+, hostPort()
+, networkLatencyMin()
+, networkLatencyMax()
+, mWaitingForResponse()
+, mZstream()
+, recvdGA()
+, lastTimeOffset()
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -107,9 +119,7 @@ cTelnet::cTelnet( Host * pH )
     // initialize the socket
     connect(&socket, SIGNAL(connected()), this, SLOT(handle_socket_signal_connected()));
     connect(&socket, SIGNAL(disconnected()), this, SLOT(handle_socket_signal_disconnected()));
-    //connect(&socket, SIGNAL(error()), this, SLOT (handle_socket_signal_error()));
     connect(&socket, SIGNAL(readyRead()), this, SLOT (handle_socket_signal_readyRead()));
-    //connect(&socket, SIGNAL(hostFound()), this, SLOT (handle_socket_signal_hostFound()));
 
     // initialize telnet session
     reset();
@@ -163,7 +173,6 @@ cTelnet::~cTelnet()
 
 void cTelnet::encodingChanged(QString encoding)
 {
-    qDebug() << "cTelnet::encodingChanged() called!";
     encoding = encoding;
 
     // unicode carries information in form of single byte characters
@@ -198,9 +207,6 @@ void cTelnet::connectIt(const QString &address, int port)
 
     hostName = address;
     hostPort = port;
-    // QChar(0x2714));//'?'
-    // QChar(0x2718));//'?'
-    // QChar(0x24d8));//info i im kreis
     QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
     postMessage( server );
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
@@ -210,11 +216,6 @@ void cTelnet::connectIt(const QString &address, int port)
 void cTelnet::disconnect ()
 {
     socket.disconnectFromHost();
-    TEvent me;
-    me.mArgumentList.append( "sysDisconnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
-
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -242,25 +243,26 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing );
     mConnectionTime.start();
-    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0))
+    if( (mpHost->getLogin().size()>0) && (mpHost->getPass().size()>0)) {
         mTimerLogin->start(2000);
-    if( (mpHost->getPass().size()>0)  && (mpHost->getPass().size()>0))
         mTimerPass->start(3000);
-    //sendTelnetOption(252,3);// try to force GA by telling the server that we are NOT willing to supress GA signals
-    TEvent me;
-    me.mArgumentList.append( "sysConnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+    }
 
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysConnectionEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 void cTelnet::handle_socket_signal_disconnected()
 {
     postData();
-    TEvent me;
-    me.mArgumentList.append( "sysDisconnectionEvent" );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysDisconnectionEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+
     QString msg;
     QTime timeDiff(0,0,0,0);
     msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
@@ -302,12 +304,14 @@ bool cTelnet::sendData( QString & data )
     {
         data.replace(QChar('\n'),"");
     }
-    TEvent pE;
-    pE.mArgumentList.append( "sysDataSendRequest" );
-    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    pE.mArgumentList.append( data );
-    pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( pE );
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysDataSendRequest"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(data);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+
     if( mpHost->mAllowToSendCommand )
     {
         string outdata = (outgoingDataCodec->fromUnicode(data)).data();
@@ -331,21 +335,10 @@ bool cTelnet::socketOutRaw(string & data)
 {
     if( ! socket.isWritable() )
     {
-        //qDebug()<<"MUDLET SOCKET ERROR: socket not connected, but wants to send data="<<data.c_str();
         return false;
     }
     int dataLength = data.length();
     int remlen = dataLength;
-
-    /*cout << "SOCKET OUT RAW: [ ";
-    for(unsigned int i=0;i<data.size();i++)
-    {
-        unsigned char c = data[i];
-        int ci = 0;
-        ci = (int)c;
-        cout << "<" << ci << "> ";
-    }
-    cout << " ]" << endl;*/
 
     do
     {
@@ -381,7 +374,6 @@ void cTelnet::setDisplayDimensions()
     int y = mpHost->mScreenHeight;
     if(myOptionState[static_cast<int>(OPT_NAWS)])
     {
-        //cout<<"TELNET: sending NAWS:"<<x<<"x"<<y<<endl;
         string s;
         s = TN_IAC;
         s += TN_SB;
@@ -544,12 +536,12 @@ void cTelnet::processTelnetCommand( const string & command )
 
               qDebug() << "ATCP enabled";
               enableATCP = true;
-              sendTelnetOption( TN_DO, 200 );
+              sendTelnetOption( TN_DO, static_cast<char>(200) );
 
               string _h;
               _h += TN_IAC;
               _h += TN_SB;
-              _h += 200;
+              _h += static_cast<char>(200);
               _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
               _h += TN_IAC;
               _h += TN_SE;
@@ -594,16 +586,12 @@ void cTelnet::processTelnetCommand( const string & command )
               if( ! mpHost->mFORCE_MXP_NEGOTIATION_OFF )
               {
                 sendTelnetOption( TN_DO, 91 );
-                //mpHost->mpConsole->print("\n<MXP enabled>\n");
 
                 raiseProtocolEvent( "sysProtocolEnabled", "MXP" );
                 break;
               }
-              //else
-                  //mpHost->mpConsole->print("\n<MXP declined because of user setting: force MXP off>");
           }
 
-          //option = command[2];
           if( option == static_cast<char>(102) ) // Aardwulf channel 102 support
           {
               qDebug() << "Aardwulf channel 102 support enabled";
@@ -627,7 +615,7 @@ void cTelnet::processTelnetCommand( const string & command )
                    //(according to telnet specification, option announcement may not be
                    //unless explicitly requested)
 
-                   if( //( option == OPT_SUPPRESS_GA ) ||
+                   if(
                        ( option == OPT_STATUS ) ||
                        ( option == OPT_TERMINAL_TYPE) ||
                        ( option == OPT_ECHO ) ||
@@ -645,7 +633,7 @@ void cTelnet::processTelnetCommand( const string & command )
                            //MCCP v2...
                            sendTelnetOption( TN_DONT, option );
                            hisOptionState[idxOption] = false;
-                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
+                           qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
                        }
                        else
                        {
@@ -655,13 +643,11 @@ void cTelnet::processTelnetCommand( const string & command )
                            if( option == OPT_COMPRESS )
                            {
                                mMCCP_version_1 = true;
-                               //MCCP->setMCCP1(true);
                                qDebug() << "MCCP v1 negotiated.";
                            }
                            else
                            {
                                mMCCP_version_2 = true;
-                               //MCCP->setMCCP2( true );
                                qDebug() << "MCCP v2 negotiated!";
                            }
                        }
@@ -731,14 +717,14 @@ void cTelnet::processTelnetCommand( const string & command )
 
                   if( option == OPT_COMPRESS )
                   {
-                      //MCCP->setMCCP1 (false);
                       mMCCP_version_1 = false;
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       qDebug() << "MCCP v1 disabled !";
                   }
                   if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
-                      //MCCP->setMCCP2 (false);
+                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       qDebug() << "MCCP v1 disabled !";
                   }
               }
@@ -767,7 +753,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
             qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
-            sendTelnetOption( TN_WILL, 200 );
+            sendTelnetOption( TN_WILL, static_cast<char>(200) );
             raiseProtocolEvent( "sysProtocolEnabled", "ATCP" );
             break;
           }
@@ -775,7 +761,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
             qDebug() << "TELNET IAC DO GMCP";
             enableGMCP = true;
-            sendTelnetOption( TN_WILL, 201 );
+            sendTelnetOption( TN_WILL, static_cast<char>(201) );
             raiseProtocolEvent( "sysProtocolEnabled", "GMCP" );
             break;
           }
@@ -806,12 +792,11 @@ void cTelnet::processTelnetCommand( const string & command )
           else if (!myOptionState[255])
           //only if the option is currently disabled
           {
-              if( //( option == OPT_SUPPRESS_GA ) ||
+              if(
                   ( option == OPT_STATUS ) ||
                   ( option == OPT_NAWS ) ||
                   ( option == OPT_TERMINAL_TYPE ) )
               {
-                  if( option == OPT_SUPPRESS_GA ) qDebug() << "OK we are willing to enable option SUPPRESS_GA";
                   if( option == OPT_STATUS ) qDebug() << "OK we are willing to enable telnet option STATUS";
                   if( option == OPT_TERMINAL_TYPE ) qDebug() << "OK we are willing to enable telnet option TERMINAL_TYPE";
                   if( option == OPT_NAWS ) qDebug() << "OK we are willing to enable telnet option NAWS";
@@ -861,7 +846,7 @@ void cTelnet::processTelnetCommand( const string & command )
           {
              raiseProtocolEvent( "sysProtocolDisabled", "channel102" );
           }
-          int idxOption = static_cast<int>(option);
+          int idxOption = option & 0xFF;
           if( myOptionState[idxOption] || ( !announcedState[idxOption] ) )
           {
               sendTelnetOption (TN_WONT, option);
@@ -895,7 +880,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   string _h;
                   _h += TN_IAC;
                   _h += TN_SB;
-                  _h += 200;
+                  _h += static_cast<char>(200);
                   _h += string("hello Mudlet ") + APP_VERSION + APP_BUILD + string("\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
                   _h += TN_IAC;
                   _h += TN_SE;
@@ -912,8 +897,6 @@ void cTelnet::processTelnetCommand( const string & command )
                   version = version.section(' ', 0, 0);
 
                   int newVersion = version.toInt();
-                  //QString __mkp = QString("<old version:'%1' new version:'%2' name:'%3' msg:'%4'>\n").arg(mpHost->mServerGUI_Package_version).arg(newVersion).arg(mpHost->mServerGUI_Package_name).arg(version);
-                  //mpHost->mpConsole->print(__mkp);
                   if( mpHost->mServerGUI_Package_version != newVersion )
                   {
                       QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
@@ -953,6 +936,13 @@ void cTelnet::processTelnetCommand( const string & command )
 
               }
               return;
+          }
+
+          // Original fix by CR, second revision by MH - To take out normal MCCP version 1 option and 2, no need for them now. //
+          if ((mWaitingForCompressedStreamToStart) && (!mpHost->mFORCE_NO_COMPRESSION))
+          {
+            mNeedDecompression = true;
+            initStreamDecompressor();
           }
 
           // GMCP
@@ -1016,7 +1006,6 @@ void cTelnet::processTelnetCommand( const string & command )
 
               case OPT_TERMINAL_TYPE:
               {
-                  qDebug() << "server sends telnet option terminal type";
                   if( myOptionState[static_cast<int>(OPT_TERMINAL_TYPE)] )
                   {
                       if(command[3] == TNSB_SEND )
@@ -1043,23 +1032,25 @@ void cTelnet::processTelnetCommand( const string & command )
   };//end switch 1
   // raise sysTelnetEvent for all unhandled protocols
   // EXCEPT TN_GA (performance)
-  if( command[1] != TN_GA )
-  {
-      unsigned char type = static_cast<unsigned char>(command[1]);
-      unsigned char telnetOption = static_cast<unsigned char>(command[2]);
-      QString msg = command.c_str();
-      if( command.size() >= 6 ) msg = msg.mid( 3, command.size()-5 );
-      TEvent me;
-      me.mArgumentList.append( "sysTelnetEvent" );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-      me.mArgumentList.append( QString::number(type) );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-      me.mArgumentList.append( QString::number(telnetOption) );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-      me.mArgumentList.append( msg );
-      me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-      mpHost->raiseEvent( me );
-  }
+    if (command[1] != TN_GA) {
+        unsigned char type = static_cast<unsigned char>(command[1]);
+        unsigned char telnetOption = static_cast<unsigned char>(command[2]);
+        QString msg = command.c_str();
+        if (command.size() >= 6) {
+            msg = msg.mid(3, command.size() - 5);
+        }
+
+        TEvent event;
+        event.mArgumentList.append(QLatin1String("sysTelnetEvent"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QString::number(type));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        event.mArgumentList.append(QString::number(telnetOption));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        event.mArgumentList.append(msg);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 }
 
 void cTelnet::setATCPVariables(const QString & msg )
@@ -1132,12 +1123,10 @@ void cTelnet::setGMCPVariables(const QString & msg )
 {
     QString var;
     QString arg;
-// N/U:    bool single = true;
     if( msg.indexOf( '\n' ) > -1 )
     {
         var = msg.section( "\n", 0, 0 );
         arg = msg.section( "\n", 1 );
-// N/U:        single = false;
     }
     else
     {
@@ -1145,7 +1134,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
         arg = msg.section( " ", 1 );
     }
 
-    //printf("message: '%s', body: '%s'\n", var.toLatin1().data(), arg.toLatin1().data());
     if( msg.startsWith( "Client.GUI" ) )
     {
         if( ! mpHost->mAcceptServerGUI ) return;
@@ -1156,8 +1144,6 @@ void cTelnet::setGMCPVariables(const QString & msg )
         version = version.section(' ', 0, 0);
 
         int newVersion = version.toInt();
-        //QString __mkp = QString("<old version:'%1' new version:'%2' name:'%3' msg:'%4'>\n").arg(mpHost->mServerGUI_Package_version).arg(newVersion).arg(mpHost->mServerGUI_Package_name).arg(version);
-        //mpHost->mpConsole->print(__mkp);
         if( mpHost->mServerGUI_Package_version != newVersion )
         {
             QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
@@ -1235,7 +1221,7 @@ void cTelnet::atcpComposerSave( QString txt )
         string _h;
         _h += TN_IAC;
         _h += TN_SB;
-        _h += 200;
+        _h += static_cast<char>(200);
         _h += "olesetbuf \n ";
         _h += txt.toLatin1().data();
         _h += '\n';
@@ -1270,23 +1256,6 @@ void cTelnet::atcpComposerSave( QString txt )
     mpComposer->close();
     mpComposer = 0;
 }
-
-/*string cTelnet::getCurrentTime()
-{
-    time_t t;
-    time(&t);
-    tm lt;
-    ostringstream s;
-    s.str("");
-    struct timeval tv;
-    struct timezone tz;
-    gettimeofday(&tv, &tz);
-    localtime_r( &t, &lt );
-    s << "["<<lt.tm_hour<<":"<<lt.tm_min<<":"<<lt.tm_sec<<":"<<tv.tv_usec<<"]";
-    string time = s.str();
-    return time;
-} */
-
 
 // Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent
 // additional lines (ending with '\n') to last space character after "-"
@@ -1330,8 +1299,8 @@ void cTelnet::postMessage( QString msg )
             body.removeFirst();
             if( prefix.contains("ERROR") )
             {
-                mpHost->mpConsole->print( prefix, 150, 0, 0, 0, 0, 0 ); // Red on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                mpHost->mpConsole->print( prefix, Qt::red, Qt::black ); // Bright Red on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(255, 255, 50), Qt::black );  // Bright Yellow on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1340,12 +1309,27 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified( temp.length() + prefixLength );
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 150, 0, 0, 0, 0, 0 );  // Red on black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(255, 255, 50), Qt::black );  // Bright Yellow on black
+            }
+            else if( prefix.contains("LUA") )
+            {
+                mpHost->mpConsole->print( prefix, QColor(80, 160, 255), Qt::black ); // Light blue on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(50, 200, 50), Qt::black );  // Light green on black
+                for( quint8 _i = 0; _i < body.size(); _i++ )
+                {
+                    QString temp = body.at(_i);
+                    temp.replace('\t', "        ");
+                    body[_i] = temp.rightJustified( temp.length() + prefixLength );
+                }
+                if( body.size() > 0 )
+                {
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(200, 50, 50), Qt::black );  // Red on black
+                }
             }
             else if( prefix.contains("WARN") )
             {
-                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 );
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 150, 0, 0, 0, 0 ); //Foreground dark grey, background bright grey
+                mpHost->mpConsole->print( prefix, QColor(0, 150, 190), Qt::black );
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(190, 150, 0), Qt::black ); // Orange on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1353,12 +1337,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 150, 0, 0, 0, 0 );
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 150, 0), Qt::black );
             }
             else if( prefix.contains("ALERT") )
             {
-                mpHost->mpConsole->print( prefix, 190, 100, 50, 0, 0, 0 ); // Orangish on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                mpHost->mpConsole->print( prefix, QColor(190, 100, 50), Qt::black ); // Orangish on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(190, 190, 50), Qt::black ); // Yellow on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1366,12 +1350,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 50, 0, 0, 0 ); // Yellow on Black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 190, 50), Qt::black ); // Yellow on Black
             }
             else if( prefix.contains("INFO") )
             {
-                mpHost->mpConsole->print( prefix, 0, 150, 190, 0, 0, 0 ); // Cyan on black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                mpHost->mpConsole->print( prefix, QColor(0, 150, 190), Qt::black ); // Cyan on black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(0, 160, 0), Qt::black );  // Light Green on Black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1379,12 +1363,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 0, 160, 0, 0, 0, 0 );  // Light Green on Black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(0, 160, 0), Qt::black );  // Light Green on Black
             }
             else if( prefix.contains("OK") )
             {
-                mpHost->mpConsole->print( prefix, 0, 160, 0, 0, 0, 0 );  // Light Green on Black
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                mpHost->mpConsole->print( prefix, QColor(0, 160, 0), Qt::black );  // Light Green on Black
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(190, 100, 50), Qt::black ); // Orangish on black
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1392,12 +1376,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 100, 50, 0, 0, 0 ); // Orangish on black
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 100, 50), Qt::black ); // Orangish on black
             }
             else
             {  // Unrecognised but still in a "[ something ] -  message..." format
-                mpHost->mpConsole->print( prefix, 190, 50, 50, 190, 190, 190 ); // Foreground red, background bright grey
-                mpHost->mpConsole->print( firstLineTail.append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                mpHost->mpConsole->print( prefix, QColor(190, 50, 50), QColor(190, 190, 190) ); // Foreground red, background bright grey
+                mpHost->mpConsole->print( firstLineTail.append('\n'), QColor(50, 50, 50), QColor(190, 190, 190) ); //Foreground dark grey, background bright grey
                 for( quint8 _i = 0; _i < body.size(); _i++ )
                 {
                     QString temp = body.at(_i);
@@ -1405,12 +1389,12 @@ void cTelnet::postMessage( QString msg )
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if( body.size() )
-                    mpHost->mpConsole->print( body.join('\n').append('\n'), 50, 50, 50, 190, 190, 190 ); //Foreground dark grey, background bright grey
+                    mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(50, 50, 50), QColor(190, 190, 190) ); //Foreground dark grey, background bright grey
             }
         }
         else
         {  // No prefix found
-            mpHost->mpConsole->print( body.join('\n').append('\n'), 190, 190, 190, 0, 0, 0 ); //Foreground bright grey, background black
+            mpHost->mpConsole->print( body.join('\n').append('\n'), QColor(190, 190, 190), Qt::black ); //Foreground bright grey, background black
         }
         messageStack.removeFirst();
     }
@@ -1475,7 +1459,6 @@ void cTelnet::gotRest( string & mud_data )
     {
         return;
     }
-    //if( ( ! mGA_Driver ) || ( mud_data[mud_data.size()-1] == '\n' ) )
     if( ! mGA_Driver )
     {
         size_t i = mud_data.rfind('\n');
@@ -1505,14 +1488,11 @@ void cTelnet::gotRest( string & mud_data )
         }
 
     }
-    else if( mGA_Driver )// if( ( mud_data[mud_data.size()-1] == '\n' ) )
+    else if( mGA_Driver )
     {
-
-        //mpPostingTimer->stop();
         mMudData += mud_data;
         postData();
         mMudData = "";
-        //mIsTimerPosting = false;
     }
     else
     {
@@ -1537,7 +1517,6 @@ void cTelnet::slot_timerPosting()
 
 void cTelnet::postData()
 {
-    //QString cd = incomingDataDecoder->toUnicode( mMudData.data(), mMudData.size() );
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData);
     }
@@ -1584,11 +1563,16 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
         // such as in the case of a copyover -JM
         hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
         hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
+
+        // To finish off this old code, here is a fix to make it stay working. -MH //
+        qDebug() << "Listening for new compression sequences or Z_OK.";
+        mWaitingForCompressedStreamToStart = true; // Was an unused boolean, thanks CR //
     }
     else
     {
         if( zval < 0 )
         {
+            mWaitingForCompressedStreamToStart = true; // Wasn't needed before, but is now (fixes MCCP toggling on/off)
             initStreamDecompressor();
             return -1;
         }
@@ -1694,7 +1678,6 @@ void cTelnet::readPipe()
             }
             else if( iac && (!insb) && (ch == TN_SB))
             {
-                //cout << getCurrentTime()<<" GOT TN_SB"<<endl;
                 //5. IAC SB
                 iac = false;
                 insb = true;
@@ -1797,9 +1780,6 @@ void cTelnet::handle_socket_signal_readyRead()
         buffer = out_buffer;
     }
     buffer[datalen] = '\0';
-    #ifdef DEBUG
-        //qDebug()<<"got<"<<pBuffer<<">";
-    #endif
     if( mpHost->mpConsole->mRecordReplay )
     {
         mpHost->mpConsole->mReplayStream << timeOffset.elapsed()-lastTimeOffset;
@@ -1814,9 +1794,6 @@ void cTelnet::handle_socket_signal_readyRead()
 
         if( iac || iac2 || insb || (ch == TN_IAC) )
         {
-            #ifdef DEBUG
-                //qDebug() <<" SERVER SENDS telnet command "<<(unsigned int)ch;
-            #endif
             if( ! (iac || iac2 || insb) && ( ch == TN_IAC ) )
             {
                 iac = true;
@@ -1859,21 +1836,6 @@ void cTelnet::handle_socket_signal_readyRead()
             }
             else if( insb )
             {
-                /*if( buffer[i] == static_cast<char>(200) )
-                {
-                    cout << "got atcp? ";
-                    if( i > 1 )
-                    {
-                        if( ( buffer[i-2] == TN_IAC ) && ( buffer[i-1] == TN_SB ) )
-                        {
-                            atcp_msg = true;
-                            cout << " yes"<<endl;
-                        }
-                        else
-                            cout << "no"<<endl;
-                    }
-                }
-                else*/
                 if( ! mNeedDecompression )
                 {
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
@@ -1904,7 +1866,6 @@ void cTelnet::handle_socket_signal_readyRead()
                                 mNeedDecompression = true;
                                 // from this position in stream onwards, data will be compressed by zlib
                                 gotRest( cleandata );
-                                //mpHost->mpConsole->print("\n<starting MCCP data compression>\n");
                                 cleandata = "";
                                 initStreamDecompressor();
                                 buffer += i + 3;//bugfix: BenH
@@ -1995,10 +1956,10 @@ MAIN_LOOP_END: ;
 
 void cTelnet::raiseProtocolEvent( const QString & name, const QString & protocol )
 {
-    TEvent me;
-    me.mArgumentList.append( name );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    me.mArgumentList.append( protocol );
-    me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    mpHost->raiseEvent( me );
+    TEvent event;
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(protocol);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }

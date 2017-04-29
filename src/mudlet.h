@@ -4,7 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,8 +35,8 @@
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QQueue>
-#include <QTime>
 #include <QTextOption>
+#include <QTime>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -52,6 +54,7 @@ class QTimer;
 
 class Host;
 class TConsole;
+class TDockWidget;
 class TEvent;
 class TLabel;
 class TTimer;
@@ -60,261 +63,262 @@ class dlgIRC;
 
 class mudlet : public QMainWindow, public Ui::MainWindow
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(mudlet)
 
 public:
+    mudlet();
+    ~mudlet();
+    static mudlet* self();
+    // This method allows better debugging when mudlet::self() is called inappropriately.
+    static void start();
+    HostManager& getHostManager() { return mHostManager; }
+    void addSubWindow(TConsole* p);
+    int getColumnNumber(Host* pHost, QString& name);
+    int getLineNumber(Host* pHost, QString& name);
+    void printSystemMessage(Host* pH, const QString& s);
+    void print(Host*, const QString&);
+    void addConsoleForNewHost(Host* pH);
+    void disableToolbarButtons();
+    void enableToolbarButtons();
+    Host* getActiveHost();
+    void registerTimer(TTimer*, QTimer*);
+    void unregisterTimer(QTimer*);
+    void forceClose();
+    bool openWindow(Host*, const QString&);
+    bool createMiniConsole(Host*, const QString&, int, int, int, int);
+    bool createLabel(Host*, const QString&, int, int, int, int, bool);
+    bool echoWindow(Host*, const QString&, const QString&);
+    bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
+    void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);
+    bool appendBuffer(Host*, const QString&);
+    bool createBuffer(Host*, const QString&);
+    bool showWindow(Host*, const QString&);
+    bool hideWindow(Host*, const QString&);
+    bool paste(Host*, const QString&);
+    bool closeWindow(Host*, const QString&);
+    bool resizeWindow(Host*, const QString&, int, int);
+    bool clearWindow(Host*, const QString&);
+    bool pasteWindow(Host* pHost, const QString& name);
+    bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
+    bool setBackgroundImage(Host*, const QString& name, QString& path);
+    bool setTextFormat(Host*, const QString& name, int, int, int, int, int, int, bool, bool, bool, bool);
+    bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
+    bool moveWindow(Host*, const QString& name, int, int);
+    void deleteLine(Host*, const QString& name);
+    void insertText(Host*, const QString& name, const QString&);
+    void replace(Host*, const QString& name, const QString&);
+    int selectString(Host*, const QString& name, const QString& what, int);
+    int selectSection(Host*, const QString& name, int, int);
+    void setBold(Host*, const QString& name, bool);
+    void setLink(Host* pHost, const QString& name, const QString& linkText, QStringList& linkFunction, QStringList&);
+    void setItalics(Host*, const QString& name, bool);
+    void setUnderline(Host*, const QString& name, bool);
+    void setStrikeOut(Host*, const QString& name, bool);
+    void setFgColor(Host*, const QString& name, int, int, int);
+    void setBgColor(Host*, const QString& name, int, int, int);
+    QString readProfileData(const QString& profile, const QString& item);
+    bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
+    bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
+    bool copy(Host* pHost, const QString& name);
+    bool moveCursorEnd(Host*, const QString&);
+    bool moveCursor(Host*, const QString&, int, int);
+    int getLastLineNumber(Host*, const QString&);
+    void readSettings();
+    void writeSettings();
+    bool openWebPage(const QString& path);
+    void processEventLoopHack();
+    static const QString scmMudletXmlDefaultVersion;
+    static QPointer<TConsole> mpDebugConsole;
+    static QMainWindow* mpDebugArea;
+    static bool debugMode;
+    QMap<Host*, TConsole*> mConsoleMap;
+    QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;
+    QMap<Host*, QMap<QString, TDockWidget*>> mHostDockConsoleMap;
+    QMap<Host*, QMap<QString, TLabel*>> mHostLabelMap;
+    QIcon* testicon;
+    bool mShowMenuBar;
+    bool mShowToolbar;
+    bool isGoingDown() { return mIsGoingDown; }
+    int mMainIconSize;
+    int mTEFolderIconSize;
+    void setIcoSize(int s);
+    void replayStart();
+    bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
+    void replayOver();
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    bool resetFormat(Host*, QString& name);
+    bool moduleTableVisible();
+    bool mWindowMinimized;
+    void doAutoLogin(const QString&);
+    bool deselect(Host* pHost, const QString& name);
+    void stopSounds();
+    void playSound(QString s, int);
+    QTime mReplayTime;
+    int mReplaySpeed;
+    QToolBar* mpMainToolBar;
+    QMap<QTimer*, TTimer*> mTimerMap;
+    dlgIRC* mpIRC;
+    QString version;
+    QPointer<Host> mpCurrentActiveHost;
+    bool mAutolog;
+    QString mIrcNick;
+    QList<QMediaPlayer*> mMusicBoxList;
+    QTabBar* mpTabBar;
+    QStringList packagesToInstallList;
 
-                                 mudlet();
-                                ~mudlet();
-   static                        mudlet * self();
-   // This method allows better debugging when mudlet::self() is called inappropriately.
-   static                        void start();
-   HostManager *                 getHostManager();
-   void                          addSubWindow(TConsole* p);
-   int                           getColumnNumber( Host * pHost, QString & name );
-   int                           getLineNumber( Host * pHost, QString & name );
-   void                          printSystemMessage( Host * pH, const QString & s );
-   void                          print( Host *, const QString & );
-   void                          addConsoleForNewHost( Host * pH );
-   void							 disableToolbarButtons();
-   void							 enableToolbarButtons();
-   Host *                        getActiveHost();
-   void                          registerTimer( TTimer *, QTimer * );
-   void                          unregisterTimer( QTimer * );
-   bool                          openWindow( Host *, const QString & );
-   bool                          createMiniConsole( Host *, const QString &, int, int, int, int );
-   bool                          createLabel( Host *, const QString &, int, int, int, int, bool );
-   bool                          echoWindow( Host *, const QString &, const QString & );
-   bool                          echoLink( Host * pHost, const QString & name, const QString & text, QStringList &, QStringList &, bool customFormat=false );
-   void                          insertLink( Host *, const QString &, const QString&, QStringList &, QStringList &, bool customFormat=false );
-   bool                          appendBuffer( Host *, const QString & );
-   bool                          createBuffer( Host *, const QString & );
-   bool                          showWindow( Host *, const QString & );
-   bool                          hideWindow( Host *, const QString & );
-   bool                          paste( Host *, const QString & );
-   bool                          closeWindow( Host *, const QString & );
-   bool                          resizeWindow( Host *, const QString &, int, int );
-   bool                          clearWindow( Host *, const QString & );
-   bool                          pasteWindow( Host * pHost, const QString & name );
-   bool                          setBackgroundColor( Host *, const QString & name, int r, int g, int b, int alpha );
-   bool                          setBackgroundImage( Host *, const QString & name, QString & path );
-   bool                          setTextFormat( Host *, const QString & name, int, int, int, int, int, int, bool, bool, bool, bool );
-   bool                          setLabelClickCallback( Host *, const QString &, const QString &, const TEvent & );
-   bool                          setLabelOnEnter( Host *, const QString &, const QString &, const TEvent & );
-   bool                          setLabelOnLeave( Host *, const QString &, const QString &, const TEvent & );
-   bool                          moveWindow( Host *, const QString & name, int, int );
-   void                          deleteLine( Host *, const QString & name );
-   void                          insertText( Host *, const QString & name, const QString& );
-   void                          replace( Host *, const QString & name, const QString& );
-   int                           selectString( Host *, const QString & name, const QString& what, int );
-   int                           selectSection( Host *, const QString & name, int, int );
-   void                          setBold( Host *, const QString & name, bool );
-   void                          setLink( Host * pHost, const QString & name, const QString & linkText, QStringList & linkFunction, QStringList & );
-   void                          setItalics( Host *, const QString & name, bool );
-   void                          setUnderline( Host *, const QString & name, bool );
-   void                          setStrikeOut( Host *, const QString & name, bool );
-   void                          setFgColor( Host *, const QString & name, int, int, int );
-   void                          setBgColor( Host *, const QString & name, int, int, int );
-   bool                          userWindowLineWrap( Host * pHost, const QString & name, bool on );
-   QString                       readProfileData( const QString& profile, const QString& item );
-   bool                          setWindowWrap( Host * pHost, const QString & name, int & wrap );
-   bool                          setWindowWrapIndent( Host * pHost, const QString & name, int & wrap );
-   bool                          copy( Host * pHost, const QString & name );
-   bool                          moveCursorEnd( Host *, const QString & );
-   bool                          moveCursor( Host *, const QString &, int, int );
-   int                           getLastLineNumber( Host *, const QString & );
-   void                          readSettings();
-   void                          writeSettings();
-   void                          showUnzipProgress( const QString& txt );
-   bool                          openWebPage(const QString& path);
-   void                          processEventLoopHack();
-   static QPointer<TConsole>     mpDebugConsole;
-   static QMainWindow*           mpDebugArea;
-   static bool                   debugMode;
-   QMap<Host *, TConsole *>     mConsoleMap;
-   QMap<Host *, QMap<QString, TConsole * > > mHostConsoleMap;
-   QMap<Host *, QMap<QString, TLabel * > > mHostLabelMap;
-   QIcon *                       testicon;
-   bool                          mShowMenuBar;
-   bool                          mShowToolbar;
-   bool                          isGoingDown() { return mIsGoingDown; }
-   int                           mMainIconSize;
-   int                           mTEFolderIconSize;
-   void                          setIcoSize( int s );
-   void                          replayStart();
-   bool                          setConsoleBufferSize( Host * pHost, const QString & name, int x1, int y1 );
-   void                          replayOver();
-   void                          showEvent( QShowEvent * event ) override;
-   void                          hideEvent( QHideEvent * event ) override;
-   bool                          resetFormat( Host *, QString & name );
-   bool                          moduleTableVisible();
-   bool                          mWindowMinimized;
-   void                          doAutoLogin( const QString & );
-   void                          deselect( Host * pHost, const QString & name );
-   void                          stopSounds();
-   void                          playSound( QString s );
-   QTime                         mReplayTime;
-   int                           mReplaySpeed;
-   QToolBar *                    mpMainToolBar;
-   QMap<QTimer *, TTimer *>      mTimerMap;
-   dlgIRC *                      mpIRC;
-   QString                       version;
-   QPointer<Host>                mpCurrentActiveHost;
-   bool                          mAutolog;
-   QString                       mIrcNick;
-   QMediaPlayer *                mpMusicBox1;
-   QMediaPlayer *                mpMusicBox2;
-   QMediaPlayer *                mpMusicBox3;
-   QMediaPlayer *                mpMusicBox4;
-   QTabBar *                     mpTabBar;
-   QStringList                   packagesToInstallList;
-   QTextOption::Flags           mEditorTextOptions; // Used for editor area, but
-                                                    // only ::ShowTabsAndSpaces
-                                                    // and ::ShowLineAndParagraphSeparators
-                                                    // are considered/used/stored
-   void                         setEditorTextoptions( const bool, const bool );
+    // Used for editor area, but
+    // only ::ShowTabsAndSpaces
+    // and ::ShowLineAndParagraphSeparators
+    // are considered/used/stored
+    QTextOption::Flags mEditorTextOptions;
 
-   enum StatusBarOption {
-       statusBarHidden = 0x0,     // Currently not on display
-       statusBarAutoShown = 0x1,  // Currently shown but to hide as soon as there is no text to display
-       statusBarAlwaysShown = 0x2
-   };
+    void setEditorTextoptions(const bool, const bool);
 
-   Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
-   StatusBarOptions             mStatusBarState;
+    enum StatusBarOption {
+        statusBarHidden = 0x0,    // Currently not on display
+        statusBarAutoShown = 0x1, // Currently shown but to hide as soon as there is no text to display
+        statusBarAlwaysShown = 0x2
+    };
 
-   void                         requestProfilesToReloadMaps( QList<QString> );
-                                // Used by a profile to tell the mudlet class
-                                // to tell other profiles to reload the updated
-                                // maps (via signal_profileMapReloadRequested(...))
+    Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
+    StatusBarOptions mStatusBarState;
 
-    const bool                  getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
-    void                        setAuditErrorsToConsoleEnabled( const bool state ) { mIsToDisplayMapAuditErrorsToConsole = state; }
+    // Used by a profile to tell the mudlet class
+    // to tell other profiles to reload the updated
+    // maps (via signal_profileMapReloadRequested(...))
+    void requestProfilesToReloadMaps(QList<QString>);
 
+    const bool getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
+    void setAuditErrorsToConsoleEnabled(const bool state) { mIsToDisplayMapAuditErrorsToConsole = state; }
+    void createMapper(bool isToLoadDefaultMapFile = true);
 
 public slots:
-
-   void                          processEventLoopHack_timerRun();
-   void                          slot_mapper();
-   void                          slot_replayTimeChanged();
-   void                          slot_replaySpeedUp();
-   void                          slot_replaySpeedDown();
-   void                          toggleFullScreenView();
-   void                          slot_userToolBar_orientation_changed(Qt::Orientation);
-   void                          slot_show_about_dialog();
-   void                          slot_show_help_dialog_video();
-   void                          slot_show_help_dialog_forum();
-   void                          slot_show_help_dialog_irc();
-   void                          slot_show_help_dialog_download();
-   void                          slot_open_mappingscripts_page();
-   void                          slot_module_clicked(QTableWidgetItem*);
-   void                          slot_module_changed(QTableWidgetItem*);
-   void                          slot_multi_view();
-   void                          slot_stopAllTriggers();
-   void                          slot_userToolBar_hovered( QAction* pA );
-   void                          slot_connection_dlg_finnished( const QString& profile, int historyVersion );
-   void                          slot_timer_fires();
-   void                          slot_send_login();
-   void                          slot_send_pass();
-   void                          slot_replay();
-   void                          slot_disconnect();
-   void                          slot_notes();
-   void                          slot_reconnect();
-   void                          slot_close_profile_requested(int);
-   void                          startAutoLogin();
-   void                          slot_irc();
-   void                          slot_uninstall_package();
-   void                          slot_install_package();
-   void                          slot_package_manager();
-   void                          slot_package_exporter();
-   void                          slot_uninstall_module();
-   void                          slot_install_module();
-   void                          slot_module_manager();
-   void                          layoutModules();
-   void                          slot_help_module();
+    void processEventLoopHack_timerRun();
+    void slot_mapper();
+    void slot_replayTimeChanged();
+    void slot_replaySpeedUp();
+    void slot_replaySpeedDown();
+    void toggleFullScreenView();
+    void slot_userToolBar_orientation_changed(Qt::Orientation);
+    void slot_show_about_dialog();
+    void slot_show_help_dialog_video();
+    void slot_show_help_dialog_forum();
+    void slot_show_help_dialog_irc();
+    void slot_show_help_dialog_download();
+    void slot_open_mappingscripts_page();
+    void slot_module_clicked(QTableWidgetItem*);
+    void slot_module_changed(QTableWidgetItem*);
+    void slot_multi_view();
+    void slot_stopAllTriggers();
+    void slot_userToolBar_hovered(QAction* pA);
+    void slot_connection_dlg_finnished(const QString& profile, int historyVersion);
+    void slot_timer_fires();
+    void slot_send_login();
+    void slot_send_pass();
+    void slot_replay();
+    void slot_disconnect();
+    void slot_notes();
+    void slot_reconnect();
+    void slot_close_profile_requested(int);
+    void startAutoLogin();
+    void slot_irc();
+    void slot_uninstall_package();
+    void slot_install_package();
+    void slot_package_manager();
+    void slot_package_exporter();
+    void slot_uninstall_module();
+    void slot_install_module();
+    void slot_module_manager();
+    void layoutModules();
+    void slot_help_module();
 
 protected:
-
-   void                          closeEvent(QCloseEvent *event) override;
+    void closeEvent(QCloseEvent* event) override;
 
 signals:
-
-   void                         signal_editorTextOptionsChanged( QTextOption::Flags );
-   void                         signal_profileMapReloadRequested( QList<QString> );
+    void signal_editorTextOptionsChanged(QTextOption::Flags);
+    void signal_profileMapReloadRequested(QList<QString>);
 
 private slots:
-
-   void                          slot_close_profile();
-   void                          slot_tab_changed( int );
-   void                          show_help_dialog();
-   void                          connectToServer();
-   void                          show_trigger_dialog();
-   void                          show_alias_dialog();
-   void                          show_script_dialog();
-   void                          show_timer_dialog();
-   void                          show_action_dialog();
-   void                          show_key_dialog();
-   void                          show_variable_dialog();
-   void                          show_options_dialog();
-   void                         slot_statusBarMessageChanged( QString );
+    void slot_close_profile();
+    void slot_tab_changed(int);
+    void show_help_dialog();
+    void connectToServer();
+    void show_trigger_dialog();
+    void show_alias_dialog();
+    void show_script_dialog();
+    void show_timer_dialog();
+    void show_action_dialog();
+    void show_key_dialog();
+    void show_variable_dialog();
+    void show_options_dialog();
+    void slot_statusBarMessageChanged(QString);
 
 private:
+    void goingDown() { mIsGoingDown = true; }
+    QMap<QString, TConsole*> mTabMap;
+    QWidget* mainPane;
 
-   void                          goingDown() { mIsGoingDown = true; }
-   QMap<QString, TConsole *>         mTabMap;
-   QWidget *                     mainPane;
-
-   QPointer<Host>                mpDefaultHost;
-   QQueue<QString>               tempLoginQueue;
-   QQueue<QString>               tempPassQueue;
-   QQueue<Host *>                tempHostQueue;
-   static                        QPointer<mudlet> _self;
-   QMap<QString, QDockWidget *>  dockWindowMap;
-   QMap<Host *, QToolBar *>      mUserToolbarMap;
+    QPointer<Host> mpDefaultHost;
+    QQueue<QString> tempLoginQueue;
+    QQueue<QString> tempPassQueue;
+    QQueue<Host*> tempHostQueue;
+    static QPointer<mudlet> _self;
+//    QMap<QString, TDockWidget*> dockWindowMap;
+    QMap<Host*, QToolBar*> mUserToolbarMap;
 
 
-   QMenu *                       restoreBar;
-   bool                          mIsGoingDown;
+    QMenu* restoreBar;
+    bool mIsGoingDown;
 
-   QAction *                     actionReplaySpeedDown;
-   QAction *                     actionReplaySpeedUp;
-   QAction *                     actionSpeedDisplay;
-   QAction *                     actionReplayTime;
-   QLabel *                      replaySpeedDisplay;
-   QLabel *                      replayTime;
-   QTimer *                      replayTimer;
-   QToolBar *                    replayToolBar;
+    QAction* actionReplaySpeedDown;
+    QAction* actionReplaySpeedUp;
+    QAction* actionSpeedDisplay;
+    QAction* actionReplayTime;
+    QLabel* replaySpeedDisplay;
+    QLabel* replayTime;
+    QTimer* replayTimer;
+    QToolBar* replayToolBar;
 
-   QAction *                     actionReconnect;
+    QAction* actionReconnect;
 
-   void                          check_for_mappingscript();
+    void check_for_mappingscript();
 
-   QListWidget *                 packageList;
-   QPushButton *                 uninstallButton;
-   QPushButton *                 installButton;
+    QListWidget* packageList;
+    QPushButton* uninstallButton;
+    QPushButton* installButton;
 
-   QTableWidget *                 moduleTable;
-   QPushButton *                 moduleUninstallButton;
-   QPushButton *                 moduleInstallButton;
-   QPushButton *                 moduleHelpButton;
+    QTableWidget* moduleTable;
+    QPushButton* moduleUninstallButton;
+    QPushButton* moduleInstallButton;
+    QPushButton* moduleHelpButton;
 
-   HostManager                   mHostManager;
-   QStatusBar *                 mpMainStatusBar;
+    HostManager mHostManager;
+    QStatusBar* mpMainStatusBar;
 
-   bool                         mIsToDisplayMapAuditErrorsToConsole;
+    bool mIsToDisplayMapAuditErrorsToConsole;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 
 class TConsoleMonitor : public QObject
- {
-     Q_OBJECT
+{
+    Q_OBJECT
+
+    Q_DISABLE_COPY(TConsoleMonitor)
 
 public:
     TConsoleMonitor(QObject* parent) : QObject(parent) {}
 
- protected:
-     bool eventFilter(QObject *obj, QEvent *event) override;
- };
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+};
+
 
 #endif // MUDLET_MUDLET_H

@@ -25,18 +25,13 @@
 #include "TVar.h"
 
 #include "pre_guard.h"
-#include <QSet>
 #include <QScopedPointer>
+#include <QSet>
 #include "post_guard.h"
 
-#ifndef LUA_CPP
-extern "C"
-{
-#endif
+extern "C" {
 #include <lua.h>
-#ifndef LUA_CPP
 }
-#endif
 
 
 class Host;
@@ -49,35 +44,35 @@ class QTreeWidgetItem;
 class LuaInterface
 {
 public:
-    LuaInterface( Host * );
+    LuaInterface(Host*);
     ~LuaInterface();
-    void iterateTable(lua_State *, int, TVar *, bool );
-    void getVars( bool );
-    QStringList varName(TVar * var);
-    QList<TVar *> varOrder(TVar * var);
-    QString getValue( TVar * );
-    bool loadKey(lua_State *, TVar *);
-    bool loadValue(lua_State *, TVar *, int);
-    bool setCValue( QList<TVar *> );
-    bool setValue( TVar * );
-    void deleteVar( TVar * );
-    void renameCVar( QList<TVar *> );
-    void renameVar( TVar * );
-    void createVar( TVar * );
-    VarUnit * getVarUnit();
-    bool loadVar( TVar* var );
-    bool reparentCVariable(TVar * from , TVar * to, TVar * curVar);
-    bool reparentVariable( QTreeWidgetItem *, QTreeWidgetItem *, QTreeWidgetItem * );
-    bool validMove( QTreeWidgetItem * );
-    void getAllChildren( TVar * var, QList<TVar *> * list);
-    static int onPanic( lua_State * );
+    void iterateTable(lua_State*, int, TVar*, bool);
+    void getVars(bool);
+    QStringList varName(TVar* var);
+    QList<TVar*> varOrder(TVar* var);
+    QString getValue(TVar*);
+    bool loadKey(lua_State*, TVar*);
+    bool loadValue(lua_State*, TVar*, int);
+    bool setCValue(QList<TVar*>);
+    bool setValue(TVar*);
+    void deleteVar(TVar*);
+    void renameCVar(QList<TVar*>);
+    void renameVar(TVar*);
+    void createVar(TVar*);
+    VarUnit* getVarUnit();
+    bool loadVar(TVar* var);
+    bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
+    bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
+    bool validMove(QTreeWidgetItem*);
+    void getAllChildren(TVar* var, QList<TVar*>* list);
+    static int onPanic(lua_State*);
 
 private:
-    Host * mpHost;
+    Host* mpHost;
     int mHostID;
     int depth;
-    TLuaInterpreter *interpreter;
-    lua_State *L;
+    TLuaInterpreter* interpreter;
+    lua_State* L;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;

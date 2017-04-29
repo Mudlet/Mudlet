@@ -34,15 +34,19 @@ class dlgComposer : public QMainWindow, public Ui::composer
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgComposer)
+
 public:
     dlgComposer(Host*);
 
     void init(QString title, QString txt);
-    QPointer<Host> mpHost;
 
 public slots:
     void save();
     void cancel();
+
+private:
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

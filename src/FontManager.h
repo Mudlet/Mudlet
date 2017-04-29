@@ -29,6 +29,7 @@ class FontManager
 {
 public:
     void addFonts();
+
 private:
     void loadFonts(const QString& folder);
 };
