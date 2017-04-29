@@ -69,17 +69,17 @@ void AliasUnit::compileAll()
 void AliasUnit::initStats()
 {
     statsAliasTotal = 0;
-    statsTempAliass = 0;
-    statsActiveAliass = 0;
-    statsActiveAliassMax = 0;
-    statsActiveAliassMin = 0;
-    statsActiveAliassAverage = 0;
-    statsTempAliassCreated = 0;
-    statsTempAliassKilled = 0;
+    statsTempAliases = 0;
+    statsActiveAliases = 0;
+    statsActiveAliasesMax = 0;
+    statsActiveAliasesMin = 0;
+    statsActiveAliasesAverage = 0;
+    statsTempAliasesCreated = 0;
+    statsTempAliasesKilled = 0;
     statsAverageLineProcessingTime = 0;
     statsMaxLineProcessingTime = 0;
     statsMinLineProcessingTime = 0;
-    statsRegexAliass = 0;
+    statsRegexAliases = 0;
 }
 
 void AliasUnit::addAliasRootNode(TAlias* pT, int parentPosition, int childPosition, bool moveAlias)
@@ -309,7 +309,7 @@ bool AliasUnit::killAlias(const QString& name)
 {
     for (auto alias : mAliasRootNodeList) {
         if (alias->getName() == name) {
-            // only temporary Aliass can be killed
+            // only temporary Aliases can be killed
             if (!alias->isTempAlias()) {
                 return false;
             } else {
@@ -328,10 +328,10 @@ void AliasUnit::_assembleReport(TAlias* pChild)
     for (auto alias : *childrenList) {
         _assembleReport(alias);
         if (alias->isActive()) {
-            statsActiveAliass++;
+            statsActiveAliases++;
         }
         if (alias->isTempAlias()) {
-            statsTempAliass++;
+            statsTempAliases++;
         }
         statsAliasTotal++;
     }
@@ -339,39 +339,39 @@ void AliasUnit::_assembleReport(TAlias* pChild)
 
 QString AliasUnit::assembleReport()
 {
-    statsActiveAliass = 0;
+    statsActiveAliases = 0;
     statsAliasTotal = 0;
-    statsTempAliass = 0;
+    statsTempAliases = 0;
     for (auto alias : mAliasRootNodeList) {
         if (alias->isActive()) {
-            statsActiveAliass++;
+            statsActiveAliases++;
         }
         if (alias->isTempAlias()) {
-            statsTempAliass++;
+            statsTempAliases++;
         }
         statsAliasTotal++;
         list<TAlias*>* childrenList = alias->mpMyChildrenList;
         for (auto childAlias : *childrenList) {
             _assembleReport(childAlias);
             if (childAlias->isActive()) {
-                statsActiveAliass++;
+                statsActiveAliases++;
             }
             if (childAlias->isTempAlias()) {
-                statsTempAliass++;
+                statsTempAliases++;
             }
             statsAliasTotal++;
         }
     }
     QStringList msg;
-    msg << "Aliass current total: " << QString::number(statsAliasTotal) << "\n"
-        << "tempAliass current total: " << QString::number(statsTempAliass) << "\n"
-        << "active Aliass: " << QString::number(statsActiveAliass) << "\n";
-        /*<< "active Aliass max this session: " << QString::number(statsActiveAliassMax) << "\n"
-        << "active Aliass min this session: " << QString::number(statsActiveAliassMin) << "\n"
-        << "active Aliass average this session: " << QString::number(statsActiveAliassAverage) << "\n"*/
-        //<< "tempAliass created this session: " << QString::number(statsTempAliassCreated) << "\n"
-        //<< "tempAliass killed this session: " << QString::number(statsTempAliassKilled) << "\n"
-        //<< "current total regex Aliass: " << QString::number(statsRegexAliass) << "\n"
+    msg << "Aliases current total: " << QString::number(statsAliasTotal) << "\n"
+        << "tempAliases current total: " << QString::number(statsTempAliases) << "\n"
+        << "active Aliases: " << QString::number(statsActiveAliases) << "\n";
+        /*<< "active Aliases max this session: " << QString::number(statsActiveAliasesMax) << "\n"
+        << "active Aliases min this session: " << QString::number(statsActiveAliasesMin) << "\n"
+        << "active Aliases average this session: " << QString::number(statsActiveAliasesAverage) << "\n"*/
+        //<< "tempAliases created this session: " << QString::number(statsTempAliasesCreated) << "\n"
+        //<< "tempAliases killed this session: " << QString::number(statsTempAliasesKilled) << "\n"
+        //<< "current total regex Aliases: " << QString::number(statsRegexAliases) << "\n"
         //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
         //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
         //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
