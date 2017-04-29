@@ -29,13 +29,9 @@
 #include <QSet>
 #include "post_guard.h"
 
-#ifndef LUA_CPP
 extern "C" {
-#endif
 #include <lua.h>
-#ifndef LUA_CPP
 }
-#endif
 
 
 class Host;

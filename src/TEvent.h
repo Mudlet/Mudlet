@@ -56,39 +56,40 @@ inline QDebug& operator<<(QDebug& debug, const TEvent& event)
         if (Q_UNLIKELY(i >= typeCount)) {
             result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{missing}") % event.mArgumentList.at(i) % QLatin1String("]"));
         } else {
-            if (Q_UNLIKELY(i >=argCount)) {
+            if (Q_UNLIKELY(i >= argCount)) {
                 switch (event.mArgumentTypeList.at(i)) {
                 case ARGUMENT_TYPE_NUMBER:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{number}missing]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{number}missing]"));
                     break;
                 case ARGUMENT_TYPE_BOOLEAN:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{bool}missing]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{bool}missing]"));
                     break;
                 case ARGUMENT_TYPE_NIL:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{nil}missing]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{nil}missing]"));
                     break;
                 default:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{string}missing]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{string}missing]"));
                 }
             } else {
                 switch (event.mArgumentTypeList.at(i)) {
                 case ARGUMENT_TYPE_NUMBER:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{number}") % QString::number(event.mArgumentList.at( i ).toDouble()) % QLatin1String("]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{number}") % QString::number(event.mArgumentList.at(i).toDouble()) % QLatin1String("]"));
                     break;
                 case ARGUMENT_TYPE_BOOLEAN:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{bool}") % (event.mArgumentList.at( i ).toInt()?QLatin1String("true"):QLatin1String("false")) % QLatin1String("]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{bool}") % (event.mArgumentList.at(i).toInt() ? QLatin1String("true") : QLatin1String("false"))
+                                  % QLatin1String("]"));
                     break;
                 case ARGUMENT_TYPE_NIL:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{nil}nil]") );
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{nil}nil]"));
                     break;
                 default:
-                    result.append( QLatin1String("[") % QString::number(i) % QLatin1String("{string}") % event.mArgumentList.at(i) % QLatin1String("]"));
+                    result.append(QLatin1String("[") % QString::number(i) % QLatin1String("{string}") % event.mArgumentList.at(i) % QLatin1String("]"));
                 }
             }
             ++i;
         }
     }
-    result.append( QLatin1String( ")" ) );
+    result.append(QLatin1String(")"));
     debug.nospace() << result;
     return debug;
 }

@@ -192,8 +192,8 @@ void TMap::mapClear()
 
 void TMap::logError( QString & msg )
 {
-    QColor orange = QColor(255,128,0);
-    QColor black = QColor(0,0,0);
+    auto orange = QColor(255,128,0);
+    auto black = QColor(Qt::black);
     QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
     if( mpHost->mpEditorDialog )
     {
@@ -2397,7 +2397,7 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
 
                     if( readXmlMapFile( file ) ) {
                         TEvent mapDownloadEvent;
-                        mapDownloadEvent.mArgumentList.append( QLatin1String( "sysMapDownloadEvent" ) );
+                        mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
                         pHost->raiseEvent( mapDownloadEvent );
                     }
