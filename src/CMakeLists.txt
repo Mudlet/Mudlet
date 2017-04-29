@@ -64,6 +64,7 @@ SET(mudlet_SRCS
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
+    TDockWidget.cpp
     TEasyButtonBar.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
@@ -176,6 +177,7 @@ SET(mudlet_HDRS
     TAstar.h
     TBuffer.h
     TDebug.h
+    TDockWidget.h
     testdbg.h
     TEvent.h
     TFlipButton.h

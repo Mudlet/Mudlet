@@ -214,6 +214,7 @@ SOURCES += \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
+    TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
@@ -285,6 +286,7 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDockWidget.h \
     TEasyButtonBar.h \
     testdbg.h \
     TEvent.h \
