@@ -1194,11 +1194,8 @@ bool mudlet::hideWindow( Host * pHost, const QString & name )
         return true;
     }
 
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
-    if( dockWindowConsoleMap.contains( name ) )
-    {
-        dockWindowConsoleMap[name]->console->hide();
-        dockWindowConsoleMap[name]->console->forceUpdate();
+    if (dockWindowMap.contains(name)) {
+        dockWindowMap[name]->hide();
         return true;
     }
 
