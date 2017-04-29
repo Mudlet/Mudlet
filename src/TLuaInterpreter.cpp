@@ -3224,202 +3224,262 @@ int TLuaInterpreter::setBackgroundImage( lua_State *L )
 
 int TLuaInterpreter::setLabelClickCallback( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelClickCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelClickCallback( pHost, text, name, pE );
+    if (! pHost) {
+        lua_pushstring(L, "setLabelClickCallback: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
 
-    return 0;
+    QString labelName;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelClickCallback: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        labelName = QString::fromUtf8(lua_tostring(L, 1));
+        if (labelName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "setLabelClickCallback: bad argument #1 value (label name cannot be an empty string.)");
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if (! lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelClickCallback: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        eventName = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    TEvent event;
+    int n = lua_gettop(L);
+    for (int i = 3; i <= n; ++i) {
+        if (lua_isnumber(L, i)) {
+            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        } else if(lua_isstring(L, i)) {
+            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        } else if(lua_isboolean(L, i)) {
+            event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        } else if(lua_isnil(L, i)) {
+            event.mArgumentList.append(QString());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
+        } else {
+            lua_pushfstring(L, "setLabelClickCallback: bad argument #%d type (boolean, number, string or nil\n"
+                               "expected, got a %s!)",
+                            i, luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
+    if (L, mudlet::self()->setLabelClickCallback(pHost, labelName, eventName, event)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setLabelClickCallback: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelReleaseCallback: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelReleaseCallback( pHost, text, name, pE );
+    if (! pHost) {
+        lua_pushstring(L, "setLabelReleaseCallback: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
 
-    return 0;
+    QString labelName;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelReleaseCallback: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        labelName = QString::fromUtf8(lua_tostring(L, 1));
+        if (labelName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "setLabelReleaseCallback: bad argument #1 value (label name cannot be an empty string.)");
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if (! lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelReleaseCallback: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        eventName = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    TEvent event;
+    int n = lua_gettop(L);
+    for (int i = 3; i <= n; ++i) {
+        if (lua_isnumber(L, i)) {
+            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        } else if(lua_isstring(L, i)) {
+            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        } else if(lua_isboolean(L, i)) {
+            event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        } else if(lua_isnil(L, i)) {
+            event.mArgumentList.append(QString());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
+        } else {
+            lua_pushfstring(L, "setLabelReleaseCallback: bad argument #%d type (boolean, number, string or nil\n"
+                               "expected, got a %s!)",
+                            i, luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
+    if (L, mudlet::self()->setLabelReleaseCallback(pHost, labelName, eventName, event)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setLabelReleaseCallback: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelOnEnter: wrong first argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelOnEnter: wrong second argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelOnEnter( pHost, text, name, pE );
+    if (! pHost) {
+        lua_pushstring(L, "setLabelOnEnter: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
 
-    return 0;
+    QString labelName;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelOnEnter: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        labelName = QString::fromUtf8(lua_tostring(L, 1));
+        if (labelName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "setLabelOnEnter: bad argument #1 value (label name cannot be an empty string.)");
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if (! lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelOnEnter: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        eventName = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    TEvent event;
+    int n = lua_gettop(L);
+    for (int i = 3; i <= n; ++i) {
+        if (lua_isnumber(L, i)) {
+            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        } else if (lua_isstring(L, i)) {
+            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        } else if (lua_isboolean(L, i)) {
+            event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        } else if (lua_isnil(L, i)) {
+            event.mArgumentList.append(QString());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
+        } else {
+            lua_pushfstring(L, "setLabelOnEnter: bad argument #%d type (boolean, number, string or nil expected,\n"
+                               "got a %s!)",
+                            i, luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
+    if (L, mudlet::self()->setLabelOnEnter(pHost, labelName, eventName, event)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setLabelOnEnter: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 {
-    string luaSendText="";
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "setLabelOnLeave: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaSendText = lua_tostring( L, 1 );
-    }
-    string luaName="";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushstring( L, "setLabelOnLeave: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaName = lua_tostring( L, 2 );
-    }
-
-    TEvent pE;
-
-    int n = lua_gettop( L );
-    for( int i=3; i<=n; i++)
-    {
-        if( lua_isnumber( L, i ) )
-        {
-            pE.mArgumentList.append( QString::number(lua_tonumber( L, i ) ) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        }
-        else if( lua_isstring( L, i ) )
-        {
-            pE.mArgumentList.append( QString(lua_tostring( L, i )) );
-            pE.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        }
-    }
-
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString text(luaSendText.c_str());
-    QString name(luaName.c_str());
-    mudlet::self()->setLabelOnLeave( pHost, text, name, pE );
+    if(! pHost) {
+        lua_pushstring(L, "setLabelOnLeave: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
 
-    return 0;
+    QString labelName;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelOnLeave: bad argument #1 type (label name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        labelName = QString::fromUtf8(lua_tostring(L, 1));
+        if (labelName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "setLabelOnLeave: bad argument #1 value (label name cannot be an empty string.)");
+            return 2;
+        }
+    }
+
+    QString eventName;
+    if (! lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelOnLeave: bad argument #2 type (event name as string expected, got %s!)",
+                        luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        eventName = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    TEvent event;
+    int n = lua_gettop(L);
+    for (int i = 3; i <= n; ++i) {
+        if (lua_isnumber(L, i)) {
+            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        } else if (lua_isstring(L, i)) {
+            event.mArgumentList.append(QString::fromUtf8(lua_tostring(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        } else if (lua_isboolean(L, i)) {
+            event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+        } else if (lua_isnil(L, i)) {
+            event.mArgumentList.append(QString());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
+        } else {
+            lua_pushfstring(L, "setLabelOnLeave: bad argument type #%d (boolean, number, string or nil expected,\n"
+                               "got a %s!)",
+                            i, luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
+    if (L, mudlet::self()->setLabelOnLeave(pHost, labelName, eventName, event)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setLabelOnLeave: bad argument #1 value (label name \"%s\" not found.)",
+                        labelName.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::setTextFormat( lua_State * L )
