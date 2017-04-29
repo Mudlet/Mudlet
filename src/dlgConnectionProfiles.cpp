@@ -396,7 +396,7 @@ void dlgConnectionProfiles::slot_save_name()
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
         QPixmap pb( 120, 30 );
-        pb.fill(QColor(0,0,0,0));
+        pb.fill(Qt::transparent);
         uint hash = qHash( sList );
         QLinearGradient shade(0, 0, 120, 30);
         int i = row;
@@ -1092,7 +1092,7 @@ void dlgConnectionProfiles::fillout_form()
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
         QPixmap pb( 120, 30 );
-        pb.fill(QColor(0,0,0,0));
+        pb.fill(Qt::transparent);
         uint hash = qHash( mProfileList.at(i) );
         QLinearGradient shade(0, 0, 120, 30);
         quint8 i1 = hash%255;
