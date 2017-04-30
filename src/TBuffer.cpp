@@ -2429,13 +2429,23 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
-                    else if((localBuffer[msPos+3] & 0x3F) > 0x04) {
+                    else if(( (localBuffer[msPos]   & 0x07) >  0x04)
+                            ||((  (localBuffer[msPos]   & 0x07) == 0x04)
+                               &&((localBuffer[msPos+1] & 0x3F) >  0x0F))) {
+
                         // For 4 byte values the bits are distributed:
                         //  Byte 1    Byte 2    Byte 3    Byte 4
                         // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
                         // U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
                         // So this (the maximum valid character) is:
-                        // -----100  --001111  --111111  --111111
+                        //      ABC    DEFGHI    JKLMNO    PQRSTU
+                        //      100    001111    111111    111111
+                        // So if the first byte localBuffer[msPos] & 0x07 is:
+                        //  < 0x04 then must be in range
+                        //  > 0x04 then must be out of range
+                        // == 0x04 then consider localBuffer[msPos+1] & 0x3F:
+                        //     <= 001111 0x0F then must be in range
+                        //      > 001111 0x0F then must be out of range
 
                         qDebug() << "TBuffer::translateToPlainText(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
                         isValid = false;
@@ -2446,6 +2456,39 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 case 3:
                     if ((localBuffer[msPos+2] & 0xC0) != 0x80) {
                         qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
+                        isValid = false;
+                        isToUseReplacementMark = true;
+                    } else if ((localBuffer[msPos] & 0x0F) == 0x0D) {
+
+                        // For 3 byte values the bits are distributed:
+                        //  Byte 1    Byte 2    Byte 3
+                        // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
+                        // First High surrogate 0xed 0xa0 0x80 (U+D800)
+                        // 1101 1000 0000 0000
+                        // ----1101  --100000  --000000
+                        // Last Low surrogate 0xed 0xbf 0xbf (U+DFFF)
+                        // 1101 1111 1111 1111
+                        // ----1101  --111111  --111111
+/*
+ * As per Wikipedia {https://en.wikipedia.org/wiki/UTF-16#U.2BD800_to_U.2BDFFF}
+ * "The Unicode standard permanently reserves these code point values for UTF-16
+ * encoding of the high and low surrogates, and they will never be assigned a
+ * character, so there should be no reason to encode them. The official Unicode
+ * standard says that no UTF forms, including UTF-16, can encode these code
+ * points.
+ *
+ * However UCS-2, UTF-8, and UTF-32 can encode these code points in trivial and
+ * obvious ways, and large amounts of software does so even though the standard
+ * states that such arrangements should be treated as encoding errors. It is
+ * possible to unambiguously encode them in UTF-16 by using a code unit equal to
+ * the code point, as long as no sequence of two code units can be interpreted
+ * as a legal surrogate pair (that is, as long as a high surrogate is never
+ * followed by a low surrogate). The majority of UTF-16 encoder and decoder
+ * implementations translate between encodings as though this were the case
+ * and Windows allows such sequences in filenames."
+ */
+                        // So test for and reject if LSN of first byte is 0xD!
+                        qDebug() << "TBuffer::translateToPlainText(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
                         isValid = false;
                         isToUseReplacementMark = true;
                     } else if ((static_cast<quint8>(localBuffer[msPos+2]) == 0xbf)
