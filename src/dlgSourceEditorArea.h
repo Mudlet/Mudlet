@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,11 +24,10 @@
 
 
 #include "pre_guard.h"
+#include "edbee/edbee.h"
+#include "edbee/texteditorwidget.h"
 #include "ui_source_editor_area.h"
 #include "post_guard.h"
-
-class THighlighter;
-
 
 class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 {
@@ -37,9 +37,6 @@ class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 
 public:
     dlgSourceEditorArea(QWidget*);
-
-//private:
-    THighlighter* highlighter;
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H

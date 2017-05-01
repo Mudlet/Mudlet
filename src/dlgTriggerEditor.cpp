@@ -24,6 +24,7 @@
 
 #include "dlgTriggerEditor.h"
 
+#include "QDebug.h"
 
 #include "Host.h"
 #include "HostManager.h"
@@ -107,8 +108,9 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 , mpCurrentAliasItem( 0 )
 , mpCurrentVarItem( 0 )
 , mpHost( pH )
-, mpSourceEditor( 0 )
 , mpSourceEditorDocument( 0 )
+, mpSourceEditorEdbee( 0 )
+, mpSourceEditorEdbeeDocument( 0 )
 {
     // init generated dialog
     setupUi(this);
@@ -182,18 +184,32 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy( sizePolicy5 );
     pVB1->addWidget( mpSourceEditorArea );
-    mpSourceEditor = mpSourceEditorArea->editor;
-    mpSourceEditor->setWordWrapMode( QTextOption::NoWrap );
-    mpSourceEditor->setPlaceholderText( tr( "Enter your Lua code (or value for variable) here..." ) );
-    mpSourceEditorDocument = mpSourceEditor->document();
-    QTextOption _options = mpSourceEditorDocument->defaultTextOption();
-    QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
-    _flags |= mudlet::self()->mEditorTextOptions & ( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
-    _options.setFlags( _flags );
-    mpSourceEditorDocument->setDefaultTextOption( _options );
 
-    connect( mpSourceEditor, SIGNAL( cursorPositionChanged() ), this, SLOT( slot_cursorPositionChanged() ) );
-    connect( mudlet::self(), SIGNAL( signal_editorTextOptionsChanged( QTextOption::Flags ) ), this,  SLOT( slot_changeEditorTextOptions( QTextOption::Flags ) ) );
+    // And the new edbee widget - Go Buck!
+
+    mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
+    mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
+
+    // Updating the status bar on changes
+
+    connect( mpSourceEditorEdbee->controller(),
+             SIGNAL(updateStatusTextSignal(QString)),
+             this,
+             SLOT(slot_updateStatusBar(QString))
+         );
+
+    // Updating the editor preferences
+
+    connect( mudlet::self(),
+             SIGNAL(signal_editorTextOptionsChanged(QTextOption::Flags)),
+             this,
+             SLOT(slot_changeEditorTextOptions(QTextOption::Flags))
+         );
+
+    mpSourceEditorEdbee->config()->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    mpSourceEditorEdbee->config()->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+
+    mpSourceEditorEdbeeDocument->setText("# Enter your lua code here\n");
 
     // option areas
 
@@ -413,7 +429,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar );
 
-    mpSourceEditor->setFont( mpHost->mDisplayFont );
+    mpSourceEditorEdbee->config()->setFont( mpHost->mDisplayFont);
 
     connect( comboBox_searchTerms, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( treeWidget_triggers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
@@ -594,15 +610,15 @@ void dlgTriggerEditor::closeEvent(QCloseEvent *event)
 
 void dlgTriggerEditor::readSettings()
 {
-    /*In case sensitive environments, two different config directories 
+    /*In case sensitive environments, two different config directories
     were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
     Furthermore, we skip the version from the application name to follow the convention.
-    For compatibility with older settings, if no config is loaded 
-    from the config directory "mudlet", application "Mudlet", we try to load from the config 
+    For compatibility with older settings, if no config is loaded
+    from the config directory "mudlet", application "Mudlet", we try to load from the config
     directory "Mudlet", application "Mudlet 1.0". */
     QSettings settings_new("mudlet","Mudlet");
     QSettings settings((settings_new.contains("pos")? "mudlet":"Mudlet"),(settings_new.contains("pos")? "Mudlet":"Mudlet 1.0"));
-    
+
 
     QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
@@ -612,8 +628,8 @@ void dlgTriggerEditor::readSettings()
 
 void dlgTriggerEditor::writeSettings()
 {
-    /*In case sensitive environments, two different config directories 
-    were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory 
+    /*In case sensitive environments, two different config directories
+    were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
     (the organization name) to "mudlet".
     Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
@@ -1187,7 +1203,23 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
             }
         }
     }
-    mpSourceEditorArea->highlighter->setSearchPattern( s );
+
+    // TODO: Edbee search term highlighter
+
+    // As it is, findNext() and selectNext() are exactly the same. You could
+    // do a selectAll(), but that would create a cursor for each found instance,
+    // and would likely do things the user wasn't expecting.
+
+    // Although there are some findHighlight code entries in libedbee, the
+    // functionality isn't implemented.
+
+    mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm( s);
+    //mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
+    //mpSourceEditorEdbee->controller()->textRenderer()->theme()->setFindHighlightBackgroundColor( QColor(0,0,0)); // This does nothing
+    mpSourceEditorEdbee->controller()->textSearcher()->findNext( mpSourceEditorEdbee);
+
+    //==
+
     treeWidget_searchResults->setUpdatesEnabled( true );
 }
 
@@ -2530,7 +2562,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
-    mpSourceEditor->clear();
+    mpSourceEditorEdbeeDocument->setText("");
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
@@ -2634,7 +2666,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
-    mpSourceEditor->clear();
+    mpSourceEditorEdbeeDocument->setText("");
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
@@ -2648,16 +2680,18 @@ void dlgTriggerEditor::addVar( bool isFolder )
     mpVarsMainArea->key_type->setCurrentIndex(0);
     if (isFolder)
     {
-        mpSourceEditor->setReadOnly(true);
+        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->var_type->setDisabled(true);
         mpVarsMainArea->var_type->setCurrentIndex(4);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
-        mpSourceEditor->setPlainText("NewTable");
+        mpSourceEditorEdbeeDocument->setText("NewTable");
         name="";
     }
     else{
-        mpSourceEditor->setReadOnly(false);
+        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        mpSourceEditorEdbee->setEnabled(true);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Variable name...");
         mpVarsMainArea->var_type->setDisabled(false);
@@ -2798,7 +2832,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
-    mpSourceEditor->clear();
+    mpSourceEditorEdbeeDocument->setText("");
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
@@ -2894,7 +2928,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditor->clear();
+    mpSourceEditorEdbeeDocument->setText("");
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
@@ -2997,7 +3031,8 @@ void dlgTriggerEditor::addAction( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpSourceEditor->clear();
+    mpSourceEditorEdbeeDocument->setText("");
+
 
     mpHost->getActionUnit()->updateToolbar();
     mpCurrentActionItem = pNewItem;
@@ -3095,7 +3130,7 @@ void dlgTriggerEditor::addScript( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
-    mpSourceEditor->setPlainText( script );
+    mpSourceEditorEdbeeDocument->setText( script);
     mpCurrentScriptItem = pNewItem;
     treeWidget_scripts->setCurrentItem( pNewItem );
     slot_scripts_selected( treeWidget_scripts->currentItem() );
@@ -3128,8 +3163,8 @@ void dlgTriggerEditor::saveTrigger()
         else if( _type == 5 ) regexPropertyList << REGEX_LINE_SPACER;
         else if( _type == 6 ) regexPropertyList << REGEX_COLOR_PATTERN;
     }
-    QString script = mpSourceEditor->toPlainText();
 
+    QString script = mpSourceEditorEdbeeDocument->text();
 
         int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
         TTrigger * pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
@@ -3267,7 +3302,7 @@ void dlgTriggerEditor::saveTimer()
     QTreeWidgetItem * pItem = mpCurrentTimerItem;
     if( ! pItem ) return;
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
-    QString script = mpSourceEditor->toPlainText();
+    QString script = mpSourceEditorEdbeeDocument->text();
 
 
         int timerID = pItem->data(0, Qt::UserRole).toInt();
@@ -3378,7 +3413,7 @@ void dlgTriggerEditor::saveAlias()
                   .arg(name));
         return;
     }
-    QString script = mpSourceEditor->toPlainText();
+    QString script = mpSourceEditorEdbeeDocument->text();
 
 
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -3489,7 +3524,7 @@ void dlgTriggerEditor::saveAction()
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString commandDown = mpActionsMainArea->lineEdit_command_down->text();
     QString commandUp = mpActionsMainArea->lineEdit_command_up->text();
-    QString script = mpSourceEditor->toPlainText();
+    QString script = mpSourceEditorEdbeeDocument->text();
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     int rotation = qMax( 0, mpActionsMainArea->buttonRotation->currentIndex() );
     int columns = mpActionsMainArea->buttonColumns->text().toInt();
@@ -3607,7 +3642,7 @@ void dlgTriggerEditor::saveScript()
 
     QString old_name;
     QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
-    QString script = mpSourceEditor->toPlainText();
+    QString script = mpSourceEditorEdbeeDocument->text();
     mpScriptsMainAreaEditHandlerItem = 0;
     QList<QListWidgetItem*> itemList;
     for( int i=0; i<mpScriptsMainArea->listWidget_registered_event_handlers->count(); i++ )
@@ -3761,7 +3796,7 @@ void dlgTriggerEditor::saveVar()
     if ( !var )
         return;
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
-    QString newValue = mpSourceEditor->toPlainText();
+    QString newValue = mpSourceEditorEdbeeDocument->text();
     if (newName == "")
     {
         slot_var_selected(pItem);
@@ -3961,7 +3996,7 @@ void dlgTriggerEditor::saveKey()
         name = mpKeysMainArea->lineEdit_key->text();
     }
     QString command = mpKeysMainArea->lineEdit_command->text();
-    QString script = mpSourceEditor->toPlainText();
+    QString script = mpSourceEditorEdbeeDocument->text();
 
 
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -4109,7 +4144,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditorEdbeeDocument->setText("");
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
@@ -4244,7 +4279,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
         mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
         mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
         QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
+        mpSourceEditorEdbeeDocument->setText( script);
 
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -4265,7 +4300,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditorEdbeeDocument->setText( "");
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
@@ -4285,7 +4320,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
         mpAliasMainArea->lineEdit_alias_name->setText( name );
 
         QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
+        mpSourceEditorEdbeeDocument->setText( script);
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -4305,7 +4340,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditorEdbeeDocument->setText( "");
 
     mpKeysMainArea->lineEdit_key->setText( pItem->text(0) );
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
@@ -4320,7 +4355,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
         QString keyName = mpHost->getKeyUnit()->getKeyName( pT->getKeyCode(), pT->getKeyModifiers() );
         mpKeysMainArea->lineEdit_key->setText( keyName );
         QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
+        mpSourceEditorEdbeeDocument->setText( script);
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -4500,7 +4535,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
-        mpSourceEditor->setPlainText("");
+        mpSourceEditorEdbeeDocument->setText( "");
         //check for temp item
         var = vu->getTVar( pItem );
         if ( var && var->getValueType() == LUA_TTABLE )
@@ -4521,7 +4556,8 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     int keyType = var->getKeyType();
     QIcon icon;
     mpVarsMainArea->key_type->setEnabled(true);
-    mpSourceEditor->setReadOnly(false);
+    // Edbee doesn't have a readonly option, so I'm using setEnabled
+    mpSourceEditorEdbee->setEnabled(true);
     mpVarsMainArea->var_type->setEnabled(true);
     if (keyType == 4)
         mpVarsMainArea->key_type->setCurrentIndex(1);
@@ -4539,7 +4575,9 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     }
     if (varType == LUA_TTABLE || varType == LUA_TFUNCTION)
     {
-        mpSourceEditor->setReadOnly(true);
+        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        mpSourceEditorEdbee->setEnabled(false);
+
         if ( varType == LUA_TTABLE )
         {
             if ( pItem->childCount() )
@@ -4566,7 +4604,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     }
     mpVarsMainArea->hideVariable->setChecked( vu->isHidden( var ) );
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
-    mpSourceEditor->setPlainText(lI->getValue( var ));
+    mpSourceEditorEdbeeDocument->setText( lI->getValue( var ));
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
@@ -4592,10 +4630,10 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         saveAction();
 
     mpActionsMainArea->show();
-    mpSourceEditor->show();
+    mpSourceEditorEdbee->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditor->clear();
+    mpSourceEditorEdbeeDocument->setText("");
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -4626,7 +4664,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpActionsMainArea->lineEdit_command_down->setText( pT->getCommandButtonDown() );
         mpActionsMainArea->lineEdit_command_up->setText( pT->getCommandButtonUp() );
-        mpSourceEditor->setPlainText( pT->getScript() );
+        mpSourceEditorEdbeeDocument->setText(pT->getScript());
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
         if( location > 0 ) location--;
@@ -4697,7 +4735,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     {
         // On root of treewidget_actions: - show help message instead
         mpActionsMainArea->hide();
-        mpSourceEditor->hide();
+        mpSourceEditorEdbee->hide();
         showInfo( msgInfoAddButton );
     }
 }
@@ -4740,7 +4778,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditorEdbeeDocument->setText("");
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
 
@@ -4760,7 +4798,8 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
         }
         mpScriptsMainArea->lineEdit_scripts_name->clear();
         QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
+        mpSourceEditorEdbeeDocument->setText( script);
+
         mpScriptsMainArea->lineEdit_scripts_name->setText( name );
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -4778,7 +4817,8 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditor->setPlainText( "" );
+    mpSourceEditorEdbeeDocument->setText("");
+
     mpTimersMainArea->lineEdit_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
     mpTimersMainArea->timeEdit_hours->clear();
@@ -4818,7 +4858,8 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
         mpTimersMainArea->timeEdit_msecs->setTime(t5);
 
         QString script = pT->getScript();
-        mpSourceEditor->setPlainText( script );
+        mpSourceEditorEdbeeDocument->setText( script);
+
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -5995,9 +6036,12 @@ void dlgTriggerEditor::changeView( int view )
         mNeedUpdateData = false;
     }
 
-    mpSourceEditor->setReadOnly(false);
-    if (mCurrentView != view)
-        mpSourceEditor->clear();
+    // Edbee doesn't have a readonly option, so I'm using setEnabled
+    mpSourceEditorEdbee->setEnabled(true);
+
+    if (mCurrentView != view) {
+        mpSourceEditorEdbeeDocument->setText("");
+    }
     mCurrentView = view;
 
     mpTriggersMainArea->hide();
@@ -7214,38 +7258,15 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     pB->setStyleSheet( styleSheet );
 }
 
-void dlgTriggerEditor::slot_cursorPositionChanged()
+void dlgTriggerEditor::slot_updateStatusBar( QString statusText)
 {
-    // We only have one block so block count is the same as line count...!
-    int _line = mpSourceEditor->textCursor().blockNumber();
-    int _maxLines = mpSourceEditor->blockCount();
-    int _character = mpSourceEditor->textCursor().position();
-    int _characterInLine = mpSourceEditor->textCursor().positionInBlock();
-    int _charactersInLine = mpSourceEditor->textCursor().block().length();
-    int _maxCharacter = mpSourceEditorDocument->characterCount();
-
-    QString line;
-    if( mpSourceEditorDocument->isEmpty() ) {
-        line = tr( "Current line: <none>, character in line: <none>, overall: <none>" );
-    }
-    else {
-        line = tr( "Current line: %1/%2, character in line: %3/%4, overall: %5/%6" )
-                   .arg( _line + 1 )
-                   .arg( _maxLines )
-                   .arg( _characterInLine )
-                   .arg( _charactersInLine - 1 )
-                   .arg( _character )
-                   .arg( _maxCharacter - 1 );
-    }
-    QMainWindow::statusBar()->showMessage( line );
+    QMainWindow::statusBar()->showMessage( statusText );
 }
 
 void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 {
+    edbee::TextEditorConfig* config = mpSourceEditorEdbee->config();
 
-    QTextOption _options = mpSourceEditorDocument->defaultTextOption();
-    QTextOption::Flags _flags = _options.flags() & ~( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
-    _flags |= state & ( QTextOption::ShowTabsAndSpaces | QTextOption::ShowLineAndParagraphSeparators );
-    _options.setFlags( _flags );
-    mpSourceEditorDocument->setDefaultTextOption( _options );
+    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces);
+    config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
 }
