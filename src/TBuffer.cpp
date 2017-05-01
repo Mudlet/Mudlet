@@ -416,7 +416,7 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
 //            std::deque<TChar> newLine;
 //            buffer.push_back( newLine );
 //            lineBuffer.push_back( QString() );
-//            QString time = "-----";
+//            QString time = "-------------";
 //            timeBuffer << time;
 //            promptBuffer << false;
 //            dirty << true;
@@ -455,7 +455,7 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
 //                        lineBuffer.append( lineRest );
 //                    else
 //                        lineBuffer.append( nothing );
-//                    QString time = "-----";
+//                    QString time = "-------------";
 //                    timeBuffer << time;
 //                    promptBuffer << false;
 //                    dirty << true;
@@ -1860,7 +1860,7 @@ void TBuffer::append(const QString & text,
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
-            timeBuffer << QStringLiteral( "-----" );
+            timeBuffer << QStringLiteral( "-------------" );
             promptBuffer << false;
             dirty << true;
             mLastLine++;
@@ -1892,7 +1892,7 @@ void TBuffer::append(const QString & text,
                     else {
                         lineBuffer.append( QString() );
                     }
-                    timeBuffer << QStringLiteral( "-----" );
+                    timeBuffer << QStringLiteral( "-------------" );
                     promptBuffer << false;
                     dirty << true;
                     mLastLine++;
