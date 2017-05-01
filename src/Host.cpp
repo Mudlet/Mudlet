@@ -93,6 +93,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPort(port)
 , mPrintCommand(true)
 , mIsCurrentLogFileInHtmlFormat(false)
+, mIsLoggingTimestamps(false)
 , mResetProfile(false)
 , mRetries(5)
 , mSaveProfileOnExit(false)

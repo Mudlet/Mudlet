@@ -2400,7 +2400,7 @@ void TBuffer::log( int from, int to )
                 }
                 else
                 {
-                    if( !timeBuffer[i].isEmpty() )
+                    if( mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty() )
                     {
                         toLog = timeBuffer[i].left(13);
                     }
@@ -3175,7 +3175,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontStyle;
     QString textDecoration;
     bool firstSpan = true;
-    if( !timeBuffer[y].isEmpty() )
+    if( mpHost->mIsLoggingTimestamps && !timeBuffer[y].isEmpty() )
     {
         firstSpan = false;
         // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
