@@ -2400,7 +2400,11 @@ void TBuffer::log( int from, int to )
                 }
                 else
                 {
-                    toLog = lineBuffer[i];
+                    if( !timeBuffer[i].isEmpty() )
+                    {
+                        toLog = timeBuffer[i].left(13);
+                    }
+                    toLog.append(lineBuffer[i]);
                     toLog.append("\n");
                 }
                 mpHost->mpConsole->mLogStream << toLog;
@@ -3171,6 +3175,14 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontStyle;
     QString textDecoration;
     bool firstSpan = true;
+    if( !timeBuffer[y].isEmpty() )
+    {
+        firstSpan = false;
+        // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
+        s.append("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); ");
+        s.append("font-weight: normal; font-style: normal; text-decoration: normal\">");
+        s.append(timeBuffer[y].left(13));
+    }
     for( ; x<P2.x(); x++ ) {
         if( x >= static_cast<int>(buffer[y].size()) ) {
             break;
