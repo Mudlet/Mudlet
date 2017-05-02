@@ -123,7 +123,6 @@ public:
     bool applyBgColor(QPoint&, QPoint&, int, int, int);
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
-    QPoint& insertText(const QString& what, QPoint& where);
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
