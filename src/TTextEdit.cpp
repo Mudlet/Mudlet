@@ -1498,21 +1498,14 @@ void TTextEdit::copySelectionToClipboardHTML()
         int x = 0;
         if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
-            if( x ) {
-                text.append( "<span>" );
-                text.append( QString( x, QLatin1Char(' ') ) );
-                text.append( "</span>" );
-                // Pad out with spaces to the right so a partial first line lines up
-            }
-
-            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y), mShowTimeStamps, x));
         }
         else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y), mShowTimeStamps));
         }
         else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y), mShowTimeStamps));
         }
     }
     text.append( QStringLiteral( " </div></body>\n"

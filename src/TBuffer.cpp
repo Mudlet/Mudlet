@@ -2396,7 +2396,7 @@ void TBuffer::log( int from, int to )
                 {
                     QPoint P1 = QPoint(0,i);
                     QPoint P2 = QPoint( buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2);
+                    toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
                 }
                 else
                 {
@@ -3139,7 +3139,7 @@ QStringList TBuffer::getEndLines( int n )
 }
 
 
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding )
 {
     int y = P1.y();
     int x = P1.x();
@@ -3175,13 +3175,28 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontStyle;
     QString textDecoration;
     bool firstSpan = true;
-    if( mpHost->mIsLoggingTimestamps && !timeBuffer[y].isEmpty() )
+    if( allowedTimestamps && !timeBuffer[y].isEmpty() )
     {
         firstSpan = false;
         // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
         s.append("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); ");
         s.append("font-weight: normal; font-style: normal; text-decoration: normal\">");
         s.append(timeBuffer[y].left(13));
+    }
+    if( spacePadding > 0 )
+    {
+        // used for "copy HTML", first line of selection
+        if( firstSpan )
+        {
+            firstSpan = false;
+        }
+        else
+        {
+            s.append( "</span>" );
+        }
+        s.append( "<span>" );
+        s.append( QString( spacePadding, QLatin1Char(' ') ) );
+        // Pad out with spaces to the right so a partial first line lines up
     }
     for( ; x<P2.x(); x++ ) {
         if( x >= static_cast<int>(buffer[y].size()) ) {
