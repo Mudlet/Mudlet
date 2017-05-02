@@ -29,6 +29,10 @@
 
 #include <assert.h>
 
+// Define this to get qDebug() messages about the decoding of UTF-8 data when it
+// is not the single bytes of pure ASCII text:
+#define DEBUG_UTF8_PROCESSING
+
 // These tables have been regenerated from examination of the Qt source code
 // particularly from:
 // https://gitorious.org/qt/qt?p=qt:qt.git;a=blob;f=src/corelib/codecs/qsimplecodec.cpp;h=cb52ce35f369f7fbe5b04ff2c2cf1600bd794f4e;hb=HEAD
@@ -2425,7 +2429,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 switch (utf8SequenceLength) {
                 case 4:
                     if ((localBuffer[msPos+3] & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 4th byte in UTF-8 sequence is invalid!";
+#endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
@@ -2447,7 +2453,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         //     <= 001111 0x0F then must be in range
                         //      > 001111 0x0F then must be out of range
 
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
+#endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
@@ -2455,7 +2463,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     // Fall-through
                 case 3:
                     if ((localBuffer[msPos+2] & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
+#endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     } else if ((localBuffer[msPos] & 0x0F) == 0x0D) {
@@ -2488,7 +2498,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
  * and Windows allows such sequences in filenames."
  */
                         // So test for and reject if LSN of first byte is 0xD!
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
+#endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     } else if ((static_cast<quint8>(localBuffer[msPos+2]) == 0xbf)
@@ -2497,7 +2509,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                         // Got caught out by this one - it is the Utf-8 BOM and
                         // needs to be ignored as it transcodes to NO codepoints!
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) UTF-8 BOM sequence seen and handled!";
+#endif
                         isValid = false;
                         isToUseByteOrderMark = true;
                     }
@@ -2505,7 +2519,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     // Fall-through
                 case 2:
                     if ((localBuffer[msPos+1] & 0xC0) != 0x80) {
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 2nd byte in UTF-8 sequence is invalid!";
+#endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
@@ -2516,18 +2532,22 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                        ||(( localBuffer[msPos]         == 0xE0) && ((localBuffer[msPos+1] & 0xE0) == 0x80))
                        ||(( localBuffer[msPos]         == 0xF0) && ((localBuffer[msPos+1] & 0xF0) == 0x80))) {
 
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong "
                                            << utf8SequenceLength
                                            << "-byte sequence as UTF-8 rejected!";
+#endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
                     break;
 
                 default:
+#if defined(DEBUG_UTF8_PROCESSING)
                     qDebug().nospace() << "TBuffer::translateToPlainText(...) "
                                        << utf8SequenceLength
                                        << "-byte sequence as UTF-8 rejected!";
+#endif
                     isValid = false;
                     isToUseReplacementMark = true;
                 }
@@ -2540,7 +2560,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
                         qWarning().nospace() << "TBuffer::translateToPlainText(...) "
                                               << utf8SequenceLength
-                                              << "-byte UTF-8 sequence accepted, but it encoded to "
+                                              << "-byte UTF-8 sequence accepted, and it encoded to "
                                               << codePoint.size()
                                               << " QChars which does not make sense!!!";
                         isValid = false;
@@ -2550,6 +2570,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         isTwoTCharsNeeded = true;
                         // Fall-through
                     case 1:
+#if defined(DEBUG_UTF8_PROCESSING)
                         qDebug().nospace() << "TBuffer::translateToPlainText(...) "
                                            << utf8SequenceLength
                                            << "-byte UTF-8 sequence accepted, it was "
@@ -2557,6 +2578,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                            << " QChar(s) long ["
                                            << codePoint
                                            << "]";
+#endif
                         mMudLine.append(codePoint);
                         break;
                     case 0:
@@ -2569,13 +2591,14 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 }
 
                 if (! isValid) {
+#if defined(DEBUG_UTF8_PROCESSING)
                     QString debugMsg;
                     for (size_t i = 0; i < utf8SequenceLength; ++i) {
                         debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[msPos+i]),2,16));
                     }
                     qDebug().nospace() << "    Sequence bytes are: "
                                        << debugMsg.toLatin1().constData();
-
+#endif
                     if (isToUseReplacementMark) {
                         mMudLine.append(QChar::ReplacementCharacter);
                     }
@@ -2660,6 +2683,7 @@ void TBuffer::append(const QString & text,
                       bool strikeout,
                       int linkID )
 {
+    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
     const QString lineBreaks = QStringLiteral( ",.- " );
 
     if( static_cast<int>(buffer.size()) > mLinesLimit ) {
@@ -2703,7 +2727,11 @@ void TBuffer::append(const QString & text,
             firstChar = true;
             continue;
         }
-        if( lineBuffer.back().size() >= mWrapAt ) {
+
+        // FIXME: (I18n) Need to measure painted line width and compare that
+        // to "unit" character width (whatever we work THAT out to be)
+        // multiplied by mWrap:
+        if (lineBuffer.back().size() >= mWrapAt) {
             for( int i=lineBuffer.back().size()-1; i>=0; i-- ) {
                 if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 ) {
                     QString tmp = lineBuffer.back().mid(0,i+1);
