@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,6 +33,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QStringBuilder>
 #include "post_guard.h"
 
 
@@ -640,6 +641,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
     // Check the set of area Ids against the ones we actually have:
     QSetIterator<int> itUsedArea(areaIdSet);
+    QList<int> missingAreasNeeded; // Later fix, forgot to handle wanted area ids that are +ve (and thus valid) but absent
     while (itUsedArea.hasNext()) {
         int usedAreaId = itUsedArea.next();
         if (usedAreaId < -1 || !usedAreaId) {
@@ -654,6 +656,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 mpMap->postMessage(warnMsg);
             }
             mpMap->appendAreaErrorMsg(usedAreaId, tr("[ ALERT ] - Area with this id expected but not found, will be created."), true);
+            missingAreasNeeded.append(usedAreaId);
         }
     }
 
@@ -670,7 +673,59 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         }
     }
 
-    // START OF TASK 5
+    // START OF TASK 5.0 (previously omitted) - add in areas that we have an id
+    // for but no actaul TArea:
+    // * id WILL be in validUsedAreaIds
+    // * id WILL NOT be in areaRemapping, but represents a id number that cannot be
+    // remapped as a new area id
+    // * id MAY be in TRoomDB::areaNamesMap
+    // * id MAY be used by rooms which will have to be added to it at some point
+    // * WILL NOT be in TRoomDB::areas
+    if (!missingAreasNeeded.isEmpty()) {
+        if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
+            QString alertMsg = tr( "[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
+                                   " Look for further messsages related to the rooms that are supposed to\n"
+                                   " be in this/these area(s)...",
+                                   "Making use of %n to allow quantity dependent message form 8-) !",
+                                   missingAreasNeeded.count() );
+            mpMap->postMessage(alertMsg);
+        }
+        mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
+                                         " Look for further messsages related to the rooms that is/are supposed to\n"
+                                         " be in this/these area(s)...",
+                                         "Making use of %n to allow quantity dependent message form 8-) !",
+                                         missingAreasNeeded.count() ),
+                              true);
+
+        QString infoMsg;
+        if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
+            infoMsg = tr("[ INFO ]  - The missing area(s) are now called:\n"
+                         "(ID) ==> \"name\"",
+                         "Making use of %n to allow quantity dependent message form 8-) !",
+                         missingAreasNeeded.count() );
+        }
+
+        QMutableListIterator<int> itMissingArea(missingAreasNeeded);
+        while(itMissingArea.hasNext()) {
+            int newAreaId = itMissingArea.next();
+            // This will create a new "Default" area name if there is not one
+            // already for this id - and we do not anticipate that it could ever
+            // fail and return false...
+            addArea(newAreaId);
+            infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"")
+                           .arg(newAreaId)
+                           .arg(areaNamesMap.value(newAreaId)));
+
+            itMissingArea.remove(); // Clean up the list as we go...!
+        }
+
+        if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
+            mpMap->postMessage(infoMsg);
+        }
+        mpMap->appendErrorMsg(infoMsg, true);
+    }
+
+    // START OF TASK 5.1
     // Now process problem areaIds
     if (!areaRemapping.isEmpty()) {
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
