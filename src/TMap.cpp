@@ -60,19 +60,9 @@ TMap::TMap( Host * pH )
 , mpMapper( Q_NULLPTR )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
-, mDefaultVersion( 16 )      // <== replaces CURRENT_MAP_VERSION
-                            // THIS, mMinVersion AND mMaxVersion SHOULD BE
-                            // REVISED WHEN WE SWITCH FROM A PREVIEW TO A RELEASE VERSION!
-                            // Currently:
-                            // + TLuaInterpreter::setAreaUserData()
-                            // + TLuaInterpreter::setMapUserData() need 17
-                            // (for persistant storage of data)
-                            // + TArea::rooms as QSet<int> needs 18,
-                            // is/was QList<int> in prior versions
-                            // + TMap::mRoomIdHash as QHash<QString, int> needs 18, is/was
-                            // a single mRoomId in prior versions
-, mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
-, mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
+, mDefaultVersion( 18 )
+, mMaxVersion( 18 )
+, mMinVersion( 16 )
 , mIsFileViewingRecommended( false )
 , mpNetworkAccessManager( Q_NULLPTR )
 , mpProgressDialog( Q_NULLPTR )
