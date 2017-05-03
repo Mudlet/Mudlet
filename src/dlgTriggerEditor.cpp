@@ -580,9 +580,9 @@ void dlgTriggerEditor::setTBIconSize( int s )
 
 void dlgTriggerEditor::slot_choseButtonColor()
 {
-     QColor color = QColorDialog::getColor();
-     QPalette palette;
-     palette.setColor( QPalette::Button, color );
+    auto color = QColorDialog::getColor();
+    QPalette palette;
+    palette.setColor(QPalette::Button, color);
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent *event)
@@ -4051,13 +4051,13 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
     switch( type )
     {
     case 0:
-        palette.setColor( QPalette::Text, QColor(0,0,0) );
+        palette.setColor( QPalette::Text, QColor(Qt::black) );
         pItem->lineEdit->show();
         pItem->fgB->hide();
         pItem->bgB->hide();
         break;
     case 1:
-        palette.setColor( QPalette::Text, QColor(0,0,255) );
+        palette.setColor( QPalette::Text, QColor(Qt::blue) );
         pItem->lineEdit->show();
         pItem->fgB->hide();
         pItem->bgB->hide();
@@ -4137,14 +4137,14 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
             switch( propertyList[i] )
             {
             case REGEX_SUBSTRING:
-                palette.setColor( QPalette::Text, QColor(0,0,0) );
+                palette.setColor( QPalette::Text, QColor(Qt::black) );
                 pBox->setCurrentIndex( 0 );
                 pItem->fgB->hide();
                 pItem->bgB->hide();
                 pItem->lineEdit->show();
                 break;
             case REGEX_PERL:
-                palette.setColor( QPalette::Text, QColor(0,0,255) );
+                palette.setColor( QPalette::Text, QColor(Qt::blue) );
                 pBox->setCurrentIndex( 1 );
                 pItem->fgB->hide();
                 pItem->bgB->hide();
@@ -4187,12 +4187,12 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
                 QPalette fgPal;
                 QPalette bgPal;
                 if( ! pT->mColorPatternList[i] ) break;
-                QColor fgC = QColor(pT->mColorPatternList[i]->fgR,
+                auto fgC = QColor(pT->mColorPatternList[i]->fgR,
                                     pT->mColorPatternList[i]->fgG,
                                     pT->mColorPatternList[i]->fgB);
                 fgPal.setColor( QPalette::Button, fgC );
                 QString fgstyleSheet = QString("QPushButton{background-color:")+fgC.name()+QString(";}");
-                QColor bgC = QColor(pT->mColorPatternList[i]->bgR,
+                auto bgC = QColor(pT->mColorPatternList[i]->bgR,
                                     pT->mColorPatternList[i]->bgG,
                                     pT->mColorPatternList[i]->bgB);
                 bgPal.setColor( QPalette::Button, bgC );
@@ -7073,7 +7073,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
-    QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
+    auto color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
     {
         QPalette palette;
@@ -7090,7 +7090,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
-    QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
+    auto color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
     {
         QPalette palette;

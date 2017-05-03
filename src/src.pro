@@ -27,6 +27,10 @@ include(../3rdparty/communi/src/core/core.pri)
 
 include(../3rdparty/lua_yajl/src.pri)
 
+macx: {
+    include(../3rdparty/luazip/src.pri)
+}
+
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
 VERSION = 3.0.1
@@ -214,6 +218,7 @@ SOURCES += \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
+    TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
@@ -285,6 +290,7 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDockWidget.h \
     TEasyButtonBar.h \
     testdbg.h \
     TEvent.h \
@@ -313,8 +319,6 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h
-
-macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

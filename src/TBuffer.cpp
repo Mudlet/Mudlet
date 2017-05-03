@@ -858,9 +858,9 @@ QPoint TBuffer::getEndPos()
 {
     int x = 0;
     int y = 0;
-    if (! buffer.empty()) {
+    if (!buffer.empty()) {
         y = buffer.size()-1;
-        if (! buffer.at(y).empty()) {
+        if (!buffer.at(y).empty()) {
             x = buffer.at(y).size() - 1;
         }
     }

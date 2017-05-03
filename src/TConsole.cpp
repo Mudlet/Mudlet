@@ -61,13 +61,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , buffer( pH )
 , emergencyStop( new QToolButton )
 , layerCommandLine( 0 )
-, mBgColor( QColor( 255, 255, 255 ) )
+, mBgColor( QColor(Qt::black) )
 , mClipboard( mpHost )
-, mCommandBgColor( QColor( 0, 0, 0 ) )
+, mCommandBgColor( QColor(Qt::white) )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
 , mConsoleName( "main" )
 , mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
-, mFgColor( QColor( 0, 0, 0 ) )
+, mFgColor( QColor(Qt::white) )
 , mIndentCount( 0 )
 , mIsDebugConsole( isDebugConsole )
 , mLogFileName(QString(""))
@@ -90,7 +90,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
 , mRecordReplay( false )
 , mSystemMessageBgColor( mBgColor )
-, mSystemMessageFgColor( QColor( 255,0,0 ) )
+, mSystemMessageFgColor( QColor(Qt::red) )
 , mTriggerEngineMode( false )
 , mUserConsole( false )
 , mWindowIsHidden( false )
@@ -182,20 +182,20 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QSizePolicy sizePolicy4( QSizePolicy::Fixed, QSizePolicy::Expanding);
     QSizePolicy sizePolicy5( QSizePolicy::Fixed, QSizePolicy::Fixed);
     QPalette mainPalette;
-    mainPalette.setColor( QPalette::Text, QColor(0,0,0) );
+    mainPalette.setColor( QPalette::Text, QColor(Qt::black) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     mainPalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     QPalette splitterPalette;
     splitterPalette = mainPalette;
     splitterPalette.setColor( QPalette::Button, QColor(0,0,255,255) );
-    splitterPalette.setColor( QPalette::Window, QColor(0,255,0));//,255) );
+    splitterPalette.setColor( QPalette::Window, QColor(Qt::green));//,255) );
     splitterPalette.setColor( QPalette::Base, QColor(255,0,0,255) );
-    splitterPalette.setColor( QPalette::Window, QColor(255,255,255) );
+    splitterPalette.setColor( QPalette::Window, QColor(Qt::white) );
     //setPalette( mainPalette );
 
     //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
     QPalette framePalette;
-    framePalette.setColor( QPalette::Text, QColor(0,0,0) );
+    framePalette.setColor( QPalette::Text, QColor(Qt::black) );
     framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     framePalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     mpMainFrame->setPalette( framePalette );
@@ -222,7 +222,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpTopToolBar->setContentsMargins(0,0,0,0);
     mpTopToolBar->setAutoFillBackground(true);
     QPalette topbarPalette;
-    topbarPalette.setColor( QPalette::Text, QColor(255,255,255) );
+    topbarPalette.setColor( QPalette::Text, QColor(Qt::white) );
     topbarPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     topbarPalette.setColor( QPalette::Window, QColor(0,255,0,255) );
     topbarPalette.setColor( QPalette::Base, QColor(0,255,0,255) );
@@ -413,8 +413,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     networkLatency->setAutoFillBackground( true );
     networkLatency->setContentsMargins(0,0,0,0);
     QPalette basePalette;
-    basePalette.setColor( QPalette::Text, QColor(0,0,0) );
-    basePalette.setColor( QPalette::Base, QColor(255, 255, 255) );
+    basePalette.setColor( QPalette::Text, QColor(Qt::black) );
+    basePalette.setColor( QPalette::Base, QColor(Qt::white) );
     networkLatency->setPalette( basePalette );
     networkLatency->setAlignment( Qt::AlignHCenter | Qt::AlignVCenter );
 
@@ -462,7 +462,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QPalette __pal;
     __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
     __pal.setColor(QPalette::Highlight,QColor(0,0,192));
-    __pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    __pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
     __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette( __pal );
@@ -655,16 +655,16 @@ void TConsole::resizeEvent( QResizeEvent * event )
         QString n = "WindowResizeEvent";
         pLua->call( func, n );
 
-        TEvent me;
-        me.mArgumentList.append( "sysWindowResizeEvent" );
-        me.mArgumentList.append( QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth) );
-        me.mArgumentList.append( QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()) );
-        me.mArgumentList.append( mConsoleName );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        mpHost->raiseEvent( me );
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
+        mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
+        mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
+        mudletEvent.mArgumentList.append(mConsoleName);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
     }
 }
 
@@ -739,7 +739,7 @@ void TConsole::closeEvent( QCloseEvent *event )
     if( profile_name != "default_host" )
     {
         TEvent conCloseEvent;
-        conCloseEvent.mArgumentList.append( "sysExitEvent" );
+        conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent( conCloseEvent );
 
@@ -987,7 +987,7 @@ void TConsole::changeColors()
         QPalette palette;
         palette.setColor( QPalette::Text, mFgColor );
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
-        palette.setColor( QPalette::Base, QColor(0,0,0) );
+        palette.setColor( QPalette::Base, QColor(Qt::black) );
         console->setPalette( palette );
         console2->setPalette( palette );
     }
@@ -1028,7 +1028,7 @@ void TConsole::changeColors()
         QPalette pal;
         pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
         pal.setColor(QPalette::Highlight,QColor(0,0,192));
-        pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
+        pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
         pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
         mpCommandLine->setPalette( pal );
         mpCommandLine->mRegularPalette = pal;
@@ -1078,9 +1078,9 @@ void TConsole::changeColors()
 
     }
     QPalette palette;
-    palette.setColor( QPalette::Button, QColor(0,0,255) );
-    palette.setColor( QPalette::Window, QColor(0,255,0) );
-    palette.setColor( QPalette::Base, QColor(255,0,0) );
+    palette.setColor( QPalette::Button, QColor(Qt::blue) );
+    palette.setColor( QPalette::Window, QColor(Qt::green) );
+    palette.setColor( QPalette::Base, QColor(Qt::red) );
 
     if( ! mIsSubConsole )
     {
@@ -2397,7 +2397,7 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(2) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
 
         TEvent mapOpenEvent;
-        mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
+        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent( mapOpenEvent );
     }
