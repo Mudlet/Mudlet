@@ -60,8 +60,12 @@ TMap::TMap( Host * pH )
 , mpMapper( Q_NULLPTR )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
+// default map version that new maps will get
 , mDefaultVersion( 18 )
+// maximum version of the map format that this Mudlet can understand and will
+// allow the user to load
 , mMaxVersion( 18 )
+// minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion( 16 )
 , mIsFileViewingRecommended( false )
 , mpNetworkAccessManager( Q_NULLPTR )
