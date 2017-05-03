@@ -331,6 +331,7 @@ bool XMLexport::writeHost(Host* pHost)
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.
     writeAttribute("mRawStreamDump", pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no");
+    writeAttribute("mIsLoggingTimestamps", pHost->mIsLoggingTimestamps ? "yes" : "no");
     writeAttribute("mAlertOnNewData", pHost->mAlertOnNewData ? "yes" : "no");
     writeAttribute("mFORCE_NO_COMPRESSION", pHost->mFORCE_NO_COMPRESSION ? "yes" : "no");
     writeAttribute("mFORCE_GA_OFF", pHost->mFORCE_GA_OFF ? "yes" : "no");
