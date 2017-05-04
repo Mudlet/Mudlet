@@ -641,7 +641,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
     // Check the set of area Ids against the ones we actually have:
     QSetIterator<int> itUsedArea(areaIdSet);
-    QList<int> missingAreasNeeded; // Later fix, forgot to handle wanted area ids that are +ve (and thus valid) but absent
+    // This is a later fix, as I forgot to handle wanted area ids that are +ve
+    // (and thus valid) but absent:
+    QList<int> missingAreasNeeded;
     while (itUsedArea.hasNext()) {
         int usedAreaId = itUsedArea.next();
         if (usedAreaId < -1 || !usedAreaId) {
@@ -674,13 +676,14 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     }
 
     // START OF TASK 5.0 (previously omitted) - add in areas that we have an id
-    // for but no actaul TArea:
+    // for but no actual TArea, at this point:
     // * id WILL be in validUsedAreaIds
     // * id WILL NOT be in areaRemapping, but represents a id number that cannot be
     // remapped as a new area id
     // * id MAY be in TRoomDB::areaNamesMap
     // * id MAY be used by rooms which will have to be added to it at some point
-    // * WILL NOT be in TRoomDB::areas
+    // * WILL NOT be in TRoomDB::areas - as that is the source of the error this
+    // bit of the task being addressed here is fixing
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             QString alertMsg = tr( "[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
@@ -705,18 +708,25 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                          missingAreasNeeded.count() );
         }
 
-        QMutableListIterator<int> itMissingArea(missingAreasNeeded);
-        while(itMissingArea.hasNext()) {
-            int newAreaId = itMissingArea.next();
-            // This will create a new "Default" area name if there is not one
-            // already for this id - and we do not anticipate that it could ever
-            // fail and return false...
-            addArea(newAreaId);
-            infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"")
-                           .arg(newAreaId)
-                           .arg(areaNamesMap.value(newAreaId)));
+        if (missingAreasNeeded.count() > 1) {
+            // Sort the ids so that the reporting is ordered, which could be
+            // helpful if there is a large number of faults
+            std::sort(missingAreasNeeded.begin(), missingAreasNeeded.end());
+            foreach (int newAreaId, missingAreasNeeded) {
 
-            itMissingArea.remove(); // Clean up the list as we go...!
+                // This will create a new "Default" area name if there is not one
+                // already for this id - and we do not anticipate that it could ever
+                // fail and return false...
+                addArea(newAreaId);
+                infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"")
+                               .arg(newAreaId)
+                               .arg(areaNamesMap.value(newAreaId)));
+            }
+
+            // Didn't really needed to be done, but as we have finished with it
+            // now, clearing it may make tracking the overall processes going on
+            // in the debugger a little clearer...
+            missingAreasNeeded.clear();
         }
 
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
