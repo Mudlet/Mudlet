@@ -1193,7 +1193,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
     int numCodes=0;
     speedSequencer = 0;
     mUntriggered = lineBuffer.size()-1;
-    msLength = incoming.length();
+    msLength = localBuffer.length();
     mFormatSequenceRest="";
     int msPos = 0;
     QString packetTime = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
