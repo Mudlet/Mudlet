@@ -27,9 +27,13 @@ include(../3rdparty/communi/src/core/core.pri)
 
 include(../3rdparty/lua_yajl/src.pri)
 
+macx: {
+    include(../3rdparty/luazip/src.pri)
+}
+
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.1.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -57,11 +61,16 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
 
-# Leave the value of the following empty, line should be "BUILD =" without quotes
-# (it is NOT a Qt built-in variable) for a release build or, if you are
-# distributing modified code, it would be useful if you could put something to
-# distinguish the version:
-BUILD = "-dev"
+# if you are distributing modified code, it would be useful if you
+# put something distinguishing into the MUDLET_VERSION_BUILD environment
+# variable to make identification of the used version simple
+# the qmake BUILD variable is NOT built-in
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
+# Leave the value of the following empty for a release build
+# i.e. the line should be "BUILD =" without quotes
+  BUILD = "-dev"
+}
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -209,6 +218,7 @@ SOURCES += \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
+    TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
@@ -280,6 +290,7 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDockWidget.h \
     TEasyButtonBar.h \
     testdbg.h \
     TEvent.h \
@@ -308,8 +319,6 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h
-
-macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
