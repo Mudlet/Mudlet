@@ -1,6 +1,6 @@
 ############################################################################
-#    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         #
+#    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
+#    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -18,8 +18,6 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
-
 SET(mudlet_RCCS mudlet_alpha.qrc)
 
 SET(mudlet_SRCS
@@ -36,16 +34,10 @@ SET(mudlet_SRCS
     dlgKeysMainArea.cpp
     dlgMapper.cpp
     dlgNotepad.cpp
-    dlgOptionsAreaAction.cpp
-    dlgOptionsAreaAlias.cpp
-    dlgOptionsAreaScripts.cpp
-    dlgOptionsAreaTimers.cpp
-    dlgOptionsAreaTriggers.cpp
     dlgPackageExporter.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
     dlgScriptsMainArea.cpp
-    dlgSearchArea.cpp
     dlgSourceEditorArea.cpp
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
@@ -59,7 +51,6 @@ SET(mudlet_SRCS
     glwidget.cpp
     Host.cpp
     HostManager.cpp
-    HostPool.cpp
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
@@ -73,6 +64,7 @@ SET(mudlet_SRCS
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
+    TDockWidget.cpp
     TEasyButtonBar.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
@@ -108,17 +100,11 @@ SET(mudlet_UIS
     ui/composer.ui
     ui/connection_profiles.ui
     ui/dlgPackageExporter.ui
-    ui/extended_search_area.ui
     ui/irc.ui
     ui/keybindings_main_area.ui
     ui/main_window.ui
     ui/mapper.ui
     ui/notes_editor.ui
-    ui/options_area_actions.ui
-    ui/options_area_aliases.ui
-    ui/options_area_scripts.ui
-    ui/options_area_timers.ui
-    ui/options_area_triggers.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
     ui/scripts_main_area.ui
@@ -143,16 +129,10 @@ SET(mudlet_MOC_HDRS
     dlgKeysMainArea.h
     dlgMapper.h
     dlgNotepad.h
-    dlgOptionsAreaAction.h
-    dlgOptionsAreaAlias.h
-    dlgOptionsAreaScripts.h
-    dlgOptionsAreaTimers.h
-    dlgOptionsAreaTriggers.h
     dlgPackageExporter.h
     dlgProfilePreferences.h
     dlgRoomExits.h
     dlgScriptsMainArea.h
-    dlgSearchArea.h
     dlgSourceEditorArea.h
     dlgSystemMessageArea.h
     dlgTimersMainArea.h
@@ -174,6 +154,7 @@ SET(mudlet_MOC_HDRS
     TLuaInterpreter.h
     TMap.h
     TSplitter.h
+    TSplitterHandle.h
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
@@ -185,7 +166,6 @@ SET(mudlet_HDRS
     FontManager.h
     Host.h
     HostManager.h
-    HostPool.h
     KeyUnit.h
     LuaInterface.h
     pre_guard.h
@@ -197,6 +177,8 @@ SET(mudlet_HDRS
     TAstar.h
     TBuffer.h
     TDebug.h
+    TDockWidget.h
+    testdbg.h
     TEvent.h
     TFlipButton.h
     TimerUnit.h
@@ -218,13 +200,23 @@ SET(mudlet_HDRS
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zc:inline") # improve link times
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zc:rvalueCast") # improve conformance
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4305") # '=' : truncation from 'double' to 'float'
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4309") # 'initializing' : truncation of constant value
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4996") # deprecation
-ELSE(MSVC)
+ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-ENDIF(MSVC)
+  IF(APPLE)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
+  ENDIF()
+ENDIF()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 SET(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
 
@@ -277,12 +269,7 @@ IF(WIN32)
   ENDIF()
 ENDIF()
 
-IF(WIN32)
-  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
-  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
-ENDIF()
-
-# Break each step into a separate command so any status message is output straigh away
+# Break each step into a separate command so any status message is output straight away
 IF(APPLE)
   # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
   # we need the path to an interal header zipconf.g that it calls for using '<''>'s
@@ -315,28 +302,6 @@ IF((APPLE) AND (PKG_CONFIG_FOUND))
 ENDIF()
 
 IF((APPLE) AND (PKG_CONFIG_FOUND))
-  # Examining Homebrew (for MacOs) for libzzip:
-  # https://bintray.com/homebrew/bottles/libzzip found that they use pkg-config
-  # So use that to try and find what we want
-  PKG_SEARCH_MODULE(PC_ZZIPLIB zziplib libzzip zzip)
-  IF(PC_ZZIPLIB_FOUND)
-    IF(PC_ZZIPLIB_zziplib_FOUND)
-      MESSAGE(STATUS "Using pkg_config, found \"zziplib\" version: ${PC_ZZIPLIB_zziplib_VERSION} with:")
-    ELSEIF(PC_ZZIPLIB_libzzip_FOUND)
-      MESSAGE(STATUS "Using pkg_config, found \"libzzip\" version: ${PC_ZZIPLIB_libzzip_VERSION} with:")
-    ELSEIF(PC_ZZIPLIB_zzip_FOUND)
-      MESSAGE(STATUS "Using pkg_config, found \"zzip\" version: ${PC_ZZIPLIB_zzip_VERSION} with:")
-    ELSE()
-      MESSAGE(STATUS "Using pkg_config, found Zzip version: ${PC_ZZIPLIB_VERSION} with:")
-    ENDIF()
-    MESSAGE(STATUS "  include directory(ies), ZZIPLIB_INCLUDE_DIRS: ${PC_ZZIPLIB_INCLUDE_DIRS} .")
-    MESSAGE(STATUS "  library(ies): ZZIPLIB_LIBRARY_DIRS: ${PC_ZZIPLIB_LIBRARY_DIRS}; ZZIPLIB_LIBDIR: ${PC_ZZIPLIB_LIBDIR}. ")
-  ELSEIF()
-    MESSAGE(WARNING "Using pkg_config, failed to find any version of Zziplib library!")
-  ENDIF()
-ENDIF()
-
-IF((APPLE) AND (PKG_CONFIG_FOUND))
   PKG_SEARCH_MODULE(PC_HUNSPELL hunspell libhunspell)
   IF(PC_HUNSPELL_FOUND)
     IF(PC_HUNSPELL_hunspell_FOUND)
@@ -354,26 +319,26 @@ IF((APPLE) AND (PKG_CONFIG_FOUND))
 ENDIF()
 
 FIND_PACKAGE(Qt5Core REQUIRED)
+IF (Qt5Core_VERSION VERSION_LESS 5.6)
+  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+ENDIF()
+
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 
+IF(WIN32)
+  SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
+  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
+ENDIF()
+
 IF(NOT(PC_ZIP_FOUND))
   FIND_PACKAGE(ZIP REQUIRED)
 ENDIF()
 FIND_PACKAGE(OpenGL REQUIRED)
 FIND_PACKAGE(Lua51 REQUIRED)
-# Needed (just) on MacOs as an #include in luazip.h:
-IF(APPLE)
-  IF(NOT(PC_ZZIPLIB_FOUND))
-    FIND_PACKAGE(ZZIPLIB)
-  ENDIF()
-  IF(NOT((ZZIPLIB_FOUND) OR (PC_ZZIPLIB_FOUND) OR (PC_ZZIPLIB_zziplib_FOUND) OR (PC_ZZIPLIB_libzzip_FOUND) OR (PC_ZZIPLIB_zzip_FOUND)))
-    MESSAGE(WARNING "Failed to find any trace of zziplib (or zzip or libzzip)\n- so will not be able to build the (internal version for Mac builds) of the lua zip module that Mudlet needs.")
-  ENDIF()
-ENDIF()
 FIND_PACKAGE(ZLIB REQUIRED)
 FIND_PACKAGE(PCRE REQUIRED)
 FIND_PACKAGE(YAJL REQUIRED)
@@ -389,19 +354,7 @@ ELSE()
   FIND_PACKAGE(HUNSPELL REQUIRED)
 ENDIF()
 
-SET(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE(Boost 1.44 COMPONENTS graph)
-
-SET(LUA_CPP OFF CACHE BOOL "Lua is compiled as C++ rather than C")
-
-IF(LUA_CPP)
-  ADD_DEFINITIONS(-DLUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.cpp)
-ELSE(LUA_CPP)
-  SET(mudlet_SRCS ${mudlet_SRCS} lua_yajl.c)
-ENDIF(LUA_CPP)
-
-ADD_SUBDIRECTORY(irc)
 
 ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
@@ -431,7 +384,6 @@ INCLUDE_DIRECTORIES(
     ${Qt5Multimedia_INCLUDE_DIRS}
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/irc/include
     ${LUA_INCLUDE_DIR}
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
@@ -442,14 +394,6 @@ IF(PC_ZIP_FOUND)
     INCLUDE_DIRECTORIES( ${PC_ZIP_INCLUDE_DIRS} )
 ELSE()
     INCLUDE_DIRECTORIES( ${ZIP_INCLUDE_DIRS} )
-ENDIF()
-
-IF(APPLE)
-  IF(PC_ZZIPLIB_FOUND)
-    INCLUDE_DIRECTORIES( ${PC_ZZIPLIB_INCLUDE_DIRS} )
-  ELSE()
-    INCLUDE_DIRECTORIES( ${ZZIPLIB_INCLUDE_DIRS} )
-  ENDIF()
 ENDIF()
 
 INCLUDE_DIRECTORIES( ${ZLIB_INCLUDE_DIR} )
@@ -480,7 +424,8 @@ TARGET_LINK_LIBRARIES(mudlet
     ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    irccqt
+    communi
+    lua_yajl
 )
 
 IF(PC_ZIP_FOUND)
@@ -490,11 +435,7 @@ ELSE()
 ENDIF()
 
 IF(APPLE)
-  IF(PC_ZZIPLIB_FOUND)
-    TARGET_LINK_LIBRARIES(mudlet ${PC_ZZIPLIB_LIBRARIES})
-  ELSE()
-    TARGET_LINK_LIBRARIES(mudlet ${ZZIPLIB_LIBRARIES})
-  ENDIF()
+  TARGET_LINK_LIBRARIES(mudlet luazip)
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)

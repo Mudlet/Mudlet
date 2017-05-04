@@ -22,10 +22,10 @@
 #include "FontManager.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFontDatabase>
 #include <QString>
 #include <QStringList>
-#include <QDir>
 #include "post_guard.h"
 
 #include <iostream>
@@ -45,13 +45,13 @@ void FontManager::addFonts()
     loadFonts(dir.absolutePath());
 
     // load all fonts in the subfolders of 'font'
-    foreach(QString fontfolder, dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
+    foreach (QString fontfolder, dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
         loadFonts(dir.absolutePath() + "/" + fontfolder);
     }
 }
 
 // loads all of the fonts in the given folder
-void FontManager::loadFonts(QString folder)
+void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
     QStringList filters;
@@ -59,7 +59,7 @@ void FontManager::loadFonts(QString folder)
     QDir dir = folder;
     dir.setNameFilters(filters);
 
-    foreach(QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
+    foreach (QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         if (QFontDatabase::addApplicationFont(dir.absolutePath() + "/" + fontfile) == -1)
             std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
                 data() << "/" << fontfile.toUtf8().data() << std::endl;

@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QMutex>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -40,39 +41,43 @@ class KeyUnit
     friend class XMLimport;
 
 public:
+    KeyUnit(Host* pHost);
 
-                          KeyUnit( Host * pHost );
-    std::list<TKey *>     getKeyRootNodeList()   { QMutexLocker locker(& mKeyUnitLock); return mKeyRootNodeList; }
-    TKey *                getKey( int id );
-    void                  compileAll();
-    bool                  enableKey( QString & name );
-    bool                  disableKey( QString & name );
-    bool                  registerKey( TKey * pT );
-    void                  unregisterKey( TKey * pT );
-    void                  reParentKey( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    int                  getNewID();
-    QString               getKeyName( int keyCode, int modifier );
-    void                  setupKeyNames();
-    void                  uninstall( QString );
-    void                  _uninstall( TKey * pChild, QString packageName );
-    bool                  processDataStream( int, int );
-    QMutex                mKeyUnitLock;
-    QList<TKey*>        uninstallList;
+    std::list<TKey*> getKeyRootNodeList()
+    {
+        QMutexLocker locker(&mKeyUnitLock);
+        return mKeyRootNodeList;
+    }
+
+    TKey* getKey(int id);
+    void compileAll();
+    bool enableKey(const QString& name);
+    bool disableKey(const QString& name);
+    bool registerKey(TKey* pT);
+    void unregisterKey(TKey* pT);
+    void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    int getNewID();
+    QString getKeyName(int keyCode, int modifier);
+    void setupKeyNames();
+    void uninstall(const QString&);
+    void _uninstall(TKey* pChild, const QString& packageName);
+    bool processDataStream(int, int);
+    QMutex mKeyUnitLock;
+    QList<TKey*> uninstallList;
 
 private:
-    KeyUnit(){;}
-    TKey *                getKeyPrivate( int id );
-    void                  addKeyRootNode( TKey * pT, int parentPosition = -1, int childPosition = -1 );
-    void                  addKey( TKey * pT );
-    void                  removeKeyRootNode( TKey * pT );
-    void                  removeKey( TKey *);
-    Host *                mpHost;
-    QMap<int, TKey *>     mKeyMap;
-    std::list<TKey *>     mKeyRootNodeList;
-    int                 mMaxID;
-    bool                  mModuleMember;
-    QMap<int, QString>    mKeys;
-
+    KeyUnit() {}
+    TKey* getKeyPrivate(int id);
+    void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1);
+    void addKey(TKey* pT);
+    void removeKeyRootNode(TKey* pT);
+    void removeKey(TKey*);
+    QPointer<Host> mpHost;
+    QMap<int, TKey*> mKeyMap;
+    std::list<TKey*> mKeyRootNodeList;
+    int mMaxID;
+    bool mModuleMember;
+    QMap<int, QString> mKeys;
 };
 
 #endif // MUDLET_KEYUNIT_H

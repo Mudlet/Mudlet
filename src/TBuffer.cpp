@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -163,6 +164,20 @@ TBuffer::TBuffer( Host * pH )
 , mFgColorCode       ( false )
 , mBgColorCode       ( false )
 , mIsHighColorMode   ( false )
+, speedTP()
+, speedSequencer()
+, speedAppend()
+, msLength()
+, msPos()
+, mOpenMainQuote()
+, mEchoText()
+, mIsDefaultColor()
+, isUserScrollBack()
+, currentFgColorProperty()
+, maxx()
+, maxy()
+, hadLF()
+, mCode()
 {
     clear();
     newLines = 0;
@@ -172,10 +187,10 @@ TBuffer::TBuffer( Host * pH )
     mHighColorModeForeground = false;
     mHighColorModeBackground = false;
 
-    TMxpElement * _element = new TMxpElement;
-    _element->name = "SEND";
-    _element->href = "";
-    _element->hint = "";
+    TMxpElement _element;
+    _element.name = "SEND";
+    _element.href = "";
+    _element.hint = "";
     mMXP_Elements["SEND"] = _element;
 }
 
@@ -292,11 +307,13 @@ QPoint TBuffer::getEndPos()
 {
     int x = 0;
     int y = 0;
-    if( buffer.size() > 0 )
+    if (!buffer.empty()) {
         y = buffer.size()-1;
-    if( buffer[y].size() > 0 )
-        x = buffer[y].size()-1;
-    QPoint P_end( x, y );
+        if (!buffer.at(y).empty()) {
+            x = buffer.at(y).size() - 1;
+        }
+    }
+    QPoint P_end(x, y);
     return P_end;
 }
 
@@ -312,7 +329,7 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QStringList & hint, TChar format )
+void TBuffer::addLink( bool trigMode, const QString & text, QStringList & command, QStringList & hint, TChar format )
 {
     mLinkID++;
     if( mLinkID > 1000 )
@@ -399,7 +416,7 @@ void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QSt
 //            std::deque<TChar> newLine;
 //            buffer.push_back( newLine );
 //            lineBuffer.push_back( QString() );
-//            QString time = "-----";
+//            QString time = "-------------";
 //            timeBuffer << time;
 //            promptBuffer << false;
 //            dirty << true;
@@ -438,7 +455,7 @@ void TBuffer::addLink( bool trigMode, QString & text, QStringList & command, QSt
 //                        lineBuffer.append( lineRest );
 //                    else
 //                        lineBuffer.append( nothing );
-//                    QString time = "-----";
+//                    QString time = "-------------";
 //                    timeBuffer << time;
 //                    promptBuffer << false;
 //                    dirty << true;
@@ -543,7 +560,7 @@ const QChar cESC = '\033';
 const QString cDigit = "0123456789";
 
 
-inline int TBuffer::lookupColor( QString & s, int pos )
+inline int TBuffer::lookupColor(const QString & s, int pos )
 {
     int ret = 0;
     QString code;
@@ -601,7 +618,6 @@ void TBuffer::translateToPlainText( std::string & s )
     mFormatSequenceRest="";
     int msPos = 0;
     QString packetTime = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-    //bool firstChar = (lineBuffer.back().size() == 0); //FIXME
     if( msLength < 1 ) return;
 
     while( true )
@@ -1421,10 +1437,10 @@ void TBuffer::translateToPlainText( std::string & s )
                                 _hint = _hint.replace( '\"', "" );//NEU
                                 _hint = _hint.replace( "&#34", "\"" );
                             }
-                            TMxpElement * _element = new TMxpElement;
-                            _element->name = _tn;
-                            _element->href = _ref;
-                            _element->hint = _hint;
+                            TMxpElement _element;
+                            _element.name = _tn;
+                            _element.href = _ref;
+                            _element.hint = _hint;
                             mMXP_Elements[_tn] = _element;
                         }
                         openT = 0;
@@ -1474,9 +1490,9 @@ void TBuffer::translateToPlainText( std::string & s )
                         else
                             _tp = "";
                         QString _t1 = _tp.toUpper();
-                        TMxpElement * _element = mMXP_Elements[_tn];
-                        QString _t2 = _element->href;
-                        QString _t3 = _element->hint;
+                        const TMxpElement & _element = mMXP_Elements[_tn];
+                        QString _t2 = _element.href;
+                        QString _t3 = _element.hint;
                         bool _userTag = true;
                         if( _t2.size() < 1 ) _userTag = false;
                         QRegExp _rex;
@@ -1575,11 +1591,6 @@ void TBuffer::translateToPlainText( std::string & s )
                             }
 
                         }
-//                        if( mMXP_SEND_NO_REF_MODE )
-//                        {
-//                            _t1.clear();
-//                            _t2.clear();
-//                        }
 
                         mLinkStore[mLinkID] = _tl;
 
@@ -1621,11 +1632,6 @@ void TBuffer::translateToPlainText( std::string & s )
                     continue;
                 }
             }
-
-//            if( mMXP_SEND_NO_REF_MODE )
-//            {
-//                mAssembleRef += ch;
-//            }
 
             if( ch == '&' || mIgnoreTag )
             {
@@ -1795,9 +1801,6 @@ void TBuffer::translateToPlainText( std::string & s )
         if( mMXP_LINK_MODE )
         {
             c.link = mLinkID;
-//            c.fgR = 0;
-//            c.fgG = 0;
-//            c.fgB = 255;
             c.flags |= TCHAR_UNDERLINE;
         }
 
@@ -1807,7 +1810,7 @@ void TBuffer::translateToPlainText( std::string & s )
     }
 }
 
-void TBuffer::append( QString & text,
+void TBuffer::append(const QString & text,
                       int sub_start,
                       int sub_end,
                       int fgColorR,
@@ -1857,7 +1860,7 @@ void TBuffer::append( QString & text,
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
-            timeBuffer << QStringLiteral( "-----" );
+            timeBuffer << QStringLiteral( "-------------" );
             promptBuffer << false;
             dirty << true;
             mLastLine++;
@@ -1889,7 +1892,7 @@ void TBuffer::append( QString & text,
                     else {
                         lineBuffer.append( QString() );
                     }
-                    timeBuffer << QStringLiteral( "-----" );
+                    timeBuffer << QStringLiteral( "-------------" );
                     promptBuffer << false;
                     dirty << true;
                     mLastLine++;
@@ -1915,7 +1918,7 @@ void TBuffer::append( QString & text,
     }
 }
 
-void TBuffer::appendLine( QString & text,
+void TBuffer::appendLine( const QString & text,
                           int sub_start,
                           int sub_end,
                           int fgColorR,
@@ -1969,7 +1972,7 @@ void TBuffer::appendLine( QString & text,
     }
 }
 
-QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
+QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
 {
     QPoint P(-1, -1);
 
@@ -1980,9 +1983,9 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
     if( y >= static_cast<int>(buffer.size()) ) return P;
 
 
-    for( int i=0; i<text.size(); i++ )
+    for(auto character : text)
     {
-        if( text.at(i) == QChar('\n') )
+        if( character == QChar('\n') )
         {
             std::deque<TChar> newLine;
             TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
@@ -1999,10 +2002,9 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
             y++;
             continue;
         }
-        lineBuffer[y].insert( x, text.at( i ) );
+        lineBuffer[y].insert( x, character );
         TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
-        typedef std::deque<TChar>::iterator IT;
-        IT it = buffer[y].begin();
+        auto it = buffer[y].begin();
         buffer[y].insert( it+x, c );
     }
     dirty[y] = true;
@@ -2012,7 +2014,7 @@ QPoint TBuffer::insert( QPoint & where, QString text, int fgColorR, int fgColorG
 }
 
 
-bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
+bool TBuffer::insertInLine( QPoint & P, const QString & text, TChar & format )
 {
     if( text.size() < 1 ) return false;
     int x = P.x();
@@ -2032,8 +2034,7 @@ bool TBuffer::insertInLine( QPoint & P, QString & text, TChar & format )
         {
             lineBuffer[y].insert( x+i, text.at( i ) );
             TChar c = format;
-            typedef std::deque<TChar>::iterator IT;
-            IT it = buffer[y].begin();
+            auto it = buffer[y].begin();
             buffer[y].insert( it+x+i, c );
         }
     }
@@ -2076,8 +2077,8 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
                      (buffer[y][x].flags & TCHAR_ITALICS),
                      (buffer[y][x].flags & TCHAR_UNDERLINE),
                      (buffer[y][x].flags & TCHAR_STRIKEOUT) );
-        }
-        return slice;
+    }
+    return slice;
 }
 
 TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
@@ -2147,8 +2148,6 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
         TChar format;
         if( y == -1 )
         {
-            //FIXME:
-            //wrap( y,mWrapAt, mWrapIndent, format );
         }
         else
         {
@@ -2157,7 +2156,7 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
     }
 }
 
-void TBuffer::appendBuffer( TBuffer chunk )
+void TBuffer::appendBuffer( const TBuffer& chunk )
 {
     if( chunk.buffer.size() < 1 )
     {
@@ -2243,7 +2242,6 @@ inline int TBuffer::wrap( int startLine )
     int lineCount = 0;
     for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
     {
-        //assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
         bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = "";
@@ -2398,11 +2396,15 @@ void TBuffer::log( int from, int to )
                 {
                     QPoint P1 = QPoint(0,i);
                     QPoint P2 = QPoint( buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2);
+                    toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
                 }
                 else
                 {
-                    toLog = lineBuffer[i];
+                    if( mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty() )
+                    {
+                        toLog = timeBuffer[i].left(13);
+                    }
+                    toLog.append(lineBuffer[i]);
                     toLog.append("\n");
                 }
                 mpHost->mpConsole->mLogStream << toLog;
@@ -2425,8 +2427,6 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
     {
         if( i > startLine ) break; //only wrap one line of text
 
-        //assert( static_cast<int>(buffer[i].size()) == lineBuffer[i].size() );
-        //assert( static_cast<int>(buffer.size()) == promptBuffer.size() );
         std::deque<TChar> newLine;
         QString lineText;
 
@@ -2568,7 +2568,7 @@ QString & TBuffer::line( int n )
 }
 
 
-int TBuffer::find( int line, QString what, int pos=0 )
+int TBuffer::find( int line, const QString& what, int pos=0 )
 {
     if( lineBuffer[line].size() >= pos ) return -1;
     if( pos < 0 ) return -1;
@@ -2577,7 +2577,7 @@ int TBuffer::find( int line, QString what, int pos=0 )
 }
 
 
-QStringList TBuffer::split( int line, QString splitter )
+QStringList TBuffer::split( int line, const QString& splitter )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
     return lineBuffer[line].split( splitter );
@@ -2603,7 +2603,7 @@ void TBuffer::expandLine( int y, int count, TChar & pC )
 
 bool TBuffer::replaceInLine( QPoint & P_begin,
                              QPoint & P_end,
-                             QString & with,
+                             const QString & with,
                              TChar & format )
 {
     int x1 = P_begin.x();
@@ -2652,9 +2652,8 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
             x_end = xe;
         }
         lineBuffer[y].remove( x, x_end-x );
-        typedef std::deque<TChar>::iterator IT;
-        IT it1 = buffer[y].begin()+x;
-        IT it2 = buffer[y].begin()+x_end;
+        auto it1 = buffer[y].begin()+x;
+        auto it2 = buffer[y].begin()+x_end;
         buffer[y].erase( it1, it2 );
     }
 
@@ -2664,7 +2663,7 @@ bool TBuffer::replaceInLine( QPoint & P_begin,
 }
 
 
-bool TBuffer::replace( int line, QString what, QString with )
+bool TBuffer::replace( int line, const QString& what, const QString& with )
 {
     if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) )
         return false;
@@ -2802,7 +2801,7 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
         return false;
 }
 
-bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, QString linkText, QStringList & linkFunction, QStringList & linkHint )
+bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -3140,7 +3139,7 @@ QStringList TBuffer::getEndLines( int n )
 }
 
 
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding )
 {
     int y = P1.y();
     int x = P1.x();
@@ -3161,9 +3160,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     bool bold = false;
     bool italics = false;
     bool underline = false;
-    bool overline = false;
+//    bool overline = false;
     bool strikeout = false;
-    bool inverse = false;
+//    bool inverse = false;
     int fgR=0;
     int fgG=0;
     int fgB=0;
@@ -3176,6 +3175,29 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontStyle;
     QString textDecoration;
     bool firstSpan = true;
+    if( allowedTimestamps && !timeBuffer[y].isEmpty() )
+    {
+        firstSpan = false;
+        // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
+        s.append("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); ");
+        s.append("font-weight: normal; font-style: normal; text-decoration: normal\">");
+        s.append(timeBuffer[y].left(13));
+    }
+    if( spacePadding > 0 )
+    {
+        // used for "copy HTML", first line of selection
+        if( firstSpan )
+        {
+            firstSpan = false;
+        }
+        else
+        {
+            s.append( "</span>" );
+        }
+        s.append( "<span>" );
+        s.append( QString( spacePadding, QLatin1Char(' ') ) );
+        // Pad out with spaces to the right so a partial first line lines up
+    }
     for( ; x<P2.x(); x++ ) {
         if( x >= static_cast<int>(buffer[y].size()) ) {
             break;
@@ -3224,7 +3246,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
             else {
                 fontStyle = "normal";
             }
-            if( ! (underline || strikeout || overline) ) {
+            if( ! (underline || strikeout /* || overline */ ) ) {
                 textDecoration = "normal";
             }
             else {
@@ -3235,9 +3257,9 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
                 if( strikeout ) {
                     textDecoration += "line-through ";
                 }
-                if( overline ) {
-                    textDecoration += "overline ";
-                }
+//                if( overline ) {
+//                    textDecoration += "overline ";
+//                }
                 textDecoration = textDecoration.trimmed();
             }
             s += "<span style=\"";

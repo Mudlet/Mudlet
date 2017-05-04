@@ -23,27 +23,24 @@
 #include "glwidget.h"
 
 
-#include "dlgMapper.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgMapper.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
 #include "post_guard.h"
 
-#if QT_VERSION >= 0x040800
-    #ifdef __APPLE__
-        #include <OpenGL/glu.h>
-    #else
-        #include <GL/glu.h>
-    #endif
-#endif
-
 #include <math.h>
 
+#ifdef Q_OS_MACOS
+    #include <OpenGL/glu.h>
+#else
+    #include <GL/glu.h>
+#endif
 
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
@@ -57,6 +54,11 @@ float zmax, zmin;
 
 GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+, mShowInfo()
+, dehnung()
+, rotTri()
+, rotQuad()
+, mTarget()
 {
     mpMap = 0;
     xDist=0.0;
@@ -87,6 +89,20 @@ GLWidget::GLWidget(QWidget *parent)
 
 GLWidget::GLWidget(TMap * pM, QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+, mShowInfo()
+, xRot()
+, yRot()
+, zRot()
+, xDist()
+, yDist()
+, zDist()
+, dehnung()
+, mShowTopLevels()
+, mShowBottomLevels()
+, rotTri()
+, rotQuad()
+, mScale()
+, mTarget()
 {
     mpHost = 0;
     mpMap = pM;
@@ -572,11 +588,11 @@ void GLWidget::paintGL()
                               ebenenColor[ef][2],
                               ebenenColor[ef][3]);*/
                 }
-                for( int k=0; k<exitList.size(); k++ )
+                for(int k : exitList)
                 {
                     bool areaExit = false;
-                    if( exitList[k] == -1 ) continue;
-                    TRoom * pExit = mpMap->mpRoomDB->getRoom( exitList[k] );
+                    if( k == -1 ) continue;
+                    TRoom * pExit = mpMap->mpRoomDB->getRoom( k );
                     if( !pExit )
                     {
                         continue;
@@ -601,7 +617,7 @@ void GLWidget::paintGL()
                         glLineWidth(1);//1/mScale+2);
                     else
                         glLineWidth(1);//1/mScale);
-                    if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
+                    if( k == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
@@ -628,25 +644,25 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glVertex3f( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()-1 );
                     }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
@@ -664,32 +680,32 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.1, 0.1, 0.1);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
                         float mc6[] = { 85.0/255.0, 170.0/255.0, 0.0/255.0, 0.0 };
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc6);
                         glMateriali(GL_FRONT, GL_SHININESS, 96);
 
-                        glLoadName( exitList[k] );
+                        glLoadName( k );
                         quads++;
                         glBegin( GL_QUADS );
                         glNormal3f(0.57735, -0.57735, 0.57735);
@@ -761,76 +777,76 @@ void GLWidget::paintGL()
                         switch( env )
                         {
                         case 1:
-                            glColor4b(128,50,50,200);
+                            glColor4ub(128,50,50,200);
                             mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 2:
-                            glColor4b(128,128,50, 200);
+                            glColor4ub(128,128,50, 200);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 3:
-                            glColor4b(50,128,50,200);
+                            glColor4ub(50,128,50,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 4:
-                            glColor4b(50,50,128,200);
+                            glColor4ub(50,50,128,200);
                             mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 5:
-                            glColor4b(128,50,128,200);
+                            glColor4ub(128,50,128,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 6:
-                            glColor4b(50,128,128,200);
+                            glColor4ub(50,128,128,200);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 7:
-                            glColor4b(52,38,78,200);
+                            glColor4ub(52,38,78,200);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 8:
-                            glColor4b(65, 55, 35, 200);
+                            glColor4ub(65, 55, 35, 200);
                             mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 9:
-                            glColor4b(175,50,50,200);
+                            glColor4ub(175,50,50,200);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 10:
-                            glColor4b(255,255,50,200);
+                            glColor4ub(255,255,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
                         case 11:
-                            glColor4b(50,175,175,200);
+                            glColor4ub(50,175,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 12:
-                            glColor4b(175,175,50,200);
+                            glColor4ub(175,175,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 13:
-                            glColor4b(175,50,175,200);
+                            glColor4ub(175,50,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 14:
-                            glColor4b(50,175,50,200);
+                            glColor4ub(50,175,50,200);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 15:
-                            glColor4b(50,50,175,200);
+                            glColor4ub(50,50,175,200);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         default: //user defined room color
                             if( ! mpMap->customEnvColors.contains(env) ) break;
                             QColor &_c = mpMap->customEnvColors[env];
-                            glColor4b(_c.red(),_c.green(),_c.blue(),25);
+                            glColor4ub(_c.red(),_c.green(),_c.blue(),25);
                             mc3[0]=_c.redF();
                             mc3[1]=_c.greenF();
                             mc3[2]=_c.blueF();
@@ -842,25 +858,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.05, 0.05, 0.020);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
 
                         glBegin( GL_QUADS );
@@ -924,11 +940,11 @@ void GLWidget::paintGL()
             }
             else
             {
-                for( int k=0; k<exitList.size(); k++ )
+                for(int k : exitList)
                 {
                     bool areaExit = false;
-                    if( exitList[k] == -1 ) continue;
-                    TRoom * pExit = mpMap->mpRoomDB->getRoom( exitList[k] );
+                    if( k == -1 ) continue;
+                    TRoom * pExit = mpMap->mpRoomDB->getRoom( k );
                     if( !pExit )
                     {
                         continue;
@@ -954,7 +970,7 @@ void GLWidget::paintGL()
                         glLineWidth(1);//1/mScale+2);
                     else
                         glLineWidth(1);//1/mScale);
-                    if( exitList[k] == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
+                    if( k == mRID || ( ( rz == pz ) && ( rx == px ) && ( ry == py ) ) )
                     {
                         glDisable(GL_BLEND);
                         glEnable( GL_LIGHTING );
@@ -982,25 +998,25 @@ void GLWidget::paintGL()
                     }
                     else
                     {
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glVertex3f( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glVertex3f( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glVertex3f( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glVertex3f( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glVertex3f( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glVertex3f( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glVertex3f( p2.x(), p2.y(), p2.z()-1 );
                     }
                     glVertex3f( p2.x(), p2.y(), p2.z() );
@@ -1018,28 +1034,28 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.1, 0.1, 0.1);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( p2.x(), p2.y()+1, p2.z() );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( p2.x(), p2.y()-1, p2.z() );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( p2.x()-1, p2.y(), p2.z() );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( p2.x()+1, p2.y(), p2.z() );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()-1, p2.z() );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( p2.x()+1, p2.y()-1, p2.z() );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( p2.x()+1, p2.y()+1, p2.z() );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( p2.x()-1, p2.y()+1, p2.z() );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()+1 );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( p2.x(), p2.y(), p2.z()-1 );
 
-                        glLoadName( exitList[k] );
+                        glLoadName( k );
                         quads++;
                         glBegin( GL_QUADS );
                         glNormal3f(0.57735, -0.57735, 0.57735);
@@ -1112,76 +1128,76 @@ void GLWidget::paintGL()
                         switch( env )
                         {
                         case 1:
-                            glColor4b(128,50,50,2);
+                            glColor4ub(128,50,50,2);
                             mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 2:
-                            glColor4b(128,128,50, 2);
+                            glColor4ub(128,128,50, 2);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 3:
-                            glColor4b(50,128,50,2);
+                            glColor4ub(50,128,50,2);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 4:
-                            glColor4b(50,50,128,2);
+                            glColor4ub(50,50,128,2);
                             mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 5:
-                            glColor4b(128,50,128,2);
+                            glColor4ub(128,50,128,2);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                             break;
                         case 6:
-                            glColor4b(50,128,128,2);
+                            glColor4ub(50,128,128,2);
                             mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 7:
-                            glColor4b(52,38,78,2);
+                            glColor4ub(52,38,78,2);
                             mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                             break;
                         case 8:
-                            glColor4b(65, 55, 35, 2);
+                            glColor4ub(65, 55, 35, 2);
                             mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 9:
-                            glColor4b(175,50,50,2);
+                            glColor4ub(175,50,50,2);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 10:
-                            glColor4b(255,255,50,2);
+                            glColor4ub(255,255,50,2);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
                         case 11:
-                            glColor4b(50,175,175,2);
+                            glColor4ub(50,175,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 12:
-                            glColor4b(175,175,50,2);
+                            glColor4ub(175,175,50,2);
                             mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
 
                         case 13:
-                            glColor4b(175,50,175,2);
+                            glColor4ub(175,50,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 14:
-                            glColor4b(50,175,50,2);
+                            glColor4ub(50,175,50,2);
                             mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         case 15:
-                            glColor4b(50,50,175,2);
+                            glColor4ub(50,50,175,2);
                             mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                             break;
                         default: //user defined room color
                             if( ! mpMap->customEnvColors.contains(env) ) break;
                             QColor &_c = mpMap->customEnvColors[env];
-                            glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                            glColor4ub(_c.red(),_c.green(),_c.blue(),255);
                             mc3[0]=_c.redF();
                             mc3[1]=_c.greenF();
                             mc3[2]=_c.blueF();
@@ -1193,25 +1209,25 @@ void GLWidget::paintGL()
                         glLoadIdentity();
                         gluLookAt(px*0.1+xRot, py*0.1+yRot, pz*0.1+zRot, px*0.1, py*0.1, pz*0.1,0.0,1.0,0.0);
                         glScalef( 0.05, 0.05, 0.020);
-                        if( pR->getNorth() == exitList[k] )
+                        if( pR->getNorth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouth() == exitList[k] )
+                        else if( pR->getSouth() == k )
                             glTranslatef( 2*p2.x(), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getWest() == exitList[k] )
+                        else if( pR->getWest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getEast() == exitList[k] )
+                        else if( pR->getEast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*p2.y(), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSouthwest() == exitList[k] )
+                        else if( pR->getSouthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getSoutheast() == exitList[k] )
+                        else if( pR->getSoutheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()-1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNortheast() == exitList[k] )
+                        else if( pR->getNortheast() == k )
                             glTranslatef( 2*(p2.x()+1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getNorthwest() == exitList[k] )
+                        else if( pR->getNorthwest() == k )
                             glTranslatef( 2*(p2.x()-1), 2*(p2.y()+1), 5.0*(p2.z()+0.25) );
-                        else if( pR->getUp() == exitList[k] )
+                        else if( pR->getUp() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()+1+0.25) );
-                        else if( pR->getDown() == exitList[k] )
+                        else if( pR->getDown() == k )
                             glTranslatef( 2*p2.x(), 2*p2.y(), 5.0*(p2.z()-1+0.25) );
 
                         glBegin( GL_QUADS );
@@ -1282,11 +1298,6 @@ void GLWidget::paintGL()
         else
             zEbene += 1.0;
     }
-
-    if( zRot <= 0 )
-        zEbene = zmax;
-    else
-        zEbene = zmin;
 
     quads = 0;
     zEbene = zmin;
@@ -1453,76 +1464,76 @@ void GLWidget::paintGL()
                 switch( env )
                 {
                 case 1:
-                    glColor4b(128,50,50,2);
+                    glColor4ub(128,50,50,2);
                     mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 2:
-                    glColor4b(128,128,50, 2);
+                    glColor4ub(128,128,50, 2);
                     mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
                 case 3:
-                    glColor4b(50,128,50,2);
+                    glColor4ub(50,128,50,2);
                     mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 4:
-                    glColor4b(50,50,128,2);
+                    glColor4ub(50,50,128,2);
                     mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 5:
-                    glColor4b(128,50,128,2);
+                    glColor4ub(128,50,128,2);
                     mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=0.2;
                     break;
                 case 6:
-                    glColor4b(50,128,128,2);
+                    glColor4ub(50,128,128,2);
                     mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                     break;
                 case 7:
-                    glColor4b(52,38,78,2);
+                    glColor4ub(52,38,78,2);
                     mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=0.2;
                     break;
                 case 8:
-                    glColor4b(65, 55, 35, 2);
+                    glColor4ub(65, 55, 35, 2);
                     mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 9:
-                    glColor4b(175,50,50,2);
+                    glColor4ub(175,50,50,2);
                     mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 10:
-                    glColor4b(255,255,50,2);
+                    glColor4ub(255,255,50,2);
                     mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                     break;
                 case 11:
-                    glColor4b(50,175,175,2);
+                    glColor4ub(50,175,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 12:
-                    glColor4b(175,175,50,2);
+                    glColor4ub(175,175,50,2);
                     mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
 
                 case 13:
-                    glColor4b(175,50,175,2);
+                    glColor4ub(175,50,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
                 case 14:
-                    glColor4b(50,175,50,2);
+                    glColor4ub(50,175,50,2);
                     mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
                 case 15:
-                    glColor4b(50,50,175,2);
+                    glColor4ub(50,50,175,2);
                     mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=0.2;
                     break;
                 default: //user defined room color
                     if( ! mpMap->customEnvColors.contains(env) ) break;
                     QColor &_c = mpMap->customEnvColors[env];
-                    glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                    glColor4ub(_c.red(),_c.green(),_c.blue(),255);
                     mc3[0]=_c.redF();
                     mc3[1]=_c.greenF();
                     mc3[2]=_c.blueF();
@@ -1698,76 +1709,76 @@ void GLWidget::paintGL()
             switch( env )
             {
             case 1:
-                glColor4b(128,50,50,255);
+                glColor4ub(128,50,50,255);
                 mc3[0]=128.0/255.0; mc3[1]=0.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 2:
-                glColor4b(128,128,50, 255);
+                glColor4ub(128,128,50, 255);
                 mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 3:
-                glColor4b(50,128,50,255);
+                glColor4ub(50,128,50,255);
                 mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 4:
-                glColor4b(50,50,128,255);
+                glColor4ub(50,50,128,255);
                 mc3[0]=0.0/255.0; mc3[1]=0.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 5:
-                glColor4b(128,50,128,255);
+                glColor4ub(128,50,128,255);
                 mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=0.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 6:
-                glColor4b(50,128,128,255);
+                glColor4ub(50,128,128,255);
                 mc3[0]=0.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 7:
-                glColor4b(52,38,78,255);
+                glColor4ub(52,38,78,255);
                 mc3[0]=128.0/255.0; mc3[1]=128.0/255.0; mc3[2]=128.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 8:
-                glColor4b(65, 55, 35, 255);
+                glColor4ub(65, 55, 35, 255);
                 mc3[0]=55.0/255.0; mc3[1]=55.0/255.0; mc3[2]=55.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 9:
-                glColor4b(175,50,50,255);
+                glColor4ub(175,50,50,255);
                 mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 10:
-                glColor4b(255,255,50,255);
+                glColor4ub(255,255,50,255);
                 mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 11:
-                glColor4b(50,175,175,255);
+                glColor4ub(50,175,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=50.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 12:
-                glColor4b(175,175,50,255);
+                glColor4ub(175,175,50,255);
                 mc3[0]=50.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
 
             case 13:
-                glColor4b(175,50,175,255);
+                glColor4ub(175,50,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=50.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 14:
-                glColor4b(50,175,50,255);
+                glColor4ub(50,175,50,255);
                 mc3[0]=50.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
             case 15:
-                glColor4b(50,50,175,255);
+                glColor4ub(50,50,175,255);
                 mc3[0]=255.0/255.0; mc3[1]=255.0/255.0; mc3[2]=255.0/255.0; mc3[3]=255.0/255.0;
                 break;
             default: //user defined room color
                 if( ! mpMap->customEnvColors.contains(env) ) break;
                 QColor &_c = mpMap->customEnvColors[env];
-                glColor4b(_c.red(),_c.green(),_c.blue(),255);
+                glColor4ub(_c.red(),_c.green(),_c.blue(),255);
                 mc3[0]=_c.redF();
                 mc3[1]=_c.greenF();
                 mc3[2]=_c.blueF();
@@ -1860,7 +1871,7 @@ void GLWidget::paintGL()
             glVertex3f(1.0/dehnung, 1.0/dehnung, 1.0/dehnung);
             glEnd();
 
-            glColor4b(128,128,128,255);
+            glColor4ub(128,128,128,255);
 
 
             glBegin( GL_TRIANGLES );

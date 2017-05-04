@@ -23,38 +23,40 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
 
-TTimer::TTimer( TTimer * parent, Host * pHost )
-: Tree<TTimer>( parent )
-, mRegisteredAnonymousLuaFunction( false )
+TTimer::TTimer(TTimer* parent, Host* pHost)
+: Tree<TTimer>(parent)
+, mRegisteredAnonymousLuaFunction(false)
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mIsTempTimer( false )
-, mpTimer( new QTimer )
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
+, mIsTempTimer(false)
+, mpTimer(new QTimer)
 , mModuleMember(false)
+, mIsFolder()
 {
     mpTimer->stop();
 }
 
-TTimer::TTimer( QString name, QTime time, Host * pHost )
+TTimer::TTimer(const QString& name, QTime time, Host* pHost)
 : Tree<TTimer>(0)
-, mRegisteredAnonymousLuaFunction( false )
+, mRegisteredAnonymousLuaFunction(false)
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mName( name )
-, mTime( time )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mIsTempTimer( false )
-, mpTimer( new QTimer )
+, mName(name)
+, mTime(time)
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
+, mIsTempTimer(false)
+, mpTimer(new QTimer)
 , mModuleMember(false)
+, mIsFolder()
 {
     mpTimer->stop();
 }
@@ -62,45 +64,40 @@ TTimer::TTimer( QString name, QTime time, Host * pHost )
 TTimer::~TTimer()
 {
     mpTimer->stop();
-    if( ! mpHost )
-    {
+    if (!mpHost) {
         return;
     }
-    mpHost->getTimerUnit()->unregisterTimer( this );
-    mudlet::self()->unregisterTimer( mpTimer );
+    mpHost->getTimerUnit()->unregisterTimer(this);
+    mudlet::self()->unregisterTimer(mpTimer);
     mpTimer->deleteLater();
-    //qDebug()<<"DELETING TIMER:"<<this;
 }
 
 bool TTimer::registerTimer()
 {
-    if( ! mpHost )
-    {
+    if (!mpHost) {
         return false;
     }
-    setTime( mTime );
-    mudlet::self()->registerTimer( this, mpTimer );
-    //mpTimer->connect(mpTimer, SIGNAL(timeout()), mudlet::self(),SLOT(slot_timer_fires()));
-    return mpHost->getTimerUnit()->registerTimer( this );
+    setTime(mTime);
+    mudlet::self()->registerTimer(this, mpTimer);
+    return mpHost->getTimerUnit()->registerTimer(this);
 }
 
-void TTimer::setName( QString name )
+void TTimer::setName(const QString& name)
 {
     // temp timers do not need to check for names referring to multiple
     // timer objects as names=ID -> much faster tempTimer creation
-    if( ! mIsTempTimer )
-    {
-        mpHost->getTimerUnit()->mLookupTable.remove( mName, this );
+    if (!mIsTempTimer) {
+        mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getTimerUnit()->mLookupTable.insertMulti( name, this );
+    mpHost->getTimerUnit()->mLookupTable.insertMulti(name, this);
 }
 
-void TTimer::setTime( QTime time )
+void TTimer::setTime(QTime time)
 {
-    QMutexLocker locker(& mLock);
+    QMutexLocker locker(&mLock);
     mTime = time;
-    mpTimer->setInterval( mTime.msec()+(1000*mTime.second())+(1000*60*mTime.minute())+(1000*60*60*mTime.hour()));
+    mpTimer->setInterval(mTime.msec() + (1000 * mTime.second()) + (1000 * 60 * mTime.minute()) + (1000 * 60 * 60 * mTime.hour()));
     mpTimer->stop();
 }
 
@@ -109,31 +106,24 @@ void TTimer::setTime( QTime time )
 //     offset timers: -> their time interval is interpreted as an offset to their parent timer
 bool TTimer::isOffsetTimer()
 {
-    if( mpParent )
-    {
-        if( ! mpParent->isFolder() )
-        {
+    if (mpParent) {
+        if (!mpParent->isFolder()) {
             return true;
-        }
-        else
+        } else {
             return false;
-    }
-    else
-    {
+        }
+    } else {
         return false;
     }
 }
 
-bool TTimer::setIsActive( bool b )
+bool TTimer::setIsActive(bool b)
 {
-    bool condition1 = Tree<TTimer>::setIsActive( b );
+    bool condition1 = Tree<TTimer>::setIsActive(b);
     bool condition2 = canBeUnlocked(0);
-    if( condition1 && condition2 )
-    {
+    if (condition1 && condition2) {
         start();
-    }
-    else
-    {
+    } else {
         stop();
     }
     return condition1 && condition2;
@@ -142,12 +132,13 @@ bool TTimer::setIsActive( bool b )
 
 void TTimer::start()
 {
-    if( mIsTempTimer )
-        mpTimer->setSingleShot( true );
-    else
-        mpTimer->setSingleShot( false );
+    if (mIsTempTimer) {
+        mpTimer->setSingleShot(true);
+    } else {
+        mpTimer->setSingleShot(false);
+    }
 
-    if( ! mIsFolder )
+    if (!mIsFolder)
         mpTimer->start();
     else
         stop();
@@ -160,48 +151,40 @@ void TTimer::stop()
 
 void TTimer::compile()
 {
-    if( mNeedsToBeCompiled )
-    {
-        if( ! compileScript() )
-        {
-            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of timer:"<<mName<<"\n">>0;}
+    if (mNeedsToBeCompiled) {
+        if (!compileScript()) {
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> 0;
+            }
             mOK_code = false;
         }
     }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        pChild->compile();
+    for (auto timer : *mpMyChildrenList) {
+        timer->compile();
     }
 }
 
 void TTimer::compileAll()
 {
     mNeedsToBeCompiled = true;
-    if( ! compileScript() )
-    {
-        if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of timer:"<<mName<<"\n">>0;}
+    if (!compileScript()) {
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> 0;
+        }
         mOK_code = false;
     }
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        pChild->compileAll();
+    for (auto timer : *mpMyChildrenList) {
+        timer->compileAll();
     }
 }
 
-bool TTimer::setScript( QString & script )
+bool TTimer::setScript(const QString& script)
 {
     mScript = script;
-    if( script == "" )
-    {
+    if (script == "") {
         mNeedsToBeCompiled = false;
         mOK_code = true;
-    }
-    else
-    {
+    } else {
         mNeedsToBeCompiled = true;
         mOK_code = compileScript();
     }
@@ -210,184 +193,138 @@ bool TTimer::setScript( QString & script )
 
 bool TTimer::compileScript()
 {
-    mFuncName = QString("Timer")+QString::number( mID );
-    QString code = QString("function ")+ mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QString("Timer") + QString::number(mID);
+    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
-    if( mpHost->mLuaInterpreter.compile( code, error ) )
-    {
+    if (mpHost->mLuaInterpreter.compile(code, error, "Timer: " + getName())) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    }
-    else
-    {
+    } else {
         mOK_code = false;
-        setError( error );
+        setError(error);
         return false;
     }
 }
 
 bool TTimer::checkRestart()
 {
-    return ( ! mIsTempTimer
-            && ! isOffsetTimer()
-            && isActive()
-            && ! mIsFolder );
+    return (!mIsTempTimer && !isOffsetTimer() && isActive() && !mIsFolder);
 }
 
 void TTimer::execute()
 {
-    if( ! isActive() || mIsFolder ) {
+    if (!isActive() || mIsFolder) {
         mpTimer->stop();
         return;
     }
 
-    if( mIsTempTimer ) {
-        if( mScript.isEmpty() ) {
-            mpHost->mLuaInterpreter.call_luafunction( this );
-        }
-        else {
-            mpHost->mLuaInterpreter.compileAndExecuteScript( mScript );
+    if (mIsTempTimer) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.call_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
         mpTimer->stop();
-        mpHost->mTimerUnit.markCleanup( this );
+        mpHost->getTimerUnit()->markCleanup(this);
         return;
     }
 
-    if( ( ! isFolder() && hasChildren() )
-     || ( isOffsetTimer() ) ) {
-
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin();
-             it != mpMyChildrenList->end();
-             ++it ) {
-
-            TTimer * pChild = *it;
-            if( pChild->isOffsetTimer() ) {
-                pChild->enableTimer( pChild->getID() );
+    if ((!isFolder() && hasChildren()) || (isOffsetTimer())) {
+        for (auto timer : *mpMyChildrenList) {
+            if (timer->isOffsetTimer()) {
+                timer->enableTimer(timer->getID());
             }
         }
-        if( isOffsetTimer() ) {
-            disableTimer( mID );
+        if (isOffsetTimer()) {
+            disableTimer(mID);
             deactivate();
         }
     }
 
-    if( ! mCommand.isEmpty() ) {
-        mpHost->send( mCommand );
+    if (!mCommand.isEmpty()) {
+        mpHost->send(mCommand);
     }
 
-    if( ! mScript.isEmpty() ) {
-        if( mNeedsToBeCompiled ) {
-            if( ! compileScript() ) {
+    if (!mScript.isEmpty()) {
+        if (mNeedsToBeCompiled) {
+            if (!compileScript()) {
                 disableTimer();
                 return;
             }
         }
-        if( ! mpHost->mLuaInterpreter.call( mFuncName, mName ) ) {
+        if (!mpHost->mLuaInterpreter.call(mFuncName, mName)) {
             mpTimer->stop();
         }
     }
 }
 
-bool TTimer::canBeUnlocked( TTimer * pChild )
+bool TTimer::canBeUnlocked(TTimer* pChild)
 {
-    if( shouldBeActive() )
-    {
-        if( ! mpParent )
-        {
+    if (shouldBeActive()) {
+        if (!mpParent) {
             return true;
-        }
-        else
-            return mpParent->canBeUnlocked( 0 );
-    }
-    else
-    {
-        //DumpFamily();
+        } else
+            return mpParent->canBeUnlocked(0);
+    } else {
         return false;
     }
-
 }
 
-void TTimer::enableTimer( int id )
+void TTimer::enableTimer(int id)
 {
-
-    if( mID == id )
-    {
-        if( canBeUnlocked( 0 ) )
-        {
-            if( activate() )
-            {
-                if( mScript.size() > 0 )
-                {
+    if (mID == id) {
+        if (canBeUnlocked(0)) {
+            if (activate()) {
+                if (mScript.size() > 0) {
                     mpTimer->start();
                 }
-            }
-            else
-            {
+            } else {
                 deactivate();
                 mpTimer->stop();
             }
         }
     }
 
-    if( mIsFolder )
-    {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TTimer * pChild = *it;
-            if( ! pChild->isOffsetTimer() )
-            {
-                pChild->enableTimer( pChild->getID() );
+    if (mIsFolder) {
+        for (auto timer : *mpMyChildrenList) {
+            if (!timer->isOffsetTimer()) {
+                timer->enableTimer(timer->getID());
             }
         }
     }
 }
 
-void TTimer::disableTimer( int id )
+void TTimer::disableTimer(int id)
 {
-    if( mID == id )
-    {
+    if (mID == id) {
         deactivate();
         mpTimer->stop();
     }
 
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        if( ! pChild->isOffsetTimer() && pChild->shouldBeActive() )
-        {
-            pChild->disableTimer( pChild->getID() );
+    for (auto timer : *mpMyChildrenList) {
+        if (!timer->isOffsetTimer() && timer->shouldBeActive()) {
+            timer->disableTimer(timer->getID());
         }
     }
 }
 
 void TTimer::enableTimer()
 {
-    if( canBeUnlocked( 0 ) )
-    {
-        if( activate() )
-        {
-            if( mScript.size() > 0 )
-            {
+    if (canBeUnlocked(0)) {
+        if (activate()) {
+            if (mScript.size() > 0) {
                 mpTimer->start();
             }
-        }
-        else
-        {
+        } else {
             deactivate();
             mpTimer->stop();
         }
     }
-    if( ! isOffsetTimer() )
-    {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TTimer * pChild = *it;
-            if( ! pChild->isOffsetTimer() ) pChild->enableTimer();
+    if (!isOffsetTimer()) {
+        for (auto timer : *mpMyChildrenList) {
+            if (!timer->isOffsetTimer())
+                timer->enableTimer();
         }
     }
 }
@@ -396,59 +333,41 @@ void TTimer::disableTimer()
 {
     deactivate();
     mpTimer->stop();
-    //qDebug()<<"timer "<<mName<<" has been stopped stopping children...\n";
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        pChild->disableTimer();
+    for (auto timer : *mpMyChildrenList) {
+        timer->disableTimer();
     }
 }
 
 
-
-void TTimer::enableTimer( QString & name )
+void TTimer::enableTimer(const QString& name)
 {
-    if( mName == name )
-    {
-        if( canBeUnlocked( 0 ) )
-        {
-            if( activate() )
-            {
+    if (mName == name) {
+        if (canBeUnlocked(0)) {
+            if (activate()) {
                 mpTimer->start();
-            }
-            else
-            {
+            } else {
                 deactivate();
                 mpTimer->stop();
             }
         }
     }
 
-    if( ! isOffsetTimer() )
-    {
-        typedef list<TTimer *>::const_iterator I;
-        for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-        {
-            TTimer * pChild = *it;
-            pChild->enableTimer( pChild->getName() );
+    if (!isOffsetTimer()) {
+        for (auto timer : *mpMyChildrenList) {
+            timer->enableTimer(timer->getName());
         }
     }
 }
 
-void TTimer::disableTimer( QString & name )
+void TTimer::disableTimer(const QString& name)
 {
-    if( mName == name )
-    {
+    if (mName == name) {
         deactivate();
         mpTimer->stop();
     }
 
-    typedef list<TTimer *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TTimer * pChild = *it;
-        pChild->disableTimer( pChild->getName() );
+    for (auto timer : *mpMyChildrenList) {
+        timer->disableTimer(timer->getName());
     }
 }
 

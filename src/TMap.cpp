@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,9 +23,6 @@
 #include "TMap.h"
 
 
-#include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
-#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -33,6 +30,9 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
+#include "dlgMapper.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -60,19 +60,13 @@ TMap::TMap( Host * pH )
 , mpMapper( Q_NULLPTR )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
-, mDefaultVersion( 16 )      // <== replaces CURRENT_MAP_VERSION
-                            // THIS, mMinVersion AND mMaxVersion SHOULD BE
-                            // REVISED WHEN WE SWITCH FROM A PREVIEW TO A RELEASE VERSION!
-                            // Currently:
-                            // + TLuaInterpreter::setAreaUserData()
-                            // + TLuaInterpreter::setMapUserData() need 17
-                            // (for persistant storage of data)
-                            // + TArea::rooms as QSet<int> needs 18,
-                            // is/was QList<int> in prior versions
-                            // + TMap::mRoomIdHash as QHash<QString, int> needs 18, is/was
-                            // a single mRoomId in prior versions
-, mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
-, mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
+// default map version that new maps will get
+, mDefaultVersion( 18 )
+// maximum version of the map format that this Mudlet can understand and will
+// allow the user to load
+, mMaxVersion( 18 )
+// minimum version this instance of Mudlet will allow the user to save maps in
+, mMinVersion( 16 )
 , mIsFileViewingRecommended( false )
 , mpNetworkAccessManager( Q_NULLPTR )
 , mpProgressDialog( Q_NULLPTR )
@@ -125,9 +119,6 @@ TMap::TMap( Host * pH )
     reverseDirections[10] = 9;
     reverseDirections[11] = 12;
     reverseDirections[12] = 11;
-    m2DPanMode = false;
-    mLeftDown = false;
-    mRightDown = false;
 
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -195,8 +186,8 @@ void TMap::mapClear()
 
 void TMap::logError( QString & msg )
 {
-    QColor orange = QColor(255,128,0);
-    QColor black = QColor(0,0,0);
+    auto orange = QColor(255,128,0);
+    auto black = QColor(Qt::black);
     QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
     if( mpHost->mpEditorDialog )
     {
@@ -492,40 +483,40 @@ void TMap::audit()
             int areaID = itArea.key();
             if( mapLabels.contains(areaID) ) {
                 QList<int> labelIDList = mapLabels.value(areaID).keys();
-                for( int i=0; i<labelIDList.size(); i++ ) {
-                    TMapLabel l = mapLabels.value(areaID).value(labelIDList.at(i));
+                for(int & i : labelIDList) {
+                    TMapLabel l = mapLabels.value(areaID).value(i);
                     if( l.pix.isNull() ) {
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50 );
                         if( newID > -1 ) {
                             if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
                                 QString msg = tr( "[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2." )
                                               .arg(areaID)
-                                              .arg(labelIDList.at(i) );
+                                              .arg(i );
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg( areaID, tr( "[ INFO ] - Converting old style label id: %1." )
-                                                            .arg( labelIDList.at(i) ) );
-                            mapLabels[areaID][labelIDList.at(i)] = mapLabels[areaID][newID];
+                                                            .arg( i ) );
+                            mapLabels[areaID][i] = mapLabels[areaID][newID];
                             deleteMapLabel( areaID, newID );
                         }
                         else {
                             if( mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
                                 QString msg = tr( "[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2." )
                                               .arg(areaID)
-                                              .arg(labelIDList.at(i));
+                                              .arg(i);
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg( areaID, tr( "[ WARN ] - CONVERTING: cannot convert old style label with id: %1." )
-                                                            .arg( labelIDList.at(i) ) );
+                                                            .arg( i ) );
                         }
                     }
                     if (    ( l.size.width() >  std::numeric_limits<qreal>::max() )
                          || ( l.size.width() < -std::numeric_limits<qreal>::max() ) ) {
-                        mapLabels[areaID][labelIDList[i]].size.setWidth(l.pix.width());
+                        mapLabels[areaID][i].size.setWidth(l.pix.width());
                     }
                     if (    ( l.size.height() >  std::numeric_limits<qreal>::max() )
                          || ( l.size.height() < -std::numeric_limits<qreal>::max() ) ) {
-                        mapLabels[areaID][labelIDList[i]].size.setHeight(l.pix.height());
+                        mapLabels[areaID][i].size.setHeight(l.pix.height());
                     }
                 }
             }
@@ -547,8 +538,8 @@ void TMap::audit()
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed, in %1 seconds. Enjoy your game..." )
-                              .arg( _time.nsecsElapsed() * 1.0e-9 );
+        QString infoMsg = tr( "[  OK  ]  - Auditing of map completed (%1s). Enjoy your game..." )
+                              .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
         postMessage( infoMsg );
         appendErrorMsg( infoMsg );
     }
@@ -1010,7 +1001,7 @@ bool TMap::findPath( int from, int to )
         astar_search( g,
                       start,
                       distance_heuristic<mygraph_t, cost, std::vector<location> >(locations, goal),
-                      boost::predecessor_map(&p[0]).distance_map(&d[0]).
+                      predecessor_map(&p[0]).distance_map(&d[0]).
                       visitor(astar_goal_visitor<vertex>(goal)) );
     }
     catch( found_goal ) {
@@ -1232,7 +1223,6 @@ bool TMap::serialize( QDataStream & ofs )
         while( itL2.hasNext() )
         {
             itL2.next();
-// N/U:             int ii = itL2.key();
             ofs << itL2.key();//label ID
             TMapLabel label = itL2.value();
             ofs << label.pos;
@@ -1277,10 +1267,6 @@ bool TMap::serialize( QDataStream & ofs )
         ofs << pR->getOut();
         ofs << pR->environment;
         ofs << pR->getWeight();
-//        ofs << rooms[i]->xRot;
-//        ofs << rooms[i]->yRot;
-//        ofs << rooms[i]->zRot;
-//        ofs << rooms[i]->zoom;
         ofs << pR->name;
         ofs << pR->isLocked;
         ofs << pR->getOtherMap();
@@ -1397,7 +1383,7 @@ bool TMap::restore( QString location )
             ifs >> areaSize;
             // restore area table
             for( int i=0; i<areaSize; i++ ) {
-                TArea * pA = new TArea( this, mpRoomDB );
+                auto pA = new TArea( this, mpRoomDB );
                 int areaID;
                 ifs >> areaID;
                 if( mVersion >= 18 ) {
@@ -1449,7 +1435,7 @@ bool TMap::restore( QString location )
         }
 
         if( ! mpRoomDB->getAreaMap().keys().contains( -1 ) ) {
-            TArea * pDefaultA = new TArea( this, mpRoomDB );
+            auto pDefaultA = new TArea( this, mpRoomDB );
             mpRoomDB->restoreSingleArea( -1, pDefaultA );
             QString defaultAreaInsertionMsg = tr( "[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                               "area) not found, adding reserved -1 id." );
@@ -1515,7 +1501,7 @@ bool TMap::restore( QString location )
         while( ! ifs.atEnd() ) {
             int i;
             ifs >> i;
-            TRoom * pT = new TRoom(mpRoomDB);
+            auto pT = new TRoom(mpRoomDB);
             pT->restore( ifs, i, mVersion );
             mpRoomDB->restoreSingleRoom( i, pT );
         }
@@ -1537,9 +1523,9 @@ bool TMap::restore( QString location )
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file in %1 seconds, checking some\n"
+        QString okMsg = tr( "[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
                                         "consistency details..." )
-                            .arg( _time.nsecsElapsed() * 1.0e-9 );
+                            .arg( _time.nsecsElapsed() * 1.0e-9, 0, 'f', 2 );
 
         postMessage( okMsg );
         appendErrorMsgWithNoLf( okMsg );
@@ -1563,7 +1549,7 @@ bool TMap::restore( QString location )
             if( msgBox.clickedButton() == yesButton ) {
                 downloadMap();
             }
-            else if( msgBox.clickedButton() == noButton) {
+            else if( msgBox.clickedButton() == noButton ) {
                 ; //No-op to avoid unused "noButton"
             }
         }
@@ -1594,6 +1580,10 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
     QDir dir( folder );
     dir.setSorting( QDir::Time );
     entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
+    
+    if ( entries.isEmpty() ) {
+        return false;
+    }
 
     // As the files are sorted by time this gets the latest one
     QFile file( QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at( 0 ) ) );
@@ -1689,40 +1679,40 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
         }
         // read each area
         for( int i = 0; i < areaSize; i++ ) {
-            TArea * pA = new TArea( 0, 0 );
+            TArea pA( 0, 0 );
             int areaID;
             ifs >> areaID;
-            ifs >> pA->rooms;
-            ifs >> pA->ebenen;
-            ifs >> pA->exits;
-            ifs >> pA->gridMode;
-            ifs >> pA->max_x;
-            ifs >> pA->max_y;
-            ifs >> pA->max_z;
-            ifs >> pA->min_x;
-            ifs >> pA->min_y;
-            ifs >> pA->min_z;
-            ifs >> pA->span;
+            ifs >> pA.rooms;
+            ifs >> pA.ebenen;
+            ifs >> pA.exits;
+            ifs >> pA.gridMode;
+            ifs >> pA.max_x;
+            ifs >> pA.max_y;
+            ifs >> pA.max_z;
+            ifs >> pA.min_x;
+            ifs >> pA.min_y;
+            ifs >> pA.min_z;
+            ifs >> pA.span;
             if( otherProfileVersion >= 17 ) {
-                ifs >> pA->xmaxEbene;
-                ifs >> pA->ymaxEbene;
-                ifs >> pA->xminEbene;
-                ifs >> pA->yminEbene;
+                ifs >> pA.xmaxEbene;
+                ifs >> pA.ymaxEbene;
+                ifs >> pA.xminEbene;
+                ifs >> pA.yminEbene;
             }
             else {
                 QMap<int, int> dummyMinMaxEbene;
-                ifs >> pA->xmaxEbene;
-                ifs >> pA->ymaxEbene;
+                ifs >> pA.xmaxEbene;
+                ifs >> pA.ymaxEbene;
                 ifs >> dummyMinMaxEbene;
-                ifs >> pA->xminEbene;
-                ifs >> pA->yminEbene;
+                ifs >> pA.xminEbene;
+                ifs >> pA.yminEbene;
                 ifs >> dummyMinMaxEbene;
             }
-            ifs >> pA->pos;
-            ifs >> pA->isZone;
-            ifs >> pA->zoneAreaRef;
+            ifs >> pA.pos;
+            ifs >> pA.isZone;
+            ifs >> pA.zoneAreaRef;
             if( otherProfileVersion >= 17 ) {
-                ifs >> pA->mUserData;
+                ifs >> pA.mUserData;
             }
         }
     }
@@ -1788,12 +1778,12 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
         }
     }
 
-    TRoom * _pT = new TRoom( 0 );
+    TRoom _pT(0);
     QSet<int> _dummyRoomIdSet;
     while( ! ifs.atEnd() ) {
         int i;
         ifs >> i;
-        _pT->restore( ifs, i, otherProfileVersion );
+        _pT.restore( ifs, i, otherProfileVersion );
         // Can't do mpRoomDB->restoreSingleRoom( ifs, i, pT ) as it would mess up
         // this TMap::mpRoomDB
         // So emulate using _dummyRoomIdSet
@@ -1846,25 +1836,27 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     QSizeF s = QSizeF(label.size.width()/zoom, label.size.height()/zoom);
     label.size = s;
     label.clickSize = s;
-    if( ! mpRoomDB->getArea(area) ) return -1;
-    int labelID;
-    if( !mapLabels.contains( area ) )
-    {
+    if( ! mpRoomDB->getArea(area) ) { return -1; }
+
+    int label_id;
+
+    // No labels exist for this area, so start from zero.
+    if (!mapLabels.contains(area)) {
         QMap<int, TMapLabel> m;
-        m[0] = label;
+        label_id = 0;
+        m[label_id] = label;
         mapLabels[area] = m;
-    }
-    else
-    {
-        labelID = createMapLabelID( area );
-        if( labelID > -1 )
-        {
-            mapLabels[area].insert(labelID, label);
+    } else {
+        label_id = createMapLabelID(area);
+        if (label_id > -1) {
+            mapLabels[area].insert(label_id, label);
         }
     }
 
-    if( mpMapper ) mpMapper->mp2dMap->update();
-    return labelID;
+    if (mpMapper) {
+        mpMapper->mp2dMap->update();
+    }
+    return label_id;
 }
 
 int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling )
@@ -1885,25 +1877,29 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
-    if( ! mpRoomDB->getArea(area) ) return -1;
-    int labelID;
-    if( !mapLabels.contains( area ) )
-    {
-        QMap<int, TMapLabel> m;
-        m[0] = label;
-        mapLabels[area] = m;
+    if (!mpRoomDB->getArea(area)) {
+        return -1;
     }
-    else
-    {
-        labelID = createMapLabelID( area );
-        if( labelID > -1 )
-        {
-            mapLabels[area].insert(labelID, label);
+
+    int label_id;
+
+    // No labels exist for this area, so start from zero.
+    if (!mapLabels.contains(area)) {
+        QMap<int, TMapLabel> m;
+        label_id = 0;
+        m[label_id] = label;
+        mapLabels[area] = m;
+    } else {
+        label_id = createMapLabelID(area);
+        if (label_id > -1) {
+            mapLabels[area].insert(label_id, label);
         }
     }
 
-    if( mpMapper ) mpMapper->mp2dMap->update();
-    return labelID;
+    if (mpMapper) {
+        mpMapper->mp2dMap->update();
+    }
+    return label_id;
 }
 
 
@@ -2394,9 +2390,9 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
                     // direct importation of a local copy of a map file.
 
                     if( readXmlMapFile( file ) ) {
-                        TEvent * mapDownloadEvent = new TEvent;
-                        mapDownloadEvent->mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
-                        mapDownloadEvent->mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
+                        TEvent mapDownloadEvent;
+                        mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
+                        mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
                         pHost->raiseEvent( mapDownloadEvent );
                     }
                     else {

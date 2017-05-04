@@ -26,15 +26,15 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
-#include "mudlet.h"
 #include "XMLimport.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtUiTools>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
-#include <QtUiTools>
 #include "post_guard.h"
 
 
@@ -46,6 +46,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , connect_button( Q_NULLPTR )
 , delete_profile_lineedit( Q_NULLPTR )
 , delete_button( Q_NULLPTR )
+, validName()
+, validUrl()
+, validPort()
 {
     setupUi( this );
 
@@ -87,22 +90,22 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     mRegularPalette.setColor(QPalette::Text,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mRegularPalette.setColor(QPalette::Base,QColor(255,255,255));
+    mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
+    mRegularPalette.setColor(QPalette::Base,QColor(Qt::white));
 
     mReadOnlyPalette.setColor(QPalette::Base,QColor(212,212,212));
     mReadOnlyPalette.setColor(QPalette::Text,QColor(0,0,192));
     mReadOnlyPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
 
     mOKPalette.setColor(QPalette::Text,QColor(0,0,192));
     mOKPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mOKPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    mOKPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mOKPalette.setColor(QPalette::Base,QColor(235,255,235));
 
     mErrorPalette.setColor(QPalette::Text,QColor(0,0,192));
     mErrorPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mErrorPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mErrorPalette.setColor(QPalette::Base,QColor(255,235,235));
 
     // need to resize because the intro & error boxes get hidden
@@ -462,7 +465,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     QString newname = tr( "new profile name" );
 
-    QListWidgetItem * pItem = new QListWidgetItem( newname );
+    auto pItem = new QListWidgetItem( newname );
     if( ! pItem ) {
         return;
     }
@@ -811,7 +814,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     profile_history->setEnabled( static_cast<bool>(profile_history->count()) );
 
-    QStringList loadedProfiles = HostManager::self()->getHostList();
+    QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
     if( loadedProfiles.contains( profile_name ) )
     {
         profile_name_entry->setReadOnly( true );
@@ -904,7 +907,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral("Avalon.de");
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     QPixmap p( QStringLiteral( ":/icons/avalon.png" ) );
     mi = QIcon( p.scaled(QSize(120,30)) );
@@ -914,7 +917,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Achaea" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/achaea_120_30.png" ) );
     pM->setIcon(mi);
@@ -923,7 +926,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "3Kingdoms" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem(pM);
     QPixmap pd( QStringLiteral( ":/icons/3klogo.png" ) );
     QPixmap pd1 = pd.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
@@ -933,7 +936,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "3Scapes" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem(pM);
     QPixmap pc( QStringLiteral( ":/icons/3slogo.png" ) );
     QPixmap pc1 = pc.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
@@ -944,7 +947,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Lusternia" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/lusternia_120_30.png" ) );
     pM->setIcon(mi);
@@ -956,7 +959,7 @@ void dlgConnectionProfiles::fillout_form()
     mi = QIcon( pb1 );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     pM->setIcon(mi);
     muds.clear();
@@ -964,7 +967,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral("God Wars II");
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/gw2.png" ) );
     pM->setIcon(mi);
@@ -973,7 +976,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Slothmud" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/Slothmud.png" ) );
     pM->setIcon(mi);
@@ -982,7 +985,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Aardwolf" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/aardwolf_mud.png" ) );
     pM->setIcon(mi);
@@ -991,7 +994,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Materia Magica" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/materiaMagicaIcon" ) );
     pM->setIcon(mi);
@@ -1000,7 +1003,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Realms of Despair" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/120x30RoDLogo.png" ) );
     pM->setIcon(mi);
@@ -1009,7 +1012,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "ZombieMUD" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/zombiemud.png" ) );
     pM->setIcon(mi);
@@ -1018,7 +1021,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Aetolia" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/aetolia_120_30.png" ) );
     pM->setIcon(mi);
@@ -1027,7 +1030,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Imperian" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/imperian_120_30.png" ) );
     pM->setIcon(mi);
@@ -1036,7 +1039,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "WoTMUD" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QPixmap( QStringLiteral( ":/icons/wotmudicon.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);
@@ -1045,7 +1048,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Midnight Sun 2" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QPixmap( QStringLiteral( ":/icons/midnightsun2.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);
@@ -1084,7 +1087,7 @@ void dlgConnectionProfiles::fillout_form()
             continue;
         }
 
-        QListWidgetItem * pItem = new QListWidgetItem( mProfileList.at(i) );
+        auto pItem = new QListWidgetItem( mProfileList.at(i) );
         pItem->setFont(font);
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
@@ -1189,7 +1192,7 @@ void dlgConnectionProfiles::slot_copy_profile()
         profile_name = profile_name2;
     }
 
-    QListWidgetItem * pItem = new QListWidgetItem( profile_name );
+    auto pItem = new QListWidgetItem( profile_name );
     if( ! pItem )
     {
         return;
@@ -1227,7 +1230,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     if( profile_name.isEmpty() )
         return;
 
-    Host * pHost = HostManager::self()->getHost( profile_name );
+    Host* pHost = mudlet::self()->getHostManager().getHost(profile_name);
     if( pHost )
     {
         pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
@@ -1235,8 +1238,8 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
     // load an old profile if there is any
-    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
-    pHost = HostManager::self()->getHost( profile_name );
+    mudlet::self()->getHostManager().addHost(profile_name, port_entry->text().trimmed(), QString(), QString());
+    pHost = mudlet::self()->getHostManager().getHost(profile_name);
 
     if( ! pHost ) return;
 
@@ -1315,43 +1318,6 @@ void dlgConnectionProfiles::slot_connectToServer()
     }
 
     emit signal_establish_connection( profile_name, 0 );
-}
-
-void dlgConnectionProfiles::slot_chose_history()
-{
-    QString profile_name = profile_name_entry->text().trimmed();
-    if( profile_name.size() < 1 )
-    {
-        QMessageBox::warning(this, tr("Browse Profile History:"),
-                             tr("You have not selected a profile yet.\nWhich profile history do you want to browse?\nPlease select a profile first."));
-        return;
-    }
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Chose Mudlet Profile"),
-                                                    QStringLiteral( "%1/.config/mudlet/profiles/%2" )
-                                                        .arg( QDir::homePath() )
-                                                        .arg( profile_name ),
-                                                    tr("*.xml"));
-
-    if( fileName.isEmpty() ) return;
-
-    QFile file(fileName);
-    if( ! file.open(QFile::ReadOnly | QFile::Text) )
-    {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"),
-                             tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
-        return;
-    }
-
-    HostManager::self()->addHost( profile_name, port_entry->text().trimmed(), QString(), QString() );
-    Host * pHost = HostManager::self()->getHost( profile_name );
-    if( ! pHost ) return;
-    XMLimport importer( pHost );
-    importer.importPackage( & file ); // TODO: Missing false return value handler
-
-    emit signal_establish_connection( profile_name, -1 );
-    QDialog::accept();
 }
 
 bool dlgConnectionProfiles::validateConnect()

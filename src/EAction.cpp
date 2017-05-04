@@ -24,21 +24,20 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TAction.h"
+#include "mudlet.h"
 
 
-EAction::EAction( QIcon & icon, QString & name )
-    : QAction( icon, name, mudlet::self() )
+EAction::EAction(QIcon& icon, QString& name) : QAction(icon, name, mudlet::self()), mID()
 {
-    setText( name );
-    setObjectName( name );
-    setIcon( icon );
+    setText(name);
+    setObjectName(name);
+    setIcon(icon);
     connect(this, SIGNAL(triggered(bool)), this, SLOT(slot_execute(bool)));
 }
 
 void EAction::slot_execute(bool checked)
 {
-    mpHost->getActionUnit()->getAction( mID )->mButtonState = checked;
-    mpHost->getActionUnit()->getAction( mID )->execute();
+    mpHost->getActionUnit()->getAction(mID)->mButtonState = checked;
+    mpHost->getActionUnit()->getAction(mID)->execute();
 }

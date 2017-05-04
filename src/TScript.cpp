@@ -23,8 +23,8 @@
 
 
 #include "Host.h"
-#include "mudlet.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 
 using namespace std;
@@ -36,10 +36,11 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mIsFolder()
 {
 }
 
-TScript::TScript( QString name, Host * pHost )
+TScript::TScript(const QString& name, Host * pHost )
 : Tree<TScript>(0)
 , exportItem(true)
 , mModuleMasterFolder(false)
@@ -47,45 +48,41 @@ TScript::TScript( QString name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
+, mIsFolder()
 {
 }
 
 TScript::~TScript()
 {
-    if( ! mpHost )
-    {
+    if (!mpHost) {
         return;
     }
-    for( int i=0; i<mEventHandlerList.size(); i++ )
-    {
-        mpHost->unregisterEventHandler( mEventHandlerList[i], this );
+    for (int i = 0; i < mEventHandlerList.size(); i++) {
+        mpHost->unregisterEventHandler(mEventHandlerList[i], this);
     }
-    mpHost->getScriptUnit()->unregisterScript( this );
+    mpHost->getScriptUnit()->unregisterScript(this);
 }
-
 
 
 bool TScript::registerScript()
 {
-    if( ! mpHost )
-    {
+    if (!mpHost) {
         return false;
     }
     return mpHost->getScriptUnit()->registerScript(this);
 }
 
-void TScript::setEventHandlerList( QStringList handlerList )
+void TScript::setEventHandlerList(QStringList handlerList)
 {
-    for( int i=0; i<mEventHandlerList.size(); i++ )
-    {
-        mpHost->unregisterEventHandler( mEventHandlerList[i], this );
+    for (int i = 0; i < mEventHandlerList.size(); i++) {
+        mpHost->unregisterEventHandler(mEventHandlerList[i], this);
     }
     mEventHandlerList.clear();
-    for( int i=0; i<handlerList.size(); i++ )
-    {
-        if( handlerList[i].size() < 1 ) continue;
-        mEventHandlerList.append( handlerList[i] );
-        mpHost->registerEventHandler( handlerList[i], this );
+    for (int i = 0; i < handlerList.size(); i++) {
+        if (handlerList[i].size() < 1)
+            continue;
+        mEventHandlerList.append(handlerList[i]);
+        mpHost->registerEventHandler(handlerList[i], this);
     }
 }
 
@@ -93,78 +90,64 @@ void TScript::setEventHandlerList( QStringList handlerList )
 void TScript::compileAll()
 {
     compile();
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TScript * pChild = *it;
-        pChild->compileAll();
+    for (auto script : *mpMyChildrenList) {
+        script->compileAll();
     }
 }
 
-void TScript::callEventHandler( TEvent * pE )
+void TScript::callEventHandler(const TEvent& pE)
 {
     // Only call this event handler if this script and all its ancestors are active:
-    if(isActive() && ancestorsActive())
-    {
-        mpHost->mLuaInterpreter.callEventHandler( mName, pE );
+    if (isActive() && ancestorsActive()) {
+        mpHost->mLuaInterpreter.callEventHandler(mName, pE);
     }
 }
 
 void TScript::compile()
 {
-    if( mNeedsToBeCompiled || mpHost->mResetProfile )
-    {
-        if( ! compileScript() )
-        {
-            if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"ERROR: Lua compile error. compiling script of script:"<<mName<<"\n">>0;}
+    if (mNeedsToBeCompiled || mpHost->mResetProfile) {
+        if (!compileScript()) {
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> 0;
+            }
             mOK_code = false;
         }
     }
-    typedef list<TScript *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++)
-    {
-        TScript * pChild = *it;
-        pChild->compile();
+    for (auto script : *mpMyChildrenList) {
+        script->compile();
     }
 }
 
-bool TScript::setScript( QString & script )
+bool TScript::setScript(const QString& script)
 {
     mScript = script;
     mNeedsToBeCompiled = true;
-    if( ! mpHost->blockScripts() ) mOK_code = compileScript();
+    if (!mpHost->blockScripts()) {
+        mOK_code = compileScript();
+    }
     return mOK_code;
 }
 
 bool TScript::compileScript()
 {
     QString error;
-    if( mpHost->mLuaInterpreter.compile( mScript, error ) )
-    {
+    if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
-    }
-    else
-    {
+    } else {
         mOK_code = false;
-        setError( error );
+        setError(error);
         return false;
     }
 }
 
 void TScript::execute()
 {
-    if( mNeedsToBeCompiled )
-    {
-        if( ! compileScript() )
-        {
+    if (mNeedsToBeCompiled) {
+        if (!compileScript()) {
             return;
         }
     }
-    mpHost->mLuaInterpreter.call( mFuncName, mName );
+    mpHost->mLuaInterpreter.call(mFuncName, mName);
 }
-
-
-
-

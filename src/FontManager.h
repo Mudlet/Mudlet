@@ -21,13 +21,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
 class QString;
+
 
 class FontManager
 {
 public:
     void addFonts();
-    void loadFonts(QString folder);
+
+private:
+    void loadFonts(const QString& folder);
 };
 
 #endif // MUDLET_FONTMANAGER_H

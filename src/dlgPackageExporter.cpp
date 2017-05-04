@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,8 +28,8 @@
 #include "TAlias.h"
 #include "TKey.h"
 #include "TScript.h"
-#include "TTrigger.h"
 #include "TTimer.h"
+#include "TTrigger.h"
 #include "XMLexport.h"
 
 #include "pre_guard.h"
@@ -48,6 +49,9 @@ using namespace std;
 dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::dlgPackageExporter)
+, treeWidget()
+, exportButton()
+, closeButton()
 {
     ui->setupUi(this);
 }
@@ -60,7 +64,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     ui->setupUi(this);
     treeWidget = ui->treeWidget;
 
-    closeButton = ui->buttonBox->addButton (QDialogButtonBox::Close);
+    closeButton = ui->buttonBox->addButton(QDialogButtonBox::Close);
     exportButton = new QPushButton(tr("&Export"));
 
     ui->browseButton->hide();
@@ -70,20 +74,20 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     // reset zipFile and filePath from possible previous use
     zipFile = filePath = "";
 
-    packageName = QInputDialog::getText(0,"Package name", "Package name:");
+    packageName = QInputDialog::getText(0, "Package name", "Package name:");
     if (packageName.isEmpty()) {
         return;
     }
-    QString packagePath = QFileDialog::getExistingDirectory(0,"Where do you want to save the package?","Where do you want to save the package?");
+    QString packagePath = QFileDialog::getExistingDirectory(0, "Where do you want to save the package?", "Where do you want to save the package?");
     if (packagePath.isEmpty()) {
         return;
     }
 
-    tempDir = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/tmp/";
+    tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mpHost->getName() + "/tmp/";
     packagePath.replace("\\", "/");
     tempDir = tempDir + "/" + packageName;
     QDir packageDir = QDir(tempDir);
-    if ( !packageDir.exists() ){
+    if (!packageDir.exists()) {
         packageDir.mkpath(tempDir);
     }
     zipFile = packagePath + "/" + packageName + ".zip";
@@ -91,8 +95,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
 
     QString luaConfig = tempDir + "/config.lua";
     QFile configFile(luaConfig);
-    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
+    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
         out << "mpackage = \"" << packageName << "\"\n";
         out.flush();
@@ -116,104 +119,90 @@ dlgPackageExporter::~dlgPackageExporter()
     delete ui;
 }
 
-void dlgPackageExporter::recurseTree(QTreeWidgetItem * pItem, QList<QTreeWidgetItem *> &treeList){
+void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>& treeList)
+{
     treeList.append(pItem);
-    for(int i=0;i<pItem->childCount();++i)
+    for (int i = 0; i < pItem->childCount(); ++i) {
         recurseTree(pItem->child(i), treeList);
+    }
 }
 
 
-
-void dlgPackageExporter::slot_export_package(){
-//#ifndef Q_OS_WIN
-//    filePath = ui->filePath->text();
-//#endif
-    QFile file_xml( filePath );
-    if( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        XMLexport writer( mpHost );
+void dlgPackageExporter::slot_export_package()
+{
+    QFile file_xml(filePath);
+    if (file_xml.open(QIODevice::WriteOnly)) {
+        XMLexport writer(mpHost);
         //write trigs
-        QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Triggers"), Qt::MatchExactly, 0);
-        QTreeWidgetItem * top = items.first();
-        QList<QTreeWidgetItem *> trigList;
-        recurseTree(top,trigList);
-        for (int i=0;i<trigList.size();i++){
-            QTreeWidgetItem * item = trigList.at(i);
-            if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)){
+        QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Triggers"), Qt::MatchExactly, 0);
+        QTreeWidgetItem* top = items.first();
+        QList<QTreeWidgetItem*> trigList;
+        recurseTree(top, trigList);
+        for (auto item : trigList) {
+            if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
                 triggerMap[item]->exportItem = false;
-            }
-            else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder){
-                triggerMap[item]->mModuleMasterFolder=false;
+            } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
+                triggerMap[item]->mModuleMasterFolder = false;
                 modTriggerMap.insert(item, triggerMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Timers"), Qt::MatchExactly, 0);
         top = items.first();
-        QList<QTreeWidgetItem *> timerList;
-        recurseTree(top,timerList);
-        for (int i=0;i<timerList.size();i++){
-            QTreeWidgetItem * item = timerList.at(i);
-            if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)){
+        QList<QTreeWidgetItem*> timerList;
+        recurseTree(top, timerList);
+        for (auto item : timerList) {
+            if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
                 timerMap[item]->exportItem = false;
-            }
-            else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder){
-                timerMap[item]->mModuleMasterFolder=false;
+            } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {
+                timerMap[item]->mModuleMasterFolder = false;
                 modTimerMap.insert(item, timerMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Aliases"), Qt::MatchExactly, 0);
         top = items.first();
-        QList<QTreeWidgetItem *> aliasList;
-        recurseTree(top,aliasList);
-        for (int i=0;i<aliasList.size();i++){
-            QTreeWidgetItem * item = aliasList.at(i);
-            if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)){
+        QList<QTreeWidgetItem*> aliasList;
+        recurseTree(top, aliasList);
+        for (auto item : aliasList) {
+            if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
                 aliasMap[item]->exportItem = false;
-            }
-            else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder){
-                aliasMap[item]->mModuleMasterFolder=false;
+            } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
+                aliasMap[item]->mModuleMasterFolder = false;
                 modAliasMap.insert(item, aliasMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Buttons"), Qt::MatchExactly, 0);
         top = items.first();
-        QList<QTreeWidgetItem *> actionList;
-        recurseTree(top,actionList);
-        for (int i=0;i<actionList.size();i++){
-            QTreeWidgetItem * item = actionList.at(i);
-            if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)){
+        QList<QTreeWidgetItem*> actionList;
+        recurseTree(top, actionList);
+        for (auto item : actionList) {
+            if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
                 actionMap[item]->exportItem = false;
-            }
-            else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder){
-                actionMap[item]->mModuleMasterFolder=false;
+            } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
+                actionMap[item]->mModuleMasterFolder = false;
                 modActionMap.insert(item, actionMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Scripts"), Qt::MatchExactly, 0);
         top = items.first();
-        QList<QTreeWidgetItem *> scriptList;
-        recurseTree(top,scriptList);
-        for (int i=0;i<scriptList.size();i++){
-            QTreeWidgetItem * item = scriptList.at(i);
-            if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)){
+        QList<QTreeWidgetItem*> scriptList;
+        recurseTree(top, scriptList);
+        for (auto item : scriptList) {
+            if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
                 scriptMap[item]->exportItem = false;
-            }
-            else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder){
-                scriptMap[item]->mModuleMasterFolder=false;
+            } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
+                scriptMap[item]->mModuleMasterFolder = false;
                 modScriptMap.insert(item, scriptMap[item]);
             }
         }
         items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
         top = items.first();
-        QList<QTreeWidgetItem *> keyList;
-        recurseTree(top,keyList);
-        for (int i=0;i<keyList.size();i++){
-            QTreeWidgetItem * item = keyList.at(i);
-            if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)){
+        QList<QTreeWidgetItem*> keyList;
+        recurseTree(top, keyList);
+        for (auto item : keyList) {
+            if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
                 keyMap[item]->exportItem = false;
-            }
-            else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder){
-                keyMap[item]->mModuleMasterFolder=false;
+            } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
+                keyMap[item]->mModuleMasterFolder = false;
                 modKeyMap.insert(item, keyMap[item]);
             }
         }
@@ -221,70 +210,61 @@ void dlgPackageExporter::slot_export_package(){
         file_xml.close();
         //now fix all the stuff we weren't exporting
         //trigger, timer, alias,action,script, keys
-        for (int i=0;i<trigList.size();i++){
-            QTreeWidgetItem * item = trigList.at(i);
-            if (triggerMap.contains(item)){
+        for (auto item : trigList) {
+            if (triggerMap.contains(item)) {
                 triggerMap[item]->exportItem = true;
             }
-            if (modTriggerMap.contains(item)){
+            if (modTriggerMap.contains(item)) {
                 modTriggerMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<timerList.size();i++){
-            QTreeWidgetItem * item = timerList.at(i);
-            if (timerMap.contains(item)){
+        for (auto item : timerList) {
+            if (timerMap.contains(item)) {
                 timerMap[item]->exportItem = true;
             }
-            if (modTimerMap.contains(item)){
+            if (modTimerMap.contains(item)) {
                 modTimerMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<actionList.size();i++){
-            QTreeWidgetItem * item = actionList.at(i);
-            if (actionMap.contains(item)){
+        for (auto item : actionList) {
+            if (actionMap.contains(item)) {
                 actionMap[item]->exportItem = true;
             }
-            if (modActionMap.contains(item)){
+            if (modActionMap.contains(item)) {
                 modActionMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<scriptList.size();i++){
-            QTreeWidgetItem * item = scriptList.at(i);
-            if (scriptMap.contains(item)){
+        for (auto item : scriptList) {
+            if (scriptMap.contains(item)) {
                 scriptMap[item]->exportItem = true;
             }
-            if (modScriptMap.contains(item)){
+            if (modScriptMap.contains(item)) {
                 modScriptMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<keyList.size();i++){
-            QTreeWidgetItem * item = keyList.at(i);
-            if (keyMap.contains(item)){
+        for (auto item : keyList) {
+            if (keyMap.contains(item)) {
                 keyMap[item]->exportItem = true;
             }
-            if (modKeyMap.contains(item)){
+            if (modKeyMap.contains(item)) {
                 modKeyMap[item]->mModuleMasterFolder = true;
             }
         }
-        for (int i=0;i<aliasList.size();i++){
-            QTreeWidgetItem * item = aliasList.at(i);
-            if (aliasMap.contains(item)){
+        for (auto item : aliasList) {
+            if (aliasMap.contains(item)) {
                 aliasMap[item]->exportItem = true;
             }
-            if (modAliasMap.contains(item)){
+            if (modAliasMap.contains(item)) {
                 modAliasMap[item]->mModuleMasterFolder = true;
             }
         }
 
 
-        //#ifdef Q_OS_WIN
         int err = 0;
         char buf[100];
         zip* archive;
-        //archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &err);
-        archive = zip_open( zipFile.toStdString().c_str(), ZIP_CREATE, &err);
-        if ( err != 0 )
-        {
+        archive = zip_open(zipFile.toStdString().c_str(), ZIP_CREATE, &err);
+        if (err != 0) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to user qDebug()<<"dp zip open error"<<zipFile<<buf;
             close();
@@ -292,85 +272,62 @@ void dlgPackageExporter::slot_export_package(){
         }
         QDir dir(tempDir);
         QStringList contents = dir.entryList();
-        for(int i=0;i<contents.size();i++)
-        {
+        for (int i = 0; i < contents.size(); i++) {
             QString fname = contents[i];
-            if ( fname == "." || fname == ".." )
+            if (fname == "." || fname == "..") {
                 continue;
-            QString fullName = tempDir+"/"+contents[i];
-            struct zip_source *s = zip_source_file( archive, fullName.toStdString().c_str(), 0, 0);
-            if ( s == NULL )
-            {
+            }
+            QString fullName = tempDir + "/" + contents[i];
+            struct zip_source* s = zip_source_file(archive, fullName.toStdString().c_str(), 0, 0);
+            if (s == NULL) {
                 int sep = 0;
-                zip_error_get( archive, &err, &sep);
+                zip_error_get(archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);
                 //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
             }
-//            err = zip_file_add( archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            err = zip_add( archive, fname.toStdString().c_str(), s);
-            if ( err == -1 )
-            {
+            err = zip_add(archive, fname.toStdString().c_str(), s);
+            if (err == -1) {
                 int sep = 0;
-                zip_error_get( archive, &err, &sep);
+                zip_error_get(archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);
                 //FIXME: report error to userqDebug()<<"added file error"<<fullName<<fname<<buf;
             }
         }
-        err = zip_close( archive );
-        if ( err != 0 ){
+        err = zip_close(archive);
+        if (err != 0) {
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to userqDebug()<<"dp close file error"<<buf;
             close();
             return;
         }
-            //JlCompress::compressDir(zip, tempDir );
-//        #else
-//            ui->infoLabel->setText("Exported package to "+filePath);
-//        #endif
     } else {
-        ui->infoLabel->setText("Failed to export - couldn't open "+filePath+" for writing in. Do you have the necessary permissions to write to that folder?");
+        ui->infoLabel->setText("Failed to export - couldn't open " + filePath + " for writing in. Do you have the necessary permissions to write to that folder?");
     }
     close();
 }
 
-void dlgPackageExporter::slot_addFiles(){
-    QString _pn = "file:///"+tempDir;
+void dlgPackageExporter::slot_addFiles()
+{
+    QString _pn = "file:///" + tempDir;
     QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
 }
 
-// Not Used - otherwise might need to tweak search for *.xml to ensure it worked
-// on MacOS:
-//void dlgPackageExporter::slot_browse_button(){
-//    QFileDialog dialog(this);
-//    dialog.setFileMode(QFileDialog::AnyFile);
-//    dialog.setNameFilter(tr("Mudlet Packages (*.xml)"));
-//    dialog.setViewMode(QFileDialog::Detail);
-//    QString fileName;
-//    if (dialog.exec()) {
-//        fileName = dialog.selectedFiles().first();
-
-//        if (!fileName.endsWith(".xml"))
-//            fileName.append(".xml");
-
-//        ui->filePath->setText(fileName);
-//        exportButton->setDisabled(false);
-//    }
-//}
-
-void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig){
-    list<TTrigger *> * childList = trig->getChildrenList();
-    if (!childList->size())
+void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
+{
+    list<TTrigger*>* childList = trig->getChildrenList();
+    if (!childList->size()) {
         return;
-    list<TTrigger *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TTrigger * pChild = *it;
+    }
+    list<TTrigger*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TTrigger* pChild = *it;
         if (pChild->isTempTrigger())
             continue;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
+        auto pItem = new QTreeWidgetItem(sl);
         triggerMap.insert(pItem, pChild);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qTrig->addChild(pItem);
         recurseTriggers(pChild, pItem);
@@ -380,18 +337,19 @@ void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
 void dlgPackageExporter::listTriggers()
 {
     TriggerUnit* tu = mpHost->getTriggerUnit();
-    list<TTrigger *>::const_iterator it;
-    std::list<TTrigger *> tList = tu->getTriggerRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Triggers"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TTrigger * pChild = *it;
-        if( pChild->isTempTrigger() ) continue;
+    list<TTrigger*>::const_iterator it;
+    std::list<TTrigger*> tList = tu->getTriggerRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Triggers"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TTrigger* pChild = *it;
+        if (pChild->isTempTrigger()) {
+            continue;
+        }
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         top->addChild(pItem);
         triggerMap.insert(pItem, pChild);
@@ -399,19 +357,22 @@ void dlgPackageExporter::listTriggers()
     }
 }
 
-void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem){
-    list<TAlias *> * childList = item->getChildrenList();
-    if (!childList->size())
+void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
+{
+    list<TAlias*>* childList = item->getChildrenList();
+    if (!childList->size()) {
         return;
-    list<TAlias *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TAlias * pChild = *it;
-        if (pChild->isTempAlias())
+    }
+    list<TAlias*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TAlias* pChild = *it;
+        if (pChild->isTempAlias()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qItem->addChild(pItem);
         aliasMap.insert(pItem, pChild);
@@ -422,19 +383,19 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem){
 void dlgPackageExporter::listAliases()
 {
     AliasUnit* tu = mpHost->getAliasUnit();
-    list<TAlias *>::const_iterator it;
-    std::list<TAlias *> tList = tu->getAliasRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Aliases"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TAlias * pChild = *it;
-        if (pChild->isTempAlias())
+    list<TAlias*>::const_iterator it;
+    std::list<TAlias*> tList = tu->getAliasRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Aliases"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TAlias* pChild = *it;
+        if (pChild->isTempAlias()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         top->addChild(pItem);
         aliasMap.insert(pItem, pChild);
@@ -442,17 +403,19 @@ void dlgPackageExporter::listAliases()
     }
 }
 
-void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem){
-    list<TScript *> * childList = item->getChildrenList();
-    if (!childList->size())
+void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
+{
+    list<TScript*>* childList = item->getChildrenList();
+    if (!childList->size()) {
         return;
-    list<TScript *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TScript * pChild = *it;
+    }
+    list<TScript*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TScript* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         scriptMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -463,17 +426,16 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem){
 void dlgPackageExporter::listScripts()
 {
     ScriptUnit* tu = mpHost->getScriptUnit();
-    list<TScript *>::const_iterator it;
-    std::list<TScript *> tList = tu->getScriptRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Scripts"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TScript * pChild = *it;
+    list<TScript*>::const_iterator it;
+    std::list<TScript*> tList = tu->getScriptRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Scripts"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TScript* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         scriptMap.insert(pItem, pChild);
         top->addChild(pItem);
@@ -481,17 +443,19 @@ void dlgPackageExporter::listScripts()
     }
 }
 
-void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem){
-    list<TKey *> * childList = item->getChildrenList();
-    if (!childList->size())
+void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
+{
+    list<TKey*>* childList = item->getChildrenList();
+    if (!childList->size()) {
         return;
-    list<TKey *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TKey * pChild = *it;
+    }
+    list<TKey*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TKey* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -502,17 +466,16 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem){
 void dlgPackageExporter::listKeys()
 {
     KeyUnit* tu = mpHost->getKeyUnit();
-    list<TKey *>::const_iterator it;
-    std::list<TKey *> tList = tu->getKeyRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TKey * pChild = *it;
+    list<TKey*>::const_iterator it;
+    std::list<TKey*> tList = tu->getKeyRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TKey* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
         top->addChild(pItem);
@@ -520,17 +483,19 @@ void dlgPackageExporter::listKeys()
     }
 }
 
-void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem){
-    list<TAction *> * childList = item->getChildrenList();
-    if (!childList->size())
+void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
+{
+    list<TAction*>* childList = item->getChildrenList();
+    if (!childList->size()) {
         return;
-    list<TAction *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TAction * pChild = *it;
+    }
+    list<TAction*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TAction* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -541,17 +506,16 @@ void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem){
 void dlgPackageExporter::listActions()
 {
     ActionUnit* tu = mpHost->getActionUnit();
-    list<TAction *>::const_iterator it;
-    std::list<TAction *> tList = tu->getActionRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Buttons"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TAction * pChild = *it;
+    list<TAction*>::const_iterator it;
+    std::list<TAction*> tList = tu->getActionRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Buttons"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TAction* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
         top->addChild(pItem);
@@ -559,19 +523,22 @@ void dlgPackageExporter::listActions()
     }
 }
 
-void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem){
-    list<TTimer *> * childList = item->getChildrenList();
-    if (!childList->size())
+void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
+{
+    list<TTimer*>* childList = item->getChildrenList();
+    if (!childList->size()) {
         return;
-    list<TTimer *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TTimer * pChild = *it;
-        if (pChild->isTempTimer())
+    }
+    list<TTimer*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TTimer* pChild = *it;
+        if (pChild->isTempTimer()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -582,19 +549,19 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem){
 void dlgPackageExporter::listTimers()
 {
     TimerUnit* tu = mpHost->getTimerUnit();
-    list<TTimer *>::const_iterator it;
-    std::list<TTimer *> tList = tu->getTimerRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Timers"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TTimer * pChild = *it;
-        if (pChild->isTempTimer())
+    list<TTimer*>::const_iterator it;
+    std::list<TTimer*> tList = tu->getTimerRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Timers"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TTimer* pChild = *it;
+        if (pChild->isTempTimer()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
-        QTreeWidgetItem * pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsTristate|Qt::ItemIsEnabled|Qt::ItemIsSelectable);
+        auto pItem = new QTreeWidgetItem(sl);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);
         top->addChild(pItem);

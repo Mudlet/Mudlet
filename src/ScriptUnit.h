@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QMutex>
+#include <QPointer>
 #include <QString>
 #include "post_guard.h"
 
@@ -40,35 +41,37 @@ class ScriptUnit
     friend class XMLimport;
 
 public:
+    ScriptUnit(Host* pHost) : mpHost(pHost), mMaxID(0) {}
 
-    ScriptUnit( Host * pHost ) : mpHost(pHost), mMaxID(0) {;}
-    std::list<TScript *>  getScriptRootNodeList()   { QMutexLocker locker(& mScriptUnitLock); return mScriptRootNodeList; }
-    TScript *             getScript( int id );
-    void                  compileAll();
-    bool                  registerScript( TScript * pT );
-    void                  unregisterScript( TScript * pT );
-    void                  reParentScript( int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1 );
-    void                  stopAllTriggers();
-    void                  uninstall( QString );
-    void                  _uninstall( TScript * pChild, QString packageName );
-    int                     getNewID();
-    QMutex                mScriptUnitLock;
-    QList<TScript*>        uninstallList;
+    std::list<TScript*> getScriptRootNodeList()
+    {
+        QMutexLocker locker(&mScriptUnitLock);
+        return mScriptRootNodeList;
+    }
+
+    TScript* getScript(int id);
+    void compileAll();
+    bool registerScript(TScript* pT);
+    void unregisterScript(TScript* pT);
+    void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
+    void stopAllTriggers();
+    void uninstall(QString);
+    void _uninstall(TScript* pChild, QString packageName);
+    int getNewID();
+    QMutex mScriptUnitLock;
+    QList<TScript*> uninstallList;
 
 private:
-
-    ScriptUnit(){;}
-    TScript *             getScriptPrivate( int id );
-    void                  addScriptRootNode( TScript * pT, int parentPosition = -1, int childPosition = -1 );
-    void                  addScript( TScript * pT );
-    void                  removeScriptRootNode( TScript * pT );
-    void                  removeScript( TScript *);
-    Host *                mpHost;
-    QMap<int, TScript *>  mScriptMap;
-    std::list<TScript *>  mScriptRootNodeList;
-    int                     mMaxID;
-
-
+    ScriptUnit() {}
+    TScript* getScriptPrivate(int id);
+    void addScriptRootNode(TScript* pT, int parentPosition = -1, int childPosition = -1);
+    void addScript(TScript* pT);
+    void removeScriptRootNode(TScript* pT);
+    void removeScript(TScript*);
+    QPointer<Host> mpHost;
+    QMap<int, TScript*> mScriptMap;
+    std::list<TScript*> mScriptRootNodeList;
+    int mMaxID;
 };
 
 #endif // MUDLET_SCRIPTUNIT_H

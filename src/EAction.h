@@ -25,6 +25,7 @@
 
 #include "pre_guard.h"
 #include <QAction>
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -35,20 +36,20 @@ class EAction : public QAction
 {
     Q_OBJECT
 
-public:
-                    EAction( QIcon &, QString & );
-    QWidget *       createWidget( QWidget * );
+    Q_DISABLE_COPY(EAction)
 
-    int             mID;
-    Host *          mpHost;
+public:
+    EAction(QIcon&, QString&);
 
 public slots:
-
-    void            slot_execute( bool checked );
+    void slot_execute(bool checked);
 
 signals:
+    void triggered(QAction*);
 
-    void            triggered( QAction * );
+public: // TODO: private:
+    int mID;
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_EACTION_H

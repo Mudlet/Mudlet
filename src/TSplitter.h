@@ -33,13 +33,15 @@ class TSplitter : public QSplitter
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TSplitter)
+
 public:
-    TSplitter( Qt::Orientation orientation, QWidget *parent = 0 );
+    TSplitter(Qt::Orientation orientation, QWidget* parent = 0);
 
 protected:
-    QSplitterHandle * createHandle();
+    QSplitterHandle* createHandle() override;
 
-    TSplitterHandle * mpSplitterHandle;
+    TSplitterHandle* mpSplitterHandle;
 };
 
 #endif // MUDLET_TSPLITTER_H

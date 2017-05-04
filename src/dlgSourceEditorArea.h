@@ -33,9 +33,13 @@ class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgSourceEditorArea)
+
 public:
     dlgSourceEditorArea(QWidget*);
-    THighlighter * highlighter;
+
+//private:
+    THighlighter* highlighter;
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H

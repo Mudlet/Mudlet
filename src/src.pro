@@ -18,13 +18,22 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5) {
-  error("requires Qt 5.0 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
+    error("Mudlet requires Qt 5.6 or later")
+}
+
+# Including IRC Library
+include(../3rdparty/communi/src/core/core.pri)
+
+include(../3rdparty/lua_yajl/src.pri)
+
+macx: {
+    include(../3rdparty/luazip/src.pri)
 }
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.1.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -52,11 +61,16 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
 
-# Leave the value of the following empty, line should be "BUILD =" without quotes
-# (it is NOT a Qt built-in variable) for a release build or, if you are
-# distributing modified code, it would be useful if you could put something to
-# distinguish the version:
-BUILD =
+# if you are distributing modified code, it would be useful if you
+# put something distinguishing into the MUDLET_VERSION_BUILD environment
+# variable to make identification of the used version simple
+# the qmake BUILD variable is NOT built-in
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
+# Leave the value of the following empty for a release build
+# i.e. the line should be "BUILD =" without quotes
+  BUILD = ""
+}
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -70,7 +84,6 @@ macx {
 } else {
     TARGET = mudlet
 }
-msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
@@ -108,8 +121,8 @@ unix:!macx {
     INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
-    LIBS += -L"C:\\mingw32\\lib" \
-        -L"C:\\mingw32\\bin" \
+    LIBS += -L"C:\\mingw32\\bin" \
+        -L"C:\\mingw32\\lib" \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.4 \
@@ -161,8 +174,6 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
-INCLUDEPATH += irc/include
-
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -177,16 +188,10 @@ SOURCES += \
     dlgKeysMainArea.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
-    dlgOptionsAreaAction.cpp \
-    dlgOptionsAreaAlias.cpp \
-    dlgOptionsAreaScripts.cpp \
-    dlgOptionsAreaTimers.cpp \
-    dlgOptionsAreaTriggers.cpp \
     dlgPackageExporter.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgScriptsMainArea.cpp \
-    dlgSearchArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
@@ -200,11 +205,6 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
-    HostPool.cpp \
-    irc/src/irc.cpp \
-    irc/src/ircbuffer.cpp \
-    irc/src/ircsession.cpp \
-    irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -218,6 +218,7 @@ SOURCES += \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
+    TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
@@ -243,9 +244,6 @@ SOURCES += \
     XMLexport.cpp \
     XMLimport.cpp
 
-!msvc:SOURCES += lua_yajl.c
-msvc:SOURCES += lua_yajl.cpp
-
 
 HEADERS += \
     ActionUnit.h \
@@ -261,16 +259,10 @@ HEADERS += \
     dlgKeysMainArea.h \
     dlgMapper.h \
     dlgNotepad.h \
-    dlgOptionsAreaAction.h \
-    dlgOptionsAreaAlias.h \
-    dlgOptionsAreaScripts.h \
-    dlgOptionsAreaTimers.h \
-    dlgOptionsAreaTriggers.h \
     dlgPackageExporter.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgScriptsMainArea.h \
-    dlgSearchArea.h \
     dlgSourceEditorArea.h \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
@@ -283,12 +275,6 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
-    HostPool.h \
-    irc/include/irc.h \
-    irc/include/ircbuffer.h \
-    irc/include/ircglobal.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -304,7 +290,9 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDockWidget.h \
     TEasyButtonBar.h \
+    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -332,8 +320,6 @@ HEADERS += \
     XMLexport.h \
     XMLimport.h
 
-macx:HEADERS += luazip.h
-
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
     ui/about_dialog.ui \
@@ -343,17 +329,11 @@ FORMS += \
     ui/composer.ui \
     ui/connection_profiles.ui \
     ui/dlgPackageExporter.ui \
-    ui/extended_search_area.ui \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
-    ui/options_area_actions.ui \
-    ui/options_area_aliases.ui \
-    ui/options_area_scripts.ui \
-    ui/options_area_timers.ui \
-    ui/options_area_triggers.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
@@ -431,7 +411,7 @@ macx: {
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
     # Set the .app's icns file
-    ICON = osx-installer/osx.icns
+    ICON = icons/osx.icns
 }
 
 win32: {
@@ -447,6 +427,7 @@ win32: {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -471,15 +452,15 @@ DISTFILES += \
     ../.travis.yml \
     CMakeLists.txt \
     ../CMakeLists.txt \
-    irc/CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    ../.clang-format
+    .clang-format

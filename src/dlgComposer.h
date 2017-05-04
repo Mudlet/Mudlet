@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include "ui_composer.h"
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -33,15 +34,19 @@ class dlgComposer : public QMainWindow, public Ui::composer
 {
     Q_OBJECT
 
-public:
-    dlgComposer( Host * );
+    Q_DISABLE_COPY(dlgComposer)
 
-    void init( QString title, QString txt );
-    Host * mpHost;
+public:
+    dlgComposer(Host*);
+
+    void init(QString title, QString txt);
 
 public slots:
     void save();
     void cancel();
+
+private:
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGCOMPOSER_H

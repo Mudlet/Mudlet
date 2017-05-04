@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include "ui_notes_editor.h"
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -33,11 +34,15 @@ class dlgNotepad : public QMainWindow, public Ui::NotesEditor
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgNotepad)
+
 public:
-    dlgNotepad( Host * );
+    dlgNotepad(Host*);
     void save();
     void restore();
-    Host * mpHost;
+
+private:
+    QPointer<Host> mpHost;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

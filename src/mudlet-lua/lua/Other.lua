@@ -124,10 +124,25 @@ function sendAll(...)
 end
 
 
+--- Table of functions used by permGroup to create the appropriate group, based on itemtype.
+local group_creation_functions = {
+    timer = function(name, parent)
+        return not (permTimer(name, parent, 0, "") == -1)
+       end,
+    trigger = function(name, parent)
+        return not (permSubstringTrigger(name, parent, {""}, "") == -1)
+      end,
+    alias = function(name, parent)
+        return not (permAlias(name, parent, "", "") == -1)
+      end
+ }
+
 --- Creates a group of a given type that will persist through sessions.
 ---
---- @param name name of the teim
+--- @param name name of the item
 --- @param itemtype type of the item - can be trigger, alias, or timer
+--- @param parent optional name of existing item which the new item
+---   will be created as a child of
 ---
 --- @usage
 --- <pre>
@@ -141,24 +156,11 @@ end
 ---     permGroup("Defensive aliases", "alias")
 ---   end
 --- </pre>
-function permGroup(name, itemtype)
+function permGroup(name, itemtype, parent)
   assert(type(name) == "string", "permGroup: need a name for the new thing")
-
-  local t = {
-    timer = function(name)
-        return (permTimer(name, "", 0, "") == -1) and false or true
-       end,
-    trigger = function(name)
-        return (permSubstringTrigger(name, "", {""}, "") == -1) and false or true
-      end,
-    alias = function(name)
-        return (permAlias(name, "", "", "") == -1) and false or true
-      end
- }
-
- assert(t[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
-
- return t[itemtype](name)
+  parent = parent or ""
+  assert(group_creation_functions[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
+  return group_creation_functions[itemtype](name, parent)
 end
 
 

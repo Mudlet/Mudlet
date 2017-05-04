@@ -34,13 +34,12 @@ class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
 {
     Q_OBJECT
 
-public:
-    dlgColorTrigger( QWidget *, TTrigger *, int );
-signals:
+    Q_DISABLE_COPY(dlgColorTrigger)
 
+public:
+    dlgColorTrigger(QWidget*, TTrigger*, int);
 
 public slots:
-
     void setColorBlack();
     void setColorLightBlack();
     void setColorRed();
@@ -61,8 +60,8 @@ public slots:
     void slot_save_and_exit();
 
 private:
-    TTrigger * mpTrigger;
-    int        mMode;
+    TTrigger* mpTrigger;
+    int mMode;
 };
 
 #endif // MUDLET_DLGCOLORTRIGGER_H

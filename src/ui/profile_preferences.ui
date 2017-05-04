@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>592</height>
+    <height>663</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -164,9 +164,16 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="mIsLoggingTimestamps">
+            <property name="text">
+             <string>Add timestamps at the beginning of log lines</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
-             <string>Allow server to install scrpt packages</string>
+             <string>Allow server to install script packages</string>
             </property>
            </widget>
           </item>
@@ -248,7 +255,7 @@
           <item>
            <widget class="QLabel" name="label_58">
             <property name="text">
-             <string>Nick name in mudlet IRC channel:</string>
+             <string>Nickname in Mudlet IRC channel:</string>
             </property>
            </widget>
           </item>
@@ -373,7 +380,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_57">
             <property name="text">
-             <string>Chose spell check dictionary:</string>
+             <string>Choose spell check dictionary:</string>
             </property>
            </widget>
           </item>
@@ -766,6 +773,16 @@
             </property>
             <property name="text">
              <string>Show Line/Paragraphs</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_echoLuaErrors">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Echo Lua errors to the main console</string>
             </property>
            </widget>
           </item>
@@ -1403,11 +1420,11 @@
          <layout class="QGridLayout" name="gridLayout_22">
           <item row="0" column="0">
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
-            <property name="whatsThis">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for tha map view, making it look smother and nicer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
-             <string>Use high quality graphics (disable on slow computers)</string>
+             <string>Use high quality graphics in 2D view</string>
             </property>
            </widget>
           </item>
@@ -1474,7 +1491,7 @@
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_saveMap">
             <property name="text">
-             <string>Press to chose location and save</string>
+             <string>Press to choose location and save</string>
             </property>
            </widget>
           </item>
@@ -1501,7 +1518,7 @@
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_loadMap">
             <property name="text">
-             <string>Press to chose file and load</string>
+             <string>Press to choose file and load</string>
             </property>
            </widget>
           </item>

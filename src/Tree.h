@@ -30,67 +30,60 @@
 #include <list>
 
 
-template<class T>
+template <class T>
 class Tree
 {
 public:
-                       Tree();
-                       Tree( T * parent );
-    virtual            ~Tree();
-                       T * getParent()             { return mpParent; }
-    std::list<T *> *   getChildrenList();
-    bool               hasChildren()               { return (mpMyChildrenList->size() > 0); }
-    int                getChildCount()             { return mpMyChildrenList->size(); }
-    void               DumpFamily();
-    void               Dump();
-    void               setFullyExpanded()          { FullyExpanded = true; }
-    bool               isFullyExpanded()           { return FullyExpanded; }
-    int                getID()                     { return mID; }
-    void               setID( int id )             { mID=id; }
-    void               addChild( T * newChild, int parentPostion = -1, int parentPosition = -1 );
-    bool               popChild( T * removeChild );
-    void               setParent( T * parent );
-    void               enableFamily();
-    void               disableFamily();
-    bool               isActive();
-    bool               activate();
-    void               deactivate();
-    bool               setIsActive( bool );
-    bool               shouldBeActive();
-    void               setShouldBeActive( bool b );
-    bool               ancestorsActive(); // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    Tree();
+    Tree(T* parent);
+    virtual ~Tree();
+    T* getParent() { return mpParent; }
+    std::list<T*>* getChildrenList();
+    bool hasChildren() { return (mpMyChildrenList->size() > 0); }
+    int getChildCount() { return mpMyChildrenList->size(); }
+    int getID() { return mID; }
+    void setID(int id) { mID = id; }
+    void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
+    bool popChild(T* removeChild);
+    void setParent(T* parent);
+    void enableFamily();
+    void disableFamily();
+    bool isActive();
+    bool activate();
+    void deactivate();
+    bool setIsActive(bool);
+    bool shouldBeActive();
+    void setShouldBeActive(bool b);
 
-    T *                mpParent;
-    std::list<T *> *   mpMyChildrenList;
-    int                mID;
-    QString &          getError();
-    void               setError( QString );
-    bool               state();
-    QString            getPackageName() { return mPackageName; }
-    void               setPackageName( QString n ){ mPackageName = n; }
-    void               setModuleName( QString n ){ mModuleName = n;}
-    QString            getModuleName() {return mModuleName;}
-    bool               FullyExpanded;
-    QString            mPackageName;
-    QString            mModuleName;
+    // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    bool ancestorsActive();
+
+    T* mpParent;
+    std::list<T*>* mpMyChildrenList;
+    int mID;
+    QString& getError();
+    void setError(QString);
+    bool state();
+    QString getPackageName() { return mPackageName; }
+    void setPackageName(const QString& n) { mPackageName = n; }
+    void setModuleName(const QString& n) { mModuleName = n; }
+    QString getModuleName() { return mModuleName; }
+    QString mPackageName;
+    QString mModuleName;
 
 
 protected:
-
-    virtual bool       canBeActivated();
-    bool               mOK_init;
-    bool               mOK_code;
+    virtual bool canBeActivated();
+    bool mOK_init;
+    bool mOK_code;
 
 private:
-
-    bool               mActive;
-    bool               mUserActiveState;
-    QString            mErrorMessage;
-
-
+    bool mActive;
+    bool mUserActiveState;
+    QString mErrorMessage;
 };
 
-template<class T>
+template <class T>
 Tree<T>::Tree()
 : mpParent( 0 )
 , mpMyChildrenList( new std::list<T *> )
@@ -102,8 +95,8 @@ Tree<T>::Tree()
 {
 }
 
-template<class T>
-Tree<T>::Tree( T *  pParent )
+template <class T>
+Tree<T>::Tree( T * pParent )
 : mpParent( pParent )
 , mpMyChildrenList( new std::list<T *> )
 , mID( 0 )
@@ -112,92 +105,82 @@ Tree<T>::Tree( T *  pParent )
 , mActive( false )
 , mUserActiveState( false )
 {
-    if( pParent )
-    {
-        pParent->addChild( (T*)( this ) );
-    }
-    else mpParent=0;
+    if (pParent) {
+        pParent->addChild((T*)(this));
+    } else
+        mpParent = 0;
 }
 
-template<class T>
+template <class T>
 Tree<T>::~Tree()
 {
-    while( mpMyChildrenList->size() > 0 )
-    {
-        typename std::list<T*>::iterator it = mpMyChildrenList->begin();
-        T * pChild = *it;
+    while (mpMyChildrenList->size() > 0) {
+        auto it = mpMyChildrenList->begin();
+        T* pChild = *it;
         delete pChild;
     }
     delete mpMyChildrenList;
-    if( mpParent != 0 )
-    {
-        mpParent->popChild( (T*)this ); // tell parent about my death
-        if( std::uncaught_exception() )
-        {
+    if (mpParent != 0) {
+        mpParent->popChild((T*)this); // tell parent about my death
+        if (std::uncaught_exception()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
     }
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::ancestorsActive()
 {
-    Tree<T> * node(mpParent);
-    while(node)
-    {
-        if(!node->isActive())
-        {
+    Tree<T>* node(mpParent);
+    while (node) {
+        if (!node->isActive()) {
             return false;
         }
-        node=node->mpParent;
+        node = node->mpParent;
     }
     return true;
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::shouldBeActive()
 {
     return mUserActiveState;
 }
 
-template<class T>
-void Tree<T>::setShouldBeActive( bool b )
+template <class T>
+void Tree<T>::setShouldBeActive(bool b)
 {
     mUserActiveState = b;
 }
 
-template<class T>
-bool Tree<T>::setIsActive( bool b )
+template <class T>
+bool Tree<T>::setIsActive(bool b)
 {
-    setShouldBeActive( b );
-    if( b )
-    {
+    setShouldBeActive(b);
+    if (b) {
         return activate();
-    }
-    else
-    {
+    } else {
         mActive = false;
         return false;
     }
 }
 
-template<class T>
+template <class T>
 inline bool Tree<T>::state()
 {
-    return ( mOK_init && mOK_code );
+    return (mOK_init && mOK_code);
 }
 
-template<class T>
+template <class T>
 inline bool Tree<T>::canBeActivated()
 {
-    return ( shouldBeActive() && state() );
+    return (shouldBeActive() && state());
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::activate()
 {
-    if( canBeActivated() )
-    {
+    if (canBeActivated()) {
         mActive = true;
         return true;
     }
@@ -205,57 +188,47 @@ bool Tree<T>::activate()
     return false;
 }
 
-template<class T>
+template <class T>
 void Tree<T>::deactivate()
 {
     mActive = false;
 }
 
-template<class T>
+template <class T>
 bool Tree<T>::isActive()
 {
     return (mActive && canBeActivated());
 }
 
-template<class T>
+template <class T>
 void Tree<T>::enableFamily()
 {
     activate();
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
+    for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
         (*it)->enableFamily();
     }
 }
 
-template<class T>
+template <class T>
 void Tree<T>::disableFamily()
 {
     deactivate();
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
+    for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
         (*it)->disableFamily();
     }
 }
 
-template<class T>
-void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
+template <class T>
+void Tree<T>::addChild(T* newChild, int parentPosition, int childPosition)
 {
-    if( ( parentPosition == -1 ) || ( childPosition >= static_cast<int>(mpMyChildrenList->size()) ) )
-    {
-        mpMyChildrenList->push_back( newChild );
-    }
-    else
-    {
+    if ((parentPosition == -1) || (childPosition >= static_cast<int>(mpMyChildrenList->size()))) {
+        mpMyChildrenList->push_back(newChild);
+    } else {
         // insert item at proper position
         int cnt = 0;
-        typedef typename std::list<T *>::iterator IT;
-        for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it ++ )
-        {
-            if( cnt >= childPosition )
-            {
-                mpMyChildrenList->insert( it, newChild );
+        for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
+            if (cnt >= childPosition) {
+                mpMyChildrenList->insert(it, newChild);
                 break;
             }
             cnt++;
@@ -263,71 +236,40 @@ void Tree<T>::addChild( T * newChild, int parentPosition, int childPosition )
     }
 }
 
-template<class T>
-void Tree<T>::setParent( T * pParent )
+template <class T>
+void Tree<T>::setParent(T* pParent)
 {
     mpParent = pParent;
 }
 
-template<class T>
-bool Tree<T>::popChild( T * pChild )
+template <class T>
+bool Tree<T>::popChild(T* pChild)
 {
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
-        if( *it == pChild )
-        {
-            mpMyChildrenList->remove( pChild );
+    for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
+        if (*it == pChild) {
+            mpMyChildrenList->remove(pChild);
             return true;
         }
     }
     return false;
 }
 
-template<class T>
-std::list<T *> * Tree<T>::getChildrenList()
+template <class T>
+std::list<T*>* Tree<T>::getChildrenList()
 {
     return mpMyChildrenList;
 }
 
-template<class T>
-QString & Tree<T>::getError()
+template <class T>
+QString& Tree<T>::getError()
 {
     return mErrorMessage;
 }
 
-template<class T>
-void Tree<T>::setError( QString error )
+template <class T>
+void Tree<T>::setError(QString error)
 {
     mErrorMessage = error;
-}
-
-
-template<class T>
-void Tree<T>::DumpFamily()
-{
-    Dump();
-    typedef typename std::list<T *>::const_iterator I;
-    for( I it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
-        T * pChild = *it;
-        if( pChild ) pChild->DumpFamily();
-    }
-}
-
-template<class T>
-void Tree<T>::Dump()
-{
-    std::cout << "My ID=" << mID << " my parent="<< mpParent << std::endl;
-    std::cout << " my children are:";
-    typedef typename std::list<T *>::const_iterator IT;
-    for( IT it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++ )
-    {
-        std::cout << " dumping:"<<std::endl;
-        T* pChild = *it;
-        if( pChild ) std::cout << pChild->mID << ", ";
-    }
-    std::cout << "ende dump()"<< std::endl;
 }
 
 #endif // MUDLET_TREE_H

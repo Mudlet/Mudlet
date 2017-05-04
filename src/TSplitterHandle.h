@@ -31,10 +31,13 @@ class TSplitter;
 
 class TSplitterHandle : public QSplitterHandle
 {
-    // Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(TSplitterHandle)
+
 public:
-    TSplitterHandle(Qt::Orientation orientation, TSplitter * parent );
-    void paintEvent( QPaintEvent * );
+    TSplitterHandle(Qt::Orientation orientation, TSplitter* parent);
+    void paintEvent(QPaintEvent*) override;
 };
 
 #endif // MUDLET_TSPLITTERHANDLE_H

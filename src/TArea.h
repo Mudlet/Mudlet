@@ -39,30 +39,30 @@ class TArea
 {
     Q_DECLARE_TR_FUNCTIONS(TArea) // Needed so we can use tr() even though TArea is NOT derived from QObject
 
-    friend bool TMap::serialize( QDataStream & );
-    friend bool TMap::restore( QString );
-    friend bool TMap::retrieveMapFileStats( QString , QString *, int *, int *, int *, int * );
+    friend bool TMap::serialize(QDataStream&);
+    friend bool TMap::restore(QString);
+    friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
 
 public:
-    TArea( TMap *, TRoomDB * );
+    TArea(TMap*, TRoomDB*);
     ~TArea();
     int getAreaID();
     void addRoom(int id);
     const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return exits.uniqueKeys(); }
-    const QMultiMap<int, QPair<QString, int> > getAreaExitRoomData() const ;
+    const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
     void calcSpan();
     void fast_calcSpan(int);
     void determineAreaExits();
     void determineAreaExitsOfRoom(int);
-    void removeRoom(int, bool isToDeferAreaRelatedRecalculations=false);
+    void removeRoom(int, bool isToDeferAreaRelatedRecalculations = false);
     QList<int> getCollisionNodes();
-    QList<int> getRoomsByPosition( int x, int y, int z );
-    QMap<int, QMap<int, QMultiMap<int, int> > > koordinatenSystem();
+    QList<int> getRoomsByPosition(int x, int y, int z);
+    QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
 
 
-    QSet<int> rooms;                        // rooms of this area
-    QVector3D pos;                          // pos auf der map und 0 punkt des area internen koordinatensystems
+    QSet<int> rooms; // rooms of this area
+    QVector3D pos;   // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x;
     int min_y;
@@ -82,17 +82,17 @@ public:
     bool gridMode;
     bool isZone;
     int zoneAreaRef;
-    TRoomDB * mpRoomDB;
+    TRoomDB* mpRoomDB;
     bool mIsDirty;
     QMap<QString, QString> mUserData;
 
 
 private:
-    TArea(){qFatal("FATAL: illegal default constructor use of TArea()");};
+    TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
     // QMap<int, TMapLabel> labelMap;
 
-    TMap * mpMap; // Supplied by C'tor and now needed to pass an error message upwards
-    QMultiMap<int, QPair<int, int> > exits;
+    TMap* mpMap; // Supplied by C'tor and now needed to pass an error message upwards
+    QMultiMap<int, QPair<int, int>> exits;
     // rooms that border on this area:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
     // Made private as we may change implimentation detail
