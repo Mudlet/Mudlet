@@ -3277,7 +3277,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelClickCallback(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelClickCallback(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3342,7 +3342,7 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelReleaseCallback(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelReleaseCallback(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3407,7 +3407,7 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelOnEnter(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnEnter(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3472,7 +3472,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelOnLeave(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnLeave(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
