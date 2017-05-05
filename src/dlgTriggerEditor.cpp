@@ -24,8 +24,6 @@
 
 #include "dlgTriggerEditor.h"
 
-#include "QDebug.h"
-
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
