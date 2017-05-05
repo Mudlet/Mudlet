@@ -209,7 +209,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpSourceEditorEdbee->config()->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     mpSourceEditorEdbee->config()->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
-    mpSourceEditorEdbeeDocument->setText("# Enter your lua code here\n");
+    mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
 
     // option areas
 
@@ -2562,7 +2562,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
@@ -2666,7 +2666,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
@@ -2686,7 +2686,7 @@ void dlgTriggerEditor::addVar( bool isFolder )
         mpVarsMainArea->var_type->setCurrentIndex(4);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
-        mpSourceEditorEdbeeDocument->setText("NewTable");
+        mpSourceEditorEdbeeDocument->setText( QString("NewTable"));
         name="";
     }
     else{
@@ -2832,7 +2832,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
@@ -2928,7 +2928,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
@@ -3031,7 +3031,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
 
 
     mpHost->getActionUnit()->updateToolbar();
@@ -4144,7 +4144,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
@@ -4300,7 +4300,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorEdbeeDocument->setText( "");
+    mpSourceEditorEdbeeDocument->clear();
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
@@ -4340,7 +4340,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditorEdbeeDocument->setText( "");
+    mpSourceEditorEdbeeDocument->clear();
 
     mpKeysMainArea->lineEdit_key->setText( pItem->text(0) );
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
@@ -4535,7 +4535,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
-        mpSourceEditorEdbeeDocument->setText( "");
+        mpSourceEditorEdbeeDocument->clear();
         //check for temp item
         var = vu->getTVar( pItem );
         if ( var && var->getValueType() == LUA_TTABLE )
@@ -4633,7 +4633,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditorEdbee->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -4778,7 +4778,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
 
@@ -4817,7 +4817,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->setText("");
+    mpSourceEditorEdbeeDocument->clear();
 
     mpTimersMainArea->lineEdit_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
@@ -6040,7 +6040,7 @@ void dlgTriggerEditor::changeView( int view )
     mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
-        mpSourceEditorEdbeeDocument->setText("");
+        mpSourceEditorEdbeeDocument->clear();
     }
     mCurrentView = view;
 

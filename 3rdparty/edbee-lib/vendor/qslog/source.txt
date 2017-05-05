@@ -1,0 +1,1 @@
+https://bitbucket.org/razvanpetru/qt-components/src/fc2426a9d9fd/QsLog/

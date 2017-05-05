@@ -462,3 +462,11 @@ DISTFILES += \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     .clang-format
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../3rdparty/edbee-lib/edbee-lib/release/ -ledbee
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../3rdparty/edbee-lib/edbee-lib/debug/ -ledbee
+else:unix: LIBS += -L$$OUT_PWD/../3rdparty/edbee-lib/edbee-lib/ -ledbee
+
+INCLUDEPATH += $$PWD/../3rdparty/edbee-lib/edbee-lib
+DEPENDPATH += $$PWD/../3rdparty/edbee-lib/edbee-lib
+
