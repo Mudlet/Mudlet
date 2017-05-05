@@ -115,15 +115,15 @@ QVariant BasePListParser::readNextPlistType( int level )
 {
     if( readNextElement("",level) ) {
         // reads a dictionary
-        if( xml_->name().compare( "dict", Qt::CaseInsensitive ) == 0 ) {
+        if( xml_->name().compare( QString("dict"), Qt::CaseInsensitive ) == 0 ) {
             return readDict();
 
         // reads an array
-        } else if( xml_->name().compare( "array", Qt::CaseInsensitive ) == 0 ) {
+        } else if( xml_->name().compare( QString("array"), Qt::CaseInsensitive ) == 0 ) {
             return readList( );
 
         // reads a string
-        } else if( xml_->name().compare( "string", Qt::CaseInsensitive ) == 0 ) {
+        } else if( xml_->name().compare( QString("string"), Qt::CaseInsensitive ) == 0 ) {
             return readElementText();
         }
     }
