@@ -155,6 +155,6 @@ HEADERS += \
 
 ## Extra dependencies
 ##====================
-include($$PWD/../vendor/QsLog/QsLog.pri)
+include($$PWD/../vendor/qslog/QsLog.pri)
 include($$PWD/../vendor/onig/onig.pri)
 
