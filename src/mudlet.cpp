@@ -154,6 +154,7 @@ mudlet::mudlet()
     // On at least my platform (Linux) the status bar does not seem to exist
     // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar( this );
+    mpMainToolBar->setObjectName("mpMainToolBar");
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
@@ -701,16 +702,29 @@ void mudlet::slot_close_profile_requested( int tab )
     if( ! pH ) return;
 
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
+    QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
 
     if( ! pH->mpConsole->close() )
         return;
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
+    pH->closingDown();
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
-    for( auto dockName : dockWindowMap.keys() ) {
-        dockWindowMap[dockName]->close();
+    for( auto consoleName : hostConsoleMap.keys() ) {
+        hostConsoleMap[consoleName]->close();
+        hostConsoleMap.remove(consoleName);
+
+        if( dockWindowMap.contains(consoleName) ) {
+            dockWindowMap[consoleName]->setAttribute( Qt::WA_DeleteOnClose );
+            dockWindowMap[consoleName]->close();
+            removeDockWidget( dockWindowMap[consoleName] );
+            dockWindowMap.remove(consoleName);
+        }
     }
+    mHostDockConsoleMap.remove(pH);
+    mHostConsoleMap.remove(pH);
+
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
     {
@@ -740,11 +754,25 @@ void mudlet::slot_close_profile()
             if( pH )
             {
                 QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
+                QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
                 QString name = pH->getName();
+
+                pH->closingDown();
                 mpCurrentActiveHost->mpEditorDialog->close();
-                for( auto dockName : dockWindowMap.keys() ) {
-                    dockWindowMap[dockName]->close();
+                for( auto consoleName : hostConsoleMap.keys() ) {
+                    hostConsoleMap[consoleName]->close();
+                    hostConsoleMap.remove(consoleName);
+
+                    if( dockWindowMap.contains(consoleName) ) {
+                        dockWindowMap[consoleName]->setAttribute( Qt::WA_DeleteOnClose );
+                        dockWindowMap[consoleName]->close();
+                        removeDockWidget( dockWindowMap[consoleName] );
+                        dockWindowMap.remove(consoleName);
+                    }
                 }
+                mHostDockConsoleMap.remove(pH);
+                mHostConsoleMap.remove(pH);
+
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )
                 {
@@ -860,10 +888,14 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
+    QMap<QString, TDockWidget*> dockConsoleMap;
+    mHostDockConsoleMap[mpCurrentActiveHost] = dockConsoleMap;
     QMap<QString, TConsole *> miniConsoleMap;
     mHostConsoleMap[mpCurrentActiveHost] = miniConsoleMap;
     QMap<QString, TLabel *> labelMap;
     mHostLabelMap[mpCurrentActiveHost] = labelMap;
+    QList<QString> updateMap;
+    mHostDockLayoutChangeMap[mpCurrentActiveHost] = updateMap;
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -953,17 +985,90 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[14]->setEnabled( true );
 }
 
-bool mudlet::openWindow( Host * pHost, const QString & name )
+bool mudlet::saveWindowLayout() {
+    qDebug() << "mudlet::saveWindowLayout() - saving layout.";
+
+    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+
+    QFile layoutFile(layoutFilePath);
+    if (layoutFile.open(QIODevice::WriteOnly)) {
+        // revert update markers to ready objects for saving.
+        commitLayoutUpdates();
+
+        QByteArray layoutData = saveState();
+        QDataStream ofs(&layoutFile);
+        ofs << layoutData;
+        layoutFile.close();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::loadWindowLayout() {
+    qDebug() << "mudlet::loadWindowLayout() - loading layout.";
+
+    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+
+    QFile layoutFile(layoutFilePath);
+    if (layoutFile.exists()) {
+        if (layoutFile.open(QIODevice::ReadOnly)) {
+            mIsLoadingLayout = true;
+
+            QByteArray layoutData;
+            QDataStream ifs(&layoutFile);
+            ifs >> layoutData;
+            layoutFile.close();
+
+            restoreState(layoutData);
+
+            mIsLoadingLayout = false;
+            return true;
+        }
+    }
+    return false;
+}
+
+void mudlet::setDockLayoutUpdated(Host* pHost, const QString & name) {
+    if( !pHost ) return;
+
+    QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
+    QList<QString> & mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
+    if( !mDockLayoutUpdateMap.contains(name) && dockWindowMap.contains(name) ) {
+        dockWindowMap[name]->setObjectName( QString("%1_changed").arg(dockWindowMap[name]->objectName()) );
+        mDockLayoutUpdateMap.append(name);
+    }
+}
+
+void mudlet::commitLayoutUpdates() {
+    for( Host* pHost : mHostDockLayoutChangeMap.keys() ) {
+        QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
+        QList<QString> & mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
+
+        for( QString TDockName : mDockLayoutUpdateMap ) {
+            if( dockWindowMap.contains(TDockName) ) {
+                QString rename = QString("dockWindow_%1_%2").arg(pHost->getName(), TDockName);
+                dockWindowMap[TDockName]->setObjectName(rename);
+            }
+            mDockLayoutUpdateMap.removeAll(TDockName);
+        }
+    }
+}
+
+bool mudlet::openWindow( Host * pHost, const QString & name, bool loadLayout )
 {
+    if( ! pHost ) return false;
+
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
 
     if( ! dockWindowMap.contains(name) && ! dockWindowConsoleMap.contains(name) )
     {
         auto pD = new TDockWidget(pHost, name);
+        pD->setObjectName(QString("dockWindow_%1_%2").arg(pHost->getName(), name));
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
-        pD->setWindowTitle( name );
+        pD->setWindowTitle( QString("%1 - %2").arg(name, pHost->getName()) );
         dockWindowMap[name] = pD;
         auto pC = new TConsole( pHost, false );
         pC->setContentsMargins(0,0,0,0);
@@ -974,12 +1079,19 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         pC->setUserWindow();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
+
+        if(loadLayout)
+            loadWindowLayout();
+
         return true;
     } else if( dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name) ) {
-        dockWindowMap[name]->show();
         dockWindowMap[name]->update();
-        dockWindowConsoleMap[name]->console->show();
-        dockWindowConsoleMap[name]->console->forceUpdate();
+        dockWindowMap[name]->show();
+        dockWindowConsoleMap[name]->showWindow(name);
+
+        if(loadLayout)
+            loadWindowLayout();
+
         return true;
     }
 
@@ -1172,6 +1284,9 @@ bool mudlet::clearWindow( Host * pHost, const QString & name )
 
 bool mudlet::showWindow( Host * pHost, const QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     // check labels first as they are shown/hidden more often
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1185,10 +1300,9 @@ bool mudlet::showWindow( Host * pHost, const QString & name )
     {
         QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
         if( dockWindowMap.contains(name) ) {
-            dockWindowMap[name]->show();
             dockWindowMap[name]->update();
-            dockWindowConsoleMap[name]->console->show();
-            dockWindowConsoleMap[name]->console->forceUpdate();
+            dockWindowMap[name]->show();
+            dockWindowConsoleMap[name]->showWindow(name);
 
             return true;
         }
@@ -1213,6 +1327,9 @@ bool mudlet::paste( Host * pHost, const QString & name )
 
 bool mudlet::hideWindow( Host * pHost, const QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     // check labels first as they are shown/hidden more often
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1228,14 +1345,11 @@ bool mudlet::hideWindow( Host * pHost, const QString & name )
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->hide();
             dockWindowMap[name]->update();
-            dockWindowConsoleMap[name]->console->hide();
-            dockWindowConsoleMap[name]->console->forceUpdate();
+            dockWindowConsoleMap[name]->hideWindow(name);
 
             return true;
         }
 
-        //dockWindowConsoleMap[name]->console->hide();
-        //dockWindowConsoleMap[name]->console->forceUpdate();
         return pHost->mpConsole->hideWindow(name);
     }
 
@@ -1315,6 +1429,9 @@ bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
 
 bool mudlet::closeWindow( Host * pHost, const QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains(name) )
     {
@@ -1322,14 +1439,11 @@ bool mudlet::closeWindow( Host * pHost, const QString & name )
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->hide();
             dockWindowMap[name]->update();
-            dockWindowConsoleMap[name]->console->hide();
-            dockWindowConsoleMap[name]->console->forceUpdate();
+            dockWindowConsoleMap[name]->hideWindow(name);
 
             return true;
         }
 
-        //dockWindowConsoleMap[name]->console->hide();
-        //dockWindowConsoleMap[name]->console->forceUpdate();
         return pHost->mpConsole->hideWindow(name);
     }
     else

@@ -86,7 +86,11 @@ public:
     void registerTimer(TTimer*, QTimer*);
     void unregisterTimer(QTimer*);
     void forceClose();
-    bool openWindow(Host*, const QString&);
+    bool saveWindowLayout();
+    bool loadWindowLayout();
+    void setDockLayoutUpdated(Host*, const QString&);
+    void commitLayoutUpdates();
+    bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
     bool echoWindow(Host*, const QString&, const QString&);
@@ -171,6 +175,8 @@ public:
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;
+    bool mIsLoadingLayout;
+    QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
@@ -270,7 +276,6 @@ private:
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
-//    QMap<QString, TDockWidget*> dockWindowMap;
     QMap<Host*, QToolBar*> mUserToolbarMap;
 
 

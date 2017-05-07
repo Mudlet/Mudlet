@@ -82,7 +82,8 @@ public:
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
 
-    bool closingDown();
+    void closingDown();
+    bool isClosingDown();
     const unsigned int assemblePath();
     const bool checkForMappingScript();
 

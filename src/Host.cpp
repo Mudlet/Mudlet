@@ -191,6 +191,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 Host::~Host()
 {
     mIsGoingDown = true;
+    mIsClosingDown = true;
     mTelnet.disconnect();
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -663,11 +664,16 @@ void Host::connectToServer()
     mTelnet.connectIt(mUrl, mPort);
 }
 
-bool Host::closingDown()
+void Host::closingDown()
 {
     QMutexLocker locker(&mLock);
-    bool shutdown = mIsClosingDown;
-    return shutdown;
+    mIsClosingDown = true;
+}
+
+bool Host::isClosingDown()
+{
+    QMutexLocker locker(&mLock);
+    return mIsClosingDown;
 }
 
 bool Host::installPackage(const QString& fileName, int module)

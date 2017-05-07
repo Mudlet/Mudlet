@@ -2422,6 +2422,16 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::loadWindowLayout(lua_State *L) {
+    mudlet::self()->loadWindowLayout();
+    return 0;
+}
+
+int TLuaInterpreter::saveWindowLayout(lua_State *L) {
+    mudlet::self()->saveWindowLayout();
+    return 0;
+}
+
 int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -2462,9 +2472,15 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
+
+    bool loadLayout = true;
+    if( ! lua_isnoneornil(L, 2) && lua_isboolean(L, 2) ) {
+        loadLayout = lua_toboolean(L, 2);
+    }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->openWindow( pHost, text );
+    mudlet::self()->openWindow( pHost, text, loadLayout );
     return 0;
 }
 
@@ -12985,7 +13001,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempTimer", TLuaInterpreter::tempTimer );
     lua_register( pGlobalLua, "tempTrigger", TLuaInterpreter::tempTrigger );
     lua_register( pGlobalLua, "tempRegexTrigger", TLuaInterpreter::tempRegexTrigger );
-    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
+    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet );
+    lua_register( pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout );
+    lua_register( pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout );
     lua_register( pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow );
     lua_register( pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow );
     lua_register( pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer );
