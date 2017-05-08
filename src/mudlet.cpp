@@ -630,22 +630,26 @@ void mudlet::slot_package_manager()
 {
     Host * pH = getActiveHost();
     if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/package_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    packageList = d->findChild<QListWidget *>("packageList");
-    uninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    installButton = d->findChild<QPushButton *>("installButton");
-    if( ! packageList || ! uninstallButton ) return;
-    packageList->addItems( pH->mInstalledPackages );
-    connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
-    connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
-    d->setWindowTitle("Package Manager");
-    d->show();
-    d->raise();
+    if( ! mpPackageManagerDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/package_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpPackageManagerDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+        if( !mpPackageManagerDlg ) return;
+        packageList = mpPackageManagerDlg->findChild<QListWidget *>("packageList");
+        uninstallButton = mpPackageManagerDlg->findChild<QPushButton *>("uninstallButton");
+        installButton = mpPackageManagerDlg->findChild<QPushButton *>("installButton");
+        if( ! packageList || ! uninstallButton ) return;
+        packageList->addItems( pH->mInstalledPackages );
+        connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
+        connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
+        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
+    }
+    if( mpPackageManagerDlg ) {
+        mpPackageManagerDlg->raise();
+        mpPackageManagerDlg->show();
+    }
 }
 
 void mudlet::slot_install_package()
@@ -1949,12 +1953,16 @@ void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
-    auto pDlg = new dlgProfilePreferences( this, pHost );
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    pDlg->show();
+    if( ! mpProfilePreferencesDlg ) {
+        mpProfilePreferencesDlg = new dlgProfilePreferences( this, pHost );
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        mpProfilePreferencesDlg->show();
+    }
+    else
+        mpProfilePreferencesDlg->show();
 }
 
 void mudlet::show_help_dialog()

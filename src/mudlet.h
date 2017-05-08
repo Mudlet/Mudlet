@@ -60,6 +60,7 @@ class TLabel;
 class TTimer;
 class dlgIRC;
 class dlgAboutDialog;
+class dlgProfilePreferences;
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow
@@ -174,6 +175,8 @@ public:
     QStringList packagesToInstallList;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
+    QPointer<QDialog> mpPackageManagerDlg;
+    QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
