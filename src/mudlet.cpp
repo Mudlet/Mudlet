@@ -1020,10 +1020,10 @@ bool mudlet::loadWindowLayout() {
             ifs >> layoutData;
             layoutFile.close();
 
-            restoreState(layoutData);
+            bool rv = restoreState(layoutData);
 
             mIsLoadingLayout = false;
-            return true;
+            return rv;
         }
     }
     return false;

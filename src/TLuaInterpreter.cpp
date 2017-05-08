@@ -2423,13 +2423,13 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
 }
 
 int TLuaInterpreter::loadWindowLayout(lua_State *L) {
-    mudlet::self()->loadWindowLayout();
-    return 0;
+    lua_pushboolean( L, mudlet::self()->loadWindowLayout() );
+    return 1;
 }
 
 int TLuaInterpreter::saveWindowLayout(lua_State *L) {
-    mudlet::self()->saveWindowLayout();
-    return 0;
+    lua_pushboolean( L, mudlet::self()->saveWindowLayout() );
+    return 1;
 }
 
 int TLuaInterpreter::saveProfile(lua_State* L)
@@ -2480,8 +2480,8 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
 
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->openWindow( pHost, text, loadLayout );
-    return 0;
+    lua_pushboolean( L, mudlet::self()->openWindow( pHost, text, loadLayout ));
+    return 1;
 }
 
 int TLuaInterpreter::createMiniConsole( lua_State *L )
