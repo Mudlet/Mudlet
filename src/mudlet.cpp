@@ -141,6 +141,10 @@ mudlet::mudlet()
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
 , mIsToDisplayMapAuditErrorsToConsole( false )
+, mpAboutDlg( 0 )
+, mpModuleDlg( 0 )
+, mpPackageManagerDlg( 0 )
+, mpProfilePreferencesDlg( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -503,6 +507,7 @@ void mudlet::slot_module_manager(){
         connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
         connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
         mpModuleDlg->setWindowTitle(tr("Module Manager"));
+        mpModuleDlg->setAttribute( Qt::WA_DeleteOnClose );
     }
     if( mpModuleDlg ) {
         mpModuleDlg->show();
@@ -645,6 +650,7 @@ void mudlet::slot_package_manager()
         connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
         connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
         mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
+        mpPackageManagerDlg->setAttribute( Qt::WA_DeleteOnClose );
     }
     if( mpPackageManagerDlg ) {
         mpPackageManagerDlg->raise();
@@ -1960,6 +1966,7 @@ void mudlet::show_options_dialog()
         connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
         connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
         mpProfilePreferencesDlg->show();
+        mpProfilePreferencesDlg->setAttribute( Qt::WA_DeleteOnClose );
     }
     else
         mpProfilePreferencesDlg->show();
@@ -2080,6 +2087,7 @@ void mudlet::slot_show_about_dialog()
 {
     if( ! mpAboutDlg ) {
         mpAboutDlg = new dlgAboutDialog( this );
+        mpAboutDlg->setAttribute( Qt::WA_DeleteOnClose );
     }
 
     mpAboutDlg->raise();
