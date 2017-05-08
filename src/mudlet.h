@@ -59,6 +59,7 @@ class TEvent;
 class TLabel;
 class TTimer;
 class dlgIRC;
+class dlgAboutDialog;
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow
@@ -171,6 +172,7 @@ public:
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;
+    dlgAboutDialog* mpAboutDlg;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces

@@ -2067,9 +2067,12 @@ void mudlet::slot_show_help_dialog_download()
 
 void mudlet::slot_show_about_dialog()
 {
-    auto pDlg = new dlgAboutDialog( this );
-    pDlg->raise();
-    pDlg->show();
+    if( ! mpAboutDlg ) {
+        mpAboutDlg = new dlgAboutDialog( this );
+    }
+
+    mpAboutDlg->raise();
+    mpAboutDlg->show();
 }
 
 void mudlet::slot_notes()
