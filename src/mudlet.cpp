@@ -484,27 +484,30 @@ void mudlet::layoutModules(){
 void mudlet::slot_module_manager(){
     Host * pH = getActiveHost();
     if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/module_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    moduleTable = d->findChild<QTableWidget *>("moduleTable");
-    moduleUninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    moduleInstallButton = d->findChild<QPushButton *>("installButton");
-    moduleHelpButton = d->findChild<QPushButton *>("helpButton");
-    if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) return;
-    layoutModules();
-    connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
-    connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
-    connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
-    connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
-    connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-    d->setWindowTitle("Module Manager");
-    d->show();
-    d->raise();
-
+    if( !mpModuleDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/module_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpModuleDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+        if( !mpModuleDlg ) { return; }
+        moduleTable = mpModuleDlg->findChild<QTableWidget *>("moduleTable");
+        moduleUninstallButton = mpModuleDlg->findChild<QPushButton *>("uninstallButton");
+        moduleInstallButton = mpModuleDlg->findChild<QPushButton *>("installButton");
+        moduleHelpButton = mpModuleDlg->findChild<QPushButton *>("helpButton");
+        if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) return;
+        layoutModules();
+        connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
+        connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
+        connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
+        connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
+        connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
+        mpModuleDlg->setWindowTitle(tr("Module Manager"));
+    }
+    if( mpModuleDlg ) {
+        mpModuleDlg->show();
+        mpModuleDlg->raise();
+    }
 }
 
 bool mudlet::openWebPage(const QString& path){

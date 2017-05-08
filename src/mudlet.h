@@ -172,7 +172,8 @@ public:
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;
-    dlgAboutDialog* mpAboutDlg;
+    QPointer<dlgAboutDialog> mpAboutDlg;
+    QPointer<QDialog> mpModuleDlg;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
