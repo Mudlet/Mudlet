@@ -786,6 +786,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
     pHost->mIsNextLogFileInHtmlFormat = (attributes().value("mRawStreamDump") == "yes");
+    pHost->mIsLoggingTimestamps = (attributes().value("mIsLoggingTimestamps") == "yes");
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");

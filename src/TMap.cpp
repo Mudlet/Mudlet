@@ -60,19 +60,13 @@ TMap::TMap( Host * pH )
 , mpMapper( Q_NULLPTR )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
-, mDefaultVersion( 16 )      // <== replaces CURRENT_MAP_VERSION
-                            // THIS, mMinVersion AND mMaxVersion SHOULD BE
-                            // REVISED WHEN WE SWITCH FROM A PREVIEW TO A RELEASE VERSION!
-                            // Currently:
-                            // + TLuaInterpreter::setAreaUserData()
-                            // + TLuaInterpreter::setMapUserData() need 17
-                            // (for persistant storage of data)
-                            // + TArea::rooms as QSet<int> needs 18,
-                            // is/was QList<int> in prior versions
-                            // + TMap::mRoomIdHash as QHash<QString, int> needs 18, is/was
-                            // a single mRoomId in prior versions
-, mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
-, mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
+// default map version that new maps will get
+, mDefaultVersion( 18 )
+// maximum version of the map format that this Mudlet can understand and will
+// allow the user to load
+, mMaxVersion( 18 )
+// minimum version this instance of Mudlet will allow the user to save maps in
+, mMinVersion( 16 )
 , mIsFileViewingRecommended( false )
 , mpNetworkAccessManager( Q_NULLPTR )
 , mpProgressDialog( Q_NULLPTR )
@@ -192,8 +186,8 @@ void TMap::mapClear()
 
 void TMap::logError( QString & msg )
 {
-    QColor orange = QColor(255,128,0);
-    QColor black = QColor(0,0,0);
+    auto orange = QColor(255,128,0);
+    auto black = QColor(Qt::black);
     QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
     if( mpHost->mpEditorDialog )
     {
@@ -2397,7 +2391,7 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
 
                     if( readXmlMapFile( file ) ) {
                         TEvent mapDownloadEvent;
-                        mapDownloadEvent.mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
+                        mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
                         pHost->raiseEvent( mapDownloadEvent );
                     }

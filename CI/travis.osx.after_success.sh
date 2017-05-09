@@ -11,7 +11,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
   ln -s "${TRAVIS_BUILD_DIR}" source
 
   if [ -z "${TRAVIS_TAG}" ]; then
-    appBaseName="Mudlet-${VERSION}${BUILD}"
+    appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
     bash make-installer.sh "${appBaseName}.app"

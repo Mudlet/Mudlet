@@ -102,7 +102,7 @@ public:
     void log(int, int);
     int skipSpacesAtBeginOfLine(int i, int i2);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format);
-    QString bufferToHtml(QPoint P1, QPoint P2);
+    QString bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     QString& line(int n);
     int find(int line, const QString& what, int pos);
@@ -123,7 +123,6 @@ public:
     bool applyBgColor(QPoint&, QPoint&, int, int, int);
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
-    QPoint& insertText(const QString& what, QPoint& where);
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();

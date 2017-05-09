@@ -22,9 +22,18 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
     error("Mudlet requires Qt 5.6 or later")
 }
 
+# Including IRC Library
+include(../3rdparty/communi/src/core/core.pri)
+
+include(../3rdparty/lua_yajl/src.pri)
+
+macx: {
+    include(../3rdparty/luazip/src.pri)
+}
+
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.1.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -52,11 +61,16 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
 
-# Leave the value of the following empty, line should be "BUILD =" without quotes
-# (it is NOT a Qt built-in variable) for a release build or, if you are
-# distributing modified code, it would be useful if you could put something to
-# distinguish the version:
-BUILD = "-dev"
+# if you are distributing modified code, it would be useful if you
+# put something distinguishing into the MUDLET_VERSION_BUILD environment
+# variable to make identification of the used version simple
+# the qmake BUILD variable is NOT built-in
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
+# Leave the value of the following empty for a release build
+# i.e. the line should be "BUILD =" without quotes
+  BUILD = "-dev"
+}
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -70,7 +84,6 @@ macx {
 } else {
     TARGET = mudlet
 }
-msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
@@ -161,8 +174,6 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
-INCLUDEPATH += irc/include
-
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -194,15 +205,6 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
-    irc/src/irc.cpp \
-    irc/src/irccodecplugin.cpp \
-    irc/src/irccommand.cpp \
-    irc/src/ircdecoder.cpp \
-    irc/src/ircmessage.cpp \
-    irc/src/ircparser.cpp \
-    irc/src/ircsender.cpp \
-    irc/src/ircsession.cpp \
-    irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -216,6 +218,7 @@ SOURCES += \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
+    TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
@@ -240,9 +243,6 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
-
-!msvc:SOURCES += lua_yajl.c
-msvc:SOURCES += lua_yajl.cpp
 
 
 HEADERS += \
@@ -275,16 +275,6 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
-    irc/include/irc.h \
-    irc/include/irccodecplugin.h \
-    irc/include/irccommand.h \
-    irc/include/ircdecoder_p.h \
-    irc/include/ircglobal.h \
-    irc/include/ircmessage.h \
-    irc/include/ircparser_p.h \
-    irc/include/ircsender.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -300,6 +290,7 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDockWidget.h \
     TEasyButtonBar.h \
     testdbg.h \
     TEvent.h \
@@ -328,8 +319,6 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h
-
-macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -463,7 +452,6 @@ DISTFILES += \
     ../.travis.yml \
     CMakeLists.txt \
     ../CMakeLists.txt \
-    irc/CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \

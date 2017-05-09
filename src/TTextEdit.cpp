@@ -194,7 +194,7 @@ void TTextEdit::slot_scrollBarMoved( int line )
 void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192,192,192);
-    mBgColor = QColor(0,0,0);
+    mBgColor = QColor(Qt::black);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
 #if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         int width = mScreenWidth*mFontWidth*2;
@@ -527,8 +527,8 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
                                         mFontHeight );
-                QColor bgTime = QColor(22,22,22);
-                QColor fgTime = QColor(200,150,0);
+                auto bgTime = QColor(22,22,22);
+                auto fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
                 drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
@@ -542,8 +542,8 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                 text = mpBuffer->lineBuffer[i+lineOffset].at(i2-timeOffset);
                 TChar & f = mpBuffer->buffer[i+lineOffset][i2-timeOffset];
                 int delta = 1;
-                QColor fgColor = QColor(f.fgR, f.fgG, f.fgB );
-                QColor bgColor = QColor(f.bgR, f.bgG, f.bgB );
+                auto fgColor = QColor(f.fgR, f.fgG, f.fgB );
+                auto bgColor = QColor(f.bgR, f.bgG, f.bgB );
                 while( i2+delta+timeOffset < lineLength )
                 {
                     if( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset] == f )
@@ -737,8 +737,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
                                         mFontHeight );
-                QColor bgTime = QColor(22,22,22);
-                QColor fgTime = QColor(200,150,0);
+                auto bgTime = QColor(22,22,22);
+                auto fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
                 drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
@@ -1153,33 +1153,32 @@ void TTextEdit::slot_popupMenu()
 
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
-    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
-    {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMousePressEvent" );
-        switch( event->button() )
-        {
+    if (!mpConsole->mIsSubConsole && !mpConsole->mIsDebugConsole) {
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append(QLatin1String("sysWindowMousePressEvent"));
+        switch (event->button()) {
         case Qt::LeftButton:
-            me.mArgumentList.append( QString::number(1) );
+            mudletEvent.mArgumentList.append(QString::number(1));
             break;
         case Qt::RightButton:
-            me.mArgumentList.append( QString::number(2) );
+            mudletEvent.mArgumentList.append(QString::number(2));
             break;
         case Qt::MidButton:
-            me.mArgumentList.append( QString::number(3) );
+            mudletEvent.mArgumentList.append(QString::number(3));
             break;
-        default:
-            me.mArgumentList.append( 0 );
+        default: // TODO: What about those of us with more than three mouse buttons?
+            mudletEvent.mArgumentList.append(0);
             break;
         }
-        me.mArgumentList.append( QString::number(event->x()) );
-        me.mArgumentList.append( QString::number(event->y()) );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        mudletEvent.mArgumentList.append(QString::number(event->x()));
+        mudletEvent.mArgumentList.append(QString::number(event->y()));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(mudletEvent);
     }
+
     if( event->button() == Qt::LeftButton )
     {
         if( event->modifiers() & Qt::ControlModifier ) {
@@ -1388,6 +1387,11 @@ void TTextEdit::copySelectionToClipboard()
             forceUpdate();
             return;
         }
+        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
+        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y())
+        {
+            text.append( mpBuffer->timeBuffer[y].left(13) );
+        }
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
         while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
@@ -1499,21 +1503,14 @@ void TTextEdit::copySelectionToClipboardHTML()
         int x = 0;
         if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
-            if( x ) {
-                text.append( "<span>" );
-                text.append( QString( x, QLatin1Char(' ') ) );
-                text.append( "</span>" );
-                // Pad out with spaces to the right so a partial first line lines up
-            }
-
-            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y), mShowTimeStamps, x));
         }
         else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y), mShowTimeStamps));
         }
         else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y), mShowTimeStamps));
         }
     }
     text.append( QStringLiteral( " </div></body>\n"
@@ -1528,37 +1525,35 @@ void TTextEdit::copySelectionToClipboardHTML()
 
 void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
 {
-    if( event->button() == Qt::LeftButton )
-    {
+    if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
     }
-    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
-    {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMouseReleaseEvent" );
-        switch( event->button() )
-        {
+
+    if (!mpConsole->mIsSubConsole && !mpConsole->mIsDebugConsole) {
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append(QLatin1String("sysWindowMouseReleaseEvent"));
+        switch (event->button()) {
         case Qt::LeftButton:
-            me.mArgumentList.append( QString::number(1) );
+            mudletEvent.mArgumentList.append(QString::number(1));
             break;
         case Qt::RightButton:
-            me.mArgumentList.append( QString::number(2) );
+            mudletEvent.mArgumentList.append(QString::number(2));
             break;
         case Qt::MidButton:
-            me.mArgumentList.append( QString::number(3) );
+            mudletEvent.mArgumentList.append(QString::number(3));
             break;
         default:
-            me.mArgumentList.append( QString::number(0) );
+            mudletEvent.mArgumentList.append(QString::number(0));
             break;
         }
-        me.mArgumentList.append( QString::number(event->x()) );
-        me.mArgumentList.append( QString::number(event->y()) );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        mudletEvent.mArgumentList.append(QString::number(event->x()));
+        mudletEvent.mArgumentList.append(QString::number(event->y()));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(mudletEvent);
     }
 }
 

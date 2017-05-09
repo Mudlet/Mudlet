@@ -81,64 +81,97 @@ public:
     void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
-    bool               closingDown();
+
+    bool closingDown();
     const unsigned int assemblePath();
-    const bool         checkForMappingScript();
-    TriggerUnit *      getTriggerUnit()                 { return & mTriggerUnit; }
-    TimerUnit *        getTimerUnit()                   { return & mTimerUnit; }
-    AliasUnit *        getAliasUnit()                   { return & mAliasUnit; }
-    ActionUnit *       getActionUnit()                  { return & mActionUnit; }
-    KeyUnit *          getKeyUnit()                     { return & mKeyUnit; }
-    ScriptUnit *       getScriptUnit()                  { return & mScriptUnit; }
-    void               connectToServer();
-    void               send( QString cmd, bool wantPrint = true, bool dontExpandAliases = false );
-    void               sendRaw( QString s );
-    int                getHostID() { QMutexLocker locker(& mLock); return mHostID; }
-    void               setHostID( int id ) { QMutexLocker locker(& mLock); mHostID = id; }
-    TLuaInterpreter *  getLuaInterpreter() { return & mLuaInterpreter; }
-    LuaInterface *     getLuaInterface() { return mLuaInterface.data(); }
-    void               incomingStreamProcessor(const QString & paragraph, int line );
-    void               postIrcMessage(const QString&, const QString&, const QString& );
-    void               enableTimer(const QString & );
-    void               disableTimer(const QString & );
-    void               enableTrigger(const QString & );
-    void               disableTrigger(const QString & );
-    void               enableKey(const QString & );
-    void               disableKey(const QString & );
-    bool               killTimer(const QString & );
-    bool               killTrigger(const QString & );
-    double             stopStopWatch( int );
-    bool               resetStopWatch( int );
-    bool               startStopWatch( int );
-    double             getStopWatchTime( int );
-    int                createStopWatch();
-    void               startSpeedWalk();
-    void               saveModules(int);
-    void               reloadModule(const QString& moduleName);
-    bool               blockScripts() { return mBlockScriptCompile; }
+    const bool checkForMappingScript();
 
-    void               setIsAutologin( bool b ){ mIsAutologin = b; }
-    bool               isAutologin(){ return mIsAutologin; }
-    void               setReplacementCommand(const QString& );
-    void               registerEventHandler(const QString&, TScript * );
-    void               registerAnonymousEventHandler(const QString& name, const QString& fun );
-    void               unregisterEventHandler(const QString&, TScript * );
-    void               raiseEvent( const TEvent & event );
-    void               resetProfile();
-    void               callEventHandlers();
-    void               stopAllTriggers();
-    void               reenableAllTriggers();
-    void               set_USE_IRE_DRIVER_BUGFIX( bool b ){ mUSE_IRE_DRIVER_BUGFIX = b; mTelnet.set_USE_IRE_DRIVER_BUGFIX( b ); }
-    void               set_LF_ON_GA( bool b ){ mLF_ON_GA = b; mTelnet.set_LF_ON_GA( b ); }
-    void               adjustNAWS();
-    class              Exception_NoLogin{};
-    class              Exception_NoConnectionAvailable{};
+    TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
+    TimerUnit* getTimerUnit() { return &mTimerUnit; }
+    AliasUnit* getAliasUnit() { return &mAliasUnit; }
+    ActionUnit* getActionUnit() { return &mActionUnit; }
+    KeyUnit* getKeyUnit() { return &mKeyUnit; }
+    ScriptUnit* getScriptUnit() { return &mScriptUnit; }
 
-    bool                installPackage(const QString&, int);
-    bool                uninstallPackage(const QString&, int);
-    bool                removeDir(const QString&, const QString&);
-    void                readPackageConfig(const QString&, QString &);
-    void                postMessage(const QString message) { mTelnet.postMessage(message); }
+    void connectToServer();
+    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
+    void sendRaw(QString s);
+
+    int getHostID()
+    {
+        QMutexLocker locker(&mLock);
+        return mHostID;
+    }
+
+    void setHostID(int id)
+    {
+        QMutexLocker locker(&mLock);
+        mHostID = id;
+    }
+
+    TLuaInterpreter* getLuaInterpreter() { return &mLuaInterpreter; }
+    LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
+
+    void incomingStreamProcessor(const QString& paragraph, int line);
+    void postIrcMessage(const QString&, const QString&, const QString&);
+    void enableTimer(const QString&);
+    void disableTimer(const QString&);
+    void enableTrigger(const QString&);
+    void disableTrigger(const QString&);
+    void enableKey(const QString&);
+    void disableKey(const QString&);
+    bool killTimer(const QString&);
+    bool killTrigger(const QString&);
+    double stopStopWatch(int);
+    bool resetStopWatch(int);
+    bool startStopWatch(int);
+    double getStopWatchTime(int);
+    int createStopWatch();
+    void startSpeedWalk();
+    void saveModules(int);
+    void reloadModule(const QString& moduleName);
+    bool blockScripts() { return mBlockScriptCompile; }
+
+    void setIsAutologin(bool b) { mIsAutologin = b; }
+    bool isAutologin() { return mIsAutologin; }
+    void setReplacementCommand(const QString&);
+    void registerEventHandler(const QString&, TScript*);
+    void registerAnonymousEventHandler(const QString& name, const QString& fun);
+    void unregisterEventHandler(const QString&, TScript*);
+    void raiseEvent(const TEvent& event);
+    void resetProfile();
+    std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), bool syncModules = false);
+    void callEventHandlers();
+    void stopAllTriggers();
+    void reenableAllTriggers();
+
+    void set_USE_IRE_DRIVER_BUGFIX(bool b)
+    {
+        mUSE_IRE_DRIVER_BUGFIX = b;
+        mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
+    }
+
+    void set_LF_ON_GA(bool b)
+    {
+        mLF_ON_GA = b;
+        mTelnet.set_LF_ON_GA(b);
+    }
+
+    void adjustNAWS();
+
+    class Exception_NoLogin
+    {
+    };
+
+    class Exception_NoConnectionAvailable
+    {
+    };
+
+    bool installPackage(const QString&, int);
+    bool uninstallPackage(const QString&, int);
+    bool removeDir(const QString&, const QString&);
+    void readPackageConfig(const QString&, QString&);
+    void postMessage(const QString message) { mTelnet.postMessage(message); }
 
 public:
     cTelnet mTelnet;
@@ -190,6 +223,7 @@ public:
     // also mIsCurrentLogFileInHtmlFormat.
     bool mIsNextLogFileInHtmlFormat;
 
+    bool mIsLoggingTimestamps;
     bool mResetProfile;
     int mScreenHeight;
     int mScreenWidth;

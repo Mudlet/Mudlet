@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<testconfig version="1.0">
+<information>
+<summary>Spam opening custom exit lines dialog in the mapper</summary>
+<description>This tests for the crashing issue that once happened due to use of an uninitialised pointer for the custom exits lines dialog.</description>
+</information>
+</testconfig>

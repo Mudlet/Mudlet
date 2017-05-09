@@ -90,22 +90,22 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     mRegularPalette.setColor(QPalette::Text,QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mRegularPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
-    mRegularPalette.setColor(QPalette::Base,QColor(255,255,255));
+    mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
+    mRegularPalette.setColor(QPalette::Base,QColor(Qt::white));
 
     mReadOnlyPalette.setColor(QPalette::Base,QColor(212,212,212));
     mReadOnlyPalette.setColor(QPalette::Text,QColor(0,0,192));
     mReadOnlyPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
 
     mOKPalette.setColor(QPalette::Text,QColor(0,0,192));
     mOKPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mOKPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    mOKPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mOKPalette.setColor(QPalette::Base,QColor(235,255,235));
 
     mErrorPalette.setColor(QPalette::Text,QColor(0,0,192));
     mErrorPalette.setColor(QPalette::Highlight,QColor(0,0,192));
-    mErrorPalette.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mErrorPalette.setColor(QPalette::Base,QColor(255,235,235));
 
     // need to resize because the intro & error boxes get hidden
@@ -907,7 +907,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral("Avalon.de");
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     QPixmap p( QStringLiteral( ":/icons/avalon.png" ) );
     mi = QIcon( p.scaled(QSize(120,30)) );
@@ -917,7 +917,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Achaea" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/achaea_120_30.png" ) );
     pM->setIcon(mi);
@@ -926,7 +926,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "3Kingdoms" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem(pM);
     QPixmap pd( QStringLiteral( ":/icons/3klogo.png" ) );
     QPixmap pd1 = pd.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
@@ -936,7 +936,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "3Scapes" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem(pM);
     QPixmap pc( QStringLiteral( ":/icons/3slogo.png" ) );
     QPixmap pc1 = pc.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
@@ -947,7 +947,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Lusternia" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/lusternia_120_30.png" ) );
     pM->setIcon(mi);
@@ -959,7 +959,7 @@ void dlgConnectionProfiles::fillout_form()
     mi = QIcon( pb1 );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     pM->setIcon(mi);
     muds.clear();
@@ -967,7 +967,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral("God Wars II");
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/gw2.png" ) );
     pM->setIcon(mi);
@@ -976,7 +976,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Slothmud" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/Slothmud.png" ) );
     pM->setIcon(mi);
@@ -985,7 +985,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Aardwolf" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/aardwolf_mud.png" ) );
     pM->setIcon(mi);
@@ -994,7 +994,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Materia Magica" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/materiaMagicaIcon" ) );
     pM->setIcon(mi);
@@ -1003,7 +1003,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Realms of Despair" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/120x30RoDLogo.png" ) );
     pM->setIcon(mi);
@@ -1012,7 +1012,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "ZombieMUD" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/zombiemud.png" ) );
     pM->setIcon(mi);
@@ -1021,7 +1021,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Aetolia" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/aetolia_120_30.png" ) );
     pM->setIcon(mi);
@@ -1030,7 +1030,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Imperian" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/imperian_120_30.png" ) );
     pM->setIcon(mi);
@@ -1039,7 +1039,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "WoTMUD" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QPixmap( QStringLiteral( ":/icons/wotmudicon.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);
@@ -1048,7 +1048,7 @@ void dlgConnectionProfiles::fillout_form()
     muds = QStringLiteral( "Midnight Sun 2" );
     pM = new QListWidgetItem( muds );
     pM->setFont(font);
-    pM->setForeground(QColor(255,255,255));
+    pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QPixmap( QStringLiteral( ":/icons/midnightsun2.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);

@@ -596,9 +596,9 @@ void dlgTriggerEditor::setTBIconSize( int s )
 
 void dlgTriggerEditor::slot_choseButtonColor()
 {
-     QColor color = QColorDialog::getColor();
-     QPalette palette;
-     palette.setColor( QPalette::Button, color );
+    auto color = QColorDialog::getColor();
+    QPalette palette;
+    palette.setColor(QPalette::Button, color);
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent *event)
@@ -1127,21 +1127,10 @@ void dlgTriggerEditor::slot_search_triggers( const QString s )
             {
                 QStringList sl;
                 sl << "Key" << key->getName() << "name";
-                if( ! parent )
-                {
-                    parent = new QTreeWidgetItem( sl );
-                    parent->setFirstColumnSpanned( false );
-                    parent->setData(0, Qt::UserRole, key->getID() );
-                    treeWidget_searchResults->addTopLevelItem( parent );
-                }
-                else
-                {
-                    pItem = new QTreeWidgetItem( parent, sl );
-                    pItem->setFirstColumnSpanned( false );
-                    pItem->setData(0, Qt::UserRole, key->getID() );
-                    parent->addChild( pItem );
-                    parent->setExpanded( true );
-                }
+                parent = new QTreeWidgetItem( sl );
+                parent->setFirstColumnSpanned( false );
+                parent->setData(0, Qt::UserRole, key->getID() );
+                treeWidget_searchResults->addTopLevelItem( parent );
             }
             QStringList scriptList = key->getScript().split("\n");
             QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1230,21 +1219,10 @@ void dlgTriggerEditor::recursiveSearchTriggers( TTrigger * pTriggerParent, const
         {
             QStringList sl;
             sl << "Trigger" << trigger->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, trigger->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, trigger->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, trigger->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = trigger->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1309,21 +1287,10 @@ void dlgTriggerEditor::recursiveSearchAlias( TAlias * pTriggerParent, const QStr
         {
             QStringList sl;
             sl << "Alias" << alias->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, alias->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, alias->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, alias->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = alias->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1388,21 +1355,10 @@ void dlgTriggerEditor::recursiveSearchScripts( TScript * pTriggerParent, const Q
         {
             QStringList sl;
             sl << "Script" << script->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, script->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, script->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, script->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = script->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1446,21 +1402,10 @@ void dlgTriggerEditor::recursiveSearchActions( TAction * pTriggerParent, const Q
         {
             QStringList sl;
             sl << "Button" << action->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, action->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, action->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, action->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = action->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1504,21 +1449,10 @@ void dlgTriggerEditor::recursiveSearchTimers( TTimer * pTriggerParent, const QSt
         {
             QStringList sl;
             sl << "Timer" << timer->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, timer->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, timer->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, timer->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = timer->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1562,21 +1496,10 @@ void dlgTriggerEditor::recursiveSearchKeys( TKey * pTriggerParent, const QString
         {
             QStringList sl;
             sl << "Key" << key->getName() << "name";
-            if( ! parent )
-            {
-                parent = new QTreeWidgetItem( sl );
-                parent->setFirstColumnSpanned( false );
-                parent->setData(0, Qt::UserRole, key->getID() );
-                treeWidget_searchResults->addTopLevelItem( parent );
-            }
-            else
-            {
-                pItem = new QTreeWidgetItem( parent, sl );
-                pItem->setFirstColumnSpanned( false );
-                pItem->setData(0, Qt::UserRole, key->getID() );
-                parent->addChild( pItem );
-                parent->setExpanded( true );
-            }
+            parent = new QTreeWidgetItem( sl );
+            parent->setFirstColumnSpanned( false );
+            parent->setData(0, Qt::UserRole, key->getID() );
+            treeWidget_searchResults->addTopLevelItem( parent );
         }
         QStringList scriptList = key->getScript().split("\n");
         QStringList resultList = scriptList.filter( s, Qt::CaseInsensitive );
@@ -1820,8 +1743,6 @@ void dlgTriggerEditor::slot_deleteTimer()
     QTreeWidgetItem * pItem = treeWidget_timers->currentItem();
     if( ! pItem ) return;
     QTreeWidgetItem * pParent = pItem->parent();
-
-    if( ! pItem ) return;
 
     TTimer * pT = mpHost->getTimerUnit()->getTimer(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;
@@ -4146,13 +4067,13 @@ void dlgTriggerEditor::slot_set_pattern_type_color( int type )
     switch( type )
     {
     case 0:
-        palette.setColor( QPalette::Text, QColor(0,0,0) );
+        palette.setColor( QPalette::Text, QColor(Qt::black) );
         pItem->lineEdit->show();
         pItem->fgB->hide();
         pItem->bgB->hide();
         break;
     case 1:
-        palette.setColor( QPalette::Text, QColor(0,0,255) );
+        palette.setColor( QPalette::Text, QColor(Qt::blue) );
         pItem->lineEdit->show();
         pItem->fgB->hide();
         pItem->bgB->hide();
@@ -4232,14 +4153,14 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
             switch( propertyList[i] )
             {
             case REGEX_SUBSTRING:
-                palette.setColor( QPalette::Text, QColor(0,0,0) );
+                palette.setColor( QPalette::Text, QColor(Qt::black) );
                 pBox->setCurrentIndex( 0 );
                 pItem->fgB->hide();
                 pItem->bgB->hide();
                 pItem->lineEdit->show();
                 break;
             case REGEX_PERL:
-                palette.setColor( QPalette::Text, QColor(0,0,255) );
+                palette.setColor( QPalette::Text, QColor(Qt::blue) );
                 pBox->setCurrentIndex( 1 );
                 pItem->fgB->hide();
                 pItem->bgB->hide();
@@ -4282,12 +4203,12 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
                 QPalette fgPal;
                 QPalette bgPal;
                 if( ! pT->mColorPatternList[i] ) break;
-                QColor fgC = QColor(pT->mColorPatternList[i]->fgR,
+                auto fgC = QColor(pT->mColorPatternList[i]->fgR,
                                     pT->mColorPatternList[i]->fgG,
                                     pT->mColorPatternList[i]->fgB);
                 fgPal.setColor( QPalette::Button, fgC );
                 QString fgstyleSheet = QString("QPushButton{background-color:")+fgC.name()+QString(";}");
-                QColor bgC = QColor(pT->mColorPatternList[i]->bgR,
+                auto bgC = QColor(pT->mColorPatternList[i]->bgR,
                                     pT->mColorPatternList[i]->bgG,
                                     pT->mColorPatternList[i]->bgB);
                 bgPal.setColor( QPalette::Button, bgC );
@@ -7329,24 +7250,10 @@ void dlgTriggerEditor::doCleanReset()
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
-    QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+mpHost->getName()+"/current";
-    QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-    QDir dir_xml;
-    if( ! dir_xml.exists( directory_xml ) )
-    {
-        dir_xml.mkpath( directory_xml );
-    }
-    QFile file_xml( filename_xml );
-    if ( file_xml.open( QIODevice::WriteOnly ) )
-    {
-        XMLexport writer( mpHost );
-        writer.exportHost( & file_xml );
-        file_xml.close();
-        mpHost->saveModules(1);
-    }
-    else
-    {
-        QMessageBox::critical( this, "Profile Save Failed", "Failed to save "+mpHost->getName()+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
+    std::tuple<bool, QString, QString> result = mpHost->saveProfile(nullptr, true);
+
+    if (std::get<0>(result) == false) {
+        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
     }
 }
 
@@ -7491,7 +7398,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
-    QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
+    auto color = QColorDialog::getColor( mpTriggersMainArea->pushButtonFgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
     {
         QPalette palette;
@@ -7508,7 +7415,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     if( ! pItem ) return;
     if( ! pItem->parent() ) return;
 
-    QColor color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
+    auto color = QColorDialog::getColor( mpTriggersMainArea->pushButtonBgColor->palette().color( QPalette::Button ), this );
     if ( color.isValid() )
     {
         QPalette palette;

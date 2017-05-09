@@ -50,3 +50,23 @@ try to consolidate identical literals so that they are not duplicated. For QStri
 cannot be merged.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
+
+# Internationalization do's and don'ts
+
+Do:
+* enable strings visible in the Mudlet GUI to be translateable
+* minimise use of HTML styling tags in strings to be translated
+* enable users to use language-specific Mudlet object names (triggers, aliases, labels, etc)
+
+Don't:
+* translate the Mudlet API: functions, events, error messages or constants (e.g. `main` console)
+* use numbers in the API - English words are preferred instead
+* try to assemble a sentence on the fly - English grammar does not translate into other languages. Present the full sentence to translators instead
+* assume English-centric plural forms, other languages do not necessarily have the simple add an "s"/"es" for more/less then the singular case.
+* assume universal quote and number punctuation formats. There are languages that use « and » instead of " for "quoting" words or phrases. Qt can provide Locale specific displays of numbers/dates/times.
+
+# Git commit guidelines for core team
+
+## Merging Pull Requests (PRs)
+
+The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is: prefer rebase, else squash if you'd like to clean up the history before merging. Avoid doing a merge commit.
