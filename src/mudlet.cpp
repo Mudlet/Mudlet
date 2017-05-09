@@ -2481,7 +2481,7 @@ void mudlet::playSound(QString s, int soundVolume)
     if (!pPlayer) {
         pPlayer = new QMediaPlayer(this);
 
-        auto pHost = getActiveHost();
+        QPointer<Host> pHost = getActiveHost();
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
@@ -2500,7 +2500,17 @@ void mudlet::playSound(QString s, int soundVolume)
                 soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                 soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
                 soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                pHost->raiseEvent(soundFinished);
+                if (pHost) {
+                    // The host may have gone away if the sound was a long one
+                    // and we are multi-playing so we ought to test it...
+                    pHost->raiseEvent(soundFinished);
+                } else {
+                    qDebug() << "mudlet::playSound(...) INFO: Sound playback"
+                                " finished but Host that started it has already"
+                                " gone away so NOT going to try sending it a"
+                                " \"sysSoundFinished\" event as that would have"
+                                " crashed Mudlet 8-)...";
+                }
             }
         });
 
