@@ -1477,7 +1477,7 @@ QString XMLimport::readScriptElement()
         localScript.replace(QStringLiteral("\xFFFC\x241D"), QChar('\x1D')); // GS
         localScript.replace(QStringLiteral("\xFFFC\x241E"), QChar('\x1E')); // RS
         localScript.replace(QStringLiteral("\xFFFC\x241F"), QChar('\x1F')); // US
-        localScript.replace(QStringLiteral("\xFFFC\x2471"), QChar('\x7F')); // DEL
+        localScript.replace(QStringLiteral("\xFFFC\x2421"), QChar('\x7F')); // DEL
     }
 
     return localScript;

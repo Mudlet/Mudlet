@@ -1159,6 +1159,6 @@ bool XMLexport::writeScriptElement(const QString & script)
     localScript.replace(QChar('\x1D'), QStringLiteral("\xFFFC\x241D")); // GS
     localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
     localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
-    localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2471")); // DEL
+    localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
     writeTextElement(QLatin1String("script"), localScript);
 }
