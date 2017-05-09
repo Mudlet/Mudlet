@@ -700,12 +700,17 @@ void mudlet::slot_close_profile_requested( int tab )
     Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
+    QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
+
     if( ! pH->mpConsole->close() )
         return;
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
+    for( auto dockName : dockWindowMap.keys() ) {
+        dockWindowMap[dockName]->close();
+    }
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
     {
@@ -734,8 +739,12 @@ void mudlet::slot_close_profile()
             Host * pH = mpCurrentActiveHost;
             if( pH )
             {
+                QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
                 QString name = pH->getName();
                 mpCurrentActiveHost->mpEditorDialog->close();
+                for( auto dockName : dockWindowMap.keys() ) {
+                    dockWindowMap[dockName]->close();
+                }
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )
                 {

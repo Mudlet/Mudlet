@@ -1387,6 +1387,11 @@ void TTextEdit::copySelectionToClipboard()
             forceUpdate();
             return;
         }
+        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
+        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y())
+        {
+            text.append( mpBuffer->timeBuffer[y].left(13) );
+        }
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
         while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
@@ -1498,21 +1503,14 @@ void TTextEdit::copySelectionToClipboardHTML()
         int x = 0;
         if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
-            if( x ) {
-                text.append( "<span>" );
-                text.append( QString( x, QLatin1Char(' ') ) );
-                text.append( "</span>" );
-                // Pad out with spaces to the right so a partial first line lines up
-            }
-
-            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y), mShowTimeStamps, x));
         }
         else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y), mShowTimeStamps));
         }
         else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y), mShowTimeStamps));
         }
     }
     text.append( QStringLiteral( " </div></body>\n"
