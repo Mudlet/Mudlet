@@ -99,15 +99,13 @@ public:
     void recurseVariablesDown(TVar*, QList<TVar*>&, bool);
     void show_vars();
 
-
-    static const int            cmTriggerView;
-    static const int            cmTimerView;
-    static const int            cmAliasView;
-    static const int            cmScriptView;
-    static const int            cmActionView;
-    static const int            cmKeysView;
-    static const int            cmVarsView;
-
+    static const int cmTriggerView;
+    static const int cmTimerView;
+    static const int cmAliasView;
+    static const int cmScriptView;
+    static const int cmActionView;
+    static const int cmKeysView;
+    static const int cmVarsView;
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -235,17 +233,17 @@ private:
     void exportScript(QFile&);
     void exportKey(QFile&);
 
-    void                        exportTriggerToClipboard( );
-    void                        exportTimerToClipboard( );
-    void                        exportAliasToClipboard( );
-    void                        exportActionToClipboard( );
-    void                        exportScriptToClipboard( );
-    void                        exportKeyToClipboard( );
+    void exportTriggerToClipboard();
+    void exportTimerToClipboard();
+    void exportAliasToClipboard();
+    void exportActionToClipboard();
+    void exportScriptToClipboard();
+    void exportKeyToClipboard();
 
-    void                        importFromClipboard( );
-    QToolBar *                  toolBar;
-    QToolBar *                  toolBar2;
-    bool                        showHiddenVars;
+    void importFromClipboard();
+    QToolBar* toolBar;
+    QToolBar* toolBar2;
+    bool showHiddenVars;
 
     QTreeWidgetItem* mpAliasBaseItem;
     QTreeWidgetItem* mpTriggerBaseItem;
@@ -264,13 +262,6 @@ private:
     QTreeWidgetItem* mpCurrentVarItem;
     QLineEdit* mpCursorPositionIndicator;
     int mCurrentView;
-    static const int cmTriggerView;
-    static const int cmTimerView;
-    static const int cmAliasView;
-    static const int cmScriptView;
-    static const int cmActionView;
-    static const int cmKeysView;
-    static const int cmVarsView;
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
