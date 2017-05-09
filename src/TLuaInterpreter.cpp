@@ -2428,6 +2428,7 @@ int TLuaInterpreter::loadWindowLayout(lua_State *L) {
 }
 
 int TLuaInterpreter::saveWindowLayout(lua_State *L) {
+    mudlet::self()->mHasSavedLayout = false;
     lua_pushboolean( L, mudlet::self()->saveWindowLayout() );
     return 1;
 }

@@ -986,7 +986,8 @@ void mudlet::enableToolbarButtons()
 }
 
 bool mudlet::saveWindowLayout() {
-    qDebug() << "mudlet::saveWindowLayout() - saving layout.";
+    qDebug() << "mudlet::saveWindowLayout() - Already-Saved:" << mHasSavedLayout;
+    if( mHasSavedLayout ) { return false; }
 
     QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
 
@@ -999,6 +1000,7 @@ bool mudlet::saveWindowLayout() {
         QDataStream ofs(&layoutFile);
         ofs << layoutData;
         layoutFile.close();
+        mHasSavedLayout = true;
         return true;
     } else {
         return false;
@@ -1037,6 +1039,8 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString & name) {
     if( !mDockLayoutUpdateMap.contains(name) && dockWindowMap.contains(name) ) {
         dockWindowMap[name]->setObjectName( QString("%1_changed").arg(dockWindowMap[name]->objectName()) );
         mDockLayoutUpdateMap.append(name);
+
+        mHasSavedLayout = false;
     }
 }
 

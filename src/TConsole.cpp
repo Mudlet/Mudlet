@@ -777,20 +777,7 @@ void TConsole::closeEvent( QCloseEvent *event )
 
     if( profile_name != "default_host" && ! mUserAgreedToCloseConsole )
     {
-        QCheckBox *cb = new QCheckBox( tr("Save the Window Layout before closing this profile.") );
-        QMessageBox *closePrompt = new QMessageBox( QMessageBox::Icon::Question, tr("Exiting Session: Question"), tr("Do you want to save the profile: %1").arg(profile_name), QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel, this );
-        closePrompt->setCheckBox(cb);
-
-        connect(cb, &QCheckBox::stateChanged, [this](int state){
-                if (static_cast<Qt::CheckState>(state) == Qt::CheckState::Checked) {
-                    this->mSaveLayoutRequested = true;
-                }
-            });
-
-        //ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
-        ASK: mSaveLayoutRequested = false;
-        closePrompt->exec();
-        int choice = closePrompt->result();
+        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
         if( choice == QMessageBox::Cancel )
         {
             event->setAccepted(false);
@@ -798,9 +785,7 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
         }
         if (choice == QMessageBox::Yes) {
-            if( mSaveLayoutRequested ) {
-                mudlet::self()->saveWindowLayout();
-            }
+            mudlet::self()->saveWindowLayout();
 
             mpHost->modulesToWrite.clear();
             std::tuple<bool, QString, QString> result = mpHost->saveProfile();
@@ -826,9 +811,7 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
 
         } else if (choice == QMessageBox::No) {
-            if( mSaveLayoutRequested ) {
-                mudlet::self()->saveWindowLayout();
-            }
+            mudlet::self()->saveWindowLayout();
 
             event->accept();
             return;
