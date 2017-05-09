@@ -42,6 +42,9 @@ TRoomDB::TRoomDB( TMap * pMap )
 , mUnnamedAreaName( tr( "Unnamed Area" ) )
 , mDefaultAreaName( tr( "Default Area" ) )
 {
+    // Ensure the default area is created, the area/areaName items that get
+    // created here will get blown away when a map is loaded but that is expected...
+    addArea(-1, mDefaultAreaName);
 }
 
 TRoom* TRoomDB::getRoom(int id)
