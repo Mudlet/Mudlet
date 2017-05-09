@@ -2464,6 +2464,11 @@ void mudlet::stopSounds()
 
 void mudlet::playSound(QString s, int soundVolume)
 {
+    QPointer<Host> pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
     QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
     QMediaPlayer* pPlayer = 0;
 
@@ -2481,7 +2486,6 @@ void mudlet::playSound(QString s, int soundVolume)
     if (!pPlayer) {
         pPlayer = new QMediaPlayer(this);
 
-        QPointer<Host> pHost = getActiveHost();
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
@@ -2491,31 +2495,31 @@ void mudlet::playSound(QString s, int soundVolume)
             return;
         }
 
-        connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
-            if (state == QMediaPlayer::StoppedState) {
-                TEvent soundFinished;
-                soundFinished.mArgumentList.append("sysSoundFinished");
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                if (pHost) {
-                    // The host may have gone away if the sound was a long one
-                    // and we are multi-playing so we ought to test it...
-                    pHost->raiseEvent(soundFinished);
-                } else {
-                    qDebug() << "mudlet::playSound(...) INFO: Sound playback"
-                                " finished but Host that started it has already"
-                                " gone away so NOT going to try sending it a"
-                                " \"sysSoundFinished\" event as that would have"
-                                " crashed Mudlet 8-)...";
-                }
-            }
-        });
-
         mMusicBoxList.append(pPlayer);
     }
+
+    // Remove any previous connection to the signal of this QMediaPlayer,
+    // theoretically this might be movable to be within the lambda function of
+    // the following connect(...) but that does seem a bit twisty and this works
+    // well enough!
+    disconnect(pPlayer, &QMediaPlayer::stateChanged, 0, 0);
+
+    connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
+        if (state == QMediaPlayer::StoppedState) {
+            TEvent soundFinished;
+            soundFinished.mArgumentList.append("sysSoundFinished");
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            if (pHost) {
+                // The host may have gone away if the sound was a long one
+                // and we are multi-playing so we ought to test it...
+                pHost->raiseEvent(soundFinished);
+            }
+        }
+    });
 
     /* set volume and play sound */
     pPlayer->setMedia(QUrl::fromLocalFile(s));
