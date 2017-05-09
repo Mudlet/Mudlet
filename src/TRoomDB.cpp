@@ -712,7 +712,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Sort the ids so that the reporting is ordered, which could be
             // helpful if there is a large number of faults
             std::sort(missingAreasNeeded.begin(), missingAreasNeeded.end());
-            foreach (int newAreaId, missingAreasNeeded) {
+            for (int newAreaId : missingAreasNeeded) {
 
                 // This will create a new "Default" area name if there is not one
                 // already for this id - and we do not anticipate that it could ever
