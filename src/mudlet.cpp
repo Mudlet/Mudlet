@@ -2489,9 +2489,7 @@ void mudlet::playSound(QString s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            if (pHost) {
-                pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
-            }
+            pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
             return;
         }
 
