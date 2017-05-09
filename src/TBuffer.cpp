@@ -48,7 +48,7 @@
 // is not a known character or, in these tables, the fact that no character was
 // defined at that Extended ASCII character code.
 
-// clang-format:off
+// clang-format off
 // Do not let code reformatting tool mess this around!
 // PLACEMARKER: Extended ASCII decoder Unicode codepoint lookup tables
 const QMap<QString, QVector<QChar>> TBuffer::csmEncodingTable = {
@@ -574,7 +574,7 @@ const QMap<QString, QVector<QChar>> TBuffer::csmEncodingTable = {
       QChar(0x00E8), QChar(0x00E9), QChar(0x00EA), QChar(0x00EB), QChar(0x0301), QChar(0x00ED), QChar(0x00EE), QChar(0x00EF),  // E8-EF
       QChar(0x0111), QChar(0x00F1), QChar(0x0323), QChar(0x00F3), QChar(0x00F4), QChar(0x01A1), QChar(0x00F6), QChar(0x00F7),  // F0=F7
       QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x01B0), QChar(0x20AB), QChar(0x00FF)}}};// F8-FF
-// clang-format:on
+// clang-format on
 
 TChar::TChar()
 {
