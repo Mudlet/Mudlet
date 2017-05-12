@@ -139,7 +139,7 @@
           <bool>true</bool>
          </property>
          <property name="title">
-          <string>Server Data Encoding</string>
+          <string>Server data encoding</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_7">
           <item>
