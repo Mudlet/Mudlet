@@ -12041,7 +12041,7 @@ int TLuaInterpreter::setServerEncoding(lua_State * L)
     }
     else {
         lua_pushnil(L);
-        lua_pushfstring(L, "setServerEncoding: bad argument #1 value %s",
+        lua_pushfstring(L, "Error: %s.",
                         results.second.toLatin1().constData());
         return 2;
     }

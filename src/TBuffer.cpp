@@ -740,7 +740,7 @@ TBuffer::TBuffer( Host * pH )
 
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
-    foreach ( auto table, csmEncodingTable ) {
+    for ( auto table : csmEncodingTable ) {
         Q_ASSERT_X(table.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
 }

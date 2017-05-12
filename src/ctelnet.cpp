@@ -105,9 +105,9 @@ cTelnet::cTelnet( Host * pH )
     curY = 25;
 
     if (mAcceptableEncodings.isEmpty()) {
+        mAcceptableEncodings << QLatin1String("UTF-8");
         mAcceptableEncodings << QLatin1String("ISO 8859-1");
         mAcceptableEncodings << TBuffer::getHardCodedEncodingTableKeys();
-        mAcceptableEncodings << QLatin1String("UTF-8");
     }
 
     // initialize the socket
@@ -210,11 +210,11 @@ QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const boo
     } else if (!mAcceptableEncodings.contains(newEncoding)) {
         // Not in list - so reject it
         return qMakePair(false,
-                         QLatin1String("(encoding \"")
+                         QLatin1String("encoding \"")
                          % newEncoding
                          % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
                          % mAcceptableEncodings.join(QLatin1String("\", \""))
-                         % QLatin1String("\")"));
+                         % QLatin1String("\""));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
         isChanged = true;
