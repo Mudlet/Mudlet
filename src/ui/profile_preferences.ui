@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="General">
       <property name="sizePolicy">
@@ -1543,14 +1543,24 @@
          <property name="title">
           <string>Map view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_22">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Use high quality graphics in 2D view</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_showDefaultArea">
+            <property name="text">
+             <string>Show (-1) area {this message should have been overwritten by initialisation code - report if not!}</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -2014,7 +2024,7 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0">
+       <item row="1" column="0">
         <spacer name="verticalSpacer_6">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -2026,28 +2036,6 @@
           </size>
          </property>
         </spacer>
-       </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_Debug">
-         <property name="title">
-          <string>Other Special options</string>
-         </property>
-         <layout class="QFormLayout" name="formLayout_Debug">
-          <property name="labelAlignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_showDefaultArea">
-            <property name="text">
-             <string>Show (-1) area {this message should have been overwritten by initialisation code - report if not!}</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
        </item>
       </layout>
      </widget>
