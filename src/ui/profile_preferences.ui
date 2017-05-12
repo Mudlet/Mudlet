@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>663</height>
+    <height>668</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -2002,7 +2002,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_mapFileSaveFormatVersion">
             <property name="text">
-             <string>Override map file format version:</string>
+             <string>Map format version:</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
