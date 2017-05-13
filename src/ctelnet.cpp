@@ -1919,7 +1919,7 @@ void cTelnet::handle_socket_signal_readyRead()
                 // flash taskbar for 3 seconds
                 QApplication::alert( mudlet::self(), 3000 );   
             }
-            else if( ch != '\r' && ch != 0 ) cleandata += ch;
+            if( ch != '\r' && ch != 0 ) cleandata += ch;
         }
 MAIN_LOOP_END: ;
         if( recvdGA )
