@@ -193,7 +193,6 @@ void cTelnet::encodingChanged(const QString & encoding)
 // OR an empty string (which means the same as the ASCII).
 QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const bool isToStore)
 {
-    bool isChanged = false;
     QString reportedEncoding = newEncoding;
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
         reportedEncoding = QLatin1String("ASCII");
@@ -205,7 +204,6 @@ QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const boo
             if (isToStore) {
                 mpHost->writeProfileData(QLatin1String("encoding"), reportedEncoding);
             }
-            isChanged = true;
         }
     } else if (!mAcceptableEncodings.contains(newEncoding)) {
         // Not in list - so reject it
@@ -217,20 +215,11 @@ QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const boo
                          % QLatin1String("\"."));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
-        isChanged = true;
         if (isToStore) {
             mpHost->writeProfileData(QLatin1String("encoding"), mEncoding);
         }
     }
 
-    if (isChanged) {
-        // Report on main console the change in ALL cases, as this can change
-        // things for the user (e.g. theoretically what characters are
-        // acceptable to the MUD Server).
-        QString message = tr("[  OK  ]  - Transcoding of MUD Server traffic set to: \"%1\".")
-                          .arg(reportedEncoding);
-        postMessage(message);
-    }
     return qMakePair(true, QString());
 }
 
