@@ -13774,9 +13774,7 @@ int TLuaInterpreter::alert( lua_State * L )
 {
     int luaDurationMs;
 
-
     int n = lua_gettop( L );
-
     if( n == 0 )
     {
         // msec argument for QApplication::alert() is optional (defaults to 0)
@@ -13803,9 +13801,6 @@ int TLuaInterpreter::alert( lua_State * L )
             }
         }
     }
-
-    lua_pushfstring( L, "alert: alerting %f ms or %d !)", luaDurationMs, luaDurationMs );
-    return 1;
 
     QApplication::alert(mudlet::self(), luaDurationMs);
 
