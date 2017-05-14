@@ -46,6 +46,7 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
+    setObjectName(QString("DockToolBar_%1").arg(name));
 
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout(mpWidget);
