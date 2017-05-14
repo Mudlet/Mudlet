@@ -108,8 +108,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mErrorPalette.setColor(QPalette::Base,QColor(255,235,235));
 
-    // need to resize because the intro & error boxes get hidden
-    resize(minimumSize());
+    // collapse the width of the dialog to the minimum, default is too big
+    resize(minimumSize().width(), height());
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
 }
