@@ -1055,6 +1055,7 @@ void dlgConnectionProfiles::fillout_form()
     muds.clear();
 
     QDateTime test_date;
+    QString toselectProfileName;
     QListWidgetItem * toselect = Q_NULLPTR;
 
     muds.clear();
@@ -1154,11 +1155,18 @@ void dlgConnectionProfiles::fillout_form()
         {
             test_date = profile_lastRead;
             toselect = pItem;
+            toselectProfileName = mProfileList.at(i);
         }
     }
 
-    if( toselect )
+    if( toselect && toselectProfileName == QLatin1Literal("default_host")) {
+        // if the last profile read is default_host, it means the user hasn't created
+        // any profiles yet since that profile cannot actually be used. In this case,
+        // select a random pre-defined profile to give all MUDs a fair go
+        profiles_tree_widget->setCurrentRow( qrand() % profiles_tree_widget->count() );
+    } else if ( toselect ) {
         profiles_tree_widget->setCurrentItem( toselect );
+    }
 }
 
 void dlgConnectionProfiles::slot_cancel()
