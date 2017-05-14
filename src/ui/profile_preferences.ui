@@ -1454,18 +1454,6 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_mapFileActionResult">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>An action above happened</string>
-            </property>
-           </widget>
-          </item>
           <item row="5" column="1">
            <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
             <property name="sizePolicy">
@@ -1494,6 +1482,18 @@
               <string># {default version}</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="3">
+           <widget class="QLabel" name="label_mapFileActionResult">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>An action above happened</string>
+            </property>
            </widget>
           </item>
          </layout>
