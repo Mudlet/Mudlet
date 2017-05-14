@@ -13773,18 +13773,41 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
 int TLuaInterpreter::alert( lua_State * L )
 {
     int luaDurationMs;
-    if( ! lua_isnumber( L, 1 ) )
+
+
+    int n = lua_gettop( L );
+
+    if( n == 0 )
     {
-        lua_pushstring( L, "alert: wrong argument type" );
-        lua_error( L );
-        return 1;
+        // msec argument for QApplication::alert() is optional (defaults to 0)
+        luaDurationMs = 0;
     }
     else
     {
-        luaDurationMs = lua_tointeger( L, 1 );
+        if( ! lua_isnumber( L, 1 ) )
+        {
+            lua_pushfstring( L, "alert: bad argument #1 type (alert duration in milliseconds as number expected, got %s!)",
+                            luaL_typename( L, 1 ));
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaDurationMs = lua_tointeger( L, 1 );
+
+            if ( luaDurationMs < 0 )
+            {
+                lua_pushstring( L, "alert: duration, in milliseconds, is optional but if given must be zero or greater." );
+                lua_error( L );
+                return 1;
+            }
+        }
     }
+
+    lua_pushfstring( L, "alert: alerting %f ms or %d !)", luaDurationMs, luaDurationMs );
+    return 1;
 
     QApplication::alert(mudlet::self(), luaDurationMs);
 
-    return 1;
+    return 0;
 }
