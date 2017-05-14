@@ -58,6 +58,7 @@ class TDockWidget;
 class TEvent;
 class TLabel;
 class TTimer;
+class TToolBar;
 class dlgIRC;
 
 
@@ -89,6 +90,7 @@ public:
     bool saveWindowLayout();
     bool loadWindowLayout();
     void setDockLayoutUpdated(Host*, const QString&);
+    void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
@@ -178,6 +180,7 @@ public:
     bool mIsLoadingLayout;
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
+    QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces

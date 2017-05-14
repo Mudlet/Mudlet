@@ -32,12 +32,13 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
-#include "TDockWidget.h"
+#include "TToolBar.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
@@ -894,8 +895,10 @@ void mudlet::addConsoleForNewHost( Host * pH )
     mHostConsoleMap[mpCurrentActiveHost] = miniConsoleMap;
     QMap<QString, TLabel *> labelMap;
     mHostLabelMap[mpCurrentActiveHost] = labelMap;
-    QList<QString> updateMap;
-    mHostDockLayoutChangeMap[mpCurrentActiveHost] = updateMap;
+    QList<QString> dockUpdateMap;
+    mHostDockLayoutChangeMap[mpCurrentActiveHost] = dockUpdateMap;
+    QList<TToolBar*> toolbarUpdateMap;
+    mHostToolbarLayoutChangeMap[mpCurrentActiveHost] = toolbarUpdateMap;
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -1044,7 +1047,22 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString & name) {
     }
 }
 
+void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar * pTB) {
+    if( !pHost ) return;
+
+
+    QList<TToolBar*> & mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+    if( !mToolbarLayoutUpdateMap.contains(pTB) ) {
+        qDebug() << "[dbg] setToolbarLayoutUpdated() - " << pTB->getName();
+        pTB->setObjectName( QString("%1_changed").arg(pTB->objectName()) );
+        mToolbarLayoutUpdateMap.append(pTB);
+
+        mHasSavedLayout = false;
+    }
+}
+
 void mudlet::commitLayoutUpdates() {
+    // commit changes for dockwidget consoles. (user windows)
     for( Host* pHost : mHostDockLayoutChangeMap.keys() ) {
         QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
         QList<QString> & mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
@@ -1055,6 +1073,19 @@ void mudlet::commitLayoutUpdates() {
                 dockWindowMap[TDockName]->setObjectName(rename);
             }
             mDockLayoutUpdateMap.removeAll(TDockName);
+        }
+    }
+
+    // commit changes for dockable/floating toolbars.
+    for( Host* pHost : mHostToolbarLayoutChangeMap.keys()  ) {
+        QList<TToolBar*> & mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+
+        for( TToolBar* pTB : mToolbarLayoutUpdateMap ) {
+            qDebug() << "[dbg] committing TToolBar layout - " << pTB->getName() << pHost->getName();
+
+            pTB->setObjectName(QString("dockToolBar_%1").arg( pTB->getName() ));
+
+            mToolbarLayoutUpdateMap.removeAll(pTB);
         }
     }
 }
