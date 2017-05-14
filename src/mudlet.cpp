@@ -1050,10 +1050,8 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString & name) {
 void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar * pTB) {
     if( !pHost ) return;
 
-
     QList<TToolBar*> & mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
     if( !mToolbarLayoutUpdateMap.contains(pTB) ) {
-        qDebug() << "[dbg] setToolbarLayoutUpdated() - " << pTB->getName();
         pTB->setObjectName( QString("%1_changed").arg(pTB->objectName()) );
         mToolbarLayoutUpdateMap.append(pTB);
 
@@ -1081,10 +1079,7 @@ void mudlet::commitLayoutUpdates() {
         QList<TToolBar*> & mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
 
         for( TToolBar* pTB : mToolbarLayoutUpdateMap ) {
-            qDebug() << "[dbg] committing TToolBar layout - " << pTB->getName() << pHost->getName();
-
             pTB->setObjectName(QString("dockToolBar_%1").arg( pTB->getName() ));
-
             mToolbarLayoutUpdateMap.removeAll(pTB);
         }
     }
