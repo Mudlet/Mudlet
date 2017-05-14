@@ -2211,6 +2211,8 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
     }
     addDockWidget(Qt::RightDockWidgetArea, pDock);
 
+    loadWindowLayout();
+
     check_for_mappingscript();
     TEvent mapOpenEvent;
     mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
