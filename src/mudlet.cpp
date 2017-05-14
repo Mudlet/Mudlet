@@ -141,6 +141,10 @@ mudlet::mudlet()
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
 , mIsToDisplayMapAuditErrorsToConsole( false )
+, mpAboutDlg( 0 )
+, mpModuleDlg( 0 )
+, mpPackageManagerDlg( 0 )
+, mpProfilePreferencesDlg( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -483,28 +487,42 @@ void mudlet::layoutModules(){
 
 void mudlet::slot_module_manager(){
     Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/module_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    moduleTable = d->findChild<QTableWidget *>("moduleTable");
-    moduleUninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    moduleInstallButton = d->findChild<QPushButton *>("installButton");
-    moduleHelpButton = d->findChild<QPushButton *>("helpButton");
-    if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) return;
-    layoutModules();
-    connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
-    connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
-    connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
-    connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
-    connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-    d->setWindowTitle("Module Manager");
-    d->show();
-    d->raise();
+    if( ! pH ) {
+        return;
+    }
 
+    if( !mpModuleDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/module_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpModuleDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        if( !mpModuleDlg ) {
+            return;
+        }
+
+        moduleTable = mpModuleDlg->findChild<QTableWidget *>("moduleTable");
+        moduleUninstallButton = mpModuleDlg->findChild<QPushButton *>("uninstallButton");
+        moduleInstallButton = mpModuleDlg->findChild<QPushButton *>("installButton");
+        moduleHelpButton = mpModuleDlg->findChild<QPushButton *>("helpButton");
+
+        if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) {
+            return;
+        }
+
+        layoutModules();
+        connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
+        connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
+        connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
+        connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
+        connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
+        mpModuleDlg->setWindowTitle(tr("Module Manager"));
+        mpModuleDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpModuleDlg->raise();
+    mpModuleDlg->show();
 }
 
 bool mudlet::openWebPage(const QString& path){
@@ -626,23 +644,38 @@ void mudlet::slot_uninstall_module()
 void mudlet::slot_package_manager()
 {
     Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/package_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    packageList = d->findChild<QListWidget *>("packageList");
-    uninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    installButton = d->findChild<QPushButton *>("installButton");
-    if( ! packageList || ! uninstallButton ) return;
-    packageList->addItems( pH->mInstalledPackages );
-    connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
-    connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
-    d->setWindowTitle("Package Manager");
-    d->show();
-    d->raise();
+    if( ! pH ) {
+        return;
+    }
+
+    if( ! mpPackageManagerDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/package_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpPackageManagerDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        if( !mpPackageManagerDlg ) {
+            return;
+        }
+
+        packageList = mpPackageManagerDlg->findChild<QListWidget *>("packageList");
+        uninstallButton = mpPackageManagerDlg->findChild<QPushButton *>("uninstallButton");
+        installButton = mpPackageManagerDlg->findChild<QPushButton *>("installButton");
+
+        if( ! packageList || ! uninstallButton ) {
+            return;
+        }
+
+        packageList->addItems( pH->mInstalledPackages );
+        connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
+        connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
+        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
+        mpPackageManagerDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpPackageManagerDlg->raise();
+    mpPackageManagerDlg->show();
 }
 
 void mudlet::slot_install_package()
@@ -1945,13 +1978,20 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    auto pDlg = new dlgProfilePreferences( this, pHost );
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    pDlg->show();
+    if( ! pHost ) {
+        return;
+    }
+
+    if( ! mpProfilePreferencesDlg ) {
+        mpProfilePreferencesDlg = new dlgProfilePreferences( this, pHost );
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        mpProfilePreferencesDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+    mpProfilePreferencesDlg->raise();
+    mpProfilePreferencesDlg->show();
 }
 
 void mudlet::show_help_dialog()
@@ -2067,9 +2107,13 @@ void mudlet::slot_show_help_dialog_download()
 
 void mudlet::slot_show_about_dialog()
 {
-    auto pDlg = new dlgAboutDialog( this );
-    pDlg->raise();
-    pDlg->show();
+    if( ! mpAboutDlg ) {
+        mpAboutDlg = new dlgAboutDialog( this );
+        mpAboutDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpAboutDlg->raise();
+    mpAboutDlg->show();
 }
 
 void mudlet::slot_notes()
