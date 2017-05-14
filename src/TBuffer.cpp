@@ -1171,8 +1171,12 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
     }
 
     if (isFromServer
+        && ! mIncompleteUtf8SequenceBytes.empty()
         && pHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
 
+#if defined(DEBUG_UTF8_PROCESSING)
+        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual UTF-8 bytes onto incoming data!";
+#endif
         localBuffer = mIncompleteUtf8SequenceBytes + incoming;
         mIncompleteUtf8SequenceBytes.clear();
     } else {
@@ -2409,7 +2413,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     utf8SequenceLength = 6;
                 }
 
-                if (msPos + utf8SequenceLength >= msLength) {
+                if (msPos + utf8SequenceLength > msLength) {
                     // Not enough bytes left in localBuffer to complete the utf-8
                     // sequence - need to save and prepend onto incoming data next
                     // time around.
@@ -2417,6 +2421,11 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     // bytes - this is only for data from the Server NOT from
                     // locally generated material from Lua feedTriggers(...)
                     if( isFromServer ) {
+#if defined(DEBUG_UTF8_PROCESSING)
+                        qDebug() << "TBuffer::translateToPlainText(...) Insufficent bytes in buffer to complate UTF-8 sequence, storing: "
+                                 << localBuffer.substr(msPos).length()
+                                 << " bytes for next call to this method...";
+#endif
                         mIncompleteUtf8SequenceBytes = localBuffer.substr(msPos);
                     }
                     return; // Bail out

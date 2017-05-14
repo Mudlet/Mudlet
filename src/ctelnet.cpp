@@ -1642,13 +1642,19 @@ QFile replayFile;
 void cTelnet::loadReplay( QString & name )
 {
     replayFile.setFileName( name );
-    QString msg = "loading replay " + name;
-    postMessage( msg );
-    replayFile.open( QIODevice::ReadOnly );
-    replayStream.setDevice( &replayFile );
-    loadingReplay = true;
-    mudlet::self()->replayStart();
-    _loadReplay();
+    if (replayFile.open( QIODevice::ReadOnly )) {
+        QString msg = tr("[ INFO ]  - Loading replay file:\n"
+                         "\"%1\".").arg(name);
+        postMessage(msg);
+        replayStream.setDevice( &replayFile );
+        loadingReplay = true;
+        mudlet::self()->replayStart();
+        _loadReplay();
+    } else {
+        QString msg = tr("[ ERROR ]  - Unable to open replay file:\n"
+                         "\"%1\".").arg(name);
+        postMessage(msg);
+    }
 }
 
 void cTelnet::_loadReplay()
@@ -1675,7 +1681,7 @@ void cTelnet::_loadReplay()
     {
         loadingReplay = false;
         replayFile.close();
-        QString msg = "The replay has ended.\n";
+        QString msg = tr("[  OK  ]  - The replay has ended.");
         postMessage( msg );
         mudlet::self()->replayOver();
     }
