@@ -13246,6 +13246,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
     lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
 
 
     luaopen_yajl(pGlobalLua);
@@ -13769,3 +13770,39 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
 
 }
 
+int TLuaInterpreter::alert( lua_State * L )
+{
+    int luaDurationMs;
+
+    int n = lua_gettop( L );
+    if( n == 0 )
+    {
+        // msec argument for QApplication::alert() is optional (defaults to 0)
+        luaDurationMs = 0;
+    }
+    else
+    {
+        if( ! lua_isnumber( L, 1 ) )
+        {
+            lua_pushfstring( L, "alert: bad argument #1 type (alert duration in milliseconds as number expected, got %s!)",
+                            luaL_typename( L, 1 ));
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaDurationMs = lua_tointeger( L, 1 );
+
+            if ( luaDurationMs < 0 )
+            {
+                lua_pushstring( L, "alert: duration, in milliseconds, is optional but if given must be zero or greater." );
+                lua_error( L );
+                return 1;
+            }
+        }
+    }
+
+    QApplication::alert(mudlet::self(), luaDurationMs);
+
+    return 0;
+}

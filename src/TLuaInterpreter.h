@@ -387,6 +387,7 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+    static int alert(lua_State* L);
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
