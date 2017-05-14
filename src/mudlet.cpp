@@ -100,7 +100,15 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 // number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
 // agreement and consideration from the Project management, even a minor part
 // increment should not be done without justification...!
-const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.0f, 'f', 3 );
+// XML version Change history (what and why):
+// 1.001    Added method to allow XML format to permit ASCII control codes
+//          0x01-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f to be stored as part of the
+//          "script" element for a Mudlet "item" (0x09, 0x0a, 0x0d are the only
+//          ones that ARE permitted) - this is wanted so that, for instance
+//          ANSI ESC codes can be included in a Lua script without breaking
+//          the XML format used to store it - prior to this embedding such
+//          codes would break or destroy the script that used it.
+const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.001f, 'f', 3 );
 
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QMainWindow* mudlet::mpDebugArea = 0;

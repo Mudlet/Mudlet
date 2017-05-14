@@ -80,6 +80,8 @@ public:
     bool exportScript(TScript*);
     bool exportKey(TKey*);
 
+    bool writeScriptElement(const QString &);
+
 private:
     QPointer<Host> mpHost;
     TTrigger* mpTrigger;
