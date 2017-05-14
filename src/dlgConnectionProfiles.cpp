@@ -873,8 +873,8 @@ void dlgConnectionProfiles::fillout_form()
 
     mProfileList = QDir(QStringLiteral("%1/.config/mudlet/profiles").arg(QDir::homePath())).entryList(QDir::Dirs|QDir::NoDotAndDotDot, QDir::Name);
 
-    // By removing the "." and ".." entries we simplify things a little!
-    if( mProfileList.isEmpty() )
+    // if only the default_host is present it means no profiles have yet been created
+    if( mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QLatin1Literal("default_host")))
     {
         welcome_message->show();
         requiredArea->hide();
