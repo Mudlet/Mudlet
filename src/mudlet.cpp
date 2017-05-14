@@ -2181,6 +2181,7 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
     }
 
     QDockWidget * pDock = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
+    pDock->setObjectName( QString("dockMap_%1").arg(pHost->getName()) );
     pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pDock->setWidget( pHost->mpMap->mpMapper );
