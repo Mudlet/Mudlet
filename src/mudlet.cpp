@@ -1006,7 +1006,7 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        auto pC = new TConsole( pHost, false );
+        auto pC = new TConsole( pHost, false, pD );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
