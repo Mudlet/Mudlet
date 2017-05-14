@@ -60,6 +60,8 @@ class TLabel;
 class TTimer;
 class TToolBar;
 class dlgIRC;
+class dlgAboutDialog;
+class dlgProfilePreferences;
 
 
 class mudlet : public QMainWindow, public Ui::MainWindow
@@ -181,6 +183,10 @@ public:
     bool mHasSavedLayout;
     QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
     QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
+    QPointer<dlgAboutDialog> mpAboutDlg;
+    QPointer<QDialog> mpModuleDlg;
+    QPointer<QDialog> mpPackageManagerDlg;
+    QPointer<dlgProfilePreferences> mpProfilePreferencesDlg;
 
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
