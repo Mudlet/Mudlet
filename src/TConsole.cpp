@@ -707,31 +707,36 @@ void TConsole::closeEvent( QCloseEvent *event )
 {
     if( mIsDebugConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
-        {
+        if( mudlet::self()->isGoingDown() || mpHost->isClosingDown() ) {
+            event->accept();
+            return;
+        } else {
             hide();
             mudlet::mpDebugArea->setVisible(false);
             mudlet::debugMode = false;
             event->ignore();
             return;
         }
-        else
-        {
-            event->accept();
-            return;
-        }
     }
+
     if( mUserConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
+        if( mudlet::self()->isGoingDown() || mpHost->isClosingDown() )
         {
+            std::string key = objectName().toLatin1().data();
+            TConsole * pC = mpHost->mpConsole;
+            if( pC->mSubConsoleMap.find(key) != pC->mSubConsoleMap.end() ) {
+                console->close();
+                console2->close();
+
+                pC->mSubConsoleMap.erase(key);
+            }
+
+            event->accept();
+            return;
+        } else {
             hide();
             event->ignore();
-            return;
-        }
-        else
-        {
-            event->accept();
             return;
         }
     }
@@ -780,6 +785,8 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
         }
         if (choice == QMessageBox::Yes) {
+            mudlet::self()->saveWindowLayout();
+
             mpHost->modulesToWrite.clear();
             std::tuple<bool, QString, QString> result = mpHost->saveProfile();
 
@@ -804,6 +811,8 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
 
         } else if (choice == QMessageBox::No) {
+            mudlet::self()->saveWindowLayout();
+
             event->accept();
             return;
         }

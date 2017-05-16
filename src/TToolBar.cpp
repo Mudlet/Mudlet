@@ -46,6 +46,7 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
+    setObjectName(QString("dockToolBar_%1").arg(name));
 
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout(mpWidget);
@@ -61,8 +62,18 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
     mpWidget->setStyleSheet(mpTAction->css);
 }
 
+void TToolBar::resizeEvent(QResizeEvent *e) {
+    if( ! mudlet::self()->mIsLoadingLayout ) {
+        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    }
+}
+
 void TToolBar::moveEvent(QMoveEvent* e)
 {
+    if( ! mudlet::self()->mIsLoadingLayout ) {
+        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    }
+
     if (mRecordMove) {
         if (!mpTAction) {
             return;
