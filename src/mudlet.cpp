@@ -336,7 +336,7 @@ mudlet::mudlet()
     mpTabBar->setFont( mdiFont );
 
     mainPane->show();
-    connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(actionConnect, SIGNAL(triggered()), this, SLOT(openConnectionDialog()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(actionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
@@ -370,8 +370,8 @@ mudlet::mudlet()
     QAction * mactionAbout = new QAction(tr("About"), this);
     QAction * mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
-    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(openConnectionDialog()));
+    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(openConnectionDialog()));
     connect(dactionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
     connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
     connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
@@ -2040,7 +2040,7 @@ void mudlet::writeSettings()
     settings.setValue("reportMapIssuesToConsole", mIsToDisplayMapAuditErrorsToConsole );
 }
 
-void mudlet::connectToServer()
+void mudlet::openConnectionDialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));

@@ -265,7 +265,7 @@ private slots:
     void slot_close_profile();
     void slot_tab_changed(int);
     void show_help_dialog();
-    void connectToServer();
+    void openConnectionDialog();
     void show_trigger_dialog();
     void show_alias_dialog();
     void show_script_dialog();
