@@ -1054,12 +1054,6 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     muds.clear();
 
-    QDateTime test_date;
-    QString toselectProfileName;
-    QListWidgetItem * toselect = Q_NULLPTR;
-    unsigned int rowToSelect = 0;
-
-    muds.clear();
     for( int i=0; i<mProfileList.size(); i++ )
     {
         QString s = mProfileList.at(i);
@@ -1068,18 +1062,7 @@ void dlgConnectionProfiles::fillout_form()
 
         auto pItem = new QListWidgetItem( mProfileList.at(i) );
 
-        QDateTime profile_lastRead = QFileInfo( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( mProfileList.at(i) ) ).lastRead();
-        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
-        // work as expected - so test for validity of the test_date value as well
-        if( ( ! test_date.isValid() ) || profile_lastRead > test_date )
-        {
-            test_date = profile_lastRead;
-            toselect = pItem;
-            rowToSelect = i;
-            toselectProfileName = mProfileList.at(i);
-        }
-
-        // mProfileList is derived from a filesystem directory, but MacOS is not
+         // mProfileList is derived from a filesystem directory, but MacOS is not
         // necesserily case preserving for file names so any tests on them
         // should be case insensitive...! - Slysven
         // Change from using a "==" test to a QString::compare( const QString )
@@ -1159,15 +1142,37 @@ void dlgConnectionProfiles::fillout_form()
         pItem->setIcon( mi );
     }
 
-    if( toselect && toselectProfileName == QStringLiteral("default_host")) {
-        // if the last profile read is default_host, it means the user hasn't created
-        // any profiles yet since that profile cannot actually be used. In this case,
-        // select a random pre-defined profile to give all MUDs a fair go
-        profiles_tree_widget->setCurrentRow( qrand() % profiles_tree_widget->count() );
-    } else if ( toselect ) {
-//        profiles_tree_widget->setCurrentItem( toselect );
-        profiles_tree_widget->setCurrentRow( rowToSelect );
+    QDateTime test_date;
+    QString toselectProfileName;
+    int toselectRow = -1;
+
+    for (int i = 0; i < profiles_tree_widget->count(); i++) {
+        auto profile = profiles_tree_widget->item(i);
+        auto profileName = profile->text();
+
+        QDateTime profile_lastRead = QFileInfo(QStringLiteral("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), profileName)).lastModified();
+        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
+        // work as expected - so test for validity of the test_date value as well
+        if ((!test_date.isValid()) || profile_lastRead > test_date) {
+            test_date = profile_lastRead;
+            toselectProfileName = profileName;
+            toselectRow = i;
+        }
     }
+
+    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host")) {
+        // if the last profile read is default_host, it means the user hasn't created
+        // any profiles yet since default_host profile cannot actually be used. In this case,
+        // select a random pre-defined profile to give all MUDs a fair go
+
+        // make sure not to actually select the default_host though
+        auto default_host_row = toselectRow;
+        while (toselectRow == default_host_row) {
+            toselectRow = qrand() % profiles_tree_widget->count();
+        }
+    }
+
+    profiles_tree_widget->setCurrentRow(toselectRow);
 }
 
 void dlgConnectionProfiles::slot_cancel()
