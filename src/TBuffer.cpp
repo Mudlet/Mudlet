@@ -967,7 +967,7 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
 //            std::deque<TChar> newLine;
 //            buffer.push_back( newLine );
 //            lineBuffer.push_back( QString() );
-//            QString time = "-----";
+//            QString time = "-------------";
 //            timeBuffer << time;
 //            promptBuffer << false;
 //            dirty << true;
@@ -1006,7 +1006,7 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
 //                        lineBuffer.append( lineRest );
 //                    else
 //                        lineBuffer.append( nothing );
-//                    QString time = "-----";
+//                    QString time = "-------------";
 //                    timeBuffer << time;
 //                    promptBuffer << false;
 //                    dirty << true;
@@ -2728,7 +2728,7 @@ void TBuffer::append(const QString & text,
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back( QString() );
-            timeBuffer << QStringLiteral( "-----" );
+            timeBuffer << QStringLiteral( "-------------" );
             promptBuffer << false;
             dirty << true;
             mLastLine++;
@@ -2764,7 +2764,7 @@ void TBuffer::append(const QString & text,
                     else {
                         lineBuffer.append( QString() );
                     }
-                    timeBuffer << QStringLiteral( "-----" );
+                    timeBuffer << QStringLiteral( "-------------" );
                     promptBuffer << false;
                     dirty << true;
                     mLastLine++;
@@ -3268,11 +3268,15 @@ void TBuffer::log( int from, int to )
                 {
                     QPoint P1 = QPoint(0,i);
                     QPoint P2 = QPoint( buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2);
+                    toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
                 }
                 else
                 {
-                    toLog = lineBuffer[i];
+                    if( mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty() )
+                    {
+                        toLog = timeBuffer[i].left(13);
+                    }
+                    toLog.append(lineBuffer[i]);
                     toLog.append("\n");
                 }
                 mpHost->mpConsole->mLogStream << toLog;
@@ -4007,7 +4011,7 @@ QStringList TBuffer::getEndLines( int n )
 }
 
 
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
+QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding )
 {
     int y = P1.y();
     int x = P1.x();
@@ -4043,6 +4047,29 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2 )
     QString fontStyle;
     QString textDecoration;
     bool firstSpan = true;
+    if( allowedTimestamps && !timeBuffer[y].isEmpty() )
+    {
+        firstSpan = false;
+        // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
+        s.append("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); ");
+        s.append("font-weight: normal; font-style: normal; text-decoration: normal\">");
+        s.append(timeBuffer[y].left(13));
+    }
+    if( spacePadding > 0 )
+    {
+        // used for "copy HTML", first line of selection
+        if( firstSpan )
+        {
+            firstSpan = false;
+        }
+        else
+        {
+            s.append( "</span>" );
+        }
+        s.append( "<span>" );
+        s.append( QString( spacePadding, QLatin1Char(' ') ) );
+        // Pad out with spaces to the right so a partial first line lines up
+    }
     for( ; x<P2.x(); x++ ) {
         if( x >= static_cast<int>(buffer[y].size()) ) {
             break;

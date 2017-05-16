@@ -331,6 +331,7 @@ bool XMLexport::writeHost(Host* pHost)
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
     // future - phpBB code might be useful if it can be done.
     writeAttribute("mRawStreamDump", pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no");
+    writeAttribute("mIsLoggingTimestamps", pHost->mIsLoggingTimestamps ? "yes" : "no");
     writeAttribute("mAlertOnNewData", pHost->mAlertOnNewData ? "yes" : "no");
     writeAttribute("mFORCE_NO_COMPRESSION", pHost->mFORCE_NO_COMPRESSION ? "yes" : "no");
     writeAttribute("mFORCE_GA_OFF", pHost->mFORCE_GA_OFF ? "yes" : "no");
@@ -763,7 +764,7 @@ bool XMLexport::writeTrigger(TTrigger* pT)
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
-            writeTextElement("script", pT->mScript);
+            writeScriptElement(pT->mScript);
             writeTextElement("triggerType", QString::number(pT->mTriggerType));
             writeTextElement("conditonLineDelta", QString::number(pT->mConditionLineDelta));
             writeTextElement("mStayOpen", QString::number(pT->mStayOpen));
@@ -851,7 +852,7 @@ bool XMLexport::writeAlias(TAlias* pT)
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
-            writeTextElement("script", pT->mScript);
+            writeScriptElement(pT->mScript);
             writeTextElement("command", pT->mCommand);
             writeTextElement("packageName", pT->mPackageName);
             writeTextElement("regex", pT->mRegexCode);
@@ -912,7 +913,7 @@ bool XMLexport::writeAction(TAction* pT)
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
             writeTextElement("packageName", pT->mPackageName);
-            writeTextElement("script", pT->mScript);
+            writeScriptElement(pT->mScript);
             writeTextElement("css", pT->css);
             writeTextElement("commandButtonUp", pT->mCommandButtonUp);
             writeTextElement("commandButtonDown", pT->mCommandButtonDown);
@@ -984,7 +985,7 @@ bool XMLexport::writeTimer(TTimer* pT)
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
-            writeTextElement("script", pT->mScript);
+            writeScriptElement(pT->mScript);
             writeTextElement("command", pT->mCommand);
             writeTextElement("packageName", pT->mPackageName);
             writeTextElement("time", pT->mTime.toString("hh:mm:ss.zzz"));
@@ -1043,7 +1044,7 @@ bool XMLexport::writeScript(TScript* pT)
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
             writeTextElement("packageName", pT->mPackageName);
-            writeTextElement("script", pT->mScript);
+            writeScriptElement(pT->mScript);
 
             writeStartElement("eventHandlerList");
             for (int i = 0; i < pT->mEventHandlerList.size(); ++i) {
@@ -1105,7 +1106,7 @@ bool XMLexport::writeKey(TKey* pT)
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
             writeTextElement("packageName", pT->mPackageName);
-            writeTextElement("script", pT->mScript);
+            writeScriptElement(pT->mScript);
             writeTextElement("command", pT->mCommand);
             writeTextElement("keyCode", QString::number(pT->mKeyCode));
             writeTextElement("keyModifier", QString::number(pT->mKeyModifier));
@@ -1125,4 +1126,39 @@ bool XMLexport::writeKey(TKey* pT)
     }
 
     return (isOk && (!hasError()));
+}
+
+bool XMLexport::writeScriptElement(const QString & script)
+{
+    QString localScript = script;
+    localScript.replace(QChar('\x01'), QStringLiteral("\xFFFC\x2401")); // SOH
+    localScript.replace(QChar('\x02'), QStringLiteral("\xFFFC\x2402")); // STX
+    localScript.replace(QChar('\x03'), QStringLiteral("\xFFFC\x2403")); // ETX
+    localScript.replace(QChar('\x04'), QStringLiteral("\xFFFC\x2404")); // EOT
+    localScript.replace(QChar('\x05'), QStringLiteral("\xFFFC\x2405")); // ENQ
+    localScript.replace(QChar('\x06'), QStringLiteral("\xFFFC\x2406")); // ACK
+    localScript.replace(QChar('\x07'), QStringLiteral("\xFFFC\x2407")); // BEL
+    localScript.replace(QChar('\x08'), QStringLiteral("\xFFFC\x2408")); // BS
+    localScript.replace(QChar('\x0B'), QStringLiteral("\xFFFC\x240B")); // VT
+    localScript.replace(QChar('\x0C'), QStringLiteral("\xFFFC\x240C")); // FF
+    localScript.replace(QChar('\x0E'), QStringLiteral("\xFFFC\x240E")); // SS
+    localScript.replace(QChar('\x0F'), QStringLiteral("\xFFFC\x240F")); // SI
+    localScript.replace(QChar('\x10'), QStringLiteral("\xFFFC\x2410")); // DLE
+    localScript.replace(QChar('\x11'), QStringLiteral("\xFFFC\x2411")); // DC1
+    localScript.replace(QChar('\x12'), QStringLiteral("\xFFFC\x2412")); // DC2
+    localScript.replace(QChar('\x13'), QStringLiteral("\xFFFC\x2413")); // DC3
+    localScript.replace(QChar('\x14'), QStringLiteral("\xFFFC\x2414")); // DC4
+    localScript.replace(QChar('\x15'), QStringLiteral("\xFFFC\x2415")); // NAK
+    localScript.replace(QChar('\x16'), QStringLiteral("\xFFFC\x2416")); // SYN
+    localScript.replace(QChar('\x17'), QStringLiteral("\xFFFC\x2417")); // ETB
+    localScript.replace(QChar('\x18'), QStringLiteral("\xFFFC\x2418")); // CAN
+    localScript.replace(QChar('\x19'), QStringLiteral("\xFFFC\x2419")); // EM
+    localScript.replace(QChar('\x1A'), QStringLiteral("\xFFFC\x241A")); // SUB
+    localScript.replace(QChar('\x1B'), QStringLiteral("\xFFFC\x241B")); // ESC
+    localScript.replace(QChar('\x1C'), QStringLiteral("\xFFFC\x241C")); // FS
+    localScript.replace(QChar('\x1D'), QStringLiteral("\xFFFC\x241D")); // GS
+    localScript.replace(QChar('\x1E'), QStringLiteral("\xFFFC\x241E")); // RS
+    localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
+    localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
+    writeTextElement(QLatin1String("script"), localScript);
 }

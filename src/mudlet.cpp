@@ -100,7 +100,15 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 // number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
 // agreement and consideration from the Project management, even a minor part
 // increment should not be done without justification...!
-const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.0f, 'f', 3 );
+// XML version Change history (what and why):
+// 1.001    Added method to allow XML format to permit ASCII control codes
+//          0x01-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f to be stored as part of the
+//          "script" element for a Mudlet "item" (0x09, 0x0a, 0x0d are the only
+//          ones that ARE permitted) - this is wanted so that, for instance
+//          ANSI ESC codes can be included in a Lua script without breaking
+//          the XML format used to store it - prior to this embedding such
+//          codes would break or destroy the script that used it.
+const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.001f, 'f', 3 );
 
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QMainWindow* mudlet::mpDebugArea = 0;
@@ -141,6 +149,10 @@ mudlet::mudlet()
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
 , mIsToDisplayMapAuditErrorsToConsole( false )
+, mpAboutDlg( 0 )
+, mpModuleDlg( 0 )
+, mpPackageManagerDlg( 0 )
+, mpProfilePreferencesDlg( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -483,28 +495,42 @@ void mudlet::layoutModules(){
 
 void mudlet::slot_module_manager(){
     Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/module_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    moduleTable = d->findChild<QTableWidget *>("moduleTable");
-    moduleUninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    moduleInstallButton = d->findChild<QPushButton *>("installButton");
-    moduleHelpButton = d->findChild<QPushButton *>("helpButton");
-    if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) return;
-    layoutModules();
-    connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
-    connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
-    connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
-    connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
-    connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-    d->setWindowTitle("Module Manager");
-    d->show();
-    d->raise();
+    if( ! pH ) {
+        return;
+    }
 
+    if( !mpModuleDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/module_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpModuleDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        if( !mpModuleDlg ) {
+            return;
+        }
+
+        moduleTable = mpModuleDlg->findChild<QTableWidget *>("moduleTable");
+        moduleUninstallButton = mpModuleDlg->findChild<QPushButton *>("uninstallButton");
+        moduleInstallButton = mpModuleDlg->findChild<QPushButton *>("installButton");
+        moduleHelpButton = mpModuleDlg->findChild<QPushButton *>("helpButton");
+
+        if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) {
+            return;
+        }
+
+        layoutModules();
+        connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
+        connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
+        connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
+        connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
+        connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
+        mpModuleDlg->setWindowTitle(tr("Module Manager"));
+        mpModuleDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpModuleDlg->raise();
+    mpModuleDlg->show();
 }
 
 bool mudlet::openWebPage(const QString& path){
@@ -626,23 +652,38 @@ void mudlet::slot_uninstall_module()
 void mudlet::slot_package_manager()
 {
     Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/package_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    packageList = d->findChild<QListWidget *>("packageList");
-    uninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    installButton = d->findChild<QPushButton *>("installButton");
-    if( ! packageList || ! uninstallButton ) return;
-    packageList->addItems( pH->mInstalledPackages );
-    connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
-    connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
-    d->setWindowTitle("Package Manager");
-    d->show();
-    d->raise();
+    if( ! pH ) {
+        return;
+    }
+
+    if( ! mpPackageManagerDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/package_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpPackageManagerDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        if( !mpPackageManagerDlg ) {
+            return;
+        }
+
+        packageList = mpPackageManagerDlg->findChild<QListWidget *>("packageList");
+        uninstallButton = mpPackageManagerDlg->findChild<QPushButton *>("uninstallButton");
+        installButton = mpPackageManagerDlg->findChild<QPushButton *>("installButton");
+
+        if( ! packageList || ! uninstallButton ) {
+            return;
+        }
+
+        packageList->addItems( pH->mInstalledPackages );
+        connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
+        connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
+        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
+        mpPackageManagerDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpPackageManagerDlg->raise();
+    mpPackageManagerDlg->show();
 }
 
 void mudlet::slot_install_package()
@@ -700,12 +741,17 @@ void mudlet::slot_close_profile_requested( int tab )
     Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
+    QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
+
     if( ! pH->mpConsole->close() )
         return;
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
+    for( auto dockName : dockWindowMap.keys() ) {
+        dockWindowMap[dockName]->close();
+    }
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
     {
@@ -734,8 +780,12 @@ void mudlet::slot_close_profile()
             Host * pH = mpCurrentActiveHost;
             if( pH )
             {
+                QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
                 QString name = pH->getName();
                 mpCurrentActiveHost->mpEditorDialog->close();
+                for( auto dockName : dockWindowMap.keys() ) {
+                    dockWindowMap[dockName]->close();
+                }
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )
                 {
@@ -956,7 +1006,7 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
         pD->setWindowTitle( name );
         dockWindowMap[name] = pD;
-        auto pC = new TConsole( pHost, false );
+        auto pC = new TConsole( pHost, false, pD );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
@@ -1936,13 +1986,20 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    auto pDlg = new dlgProfilePreferences( this, pHost );
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    pDlg->show();
+    if( ! pHost ) {
+        return;
+    }
+
+    if( ! mpProfilePreferencesDlg ) {
+        mpProfilePreferencesDlg = new dlgProfilePreferences( this, pHost );
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        mpProfilePreferencesDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+    mpProfilePreferencesDlg->raise();
+    mpProfilePreferencesDlg->show();
 }
 
 void mudlet::show_help_dialog()
@@ -2058,9 +2115,13 @@ void mudlet::slot_show_help_dialog_download()
 
 void mudlet::slot_show_about_dialog()
 {
-    auto pDlg = new dlgAboutDialog( this );
-    pDlg->raise();
-    pDlg->show();
+    if( ! mpAboutDlg ) {
+        mpAboutDlg = new dlgAboutDialog( this );
+        mpAboutDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpAboutDlg->raise();
+    mpAboutDlg->show();
 }
 
 void mudlet::slot_notes()
@@ -2455,6 +2516,11 @@ void mudlet::stopSounds()
 
 void mudlet::playSound(QString s, int soundVolume)
 {
+    QPointer<Host> pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
     QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
     QMediaPlayer* pPlayer = 0;
 
@@ -2472,31 +2538,38 @@ void mudlet::playSound(QString s, int soundVolume)
     if (!pPlayer) {
         pPlayer = new QMediaPlayer(this);
 
-        auto pHost = getActiveHost();
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            if (pHost) {
-                pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
-            }
+            pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
             return;
         }
 
-        connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
-            if (state == QMediaPlayer::StoppedState) {
-                TEvent soundFinished;
-                soundFinished.mArgumentList.append("sysSoundFinished");
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                pHost->raiseEvent(soundFinished);
-            }
-        });
-
         mMusicBoxList.append(pPlayer);
     }
+
+    // Remove any previous connection to the signal of this QMediaPlayer,
+    // theoretically this might be movable to be within the lambda function of
+    // the following connect(...) but that does seem a bit twisty and this works
+    // well enough!
+    disconnect(pPlayer, &QMediaPlayer::stateChanged, 0, 0);
+
+    connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
+        if (state == QMediaPlayer::StoppedState) {
+            TEvent soundFinished;
+            soundFinished.mArgumentList.append("sysSoundFinished");
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            if (pHost) {
+                // The host may have gone away if the sound was a long one
+                // and we are multi-playing so we ought to test it...
+                pHost->raiseEvent(soundFinished);
+            }
+        }
+    });
 
     /* set volume and play sound */
     pPlayer->setMedia(QUrl::fromLocalFile(s));

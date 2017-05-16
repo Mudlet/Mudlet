@@ -278,6 +278,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         else
             showToolbar->setChecked(mudlet::self()->mShowToolbar);
         mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
+        mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
         commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
         mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
         mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
@@ -1232,6 +1233,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     else
         mudlet::self()->mpMainToolBar->hide();
     pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
+    pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
     pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
     if (mudlet::self()->mConsoleMap.contains(pHost)) {

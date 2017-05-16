@@ -224,6 +224,7 @@ public:
     // also mIsCurrentLogFileInHtmlFormat.
     bool mIsNextLogFileInHtmlFormat;
 
+    bool mIsLoggingTimestamps;
     bool mResetProfile;
     int mScreenHeight;
     int mScreenWidth;
