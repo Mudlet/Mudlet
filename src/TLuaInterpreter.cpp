@@ -3976,11 +3976,14 @@ int TLuaInterpreter::connectToServer( lua_State *L )
 {
     int port;
     string url;
+    bool saveToProfile = false;
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
+        lua_pushstring( L, QString(" connectToServer: argument #1 expects type string, %1 was given.").arg( lua_typename(L,1) ).toUtf8().constData() );
+        return lua_error( L );
     }
     else
     {
@@ -3989,18 +3992,62 @@ int TLuaInterpreter::connectToServer( lua_State *L )
 
     if( ! lua_isnumber( L, 2 ) )
     {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
+        lua_pushstring( L, QString(" connectToServer: argument #2 expects type int, %1 was given.").arg( lua_typename(L,2) ).toUtf8().constData() );
+        return lua_error( L );
     }
     else
     {
         port = lua_tonumber( L, 2 );
+
+        if( port > 65535 || port < 0 )
+        {
+            lua_pushstring( L, " connectToServer: argument #2 is invalid, a valid port number is required.");
+            return lua_error(L);
+        }
     }
+
+    // Optional argument to save this new connection to disk for this profile.
+    if( !lua_isnoneornil(L,3) && !lua_isboolean(L,3) ) {
+        lua_pushstring( L, QString(" connectToServer: argument #3 expects boolean type, %1 was given.").arg( lua_typename(L,3) ).toUtf8().constData() );
+        return lua_error(L);
+    }
+    if( ! lua_isnoneornil(L,3) && lua_isboolean(L,3)) {
+        saveToProfile = lua_toboolean(L,3);
+        if( saveToProfile ) {
+            qDebug() << "TLuaInterpreter::connectToProfile(" << url.c_str() << ", " << port << ", " << saveToProfile << ")";
+
+            const QString filePath("%1/.config/mudlet/profiles/%2/%3");
+            QFile urlFile( filePath.arg(QDir::homePath(), pHost->getName(), "url") );
+            QFile portFile( filePath.arg(QDir::homePath(), pHost->getName(), "port") );
+
+            if( urlFile.open(QIODevice::WriteOnly) ) {
+                QString newURL = url.c_str();
+                QDataStream ofsu(&urlFile);
+                ofsu << newURL;
+                urlFile.close();
+            } else {
+                lua_pushnil(L);
+                lua_pushstring( L, QString(" connectToServer: Save has Failed - %1").arg(urlFile.errorString()).toUtf8().constData() );
+                return 2;
+            }
+
+            if( portFile.open(QIODevice::WriteOnly) ) {
+                QString newPort = QString::number(port);
+                QDataStream ofsp(&portFile);
+                ofsp << newPort;
+                portFile.close();
+            } else {
+                lua_pushnil(L);
+                lua_pushstring( L, QString(" connectToServer: Save has Failed - %1").arg(portFile.errorString()).toUtf8().constData() );
+                return 2;
+            }
+        }
+    }
+
     QString _url = url.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     pHost->mTelnet.connectIt( _url, port );
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
