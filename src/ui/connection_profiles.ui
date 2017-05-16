@@ -2282,12 +2282,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="2">
              <widget class="QLabel" name="label_3">
-              <property name="font">
-               <font>
-                <family>Bitstream Charter</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Port:</string>
               </property>
@@ -2308,14 +2302,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="0" column="0">
              <widget class="QLabel" name="label">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
-              </property>
               <property name="text">
                <string>Profile name:</string>
               </property>
@@ -2357,12 +2343,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="2" column="0">
              <widget class="QLabel" name="label_9">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Profile history:</string>
               </property>
@@ -2370,13 +2350,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_2">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-                <underline>false</underline>
-               </font>
-              </property>
               <property name="text">
                <string>Server address:</string>
               </property>
@@ -2395,11 +2368,6 @@ p, li { white-space: pre-wrap; }
                 <width>0</width>
                 <height>0</height>
                </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>8</pointsize>
-               </font>
               </property>
               <item>
                <property name="text">
@@ -2436,12 +2404,6 @@ p, li { white-space: pre-wrap; }
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
              <widget class="QLabel" name="label_4">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Character name:</string>
               </property>
@@ -2459,12 +2421,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_5">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
-              </property>
               <property name="text">
                <string>Password:</string>
               </property>
@@ -2482,14 +2438,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="2" column="0" colspan="2">
              <widget class="QCheckBox" name="autologin_checkBox">
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>10</pointsize>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
-              </property>
               <property name="toolTip">
                <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
               </property>
@@ -2544,12 +2492,6 @@ p, li { white-space: pre-wrap; }
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
-              </property>
-              <property name="font">
-               <font>
-                <family>DejaVu Sans</family>
-                <pointsize>9</pointsize>
-               </font>
               </property>
               <property name="text">
                <string>Website:</string>
