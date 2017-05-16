@@ -2373,7 +2373,7 @@ void mudlet::startAutoLogin()
     bool openedProfile = false;
 
     for (auto host : hostList) {
-        QString val = readProfileData(host, QLatin1Literal("autologin"));
+        QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(host);
             openedProfile = true;

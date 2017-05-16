@@ -871,7 +871,7 @@ void dlgConnectionProfiles::fillout_form()
     mProfileList = QDir(QStringLiteral("%1/.config/mudlet/profiles").arg(QDir::homePath())).entryList(QDir::Dirs|QDir::NoDotAndDotDot, QDir::Name);
 
     // if only the default_host is present it means no profiles have yet been created
-    if( mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QLatin1Literal("default_host")))
+    if( mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QStringLiteral("default_host")))
     {
         welcome_message->show();
         requiredArea->hide();
@@ -1057,13 +1057,27 @@ void dlgConnectionProfiles::fillout_form()
     QDateTime test_date;
     QString toselectProfileName;
     QListWidgetItem * toselect = Q_NULLPTR;
+    unsigned int rowToSelect = 0;
 
     muds.clear();
     for( int i=0; i<mProfileList.size(); i++ )
     {
         QString s = mProfileList.at(i);
         if( s.isEmpty() )
-            continue;
+            continue;        
+
+        auto pItem = new QListWidgetItem( mProfileList.at(i) );
+
+        QDateTime profile_lastRead = QFileInfo( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( mProfileList.at(i) ) ).lastRead();
+        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
+        // work as expected - so test for validity of the test_date value as well
+        if( ( ! test_date.isValid() ) || profile_lastRead > test_date )
+        {
+            test_date = profile_lastRead;
+            toselect = pItem;
+            rowToSelect = i;
+            toselectProfileName = mProfileList.at(i);
+        }
 
         // mProfileList is derived from a filesystem directory, but MacOS is not
         // necesserily case preserving for file names so any tests on them
@@ -1088,7 +1102,6 @@ void dlgConnectionProfiles::fillout_form()
             continue;
         }
 
-        auto pItem = new QListWidgetItem( mProfileList.at(i) );
         pItem->setFont(font);
         pItem->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem( pItem );
@@ -1144,28 +1157,16 @@ void dlgConnectionProfiles::fillout_form()
         pt.drawText( QRect(30,0, 90, 30), Qt::AlignHCenter|Qt::AlignVCenter|Qt::TextWordWrap, s, &_r );
         mi = QIcon( pb );
         pItem->setIcon( mi );
-
-        // Previously was using Host.dat file but that is (not now) used or
-        // present; now use the "current" directory as that is updated when a
-        // profile is used AND saved...
-        QDateTime profile_lastRead = QFileInfo( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( mProfileList.at(i) ) ).lastRead();
-        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
-        // work as expected - so test for validity of the test_date value as well
-        if( ( ! test_date.isValid() ) || profile_lastRead > test_date )
-        {
-            test_date = profile_lastRead;
-            toselect = pItem;
-            toselectProfileName = mProfileList.at(i);
-        }
     }
 
-    if( toselect && toselectProfileName == QLatin1Literal("default_host")) {
+    if( toselect && toselectProfileName == QStringLiteral("default_host")) {
         // if the last profile read is default_host, it means the user hasn't created
         // any profiles yet since that profile cannot actually be used. In this case,
         // select a random pre-defined profile to give all MUDs a fair go
         profiles_tree_widget->setCurrentRow( qrand() % profiles_tree_widget->count() );
     } else if ( toselect ) {
-        profiles_tree_widget->setCurrentItem( toselect );
+//        profiles_tree_widget->setCurrentItem( toselect );
+        profiles_tree_widget->setCurrentRow( rowToSelect );
     }
 }
 
