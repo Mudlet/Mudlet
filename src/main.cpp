@@ -339,6 +339,9 @@ int main(int argc, char* argv[])
         app->processEvents();
     }
 
+    // seed random number generator (should be done once per lifetime)
+    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
+
     QString directory = QDir::homePath() + "/.config/mudlet";
     QDir dir;
     if (!dir.exists(directory)) {
