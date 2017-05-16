@@ -1430,8 +1430,11 @@
           </item>
           <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
-             <string>Show (-1) area {this message should have been overwritten by initialisation code - report if not!}</string>
+             <string>Show the default area in map area selection</string>
             </property>
             <property name="checked">
              <bool>true</bool>

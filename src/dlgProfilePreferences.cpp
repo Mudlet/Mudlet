@@ -362,7 +362,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
         if (pHost->mpMap->mpMapper) {
             checkBox_showDefaultArea->show();
-            checkBox_showDefaultArea->setText(tr("Show \"%1\" (-1) in the map area selection").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+            checkBox_showDefaultArea->setText(tr("Show \"%1\" in the map area selection").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
             checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
         } else {
             checkBox_showDefaultArea->hide();
