@@ -2388,6 +2388,10 @@ void mudlet::startAutoLogin()
             openedProfile = true;
         }
     }
+
+    if (!openedProfile) {
+        openConnectionDialog();
+    }
 }
 
 void mudlet::doAutoLogin( const QString & profile_name )
