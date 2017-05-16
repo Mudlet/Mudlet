@@ -108,9 +108,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mErrorPalette.setColor(QPalette::Base,QColor(255,235,235));
 
-    // collapse the width of the dialog to the minimum, default is too big
-    resize(minimumSize().width(), height());
-
     profiles_tree_widget->setViewMode(QListView::IconMode);
 }
 
@@ -880,7 +877,10 @@ void dlgConnectionProfiles::fillout_form()
         requiredArea->hide();
         informationalArea->hide();
         optionalArea->hide();
-        resize( minimumSize() );
+
+        // collapse the width as the default is too big and set the height to a reasonable default
+        // to fit all of the 'Welcome' message
+        resize(minimumSize().width(), 300);
     }
     else
     {
