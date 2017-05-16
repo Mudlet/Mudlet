@@ -2378,9 +2378,7 @@ QString mudlet::readProfileData( const QString& profile, const QString& item )
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
-    hostList.removeAll(".");
-    hostList.removeAll("..");
+    QStringList hostList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for( int i = 0; i< hostList.size(); i++ )
     {
         QString item = "autologin";
