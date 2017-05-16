@@ -944,14 +944,12 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                                          "%2, was: \"%3\" now: \"%4\".")
                                               .arg(id, 6, QLatin1Char('0'))
                                               .arg(_nk, 6, QLatin1Char('0'))
-                                              .arg(_cmd)
-                                              .arg(_nc);
+                                              .arg(_cmd, _nc);
                     mpRoomDB->mpMap->postMessage(warnMsg);
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg( id, tr( "[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: \"%2\" now: \"%3\"." )
                                                              .arg( _nk, 6, QLatin1Char( '0' ) )
-                                                             .arg( _cmd )
-                                                             .arg( _nc ) );
+                                                             .arg( _cmd, _nc ) );
             }
         }
         // Now finished with (mutable) iterator, can re-insert changed things

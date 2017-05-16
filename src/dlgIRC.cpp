@@ -186,11 +186,11 @@ void dlgIRC::irc_gotMsg(QString a, QString b, QString c)
     const QString n = a;
     QString t;
     if (b == mNick)
-        t = tr("<font color=#a5a5a5>[%1] </font>msg from <font color=#ff0000>%2</font><font color=#ff0000>: %3</font>").arg(_t).arg(n).arg(msg);
+        t = tr("<font color=#a5a5a5>[%1] </font>msg from <font color=#ff0000>%2</font><font color=#ff0000>: %3</font>").arg(_t, n, msg);
     else if (a == mNick)
-        t = tr("<font color=#a5a5a5>[%1] </font><font color=#00aaaa>%2</font><font color=#004400>: %3</font>").arg(_t).arg(n).arg(msg);
+        t = tr("<font color=#a5a5a5>[%1] </font><font color=#00aaaa>%2</font><font color=#004400>: %3</font>").arg(_t, n, msg);
     else
-        t = tr("<font color=#a5a5a5>[%1] </font><font color=#0000ff>%2</font><font color=#000000>: %3</font>").arg(_t).arg(n).arg(msg);
+        t = tr("<font color=#a5a5a5>[%1] </font><font color=#0000ff>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
 
 
     QString hi = QString("<font color=#aa00aa>%1</font>").arg(mNick);
@@ -228,11 +228,11 @@ void dlgIRC::irc_gotMsg2(QString a, QStringList c)
     const QString n = a;
     QString t;
     if (msg.contains(mNick))
-        t = tr("<font color=#a5a5a5>[%1] </font><font color=#ff0000>%2</font><font color=#000000>: %3</font>").arg(_t).arg(n).arg(msg);
+        t = tr("<font color=#a5a5a5>[%1] </font><font color=#ff0000>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
     else
-        t = tr("<font color=#a5a5a5>[%1] </font><font color=#0000ff>%2</font><font color=#000000>: %3</font>").arg(_t).arg(n).arg(msg);
+        t = tr("<font color=#a5a5a5>[%1] </font><font color=#0000ff>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
 
-    //QString t = tr("<font color=#aaaaaa>[%1] </font><font color=#ff0000>%2</font><font color=#000000>: %3</font>").arg(_t).arg(n).arg(msg);
+    //QString t = tr("<font color=#aaaaaa>[%1] </font><font color=#ff0000>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
     QTextCursor cur = irc->textCursor();
     cur.movePosition(QTextCursor::End);
     cur.insertBlock();
@@ -296,7 +296,7 @@ void dlgIRC::irc_gotMsg3(QString a, uint code, QStringList c)
 void dlgIRC::slot_joined(QString nick, QString chan)
 {
     const QString _t = QTime::currentTime().toString();
-    QString t = tr("<font color=#008800>[%1] %2 has joined the channel.</font>").arg(_t).arg(nick);
+    QString t = tr("<font color=#008800>[%1] %2 has joined the channel.</font>").arg(_t, nick);
     QTextCursor cur = irc->textCursor();
     cur.movePosition(QTextCursor::End);
     cur.insertBlock();
@@ -308,7 +308,7 @@ void dlgIRC::slot_joined(QString nick, QString chan)
 void dlgIRC::slot_parted(QString nick, QString chan, QString msg)
 {
     const QString _t = QTime::currentTime().toString();
-    QString t = tr("<font color=#888800>[%1] %2 has left the channel.</font>").arg(_t).arg(nick);
+    QString t = tr("<font color=#888800>[%1] %2 has left the channel.</font>").arg(_t, nick);
     QTextCursor cur = irc->textCursor();
     cur.movePosition(QTextCursor::End);
     cur.insertBlock();

@@ -2454,7 +2454,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
         return 2;
     }
 }
@@ -10296,11 +10296,7 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 
     QNetworkRequest request = QNetworkRequest( url );
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    request.setRawHeader( QByteArray( "User-Agent" ),
-                          QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
-                                      .arg( APP_VERSION )
-                                      .arg( APP_BUILD )
-                                      .toUtf8().constData() ) );
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
     if( url.scheme() == QStringLiteral( "https" ) ) {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
@@ -12661,16 +12657,16 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
 void TLuaInterpreter::logError( std::string & e, const QString & name, const QString & function )
 {
     //QDateTime time = QDateTime::currentDateTime();
-    // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
+    // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss"), name, function, e.c_str());
     //mpHost->mErrorLogStream << entry << endl;
     auto blue = QColor(Qt::blue);
     auto green = QColor(Qt::green);
     auto red = QColor(Qt::red);
     auto black = QColor(Qt::black);
     QString s1 = QString("[ERROR:]");
-    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
+    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
+    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
 
     if( mpHost->mpEditorDialog )
     {

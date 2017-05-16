@@ -625,8 +625,7 @@ void mudlet::slot_install_module()
     {
         QMessageBox::warning(this, tr("Load Mudlet Module:"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
 
@@ -700,8 +699,7 @@ void mudlet::slot_install_package()
     {
         QMessageBox::warning(this, tr("Import Mudlet Package:"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
 
@@ -2342,8 +2340,7 @@ void mudlet::slot_replay()
     {
         QMessageBox::warning(this, tr("Select Replay"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
     //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";

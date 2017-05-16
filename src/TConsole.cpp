@@ -853,8 +853,8 @@ void TConsole::toggleLogging( bool isMessageEnabled )
         QTextStream out(&file);
         file.close();
 
-        QString directoryLogFile = QStringLiteral( "%1/.config/mudlet/profiles/%2/log" ).arg( QDir::homePath() ).arg( profile_name );
-        mLogFileName = QStringLiteral( "%1/%2" ).arg( directoryLogFile ).arg( QDateTime::currentDateTime().toString( QStringLiteral( "yyyy-MM-dd#hh-mm-ss" ) ) );
+        QString directoryLogFile = QStringLiteral( "%1/.config/mudlet/profiles/%2/log" ).arg(QDir::homePath(), profile_name);
+        mLogFileName = QStringLiteral( "%1/%2" ).arg(directoryLogFile, QDateTime::currentDateTime().toString( QStringLiteral( "yyyy-MM-dd#hh-mm-ss" ) ) );
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;
@@ -1628,7 +1628,7 @@ bool TConsole::loadMap(const QString& location)
         pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
     }
     else {
-        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg(location, now.toString( Qt::ISODate) ), true );
     }
 
     return result;
@@ -1681,9 +1681,7 @@ bool TConsole::importMap( const QString & location, QString * errMsg )
         if( fileInfo.isRelative() ) {
             // Resolve the name relative to the profile home directory:
             filePathNameString = QDir::cleanPath( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
-                                                  .arg( QDir::homePath() )
-                                                  .arg( pHost->getName() )
-                                                  .arg( fileInfo.filePath() ) );
+                                                  .arg( QDir::homePath(), pHost->getName(), fileInfo.filePath() ) );
         }
         else {
             if( fileInfo.exists() ) {
@@ -1722,7 +1720,7 @@ bool TConsole::importMap( const QString & location, QString * errMsg )
         result = pHost->mpMap->importMap( file, errMsg );
 
         file.close();
-        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ) );
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg(location, now.toString( Qt::ISODate) ) );
     }
     else {
         if( ! errMsg ) {
