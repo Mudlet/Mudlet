@@ -42,6 +42,7 @@
 #include "post_guard.h"
 
 class QDialog;
+class QDockWidget;
 class QPushButton;
 class QListWidget;
 
@@ -303,6 +304,7 @@ public:
     bool mMapperUseAntiAlias;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
+    QPointer<QDockWidget> mpDockableMapWidget;
 
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
