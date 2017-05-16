@@ -2170,21 +2170,26 @@ void mudlet::slot_mapper()
 void mudlet::createMapper( bool isToLoadDefaultMapFile )
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
+    if( ! pHost )
+    {
+        return;
+    }
     if( pHost->mpMap->mpMapper )
     {
         bool visStatus = pHost->mpMap->mpMapper->isVisible();
         if ( pHost->mpMap->mpMapper->parentWidget()->inherits("QDockWidget") )
+        {
             pHost->mpMap->mpMapper->parentWidget()->setVisible( !visStatus );
+        }
         pHost->mpMap->mpMapper->setVisible( !visStatus );
         return;
     }
 
-    QDockWidget * pDock = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
-    pDock->setObjectName( QString("dockMap_%1").arg(pHost->getName()) );
-    pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
+    pHost->mpDockableMapWidget = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
+    pHost->mpDockableMapWidget->setObjectName( QString("dockMap_%1").arg(pHost->getName()) );
+    pHost->mpMap->mpMapper = new dlgMapper( pHost->mpDockableMapWidget, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
-    pDock->setWidget( pHost->mpMap->mpMapper );
+    pHost->mpDockableMapWidget->setWidget( pHost->mpMap->mpMapper );
 
     if( isToLoadDefaultMapFile && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
@@ -2209,7 +2214,7 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
             pHost->mpMap->mpMapper->show();
         }
     }
-    addDockWidget(Qt::RightDockWidgetArea, pDock);
+    addDockWidget(Qt::RightDockWidgetArea, pHost->mpDockableMapWidget);
 
     loadWindowLayout();
 

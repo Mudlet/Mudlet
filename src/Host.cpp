@@ -159,6 +159,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
+, mpDockableMapWidget()
 , mHaveMapperScript(false)
 {
    // mLogStatus = mudlet::self()->mAutolog;
@@ -190,6 +191,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->deleteLater();
+    }
     mIsGoingDown = true;
     mIsClosingDown = true;
     mTelnet.disconnect();
