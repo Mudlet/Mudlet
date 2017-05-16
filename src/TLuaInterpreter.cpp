@@ -13772,15 +13772,9 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
 
 int TLuaInterpreter::alert( lua_State * L )
 {
-    int luaAlertDuration;
+    double luaAlertDuration = 0.0;
 
-    int n = lua_gettop( L );
-    if( n == 0 )
-    {
-        // msec argument for QApplication::alert() is optional (defaults to 0)
-        luaAlertDuration = 0;
-    }
-    else
+    if( lua_gettop( L ) > 0 )
     {
         if( ! lua_isnumber( L, 1 ) )
         {
@@ -13791,19 +13785,18 @@ int TLuaInterpreter::alert( lua_State * L )
         }
         else
         {
-            luaAlertDuration = lua_tointeger( L, 1 );
+            luaAlertDuration = lua_tonumber( L, 1 );
 
-            if ( luaAlertDuration < 0 )
+            if( luaAlertDuration < 0.000 )
             {
                 lua_pushstring( L, "alert: duration, in seconds, is optional but if given must be zero or greater." );
-                lua_error( L );
-                return 1;
+                return lua_error( L );
             }
         }
     }
 
     // QApplication::alert expects milliseconds, not seconds
-    QApplication::alert(mudlet::self(), luaAlertDuration * 1000);
+    QApplication::alert(mudlet::self(), qRound( luaAlertDuration * 1000.0 ));
 
     return 0;
 }
