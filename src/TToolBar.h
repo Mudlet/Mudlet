@@ -41,6 +41,7 @@ class TToolBar : public QDockWidget
 public:
     TToolBar(TAction*, const QString&, QWidget* pW = 0);
     void addButton(TFlipButton* pW);
+    void resizeEvent(QResizeEvent* e) override;
     void moveEvent(QMoveEvent* e) override;
     void setVerticalOrientation() { mVerticalOrientation = true; }
     void setHorizontalOrientation() { mVerticalOrientation = false; }
@@ -48,6 +49,7 @@ public:
     void finalize();
     TAction* mpTAction;
     void recordMove() { mRecordMove = true; }
+    QString getName() { return mName; }
 
 private:
     bool mVerticalOrientation;

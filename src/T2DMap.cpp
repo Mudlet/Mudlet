@@ -169,7 +169,7 @@ void T2DMap::init()
        {
            j++;
            QPixmap b(gzoom,gzoom);
-           b.fill(QColor(0,0,0,0));
+           b.fill(Qt::transparent);
            QPainter p(&b);
            QColor c = _getColor(k);
            p.setPen(c);
@@ -1576,7 +1576,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _gradient.setColorAt(0.799,QColor(150,100,100,100));
                 _gradient.setColorAt(0.7, QColor(255,0,0,200));
                 _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1628,7 +1628,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     QRadialGradient _gradient(_center,_radius);
                     _gradient.setColorAt(0.85, c);
                     _gradient.setColorAt(0, QColor(255,255,255,255));
-                    QPen myPen(QColor(0,0,0,0));
+                    QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
                     p.setPen(myPen);
@@ -1648,7 +1648,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 QRadialGradient _gradient(_center,_radius);
                 _gradient.setColorAt(0.85, pR->highlightColor);
                 _gradient.setColorAt(0, pR->highlightColor2 );
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1679,7 +1679,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _gradient.setColorAt(0.799,QColor(150,100,100,100));
                 _gradient.setColorAt(0.7, QColor(255,0,0,200));
                 _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1855,7 +1855,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     _gradient.setColorAt(0.799,QColor(150,100,100,100));
                     _gradient.setColorAt(0.7, QColor(255,0,0,200));
                     _gradient.setColorAt(0, QColor(255,255,255,255));
-                    QPen myPen(QColor(0,0,0,0));
+                    QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
                     p.setPen(myPen);
@@ -1971,7 +1971,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( ! mShiftMode )
     {
         p.save();
-        QPen myPen(QColor(0,0,0,0));
+        QPen myPen(Qt::transparent);
         QPainterPath myPath;
         if( mpHost->mMapStrongHighlight )
         {   // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -5179,7 +5179,7 @@ void T2DMap::paintMap()
 //                }
 //                QRectF lr = QRectF( 0, 0, 1000, 100 );
 //                QPixmap pix( lr.size().toSize() );
-//                pix.fill(QColor(0,0,0,0));
+//                pix.fill(Qt::transparent);
 //                QPainter lp( &pix );
 
 //                if( it.value().hilite )
@@ -5932,7 +5932,7 @@ void T2DMap::paintMap()
 //                _gradient.setColorAt(0.799,QColor(150,100,100,100));
 //                _gradient.setColorAt(0.7, QColor(255,0,0,200));
 //                _gradient.setColorAt(0, QColor(255,255,255,255));
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -5984,7 +5984,7 @@ void T2DMap::paintMap()
 //                    QRadialGradient _gradient(_center,_radius);
 //                    _gradient.setColorAt(0.85, c);
 //                    _gradient.setColorAt(0, QColor(255,255,255,255));
-//                    QPen myPen(QColor(0,0,0,0));
+//                    QPen myPen(Qt::transparent);
 //                    QPainterPath myPath;
 //                    p.setBrush(_gradient);
 //                    p.setPen(myPen);
@@ -6001,7 +6001,7 @@ void T2DMap::paintMap()
 //                QRadialGradient _gradient(_center,_radius);
 //                _gradient.setColorAt(0.85, mpMap->rooms[pArea->rooms[i]]->highlightColor);
 //                _gradient.setColorAt(0, mpMap->rooms[pArea->rooms[i]]->highlightColor2 );
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -6030,7 +6030,7 @@ void T2DMap::paintMap()
 //                _gradient.setColorAt(0.799,QColor(150,100,100,100));
 //                _gradient.setColorAt(0.7, QColor(255,0,0,200));
 //                _gradient.setColorAt(0, QColor(255,255,255,255));
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);

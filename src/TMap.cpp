@@ -1818,7 +1818,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     }
     QRectF lr = QRectF( 0, 0, 1000, 1000 );
     QPixmap pix( lr.size().toSize() );
-    pix.fill(QColor(0,0,0,0));
+    pix.fill(Qt::transparent);
     QPainter lp( &pix );
     lp.fillRect( lr, label.bgColor );
     QPen lpen;
@@ -1872,7 +1872,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     QRectF drawRect = QRectF( 0, 0, width*zoom, height*zoom );
     QPixmap imagePixmap = QPixmap(imagePath);
     QPixmap pix = QPixmap( drawRect.size().toSize() );
-    pix.fill(QColor(0,0,0,0));
+    pix.fill(Qt::transparent);
     QPainter lp( &pix );
     lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
