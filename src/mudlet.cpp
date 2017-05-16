@@ -413,7 +413,7 @@ mudlet::mudlet()
     auto timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
-    timerAutologin->start( 1000 );
+    timerAutologin->start( 50 );
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
