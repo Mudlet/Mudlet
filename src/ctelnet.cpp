@@ -102,7 +102,7 @@ cTelnet::cTelnet( Host * pH )
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
-    mWaitingForCompressedStreamToStart = false;
+
     // initialize default encoding
     encoding = "UTF-8";
     encodingChanged(encoding);
@@ -629,8 +629,7 @@ void cTelnet::processTelnetCommand( const string & command )
                        //these are handled separately, as they're a bit special
                        if( mpHost->mFORCE_NO_COMPRESSION || ( ( option == OPT_COMPRESS ) && ( hisOptionState[static_cast<int>(OPT_COMPRESS2)] ) ) )
                        {
-                           //protocol says: reject MCCP v1 if you have previously accepted
-                           //MCCP v2...
+                           //protocol says: reject MCCP v1 if you have previously accepted MCCP v2...
                            sendTelnetOption( TN_DONT, option );
                            hisOptionState[idxOption] = false;
                            qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
@@ -718,14 +717,12 @@ void cTelnet::processTelnetCommand( const string & command )
                   if( option == OPT_COMPRESS )
                   {
                       mMCCP_version_1 = false;
-                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
                       qDebug() << "MCCP v1 disabled !";
                   }
                   if( option == OPT_COMPRESS2 )
                   {
                       mMCCP_version_2 = false;
-                      mWaitingForCompressedStreamToStart = false; // Setting to false since it isn't ever supposed to turn back on
-                      qDebug() << "MCCP v1 disabled !";
+                      qDebug() << "MCCP v2 disabled !";
                   }
               }
               heAnnouncedState[idxOption] = true;
@@ -938,12 +935,8 @@ void cTelnet::processTelnetCommand( const string & command )
               return;
           }
 
-          // Original fix by CR, second revision by MH - To take out normal MCCP version 1 option and 2, no need for them now. //
-          if ((mWaitingForCompressedStreamToStart) && (!mpHost->mFORCE_NO_COMPRESSION))
-          {
-            mNeedDecompression = true;
-            initStreamDecompressor();
-          }
+          // Original fix by CR, second revision by MH - To take out normal MCCP version 1 option and 2, no need for this. -MH
+          // TODO: Remove these comments. Old boolean taken out for MCCP, and other options which were un-needed code. Rev.3 -MH //
 
           // GMCP
           if( option == static_cast<char>(201) )
@@ -1556,27 +1549,23 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
         inflateEnd( & mZstream );
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
-        this->mMCCP_version_1 = false;
-        this->mMCCP_version_2 = false;
 
-        // Reset the option state so we can re-enable compression again in the future
-        // such as in the case of a copyover -JM
-        hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
-        hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
-
-        // To finish off this old code, here is a fix to make it stay working. -MH //
-        qDebug() << "Listening for new compression sequences or Z_OK.";
-        mWaitingForCompressedStreamToStart = true; // Was an unused boolean, thanks CR //
+        // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
+        initStreamDecompressor();
+        qDebug() << "Listening for new compression sequences";
+        return -1;
     }
+    /* TODO: Remove this commented code once it is deemed safe. -MH
     else
     {
-        if( zval < 0 )
+        if( zval <= 0 )
         {
-            mWaitingForCompressedStreamToStart = true; // Wasn't needed before, but is now (fixes MCCP toggling on/off)
             initStreamDecompressor();
+            qDebug() << "Listening for new compression sequences";
             return -1;
         }
     }
+    */
     return outSize;
 }
 
