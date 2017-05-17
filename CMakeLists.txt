@@ -59,7 +59,7 @@ ENDIF()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project file,
 # i.e. ./src/src.pro
-SET(APP_VERSION 3.0.1)
+SET(APP_VERSION 3.1.0)
 IF(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -70,5 +70,9 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 ADD_SUBDIRECTORY(3rdparty/communi)
 ADD_SUBDIRECTORY(3rdparty/lua_yajl)
+# Needed (just) on MacOs as an #include in luazip.h:
+IF(APPLE)
+  ADD_SUBDIRECTORY(3rdparty/luazip)
+ENDIF()
 
 ADD_SUBDIRECTORY(src)
