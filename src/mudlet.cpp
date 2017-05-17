@@ -743,6 +743,7 @@ void mudlet::slot_close_profile_requested( int tab )
     Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
+    list<TToolBar*> hostToolBarMap = pH->getActionUnit()->getToolBarList();
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
     QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
 
@@ -766,6 +767,11 @@ void mudlet::slot_close_profile_requested( int tab )
     }
     mHostDockConsoleMap.remove(pH);
     mHostConsoleMap.remove(pH);
+
+    for( TToolBar* pTB : hostToolBarMap ) {
+        pTB->setAttribute( Qt::WA_DeleteOnClose );
+        pTB->close();
+    }
 
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
@@ -795,6 +801,7 @@ void mudlet::slot_close_profile()
             Host * pH = mpCurrentActiveHost;
             if( pH )
             {
+                list<TToolBar*> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
                 QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
                 QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
                 QString name = pH->getName();
@@ -814,6 +821,11 @@ void mudlet::slot_close_profile()
                 }
                 mHostDockConsoleMap.remove(pH);
                 mHostConsoleMap.remove(pH);
+
+                for( TToolBar* pTB : hostTToolBarMap ) {
+                    pTB->setAttribute( Qt::WA_DeleteOnClose );
+                    pTB->close();
+                }
 
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )

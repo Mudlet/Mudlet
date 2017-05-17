@@ -88,8 +88,8 @@ public:
     void expandToolbar(TToolBar* pT);
     void insertActions(TEasyButtonBar* pT, QMenu* menu);
     void expandToolbar(TEasyButtonBar* pT);
-    TToolBar* mpToolBar;
-    TEasyButtonBar* mpEasyButtonBar;
+    QPointer<TToolBar> mpToolBar;
+    QPointer<TEasyButtonBar> mpEasyButtonBar;
     // The following was an int but there was confusion over:
     // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
     // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
