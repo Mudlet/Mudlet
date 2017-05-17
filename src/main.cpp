@@ -420,13 +420,10 @@ int main(int argc, char* argv[])
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI displays
-        mudlet::self()->resize(1500, 800);
-
-        auto mudletFrame = mudlet::self()->frameGeometry();
-        auto desktopFrame = qApp->desktop()->size();
-
-        // center it on the screen as well
-        mudlet::self()->move(desktopFrame.width() / 2 - mudletFrame.width() / 2, desktopFrame.height() / 2 - mudletFrame.height() / 2);
+        auto desktop = qApp->desktop();
+        auto initialSpace = desktop->availableGeometry(desktop->screenNumber());
+        mudlet::self()->resize(initialSpace.width() * 3 / 4, initialSpace.height() * 3 / 4);
+        mudlet::self()->move(initialSpace.width() / 8, initialSpace.height() / 8);
     }
 
     mudlet::self()->show();
