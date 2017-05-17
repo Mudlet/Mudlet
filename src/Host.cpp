@@ -593,7 +593,7 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
 
 void Host::raiseEvent(const TEvent& pE)
 {
-    if (pE.mArgumentList.isEmpty()) {
+    if (pE.mArgumentList.isEmpty() || isClosingDown()) {
         return;
     }
 

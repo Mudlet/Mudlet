@@ -1925,6 +1925,9 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
+            // mark host as closing.
+            pC->mpHost->closingDown();
+
             // close script-editor
             if( pC->mpHost->mpEditorDialog )
             {
