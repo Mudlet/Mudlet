@@ -751,6 +751,10 @@ void mudlet::slot_close_profile_requested( int tab )
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->closingDown();
+
+    // disconnect telnet early.
+    pH->mTelnet.disconnect();
+
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
     for( auto consoleName : hostConsoleMap.keys() ) {
@@ -800,6 +804,10 @@ void mudlet::slot_close_profile()
                 QString name = pH->getName();
 
                 pH->closingDown();
+
+                // disconnect telnet early.
+                pH->mTelnet.disconnect();
+
                 mpCurrentActiveHost->mpEditorDialog->close();
                 for( auto consoleName : hostConsoleMap.keys() ) {
                     hostConsoleMap[consoleName]->close();
@@ -1925,8 +1933,8 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
-            // mark host as closing.
-            pC->mpHost->closingDown();
+            // disconnect telnet early.
+            pC->mpHost->mTelnet.disconnect();
 
             // close script-editor
             if( pC->mpHost->mpEditorDialog )
@@ -1940,7 +1948,6 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
-
 
             // close console
             pC->close();
