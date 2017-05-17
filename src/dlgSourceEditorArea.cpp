@@ -29,43 +29,29 @@
 #include "edbee/models/textgrammar.h"
 #include "edbee/models/texteditorconfig.h"
 
-#include <QDir> // For the homePath()
+//#include "ui_source_editor_area.h"
 
 dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
 
-    // Setting up the edbee widget
+    // Configuring the editor widget with defaults
 
-    edbee::Edbee* ei = edbee::Edbee::instance();
+    edbee::TextEditorConfig* config = edbeeEditorWidget->config();
 
-    ei->autoInit();
-    ei->autoShutDownOnAppExit();
+    config->beginChanges();
 
-    //**********
-    //
-    // As it is, the editor only needs one syntax file (Lua). We could offer a choice of themes,
-    // but it's not really necessary just yet. People can change the theme if they really want to
-    // by overwriting the Fluidvisionlet.tmTheme file with another valid textmate theme.
+    config->setSmartTab(true); // I'm not fully sure what this does, but it says "Smart" so it must be good
+    config->setCaretBlinkRate(200);
 
-    // So instead of having separate theme/syntax file directories, I'm lumping them into one directory:
-    // QDir::homePath() + "/.config/mudlet/edbee/"
+    config->setIndentSize(2); // 2 spaces is the Lua default
 
-    edbee::TextGrammarManager* grammarManager = ei->grammarManager();
-    edbee::TextGrammar* grammar = grammarManager->readGrammarFile( QDir::homePath() + "/.config/mudlet/edbee/Lua.tmLanguage" );
-    edbee::TextThemeManager* themeManager = ei->themeManager();
+    config->setThemeName(QLatin1Literal("Fluidvisionlet"));
+    config->setCaretWidth(1);
 
-    themeManager->readThemeFile( QDir::homePath() + "/.config/mudlet/edbee/Fluidvisionlet.tmTheme" ); // Once it's read it becomes available
-    edbeeEditorWidget->config()->setThemeName("Fluidvisionlet");
+    config->endChanges();
 
-    edbeeEditorWidget->config()->setShowCaretOffset( true);
-    edbeeEditorWidget->config()->setCaretWidth( 1);
-    //edbeeEditorWidget->config()->setExtraLineSpacing(40);
-    edbeeEditorWidget->config()->setSmartTab( true); // I'm not fully sure what this does, but it says "Smart" so it must be good
-    edbeeEditorWidget->config()->setCaretBlinkRate( 200);
-
-    edbeeEditorWidget->textDocument()->setLanguageGrammar( grammar );
-    edbeeEditorWidget->config()->setIndentSize( 2); // 2 spaces is the Lua default
-    edbeeEditorWidget->config()->setFont(QFont( "Courier New", 28)); // This is just a fallback, the actual font is set later
+    edbeeEditorWidget->textDocument()->setLanguageGrammar(
+                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
 }

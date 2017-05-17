@@ -62,6 +62,12 @@
 #include <QToolBar>
 #include "post_guard.h"
 
+#include "edbee/edbee.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/texttheme.h"
+#include "edbee/models/textgrammar.h"
+
+#include <QDir>
 
 using namespace std;
 
@@ -411,6 +417,30 @@ mudlet::mudlet()
     else {
         mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
     }
+
+    // Edbee has a singleton that needs some initialisation
+
+    initEdbee();
+}
+
+void mudlet::initEdbee() {
+
+    // We only need the single Lua lexer, problably ever
+    //
+    // Optional additional themese will be added in future
+
+    edbee::Edbee* edbee = edbee::Edbee::instance();
+
+    edbee->autoInit();
+    edbee->autoShutDownOnAppExit();
+
+    edbee::TextGrammarManager* grammarManager = edbee->grammarManager();
+    grammarManager->readGrammarFile(
+                QDir::homePath() + QLatin1Literal("/.config/mudlet/edbee/Lua.tmLanguage"));
+
+    edbee::TextThemeManager* themeManager = edbee->themeManager();
+    themeManager->readThemeFile(
+                QDir::homePath() + QLatin1Literal("/.config/mudlet/edbee/Fluidvisionlet.tmTheme"));
 }
 
 bool mudlet::moduleTableVisible()
