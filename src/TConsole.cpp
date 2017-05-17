@@ -777,7 +777,7 @@ void TConsole::closeEvent( QCloseEvent *event )
 
     if( profile_name != "default_host" && ! mUserAgreedToCloseConsole )
     {
-        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
+        ASK: int choice = QMessageBox::question( this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(profile_name), QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
         if( choice == QMessageBox::Cancel )
         {
             event->setAccepted(false);
