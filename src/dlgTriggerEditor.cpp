@@ -2931,14 +2931,14 @@ void dlgTriggerEditor::addAction( bool isFolder )
     {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
 
-        TAction * pParentTrigger = mpHost->getActionUnit()->getAction( parentID );
-        if( pParentTrigger )
+        TAction * pParentAction = mpHost->getActionUnit()->getAction( parentID );
+        if( pParentAction )
         {
             // insert new items as siblings unless the parent is a folder
-            if( ! pParentTrigger->isFolder() )
+            if( ! pParentAction->isFolder() )
             {
                 // handle root items
-                if( ! pParentTrigger->getParent() )
+                if( ! pParentAction->getParent() )
                 {
                     goto ROOT_ACTION;
                 }
@@ -2947,7 +2947,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
                     // insert new item as sibling of the clicked item
                     if( pParent->parent() )
                     {
-                        pT = new TAction( pParentTrigger->getParent(), mpHost );
+                        pT = new TAction( pParentAction->getParent(), mpHost );
                         pNewItem = new QTreeWidgetItem( pParent->parent(), nameL );
                         pParent->parent()->insertChild( 0, pNewItem );
                     }
@@ -2955,7 +2955,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
             }
             else
             {
-                pT = new TAction( pParentTrigger, mpHost );
+                pT = new TAction( pParentAction, mpHost );
                 pNewItem = new QTreeWidgetItem( pParent, nameL );
                 pParent->insertChild( 0, pNewItem );
             }
