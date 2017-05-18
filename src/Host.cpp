@@ -1268,3 +1268,22 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         lua_close(L);
     }
 }
+
+// Derived from the one in dlgConnectionProfile class - but it does not need a
+// host name argument...
+QPair<bool, QString> Host::writeProfileData(const QString & item, const QString & what)
+{
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                .arg(QDir::homePath(), getName(), item) );
+    if (file.open( QIODevice::WriteOnly | QIODevice::Unbuffered )) {
+        QDataStream ofs( & file );
+        ofs << what;
+        file.close();
+    }
+
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    } else {
+        return qMakePair(false, file.errorString());
+    }
+}
