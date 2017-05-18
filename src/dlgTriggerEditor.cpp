@@ -1619,10 +1619,12 @@ void dlgTriggerEditor::slot_deleteAction()
     TAction * pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;
 
+    // if active, deactivate.
+    if( pT->isActive() ) {
+        pT->deactivate();
+    }
+
     // set this and the parent TActions as changed so the toolbar is updated.
-    int parentID = pParent->data(0, Qt::UserRole).toInt();
-    TAction * pParentAction = mpHost->getActionUnit()->getAction( parentID );
-    pParentAction->setDataChanged();
     pT->setDataChanged();
 
     if( pParent )
@@ -3604,6 +3606,11 @@ void dlgTriggerEditor::saveAction()
                 iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
                 pItem->setIcon( 0, iconError );
                 pItem->setText( 0, name );
+            }
+
+            // If not active, don't bother raising the TToolBar for this save.
+            if( !pT->isActive() ) {
+                pT->setDataSaved();
             }
         }
 
