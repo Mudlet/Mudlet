@@ -59,6 +59,7 @@ TAction::TAction(TAction* parent, Host* pHost)
 , mButtonFlat()
 , mSizeX()
 , mSizeY()
+, mDataChanged(true)
 {
 }
 
@@ -87,6 +88,7 @@ TAction::TAction(const QString& name, Host* pHost)
 , mButtonFlat()
 , mSizeX()
 , mSizeY()
+, mDataChanged(true)
 {
 }
 
@@ -136,6 +138,9 @@ void TAction::compile()
 
 bool TAction::setScript(const QString& script)
 {
+    if(script != mScript) {
+        setDataChanged();
+    }
     mScript = script;
     mNeedsToBeCompiled = true;
     mOK_code = compileScript();
