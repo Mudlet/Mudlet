@@ -1619,6 +1619,12 @@ void dlgTriggerEditor::slot_deleteAction()
     TAction * pT = mpHost->getActionUnit()->getAction(pItem->data(0, Qt::UserRole).toInt());
     if( ! pT ) return;
 
+    // set this and the parent TActions as changed so the toolbar is updated.
+    int parentID = pParent->data(0, Qt::UserRole).toInt();
+    TAction * pParentAction = mpHost->getActionUnit()->getAction( parentID );
+    pParentAction->setDataChanged();
+    pT->setDataChanged();
+
     if( pParent )
     {
         pParent->removeChild( pItem );
@@ -2227,6 +2233,7 @@ void dlgTriggerEditor::slot_action_toggle_active()
     if( ! pT ) return;
 
     pT->setIsActive( ! pT->shouldBeActive() );
+    pT->setDataChanged();
 
     if( pT->isFolder() )
     {
@@ -2998,6 +3005,10 @@ void dlgTriggerEditor::addAction( bool isFolder )
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
     mpSourceEditor->clear();
+
+    // This prevents reloading a Floating toolbar when an empty action is added.
+    // After the action is saved it may trigger the rebuild.
+    pT->setDataSaved();
 
     mpHost->getActionUnit()->updateToolbar();
     mpCurrentActionItem = pNewItem;

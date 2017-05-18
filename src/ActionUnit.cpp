@@ -411,6 +411,10 @@ void ActionUnit::hideToolBar(const QString& name)
 
 void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
 {
+    if( ! pA->isDataChanged() ) {
+        return;
+    }
+
     pTB->clear();
     if ((pA->mLocation != 4) || (!pA->isActive())) {
         pTB->setFloating(false);
@@ -450,6 +454,7 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
         pTB->show();
 
     pTB->setStyleSheet(pTB->mpTAction->css);
+    pA->setDataSaved();
 }
 
 TAction* ActionUnit::getHeadAction(TEasyButtonBar* pT)
