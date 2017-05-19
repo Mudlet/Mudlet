@@ -769,8 +769,10 @@ void mudlet::slot_close_profile_requested( int tab )
     mHostConsoleMap.remove(pH);
 
     for( TToolBar* pTB : hostToolBarMap ) {
-        pTB->setAttribute( Qt::WA_DeleteOnClose );
-        pTB->close();
+        if (pTB) {
+            pTB->setAttribute( Qt::WA_DeleteOnClose );
+            pTB->deleteLater();
+        }
     }
 
     mConsoleMap[pH]->close();
@@ -823,8 +825,10 @@ void mudlet::slot_close_profile()
                 mHostConsoleMap.remove(pH);
 
                 for( TToolBar* pTB : hostTToolBarMap ) {
-                    pTB->setAttribute( Qt::WA_DeleteOnClose );
-                    pTB->close();
+                    if (pTB) {
+                        pTB->setAttribute( Qt::WA_DeleteOnClose );
+                        pTB->deleteLater();
+                    }
                 }
 
                 mConsoleMap[ pH ]->close();
