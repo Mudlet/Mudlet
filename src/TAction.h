@@ -130,12 +130,12 @@ public:
     QPointer<Host> mpHost;
     bool exportItem;
     bool mModuleMasterFolder;
-    bool mDataChanged;
 
 private:
     TAction() {}
     QString mFuncName;
     bool mModuleMember;
+    bool mDataChanged;
 };
 
 #endif // MUDLET_TACTION_H
