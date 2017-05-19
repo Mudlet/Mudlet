@@ -3527,8 +3527,8 @@ void dlgTriggerEditor::saveAction()
     // This is an unnecessary level of indentation but has been retained to
     // reduce the noise in a git commit/diff caused by the removal of a
     // redundent "if( pITem )" - can be removed next time the file is modified
-        int triggerID = pItem->data(0, Qt::UserRole).toInt();
-        TAction * pT = mpHost->getActionUnit()->getAction( triggerID );
+        int actionID = pItem->data(0, Qt::UserRole).toInt();
+        TAction * pT = mpHost->getActionUnit()->getAction( actionID );
         if( pT )
         {
             // Do not change anything for a module master folder - it won't "take"
@@ -3618,8 +3618,13 @@ void dlgTriggerEditor::saveAction()
             }
 
             // If not active, don't bother raising the TToolBar for this save.
-            if( !pT->isActive() ) {
+            if( !pT->shouldBeActive() ) {
                 pT->setDataSaved();
+            }
+
+            // if the action has a toolbar with a script error, hide the toolbar.
+            if( pT->mpToolBar && !pT->state() ) {
+                pT->mpToolBar->hide();
             }
         }
 
