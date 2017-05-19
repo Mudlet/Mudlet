@@ -435,12 +435,10 @@ void mudlet::initEdbee() {
     edbee->autoShutDownOnAppExit();
 
     edbee::TextGrammarManager* grammarManager = edbee->grammarManager();
-    grammarManager->readGrammarFile(
-                QDir::homePath() + QLatin1Literal("/.config/mudlet/edbee/Lua.tmLanguage"));
+    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
     edbee::TextThemeManager* themeManager = edbee->themeManager();
-    themeManager->readThemeFile(
-                QDir::homePath() + QLatin1Literal("/.config/mudlet/edbee/Fluidvisionlet.tmTheme"));
+    themeManager->readThemeFile(QLatin1Literal(":/edbee_defaults/Mudlet.tmTheme"));
 }
 
 bool mudlet::moduleTableVisible()
