@@ -1914,7 +1914,13 @@ void cTelnet::handle_socket_signal_readyRead()
         }
         else
         {
-            if( ch != '\r' && ch != 0 ) cleandata += ch;
+            if (ch == TN_BELL) {
+                // flash taskbar for 3 seconds on the telnet bell
+                QApplication::alert(mudlet::self(), 3000);
+            }
+            if (ch != '\r' && ch != 0) {
+                cleandata += ch;
+            }
         }
 MAIN_LOOP_END: ;
         if( recvdGA )
