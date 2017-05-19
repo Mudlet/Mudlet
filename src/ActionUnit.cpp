@@ -267,7 +267,7 @@ int ActionUnit::getNewID()
     return ++mMaxID;
 }
 
-std::list<TToolBar*> ActionUnit::getToolBarList()
+std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 {
     for (auto& action : mActionRootNodeList) {
         if (action->mPackageName.size() > 0) {
@@ -320,7 +320,7 @@ std::list<TToolBar*> ActionUnit::getToolBarList()
     return mToolBarList;
 }
 
-std::list<TEasyButtonBar*> ActionUnit::getEasyButtonBarList()
+std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
 {
     for (auto& rootAction : mActionRootNodeList) {
         if (rootAction->mPackageName.size() > 0) {
