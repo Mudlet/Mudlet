@@ -752,7 +752,7 @@ void mudlet::slot_close_profile_requested( int tab )
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->closingDown();
 
-    // disconnect telnet early.
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     pH->mTelnet.disconnect();
 
     pH->stopAllTriggers();
@@ -805,7 +805,7 @@ void mudlet::slot_close_profile()
 
                 pH->closingDown();
 
-                // disconnect telnet early.
+                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
                 pH->mTelnet.disconnect();
 
                 mpCurrentActiveHost->mpEditorDialog->close();
@@ -1933,7 +1933,7 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
-            // disconnect telnet early.
+            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
             pC->mpHost->mTelnet.disconnect();
 
             // close script-editor
