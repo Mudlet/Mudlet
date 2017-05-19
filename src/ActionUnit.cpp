@@ -118,6 +118,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     }
     if (pOldParent) {
         pOldParent->popChild(pChild);
+        pOldParent->setDataChanged();
     }
     if (!pOldParent) {
         removeActionRootNode(pChild);
@@ -125,6 +126,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     if (pNewParent) {
         pNewParent->Tree<TAction>::addChild(pChild, parentPosition, childPosition);
+        pNewParent->setDataChanged();
         if (pChild) {
             pChild->Tree<TAction>::setParent(pNewParent);
         }
@@ -135,6 +137,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         addActionRootNode(pChild, parentPosition, childPosition);
     }
 
+    pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
         if (pChild->mpEasyButtonBar) {
