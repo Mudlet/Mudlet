@@ -32,6 +32,7 @@
 #include "TConsole.h"
 #include "THighlighter.h"
 #include "TTextEdit.h"
+#include "TToolBar.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
@@ -2236,6 +2237,14 @@ void dlgTriggerEditor::slot_action_toggle_active()
 
     pT->setIsActive( ! pT->shouldBeActive() );
     pT->setDataChanged();
+
+    if( pT->mpToolBar ) {
+        if( !pT->isActive() ) {
+            pT->mpToolBar->hide();
+        } else {
+            pT->mpToolBar->show();
+        }
+    }
 
     if( pT->isFolder() )
     {
