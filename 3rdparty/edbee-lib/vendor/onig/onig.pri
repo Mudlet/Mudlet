@@ -1,4 +1,5 @@
 INCLUDEPATH += $$PWD
+INCLUDEPATH += $$PWD/enc/unicode
 
 SOURCES += $$PWD/regcomp.c \
            $$PWD/regenc.c \
@@ -15,51 +16,70 @@ SOURCES += $$PWD/regcomp.c \
            $$PWD/st.c \
            $$PWD/enc/ascii.c \
            $$PWD/enc/big5.c \
-           $$PWD/enc/cp1251.c \
+           $$PWD/enc/cp949.c \
+           $$PWD/enc/emacs_mule.c \
            $$PWD/enc/euc_jp.c \
            $$PWD/enc/euc_kr.c \
            $$PWD/enc/euc_tw.c \
            $$PWD/enc/gb18030.c \
-           $$PWD/enc/iso8859_1.c \
-           $$PWD/enc/iso8859_10.c \
-           $$PWD/enc/iso8859_11.c \
-           $$PWD/enc/iso8859_13.c \
-           $$PWD/enc/iso8859_14.c \
-           $$PWD/enc/iso8859_15.c \
-           $$PWD/enc/iso8859_16.c \
-           $$PWD/enc/iso8859_2.c \
-           $$PWD/enc/iso8859_3.c \
-           $$PWD/enc/iso8859_4.c \
-           $$PWD/enc/iso8859_5.c \
-           $$PWD/enc/iso8859_6.c \
-           $$PWD/enc/iso8859_7.c \
-           $$PWD/enc/iso8859_8.c \
-           $$PWD/enc/iso8859_9.c \
-           $$PWD/enc/koi8.c \
+           $$PWD/enc/gbk.c \
+           $$PWD/enc/iso_8859.h \
+           $$PWD/enc/iso_8859_1.c \
+           $$PWD/enc/iso_8859_10.c \
+           $$PWD/enc/iso_8859_11.c \
+           $$PWD/enc/iso_8859_13.c \
+           $$PWD/enc/iso_8859_14.c \
+           $$PWD/enc/iso_8859_15.c \
+           $$PWD/enc/iso_8859_16.c \
+           $$PWD/enc/iso_8859_2.c \
+           $$PWD/enc/iso_8859_3.c \
+           $$PWD/enc/iso_8859_4.c \
+           $$PWD/enc/iso_8859_5.c \
+           $$PWD/enc/iso_8859_6.c \
+           $$PWD/enc/iso_8859_7.c \
+           $$PWD/enc/iso_8859_8.c \
+           $$PWD/enc/iso_8859_9.c \
            $$PWD/enc/koi8_r.c \
-           $$PWD/enc/sjis.c \
+           $$PWD/enc/koi8_u.c \
+           $$PWD/enc/shift_jis.c \
            $$PWD/enc/unicode.c \
-           $$PWD/enc/utf16_be.c \
-           $$PWD/enc/utf16_le.c \
-           $$PWD/enc/utf32_be.c \
-           $$PWD/enc/utf32_le.c \
-           $$PWD/enc/utf8.c \
+           $$PWD/enc/us_ascii.c \
+           $$PWD/enc/utf_16be.c \
+           $$PWD/enc/utf_16le.c \
+           $$PWD/enc/utf_32be.c \
+           $$PWD/enc/utf_32le.c \
+           $$PWD/enc/utf_8.c \
+           $$PWD/enc/windows_1250.c \
+           $$PWD/enc/windows_1251.c \
+           $$PWD/enc/windows_1252.c \
+           $$PWD/enc/windows_1253.c \
+           $$PWD/enc/windows_1254.c \
+           $$PWD/enc/windows_1257.c \
+           $$PWD/enc/windows_31j.c
+
+
+## Temporary diabled windows_31j encoding  (see: https://github.com/edbee/edbee-lib/issues/9)
+
 
 # $$PWD/testc.c \
 # $$PWD/testu.c \
 # $$PWD/win32/testc.c
+# $$PWD/enc/gb2312.c \
 # $$PWD/enc/mktable.c \
 
 
 HEADERS += $$PWD/config.h \
-           $$PWD/oniggnu.h \
-           $$PWD/onigposix.h \
-           $$PWD/oniguruma.h \
+           $$PWD/enc/unicode/casefold.h \
+           $$PWD/onigmo.h \
+           $$PWD/onigmognu.h \
+           $$PWD/onigmoposix.h \
            $$PWD/regenc.h \
            $$PWD/regint.h \
            $$PWD/regparse.h \
            $$PWD/st.h \
-           $$PWD/win32/config.h
+           $$PWD/win32/config.h \
+           $$PWD/config-onig-edbee.h
+
 
 
 ######################################################################

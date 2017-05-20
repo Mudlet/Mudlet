@@ -15,6 +15,7 @@
 #include "edbee/edbee.h"
 
 #include "edbee/debug.h"
+#include "moc_grammartextlexertest.cpp"
 
 namespace edbee {
 

@@ -112,11 +112,11 @@ public:
 
 
 
-    void executeAndGiveChange(Change* change , int coalesceId );
+    Change* executeAndGiveChange(Change* change , int coalesceId );
 
 
 //    void giveChange( TextChange* change, bool merge  );
-    virtual void giveChangeWithoutFilter( Change* change, int coalesceId) = 0;
+    virtual Change* giveChangeWithoutFilter( Change* change, int coalesceId) = 0;
     void append(const QString& text, int coalesceId=0 );
     void replace( int offset, int length, const QString& text, int coalesceId=0);
     void setText( const QString& text );
@@ -126,7 +126,6 @@ public:
     void rawAppendEnd();
     void rawAppend( QChar c );
     void rawAppend(const QChar *chars, int length );
-    void clear();
 
 public:
 

@@ -13,6 +13,7 @@
 #include "edbee/texteditorwidget.h"
 
 #include "edbee/debug.h"
+#include "moc_newlinecommandtest.cpp"
 
 namespace edbee {
 

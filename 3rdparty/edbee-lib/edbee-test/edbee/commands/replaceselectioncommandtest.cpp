@@ -15,6 +15,7 @@
 #include "edbee/models/textundostack.h"
 
 #include "edbee/debug.h"
+#include "moc_replaceselectioncommandtest.cpp"
 
 //#include "texteditor/commands/undoablereplaceselectionbytextcommand.h"
 

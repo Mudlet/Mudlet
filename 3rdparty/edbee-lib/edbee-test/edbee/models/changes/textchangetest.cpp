@@ -8,6 +8,7 @@
 #include "edbee/models/changes/textchange.h"
 
 #include "edbee/debug.h"
+#include "moc_textchangetest.cpp"
 
 namespace edbee {
 

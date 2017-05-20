@@ -6,6 +6,9 @@ QT  += widgets
 TARGET = edbee-test
 TEMPLATE = app
 
+#QMAKE_CXXFLAGS+=-fsanitize=address -fsanitize=bounds
+#QMAKE_LFLAGS+=-fsanitize=address -fsanitize=bounds
+
 
 # This seems to be required for Windows
 INCLUDEPATH += $$PWD
@@ -106,3 +109,4 @@ DEPENDPATH += $$PWD/../edbee-lib
 win32:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../edbee-lib/release/edbee.lib
 else:win32:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../edbee-lib/debug/edbee.lib
 else:unix:!symbian: PRE_TARGETDEPS += $$OUT_PWD/../edbee-lib/libedbee.a
+

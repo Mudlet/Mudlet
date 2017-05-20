@@ -15,6 +15,7 @@
 #include "edbee/texteditorcontroller.h"
 
 #include "edbee/debug.h"
+#include "moc_textundostacktest.cpp"
 
 namespace edbee {
 

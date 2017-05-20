@@ -123,12 +123,15 @@ void TextUndoStack::endUndoGroup(int coalesceId, bool flatten )
         }
         // multiple-changes or not discardable
         if( !group->isDiscardable() || group->size() > 1 ) {
-            bool merged = giveChange( group, coalesceId  );
+            Change* newChange = giveChange( group , coalesceId );
+            bool merged = newChange && newChange != group;
             emit undoGroupEnded( coalesceId, merged, ActionEnd );
 
         // a single change (don't give the group, just the single change)
         } else if( group->size() == 1 ) {
-            bool merged = giveChange( group->takeLast(), coalesceId );
+            Change* change = group->takeLast();
+            Change* newChange = giveChange( change, coalesceId );
+            bool merged = newChange && newChange != change;
             delete group;
             emit undoGroupEnded( coalesceId, merged, ActionUngrouped );
         // empty group, can be optimized away
@@ -191,13 +194,17 @@ void TextUndoStack::resetAllLastCoalesceIds()
 ///
 /// @param change the change that's added
 /// @param coalesceId the coalseceId to use for this text change.
-/// @return the merge status (this method returns TRUE, if the command has been merged)
-bool TextUndoStack::giveChange(Change* change, int coalesceId )
+////
+/// @return the merged Change
+///        The return value is 0, if the change was discared
+///        The return value == change if the change was appended to the stack
+///        The return value != change if the change was merged  (previous stack item is returned)
+Change* TextUndoStack::giveChange(Change* change, int coalesceId )
 {
     // when undo-collection is disabled. don't record the change
     if( !collectionEnabled_ ) {
         delete change;
-        return false;
+        return 0;
     }
 
     ChangeGroup* group = undoGroupStack_.isEmpty() ? 0 : undoGroupStack_.top();
@@ -215,11 +222,15 @@ bool TextUndoStack::giveChange(Change* change, int coalesceId )
         if( merge ) {
             Change* lastChange = group->last();
             if( lastChange && lastChange->giveAndMerge( documentRef_, change ) ) {
-                return true;
+                return lastChange;
             }
         }
+
         group->giveChange( document(), change);
-        return false;
+        // TODO: giveChange to a group can also merge a change. This can have implications
+        //   on the change. At the moment I simply return the group. I doubt this is correct
+        //   for the moment it's the best solution for this problem
+        return group;
 
     // normal operation
     //-----------------
@@ -235,7 +246,7 @@ bool TextUndoStack::giveChange(Change* change, int coalesceId )
             if( lastChange && lastChange->giveAndMerge( documentRef_, change ) ) {
                 //emit changeMerged( lastChange, change );
                 dumpStackInternal();
-                return true;
+                return lastChange;
             }
         }
 
@@ -259,7 +270,7 @@ bool TextUndoStack::giveChange(Change* change, int coalesceId )
 
     }
     dumpStackInternal();
-    return false;
+    return change;
 }
 
 

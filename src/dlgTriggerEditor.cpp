@@ -2560,7 +2560,7 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
@@ -2664,7 +2664,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
@@ -2830,7 +2830,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
@@ -2926,7 +2926,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
@@ -3029,7 +3029,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
 
 
     mpHost->getActionUnit()->updateToolbar();
@@ -4142,7 +4142,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
@@ -4298,7 +4298,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
@@ -4338,7 +4338,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
 
     mpKeysMainArea->lineEdit_key->setText( pItem->text(0) );
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
@@ -4533,7 +4533,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
-        mpSourceEditorEdbeeDocument->clear();
+        mpSourceEditorEdbeeDocument->setText( QString());
         //check for temp item
         var = vu->getTVar( pItem );
         if ( var && var->getValueType() == LUA_TTABLE )
@@ -4631,7 +4631,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditorEdbee->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -4776,7 +4776,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
 
@@ -4815,7 +4815,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->clear();
+    mpSourceEditorEdbeeDocument->setText( QString());
 
     mpTimersMainArea->lineEdit_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
@@ -6038,7 +6038,7 @@ void dlgTriggerEditor::changeView( int view )
     mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
-        mpSourceEditorEdbeeDocument->clear();
+        mpSourceEditorEdbeeDocument->setText( QString());
     }
     mCurrentView = view;
 

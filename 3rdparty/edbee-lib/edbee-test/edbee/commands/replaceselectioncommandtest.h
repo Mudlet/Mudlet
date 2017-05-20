@@ -3,6 +3,8 @@
  * Author Rick Blommers
  */
 
+#pragma once
+
 #include "edbee/util/test.h"
 
 namespace edbee {

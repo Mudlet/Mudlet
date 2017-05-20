@@ -4,6 +4,7 @@
  */
 
 #include "gapvectortest.h"
+#include "moc_gapvectortest.cpp"
 
 #include "edbee/util/gapvector.h"
 

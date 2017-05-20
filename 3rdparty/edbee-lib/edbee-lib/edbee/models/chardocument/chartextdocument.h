@@ -71,7 +71,7 @@ public:
 
     virtual TextEditorConfig* config() const;
 
-    virtual void giveChangeWithoutFilter(Change* change, int coalesceId );
+    virtual Change* giveChangeWithoutFilter(Change* change, int coalesceId );
 
 
 protected slots:

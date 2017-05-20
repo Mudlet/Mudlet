@@ -2,12 +2,27 @@
 
 edbee.lib:
 
+- fix #9, Updated onigmo library. Fixes compilation/linkage issue on Mac OS X (enc/windows_31j.c)
+- fix, Fixed build warnings via een #pragma for the onig library. (When updating vendor/onig, include "config-onig-edbee.h" in "config.h")
+- fix #5, Incorrect memory access after coalescing in TextDocument::ReplaceRangeSet. (Crash on Linux/Windows)
+	This fix, changed the API interfaces of: (return type is now: Change*)
+    - TextDocument::executeAndGiveChange
+	- TextDocument::giveChangeWithoutFilter
+	- CharTextDocument::giveChangeWithoutFilter
+	- TextUndoStack::giveChange
+- fix #4, QT5.8 Ambiguity Errors. 
+- fix #6, Theme Manager only attempts to load a theme if a theme path has been set.
+- fix, updated Onigmo (Oniguruma-mod) library to version 6.1.1 (Fixes memory corruption with lexing)
+- fix, removed config.h reference from simpleprofiler.h (Which caused compilation via to fail, refs issue #1)
 - fix, mouse double click didn't select wordt anymore. (Issue with newer Qt version??)
 - fix, moveCaret after the last character didn't work correctly on the if the last line didn't end with a newline
 - fix, Syntax highlighting didn't work on the last line of the document. (First highlight after the first enter) 
 - fix, onig.pri, it contained strange references to qslog 
 - fix, edbee-lib.pri (correct references to vendor .pri's)
 - BREAKING CHANGE, moved all source/headers files under the folder 'edbee/' to prevent filename collisions when embedding it in other projects.
+
+Issues numbers below are issues from the old tracker.
+All lines above refer to github-issue numbers
 
 - add #121, Insert line before and insert line after commands
 - add #108, #111, Added a DynamicTextRangeSet, a change aware rangeset, that automatically gets adjusted when the document changes.

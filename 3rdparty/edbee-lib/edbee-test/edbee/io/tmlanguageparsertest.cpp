@@ -8,6 +8,7 @@
 #include "edbee/io/tmlanguageparser.h"
 
 #include "edbee/debug.h"
+#include "moc_tmlanguageparsertest.cpp"
 
 namespace edbee {
 

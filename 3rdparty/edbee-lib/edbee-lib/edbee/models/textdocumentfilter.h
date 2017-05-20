@@ -57,7 +57,9 @@ public:
     /// @param doc a reference to the document
     /// @param changes the multi-text-change that's excuted
     /// @param coalesceId the coalesceId
-    virtual void filterChange( TextDocument* doc, Change* change, int coalesceId ) = 0;
+    ///
+    /// @return this method should returnt the effictive change applied
+    virtual Change* filterChange( TextDocument* doc, Change* change, int coalesceId ) = 0;
 
 
 

@@ -3,7 +3,7 @@
 **********************************************************************/
 /*-
  * Copyright (c) 2002-2008  K.Kosako  <sndgk393 AT ybb DOT ne DOT jp>
- * Copyright (c) 2011       K.Takata  <kentkt AT csc DOT jp>
+ * Copyright (c) 2011-2016  K.Takata  <kentkt AT csc DOT jp>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 #define regex_t   onig_regex_t
 #include "regint.h"
 #undef regex_t
-#include "onigposix.h"
+#include "onigmoposix.h"
 
 #define ONIG_C(reg)    ((onig_regex_t* )((reg)->onig))
 #define PONIG_C(reg)   ((onig_regex_t** )(&(reg)->onig))
@@ -115,7 +115,6 @@ onig2posix_error_code(int code)
     { ONIGERR_GROUP_NUMBER_OVER_FOR_CAPTURE_HISTORY,      REG_BADPAT },
     { ONIGERR_INVALID_CHAR_PROPERTY_NAME,                 REG_BADPAT },
     { ONIGERR_NOT_SUPPORTED_ENCODING_COMBINATION,         REG_EONIG_BADARG },
-    { ONIGERR_OVER_THREAD_PASS_LIMIT_COUNT,               REG_EONIG_THREAD }
 
   };
 
@@ -123,7 +122,7 @@ onig2posix_error_code(int code)
 
   if (code >= 0) return 0;
 
-  for (i = 0; i < (int )(sizeof(o2p) / sizeof(o2p[0])); i++) {
+  for (i = 0; i < numberof(o2p); i++) {
     if (code == o2p[i].onig_err)
       return o2p[i].posix_err;
   }
@@ -135,7 +134,7 @@ extern int
 regcomp(regex_t* reg, const char* pattern, int posix_options)
 {
   int r, len;
-  OnigSyntaxType* syntax = OnigDefaultSyntax;
+  const OnigSyntaxType* syntax = OnigDefaultSyntax;
   OnigOptionType options;
 
   if ((posix_options & REG_EXTENDED) == 0)
@@ -169,36 +168,32 @@ regexec(regex_t* reg, const char* str, size_t nmatch,
 {
   int r, i, len;
   UChar* end;
-  regmatch_t* pm;
+  OnigRegion* region = NULL;
   OnigOptionType options;
 
-  options = ONIG_OPTION_POSIX_REGION;
+  options = ONIG_OPTION_NONE;
   if ((posix_options & REG_NOTBOL) != 0) options |= ONIG_OPTION_NOTBOL;
   if ((posix_options & REG_NOTEOL) != 0) options |= ONIG_OPTION_NOTEOL;
 
-  if (nmatch == 0 || (reg->comp_options & REG_NOSUB) != 0) {
-    pm = (regmatch_t* )NULL;
+  if ((reg->comp_options & REG_NOSUB) != 0) {
     nmatch = 0;
   }
-  else if ((int )nmatch < ONIG_C(reg)->num_mem + 1) {
-    pm = (regmatch_t* )xmalloc(sizeof(regmatch_t)
-                               * (ONIG_C(reg)->num_mem + 1));
-    if (pm == NULL)
+  else if (nmatch != 0) {
+    region = onig_region_new();
+    if (region == NULL)
       return REG_ESPACE;
-  }
-  else {
-    pm = pmatch;
   }
 
   ENC_STRING_LEN(ONIG_C(reg)->enc, str, len);
   end = (UChar* )(str + len);
   r = (int )onig_search(ONIG_C(reg), (UChar* )str, end, (UChar* )str, end,
-		  (OnigRegion* )pm, options);
+		  region, options);
 
   if (r >= 0) {
     r = 0; /* Match */
-    if (pm != pmatch && pm != NULL) {
-      xmemcpy(pmatch, pm, sizeof(regmatch_t) * nmatch);
+    for (i = 0; i < (int )nmatch; i++) {
+      pmatch[i].rm_so = (regoff_t )region->beg[i];
+      pmatch[i].rm_eo = (regoff_t )region->end[i];
     }
   }
   else if (r == ONIG_MISMATCH) {
@@ -210,8 +205,8 @@ regexec(regex_t* reg, const char* str, size_t nmatch,
     r = onig2posix_error_code(r);
   }
 
-  if (pm != pmatch && pm != NULL)
-    xfree(pm);
+  if (region != NULL)
+    onig_region_free(region, 1);
 
 #if 0
   if (reg->re_nsub > nmatch - 1)

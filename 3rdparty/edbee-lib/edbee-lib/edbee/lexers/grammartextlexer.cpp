@@ -71,6 +71,7 @@ RegExp* GrammarTextLexer::createEndRegExp( RegExp* startRegExp, const QString& e
 /// @return the grammarRule found
 void GrammarTextLexer::findNextGrammarRule( const QString& line, int offsetInLine, TextGrammarRule* activeRule, TextGrammarRule*& foundRule, RegExp*& foundRegExp, int& foundPosition )
 {
+
     // next iterate over all rules and find the rule with the lowest offset
     QStack<TextGrammarRule::Iterator*> ruleIterators;
     ruleIterators.push( activeRule->createIterator() );
@@ -90,7 +91,6 @@ void GrammarTextLexer::findNextGrammarRule( const QString& line, int offsetInLin
                         // only use this match if the offset < foundPosition
                         int pos = rule->matchRegExp()->indexIn( line, offsetInLine );
                         if( pos >= 0 ) {
-
                             if( pos < foundPosition ) {
                                 foundRule      = rule;
                                 foundRegExp    = rule->matchRegExp();

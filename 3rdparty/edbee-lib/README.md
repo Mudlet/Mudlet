@@ -1,5 +1,6 @@
 edbee-lib
 =========
+[![Build Status](https://travis-ci.org/edbee/edbee-lib.svg?branch=master)](https://travis-ci.org/edbee/edbee-lib)
 
 Edbee is a Qt based Editor Component. 
 It supports Multiple-carets, Textmate Scoping/Grammar and Highlighting support.

@@ -10,6 +10,7 @@
 #include "edbee/models/texteditorconfig.h"
 
 #include "edbee/debug.h"
+#include "moc_removecommandtest.cpp"
 
 namespace edbee {
 

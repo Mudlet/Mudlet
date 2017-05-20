@@ -10,13 +10,12 @@ TARGET = edbee
 TEMPLATE = lib
 CONFIG += staticlib
 
+#QMAKE_CXXFLAGS+=-fsanitize=address -fsanitize=bounds
+#QMAKE_LFLAGS+=-fsanitize=address -fsanitize=bounds
+
 # This seems to be required for Windows
 INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
-#DEFINES += QT_NODLL
-DEFINES += DLL
-
-QMAKE_CXXFLAGS += -Wall -Wno-missing-field-initializers -Wno-sized-deallocation -Wno-delete-incomplete -Wno-unused-but-set-variable -Wno-deprecated-declarations -Wno-terminate
-QMAKE_CFLAGS += -Wall -Wno-missing-field-initializers -Wno-unused-but-set-variable -Wno-deprecated-declarations
+DEFINES += QT_NODLL
 
 include(edbee-lib.pri)

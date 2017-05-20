@@ -61,14 +61,6 @@ void TextDocument::giveLineData(int line, int field, TextLineData* dataItem)
     executeAndGiveChange( change, true );
 }
 
-/// Clears all text from the document. At the moment, this is
-/// just a call to setText( QString()), but it might do more in
-/// future (clear caches, searches, selections)
-void TextDocument::clear()
-{
-    setText( QString());
-}
-
 
 /// Returns the line specific data at the given line
 /// @param line the line number to retrieve the line data for
@@ -228,13 +220,17 @@ void TextDocument::replaceRangeSet(TextRangeSet& rangeSet, const QStringList& te
 
 
         TextChangeWithCaret* change = new TextChangeWithCaret(range.min(),range.length(),text,-1);
-        executeAndGiveChange( change, false );
+        Change* effectiveChange = executeAndGiveChange( change, false );
+        TextChangeWithCaret* effectiveChangeWithCaret = dynamic_cast<TextChangeWithCaret*>(effectiveChange);
 
-        // so we need to adjust the caret with the (possible) adjusted change
-        if( change->caret() < 0 ) {
-            range.setCaret( change->offset() + change->docLength() );
+        // when a new caret position is supplied (can only happen via a TextDocumentFilter)
+        // access it and change the caret to the given position
+        if( effectiveChangeWithCaret && effectiveChangeWithCaret->caret() >= 0 ) {
+          range.setCaret( effectiveChangeWithCaret->caret() );
+
+        // Default caret location is change-independent: old location + length new text
         } else {
-            range.setCaret( change->caret() );
+          range.setCaret(range.min() + text.length() );
         }
         range.reset();
 
@@ -277,13 +273,18 @@ void TextDocument::endChanges(int coalesceId)
 /// call this method to execute a change. The change is first passed to the filter
 /// so the documentFilter can handle the processing of the change
 /// When not filter is active the 'execute' method is called on the change
-void TextDocument::executeAndGiveChange(Change* change, int coalesceId )
+///
+/// WARNING, you should never Access the change pointer given to this method
+/// It's possible the change gets deleted
+///
+/// This method  should return the effective text-change (or 0 if no text-change has been stored)
+Change *TextDocument::executeAndGiveChange(Change* change, int coalesceId )
 {
     if( documentFilter() ) {
-        documentFilter()->filterChange( this, change, coalesceId );
+        return documentFilter()->filterChange( this, change, coalesceId );
     } else {
         change->execute( this );
-        giveChangeWithoutFilter( change, coalesceId );
+        return giveChangeWithoutFilter( change, coalesceId );
     }
 }
 

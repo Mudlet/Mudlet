@@ -1,5 +1,7 @@
-/* ONIG_EXTERN.  Generated from config.h.in by configure.  */
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.  Generated from config.h.in by configure.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+#include "config-onig-edbee.h"
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.
@@ -8,27 +10,13 @@
 
 /* Define to 1 if using `alloca.c'. */
 /* #undef C_ALLOCA */
-#define HAVE_STDARG_PROTOTYPES 1
-#ifdef _WIN32
-
-    #include "win32/config.h"
-
-    // Rick: added to make it compile on windows
-    #define ONIG_EXTERN extern
-
-    // Rick: added to decrease the numberr of warnings for onig
-    #define _CRT_SECURE_NO_WARNINGS
-
-#else
 
 /* Define to 1 if you have `alloca', as a function or macro. */
 #define HAVE_ALLOCA 1
 
 /* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
    */
-
-#define HAVE_ALLOCA_H  1
-
+#define HAVE_ALLOCA_H 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
@@ -38,12 +26,6 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
-
-/* Define if compilerr supports prototypes */
-#define HAVE_PROTOTYPES 1
-
-/* Define if compiler supports stdarg prototypes */
-#define HAVE_STDARG_PROTOTYPES 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -72,42 +54,47 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
 /* Define to 1 if your C compiler doesn't accept -c and -o together. */
 /* #undef NO_MINUS_C_MINUS_O */
 
 /* Name of package */
-#define PACKAGE "onig"
+#define PACKAGE "onigmo"
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT ""
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "onig"
+#define PACKAGE_NAME "onigmo"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "onig 5.13.5"
+#define PACKAGE_STRING "onigmo 6.1.1"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "onig"
+#define PACKAGE_TARNAME "onigmo"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.13.5"
+#define PACKAGE_VERSION "6.1.1"
 
 /* The size of `int', as computed by sizeof. */
-#define SIZEOF_INT sizeof(int)
+#define SIZEOF_INT 4
 
 /* The size of `long', as computed by sizeof. */
-#define SIZEOF_LONG sizeof(long)
+#define SIZEOF_LONG 8
+
+/* The size of `long long', as computed by sizeof. */
+#define SIZEOF_LONG_LONG 8
 
 /* The size of `short', as computed by sizeof. */
-#define SIZEOF_SHORT sizeof(short)
+#define SIZEOF_SHORT 2
+
+/* The size of `void*', as computed by sizeof. */
+#define SIZEOF_VOIDP 8
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -130,13 +117,10 @@
 /* #undef USE_CRNL_AS_LINE_TERMINATOR */
 
 /* Version number of package */
-#define VERSION "5.13.5"
+#define VERSION "6.1.1"
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
-
-
-#endif

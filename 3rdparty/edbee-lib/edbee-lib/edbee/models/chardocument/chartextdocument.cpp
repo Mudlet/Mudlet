@@ -119,9 +119,9 @@ TextEditorConfig*CharTextDocument::config() const
 /// Gives a change to the undo stack without invoking the filter
 /// @param change the change to execute
 /// @param coalesceId the coalescing identifier
-void CharTextDocument::giveChangeWithoutFilter(Change *change, int coalesceId )
+Change *CharTextDocument::giveChangeWithoutFilter(Change *change, int coalesceId )
 {
-    textUndoStack()->giveChange( change, coalesceId);
+    return textUndoStack()->giveChange( change, coalesceId);
 }
 
 /// This method replaces the given text via the undo-button

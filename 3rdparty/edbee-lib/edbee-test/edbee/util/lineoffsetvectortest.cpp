@@ -4,6 +4,7 @@
  */
 
 #include "lineoffsetvectortest.h"
+#include "moc_lineoffsetvectortest.cpp"
 
 #include "edbee/models/textbuffer.h"
 #include "edbee/util/lineoffsetvector.h"

@@ -12,6 +12,7 @@
 #include "edbee/models/textsearcher.h"
 
 #include "edbee/debug.h"
+#include "moc_textsearchertest.cpp"
 
 
 namespace edbee {

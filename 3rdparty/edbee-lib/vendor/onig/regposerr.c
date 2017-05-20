@@ -1,8 +1,9 @@
 /**********************************************************************
-  regposerr.c - Oniguruma (regular expression library)
+  regposerr.c - Onigmo (Oniguruma-mod) (regular expression library)
 **********************************************************************/
 /*-
  * Copyright (c) 2002-2007  K.Kosako  <sndgk393 AT ybb DOT ne DOT jp>
+ * Copyright (c) 2011-2016  K.Takata  <kentkt AT csc DOT jp>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,21 +29,26 @@
  */
 
 #include "config.h"
-#include "onigposix.h"
-
-#ifdef HAVE_STRING_H
-# include <string.h>
-#else
-# include <strings.h>
-#endif
+#include "onigmoposix.h"
+#include <string.h>
 
 #if defined(__GNUC__)
-#  define ARG_UNUSED  __attribute__ ((unused))
+# define ARG_UNUSED  __attribute__ ((unused))
 #else
-#  define ARG_UNUSED
+# define ARG_UNUSED
 #endif
 
-static char* ESTRING[] = {
+#if defined(_WIN32) && !defined(__GNUC__)
+# define xsnprintf   sprintf_s
+# define xstrncpy(dest,src,size)   strncpy_s(dest,size,src,_TRUNCATE)
+#else
+# define xsnprintf   snprintf
+# define xstrncpy    strncpy
+#endif
+
+#define numberof(array) (int)(sizeof(array) / sizeof((array)[0]))
+
+static const char* ESTRING[] = {
   NULL,
   "failed to match",                         /* REG_NOMATCH    */
   "Invalid regular expression",              /* REG_BADPAT     */
@@ -62,7 +68,6 @@ static char* ESTRING[] = {
   "internal error",                          /* REG_EONIG_INTERNAL */
   "invalid wide char value",                 /* REG_EONIG_BADWC    */
   "invalid argument",                        /* REG_EONIG_BADARG   */
-  "multi-thread error"                       /* REG_EONIG_THREAD   */
 };
 
 #include <stdio.h>
@@ -72,26 +77,26 @@ extern size_t
 regerror(int posix_ecode, const regex_t* reg ARG_UNUSED, char* buf,
 	 size_t size)
 {
-  char* s;
+  const char* s;
   char tbuf[35];
   size_t len;
 
   if (posix_ecode > 0
-      && posix_ecode < (int )(sizeof(ESTRING) / sizeof(ESTRING[0]))) {
+      && posix_ecode < numberof(ESTRING)) {
     s = ESTRING[posix_ecode];
   }
   else if (posix_ecode == 0) {
     s = "";
   }
   else {
-    sprintf(tbuf, "undefined error code (%d)", posix_ecode);
+    xsnprintf(tbuf, sizeof(tbuf), "undefined error code (%d)", posix_ecode);
     s = tbuf;
   }
 
   len = strlen(s) + 1; /* use strlen() because s is ascii encoding. */
 
   if (buf != NULL && size > 0) {
-    strncpy(buf, s, size - 1);
+    xstrncpy(buf, s, size - 1);
     buf[size - 1] = '\0';
   }
   return len;

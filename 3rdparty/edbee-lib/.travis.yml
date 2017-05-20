@@ -1,0 +1,43 @@
+language: cpp
+os:
+  - osx
+  - linux
+dist: trusty
+sudo: false
+addons:
+  apt:
+    sources:
+    - sourceline: 'ppa:beineri/opt-qt562-trusty'
+    packages:
+    - qt56base
+    - qt56multimedia
+    - qt56tools
+    - xvfb
+compiler:
+  - gcc
+  - clang
+env:
+  matrix:
+  - Q_OR_C_MAKE=cmake
+  - Q_OR_C_MAKE=qmake
+matrix:
+  exclude:
+  - os: osx
+    compiler: gcc
+before_install: ./CI/travis.before_install.sh
+install: ./CI/travis.install.sh
+before_script:
+  - "export DISPLAY=:99.0"
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then sh -e /etc/init.d/xvfb start; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok ) & fi
+  - sleep 3 # give xvfb some time to start
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt56/bin/qt56-env.sh; fi
+  - mkdir build
+script:
+  - cd build
+  - if [ "${CC}" = "clang" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${Q_OR_C_MAKE}" = "qmake" ] ; then SPEC="-spec linux-clang"; fi
+  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ../edbee-lib.pro && make -j2; else cmake --version; cmake .. && make -j2; fi
+  - cd edbee-test
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ "${Q_OR_C_MAKE}" = "qmake" ]; then cd edbee-test.app/Contents/MacOS/; fi
+  - ./edbee-test

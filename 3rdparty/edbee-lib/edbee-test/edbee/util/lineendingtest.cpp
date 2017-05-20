@@ -4,6 +4,7 @@
  */
 
 #include "lineendingtest.h"
+#include "moc_lineendingtest.cpp"
 
 #include "edbee/util/lineending.h"
 

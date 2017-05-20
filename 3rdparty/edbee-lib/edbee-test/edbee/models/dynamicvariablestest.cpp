@@ -9,6 +9,7 @@
 #include "edbee/models/dynamicvariables.h"
 
 #include "edbee/debug.h"
+#include "moc_dynamicvariablestest.cpp"
 
 namespace edbee {
 

@@ -75,7 +75,7 @@ public:
     void setLastCoalesceIdAtCurrentLevel(int id);
     void resetAllLastCoalesceIds();
 
-    bool giveChange( Change* change, int coalesceId );
+    Change* giveChange( Change* change, int coalesceId );
 
     bool canUndo( TextEditorController* controller=0 );
     bool canRedo( TextEditorController* controller=0 );

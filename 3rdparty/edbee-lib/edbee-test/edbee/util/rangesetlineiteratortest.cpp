@@ -10,6 +10,7 @@
 #include "edbee/util/rangesetlineiterator.h"
 
 #include "edbee/debug.h"
+#include "moc_rangesetlineiteratortest.cpp"
 
 namespace edbee {
 
