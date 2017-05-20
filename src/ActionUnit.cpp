@@ -273,7 +273,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
         if (action->mPackageName.size() > 0) {
             for (auto& childAction : *action->mpMyChildrenList) {
                 bool found = false;
-                TToolBar* pTB = 0;
+                QPointer<TToolBar> pTB = 0;
                 for (auto& toolBar : mToolBarList) {
                     if (toolBar == childAction->mpToolBar) {
                         found = true;
@@ -296,7 +296,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
             continue; //action package
         }
         bool found = false;
-        TToolBar* pTB = 0;
+        QPointer<TToolBar> pTB = 0;
         for (auto& toolBar : mToolBarList) {
             if (toolBar == action->mpToolBar) {
                 found = true;
