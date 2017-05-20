@@ -4019,8 +4019,6 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     }
 
     if (isToSaveToProfile) {
-        qDebug().nospace() << "TLuaInterpreter::connectToProfile(\"" << url.c_str() << "\", " << port << ", " << isToSaveToProfile << ")";
-
         QPair<bool, QString> result = pHost->writeProfileData(QLatin1String("url"), url.c_str());
         if (!result.first) {
             lua_pushnil(L);
