@@ -358,6 +358,7 @@ public:
     static int saveMap(lua_State* L);
     static int loadMap(lua_State* L);
     static int setExitStub(lua_State* L);
+    static int clearExitStub(lua_State* L);
     static int connectExitStub(lua_State* L);
     static int getExitStubs(lua_State* L);
     static int getExitStubs1(lua_State* L);
