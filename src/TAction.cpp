@@ -60,6 +60,8 @@ TAction::TAction(TAction* parent, Host* pHost)
 , mSizeX()
 , mSizeY()
 , mDataChanged(true)
+, mToolbarLastDockArea(Qt::LeftDockWidgetArea)
+, mToolbarLastFloatingState(true)
 {
 }
 
@@ -89,6 +91,8 @@ TAction::TAction(const QString& name, Host* pHost)
 , mSizeX()
 , mSizeY()
 , mDataChanged(true)
+, mToolbarLastDockArea(Qt::LeftDockWidgetArea)
+, mToolbarLastFloatingState(true)
 {
 }
 

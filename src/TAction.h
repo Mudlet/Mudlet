@@ -130,6 +130,8 @@ public:
     QPointer<Host> mpHost;
     bool exportItem;
     bool mModuleMasterFolder;
+    Qt::DockWidgetArea mToolbarLastDockArea;
+    bool mToolbarLastFloatingState;
 
 private:
     TAction() {}

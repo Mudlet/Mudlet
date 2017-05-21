@@ -446,11 +446,16 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
     pTB->setTitleBarWidget(0);
     pTB->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pA->mLocation == 4) {
-        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pTB); //float toolbar
-        pTB->setFloating(true);
-        QPoint pos = QPoint(pA->mPosX, pA->mPosY);
-        pTB->show();
-        pTB->move(pos);
+        mudlet::self()->addDockWidget(pA->mToolbarLastDockArea, pTB);
+        if (pA->mToolbarLastFloatingState) {
+            pTB->setFloating(true);
+            QPoint pos = QPoint(pA->mPosX, pA->mPosY);
+            pTB->show();
+            pTB->move(pos);
+        } else {
+            pTB->setFloating(false);
+            pTB->show();
+        }
         pTB->mpTAction = pA;
         pTB->recordMove();
     } else
