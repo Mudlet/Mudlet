@@ -3528,34 +3528,34 @@ void dlgTriggerEditor::saveAction()
     // reduce the noise in a git commit/diff caused by the removal of a
     // redundent "if( pITem )" - can be removed next time the file is modified
         int actionID = pItem->data(0, Qt::UserRole).toInt();
-        TAction * pT = mpHost->getActionUnit()->getAction( actionID );
-        if( pT )
+        TAction * pA = mpHost->getActionUnit()->getAction( actionID );
+        if( pA )
         {
             // Do not change anything for a module master folder - it won't "take"
-            if( pT->mPackageName.isEmpty() )
+            if( pA->mPackageName.isEmpty() )
             {
-                pT->setName( name );
-                pT->setIcon( icon );
-                pT->setScript( script );
-                pT->setCommandButtonDown( commandDown );
-                pT->setCommandButtonUp( commandUp );
-                pT->setIsPushDownButton( isChecked );
-                pT->mLocation = location;
-                pT->mOrientation = orientation;
-                pT->setIsActive( pT->shouldBeActive() );
-                pT->setButtonRotation( rotation );
-                pT->setButtonColumns( columns );
-                pT->mUseCustomLayout = false;
-                pT->css = mpActionsMainArea->css->toPlainText();
+                pA->setName( name );
+                pA->setIcon( icon );
+                pA->setScript( script );
+                pA->setCommandButtonDown( commandDown );
+                pA->setCommandButtonUp( commandUp );
+                pA->setIsPushDownButton( isChecked );
+                pA->mLocation = location;
+                pA->mOrientation = orientation;
+                pA->setIsActive( pA->shouldBeActive() );
+                pA->setButtonRotation( rotation );
+                pA->setButtonColumns( columns );
+                pA->mUseCustomLayout = false;
+                pA->css = mpActionsMainArea->css->toPlainText();
             }
 
             QIcon icon;
-            if( pT->isFolder() )
+            if( pA->isFolder() )
             {
-                if( ! pT->mPackageName.isEmpty() )
+                if( ! pA->mPackageName.isEmpty() )
                 {
                     // Has a package name so is a module master folder
-                    if( pT->isActive() )
+                    if( pA->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -3564,11 +3564,11 @@ void dlgTriggerEditor::saveAction()
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-brown-locked.png" ) ), QIcon::Normal, QIcon::Off );
                     }
                 }
-                else if( ! pT->getParent()
-                      || ! pT->getParent()->mPackageName.isEmpty() )
+                else if( ! pA->getParent()
+                      || ! pA->getParent()->mPackageName.isEmpty() )
                 {
                     // No parent or it has a parent with a package name so is a toolbar
-                    if( pT->isActive() )
+                    if( pA->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-yellow.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -3580,7 +3580,7 @@ void dlgTriggerEditor::saveAction()
                 else
                 {
                     // Else must be a menu
-                    if( pT->isActive() )
+                    if( pA->isActive() )
                     {
                         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/folder-cyan.png" ) ), QIcon::Normal, QIcon::Off );
                     }
@@ -3593,7 +3593,7 @@ void dlgTriggerEditor::saveAction()
             else
             {
                 // Is a button
-                if( pT->isActive() )
+                if( pA->isActive() )
                 {
                     icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tag_checkbox_checked.png" ) ), QIcon::Normal, QIcon::Off );
                 }
@@ -3603,7 +3603,7 @@ void dlgTriggerEditor::saveAction()
                 }
             }
 
-            if( pT->state() )
+            if( pA->state() )
             {
                 pItem->setIcon( 0, icon);
                 pItem->setText( 0, name );
@@ -3618,13 +3618,13 @@ void dlgTriggerEditor::saveAction()
             }
 
             // If not active, don't bother raising the TToolBar for this save.
-            if( !pT->shouldBeActive() ) {
-                pT->setDataSaved();
+            if( !pA->shouldBeActive() ) {
+                pA->setDataSaved();
             }
 
             // if the action has a toolbar with a script error, hide the toolbar.
-            if( pT->mpToolBar && !pT->state() ) {
-                pT->mpToolBar->hide();
+            if( pA->mpToolBar && !pA->state() ) {
+                pA->mpToolBar->hide();
             }
         }
 
