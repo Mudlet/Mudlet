@@ -58,6 +58,7 @@ class TDockWidget;
 class TEvent;
 class TLabel;
 class TTimer;
+class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
@@ -88,7 +89,12 @@ public:
     void registerTimer(TTimer*, QTimer*);
     void unregisterTimer(QTimer*);
     void forceClose();
-    bool openWindow(Host*, const QString&);
+    bool saveWindowLayout();
+    bool loadWindowLayout();
+    void setDockLayoutUpdated(Host*, const QString&);
+    void setToolbarLayoutUpdated(Host*, TToolBar*);
+    void commitLayoutUpdates();
+    bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
     bool echoWindow(Host*, const QString&, const QString&);
@@ -173,6 +179,10 @@ public:
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;
+    bool mIsLoadingLayout;
+    bool mHasSavedLayout;
+    QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
+    QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
@@ -276,7 +286,6 @@ private:
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
-//    QMap<QString, TDockWidget*> dockWindowMap;
     QMap<Host*, QToolBar*> mUserToolbarMap;
 
 

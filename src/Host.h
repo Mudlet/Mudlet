@@ -42,6 +42,7 @@
 #include "post_guard.h"
 
 class QDialog;
+class QDockWidget;
 class QPushButton;
 class QListWidget;
 
@@ -82,7 +83,8 @@ public:
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
     void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
 
-    bool closingDown();
+    void closingDown();
+    bool isClosingDown();
     const unsigned int assemblePath();
     const bool checkForMappingScript();
 
@@ -303,6 +305,7 @@ public:
     bool mMapperUseAntiAlias;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
+    QPointer<QDockWidget> mpDockableMapWidget;
 
 private:
     QScopedPointer<LuaInterface> mLuaInterface;
