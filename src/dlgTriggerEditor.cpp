@@ -3534,6 +3534,14 @@ void dlgTriggerEditor::saveAction()
             // Do not change anything for a module master folder - it won't "take"
             if( pA->mPackageName.isEmpty() )
             {
+                // Check if data has been changed before it gets updated.
+                if( pA->mLocation != location ||
+                    pA->mOrientation != orientation ||
+                    pA->css != mpActionsMainArea->css->toPlainText() )
+                {
+                    pA->setDataChanged();
+                }
+
                 pA->setName( name );
                 pA->setIcon( icon );
                 pA->setScript( script );
