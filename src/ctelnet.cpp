@@ -946,7 +946,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   int newVersion = version.toInt();
                   if( mpHost->mServerGUI_Package_version != newVersion )
                   {
-                      QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
+                      QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
                       mpHost->mpConsole->print(_smsg.toLatin1().data());
                       mpHost->uninstallPackage( mpHost->mServerGUI_Package_name, 0);
                       mpHost->mServerGUI_Package_version = newVersion;
@@ -974,7 +974,7 @@ void cTelnet::processTelnetCommand( const string & command )
                   QString _home = QDir::homePath();
                   _home.append( "/.config/mudlet/profiles/" );
                   _home.append( mpHost->getName() );
-                  mServerPackage = QString( "%1/%2").arg( _home ).arg( fileName );
+                  mServerPackage = QString( "%1/%2").arg(_home, fileName);
 
                   QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
                   mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );
@@ -1193,7 +1193,7 @@ void cTelnet::setGMCPVariables(const QString & msg )
         int newVersion = version.toInt();
         if( mpHost->mServerGUI_Package_version != newVersion )
         {
-            QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(mpHost->mServerGUI_Package_version).arg(newVersion);
+            QString _smsg = QString("<The server wants to upgrade the GUI to new version '%1'. Uninstalling old version '%2'>").arg(QString::number(mpHost->mServerGUI_Package_version), QString::number(newVersion));
             mpHost->mpConsole->print(_smsg.toLatin1().data());
             mpHost->uninstallPackage( mpHost->mServerGUI_Package_name, 0);
             mpHost->mServerGUI_Package_version = newVersion;
@@ -1221,7 +1221,7 @@ void cTelnet::setGMCPVariables(const QString & msg )
         QString _home = QDir::homePath();
         _home.append( "/.config/mudlet/profiles/" );
         _home.append( mpHost->getName() );
-        mServerPackage = QString( "%1/%2").arg( _home ).arg( fileName );
+        mServerPackage = QString( "%1/%2").arg(_home, fileName);
 
         QNetworkReply * reply = mpDownloader->get( QNetworkRequest( QUrl( url ) ) );
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole );

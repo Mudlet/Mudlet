@@ -983,15 +983,14 @@ void dlgProfilePreferences::copyMap()
 
             // Check for the destination directory for the other profiles
             QDir toProfileDir;
-            QString toProfileDirPathString = QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath()).arg(toProfileName);
+            QString toProfileDirPathString = QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), toProfileName);
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
                                         "Please check that you have permissions/access to:\n"
                                         "\"%2\"\n"
                                         "and there is enough space. The copying operation has failed.")
-                                             .arg(toProfileName)
-                                             .arg(toProfileDirPathString);
+                                             .arg(toProfileName, toProfileDirPathString);
                     pHost->postMessage(errMsg);
                     label_mapFileActionResult->show();
                     label_mapFileActionResult->setText(tr("Creating a destination directory failed..."));
@@ -1107,8 +1106,7 @@ void dlgProfilePreferences::copyMap()
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
     QString sourceMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
-                                 .arg( QDir::homePath() )
-                                 .arg( pHost->getName() ) );
+                                 .arg( QDir::homePath(), pHost->getName() ) );
     QStringList mProfileList = QDir( sourceMapFolder )
                                    .entryList( QDir::Files | QDir::NoDotAndDotDot, QDir::Time );
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
@@ -1118,8 +1116,7 @@ void dlgProfilePreferences::copyMap()
         }
 
         thisProfileLatestMapFile.setFileName( QStringLiteral( "%1/%2" )
-                                                  .arg( sourceMapFolder )
-                                                  .arg( thisProfileLatestMapPathFileName ) );
+                                                  .arg( sourceMapFolder, thisProfileLatestMapPathFileName ) );
         break;
     }
 
@@ -1142,9 +1139,7 @@ void dlgProfilePreferences::copyMap()
                                // show up when saving big maps
 
         if( ! thisProfileLatestMapFile.copy( QStringLiteral( "%1/.config/mudlet/profiles/%2/map/%3" )
-                                                 .arg( QDir::homePath() )
-                                                 .arg( otherHostName )
-                                                 .arg( thisProfileLatestMapPathFileName ) ) ) {
+                                                 .arg( QDir::homePath(), otherHostName, thisProfileLatestMapPathFileName ) ) ) {
             label_mapFileActionResult->setText( tr( "Could not copy the map to %1 - unable to copy the new map file over." )
                                                         .arg( otherHostName ));
             QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
