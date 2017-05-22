@@ -27,6 +27,7 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "XMLimport.h"
+#include "ctelnet.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -1291,6 +1292,9 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->setLogin( login_entry->text().trimmed() );
         else
             slot_update_login( pHost->getLogin() );
+
+        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
+        pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
     }
 
     if( needsGenericPackagesInstall )

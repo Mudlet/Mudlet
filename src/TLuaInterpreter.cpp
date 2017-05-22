@@ -12032,6 +12032,73 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::setServerEncoding(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, "setServerEncoding: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
+
+    QString newEncoding;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error( L );
+    }
+    else {
+        newEncoding = QString::fromUtf8(lua_tostring(L,1));
+    }
+
+    QPair<bool, QString> results = pHost->mTelnet.setEncoding(newEncoding);
+
+    if(results.first) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, results.second.toLatin1().constData());
+        return 2;
+    }
+}
+
+int TLuaInterpreter::getServerEncoding(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring(L, "getServerEncoding: NULL Host pointer - something is wrong!");
+        lua_error( L );
+        return 1;
+    }
+
+    QString encoding = pHost->mTelnet.getEncoding();
+    if(encoding.isEmpty()) {
+        encoding = QLatin1String("ASCII");
+    }
+    lua_pushstring(L, encoding.toLatin1().constData());
+    return 1;
+}
+
+int TLuaInterpreter::getServerEncodingsList(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, "getServerEncodingsList: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
+
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushstring(L, "ASCII");
+    lua_settable( L, -3);
+    for (int i = 0, total = pHost->mTelnet.getEncodingsList().count(); i < total; ++i) {
+        lua_pushnumber(L, i+2); // Lua indexes start with 1 but we already have one entry
+        lua_pushstring(L, pHost->mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
 
 bool TLuaInterpreter::compileAndExecuteScript(const QString & code )
 {
@@ -13265,9 +13332,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
     lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding );
+    lua_register( pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding );
+    lua_register( pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList );
     lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
 
 
+// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
