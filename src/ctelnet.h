@@ -69,6 +69,7 @@ const char TN_DO = static_cast<char>(253);
 const char TN_DONT = static_cast<char>(254);
 const char TN_IAC = static_cast<char>(255);
 const char TN_EOR = static_cast<char>(239);
+const char TN_BELL = static_cast<char>(7);
 
 const char GMCP = static_cast<char>(201);
 const char MXP = 91;

@@ -226,6 +226,8 @@ public:
     static int setBgColor(lua_State* L);
     static int tempTimer(lua_State* L);
     static int closeMudlet(lua_State* L);
+    static int loadWindowLayout(lua_State* L);
+    static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
     static int openUserWindow(lua_State* L);
     static int echoUserWindow(lua_State* L);
@@ -387,6 +389,7 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+    static int alert(lua_State* L);
 
 public slots:
     void slot_replyFinished(QNetworkReply*);

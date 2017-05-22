@@ -63,11 +63,11 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , layerCommandLine( 0 )
 , mBgColor( QColor(Qt::black) )
 , mClipboard( mpHost )
-, mCommandBgColor( QColor(Qt::white) )
+, mCommandBgColor( Qt::black )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
 , mConsoleName( "main" )
 , mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
-, mFgColor( QColor(Qt::white) )
+, mFgColor( Qt::black )
 , mIndentCount( 0 )
 , mIsDebugConsole( isDebugConsole )
 , mLogFileName(QString(""))
@@ -707,31 +707,36 @@ void TConsole::closeEvent( QCloseEvent *event )
 {
     if( mIsDebugConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
-        {
+        if( mudlet::self()->isGoingDown() || mpHost->isClosingDown() ) {
+            event->accept();
+            return;
+        } else {
             hide();
             mudlet::mpDebugArea->setVisible(false);
             mudlet::debugMode = false;
             event->ignore();
             return;
         }
-        else
-        {
-            event->accept();
-            return;
-        }
     }
+
     if( mUserConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
+        if( mudlet::self()->isGoingDown() || mpHost->isClosingDown() )
         {
+            std::string key = objectName().toLatin1().data();
+            TConsole * pC = mpHost->mpConsole;
+            if( pC->mSubConsoleMap.find(key) != pC->mSubConsoleMap.end() ) {
+                console->close();
+                console2->close();
+
+                pC->mSubConsoleMap.erase(key);
+            }
+
+            event->accept();
+            return;
+        } else {
             hide();
             event->ignore();
-            return;
-        }
-        else
-        {
-            event->accept();
             return;
         }
     }
@@ -772,7 +777,7 @@ void TConsole::closeEvent( QCloseEvent *event )
 
     if( profile_name != "default_host" && ! mUserAgreedToCloseConsole )
     {
-        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
+        ASK: int choice = QMessageBox::question( this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(profile_name), QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
         if( choice == QMessageBox::Cancel )
         {
             event->setAccepted(false);
@@ -780,6 +785,8 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
         }
         if (choice == QMessageBox::Yes) {
+            mudlet::self()->saveWindowLayout();
+
             mpHost->modulesToWrite.clear();
             std::tuple<bool, QString, QString> result = mpHost->saveProfile();
 
@@ -804,6 +811,8 @@ void TConsole::closeEvent( QCloseEvent *event )
             return;
 
         } else if (choice == QMessageBox::No) {
+            mudlet::self()->saveWindowLayout();
+
             event->accept();
             return;
         }

@@ -2422,6 +2422,17 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::loadWindowLayout(lua_State *L) {
+    lua_pushboolean( L, mudlet::self()->loadWindowLayout() );
+    return 1;
+}
+
+int TLuaInterpreter::saveWindowLayout(lua_State *L) {
+    mudlet::self()->mHasSavedLayout = false;
+    lua_pushboolean( L, mudlet::self()->saveWindowLayout() );
+    return 1;
+}
+
 int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
@@ -2462,10 +2473,16 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
+
+    bool loadLayout = true;
+    if( ! lua_isnoneornil(L, 2) && lua_isboolean(L, 2) ) {
+        loadLayout = lua_toboolean(L, 2);
+    }
+
     Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->openWindow( pHost, text );
-    return 0;
+    lua_pushboolean( L, mudlet::self()->openWindow( pHost, text, loadLayout ));
+    return 1;
 }
 
 int TLuaInterpreter::createMiniConsole( lua_State *L )
@@ -12985,7 +13002,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempTimer", TLuaInterpreter::tempTimer );
     lua_register( pGlobalLua, "tempTrigger", TLuaInterpreter::tempTrigger );
     lua_register( pGlobalLua, "tempRegexTrigger", TLuaInterpreter::tempRegexTrigger );
-    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
+    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet );
+    lua_register( pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout );
+    lua_register( pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout );
     lua_register( pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow );
     lua_register( pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow );
     lua_register( pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer );
@@ -13246,6 +13265,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
     lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
 
 
     luaopen_yajl(pGlobalLua);
@@ -13769,3 +13789,33 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
 
 }
 
+int TLuaInterpreter::alert( lua_State * L )
+{
+    double luaAlertDuration = 0.0;
+
+    if( lua_gettop( L ) > 0 )
+    {
+        if( ! lua_isnumber( L, 1 ) )
+        {
+            lua_pushfstring( L, "alert: bad argument #1 type (alert duration in seconds as number expected, got %s!)",
+                            luaL_typename( L, 1 ));
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaAlertDuration = lua_tonumber( L, 1 );
+
+            if( luaAlertDuration < 0.000 )
+            {
+                lua_pushstring( L, "alert: duration, in seconds, is optional but if given must be zero or greater." );
+                return lua_error( L );
+            }
+        }
+    }
+
+    // QApplication::alert expects milliseconds, not seconds
+    QApplication::alert(mudlet::self(), qRound( luaAlertDuration * 1000.0 ));
+
+    return 0;
+}

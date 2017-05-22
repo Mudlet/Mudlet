@@ -52,6 +52,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // init generated dialog
     setupUi(this);
 
+    // This is currently empty so can be hidden until needed, but provides a
+    // location on the last (Special Options) tab where temporary/development
+    // /testing controls can be placed if needed...
+    groupBox_Debug->hide();
+
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
@@ -357,7 +362,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
         if (pHost->mpMap->mpMapper) {
             checkBox_showDefaultArea->show();
-            checkBox_showDefaultArea->setText(tr("If checked (normal case) the \"%1\" IS shown in the map Area selection control.").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+            checkBox_showDefaultArea->setText(tr("Show \"%1\" in the map area selection").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
             checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
         } else {
             checkBox_showDefaultArea->hide();
