@@ -136,7 +136,6 @@ public:
     void translateToPlainText(std::string& s, const bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void appendLine(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
-    int lookupColor(const QString& s, int pos);
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
     void updateColors();
@@ -165,8 +164,6 @@ public:
     int speedTP;
     int speedSequencer;
     int speedAppend;
-    int msLength;
-    int msPos;
 
     int mCursorY;
     bool mMXP;
@@ -205,7 +202,7 @@ private:
     bool mIsDefaultColor;
     bool isUserScrollBack;
     int currentFgColorProperty;
-    QString mFormatSequenceRest;
+
     QColor mBlack;
     int mBlackR;
     int mBlackG;

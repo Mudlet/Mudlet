@@ -681,7 +681,6 @@ TBuffer::TBuffer( Host * pH )
 , gotESC             ( false )
 , gotHeader          ( false )
 , codeRet            ( 0 )
-, mFormatSequenceRest( QString("") )
 , mBlack             ( pH->mBlack )
 , mLightBlack        ( pH->mLightBlack )
 , mRed               ( pH->mRed )
@@ -712,8 +711,6 @@ TBuffer::TBuffer( Host * pH )
 , speedTP()
 , speedSequencer()
 , speedAppend()
-, msLength()
-, msPos()
 , mOpenMainQuote()
 , mEchoText()
 , mIsDefaultColor()
@@ -1105,59 +1102,10 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
       elements at the end can be omitted.
       */
 
-
-
-const QChar cESC = '\033';
-const QString cDigit = "0123456789";
-
-
-inline int TBuffer::lookupColor(const QString & s, int pos )
-{
-    int ret = 0;
-    QString code;
-
-    msPos = pos;
-    while( msPos < msLength )
-    {
-        int digit = cDigit.indexOf( s[msPos] );
-        if( digit > -1 )
-        {
-            code.append( s[msPos] );
-            msPos++;
-            continue;
-        }
-        else if( s[msPos] == ';' )
-        {
-            ret++;
-            mCode[ret] = code.toInt();
-            msPos++;
-            code.clear();
-            continue;
-        }
-        else if( s[msPos] == 'm' )
-        {
-            ret++;
-            mCode[ret] = code.toInt();
-            msPos++;
-            return ret;
-        }
-        else if( s[msPos] == '[' )
-        {
-            msPos++;
-            continue;
-        }
-        else
-        {
-            msPos++;
-            return 0; // unbekannte sequenz
-        }
-    }
-    msPos = pos-1;
-    return -1; // unbeendete sequenz
-}
-
 void TBuffer::translateToPlainText( std::string & incoming, const bool isFromServer )
 {
+    const QString cDigit = "0123456789";
+
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
     // protect this process from the supplied string being modified
@@ -1197,11 +1145,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
     int numCodes=0;
     speedSequencer = 0;
     mUntriggered = lineBuffer.size()-1;
-    msLength = localBuffer.length();
-    mFormatSequenceRest="";
-    int msPos = 0;
-    QString packetTime = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-    if (msLength < 1) {
+    size_t localBufferLength = localBuffer.length();
+    size_t localBufferPosition = 0;
+    if (! localBufferLength) {
         return;
     }
 
@@ -1210,15 +1156,15 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
     while( true )
     {
         DECODE:
-        if( msPos >= msLength )
+        if( localBufferPosition >= localBufferLength )
         {
             return;
         }
-        char & ch = localBuffer[msPos];
+        char & ch = localBuffer[localBufferPosition];
         if( ch == '\033' )
         {
             gotESC = true;
-            msPos++;
+            ++localBufferPosition;
             continue;
         }
         if( gotESC )
@@ -1227,16 +1173,16 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             {
                 gotHeader = true;
                 gotESC = false;
-                msPos++;
+                ++localBufferPosition;
                 continue;
             }
         }
 
         if( gotHeader )
         {
-            while( msPos < msLength )
+            while( localBufferPosition < localBufferLength )
             {
-                QChar ch2 = incoming[msPos];
+                QChar ch2 = localBuffer[localBufferPosition];
 
                 if( ch2 == 'z' )
                 {
@@ -1245,9 +1191,15 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     // MXP line modes
 
                     // locked mode
-                    if( code == "7" || code == "2" ) mMXP = false;
+                    if( code == "7" || code == "2" )
+                    {
+                        mMXP = false;
+                    }
                     // secure mode
-                    if( code == "1" || code == "6" || code == "4" ) mMXP = true;
+                    if( code == "1" || code == "6" || code == "4" )
+                    {
+                        mMXP = true;
+                    }
                     // reset
                     if( code == "3" )
                     {
@@ -1259,14 +1211,14 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     }
                     codeRet = 0;
                     code.clear();
-                    msPos++;
+                    ++localBufferPosition;
                     goto DECODE;
                 }
                 int digit = cDigit.indexOf( ch2 );
                 if( digit > -1 )
                 {
                     code.append( ch2 );
-                    msPos++;
+                    ++localBufferPosition;
                     continue;
                 }
                 else if( ch2 == ';' )
@@ -1274,7 +1226,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     codeRet++;
                     mCode[codeRet] = code.toInt();
                     code.clear();
-                    msPos++;
+                    ++localBufferPosition;
                     continue;
                 }
                 else if( ch2 == 'm' )
@@ -1283,7 +1235,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     mCode[codeRet] = code.toInt();
                     code.clear();
                     gotHeader = false;
-                    msPos++;
+                    ++localBufferPosition;
 
                     numCodes += codeRet;
                     for( int i=1; i<codeRet+1; i++ )
@@ -1305,7 +1257,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                         mBold = true;
                                     }
                                     else
+                                    {
                                         mBold = false;
+                                    }
                                     switch(tag)
                                     {
                                     case 0:
@@ -1471,7 +1425,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                         _bold = true;
                                     }
                                     else
+                                    {
                                         _bold = false;
+                                    }
                                     int bgColorLightR = 0;
                                     int bgColorLightG = 0;
                                     int bgColorLightB = 0;
@@ -1851,7 +1807,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 }
                 else
                 {
-                    msPos++;
+                    ++localBufferPosition;
                     gotHeader = false;
                     goto DECODE;
                 }
@@ -1859,9 +1815,6 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             // sequenz ist im naechsten tcp paket keep decoder state
             return;
         }
-
-        const QString nothing = "";
-        TChar stdCh;
 
         if( mMXP )
         {
@@ -1895,14 +1848,17 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         currentToken += ch;
                     }
                     mAssemblingToken = true;
-                    msPos++;
+                    ++localBufferPosition;
                     continue;
                 }
             }
 
             if( ch == '>' )
             {
-                if( ! mParsingVar ) closeT++;
+                if( ! mParsingVar )
+                {
+                    closeT++;
+                }
 
                 // sanity check
                 if( closeT > openT )
@@ -1924,7 +1880,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         _tn = currentToken.c_str();
                     }
                     else
+                    {
                         _tn = currentToken.substr( 0, _pfs ).c_str();
+                    }
                     _tn = _tn.toUpper();
                     if( _tn == "VERSION" )
                     {
@@ -1954,17 +1912,26 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                 pRef = _t2.indexOf("SEND ");
                             }
                             else
+                            {
                                 _got_ref = true;
+                            }
 
-                            if( pRef == -1 ) return;
+                            if( pRef == -1 )
+                            {
+                                return;
+                            }
                             pRef += 5;
 
                             QChar _quote_type = _t2[pRef];
                             int pRef2;
                             if( _quote_type != '&' )
+                            {
                                 pRef2 = _t2.indexOf( _quote_type, pRef+1 ); //' ', pRef );
+                            }
                             else
+                            {
                                 pRef2 = _t2.indexOf( ' ', pRef+1 );
+                            }
                             QString _ref = _t2.mid( pRef, pRef2-pRef );
 
                             // gegencheck, ob es keine andere variable ist
@@ -1992,7 +1959,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                 _ref = _t2.mid( pRef, _t2.indexOf( ' ', pRef+1 )-pRef );
                             }
                             else
+                            {
                                 _ref = "";
+                            }
                             _ref = _ref.replace( ';' , "" );
                             _ref = _ref.replace( "&quot", "" );
                             _ref = _ref.replace( "&amp", "&" );
@@ -2033,7 +2002,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         openT = 0;
                         closeT = 0;
                         currentToken.clear();
-                        msPos++;
+                        ++localBufferPosition;
                         continue;
                     }
 
@@ -2073,15 +2042,18 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         QString _tp;
                         std::string::size_type _fs = currentToken.find_first_of(' ');
                         if( _fs != std::string::npos )
+                        {
                             _tp = currentToken.substr( _fs ).c_str();
-                        else
-                            _tp = "";
+                        }
                         QString _t1 = _tp.toUpper();
                         const TMxpElement & _element = mMXP_Elements[_tn];
                         QString _t2 = _element.href;
                         QString _t3 = _element.hint;
                         bool _userTag = true;
-                        if( _t2.size() < 1 ) _userTag = false;
+                        if( _t2.size() < 1 )
+                        {
+                            _userTag = false;
+                        }
                         QRegExp _rex;
                         QStringList _rl1, _rl2;
                         int _ki1 = _tp.indexOf('\'');
@@ -2198,7 +2170,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     closeT = 0;
                     currentToken.clear();
                 }
-                msPos++;
+                ++localBufferPosition;
                 continue;
             }
 
@@ -2215,36 +2187,36 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 else
                 {
                     currentToken += ch;
-                    msPos++;
+                    ++localBufferPosition;
                     continue;
                 }
             }
 
             if( ch == '&' || mIgnoreTag )
             {
-                if( ( msPos+4 < msLength ) && ( mSkip.size() == 0 ) )
+                if( ( localBufferPosition+4 < localBufferLength ) && ( mSkip.size() == 0 ) )
                 {
-                    if( incoming.substr( msPos, 4 ) == "&gt;" )
+                    if( localBuffer.substr( localBufferPosition, 4 ) == "&gt;" )
                     {
-                        msPos += 3;
+                        localBufferPosition += 3;
                         ch = '>';
                         mIgnoreTag = false;
                     }
-                    else if( incoming.substr( msPos, 4 ) == "&lt;" )
+                    else if( localBuffer.substr( localBufferPosition, 4 ) == "&lt;" )
                     {
-                        msPos += 3;
+                        localBufferPosition += 3;
                         ch = '<';
                         mIgnoreTag = false;
                     }
-                    else if( incoming.substr( msPos, 5 ) == "&amp;" )
+                    else if( localBuffer.substr( localBufferPosition, 5 ) == "&amp;" )
                     {
                         mIgnoreTag = false;
-                        msPos += 4;
+                        localBufferPosition += 4;
                         ch = '&';
                     }
-                    else if( incoming.substr( msPos, 6 ) == "&quot;" )
+                    else if( localBuffer.substr( localBufferPosition, 6 ) == "&quot;" )
                     {
-                        msPos += 5;
+                        localBufferPosition += 5;
                         mIgnoreTag = false;
                         mSkip.clear();
                         ch = '"';
@@ -2285,7 +2257,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         mIgnoreTag = false;
                         mSkip.clear();
                     }
-                    msPos++;
+                    ++localBufferPosition;
                     continue;
                 }
             }
@@ -2310,7 +2282,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 {
                     if( ch == '\r' )
                     {
-                        msPos++;
+                        ++localBufferPosition;
                         continue; //empty timer posting
                     }
                     lineBuffer << QString();
@@ -2337,7 +2309,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 {
                     if( ch == '\r' )
                     {
-                        msPos++;
+                        ++localBufferPosition;
                         continue; //empty timer posting
                     }
                     lineBuffer.back().append(QString());
@@ -2360,7 +2332,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             int line = lineBuffer.size()-1;
             mpHost->mpConsole->runTriggers( line );
             wrap( lineBuffer.size()-1 );
-            msPos++;
+            ++localBufferPosition;
             std::deque<TChar> newLine;
             buffer.push_back( newLine );
             lineBuffer.push_back(QString());
@@ -2393,27 +2365,27 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             // time because there is not necessarily a one-byte to one TChar
             // mapping, instead we use one TChar per QChar - and that has to be
             // tweaked for non-BMP characters that use TWO QChars per codepoint.
-            if (localBuffer[msPos] & 0x80) {
+            if (localBuffer[localBufferPosition] & 0x80) {
                 // MSB is set, so if this is Utf-8 then assume this is the first byte
                 size_t utf8SequenceLength = 1;
-                if ((localBuffer[msPos] & 0xE0) == 0xC0) {
+                if        ((localBuffer[localBufferPosition] & 0xE0) == 0xC0) {
                     // 2 byte sequence - Unicode code-points: U+00000080 to U+000007FF
                     utf8SequenceLength = 2;
-                } else if ((localBuffer[msPos] & 0xF0) == 0xE0) {
+                } else if ((localBuffer[localBufferPosition] & 0xF0) == 0xE0) {
                     // 3 byte sequence - Unicode code-points: U+00000800 to U+0000FFFF
                     utf8SequenceLength = 3;
-                } else if ((localBuffer[msPos] & 0xF8) == 0xF0) {
+                } else if ((localBuffer[localBufferPosition] & 0xF8) == 0xF0) {
                     // 4 byte sequence - Unicode code-points: U+00010000 to U+001FFFFF (<= U+0010FFF LEGAL)
                     utf8SequenceLength = 4;
-                } else if ((localBuffer[msPos] & 0xFC) == 0xF8) {
+                } else if ((localBuffer[localBufferPosition] & 0xFC) == 0xF8) {
                     // 5 byte sequence - Unicode code-points: U+00200000 to U+03FFFFFF (ALL ILLEGAL)
                     utf8SequenceLength = 5;
-                } else if ((localBuffer[msPos] & 0xFE) == 0xFC) {
+                } else if ((localBuffer[localBufferPosition] & 0xFE) == 0xFC) {
                     // 6 byte sequence - Unicode code-points: U+04000000 to U+7FFFFFFF (ALL ILLEGAL)
                     utf8SequenceLength = 6;
                 }
 
-                if (msPos + utf8SequenceLength > msLength) {
+                if ((localBufferPosition + utf8SequenceLength) > localBufferLength) {
                     // Not enough bytes left in localBuffer to complete the utf-8
                     // sequence - need to save and prepend onto incoming data next
                     // time around.
@@ -2422,11 +2394,13 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     // locally generated material from Lua feedTriggers(...)
                     if( isFromServer ) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) Insufficent bytes in buffer to complate UTF-8 sequence, storing: "
-                                 << localBuffer.substr(msPos).length()
-                                 << " bytes for next call to this method...";
+                        qDebug() << "TBuffer::translateToPlainText(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:"
+                                 << utf8SequenceLength
+                                 << " but we currently only have: "
+                                 << localBuffer.substr(localBufferPosition).length()
+                                 << " bytes (which we will store for next call to this method)...";
 #endif
-                        mIncompleteUtf8SequenceBytes = localBuffer.substr(msPos);
+                        mIncompleteUtf8SequenceBytes = localBuffer.substr(localBufferPosition);
                     }
                     return; // Bail out
                 }
@@ -2437,16 +2411,16 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
                 switch (utf8SequenceLength) {
                 case 4:
-                    if ((localBuffer[msPos+3] & 0xC0) != 0x80) {
+                    if ((localBuffer[localBufferPosition+3] & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 4th byte in UTF-8 sequence is invalid!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
-                    else if(( (localBuffer[msPos]   & 0x07) >  0x04)
-                            ||((  (localBuffer[msPos]   & 0x07) == 0x04)
-                               &&((localBuffer[msPos+1] & 0x3F) >  0x0F))) {
+                    else if(( (localBuffer[localBufferPosition]   & 0x07) >  0x04)
+                            ||((  (localBuffer[localBufferPosition]   & 0x07) == 0x04)
+                               &&((localBuffer[localBufferPosition+1] & 0x3F) >  0x0F))) {
 
                         // For 4 byte values the bits are distributed:
                         //  Byte 1    Byte 2    Byte 3    Byte 4
@@ -2455,10 +2429,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         // So this (the maximum valid character) is:
                         //      ABC    DEFGHI    JKLMNO    PQRSTU
                         //      100    001111    111111    111111
-                        // So if the first byte localBuffer[msPos] & 0x07 is:
+                        // So if the first byte localBuffer[localBufferPosition] & 0x07 is:
                         //  < 0x04 then must be in range
                         //  > 0x04 then must be out of range
-                        // == 0x04 then consider localBuffer[msPos+1] & 0x3F:
+                        // == 0x04 then consider localBuffer[localBufferPosition+1] & 0x3F:
                         //     <= 001111 0x0F then must be in range
                         //      > 001111 0x0F then must be out of range
 
@@ -2471,13 +2445,13 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                     // Fall-through
                 case 3:
-                    if ((localBuffer[msPos+2] & 0xC0) != 0x80) {
+                    if ((localBuffer[localBufferPosition+2] & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    } else if ((localBuffer[msPos] & 0x0F) == 0x0D) {
+                    } else if ((localBuffer[localBufferPosition] & 0x0F) == 0x0D) {
 
                         // For 3 byte values the bits are distributed:
                         //  Byte 1    Byte 2    Byte 3
@@ -2512,9 +2486,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    } else if ((static_cast<quint8>(localBuffer[msPos+2]) == 0xbf)
-                              && (static_cast<quint8>(localBuffer[msPos+1]) == 0xbb)
-                              && (static_cast<quint8>(localBuffer[msPos]  ) == 0xef)) {
+                    } else if (  (static_cast<quint8>(localBuffer[localBufferPosition+2]) == 0xbf)
+                              && (static_cast<quint8>(localBuffer[localBufferPosition+1]) == 0xbb)
+                              && (static_cast<quint8>(localBuffer[localBufferPosition]  ) == 0xef)) {
 
                         // Got caught out by this one - it is the Utf-8 BOM and
                         // needs to be ignored as it transcodes to NO codepoints!
@@ -2527,7 +2501,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                     // Fall-through
                 case 2:
-                    if ((localBuffer[msPos+1] & 0xC0) != 0x80) {
+                    if ((localBuffer[localBufferPosition+1] & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 2nd byte in UTF-8 sequence is invalid!";
 #endif
@@ -2537,9 +2511,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                     // Also test for (and reject) overlong sequences - don't
                     // need to check 5 or 6 ones as those are already rejected:
-                    if ((((localBuffer[msPos] & 0xFE) == 0xC0) && ((localBuffer[msPos+1] & 0xC0) == 0x80))
-                       ||(( localBuffer[msPos]         == 0xE0) && ((localBuffer[msPos+1] & 0xE0) == 0x80))
-                       ||(( localBuffer[msPos]         == 0xF0) && ((localBuffer[msPos+1] & 0xF0) == 0x80))) {
+                    if (((( localBuffer[localBufferPosition] & 0xFE) == 0xC0) && ((localBuffer[localBufferPosition+1] & 0xC0) == 0x80))
+                       ||(( localBuffer[localBufferPosition]         == 0xE0) && ((localBuffer[localBufferPosition+1] & 0xE0) == 0x80))
+                       ||(( localBuffer[localBufferPosition]         == 0xF0) && ((localBuffer[localBufferPosition+1] & 0xF0) == 0x80))) {
 
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong "
@@ -2563,7 +2537,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                 // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
                 if (isValid) {
-                    QString codePoint = QString(localBuffer.substr(msPos,utf8SequenceLength).c_str());
+                    QString codePoint = QString(localBuffer.substr(localBufferPosition,utf8SequenceLength).c_str());
                     switch(codePoint.size()) {
                     default:
                         Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
@@ -2603,7 +2577,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 #if defined(DEBUG_UTF8_PROCESSING)
                     QString debugMsg;
                     for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                        debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[msPos+i]),2,16));
+                        debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[localBufferPosition+i]),2,16));
                     }
                     qDebug().nospace() << "    Sequence bytes are: "
                                        << debugMsg.toLatin1().constData();
@@ -2618,7 +2592,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                 // As there is already a unit increment at the bottom of loop
                 // add one less than the sequence length:
-                msPos += utf8SequenceLength - 1;
+                localBufferPosition += utf8SequenceLength - 1;
             } else {
                 // Single byte character i.e. Unicode points: U+00000000 to U+0000007F
                 mMudLine.append(ch);
@@ -2629,7 +2603,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             if (ch & 0x80) {
                 // Was going to ignore this byte, not add a TChar instance
                 // either and move on:
-                // ++msPos;
+                // ++localBufferPosition;
                 // continue;
                 // but instead insert the "Replacement Character Marker"
                 mMudLine.append(QChar::ReplacementCharacter);
@@ -2639,23 +2613,22 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
         }
 
         TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
-                  ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
-                  ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
-                  bgColorR,
-                  bgColorG,
-                  bgColorB,
-                  mIsDefaultColor ? mBold : false,
-                  mItalics,
-                  mUnderline,
-                  mStrikeOut );
+                 ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                 ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                 bgColorR,
+                 bgColorG,
+                 bgColorB,
+                 mIsDefaultColor ? mBold : false,
+                 mItalics,
+                 mUnderline,
+                 mStrikeOut );
 
-        if( mMXP_LINK_MODE )
-        {
+        if (mMXP_LINK_MODE) {
             c.link = mLinkID;
             c.flags |= TCHAR_UNDERLINE;
         }
 
-        mMudBuffer.push_back( c );
+        mMudBuffer.push_back(c);
 
         if (isTwoTCharsNeeded) {
             TChar c2( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
@@ -2670,10 +2643,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                       mStrikeOut );
 
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE?
-            mMudBuffer.push_back( c2 );
+            mMudBuffer.push_back(c2);
         }
 
-        msPos++;
+        ++localBufferPosition;
     }
 }
 
