@@ -7143,7 +7143,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi) );
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)) );
     pB->setStyleSheet( styleSheet );
 }
 
@@ -7196,7 +7196,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
     if( ! pI ) return;
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi) );
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)) );
     pB->setStyleSheet( styleSheet );
 }
 

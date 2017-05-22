@@ -769,7 +769,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Insert replacement value into hash
             itRemappedArea.setValue(replacementAreaId);
             if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
-                infoMsg.append(QStringLiteral("\n%1 ==> %2").arg(faultyAreaId, replacementAreaId));
+                infoMsg.append(QStringLiteral("\n%1 ==> %2").arg(QString::number(faultyAreaId), QString::number(replacementAreaId)));
             }
 
             mpMap->appendAreaErrorMsg(faultyAreaId, tr("[ INFO ]  - The area with this bad id was renumbered to: %1.").arg(replacementAreaId), true);
@@ -852,7 +852,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
             validUsedRoomIds.insert(newRoomId);
             if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
-                infoMsg.append(QStringLiteral("%1 ==> %2").arg(itRenumberedRoomId.key(), itRenumberedRoomId.value()));
+                infoMsg.append(QStringLiteral("%1 ==> %2").arg(QString::number(itRenumberedRoomId.key()), QString::number(itRenumberedRoomId.value())));
             }
 
             mpMap->appendRoomErrorMsg(itRenumberedRoomId.key(), tr("[ INFO ]  - This room with the bad id was renumbered to: %1.").arg(itRenumberedRoomId.value()), true);

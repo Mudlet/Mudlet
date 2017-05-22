@@ -4075,7 +4075,7 @@ void T2DMap::slot_setArea()
         it.next();
         int areaID = it.key();
         if( areaID > 0 ) {
-            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value(), areaID ), QVariant(areaID) );
+            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value(), QString::number(areaID) ), QVariant(areaID) );
         }
     }
 

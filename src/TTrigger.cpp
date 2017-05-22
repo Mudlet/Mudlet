@@ -1272,7 +1272,7 @@ bool TTrigger::setupTmpColorTrigger( int ansiFg, int ansiBg )
     TColorTable * pCT = createColorPattern( ansiFg, ansiBg );
     if( ! pCT ) return false;
     QString code;
-    code = QString("FG%1BG%2").arg(ansiFg, ansiBg);
+    code = QString("FG%1BG%2").arg(QString::number(ansiFg), QString::number(ansiBg));
     mRegexCodeList << code;
     mRegexCodePropertyList << REGEX_COLOR_PATTERN;
     mColorPatternList.push_back( pCT );
