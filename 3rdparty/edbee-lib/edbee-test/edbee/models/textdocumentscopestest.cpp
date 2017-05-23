@@ -9,7 +9,6 @@
 #include "edbee/edbee.h"
 
 #include "edbee/debug.h"
-#include "moc_textdocumentscopestest.cpp"
 
 namespace edbee {
 

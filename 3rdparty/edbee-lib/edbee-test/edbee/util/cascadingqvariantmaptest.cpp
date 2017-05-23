@@ -8,7 +8,6 @@
 #include "edbee/util/cascadingqvariantmap.h"
 
 #include "edbee/debug.h"
-#include "moc_cascadingqvariantmaptest.cpp"
 
 namespace edbee {
 

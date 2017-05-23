@@ -12,7 +12,6 @@
 #include "edbee/io/textdocumentserializer.h"
 
 #include "edbee/debug.h"
-#include "moc_textdocumentserializertest.cpp"
 
 namespace edbee {
 

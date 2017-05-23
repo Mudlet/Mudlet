@@ -4,7 +4,6 @@
  */
 
 #include "rangelineiteratortest.h"
-#include "moc_rangelineiteratortest.cpp"
 
 #include "edbee/models/chardocument/chartextdocument.h"
 #include "edbee/models/textrange.h"

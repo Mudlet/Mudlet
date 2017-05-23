@@ -14,7 +14,6 @@
 #include "edbee/models/textrange.h"
 
 #include "edbee/debug.h"
-#include "moc_textdocumenttest.cpp"
 
 namespace edbee {
 

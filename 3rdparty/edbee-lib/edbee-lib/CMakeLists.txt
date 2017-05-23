@@ -83,7 +83,7 @@ SET(SOURCES
    edbee/data/factorycommandmap.cpp
 )
 
-SET(EDBEE_HEADERS
+SET(HEADERS
    edbee/util/logging.h 
    edbee/util/mem/debug_new.h 
    edbee/util/mem/debug_allocs.h 

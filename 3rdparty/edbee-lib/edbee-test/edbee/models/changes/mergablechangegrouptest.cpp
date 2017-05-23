@@ -12,7 +12,6 @@
 #include "edbee/models/chardocument/chartextdocument.h"
 
 #include "edbee/debug.h"
-#include "moc_mergablechangegrouptest.cpp"
 
 namespace edbee {
 

@@ -17,8 +17,12 @@
 // MACROS
 //=============================================================================
 
-#define DECLARE_TEST(className) static edbee::test::Test<className> t(#className)
-#define DECLARE_NAMED_TEST(name,className) static edbee::test::Test<className> name(#className)
+#define TEST_CONCATENATE_DETAIL(x, y) x##y
+#define TEST_CONCATENATE(x, y) TEST_CONCATENATE_DETAIL(x, y)
+#define TEST_MAKE_UNIQUE(x) TEST_CONCATENATE(x, __COUNTER__)
+
+#define DECLARE_TEST(className) static edbee::test::Test<className> TEST_MAKE_UNIQUE(t)(#className)
+#define DECLARE_NAMED_TEST(name,className) static edbee::test::Test<className> TEST_MAKE_UNIQUE(name)(#className)
 
 
 namespace edbee { namespace test {

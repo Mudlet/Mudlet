@@ -11,7 +11,6 @@
 #include "edbee/views/textselection.h"
 
 #include "edbee/debug.h"
-#include "moc_duplicatecommandtest.cpp"
 
 namespace edbee {
 

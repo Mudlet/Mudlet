@@ -3,6 +3,20 @@
 
 #include "config-onig-edbee.h"
 
+#ifdef _WIN32
+
+    #include "win32/config.h"
+
+    // Rick: added to make it compile on windows
+    #define ONIG_EXTERN extern
+
+    // Rick: added to decrease the numberr of warnings for onig
+    #define _CRT_SECURE_NO_WARNINGS
+
+#else
+
+
+
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.
    */
@@ -124,3 +138,5 @@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
+
+#endif

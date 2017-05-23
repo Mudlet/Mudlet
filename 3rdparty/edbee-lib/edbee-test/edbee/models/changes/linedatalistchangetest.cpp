@@ -10,7 +10,6 @@
 #include "edbee/models/textlinedata.h"
 
 #include "edbee/debug.h"
-#include "moc_linedatalistchangetest.cpp"
 
 namespace edbee {
 

@@ -10,7 +10,6 @@
 #include "edbee/models/chardocument/chartextdocument.h"
 
 #include "edbee/debug.h"
-#include "moc_textbuffertest.cpp"
 
 namespace edbee {
 

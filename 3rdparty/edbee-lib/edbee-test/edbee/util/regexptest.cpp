@@ -8,7 +8,6 @@
 #include "edbee/util/regexp.h"
 
 #include "edbee/debug.h"
-#include "moc_regexptest.cpp"
 
 namespace edbee {
 

@@ -10,7 +10,6 @@
 #include "edbee/util/util.h"
 
 #include "edbee/debug.h"
-#include "moc_utiltest.cpp"
 
 namespace edbee {
 
