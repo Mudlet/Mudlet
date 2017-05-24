@@ -51,6 +51,12 @@ cannot be merged.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
 
+## Use .arg(arg1, arg2) instead of .arg(arg1).arg(arg2)
+
+If you just need to use a plain .arg() call, use multiple arguments within it and not as separate .arg() calls as that'll avoid creating temporary QString objects.
+
+([source](https://meetingcpp.com/tl_files/mcpp/2015/talks/Marc-Mutz-MC++15-Effective-Qt.pdf))
+
 # Internationalization do's and don'ts
 
 Do:
