@@ -2034,7 +2034,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value( _iaid );
             if( _paid )
             {
-                infoText = tr( "Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n").arg(_paid_name).arg(_iaid).arg(_paid->min_x).arg(_paid->max_x).arg(_paid->min_y).arg(_paid->max_y).arg(_paid->min_z).arg(_paid->max_z);
+                infoText = tr( "Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n").arg(_paid_name, QString::number(_iaid), QString::number(_paid->min_x), QString::number(_paid->max_x), QString::number(_paid->min_y), QString::number(_paid->max_y), QString::number(_paid->min_z), QString::number((_paid->max_z)));
             }
             else
             {
@@ -2058,7 +2058,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             switch( selectionSize )
             {
             case 0:
-                infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)) );
                 if( playerArea != mAID ) {
                     f.setItalic( true );
                 }
@@ -2067,7 +2067,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 break;
             case 1:
-                infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)) );
                 f.setBold( true );
                 if( infoColor.lightness() > 127 ) {
                     infoColor = QColor( 255, 223, 191 ); // Slightly orange white
@@ -2077,7 +2077,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 break;
             default:
-                infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)).arg(QString::number(selectionSize)) );
+                infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z), QString::number(selectionSize)) );
                 f.setBold( true );
                 if( infoColor.lightness() > 127 ) {
                     infoColor = QColor( 255, 223, 191 ); // Slightly orange white
@@ -2089,7 +2089,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
         }
 
-        infoText.append( tr("render time: %1S mO: (%2,%3,%4)").arg( __time.nsecsElapsed() * 1.0e-9,0,'f',3).arg(QString::number(mOx)).arg(QString::number(mOy)).arg(QString::number(mOz)) );
+        infoText.append( tr("render time: %1S mO: (%2,%3,%4)").arg( __time.nsecsElapsed() * 1.0e-9,0,'f',3).arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)) );
 
         uint infoLeftSideAvoid = 10; // Left margin for info widget
         if( mMultiSelectionListWidget.isVisible() ) { // Room Selection Widget showing, so increase margin to avoid
@@ -3515,7 +3515,7 @@ void T2DMap::slot_setCharacter()
                     itSymbolUsed.next();
                     if( itSymbolUsed.value() == symbolCountsList.at(i) )
                     {
-                        displayStrings.append( tr("%1 {count:%2}").arg(itSymbolUsed.key()).arg(itSymbolUsed.value()));
+                        displayStrings.append( tr("%1 {count:%2}").arg(itSymbolUsed.key(), itSymbolUsed.value()));
                     }
                 }
             }
@@ -3993,11 +3993,11 @@ void T2DMap::slot_setRoomWeight()
                     {
                         if( itWeightsUsed.key() == 1 )
                         { // Indicate the "default" value which is unity weight
-                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
+                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
                         }
                         else
                         {
-                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
+                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
                         }
                     }
                 }
@@ -4075,7 +4075,7 @@ void T2DMap::slot_setArea()
         it.next();
         int areaID = it.key();
         if( areaID > 0 ) {
-            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value() ).arg( areaID ), QVariant(areaID) );
+            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value(), QString::number(areaID) ), QVariant(areaID) );
         }
     }
 

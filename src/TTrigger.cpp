@@ -193,11 +193,8 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                                                 << "\"\n"
                                                                 >>0;
                 }
-                setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
-                          .arg( tr( "Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\"." )
-                                .arg( i )
-                                .arg( local8Bit.constData() )
-                                .arg( error ) ) );
+                setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                                 .arg(tr("Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\".").arg(QString::number(i), local8Bit.constData(), error)));
                 state = false;
             }
             else
@@ -217,15 +214,12 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              std::stringstream func;
              func << "trigger" << mID << "condition" << i;
              funcName = func.str();
-             QString code = QStringLiteral("function %1()\n%2\nend\n").arg( funcName.c_str() ).arg( regexList[i] );
+             QString code = QStringLiteral("function %1()\n%2\nend\n").arg(funcName.c_str(), regexList[i]);
              QString error;
              if( ! mpLua->compile( code, error, QString::fromStdString(funcName) ) )
              {
-                 setError( QStringLiteral( "<b><font color='blue'>%1</font></b>" )
-                           .arg( tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.")
-                                 .arg( i )
-                                 .arg( regexList.at( i ) )
-                                 .arg( error ) ) );
+                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                                  .arg(tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.").arg(QString::number(i), regexList.at(i), error)));
                  state = false;
                  if( mudlet::debugMode )
                  {
@@ -1278,7 +1272,7 @@ bool TTrigger::setupTmpColorTrigger( int ansiFg, int ansiBg )
     TColorTable * pCT = createColorPattern( ansiFg, ansiBg );
     if( ! pCT ) return false;
     QString code;
-    code = QString("FG%1BG%2").arg(ansiFg).arg(ansiBg);
+    code = QString("FG%1BG%2").arg(QString::number(ansiFg), QString::number(ansiBg));
     mRegexCodeList << code;
     mRegexCodePropertyList << REGEX_COLOR_PATTERN;
     mColorPatternList.push_back( pCT );

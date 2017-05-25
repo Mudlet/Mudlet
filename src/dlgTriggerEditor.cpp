@@ -1830,10 +1830,8 @@ void dlgTriggerEditor::slot_trigger_toggle_active()
         iconError.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
         pItem->setIcon( 0, iconError );
     }
-    showInfo( QString( "Trying to %2 trigger <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+    showInfo(QString("Trying to %2 trigger <em>%1</em> %3.")
+                     .arg(pT->getName(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError()));
     if( pItem->childCount() > 0 )
     {
         children_icon_triggers( pItem );
@@ -2025,9 +2023,7 @@ void dlgTriggerEditor::slot_timer_toggle_active()
 
 
     showInfo( QString( "Trying to %2 timer <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+              .arg(pT->getName(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_alias_toggle_active()
@@ -2075,9 +2071,7 @@ void dlgTriggerEditor::slot_alias_toggle_active()
         pItem->setIcon( 0, iconError );
     }
     showInfo( QString( "Trying to %2 alias <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+              .arg(pT->getName(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
 
     if( pItem->childCount() > 0 )
     {
@@ -2212,9 +2206,7 @@ void dlgTriggerEditor::slot_script_toggle_active()
         pItem->setIcon( 0, iconError );
     }
     showInfo( QString( "Trying to %2 script <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+              .arg(pT->getName(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
 }
 
 void dlgTriggerEditor::slot_action_toggle_active()
@@ -2297,8 +2289,7 @@ void dlgTriggerEditor::slot_action_toggle_active()
     {
         pT->setIsActive( false );
         showError( tr( "Unable to activate (and automatically deactivating) a button/menu/toolbar or the part of a module \"%1\" that contains them; reason: %2." )
-                   .arg( pT->getName() )
-                   .arg( pT->getError() ) );
+                   .arg( pT->getName(), pT->getError() ) );
         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
     }
     pItem->setIcon( 0, icon);
@@ -2353,9 +2344,7 @@ void dlgTriggerEditor::slot_key_toggle_active()
         pItem->setIcon( 0, iconError );
     }
     showInfo( QString( "Trying to %2 key <em>%1</em> %3." )
-              .arg(pT->getName())
-              .arg( pT->shouldBeActive() ? "activate" : "deactivate" )
-              .arg( pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
+              .arg(pT->getName(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError() ) );
     if( pItem->childCount() > 0 )
     {
         children_icon_key( pItem );
@@ -6731,8 +6720,7 @@ void dlgTriggerEditor::slot_export()
     {
         QMessageBox::warning(this, tr("export package:"),
                              tr("Cannot write file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
 
@@ -6795,8 +6783,7 @@ void dlgTriggerEditor::slot_import()
     {
         QMessageBox::warning(this, tr("Import Mudlet Package:"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
 
@@ -6820,10 +6807,10 @@ void dlgTriggerEditor::slot_import()
         QString _home = QDir::homePath();
         _home.append( "/.config/mudlet/profiles/" );
         _home.append( mpHost->getName() );
-        QString _dest = QString( "%1/%2/").arg( _home ).arg( packageName );
+        QString _dest = QString( "%1/%2/").arg(_home, packageName);
         QDir _tmpDir;
         _tmpDir.mkpath(_dest);
-        QString _script = QString( "unzip([[%1]], [[%2]])" ).arg( fileName ).arg( _dest );
+        QString _script = QString( "unzip([[%1]], [[%2]])" ).arg(fileName, _dest);
         mpHost->mLuaInterpreter.compileAndExecuteScript( _script );
 
         // requirements for zip packages:
@@ -6955,8 +6942,7 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     {
        QMessageBox::warning(this, tr("Backup Profile:"),
                             tr("Cannot write file %1:\n%2.")
-                            .arg(fileName)
-                            .arg(file.errorString()));
+                            .arg(fileName, file.errorString()));
        return;
     }
     XMLexport writer( mpHost ); //just export a generic package without host element
@@ -7157,7 +7143,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)) );
     pB->setStyleSheet( styleSheet );
 }
 
@@ -7210,7 +7196,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
     if( ! pI ) return;
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(pT->mColorTriggerFgAnsi).arg(pT->mColorTriggerBgAnsi) );
+    pI->lineEdit->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)) );
     pB->setStyleSheet( styleSheet );
 }
 

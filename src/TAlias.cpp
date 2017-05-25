@@ -265,7 +265,7 @@ void TAlias::compileRegex()
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
             TDebug(QColor(Qt::red), QColor(Qt::gray)) << "in: \"" << mRegexCode << "\"\n" >> 0;
         }
-        setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr("Error: in \"Pattern:\", faulty regular expression, reason: \"%1\".").arg(error)));
+        setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr("Error: in \"Pattern:\", faulty regular expression, reason: \"%1\".", error)));
     } else {
         mOK_init = true;
     }

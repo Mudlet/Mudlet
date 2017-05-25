@@ -1297,9 +1297,7 @@ bool TMap::restore( QString location )
     QStringList entries;
 
     if( location.isEmpty() ) {
-        folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/" )
-                 .arg( QDir::homePath() )
-                 .arg( mpHost->getName() );
+        folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), mpHost->getName());
         QDir dir( folder );
         dir.setSorting( QDir::Time );
         entries = dir.entryList( QDir::Files, QDir::Time );
@@ -1308,7 +1306,7 @@ bool TMap::restore( QString location )
     bool canRestore = true;
     if( entries.size() || ! location.isEmpty() ) {
         QFile file(   location.isEmpty()
-                    ? QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at(0) )
+                    ? QStringLiteral( "%1%2" ).arg(folder, entries.at(0) )
                     : location );
 
         if( ! file.open( QFile::ReadOnly ) ) {
@@ -1574,9 +1572,7 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
 
     QString folder;
     QStringList entries;
-    folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/" )
-             .arg( QDir::homePath() )
-             .arg( profile );
+    folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), profile);
     QDir dir( folder );
     dir.setSorting( QDir::Time );
     entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
@@ -1586,7 +1582,7 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
     }
 
     // As the files are sorted by time this gets the latest one
-    QFile file( QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at( 0 ) ) );
+    QFile file( QStringLiteral( "%1%2" ).arg(folder, entries.at( 0) ) );
 
     if( ! file.open( QFile::ReadOnly ) ) {
         QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
@@ -1977,9 +1973,7 @@ const QString TMap::createFileHeaderLine( const QString title, const QChar fillC
 {
     QString text;
     if( title.length() <= 76 ) {
-        text = QStringLiteral( "%1 %2 %1\n" )
-                               .arg( QString( fillChar ).repeated( (78 - title.length()) / 2 ) )
-                               .arg( title );
+        text = QStringLiteral("%1 %2 %1\n").arg(QString(fillChar).repeated((78 - title.length()) / 2), title);
     }
     else {
         text = title;
@@ -2076,9 +2070,7 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
                          "- look for the (last) report with the title:\n"
                          "\"%2\"." )
                          .arg( QStringLiteral( "%1/.config/mudlet/profiles/%2/log/errors.txt" )
-                                               .arg( QDir::homePath() )
-                                               .arg( mpHost->getName() ) )
-                         .arg( title ) );
+                                               .arg( QDir::homePath(), mpHost->getName() ), title ) );
     }
     else if( mIsFileViewingRecommended && mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
         postMessage( tr( "[ INFO ]  - The equivalent to the above information about that last map\n"
@@ -2087,9 +2079,7 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
                          "- look for the (last) report with the title:\n"
                          "\"%2\"." )
                          .arg( QStringLiteral( "%1/.config/mudlet/profiles/%2/log/errors.txt" )
-                                               .arg( QDir::homePath() )
-                                               .arg( mpHost->getName() ) )
-                         .arg( title ) );
+                                               .arg( QDir::homePath(), mpHost->getName() ), title ) );
     }
 
     mIsFileViewingRecommended = false;
@@ -2127,8 +2117,7 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
                                                      "%1\n"
                                                      "and the error message (may contain technical details) was:"
                                                      "\"%2\"." )
-                         .arg( url.toString() )
-                         .arg( url.errorString() );
+                         .arg( url.toString(), url.errorString() );
         postMessage( errMsg );
         mXmlImportMutex.unlock();
         return;
@@ -2136,8 +2125,7 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
 
     if( ! localFileName || localFileName->isEmpty() ) {
         mLocalMapFileName = QStringLiteral( "%1/.config/mudlet/profiles/%2/map.xml" )
-                            .arg( QDir::homePath() )
-                            .arg( pHost->getName() );
+                            .arg( QDir::homePath(), pHost->getName() );
     }
     else {
         mLocalMapFileName = *localFileName;
@@ -2150,8 +2138,7 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
     // placed this code here:
     request.setRawHeader( QByteArray( "User-Agent" ),
                           QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
-                                      .arg( APP_VERSION )
-                                      .arg( APP_BUILD )
+                                      .arg( APP_VERSION, APP_BUILD )
                                       .toUtf8().constData() ) );
 
 #ifndef QT_NO_OPENSSL
