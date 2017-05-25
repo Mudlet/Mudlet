@@ -2065,7 +2065,8 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
     mapAuditRoomErrors.clear();
     if( mIsFileViewingRecommended && (! mudlet::self()->getAuditErrorsToConsoleEnabled() ) ) {
         postMessage( tr( "[ ALERT ] - At least one thing was detected during that last map operation\n"
-                         "that it is recommended that you review the most recent report in the file:\n"
+                         "that it is recommended that you review the most recent report in\n"
+                         "the file:\n"
                          "\"%1\"\n"
                          "- look for the (last) report with the title:\n"
                          "\"%2\"." )
@@ -2074,7 +2075,8 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
     }
     else if( mIsFileViewingRecommended && mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
         postMessage( tr( "[ INFO ]  - The equivalent to the above information about that last map\n"
-                         "operation has been saved for review as the most recent report in the file:\n"
+                         "operation has been saved for review as the most recent report in\n"
+                         "the file:\n"
                          "\"%1\"\n"
                          "- look for the (last) report with the title:\n"
                          "\"%2\"." )

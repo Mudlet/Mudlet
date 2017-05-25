@@ -690,8 +690,8 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             QString alertMsg = tr( "[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                   " Look for further messsages related to the rooms that are supposed to\n"
-                                   " be in this/these area(s)...",
+                                   " Look for further messsages related to the rooms that are supposed\n"
+                                   " to be in this/these area(s)...",
                                    "Making use of %n to allow quantity dependent message form 8-) !",
                                    missingAreasNeeded.count() );
             mpMap->postMessage(alertMsg);
@@ -715,22 +715,20 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Sort the ids so that the reporting is ordered, which could be
             // helpful if there is a large number of faults
             std::sort(missingAreasNeeded.begin(), missingAreasNeeded.end());
-            for (int newAreaId : missingAreasNeeded) {
-
-                // This will create a new "Default" area name if there is not one
-                // already for this id - and we do not anticipate that it could ever
-                // fail and return false...
-                addArea(newAreaId);
-                infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"")
-                               .arg(newAreaId)
-                               .arg(areaNamesMap.value(newAreaId)));
-            }
-
-            // Didn't really needed to be done, but as we have finished with it
-            // now, clearing it may make tracking the overall processes going on
-            // in the debugger a little clearer...
-            missingAreasNeeded.clear();
         }
+
+        for (int newAreaId : missingAreasNeeded) {
+            // This will create a new "Default" area name if there is not one
+            // already for this id - and we do not anticipate that it could ever
+            // fail and return false...
+            addArea(newAreaId);
+            infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"").arg(QString::number(newAreaId), areaNamesMap.value(newAreaId)));
+        }
+
+        // Didn't really needed to be done, but as we have finished with it
+        // now, clearing it may make tracking the overall processes going on
+        // in the debugger a little clearer...
+        missingAreasNeeded.clear();
 
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             mpMap->postMessage(infoMsg);
