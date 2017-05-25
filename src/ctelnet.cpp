@@ -714,8 +714,6 @@ void cTelnet::processTelnetCommand( const string & command )
                    }
                }
           }
-
-
           break;
       }
 
