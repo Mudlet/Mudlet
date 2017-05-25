@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -69,6 +69,7 @@ const char TN_DO = static_cast<char>(253);
 const char TN_DONT = static_cast<char>(254);
 const char TN_IAC = static_cast<char>(255);
 const char TN_EOR = static_cast<char>(239);
+const char TN_BELL = static_cast<char>(7);
 
 const char GMCP = static_cast<char>(201);
 const char MXP = 91;
@@ -104,7 +105,7 @@ public:
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
-    void encodingChanged(QString encoding);
+    void encodingChanged(const QString&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
@@ -112,8 +113,11 @@ public:
     void _loadReplay();
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
-
     bool socketOutRaw(std::string& data);
+    const QString & getEncoding() const { return mEncoding; }
+    QPair<bool, QString> setEncoding(const QString &, const bool isToStore = true);
+    void postMessage(QString);
+    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -126,7 +130,6 @@ public:
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
-    void postMessage(QString msg);
 
 public slots:
     void setDownloadProgress(qint64, qint64);
@@ -161,7 +164,7 @@ private:
     QTextCodec* incomingDataCodec;
     QTextCodec* outgoingDataCodec;
     QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataDecoder;
+    QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
     double networkLatencyMin;
@@ -183,7 +186,7 @@ private:
 
     int curX, curY;
     QString termType;
-    QString encoding;
+    QString mEncoding;
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mLF_ON_GA;
@@ -205,6 +208,7 @@ private:
     bool enableChannel102;
     QStringList messageStack;
     bool loadingReplay;
+    QStringList mAcceptableEncodings;
 };
 
 #endif // MUDLET_CTELNET_H

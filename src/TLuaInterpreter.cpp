@@ -2376,6 +2376,17 @@ int TLuaInterpreter::closeMudlet(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::loadWindowLayout(lua_State *L) {
+    lua_pushboolean( L, mudlet::self()->loadWindowLayout() );
+    return 1;
+}
+
+int TLuaInterpreter::saveWindowLayout(lua_State *L) {
+    mudlet::self()->mHasSavedLayout = false;
+    lua_pushboolean( L, mudlet::self()->saveWindowLayout() );
+    return 1;
+}
+
 int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host& host = host_from_lua_state(L);
@@ -2393,7 +2404,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(host.getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
         return 2;
     }
 }
@@ -2412,10 +2423,16 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host& host = host_from_lua_state(L);
+
+    bool loadLayout = true;
+    if( ! lua_isnoneornil(L, 2) && lua_isboolean(L, 2) ) {
+        loadLayout = lua_toboolean(L, 2);
+    }
+
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
     QString text(luaSendText.c_str());
-    mudlet::self()->openWindow( &host, text );
-    return 0;
+    lua_pushboolean( L, mudlet::self()->openWindow( pHost, text, loadLayout ));
+    return 1;
 }
 
 int TLuaInterpreter::createMiniConsole( lua_State *L )
@@ -3217,7 +3234,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelClickCallback(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3278,7 +3295,7 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelReleaseCallback(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3339,7 +3356,7 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnEnter(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3400,7 +3417,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
         }
     }
 
-    if (L, mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnLeave(pHost, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -9996,11 +10013,8 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 
     QNetworkRequest request = QNetworkRequest( url );
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    request.setRawHeader( QByteArray( "User-Agent" ),
-                          QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
-                                      .arg( APP_VERSION )
-                                      .arg( APP_BUILD )
-                                      .toUtf8().constData() ) );
+    qDebug() << QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData());
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
     if( url.scheme() == QStringLiteral( "https" ) ) {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
@@ -11712,6 +11726,73 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::setServerEncoding(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, "setServerEncoding: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
+
+    QString newEncoding;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error( L );
+    }
+    else {
+        newEncoding = QString::fromUtf8(lua_tostring(L,1));
+    }
+
+    QPair<bool, QString> results = pHost->mTelnet.setEncoding(newEncoding);
+
+    if(results.first) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, results.second.toLatin1().constData());
+        return 2;
+    }
+}
+
+int TLuaInterpreter::getServerEncoding(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring(L, "getServerEncoding: NULL Host pointer - something is wrong!");
+        lua_error( L );
+        return 1;
+    }
+
+    QString encoding = pHost->mTelnet.getEncoding();
+    if(encoding.isEmpty()) {
+        encoding = QLatin1String("ASCII");
+    }
+    lua_pushstring(L, encoding.toLatin1().constData());
+    return 1;
+}
+
+int TLuaInterpreter::getServerEncodingsList(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, "getServerEncodingsList: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
+
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushstring(L, "ASCII");
+    lua_settable( L, -3);
+    for (int i = 0, total = pHost->mTelnet.getEncodingsList().count(); i < total; ++i) {
+        lua_pushnumber(L, i+2); // Lua indexes start with 1 but we already have one entry
+        lua_pushstring(L, pHost->mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
 
 bool TLuaInterpreter::compileAndExecuteScript(const QString & code )
 {
@@ -12344,9 +12425,9 @@ void TLuaInterpreter::logError( std::string & e, const QString & name, const QSt
     auto red = QColor(Qt::red);
     auto black = QColor(Qt::black);
     QString s1 = QString("[ERROR:]");
-    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
+    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
+    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
 
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
@@ -12680,7 +12761,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempTimer", TLuaInterpreter::tempTimer );
     lua_register( pGlobalLua, "tempTrigger", TLuaInterpreter::tempTrigger );
     lua_register( pGlobalLua, "tempRegexTrigger", TLuaInterpreter::tempRegexTrigger );
-    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
+    lua_register( pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet );
+    lua_register( pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout );
+    lua_register( pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout );
     lua_register( pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow );
     lua_register( pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow );
     lua_register( pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer );
@@ -12941,8 +13024,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
     lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding );
+    lua_register( pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding );
+    lua_register( pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList );
+    lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
 
 
+// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
@@ -13462,6 +13550,37 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
     //return 1;
     return id;
 
+}
+
+int TLuaInterpreter::alert( lua_State * L )
+{
+    double luaAlertDuration = 0.0;
+
+    if( lua_gettop( L ) > 0 )
+    {
+        if( ! lua_isnumber( L, 1 ) )
+        {
+            lua_pushfstring( L, "alert: bad argument #1 type (alert duration in seconds as number expected, got %s!)",
+                            luaL_typename( L, 1 ));
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaAlertDuration = lua_tonumber( L, 1 );
+
+            if( luaAlertDuration < 0.000 )
+            {
+                lua_pushstring( L, "alert: duration, in seconds, is optional but if given must be zero or greater." );
+                return lua_error( L );
+            }
+        }
+    }
+
+    // QApplication::alert expects milliseconds, not seconds
+    QApplication::alert(mudlet::self(), qRound( luaAlertDuration * 1000.0 ));
+
+    return 0;
 }
 
 static int host_key = 0;

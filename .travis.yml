@@ -45,7 +45,8 @@ before_script:
 script:
   - cd ../build
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
-  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ../src/src.pro && make -j2; else cmake --version; cmake .. && make -j2 && make check; fi
+  - if [ "${CC}" = "clang" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${Q_OR_C_MAKE}" = "qmake" ] ; then SPEC="-spec linux-clang"; fi
+  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/src.pro && make -j2; else cmake --version; cmake .. && make -j2 && make check; fi
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
   - bash CI/travis.after_success.sh

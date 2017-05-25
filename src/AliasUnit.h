@@ -66,17 +66,17 @@ public:
     std::list<TAlias*> mCleanupList;
     QMutex mAliasUnitLock;
     int statsAliasTotal;
-    int statsTempAliass;
-    int statsActiveAliass;
-    int statsActiveAliassMax;
-    int statsActiveAliassMin;
-    int statsActiveAliassAverage;
-    int statsTempAliassCreated;
-    int statsTempAliassKilled;
+    int statsTempAliases;
+    int statsActiveAliases;
+    int statsActiveAliasesMax;
+    int statsActiveAliasesMin;
+    int statsActiveAliasesAverage;
+    int statsTempAliasesCreated;
+    int statsTempAliasesKilled;
     int statsAverageLineProcessingTime;
     int statsMaxLineProcessingTime;
     int statsMinLineProcessingTime;
-    int statsRegexAliass;
+    int statsRegexAliases;
     QList<TAlias*> uninstallList;
 
 
