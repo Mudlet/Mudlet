@@ -389,6 +389,11 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+    static int setServerEncoding(lua_State *);
+    static int getServerEncoding(lua_State *);
+    static int getServerEncodingsList(lua_State *);
+    static int alert(lua_State* L);
+// PLACEMARKER: End of Lua functions declarations
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
