@@ -2404,7 +2404,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
         return 2;
     }
 }
@@ -2429,9 +2429,9 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
         loadLayout = lua_toboolean(L, 2);
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = host_from_lua_state(L);
     QString text(luaSendText.c_str());
-    lua_pushboolean( L, mudlet::self()->openWindow( pHost, text, loadLayout ));
+    lua_pushboolean( L, mudlet::self()->openWindow( &host, text, loadLayout ));
     return 1;
 }
 
@@ -3234,7 +3234,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelClickCallback(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3295,7 +3295,7 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelReleaseCallback(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3356,7 +3356,7 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelOnEnter(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3417,7 +3417,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelOnLeave(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -11728,11 +11728,7 @@ int TLuaInterpreter::sendIrc( lua_State * L )
 
 int TLuaInterpreter::setServerEncoding(lua_State * L)
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "setServerEncoding: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = host_from_lua_state(L);
 
     QString newEncoding;
     if (! lua_isstring(L, 1)) {
@@ -11744,7 +11740,7 @@ int TLuaInterpreter::setServerEncoding(lua_State * L)
         newEncoding = QString::fromUtf8(lua_tostring(L,1));
     }
 
-    QPair<bool, QString> results = pHost->mTelnet.setEncoding(newEncoding);
+    QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
 
     if(results.first) {
         lua_pushboolean(L, true);
@@ -11759,14 +11755,9 @@ int TLuaInterpreter::setServerEncoding(lua_State * L)
 
 int TLuaInterpreter::getServerEncoding(lua_State * L)
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "getServerEncoding: NULL Host pointer - something is wrong!");
-        lua_error( L );
-        return 1;
-    }
+    Host& host = host_from_lua_state(L);
 
-    QString encoding = pHost->mTelnet.getEncoding();
+    QString encoding = host.mTelnet.getEncoding();
     if(encoding.isEmpty()) {
         encoding = QLatin1String("ASCII");
     }
@@ -11776,19 +11767,15 @@ int TLuaInterpreter::getServerEncoding(lua_State * L)
 
 int TLuaInterpreter::getServerEncodingsList(lua_State * L)
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "getServerEncodingsList: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = host_from_lua_state(L);
 
     lua_newtable(L);
     lua_pushnumber(L, 1);
     lua_pushstring(L, "ASCII");
     lua_settable( L, -3);
-    for (int i = 0, total = pHost->mTelnet.getEncodingsList().count(); i < total; ++i) {
+    for (int i = 0, total = host.mTelnet.getEncodingsList().count(); i < total; ++i) {
         lua_pushnumber(L, i+2); // Lua indexes start with 1 but we already have one entry
-        lua_pushstring(L, pHost->mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).toLatin1().data());
         lua_settable(L, -3);
     }
     return 1;
