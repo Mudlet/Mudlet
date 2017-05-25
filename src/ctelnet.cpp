@@ -97,7 +97,6 @@ cTelnet::cTelnet( Host * pH )
     // initialize default encoding
     mEncoding = "UTF-8";
     encodingChanged(mEncoding);
-    mWaitingForCompressedStreamToStart = false;
     termType = QString("Mudlet %1").arg(APP_VERSION);
     if( QByteArray(APP_BUILD).trimmed().length() )
         termType.append( QString(APP_BUILD) );
