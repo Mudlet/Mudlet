@@ -749,6 +749,10 @@ void mudlet::slot_close_profile_requested( int tab )
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->closingDown();
+
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    pH->mTelnet.disconnect();
+
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
     for( auto consoleName : hostConsoleMap.keys() ) {
@@ -798,6 +802,10 @@ void mudlet::slot_close_profile()
                 QString name = pH->getName();
 
                 pH->closingDown();
+
+                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+                pH->mTelnet.disconnect();
+
                 mpCurrentActiveHost->mpEditorDialog->close();
                 for( auto consoleName : hostConsoleMap.keys() ) {
                     hostConsoleMap[consoleName]->close();
@@ -1923,6 +1931,9 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
+            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+            pC->mpHost->mTelnet.disconnect();
+
             // close script-editor
             if( pC->mpHost->mpEditorDialog )
             {
@@ -1935,7 +1946,6 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
-
 
             // close console
             pC->close();
