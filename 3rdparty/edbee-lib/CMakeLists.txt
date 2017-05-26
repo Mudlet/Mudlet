@@ -1,8 +1,0 @@
-# Should be called before PROJECT.
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
-
-PROJECT(edbee)
-
-ADD_SUBDIRECTORY(edbee-lib)
-ADD_SUBDIRECTORY(edbee-test)
-
