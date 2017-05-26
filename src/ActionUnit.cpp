@@ -116,20 +116,32 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
+        pChild->setDataChanged();
         pOldParent->popChild(pChild);
         pOldParent->setDataChanged();
+
+        // clear references to old parent toolbars and buttonbars.
+        if( pOldParent->mpToolBar == pChild->mpToolBar ) {
+            pChild->mpToolBar = 0;
+        }
+        if( pOldParent->mpEasyButtonBar == pChild->mpEasyButtonBar ) {
+            pChild->mpEasyButtonBar = 0;
+        }
     }
     if (!pOldParent) {
         removeActionRootNode(pChild);
+        pChild->setDataChanged();
     }
 
     if (pNewParent) {
         pNewParent->Tree<TAction>::addChild(pChild, parentPosition, childPosition);
-        pNewParent->setDataChanged();
         if (pChild) {
             pChild->Tree<TAction>::setParent(pNewParent);
         }
+        pChild->setDataChanged();
+        pNewParent->setDataChanged();
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {
@@ -270,6 +282,9 @@ int ActionUnit::getNewID()
 std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 {
     for (auto& action : mActionRootNodeList) {
+        if( action->mLocation != 4 ) {
+            continue;  // skip over any root action node that is NOT going to be a TToolBar.
+        }
         if (action->mPackageName.size() > 0) {
             for (auto& childAction : *action->mpMyChildrenList) {
                 bool found = false;
@@ -323,6 +338,9 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
 {
     for (auto& rootAction : mActionRootNodeList) {
+        if( rootAction->mLocation == 4 ) {
+            continue; // skip over any root action node that IS going to be a TToolBar.
+        }
         if (rootAction->mPackageName.size() > 0) {
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
                 bool found = false;
