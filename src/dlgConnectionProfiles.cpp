@@ -27,6 +27,7 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "XMLimport.h"
+#include "ctelnet.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -356,7 +357,7 @@ void dlgConnectionProfiles::slot_save_name()
 
         pItem->setText( newProfileName );
 
-        QDir currentPath( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( currentProfileEditName ) );
+        QDir currentPath( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg(QDir::homePath(), currentProfileEditName) );
         QDir dir;
 
         if (currentPath.exists())
@@ -372,7 +373,7 @@ void dlgConnectionProfiles::slot_save_name()
                 notificationAreaMessageBox->setText( tr( "Could not rename your profile data on the computer." ));
             }
         }
-        else if (! dir.mkpath( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( newProfileName ) ) )
+        else if (! dir.mkpath( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg(QDir::homePath(), newProfileName) ) )
         {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
@@ -511,7 +512,7 @@ void dlgConnectionProfiles::slot_deleteprofile_check( const QString text )
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( profile ) );
+    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg(QDir::homePath(), profile) );
     dir.removeRecursively(); // note: we should replace this with a function that pops up a progress dialog should the deletion be taking longer than a second
     fillout_form();
     profiles_tree_widget->setFocus();
@@ -556,7 +557,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData( QString profile, QString item )
 {
-    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath() ).arg( profile ).arg( item ) );
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath(), profile, item ) );
     bool success = file.open( QIODevice::ReadOnly );
     QString ret;
     if ( success ) {
@@ -570,7 +571,7 @@ QString dlgConnectionProfiles::readProfileData( QString profile, QString item )
 
 QStringList dlgConnectionProfiles::readProfileHistory( QString profile, QString item )
 {
-    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath() ).arg( profile ).arg( item ) );
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath(), profile, item ) );
     file.open( QIODevice::ReadOnly );
     QDataStream ifs( & file );
     QString ret;
@@ -586,7 +587,7 @@ QStringList dlgConnectionProfiles::readProfileHistory( QString profile, QString 
 
 void dlgConnectionProfiles::writeProfileData( QString profile, QString item, QString what )
 {
-    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath() ).arg( profile ).arg( item ) );
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath(), profile, item ) );
     file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
     QDataStream ofs( & file );
     ofs << what;
@@ -769,7 +770,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     profile_history->clear();
 
-    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( profile_name ) );
+    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg(QDir::homePath(), profile_name) );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
 
@@ -1147,7 +1148,7 @@ void dlgConnectionProfiles::fillout_form()
         // Previously was using Host.dat file but that is (not now) used or
         // present; now use the "current" directory as that is updated when a
         // profile is used AND saved...
-        QDateTime profile_lastRead = QFileInfo( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg( QDir::homePath() ).arg( mProfileList.at(i) ) ).lastRead();
+        QDateTime profile_lastRead = QFileInfo( QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" ).arg(QDir::homePath(), mProfileList.at(i) ) ).lastRead();
         // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
         // work as expected - so test for validity of the test_date value as well
         if( ( ! test_date.isValid() ) || profile_lastRead > test_date )
@@ -1213,12 +1214,12 @@ void dlgConnectionProfiles::slot_copy_profile()
     port_entry->setReadOnly( false );
 
     // copy the folder on-disk
-    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( oldname ) );
+    QDir dir( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg(QDir::homePath(), oldname) );
     if (!dir.exists())
         return;
 
-    copyFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( oldname ),
-                QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg( QDir::homePath() ).arg( profile_name ) );
+    copyFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg(QDir::homePath(), oldname),
+                QStringLiteral( "%1/.config/mudlet/profiles/%2" ).arg(QDir::homePath(), profile_name) );
     mProfileList << profile_name;
     slot_item_clicked(pItem);
 }
@@ -1243,9 +1244,7 @@ void dlgConnectionProfiles::slot_connectToServer()
 
     if( ! pHost ) return;
 
-    QString folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/current/" )
-                     .arg( QDir::homePath() )
-                     .arg( profile_name );
+    QString folder = QStringLiteral("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), profile_name);
     QDir dir( folder );
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList( QDir::Files, QDir::Time );
@@ -1254,9 +1253,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     lI->getVars( true );
     if( ! entries.isEmpty() )
     {
-        QFile file( QStringLiteral( "%1%2" )
-                    .arg(  folder )
-                    .arg( profile_history->itemData( profile_history->currentIndex() ).toString() ) );
+        QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer( pHost );
         qDebug()<<"[LOADING PROFILE]:"<<file.fileName();
@@ -1291,6 +1288,9 @@ void dlgConnectionProfiles::slot_connectToServer()
             pHost->setLogin( login_entry->text().trimmed() );
         else
             slot_update_login( pHost->getLogin() );
+
+        QString encoding = readProfileData(profile_name, QLatin1String("encoding"));
+        pHost->mTelnet.setEncoding(encoding, false); // Only time not to save the setting
     }
 
     if( needsGenericPackagesInstall )

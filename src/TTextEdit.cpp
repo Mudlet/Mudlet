@@ -1435,14 +1435,14 @@ void TTextEdit::copySelectionToClipboardHTML()
                  ++it ) {
 
                 if( (*it).second == this->mpConsole ) {
-                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
+                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg((*it).first.data(), this->mpHost->getName() );
                     break;
                 }
             }
         }
     }
     else {
-        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg( this->mpConsole->mConsoleName ).arg(  this->mpHost->getName() );
+        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg(this->mpConsole->mConsoleName, this->mpHost->getName() );
     }
 
     QStringList fontsList; // List of fonts to become the font-family entry for

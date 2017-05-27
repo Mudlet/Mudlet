@@ -173,8 +173,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                                          "\"%1\"\n"
                                          "reports it has a version (%2) it must have come from a later Mudlet version,\n"
                                          "and this one cannot read it, you need a newer Mudlet!")
-                                          .arg(pfile->fileName())
-                                          .arg(versionString);
+                                          .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
                     return false;
                 }

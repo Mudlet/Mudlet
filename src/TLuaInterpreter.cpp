@@ -2454,7 +2454,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
         return 2;
     }
 }
@@ -3972,35 +3972,72 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     return 0;
 }
 
-int TLuaInterpreter::connectToServer( lua_State *L )
+int TLuaInterpreter::connectToServer(lua_State* L)
 {
-    int port;
+    // The lua_tointeger(...) call can return a 64-bit integer number, on
+    // Windows Platform that is bigger than the int32_t type (a.k.a. "int" AND
+    // "long" types on that platform)! 8-O
+    lua_Integer port = 23;
     string url;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        url = lua_tostring( L, 1 );
+    bool isToSaveToProfile = false;
+
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost) {
+        lua_pushstring(L, "connectToServer: NULL Host pointer - something is wrong!");
+        return lua_error(L);
     }
 
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "connectToServer: bad argument #1 type (url as string expected, got %s!)", lua_typename(L, 1));
+        return lua_error(L);
+    } else {
+        url = lua_tostring(L, 1);
     }
-    else
-    {
-        port = lua_tonumber( L, 2 );
+
+    if (!lua_isnoneornil(L, 2)) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "connectToServer: bad argument #2 type (port number as number is optional {default = 23}, got %s!)", lua_typename(L, 2));
+            return lua_error(L);
+        } else {
+            port = lua_tointeger(L, 2);
+            if (port > 65535 || port < 1) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}", port);
+                return 2;
+            }
+        }
     }
-    QString _url = url.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.connectIt( _url, port );
-    return 0;
+
+    // Optional argument to save this new connection to disk for this profile.
+    if (!lua_isnoneornil(L, 3)) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "connectToServer: bad argument #3 type (save host name and port number as boolean expected, got %1!)", lua_typename(L, 3));
+            return lua_error(L);
+        } else {
+            isToSaveToProfile = lua_toboolean(L, 3);
+        }
+    }
+
+    if (isToSaveToProfile) {
+        QPair<bool, QString> result = pHost->writeProfileData(QLatin1String("url"), url.c_str());
+        if (!result.first) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "unable to save host name, reason: %s", result.second.toUtf8().constData());
+            return 2;
+        }
+
+        result = pHost->writeProfileData(QLatin1String("url"), QString::number(port));
+        if (!result.first) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "unable to save port number, reason: %s", result.second.toUtf8().constData());
+            return 2;
+        }
+    }
+
+    pHost->mTelnet.connectIt(url.c_str(), port);
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
@@ -10296,11 +10333,8 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 
     QNetworkRequest request = QNetworkRequest( url );
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    request.setRawHeader( QByteArray( "User-Agent" ),
-                          QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
-                                      .arg( APP_VERSION )
-                                      .arg( APP_BUILD )
-                                      .toUtf8().constData() ) );
+    qDebug() << QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData());
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
     if( url.scheme() == QStringLiteral( "https" ) ) {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
@@ -12032,6 +12066,73 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::setServerEncoding(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, "setServerEncoding: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
+
+    QString newEncoding;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error( L );
+    }
+    else {
+        newEncoding = QString::fromUtf8(lua_tostring(L,1));
+    }
+
+    QPair<bool, QString> results = pHost->mTelnet.setEncoding(newEncoding);
+
+    if(results.first) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, results.second.toLatin1().constData());
+        return 2;
+    }
+}
+
+int TLuaInterpreter::getServerEncoding(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if( ! pHost ) {
+        lua_pushstring(L, "getServerEncoding: NULL Host pointer - something is wrong!");
+        lua_error( L );
+        return 1;
+    }
+
+    QString encoding = pHost->mTelnet.getEncoding();
+    if(encoding.isEmpty()) {
+        encoding = QLatin1String("ASCII");
+    }
+    lua_pushstring(L, encoding.toLatin1().constData());
+    return 1;
+}
+
+int TLuaInterpreter::getServerEncodingsList(lua_State * L)
+{
+    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (! pHost) {
+        lua_pushstring(L, "getServerEncodingsList: NULL Host pointer - something is wrong!");
+        return lua_error(L);
+    }
+
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushstring(L, "ASCII");
+    lua_settable( L, -3);
+    for (int i = 0, total = pHost->mTelnet.getEncodingsList().count(); i < total; ++i) {
+        lua_pushnumber(L, i+2); // Lua indexes start with 1 but we already have one entry
+        lua_pushstring(L, pHost->mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
 
 bool TLuaInterpreter::compileAndExecuteScript(const QString & code )
 {
@@ -12661,16 +12762,16 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
 void TLuaInterpreter::logError( std::string & e, const QString & name, const QString & function )
 {
     //QDateTime time = QDateTime::currentDateTime();
-    // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
+    // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss"), name, function, e.c_str());
     //mpHost->mErrorLogStream << entry << endl;
     auto blue = QColor(Qt::blue);
     auto green = QColor(Qt::green);
     auto red = QColor(Qt::red);
     auto black = QColor(Qt::black);
     QString s1 = QString("[ERROR:]");
-    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
+    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
+    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
 
     if( mpHost->mpEditorDialog )
     {
@@ -13265,9 +13366,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
     lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding );
+    lua_register( pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding );
+    lua_register( pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList );
     lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
 
 
+// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
