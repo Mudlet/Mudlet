@@ -419,6 +419,6 @@ private:
     QTimer purgeTimer;
 };
 
-Host& host_from_lua_state(lua_State* L);
+Host& getHostFromLua(lua_State* L);
 
 #endif // MUDLET_LUAINTERPRETER_H
