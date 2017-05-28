@@ -448,6 +448,7 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
     list<TKey*>* childList = item->getChildrenList();
     if (!childList->size()) {
         return;
+    }
     list<TKey *>::iterator it;
     for(it=childList->begin(); it!=childList->end();it++){
         TKey * pChild = *it;
