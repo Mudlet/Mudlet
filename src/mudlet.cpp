@@ -741,6 +741,7 @@ void mudlet::slot_close_profile_requested( int tab )
     Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
+    list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
     QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
 
@@ -749,6 +750,10 @@ void mudlet::slot_close_profile_requested( int tab )
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
     pH->closingDown();
+
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    pH->mTelnet.disconnect();
+
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
     for( auto consoleName : hostConsoleMap.keys() ) {
@@ -764,6 +769,13 @@ void mudlet::slot_close_profile_requested( int tab )
     }
     mHostDockConsoleMap.remove(pH);
     mHostConsoleMap.remove(pH);
+
+    for( TToolBar* pTB : hostToolBarMap ) {
+        if (pTB) {
+            pTB->setAttribute( Qt::WA_DeleteOnClose );
+            pTB->deleteLater();
+        }
+    }
 
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
@@ -793,11 +805,16 @@ void mudlet::slot_close_profile()
             Host * pH = mpCurrentActiveHost;
             if( pH )
             {
+                list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
                 QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
                 QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
                 QString name = pH->getName();
 
                 pH->closingDown();
+
+                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+                pH->mTelnet.disconnect();
+
                 mpCurrentActiveHost->mpEditorDialog->close();
                 for( auto consoleName : hostConsoleMap.keys() ) {
                     hostConsoleMap[consoleName]->close();
@@ -812,6 +829,13 @@ void mudlet::slot_close_profile()
                 }
                 mHostDockConsoleMap.remove(pH);
                 mHostConsoleMap.remove(pH);
+
+                for( TToolBar* pTB : hostTToolBarMap ) {
+                    if (pTB) {
+                        pTB->setAttribute( Qt::WA_DeleteOnClose );
+                        pTB->deleteLater();
+                    }
+                }
 
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )
@@ -1923,6 +1947,9 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
+            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+            pC->mpHost->mTelnet.disconnect();
+
             // close script-editor
             if( pC->mpHost->mpEditorDialog )
             {
@@ -1935,7 +1962,6 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
-
 
             // close console
             pC->close();

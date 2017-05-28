@@ -3884,35 +3884,68 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     return 0;
 }
 
-int TLuaInterpreter::connectToServer( lua_State *L )
+int TLuaInterpreter::connectToServer(lua_State* L)
 {
-    int port;
+    // The lua_tointeger(...) call can return a 64-bit integer number, on
+    // Windows Platform that is bigger than the int32_t type (a.k.a. "int" AND
+    // "long" types on that platform)! 8-O
+    lua_Integer port = 23;
     string url;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        url = lua_tostring( L, 1 );
+    bool isToSaveToProfile = false;
+
+    Host& host = host_from_lua_state(L);
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "connectToServer: bad argument #1 type (url as string expected, got %s!)", lua_typename(L, 1));
+        return lua_error(L);
+    } else {
+        url = lua_tostring(L, 1);
     }
 
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
+    if (!lua_isnoneornil(L, 2)) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "connectToServer: bad argument #2 type (port number as number is optional {default = 23}, got %s!)", lua_typename(L, 2));
+            return lua_error(L);
+        } else {
+            port = lua_tointeger(L, 2);
+            if (port > 65535 || port < 1) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}", port);
+                return 2;
+            }
+        }
     }
-    else
-    {
-        port = lua_tonumber( L, 2 );
+
+    // Optional argument to save this new connection to disk for this profile.
+    if (!lua_isnoneornil(L, 3)) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "connectToServer: bad argument #3 type (save host name and port number as boolean expected, got %1!)", lua_typename(L, 3));
+            return lua_error(L);
+        } else {
+            isToSaveToProfile = lua_toboolean(L, 3);
+        }
     }
-    QString _url = url.c_str();
-    Host& host = host_from_lua_state(L);
-    host.mTelnet.connectIt( _url, port );
-    return 0;
+
+    if (isToSaveToProfile) {
+        QPair<bool, QString> result = host.writeProfileData(QLatin1String("url"), url.c_str());
+        if (!result.first) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "unable to save host name, reason: %s", result.second.toUtf8().constData());
+            return 2;
+        }
+
+        result = host.writeProfileData(QLatin1String("url"), QString::number(port));
+        if (!result.first) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "unable to save port number, reason: %s", result.second.toUtf8().constData());
+            return 2;
+        }
+    }
+
+    host.mTelnet.connectIt(url.c_str(), port);
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
