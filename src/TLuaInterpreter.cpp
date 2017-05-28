@@ -7157,10 +7157,10 @@ int TLuaInterpreter::permKey( lua_State *L )
         luaParent = lua_tostring( L, 2 );
     }
 
-    int luaKeyCode;
+    int luaModifier;
     if( ! lua_isstring( L, 3 ) )
     {
-        lua_pushstring( L, tr( "permKey: bad argument #3 type (key code as string expected, got %1!)" )
+        lua_pushstring( L, tr( "permKey: bad argument #3 type (key modifier as string expected, got %1!)" )
             .arg( luaL_typename( L, 3 ) )
             .toUtf8().constData() );
         lua_error( L );
@@ -7168,13 +7168,13 @@ int TLuaInterpreter::permKey( lua_State *L )
     }
     else
     {
-        luaKeyCode = lua_tointeger( L, 3 );
+        luaModifier = lua_tointeger( L, 3 );
     }
 
-    int luaModifier;
+    int luaKeyCode;
     if( ! lua_isstring( L, 4 ) )
     {
-        lua_pushstring( L, tr( "permKey: bad argument #4 type (key modifier as string expected, got %1!)" )
+        lua_pushstring( L, tr( "permKey: bad argument #4 type (key code as string expected, got %1!)" )
             .arg( luaL_typename( L, 4 ) )
             .toUtf8().constData() );
         lua_error( L );
@@ -7182,14 +7182,14 @@ int TLuaInterpreter::permKey( lua_State *L )
     }
     else
     {
-        luaModifier = lua_tointeger( L, 4 );
+        luaKeyCode = lua_tointeger( L, 4 );
     }
 
 
     string luaFunction = "";
     if( ! lua_isstring( L, 5 ) )
     {
-        lua_pushstring( L, tr( "permKey: bad argument #5 type (key lua code as string expected, got %1!)" )
+        lua_pushstring( L, tr( "permKey: bad argument #5 type (lua code as string expected, got %1!)" )
             .arg( luaL_typename( L, 5 ) )
             .toUtf8().constData() );
         lua_error( L );
@@ -7211,19 +7211,19 @@ int TLuaInterpreter::permKey( lua_State *L )
     QString _luaNameID = luaNameID.c_str();
     QString _luaParent = luaParent.c_str();
     QString _luaFunction = luaFunction.c_str();
-    int _luaKeyCode = luaKeyCode;
     int _luaModifier = luaModifier;
-    int keyID = pLuaInterpreter->startPermKey( _luaNameID, _luaParent, _luaKeyCode, _luaModifier, _luaFunction );
+    int _luaKeyCode = luaKeyCode;
+    int keyID = pLuaInterpreter->startPermKey( _luaNameID, _luaParent, _luaModifier, _luaKeyCode, _luaFunction );
     lua_pushnumber( L, keyID );
     return 1;
 }
 
 int TLuaInterpreter::tempKey( lua_State *L )
 {
-    int luaKeyCode;
+    int luaModifier;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, tr( "tempKey: bad argument #1 type (key code as string expected, got %1!)" )
+        lua_pushstring( L, tr( "tempKey: bad argument #1 type (key modifier as string expected, got %1!)" )
             .arg( luaL_typename( L, 1 ) )
             .toUtf8().constData() );
         lua_error( L );
@@ -7231,13 +7231,13 @@ int TLuaInterpreter::tempKey( lua_State *L )
     }
     else
     {
-        luaKeyCode = lua_tointeger( L, 1 );
+        luaModifier = lua_tointeger( L, 1 );
     }
 
-    int luaModifier;
+    int luaKeyCode;
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, tr( "permKey: bad argument #2 type (key modifier as string expected, got %1!)" )
+        lua_pushstring( L, tr( "permKey: bad argument #2 type (key code as string expected, got %1!)" )
             .arg( luaL_typename( L, 2 ) )
             .toUtf8().constData() );
         lua_error( L );
@@ -7245,7 +7245,7 @@ int TLuaInterpreter::tempKey( lua_State *L )
     }
     else
     {
-        luaModifier = lua_tointeger( L, 2 );
+        luaKeyCode = lua_tointeger( L, 2 );
     }
 
     string luaFunction = "";
@@ -7271,9 +7271,9 @@ int TLuaInterpreter::tempKey( lua_State *L )
     }
     TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
-    int _luaKeyCode = luaKeyCode;
     int _luaModifier = luaModifier;
-    int timerID = pLuaInterpreter->startTempKey( _luaKeyCode, _luaModifier, _luaFunction );
+    int _luaKeyCode = luaKeyCode;
+    int timerID = pLuaInterpreter->startTempKey( _luaModifier, _luaKeyCode, _luaFunction );
     lua_pushnumber( L, timerID );
     return 1;
 }
@@ -13943,7 +13943,7 @@ int TLuaInterpreter::startPermKey( QString & name, QString & parent, int & keyco
     return id;
 }
 
-int TLuaInterpreter::startTempKey( int & keycode, int & modifier, QString & function )
+int TLuaInterpreter::startTempKey( int & modifier, int & keycode, QString & function )
 {
     TKey * pT;
     pT = new TKey( "a", mpHost );
