@@ -415,7 +415,6 @@ private:
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     void logError(std::string& e, const QString&, const QString& function);
 
-    static std::map<lua_State*, Host*> luaInterpreterMap;
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
@@ -425,5 +424,7 @@ private:
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
 };
+
+Host& getHostFromLua(lua_State* L);
 
 #endif // MUDLET_LUAINTERPRETER_H
