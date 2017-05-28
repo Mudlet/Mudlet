@@ -13580,6 +13580,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
 
+    registerLuaKeyCodes( pGlobalLua );
 
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
@@ -13727,6 +13728,37 @@ void TLuaInterpreter::initLuaGlobals()
     lua_pop( pGlobalLua, lua_gettop( pGlobalLua ) );
 
     //FIXME make function call in destructor lua_close(L);
+}
+
+void TLuaInterpreter::registerLuaKeyCodes(lua_State * pGlobalLua)
+{
+    # // Load relatively to MacOS inside Resources when we're in a .app bundle,
+    # // as mudlet-lua always gets copied in by the build script into the bundle
+    #if defined(Q_OS_MAC)
+        QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/KeyCodes.lua";
+    #else
+        QString path = "../src/mudlet-lua/lua/KeyCodes.lua";
+        // Additional "../src/" allows location of lua code when object code is in a
+        // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
+    #endif
+    
+    int error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, -1 ) )
+        {
+            e = "[ ERROR ] - KeyCodes.lua compile error - please report!\n"
+                "Error from Lua: ";
+            e += lua_tostring( pGlobalLua, -1 );
+        }
+        mpHost->postMessage( e.c_str() );
+    }
+    else
+    {
+        mpHost->postMessage( "[  OK  ] - Lua KeyCodes loaded" );
+        return;
+    }
 }
 
 void TLuaInterpreter::loadGlobal()
