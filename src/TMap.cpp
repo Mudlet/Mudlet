@@ -60,19 +60,13 @@ TMap::TMap( Host * pH )
 , mpMapper( Q_NULLPTR )
 , mMapGraphNeedsUpdate( true )
 , mNewMove( true )
-, mDefaultVersion( 16 )      // <== replaces CURRENT_MAP_VERSION
-                            // THIS, mMinVersion AND mMaxVersion SHOULD BE
-                            // REVISED WHEN WE SWITCH FROM A PREVIEW TO A RELEASE VERSION!
-                            // Currently:
-                            // + TLuaInterpreter::setAreaUserData()
-                            // + TLuaInterpreter::setMapUserData() need 17
-                            // (for persistant storage of data)
-                            // + TArea::rooms as QSet<int> needs 18,
-                            // is/was QList<int> in prior versions
-                            // + TMap::mRoomIdHash as QHash<QString, int> needs 18, is/was
-                            // a single mRoomId in prior versions
-, mMaxVersion( 18 )              // CHECKME: Allow 18 ( mDefaultVersion + 2 ) for testing
-, mMinVersion( mDefaultVersion ) // CHECKME: Allow 16 ( mDefaultVersion )
+// default map version that new maps will get
+, mDefaultVersion( 18 )
+// maximum version of the map format that this Mudlet can understand and will
+// allow the user to load
+, mMaxVersion( 18 )
+// minimum version this instance of Mudlet will allow the user to save maps in
+, mMinVersion( 16 )
 , mIsFileViewingRecommended( false )
 , mpNetworkAccessManager( Q_NULLPTR )
 , mpProgressDialog( Q_NULLPTR )
@@ -192,8 +186,8 @@ void TMap::mapClear()
 
 void TMap::logError( QString & msg )
 {
-    QColor orange = QColor(255,128,0);
-    QColor black = QColor(0,0,0);
+    auto orange = QColor(255,128,0);
+    auto black = QColor(Qt::black);
     QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
     if( mpHost->mpEditorDialog )
     {
@@ -1303,9 +1297,7 @@ bool TMap::restore( QString location )
     QStringList entries;
 
     if( location.isEmpty() ) {
-        folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/" )
-                 .arg( QDir::homePath() )
-                 .arg( mpHost->getName() );
+        folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), mpHost->getName());
         QDir dir( folder );
         dir.setSorting( QDir::Time );
         entries = dir.entryList( QDir::Files, QDir::Time );
@@ -1314,7 +1306,7 @@ bool TMap::restore( QString location )
     bool canRestore = true;
     if( entries.size() || ! location.isEmpty() ) {
         QFile file(   location.isEmpty()
-                    ? QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at(0) )
+                    ? QStringLiteral( "%1%2" ).arg(folder, entries.at(0) )
                     : location );
 
         if( ! file.open( QFile::ReadOnly ) ) {
@@ -1580,9 +1572,7 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
 
     QString folder;
     QStringList entries;
-    folder = QStringLiteral( "%1/.config/mudlet/profiles/%2/map/" )
-             .arg( QDir::homePath() )
-             .arg( profile );
+    folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), profile);
     QDir dir( folder );
     dir.setSorting( QDir::Time );
     entries = dir.entryList( QDir::Files|QDir::NoDotAndDotDot, QDir::Time );
@@ -1592,7 +1582,7 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
     }
 
     // As the files are sorted by time this gets the latest one
-    QFile file( QStringLiteral( "%1%2" ).arg( folder ).arg( entries.at( 0 ) ) );
+    QFile file( QStringLiteral( "%1%2" ).arg(folder, entries.at( 0) ) );
 
     if( ! file.open( QFile::ReadOnly ) ) {
         QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
@@ -1824,7 +1814,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     }
     QRectF lr = QRectF( 0, 0, 1000, 1000 );
     QPixmap pix( lr.size().toSize() );
-    pix.fill(QColor(0,0,0,0));
+    pix.fill(Qt::transparent);
     QPainter lp( &pix );
     lp.fillRect( lr, label.bgColor );
     QPen lpen;
@@ -1878,7 +1868,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     QRectF drawRect = QRectF( 0, 0, width*zoom, height*zoom );
     QPixmap imagePixmap = QPixmap(imagePath);
     QPixmap pix = QPixmap( drawRect.size().toSize() );
-    pix.fill(QColor(0,0,0,0));
+    pix.fill(Qt::transparent);
     QPainter lp( &pix );
     lp.drawPixmap(QPoint(0,0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
@@ -1983,9 +1973,7 @@ const QString TMap::createFileHeaderLine( const QString title, const QChar fillC
 {
     QString text;
     if( title.length() <= 76 ) {
-        text = QStringLiteral( "%1 %2 %1\n" )
-                               .arg( QString( fillChar ).repeated( (78 - title.length()) / 2 ) )
-                               .arg( title );
+        text = QStringLiteral("%1 %2 %1\n").arg(QString(fillChar).repeated((78 - title.length()) / 2), title);
     }
     else {
         text = title;
@@ -2082,9 +2070,7 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
                          "- look for the (last) report with the title:\n"
                          "\"%2\"." )
                          .arg( QStringLiteral( "%1/.config/mudlet/profiles/%2/log/errors.txt" )
-                                               .arg( QDir::homePath() )
-                                               .arg( mpHost->getName() ) )
-                         .arg( title ) );
+                                               .arg( QDir::homePath(), mpHost->getName() ), title ) );
     }
     else if( mIsFileViewingRecommended && mudlet::self()->getAuditErrorsToConsoleEnabled() ) {
         postMessage( tr( "[ INFO ]  - The equivalent to the above information about that last map\n"
@@ -2093,9 +2079,7 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
                          "- look for the (last) report with the title:\n"
                          "\"%2\"." )
                          .arg( QStringLiteral( "%1/.config/mudlet/profiles/%2/log/errors.txt" )
-                                               .arg( QDir::homePath() )
-                                               .arg( mpHost->getName() ) )
-                         .arg( title ) );
+                                               .arg( QDir::homePath(), mpHost->getName() ), title ) );
     }
 
     mIsFileViewingRecommended = false;
@@ -2133,8 +2117,7 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
                                                      "%1\n"
                                                      "and the error message (may contain technical details) was:"
                                                      "\"%2\"." )
-                         .arg( url.toString() )
-                         .arg( url.errorString() );
+                         .arg( url.toString(), url.errorString() );
         postMessage( errMsg );
         mXmlImportMutex.unlock();
         return;
@@ -2142,8 +2125,7 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
 
     if( ! localFileName || localFileName->isEmpty() ) {
         mLocalMapFileName = QStringLiteral( "%1/.config/mudlet/profiles/%2/map.xml" )
-                            .arg( QDir::homePath() )
-                            .arg( pHost->getName() );
+                            .arg( QDir::homePath(), pHost->getName() );
     }
     else {
         mLocalMapFileName = *localFileName;
@@ -2156,8 +2138,7 @@ void TMap::downloadMap( const QString * remoteUrl, const QString * localFileName
     // placed this code here:
     request.setRawHeader( QByteArray( "User-Agent" ),
                           QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
-                                      .arg( APP_VERSION )
-                                      .arg( APP_BUILD )
+                                      .arg( APP_VERSION, APP_BUILD )
                                       .toUtf8().constData() ) );
 
 #ifndef QT_NO_OPENSSL
@@ -2397,7 +2378,7 @@ void TMap::slot_replyFinished( QNetworkReply * reply )
 
                     if( readXmlMapFile( file ) ) {
                         TEvent mapDownloadEvent;
-                        mapDownloadEvent.mArgumentList.append( QStringLiteral( "sysMapDownloadEvent" ) );
+                        mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
                         pHost->raiseEvent( mapDownloadEvent );
                     }

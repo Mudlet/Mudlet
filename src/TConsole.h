@@ -58,102 +58,115 @@ class TConsole : public QWidget
     Q_DISABLE_COPY(TConsole)
 
 public:
+    TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
+    void reset();
+    void resetMainConsole();
+    void echoUserWindow(const QString&);
+    Host* getHost();
+    TCommandLine* mpCommandLine;
+    void replace(const QString&);
+    void insertHTML(const QString&);
+    void insertText(const QString&);
+    void insertText(const QString&, QPoint);
+    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false);
+    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
+    void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
+    void setLabelStyleSheet(std::string& buf, std::string& sh);
+    void copy();
+    void cut();
+    void paste();
+    void appendBuffer();
+    void appendBuffer(TBuffer);
+    int getButtonState();
+    void closeEvent(QCloseEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void pasteWindow(TBuffer);
+    void setUserWindow();
+    QStringList getLines(int from, int to);
+    int getLineNumber();
+    int getLineCount();
+    bool deleteLine(int);
+    std::list<int> getFgColor(std::string& buf);
+    std::list<int> getBgColor(std::string& buf);
+    void luaWrapLine(std::string& buf, int line);
 
-                        TConsole( Host *, bool isDebugConsole, QWidget * parent=0 );
-      void              reset();
-      void              resetMainConsole();
-      void              echoUserWindow(const QString & );
-      Host *            getHost();
-      TCommandLine *    mpCommandLine;
-      void              replace(const QString& );
-      void              insertHTML(const QString& );
-      void              insertText(const QString& );
-      void              insertText(const QString&, QPoint );
-      void              insertLink(const QString&, QStringList &, QStringList &, QPoint, bool customFormat=false );
-      void              insertLink(const QString&, QStringList &, QStringList &, bool customFormat=false );
-      void              echoLink(const QString & text, QStringList & func, QStringList & hint, bool customFormat=false );
-      void              setLabelStyleSheet( std::string & buf, std::string & sh );
-      void              copy();
-      void              cut();
-      void              paste();
-      void              appendBuffer();
-      void              appendBuffer( TBuffer );
-      int               getButtonState();
-      void              closeEvent( QCloseEvent *event ) override;
-      void              resizeEvent( QResizeEvent * event ) override;
-      void              pasteWindow( TBuffer );
-      void              setUserWindow();
-      QStringList       getLines( int from, int to );
-      int               getLineNumber();
-      int               getLineCount();
-      bool              deleteLine( int );
-      std::list<int>    getFgColor( std::string & buf );
-      std::list<int>    getBgColor( std::string & buf );
-      void              luaWrapLine( std::string & buf, int line );
+    int getColumnNumber();
+    void createMapper(int, int, int, int);
+    void loadRawFile(std::string);
 
-      int               getColumnNumber();
-      void              createMapper( int, int, int, int );
-      void              loadRawFile( std::string );
-      void              setWrapAt( int pos ){ mWrapAt = pos; buffer.setWrapAt( pos ); }
-      void              setIndentCount( int count ){ mIndentCount = count; buffer.setWrapIndent( count ); }
-      void              echo(const QString & );
-      bool              moveCursor( int x, int y );
-      int               select(const QString&, int numOfMatch = 1 );
-      void              deselect();
-      bool              selectSection( int, int );
-      void              skipLine();
-      void              setFgColor( int, int, int );
-      void              setBgColor( int, int, int );
-      void              changeColors();
-      TConsole *        createBuffer(const QString & name );
-      void              scrollDown( int lines );
-      void              scrollUp( int lines );
-      void              print(const QString &, const QColor fgColor, const QColor bgColor);
-      void              print(const QString & msg );
-      void              print( const char * );
-      void              printDebug( QColor &, QColor &, const QString & );
-      void              printSystemMessage(const QString & msg );
-      void              printOnDisplay( std::string & );
-      void              printCommand( QString & );
-      bool              hasSelection();
-      void              moveCursorEnd();
-      int               getLastLineNumber();
-      void              refresh();
-      TLabel *          createLabel(const QString & name, int x, int y, int width, int height, bool fillBackground );
-      TConsole *        createMiniConsole(const QString & name, int x, int y, int width, int height );
-      bool              createButton(const QString & name, int x, int y, int width, int height, bool fillBackground );
-      bool              raiseWindow(const QString & name );
-      bool              lowerWindow(const QString & name );
-      bool              showWindow(const QString & name );
-      bool              hideWindow(const QString & name );
-      bool              printWindow(const QString & name, const QString & text );
-      bool              setBackgroundImage(const QString & name, const QString & path );
-      bool              setBackgroundColor(const QString & name, int r, int g, int b, int alpha );
-      QString           getCurrentLine( std::string & );
-      void              selectCurrentLine( std::string & );
-      bool              setMiniConsoleFontSize( std::string &, int );
-      void              setBold( bool );
-      void              setLink(const QString & linkText, QStringList & linkFunction, QStringList & linkHint );
-      void              setItalics( bool );
-      void              setUnderline( bool );
-      void              setStrikeOut( bool );
-      void              finalize();
-      void              runTriggers( int );
-      void              showStatistics();
-      void              showEvent( QShowEvent * event ) override;
-      void              hideEvent( QHideEvent * event ) override;
-      void              setConsoleBgColor( int, int, int );
-      void              setConsoleFgColor( int, int, int );
-      std::list<int>    _getFgColor();
-      std::list<int>    _getBgColor();
-      void              _luaWrapLine( int );
-      QString           getCurrentLine();
-      void              selectCurrentLine();
-      bool              saveMap(const QString&);
-      bool              loadMap(const QString&);
-      bool              importMap(const QString&, QString *errMsg = Q_NULLPTR );
-      QSize             getMainWindowSize() const;  // Returns the size of the main buffer area (excluding the command line and toolbars).
-      void              toggleLogging(bool);
+    void setWrapAt(int pos)
+    {
+        mWrapAt = pos;
+        buffer.setWrapAt(pos);
+    }
+
+    void setIndentCount(int count)
+    {
+        mIndentCount = count;
+        buffer.setWrapIndent(count);
+    }
+
+    void echo(const QString&);
+    bool moveCursor(int x, int y);
+    int select(const QString&, int numOfMatch = 1);
+    void deselect();
+    bool selectSection(int, int);
+    void skipLine();
+    void setFgColor(int, int, int);
+    void setBgColor(int, int, int);
+    void changeColors();
+    TConsole* createBuffer(const QString& name);
+    void scrollDown(int lines);
+    void scrollUp(int lines);
+    void print(const QString&, const QColor fgColor, const QColor bgColor);
+    void print(const QString& msg);
+    void print(const char*);
+    void printDebug(QColor&, QColor&, const QString&);
+    void printSystemMessage(const QString& msg);
+    void printOnDisplay(std::string&, const bool isFromServer = false);
+    void printCommand(QString&);
+    bool hasSelection();
+    void moveCursorEnd();
+    int getLastLineNumber();
+    void refresh();
+    TLabel* createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground);
+    TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
+    bool createButton(const QString& name, int x, int y, int width, int height, bool fillBackground);
+    bool raiseWindow(const QString& name);
+    bool lowerWindow(const QString& name);
+    bool showWindow(const QString& name);
+    bool hideWindow(const QString& name);
+    bool printWindow(const QString& name, const QString& text);
+    bool setBackgroundImage(const QString& name, const QString& path);
+    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    QString getCurrentLine(std::string&);
+    void selectCurrentLine(std::string&);
+    bool setMiniConsoleFontSize(std::string&, int);
+    void setBold(bool);
+    void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
+    void setItalics(bool);
+    void setUnderline(bool);
+    void setStrikeOut(bool);
+    void finalize();
+    void runTriggers(int);
+    void showStatistics();
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    void setConsoleBgColor(int, int, int);
+    void setConsoleFgColor(int, int, int);
+    std::list<int> _getFgColor();
+    std::list<int> _getBgColor();
+    void _luaWrapLine(int);
+    QString getCurrentLine();
+    void selectCurrentLine();
+    bool saveMap(const QString&);
+    bool loadMap(const QString&);
+    bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
+
+    // Returns the size of the main buffer area (excluding the command line and toolbars).
+    QSize getMainWindowSize() const;
+
+    void toggleLogging(bool);
 
     QPointer<Host> mpHost;
 
@@ -249,22 +262,22 @@ public:
     int mCurrentSearchResult;
     QList<int> mSearchResults;
     QString mSearchQuery;
+    bool mSaveLayoutRequested;
 
 signals:
 
 
 public slots:
+    void slot_searchBufferUp();
+    void slot_searchBufferDown();
+    void slot_toggleReplayRecording();
+    void slot_stop_all_triggers(bool);
+    void slot_toggleLogging();
 
-      void              slot_searchBufferUp();
-      void              slot_searchBufferDown();
-      void              slot_toggleReplayRecording();
-      void              slot_stop_all_triggers( bool );
-      void              slot_toggleLogging();
-    void                slot_reloadMap( QList<QString> );
-                        // Used by mudlet class as told by "Profile Preferences"
-                        // =>"Copy Map" in another profile to inform a list of
-                        // profiles - asynchronously - to load in an updated map
-
+    // Used by mudlet class as told by "Profile Preferences"
+    // =>"Copy Map" in another profile to inform a list of
+    // profiles - asynchronously - to load in an updated map
+    void slot_reloadMap(QList<QString>);
 };
 
 #endif // MUDLET_TCONSOLE_H

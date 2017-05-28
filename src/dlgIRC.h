@@ -24,17 +24,10 @@
 
 #include "pre_guard.h"
 #include "ui_irc.h"
-#ifdef Q_CC_MSVC
-#include <irc.h>
-#include <irccommand.h>
-#include <ircmessage.h>
-#include <ircsession.h>
-#else
-#include "irc/include/irc.h"
-#include "irc/include/irccommand.h"
-#include "irc/include/ircmessage.h"
-#include "irc/include/ircsession.h"
-#endif
+#include <Irc>
+#include <IrcCommand>
+#include <IrcConnection>
+#include <IrcMessage>
 #include "post_guard.h"
 
 
@@ -47,7 +40,7 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 public:
     dlgIRC();
 
-    IrcSession* session;
+    IrcConnection* connection;
 
 public slots:
     void onMessageReceived(IrcMessage*);

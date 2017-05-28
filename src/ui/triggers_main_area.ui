@@ -35,7 +35,16 @@
    <property name="spacing">
     <number>0</number>
    </property>
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
@@ -208,7 +217,16 @@
       <property name="spacing">
        <number>1</number>
       </property>
-      <property name="margin">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
@@ -226,7 +244,16 @@
          <property name="spacing">
           <number>0</number>
          </property>
-         <property name="margin">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
@@ -325,7 +352,16 @@
             <property name="spacing">
              <number>0</number>
             </property>
-            <property name="margin">
+            <property name="leftMargin">
+             <number>1</number>
+            </property>
+            <property name="topMargin">
+             <number>1</number>
+            </property>
+            <property name="rightMargin">
+             <number>1</number>
+            </property>
+            <property name="bottomMargin">
              <number>1</number>
             </property>
             <item>
@@ -789,7 +825,16 @@
          <bool>true</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
-         <property name="margin">
+         <property name="leftMargin">
+          <number>1</number>
+         </property>
+         <property name="topMargin">
+          <number>1</number>
+         </property>
+         <property name="rightMargin">
+          <number>1</number>
+         </property>
+         <property name="bottomMargin">
           <number>1</number>
          </property>
          <property name="spacing">
@@ -880,12 +925,7 @@
             </palette>
            </property>
            <property name="toolTip">
-            <string>The trigger will only fire if all conditions on the list 
-have been met within the specified line margin. 
-If this option is not set the trigger will fire if any 
-conditon on the list has been met. Read more 
-about the additional implications in the manual 
-as this is a complex topic.</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The trigger will only fire if all conditions on the list have been met within the specified line delta, and captures will be saved in &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; instead of &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. If this option is not set the trigger will fire if any conditon on the list has been met.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="autoFillBackground">
             <bool>true</bool>

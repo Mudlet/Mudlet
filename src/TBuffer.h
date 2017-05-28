@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,8 +29,10 @@
 #include <QMap>
 #include <QPoint>
 #include <QPointer>
+#include <QString>
 #include <QStringList>
 #include <QTime>
+#include <QVector>
 #include "post_guard.h"
 
 #include <deque>
@@ -93,6 +95,9 @@ struct TMxpElement
 
 class TBuffer
 {
+    static const QMap<QString, QVector<QChar>> csmEncodingTable; // private!
+
+
 public:
     TBuffer(Host* pH);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
@@ -102,7 +107,7 @@ public:
     void log(int, int);
     int skipSpacesAtBeginOfLine(int i, int i2);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format);
-    QString bufferToHtml(QPoint P1, QPoint P2);
+    QString bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     QString& line(int n);
     int find(int line, const QString& what, int pos);
@@ -123,16 +128,14 @@ public:
     bool applyBgColor(QPoint&, QPoint&, int, int, int);
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
-    QPoint& insertText(const QString& what, QPoint& where);
     int getLastLineNumber();
     QStringList getEndLines(int);
     void clear();
     void resetFontSpecs();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s);
+    void translateToPlainText(std::string& s, const bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
     void appendLine(const QString& chunk, int sub_start, int sub_end, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout, int linkID = 0);
-    int lookupColor(const QString& s, int pos);
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
     void updateColors();
@@ -140,6 +143,7 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
+    static const QList<QString> getHardCodedEncodingTableKeys() {return csmEncodingTable.keys();}
 
 
     std::deque<TChar> bufferLine;
@@ -160,8 +164,6 @@ public:
     int speedTP;
     int speedSequencer;
     int speedAppend;
-    int msLength;
-    int msPos;
 
     int mCursorY;
     bool mMXP;
@@ -200,7 +202,7 @@ private:
     bool mIsDefaultColor;
     bool isUserScrollBack;
     int currentFgColorProperty;
-    QString mFormatSequenceRest;
+
     QColor mBlack;
     int mBlackR;
     int mBlackG;
@@ -301,6 +303,9 @@ private:
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
     int mCode[1024]; //FIXME: potential overflow bug
+    // Used to hold the incomplete bytes (1-3) that could be left at the end of
+    // a packet:
+    std::string mIncompleteUtf8SequenceBytes;
 };
 
 #endif // MUDLET_TBUFFER_H

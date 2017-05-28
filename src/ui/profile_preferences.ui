@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>744</width>
-    <height>663</height>
+    <height>668</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -134,6 +134,28 @@
         </widget>
        </item>
        <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_encoding">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="title">
+          <string>Server data encoding</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <widget class="QComboBox" name="comboBox_encoding">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If you are playing a non-English MUD and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your MUD.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
           <string>Misc</string>
@@ -160,6 +182,13 @@
             </property>
             <property name="text">
              <string>Save log files in HTML format instead of plain text</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="mIsLoggingTimestamps">
+            <property name="text">
+             <string>Add timestamps at the beginning of log lines</string>
             </property>
            </widget>
           </item>
@@ -545,6 +574,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Top border height:</string>
             </property>
@@ -558,11 +590,14 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="minimum">
-             <number>0</number>
+             <number>-1000000</number>
             </property>
             <property name="maximum">
-             <number>2000</number>
+             <number>1000000</number>
             </property>
             <property name="value">
              <number>0</number>
@@ -583,6 +618,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Left border width:</string>
             </property>
@@ -596,11 +634,14 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="minimum">
-             <number>0</number>
+             <number>-1000000</number>
             </property>
             <property name="maximum">
-             <number>2000</number>
+             <number>1000000</number>
             </property>
             <property name="value">
              <number>0</number>
@@ -621,6 +662,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Bottom border height:</string>
             </property>
@@ -634,11 +678,14 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="minimum">
-             <number>0</number>
+             <number>-1000000</number>
             </property>
             <property name="maximum">
-             <number>2000</number>
+             <number>1000000</number>
             </property>
             <property name="value">
              <number>0</number>
@@ -659,6 +706,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="text">
              <string>Right border width:</string>
             </property>
@@ -672,11 +722,14 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="minimum">
-             <number>0</number>
+             <number>-1000000</number>
             </property>
             <property name="maximum">
-             <number>2000</number>
+             <number>1000000</number>
             </property>
             <property name="value">
              <number>0</number>
@@ -1421,6 +1474,19 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_showDefaultArea">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show the default area in map area selection</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1540,6 +1606,43 @@
             <property name="text">
              <string>Report map issues on screen</string>
             </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_mapFileSaveFormatVersion">
+            <property name="text">
+             <string>Map format version:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>250</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+            <property name="currentText">
+             <string># {default version}</string>
+            </property>
+            <item>
+             <property name="text">
+              <string># {default version}</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -1992,50 +2095,6 @@
           <property name="labelAlignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_mapFileSaveFormatVersion">
-            <property name="text">
-             <string>Override map file format version:</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Mudlet&lt;/span&gt; is a project.that is under active development. 8-)&lt;/p&gt;&lt;p&gt;As such, when new features are added, it is sometimes necessary to change what information is stored between sessions.&lt;/p&gt;&lt;p&gt;To allow new features to be incorporated the developers will need to test when that extra data is part of the map data files that Mudlet uses and this control allows them to temporarily change what is written out as part of the map file.&lt;/p&gt;&lt;p&gt;It is not recommended to change this setting to be &lt;b&gt;&lt;i&gt;above&lt;/i&gt;&lt;/b&gt; the &lt;i&gt;default&lt;/i&gt; unless you know why you want to do so as the files that are produced may not be readable by other versions that you or others might have if you do have multiple versions installed (e.g. for testing) or you share your maps with others; also, if there is a defect in the new code you may experence data loss!&lt;/p&gt;&lt;p&gt;Conversely selecting a version &lt;b&gt;&lt;i&gt;below&lt;/i&gt;&lt;/b&gt; the &lt;i&gt;default&lt;/i&gt; may cause data loss and would not normally be recommend &lt;u&gt;unless you need to fall back by one version so that you CAN share map files with others who have not &lt;i&gt;yet&lt;/i&gt; updated to a freshly released version&lt;/u&gt;.&lt;/p&gt;&lt;p&gt;In short - do not mess with this unless you know what the effects wil be.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="editable">
-             <bool>false</bool>
-            </property>
-            <property name="currentText">
-             <string># {default version}</string>
-            </property>
-            <item>
-             <property name="text">
-              <string># {default version}</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_showDefaultArea">
-            <property name="text">
-             <string>Show (-1) area {this message should have been overwritten by initialisation code - report if not!}</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>

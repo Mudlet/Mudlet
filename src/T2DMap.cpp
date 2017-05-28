@@ -169,7 +169,7 @@ void T2DMap::init()
        {
            j++;
            QPixmap b(gzoom,gzoom);
-           b.fill(QColor(0,0,0,0));
+           b.fill(Qt::transparent);
            QPainter p(&b);
            QColor c = _getColor(k);
            p.setPen(c);
@@ -680,7 +680,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
         if( !pRID || !pAID ) return;
         ox = mOx;
         oy = mOy;
-// N/U:         oz = mOz;
     }
     if( ox*tx > xspan/2*tx )
         _rx = -(tx*ox-xspan/2*tx);
@@ -695,7 +694,6 @@ void T2DMap::paintEvent( QPaintEvent * e )
     py = oy*ty+_ry;
 
     TArea * pArea = pAID;
-    if( ! pArea ) return;
 
     int zEbene;
     zEbene = mOz;
@@ -1078,7 +1076,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                         _color.setBlue( pR->customLinesColor[itk.key()][2] );
                     }
                     else
-                        _color = QColor(255,0,0);
+                        _color = QColor(Qt::red);
                     bool _arrow = pR->customLinesArrow[itk.key()];
                     QString _style = pR->customLinesStyle[itk.key()];
                     QPointF _cstartP;
@@ -1578,7 +1576,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _gradient.setColorAt(0.799,QColor(150,100,100,100));
                 _gradient.setColorAt(0.7, QColor(255,0,0,200));
                 _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1630,7 +1628,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     QRadialGradient _gradient(_center,_radius);
                     _gradient.setColorAt(0.85, c);
                     _gradient.setColorAt(0, QColor(255,255,255,255));
-                    QPen myPen(QColor(0,0,0,0));
+                    QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
                     p.setPen(myPen);
@@ -1650,7 +1648,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 QRadialGradient _gradient(_center,_radius);
                 _gradient.setColorAt(0.85, pR->highlightColor);
                 _gradient.setColorAt(0, pR->highlightColor2 );
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1663,9 +1661,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 QPen __pen = p.pen();
                 QColor lc;
                 if( c.red()+c.green()+c.blue() > 200 )
-                    lc=QColor(0,0,0);
+                    lc=QColor(Qt::black);
                 else
-                    lc=QColor(255,255,255);
+                    lc=QColor(Qt::white);
                 p.setPen(QPen(lc));
                 p.drawText(dr, Qt::AlignHCenter|Qt::AlignVCenter,QString::number( currentAreaRoom ));
                 p.setPen(__pen);
@@ -1681,7 +1679,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _gradient.setColorAt(0.799,QColor(150,100,100,100));
                 _gradient.setColorAt(0.7, QColor(255,0,0,200));
                 _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1693,9 +1691,9 @@ void T2DMap::paintEvent( QPaintEvent * e )
 
         QColor lc;
         if( c.red()+c.green()+c.blue() > 200 )
-            lc=QColor(0,0,0);
+            lc=QColor(Qt::black);
         else
-            lc=QColor(255,255,255);
+            lc=QColor(Qt::white);
         pen = p.pen();
         pen.setColor( lc );
         pen.setWidthF(0);//wegBreite?);
@@ -1723,7 +1721,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1 );
                 _poly.append( _pt );
                 QBrush brush = p.brush();
-                brush.setColor( QColor(0, 0 ,0) );
+                brush.setColor( Qt::black );
                 brush.setStyle( Qt::NoBrush );
                 p.setBrush( brush );
                 p.drawPolygon(_poly);
@@ -1741,7 +1739,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1758,7 +1756,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1775,7 +1773,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1792,7 +1790,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
             _poly.append(_pt);
             QBrush brush = p.brush();
-            brush.setColor( QColor(0, 0 ,0) );
+            brush.setColor( Qt::black );
             brush.setStyle( Qt::SolidPattern );
             p.setBrush( brush );
             p.drawPolygon(_poly);
@@ -1857,7 +1855,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     _gradient.setColorAt(0.799,QColor(150,100,100,100));
                     _gradient.setColorAt(0.7, QColor(255,0,0,200));
                     _gradient.setColorAt(0, QColor(255,255,255,255));
-                    QPen myPen(QColor(0,0,0,0));
+                    QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
                     p.setPen(myPen);
@@ -1973,7 +1971,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( ! mShiftMode )
     {
         p.save();
-        QPen myPen(QColor(0,0,0,0));
+        QPen myPen(Qt::transparent);
         QPainterPath myPath;
         if( mpHost->mMapStrongHighlight )
         {   // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -2036,7 +2034,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value( _iaid );
             if( _paid )
             {
-                infoText = tr( "Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n").arg(_paid_name).arg(_iaid).arg(_paid->min_x).arg(_paid->max_x).arg(_paid->min_y).arg(_paid->max_y).arg(_paid->min_z).arg(_paid->max_z);
+                infoText = tr( "Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n").arg(_paid_name, QString::number(_iaid), QString::number(_paid->min_x), QString::number(_paid->max_x), QString::number(_paid->min_y), QString::number(_paid->max_y), QString::number(_paid->min_z), QString::number((_paid->max_z)));
             }
             else
             {
@@ -2060,7 +2058,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             switch( selectionSize )
             {
             case 0:
-                infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)) );
                 if( playerArea != mAID ) {
                     f.setItalic( true );
                 }
@@ -2069,7 +2067,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 break;
             case 1:
-                infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)) );
                 f.setBold( true );
                 if( infoColor.lightness() > 127 ) {
                     infoColor = QColor( 255, 223, 191 ); // Slightly orange white
@@ -2079,7 +2077,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 break;
             default:
-                infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)).arg(QString::number(selectionSize)) );
+                infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z), QString::number(selectionSize)) );
                 f.setBold( true );
                 if( infoColor.lightness() > 127 ) {
                     infoColor = QColor( 255, 223, 191 ); // Slightly orange white
@@ -2091,7 +2089,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
         }
 
-        infoText.append( tr("render time: %1S mO: (%2,%3,%4)").arg( __time.nsecsElapsed() * 1.0e-9,0,'f',3).arg(QString::number(mOx)).arg(QString::number(mOy)).arg(QString::number(mOz)) );
+        infoText.append( tr("render time: %1S mO: (%2,%3,%4)").arg( __time.nsecsElapsed() * 1.0e-9,0,'f',3).arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)) );
 
         uint infoLeftSideAvoid = 10; // Left margin for info widget
         if( mMultiSelectionListWidget.isVisible() ) { // Room Selection Widget showing, so increase margin to avoid
@@ -3259,7 +3257,7 @@ void T2DMap::slot_setPlayerLocation()
         mpMap->mRoomIdHash[ mpHost->getName() ] = _newRoomId;
         mpMap->mNewMove = true;
         TEvent manualSetEvent;
-        manualSetEvent.mArgumentList.append( QStringLiteral( "sysManualLocationSetEvent" ) );
+        manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
         manualSetEvent.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
         manualSetEvent.mArgumentList.append( QString::number( _newRoomId ) );
         manualSetEvent.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
@@ -3517,7 +3515,7 @@ void T2DMap::slot_setCharacter()
                     itSymbolUsed.next();
                     if( itSymbolUsed.value() == symbolCountsList.at(i) )
                     {
-                        displayStrings.append( tr("%1 {count:%2}").arg(itSymbolUsed.key()).arg(itSymbolUsed.value()));
+                        displayStrings.append( tr("%1 {count:%2}").arg(itSymbolUsed.key(), itSymbolUsed.value()));
                     }
                 }
             }
@@ -3624,7 +3622,7 @@ void T2DMap::slot_selectRoomColor(QListWidgetItem * pI )
 
 void T2DMap::slot_defineNewColor()
 {
-    QColor color = QColorDialog::getColor( mpHost->mRed, this );
+    auto color = QColorDialog::getColor( mpHost->mRed, this );
     if ( color.isValid() )
     {
         mpMap->customEnvColors[mpMap->customEnvColors.size()+257+16] = color;
@@ -3995,11 +3993,11 @@ void T2DMap::slot_setRoomWeight()
                     {
                         if( itWeightsUsed.key() == 1 )
                         { // Indicate the "default" value which is unity weight
-                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
+                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
                         }
                         else
                         {
-                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
+                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
                         }
                     }
                 }
@@ -4077,7 +4075,7 @@ void T2DMap::slot_setArea()
         it.next();
         int areaID = it.key();
         if( areaID > 0 ) {
-            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value() ).arg( areaID ), QVariant(areaID) );
+            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value(), QString::number(areaID) ), QVariant(areaID) );
         }
     }
 
@@ -5181,7 +5179,7 @@ void T2DMap::paintMap()
 //                }
 //                QRectF lr = QRectF( 0, 0, 1000, 100 );
 //                QPixmap pix( lr.size().toSize() );
-//                pix.fill(QColor(0,0,0,0));
+//                pix.fill(Qt::transparent);
 //                QPainter lp( &pix );
 
 //                if( it.value().hilite )
@@ -5446,7 +5444,7 @@ void T2DMap::paintMap()
 //                        _color.setBlue( mpMap->rooms[pArea->rooms[i]]->customLinesColor[itk.key()][2] );
 //                    }
 //                    else
-//                        _color = QColor(255,0,0);
+//                        _color = QColor(Qt::red);
 //                    bool _arrow = pR->customLinesArrow[itk.key()];
 //                    QString _style = pR->customLinesStyle[itk.key()];
 //                    QPointF _cstartP;
@@ -5934,7 +5932,7 @@ void T2DMap::paintMap()
 //                _gradient.setColorAt(0.799,QColor(150,100,100,100));
 //                _gradient.setColorAt(0.7, QColor(255,0,0,200));
 //                _gradient.setColorAt(0, QColor(255,255,255,255));
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -5986,7 +5984,7 @@ void T2DMap::paintMap()
 //                    QRadialGradient _gradient(_center,_radius);
 //                    _gradient.setColorAt(0.85, c);
 //                    _gradient.setColorAt(0, QColor(255,255,255,255));
-//                    QPen myPen(QColor(0,0,0,0));
+//                    QPen myPen(Qt::transparent);
 //                    QPainterPath myPath;
 //                    p.setBrush(_gradient);
 //                    p.setPen(myPen);
@@ -6003,7 +6001,7 @@ void T2DMap::paintMap()
 //                QRadialGradient _gradient(_center,_radius);
 //                _gradient.setColorAt(0.85, mpMap->rooms[pArea->rooms[i]]->highlightColor);
 //                _gradient.setColorAt(0, mpMap->rooms[pArea->rooms[i]]->highlightColor2 );
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -6015,9 +6013,9 @@ void T2DMap::paintMap()
 //                QPen __pen = p.pen();
 //                QColor lc;
 //                if( c.red()+c.green()+c.blue() > 200 )
-//                    lc=QColor(0,0,0);
+//                    lc=QColor(Qt::black);
 //                else
-//                    lc=QColor(255,255,255);
+//                    lc=QColor(Qt::white);
 //                p.setPen(QPen(lc));
 //                p.drawText(dr, Qt::AlignHCenter|Qt::AlignVCenter,QString::number(pArea->rooms[i]));
 //                p.setPen(__pen);
@@ -6032,7 +6030,7 @@ void T2DMap::paintMap()
 //                _gradient.setColorAt(0.799,QColor(150,100,100,100));
 //                _gradient.setColorAt(0.7, QColor(255,0,0,200));
 //                _gradient.setColorAt(0, QColor(255,255,255,255));
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -6044,9 +6042,9 @@ void T2DMap::paintMap()
 
 //        QColor lc;
 //        if( c.red()+c.green()+c.blue() > 200 )
-//            lc=QColor(0,0,0);
+//            lc=QColor(Qt::black);
 //        else
-//            lc=QColor(255,255,255);
+//            lc=QColor(Qt::white);
 //        pen = p.pen();
 //        pen.setColor( lc );
 //        pen.setWidthF(0);//wegBreite?);
@@ -6074,7 +6072,7 @@ void T2DMap::paintMap()
 //                _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)*uDirection.z()/3.1 );
 //                _poly.append( _pt );
 //                QBrush brush = p.brush();
-//                brush.setColor( QColor(0, 0 ,0) );
+//                brush.setColor( QColor(Qt::black) );
 //                brush.setStyle( Qt::NoBrush );
 //                p.setBrush( brush );
 //                p.drawPolygon(_poly);
@@ -6092,7 +6090,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);
@@ -6108,7 +6106,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx+(tx*rSize)/3.1, ry-(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);
@@ -6124,7 +6122,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx-(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);
@@ -6140,7 +6138,7 @@ void T2DMap::paintMap()
 //            _pt = QPointF( rx+(tx*rSize)/3.1, ry+(ty*rSize)/3.1);
 //            _poly.append(_pt);
 //            QBrush brush = p.brush();
-//            brush.setColor( QColor(0, 0 ,0) );
+//            brush.setColor( QColor(Qt::black) );
 //            brush.setStyle( Qt::SolidPattern );
 //            p.setBrush( brush );
 //            p.drawPolygon(_poly);

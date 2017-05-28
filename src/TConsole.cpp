@@ -61,13 +61,13 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 , buffer( pH )
 , emergencyStop( new QToolButton )
 , layerCommandLine( 0 )
-, mBgColor( QColor( 255, 255, 255 ) )
+, mBgColor( QColor(Qt::black) )
 , mClipboard( mpHost )
-, mCommandBgColor( QColor( 0, 0, 0 ) )
+, mCommandBgColor( Qt::black )
 , mCommandFgColor( QColor( 213, 195, 0 ) )
 , mConsoleName( "main" )
 , mDisplayFont( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//mDisplayFont( QFont("Monospace", 10, QFont::Courier ) )
-, mFgColor( QColor( 0, 0, 0 ) )
+, mFgColor( Qt::black )
 , mIndentCount( 0 )
 , mIsDebugConsole( isDebugConsole )
 , mLogFileName(QString(""))
@@ -90,7 +90,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
 
 , mRecordReplay( false )
 , mSystemMessageBgColor( mBgColor )
-, mSystemMessageFgColor( QColor( 255,0,0 ) )
+, mSystemMessageFgColor( QColor(Qt::red) )
 , mTriggerEngineMode( false )
 , mUserConsole( false )
 , mWindowIsHidden( false )
@@ -182,20 +182,20 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QSizePolicy sizePolicy4( QSizePolicy::Fixed, QSizePolicy::Expanding);
     QSizePolicy sizePolicy5( QSizePolicy::Fixed, QSizePolicy::Fixed);
     QPalette mainPalette;
-    mainPalette.setColor( QPalette::Text, QColor(0,0,0) );
+    mainPalette.setColor( QPalette::Text, QColor(Qt::black) );
     mainPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     mainPalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     QPalette splitterPalette;
     splitterPalette = mainPalette;
     splitterPalette.setColor( QPalette::Button, QColor(0,0,255,255) );
-    splitterPalette.setColor( QPalette::Window, QColor(0,255,0));//,255) );
+    splitterPalette.setColor( QPalette::Window, QColor(Qt::green));//,255) );
     splitterPalette.setColor( QPalette::Base, QColor(255,0,0,255) );
-    splitterPalette.setColor( QPalette::Window, QColor(255,255,255) );
+    splitterPalette.setColor( QPalette::Window, QColor(Qt::white) );
     //setPalette( mainPalette );
 
     //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
     QPalette framePalette;
-    framePalette.setColor( QPalette::Text, QColor(0,0,0) );
+    framePalette.setColor( QPalette::Text, QColor(Qt::black) );
     framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     framePalette.setColor( QPalette::Window, QColor(0,0,0,255) );
     mpMainFrame->setPalette( framePalette );
@@ -222,7 +222,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     mpTopToolBar->setContentsMargins(0,0,0,0);
     mpTopToolBar->setAutoFillBackground(true);
     QPalette topbarPalette;
-    topbarPalette.setColor( QPalette::Text, QColor(255,255,255) );
+    topbarPalette.setColor( QPalette::Text, QColor(Qt::white) );
     topbarPalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     topbarPalette.setColor( QPalette::Window, QColor(0,255,0,255) );
     topbarPalette.setColor( QPalette::Base, QColor(0,255,0,255) );
@@ -413,8 +413,8 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     networkLatency->setAutoFillBackground( true );
     networkLatency->setContentsMargins(0,0,0,0);
     QPalette basePalette;
-    basePalette.setColor( QPalette::Text, QColor(0,0,0) );
-    basePalette.setColor( QPalette::Base, QColor(255, 255, 255) );
+    basePalette.setColor( QPalette::Text, QColor(Qt::black) );
+    basePalette.setColor( QPalette::Base, QColor(Qt::white) );
     networkLatency->setPalette( basePalette );
     networkLatency->setAlignment( Qt::AlignHCenter | Qt::AlignVCenter );
 
@@ -462,7 +462,7 @@ TConsole::TConsole( Host * pH, bool isDebugConsole, QWidget * parent )
     QPalette __pal;
     __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
     __pal.setColor(QPalette::Highlight,QColor(0,0,192));
-    __pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
+    __pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
     __pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette( __pal );
@@ -655,16 +655,16 @@ void TConsole::resizeEvent( QResizeEvent * event )
         QString n = "WindowResizeEvent";
         pLua->call( func, n );
 
-        TEvent me;
-        me.mArgumentList.append( "sysWindowResizeEvent" );
-        me.mArgumentList.append( QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth) );
-        me.mArgumentList.append( QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()) );
-        me.mArgumentList.append( mConsoleName );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        mpHost->raiseEvent( me );
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
+        mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
+        mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
+        mudletEvent.mArgumentList.append(mConsoleName);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
     }
 }
 
@@ -707,31 +707,36 @@ void TConsole::closeEvent( QCloseEvent *event )
 {
     if( mIsDebugConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
-        {
+        if( mudlet::self()->isGoingDown() || mpHost->isClosingDown() ) {
+            event->accept();
+            return;
+        } else {
             hide();
             mudlet::mpDebugArea->setVisible(false);
             mudlet::debugMode = false;
             event->ignore();
             return;
         }
-        else
-        {
-            event->accept();
-            return;
-        }
     }
+
     if( mUserConsole )
     {
-        if( ! mudlet::self()->isGoingDown() )
+        if( mudlet::self()->isGoingDown() || mpHost->isClosingDown() )
         {
+            std::string key = objectName().toLatin1().data();
+            TConsole * pC = mpHost->mpConsole;
+            if( pC->mSubConsoleMap.find(key) != pC->mSubConsoleMap.end() ) {
+                console->close();
+                console2->close();
+
+                pC->mSubConsoleMap.erase(key);
+            }
+
+            event->accept();
+            return;
+        } else {
             hide();
             event->ignore();
-            return;
-        }
-        else
-        {
-            event->accept();
             return;
         }
     }
@@ -739,29 +744,15 @@ void TConsole::closeEvent( QCloseEvent *event )
     if( profile_name != "default_host" )
     {
         TEvent conCloseEvent;
-        conCloseEvent.mArgumentList.append( "sysExitEvent" );
+        conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent( conCloseEvent );
 
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-            QDir dir_xml;
-            if( ! dir_xml.exists( directory_xml ) )
-            {
-                dir_xml.mkpath( directory_xml );
-            }
-            QFile file_xml( filename_xml );
-            if( file_xml.open( QIODevice::WriteOnly ) )
-            {
-                mpHost->modulesToWrite.clear();
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-                mpHost->saveModules(0);
+            mpHost->modulesToWrite.clear();
+            mpHost->saveProfile();
 
-            }
             if( mpHost->mpMap->mpRoomDB->size() > 0 )
             {
                 QDir dir_map;
@@ -786,62 +777,42 @@ void TConsole::closeEvent( QCloseEvent *event )
 
     if( profile_name != "default_host" && ! mUserAgreedToCloseConsole )
     {
-        ASK: int choice = QMessageBox::question( this, "Exiting Session: Question", "Do you want to save the profile "+profile_name, QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
+        ASK: int choice = QMessageBox::question( this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(profile_name), QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel );
         if( choice == QMessageBox::Cancel )
         {
             event->setAccepted(false);
             event->ignore();
             return;
         }
-        if( choice == QMessageBox::Yes )
-        {
-            QString directory_xml = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/current";
-            QString filename_xml = directory_xml + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+".xml";
-            QDir dir_xml;
-            if( ! dir_xml.exists( directory_xml ) )
-            {
-                dir_xml.mkpath( directory_xml );
-            }
-            QFile file_xml( filename_xml );
-            if( file_xml.open( QIODevice::WriteOnly ) )
-            {
-                /*XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();*/
-                mpHost->modulesToWrite.clear();
-                XMLexport writer( mpHost );
-                writer.exportHost( & file_xml );
-                file_xml.close();
-                mpHost->saveModules(0);
-                if( mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0 )
-                {
-                    QDir dir_map;
-                    QString directory_map = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/map";
-                    QString filename_map = directory_map + "/"+QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss")+"map.dat";
-                    if( ! dir_map.exists( directory_map ) )
-                    {
-                        dir_map.mkpath( directory_map );
-                    }
-                    QFile file_map( filename_map );
-                    if ( file_map.open( QIODevice::WriteOnly ) )
-                    {
-                        QDataStream out( & file_map );
-                        mpHost->mpMap->serialize( out );
-                        file_map.close();
-                    }
-                }
-                event->accept();
-                return;
-            }
-            else
-            {
-                QMessageBox::critical( this, "ERROR: Not closing profile.", "Failed to save "+profile_name+" to location "+filename_xml+" because of the following error: "+file_xml.errorString() );
-                goto ASK;
-            }
+        if (choice == QMessageBox::Yes) {
+            mudlet::self()->saveWindowLayout();
 
-        }
-        else if( choice == QMessageBox::No )
-        {
+            mpHost->modulesToWrite.clear();
+            std::tuple<bool, QString, QString> result = mpHost->saveProfile();
+
+            if (std::get<0>(result) == false) {
+                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
+                goto ASK;
+            } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
+                QDir dir_map;
+                QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
+                QString filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+                if (!dir_map.exists(directory_map)) {
+                    dir_map.mkpath(directory_map);
+                }
+                QFile file_map(filename_map);
+                if (file_map.open(QIODevice::WriteOnly)) {
+                    QDataStream out(&file_map);
+                    mpHost->mpMap->serialize(out);
+                    file_map.close();
+                }
+            }
+            event->accept();
+            return;
+
+        } else if (choice == QMessageBox::No) {
+            mudlet::self()->saveWindowLayout();
+
             event->accept();
             return;
         }
@@ -882,8 +853,8 @@ void TConsole::toggleLogging( bool isMessageEnabled )
         QTextStream out(&file);
         file.close();
 
-        QString directoryLogFile = QStringLiteral( "%1/.config/mudlet/profiles/%2/log" ).arg( QDir::homePath() ).arg( profile_name );
-        mLogFileName = QStringLiteral( "%1/%2" ).arg( directoryLogFile ).arg( QDateTime::currentDateTime().toString( QStringLiteral( "yyyy-MM-dd#hh-mm-ss" ) ) );
+        QString directoryLogFile = QStringLiteral( "%1/.config/mudlet/profiles/%2/log" ).arg(QDir::homePath(), profile_name);
+        mLogFileName = QStringLiteral( "%1/%2" ).arg(directoryLogFile, QDateTime::currentDateTime().toString( QStringLiteral( "yyyy-MM-dd#hh-mm-ss" ) ) );
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;
@@ -1025,7 +996,7 @@ void TConsole::changeColors()
         QPalette palette;
         palette.setColor( QPalette::Text, mFgColor );
         palette.setColor( QPalette::Highlight, QColor(55,55,255) );
-        palette.setColor( QPalette::Base, QColor(0,0,0) );
+        palette.setColor( QPalette::Base, QColor(Qt::black) );
         console->setPalette( palette );
         console2->setPalette( palette );
     }
@@ -1066,7 +1037,7 @@ void TConsole::changeColors()
         QPalette pal;
         pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor );//QColor(0,0,192));
         pal.setColor(QPalette::Highlight,QColor(0,0,192));
-        pal.setColor(QPalette::HighlightedText, QColor(255,255,255));
+        pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
         pal.setColor(QPalette::Base,mpHost->mCommandLineBgColor);//QColor(255,255,225));
         mpCommandLine->setPalette( pal );
         mpCommandLine->mRegularPalette = pal;
@@ -1116,9 +1087,9 @@ void TConsole::changeColors()
 
     }
     QPalette palette;
-    palette.setColor( QPalette::Button, QColor(0,0,255) );
-    palette.setColor( QPalette::Window, QColor(0,255,0) );
-    palette.setColor( QPalette::Base, QColor(255,0,0) );
+    palette.setColor( QPalette::Button, QColor(Qt::blue) );
+    palette.setColor( QPalette::Window, QColor(Qt::green) );
+    palette.setColor( QPalette::Base, QColor(Qt::red) );
 
     if( ! mIsSubConsole )
     {
@@ -1176,14 +1147,12 @@ void TConsole::loadRawFile( std::string n )
     mpHost->mTelnet.loadReplay( fileName );
 }
 
-void TConsole::printOnDisplay( std::string & incomingSocketData )
+void TConsole::printOnDisplay( std::string & incomingSocketData, const bool isFromServer )
 {
-    //buffer.messen();
-    QString prompt ="";//FIXME
 
     mProcessingTime.restart();
     mTriggerEngineMode = true;
-    buffer.translateToPlainText( incomingSocketData );
+    buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
     double processT = mProcessingTime.elapsed();
@@ -1657,7 +1626,7 @@ bool TConsole::loadMap(const QString& location)
         pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
     }
     else {
-        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ), true );
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg(location, now.toString( Qt::ISODate) ), true );
     }
 
     return result;
@@ -1710,9 +1679,7 @@ bool TConsole::importMap( const QString & location, QString * errMsg )
         if( fileInfo.isRelative() ) {
             // Resolve the name relative to the profile home directory:
             filePathNameString = QDir::cleanPath( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
-                                                  .arg( QDir::homePath() )
-                                                  .arg( pHost->getName() )
-                                                  .arg( fileInfo.filePath() ) );
+                                                  .arg( QDir::homePath(), pHost->getName(), fileInfo.filePath() ) );
         }
         else {
             if( fileInfo.exists() ) {
@@ -1751,7 +1718,7 @@ bool TConsole::importMap( const QString & location, QString * errMsg )
         result = pHost->mpMap->importMap( file, errMsg );
 
         file.close();
-        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg( location ).arg( now.toString( Qt::ISODate ) ) );
+        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg(location, now.toString( Qt::ISODate) ) );
     }
     else {
         if( ! errMsg ) {
@@ -2437,7 +2404,7 @@ void TConsole::createMapper( int x, int y, int width, int height )
         mpHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(2) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
 
         TEvent mapOpenEvent;
-        mapOpenEvent.mArgumentList.append( "mapOpenEvent" );
+        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent( mapOpenEvent );
     }
