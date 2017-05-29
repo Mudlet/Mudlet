@@ -84,7 +84,7 @@ public:
     void setGMCPTable(QString&, const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
-    void registerLuaKeyCodes(lua_State * pGlobalLua);
+
     void loadGlobal();
     QString get_lua_string(const QString& stringName);
     int check_for_mappingscript();
