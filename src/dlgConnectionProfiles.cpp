@@ -723,8 +723,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         val = tr( "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong sense of community." );
     else
         val = readProfileData( profile, QStringLiteral( "description" ) );
-    mud_description_textedit->clear();
-    mud_description_textedit->insertPlainText( val );
+    mud_description_textedit->setPlainText(val);
 
     val = readProfileData( profile, QStringLiteral( "website" ) );
     if( val.isEmpty() )
