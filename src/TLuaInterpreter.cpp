@@ -2204,7 +2204,7 @@ int TLuaInterpreter::enableKey( lua_State *L )
         luaNameID = lua_tostring( L, 1 );
     }
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
+    QString text(luaNameID.c_str());
     bool error = host.getKeyUnit()->enableKey( text );
     lua_pushboolean( L, error );
     return 1;
@@ -2227,7 +2227,7 @@ int TLuaInterpreter::disableKey( lua_State *L )
         luaNameID = lua_tostring( L, 1 );
     }
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
+    QString text(luaNameID.c_str());
     bool error = host.getKeyUnit()->disableKey( text );
     lua_pushboolean( L, error );
     return 1;
@@ -2248,15 +2248,9 @@ int TLuaInterpreter::killKey( lua_State *L )
     {
         luaNameID = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "killKey: NULL Host pointer - something is wrong!" )
-            .toUtf8().constData() );
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
     QString text(luaNameID.c_str());
-    lua_pushboolean( L, pHost->getKeyUnit()->killKey( text ) );
+    lua_pushboolean( L, host.getKeyUnit()->killKey( text ) );
     return 1;
 }
 
@@ -6696,19 +6690,19 @@ int TLuaInterpreter::exists( lua_State * L )
     QString name = _name.c_str();
     if( type == "timer")
     {
-        cnt += pHost->getTimerUnit()->mLookupTable.count( name );
+        cnt += host.getTimerUnit()->mLookupTable.count( name );
     }
     else if( type == "trigger")
     {
-        cnt += pHost->getTriggerUnit()->mLookupTable.count( name );
+        cnt += host.getTriggerUnit()->mLookupTable.count( name );
     }
     else if( type == "alias")
     {
-        cnt += pHost->getAliasUnit()->mLookupTable.count( name );
+        cnt += host.getAliasUnit()->mLookupTable.count( name );
     }
     else if( type == "keybind")
     {
-        cnt += pHost->getKeyUnit()->mLookupTable.count( name );
+        cnt += host.getKeyUnit()->mLookupTable.count( name );
     }
     lua_pushnumber( L, cnt );
     return 1;
@@ -6781,8 +6775,8 @@ int TLuaInterpreter::isActive( lua_State * L )
     }
     else if( type == "keybind")
     {
-        QMap<QString, TKey *>::const_iterator it1 = pHost->getKeyUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getKeyUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TKey *>::const_iterator it1 = host.getKeyUnit()->mLookupTable.find( name );
+        while( it1 != host.getKeyUnit()->mLookupTable.end() && it1.key() == name )
         {
             if( it1.value()->isActive() )
             {
@@ -7068,14 +7062,8 @@ int TLuaInterpreter::permKey( lua_State *L )
         luaFunction = lua_tostring( L, i );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "permKey: NULL Host pointer - something is wrong!" )
-            .toUtf8().constData() );
-        return 2;
-    }
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _luaNameID = luaNameID.c_str();
     QString _luaParent = luaParent.c_str();
     QString _luaFunction = luaFunction.c_str();
@@ -7137,14 +7125,8 @@ int TLuaInterpreter::tempKey( lua_State *L )
         luaFunction = lua_tostring( L, i );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring( L, tr( "tempKey: NULL Host pointer - something is wrong!" )
-            .toUtf8().constData() );
-        return 2;
-    }
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
     int _luaModifier = luaModifier;
     int _luaKeyCode = luaKeyCode;
