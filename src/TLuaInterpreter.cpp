@@ -60,6 +60,7 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
+#include <assert.h>
 #include <list>
 #include <string>
 
@@ -78,8 +79,6 @@ int luaopen_yajl(lua_State*);
 }
 
 using namespace std;
-
-map<lua_State*, Host*> TLuaInterpreter::luaInterpreterMap;
 
 TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
 : mpHost( pH )
@@ -329,19 +328,14 @@ int TLuaInterpreter::dirToNumber( lua_State * L, int position )
 
 int TLuaInterpreter::denyCurrentSend( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mAllowToSendCommand = false;
+    Host& host = getHostFromLua(L);
+    host.mAllowToSendCommand = false;
     return 0;
 }
 
 int TLuaInterpreter::raiseEvent( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "raiseEvent: NULL Host pointer - something is wrong!");
-        lua_error( L );
-        return 1;
-    }
+    Host& host = getHostFromLua(L);
 
     TEvent event;
 
@@ -371,22 +365,15 @@ int TLuaInterpreter::raiseEvent( lua_State * L )
         }
     }
 
-    pHost->raiseEvent( event );
+    host.raiseEvent( event );
 
     return 0;
 }
 
 int TLuaInterpreter::getProfileName( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getProfileName:  NULL Host pointer - something is wrong!");
-
-        return 2;
-    }
-
-    lua_pushstring( L, pHost->getName().toUtf8().constData() );
+    Host& host = getHostFromLua(L);
+    lua_pushstring( L, host.getName().toUtf8().constData() );
     return 1;
 }
 
@@ -397,12 +384,7 @@ int TLuaInterpreter::getProfileName( lua_State * L )
 // arguments can be, i.e. strings, numbers, booleans or nils.
 int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "raiseGlobalEvent: NULL Host pointer - something is wrong!");
-        lua_error( L );
-        return 1;
-    }
+    Host& host = getHostFromLua(L);
 
     int n = lua_gettop( L );
     if( ! n ) {
@@ -446,18 +428,18 @@ int TLuaInterpreter::raiseGlobalEvent( lua_State * L )
         }
     }
 
-    event.mArgumentList.append( pHost->getName() );
+    event.mArgumentList.append( host.getName() );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
 
-    mudlet::self()->getHostManager().postInterHostEvent(pHost, event);
+    mudlet::self()->getHostManager().postInterHostEvent(&host, event);
 
     return 0;
 }
 
 int TLuaInterpreter::resetProfile( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mResetProfile = true;
+    Host& host = getHostFromLua(L);
+    host.mResetProfile = true;
     return 0;
 }
 
@@ -470,12 +452,7 @@ int TLuaInterpreter::resetProfile( lua_State * L )
 // same as an omitted windowName - i.e. is the main console window.
 int TLuaInterpreter::selectString( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "selectString: NULL Host pointer - something is wrong!");
-        lua_error( L );
-        return 1;
-    }
+    Host& host = getHostFromLua(L);
 
     int s = 1;
     QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
@@ -524,10 +501,10 @@ int TLuaInterpreter::selectString( lua_State * L )
     }
 
     if( windowName.isEmpty() ) {
-        lua_pushnumber( L, pHost->mpConsole->select( searchText, numOfMatch ) );
+        lua_pushnumber( L, host.mpConsole->select( searchText, numOfMatch ) );
     }
     else {
-        lua_pushnumber( L, mudlet::self()->selectString( pHost, windowName, searchText, numOfMatch ) );
+        lua_pushnumber( L, mudlet::self()->selectString( &host, windowName, searchText, numOfMatch ) );
     }
     return 1;
 }
@@ -552,8 +529,8 @@ int TLuaInterpreter::selectCurrentLine( lua_State * L )
             luaSendText = lua_tostring( L, 1 );
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->selectCurrentLine( luaSendText );
+    Host& host = getHostFromLua(L);
+    host.mpConsole->selectCurrentLine( luaSendText );
     return 0;
 }
 
@@ -575,8 +552,8 @@ int TLuaInterpreter::isAnsiFgColor( lua_State * L )
     }
 
     std::list<int> result;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    result = pHost->mpConsole->getFgColor( console );
+    Host& host = getHostFromLua(L);
+    result = host.mpConsole->getFgColor( console );
     auto it=result.begin();
     if( result.size() < 3 ) return 0;
     if( ansiFg < 0 ) return 0;
@@ -586,23 +563,23 @@ int TLuaInterpreter::isAnsiFgColor( lua_State * L )
     QColor c;
     switch( ansiFg )
     {
-        case 0: c = pHost->mFgColor;  break;
-        case 1: c = pHost->mLightBlack; break;
-        case 2: c = pHost->mBlack; break;
-        case 3: c = pHost->mLightRed; break;
-        case 4: c = pHost->mRed; break;
-        case 5: c = pHost->mLightGreen; break;
-        case 6: c = pHost->mGreen; break;
-        case 7: c = pHost->mLightYellow; break;
-        case 8: c = pHost->mYellow; break;
-        case 9: c = pHost->mLightBlue; break;
-        case 10: c = pHost->mBlue; break;
-        case 11: c = pHost->mLightMagenta; break;
-        case 12: c = pHost->mMagenta; break;
-        case 13: c = pHost->mLightCyan; break;
-        case 14: c = pHost->mCyan; break;
-        case 15: c = pHost->mLightWhite; break;
-        case 16: c = pHost->mWhite; break;
+        case 0: c = host.mFgColor;  break;
+        case 1: c = host.mLightBlack; break;
+        case 2: c = host.mBlack; break;
+        case 3: c = host.mLightRed; break;
+        case 4: c = host.mRed; break;
+        case 5: c = host.mLightGreen; break;
+        case 6: c = host.mGreen; break;
+        case 7: c = host.mLightYellow; break;
+        case 8: c = host.mYellow; break;
+        case 9: c = host.mLightBlue; break;
+        case 10: c = host.mBlue; break;
+        case 11: c = host.mLightMagenta; break;
+        case 12: c = host.mMagenta; break;
+        case 13: c = host.mLightCyan; break;
+        case 14: c = host.mCyan; break;
+        case 15: c = host.mLightWhite; break;
+        case 16: c = host.mWhite; break;
     }
 
     int val = *it;
@@ -644,9 +621,8 @@ int TLuaInterpreter::isAnsiBgColor( lua_State * L )
     }
 
     std::list<int> result;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) return 0;
-    result = pHost->mpConsole->getBgColor( console );
+    Host& host = getHostFromLua(L);
+    result = host.mpConsole->getBgColor( console );
     auto it=result.begin();
     if( result.size() < 3 ) return 0;
     if( ansiFg < 0 ) return 0;
@@ -656,23 +632,23 @@ int TLuaInterpreter::isAnsiBgColor( lua_State * L )
     QColor c;
     switch( ansiFg )
     {
-        case 0: c = pHost->mBgColor;  break;
-        case 1: c = pHost->mLightBlack; break;
-        case 2: c = pHost->mBlack; break;
-        case 3: c = pHost->mLightRed; break;
-        case 4: c = pHost->mRed; break;
-        case 5: c = pHost->mLightGreen; break;
-        case 6: c = pHost->mGreen; break;
-        case 7: c = pHost->mLightYellow; break;
-        case 8: c = pHost->mYellow; break;
-        case 9: c = pHost->mLightBlue; break;
-        case 10: c = pHost->mBlue; break;
-        case 11: c = pHost->mLightMagenta; break;
-        case 12: c = pHost->mMagenta; break;
-        case 13: c = pHost->mLightCyan; break;
-        case 14: c = pHost->mCyan; break;
-        case 15: c = pHost->mLightWhite; break;
-        case 16: c = pHost->mWhite; break;
+        case 0: c = host.mBgColor;  break;
+        case 1: c = host.mLightBlack; break;
+        case 2: c = host.mBlack; break;
+        case 3: c = host.mLightRed; break;
+        case 4: c = host.mRed; break;
+        case 5: c = host.mLightGreen; break;
+        case 6: c = host.mGreen; break;
+        case 7: c = host.mLightYellow; break;
+        case 8: c = host.mYellow; break;
+        case 9: c = host.mLightBlue; break;
+        case 10: c = host.mBlue; break;
+        case 11: c = host.mLightMagenta; break;
+        case 12: c = host.mMagenta; break;
+        case 13: c = host.mLightCyan; break;
+        case 14: c = host.mCyan; break;
+        case 15: c = host.mLightWhite; break;
+        case 16: c = host.mWhite; break;
     }
 
     int val = *it;
@@ -718,8 +694,8 @@ int TLuaInterpreter::getFgColor( lua_State * L )
     }
     QString _name(luaSendText.c_str());
     std::list<int> result;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    result = pHost->mpConsole->getFgColor( luaSendText );
+    Host& host = getHostFromLua(L);
+    result = host.mpConsole->getFgColor( luaSendText );
     for(int pos : result)
     {
         lua_pushnumber( L, pos );
@@ -749,8 +725,8 @@ int TLuaInterpreter::getBgColor( lua_State * L )
     }
 
     std::list<int> result;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    result = pHost->mpConsole->getBgColor( luaSendText );
+    Host& host = getHostFromLua(L);
+    result = host.mpConsole->getBgColor( luaSendText );
     for(int pos : result)
     {
         lua_pushnumber( L, pos );
@@ -790,8 +766,8 @@ int TLuaInterpreter::wrapLine( lua_State * L )
         luaNumOfMatch = lua_tointeger( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->luaWrapLine( a1, luaNumOfMatch );
+    Host& host = getHostFromLua(L);
+    host.mpConsole->luaWrapLine( a1, luaNumOfMatch );
     return 0;
 }
 
@@ -799,8 +775,8 @@ int TLuaInterpreter::wrapLine( lua_State * L )
 
 int TLuaInterpreter::spawn( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    return TForkedProcess::startProcess(pHost->getLuaInterpreter(), L);
+    Host& host = getHostFromLua(L);
+    return TForkedProcess::startProcess(host.getLuaInterpreter(), L);
 }
 
 
@@ -819,16 +795,16 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
     {
         luaNumOfMatch = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( luaNumOfMatch < 1 )
     {
         lua_pushnumber( L, -1 );
         return 1;
     }
     luaNumOfMatch--; //we want capture groups to start with 1 instead of 0
-    if( luaNumOfMatch < static_cast<int>(pHost->getLuaInterpreter()->mCaptureGroupList.size()) )
+    if( luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size()) )
     {
-        TLuaInterpreter * pL = pHost->getLuaInterpreter();
+        TLuaInterpreter * pL = host.getLuaInterpreter();
         auto iti = pL->mCaptureGroupPosList.begin();
         auto its = pL->mCaptureGroupList.begin();
 
@@ -845,7 +821,7 @@ int TLuaInterpreter::selectCaptureGroup( lua_State * L )
         std::string & s = *its;
         int length = s.size();
         if( mudlet::debugMode ) {TDebug(QColor(Qt::white),QColor(Qt::red))<<"selectCaptureGroup("<<begin<<", "<<length<<")\n">>0;}
-        int pos = pHost->mpConsole->selectSection( begin, length );
+        int pos = host.mpConsole->selectSection( begin, length );
         lua_pushnumber( L, pos );
     }
     else
@@ -881,8 +857,8 @@ int TLuaInterpreter::getLines( lua_State * L )
     {
         luaTo=lua_tointeger( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QStringList strList = pHost->mpConsole->getLines( luaFrom, luaTo );
+    Host& host = getHostFromLua(L);
+    QStringList strList = host.mpConsole->getLines( luaFrom, luaTo );
 
     lua_newtable(L);
     for( int i=0; i<strList.size(); i++ )
@@ -908,8 +884,8 @@ int TLuaInterpreter::loadRawFile( lua_State * L )
         luaSendText = lua_tostring( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->loadRawFile( luaSendText );
+    Host& host = getHostFromLua(L);
+    host.mpConsole->loadRawFile( luaSendText );
     return 0;
 }
 
@@ -934,8 +910,8 @@ int TLuaInterpreter::getCurrentLine( lua_State * L )
         }
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString line = pHost->mpConsole->getCurrentLine( luaSendText );
+    Host& host = getHostFromLua(L);
+    QString line = host.mpConsole->getCurrentLine( luaSendText );
     lua_pushstring( L, line.toLatin1().data() );
     return 1;
 }
@@ -964,40 +940,40 @@ int TLuaInterpreter::setMiniConsoleFontSize( lua_State * L )
     {
         luaNumOfMatch = lua_tointeger( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->setMiniConsoleFontSize( luaSendText, luaNumOfMatch );
+    Host& host = getHostFromLua(L);
+    host.mpConsole->setMiniConsoleFontSize( luaSendText, luaNumOfMatch );
     return 0;
 }
 
 // returns current y position of the user cursor
 int TLuaInterpreter::getLineNumber( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( lua_isstring( L, 1 ) )
     {
         string window = lua_tostring( L, 1 );
         QString _window = window.c_str();
-        lua_pushnumber( L, mudlet::self()->getLineNumber( pHost, _window ) );
+        lua_pushnumber( L, mudlet::self()->getLineNumber(&host, _window ) );
         return 1;
     }
     else
     {
-        lua_pushnumber( L, pHost->mpConsole->getLineNumber() );
+        lua_pushnumber( L, host.mpConsole->getLineNumber() );
         return 1;
     }
     return 0;
 }
 
 int TLuaInterpreter::updateMap(lua_State * L){
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpM)
-            pHost->mpMap->mpM->update();
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
-                pHost->mpMap->mpMapper->mp2dMap->mNewMoveAction=true;
-                pHost->mpMap->mpMapper->mp2dMap->update();
+        if (host.mpMap->mpM)
+            host.mpMap->mpM->update();
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
+                host.mpMap->mpMapper->mp2dMap->mNewMoveAction=true;
+                host.mpMap->mpMapper->mp2dMap->update();
             }
         }
     }
@@ -1034,12 +1010,12 @@ int TLuaInterpreter::addMapMenu(lua_State * L){
     {
         menuList << lua_tostring( L, 3 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
-                pHost->mpMap->mpMapper->mp2dMap->mUserMenus.insert(uniqueName,menuList);
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
+                host.mpMap->mpMapper->mp2dMap->mUserMenus.insert(uniqueName,menuList);
             }
         }
     }
@@ -1060,27 +1036,27 @@ int TLuaInterpreter::removeMapMenu(lua_State * L){
     }
     if (uniqueName == "")
         return 0;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
-                pHost->mpMap->mpMapper->mp2dMap->mUserMenus.remove(uniqueName);
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
+                host.mpMap->mpMapper->mp2dMap->mUserMenus.remove(uniqueName);
                 //remove all entries with this as parent
                 QStringList removeList;
                 removeList.append(uniqueName);
                 bool newElement = true;
                 while (newElement){
                     newElement = false;
-                    QMapIterator<QString, QStringList> it(pHost->mpMap->mpMapper->mp2dMap->mUserMenus);
+                    QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserMenus);
                     while (it.hasNext()){
                         it.next();
                         QStringList menuInfo = it.value();
                         QString parent = menuInfo[0];
                         if (removeList.contains(parent)){
-                            pHost->mpMap->mpMapper->mp2dMap->mUserMenus.remove(it.key());
+                            host.mpMap->mpMapper->mp2dMap->mUserMenus.remove(it.key());
                             if (it.key() != "" && !removeList.contains(it.key())){
-                                pHost->mpMap->mpMapper->mp2dMap->mUserMenus.remove(it.key());
+                                host.mpMap->mpMapper->mp2dMap->mUserMenus.remove(it.key());
                                 removeList.append(it.key());
                                 newElement = true;
                             }
@@ -1088,12 +1064,12 @@ int TLuaInterpreter::removeMapMenu(lua_State * L){
                     }
                 }
                 qDebug()<<removeList;
-                QMapIterator<QString, QStringList> it2(pHost->mpMap->mpMapper->mp2dMap->mUserActions);
+                QMapIterator<QString, QStringList> it2(host.mpMap->mpMapper->mp2dMap->mUserActions);
                 while (it2.hasNext()){
                     it2.next();
                     QString actParent = it2.value()[1];
                     if (removeList.contains(actParent)){
-                        pHost->mpMap->mpMapper->mp2dMap->mUserActions.remove(it2.key());
+                        host.mpMap->mpMapper->mp2dMap->mUserActions.remove(it2.key());
                     }
                 }
             }
@@ -1103,13 +1079,13 @@ int TLuaInterpreter::removeMapMenu(lua_State * L){
 }
 
 int TLuaInterpreter::getMapMenus(lua_State * L){
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
                 lua_newtable(L);
-                QMapIterator<QString, QStringList> it (pHost->mpMap->mpMapper->mp2dMap->mUserMenus);
+                QMapIterator<QString, QStringList> it (host.mpMap->mpMapper->mp2dMap->mUserMenus);
                 while (it.hasNext()){
                     it.next();
                     QString parent, display;
@@ -1172,12 +1148,12 @@ int TLuaInterpreter::addMapEvent(lua_State * L){
     for (int i=5;i<=lua_gettop(L);i++)
         actionInfo << lua_tostring(L,i);
     qDebug()<<actionInfo;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
-                pHost->mpMap->mpMapper->mp2dMap->mUserActions.insert(uniqueName, actionInfo);
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
+                host.mpMap->mpMapper->mp2dMap->mUserActions.insert(uniqueName, actionInfo);
             }
         }
     }
@@ -1196,12 +1172,12 @@ int TLuaInterpreter::removeMapEvent(lua_State * L){
     {
         displayName = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
-                pHost->mpMap->mpMapper->mp2dMap->mUserActions.remove(displayName);
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
+                host.mpMap->mpMapper->mp2dMap->mUserActions.remove(displayName);
             }
         }
     }
@@ -1209,13 +1185,13 @@ int TLuaInterpreter::removeMapEvent(lua_State * L){
 }
 
 int TLuaInterpreter::getMapEvents(lua_State * L){
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap)
+    Host& host = getHostFromLua(L);
+    if( host.mpMap)
     {
-        if (pHost->mpMap->mpMapper){
-            if (pHost->mpMap->mpMapper->mp2dMap){
+        if (host.mpMap->mpMapper){
+            if (host.mpMap->mpMapper->mp2dMap){
                 lua_newtable(L);
-                QMapIterator<QString, QStringList> it(pHost->mpMap->mpMapper->mp2dMap->mUserActions);
+                QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserActions);
                 while (it.hasNext()){
                     it.next();
                     lua_newtable(L);
@@ -1237,12 +1213,9 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
 
 int TLuaInterpreter::centerview(lua_State* L)
 {
-    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (!pHost) {
-        lua_pushnil(L);
-        lua_pushstring(L, "centerview: NULL Host pointer - something is wrong!");
-        return 2;
-    } else if (!pHost->mpMap || !pHost->mpMap->mpRoomDB || !pHost->mpMap->mpMapper) {
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
         lua_pushnil(L);
         lua_pushstring(L, "centerview: you haven't opened a map yet");
         return 2;
@@ -1257,19 +1230,19 @@ int TLuaInterpreter::centerview(lua_State* L)
         roomId = lua_tointeger(L, 1);
     }
 
-    TRoom* pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (pR) {
-        pHost->mpMap->mRoomIdHash[pHost->getName()] = roomId;
-        pHost->mpMap->mNewMove = true;
-        if (pHost->mpMap->mpM) {
-            pHost->mpMap->mpM->update();
+        host.mpMap->mRoomIdHash[host.getName()] = roomId;
+        host.mpMap->mNewMove = true;
+        if (host.mpMap->mpM) {
+            host.mpMap->mpM->update();
         }
 
-        if (pHost->mpMap->mpMapper->mp2dMap) {
-            pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
-            pHost->mpMap->mpMapper->mp2dMap->update();
-            pHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
-            pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        if (host.mpMap->mpMapper->mp2dMap) {
+            host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
+            host.mpMap->mpMapper->mp2dMap->update();
+            host.mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
+            host.mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
         lua_pushboolean(L, true);
         return 1;
@@ -1290,18 +1263,18 @@ int TLuaInterpreter::copy( lua_State * L )
     else
         luaWindowName = "main";
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
     if( luaWindowName == "main" )
-        pHost->mpConsole->copy();
+        host.mpConsole->copy();
     else
-       mudlet::self()->copy( pHost, windowName );
+       mudlet::self()->copy(&host, windowName );
     return 0;
 }
 int TLuaInterpreter::cut( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->cut();
+    Host& host = getHostFromLua(L);
+    host.mpConsole->cut();
     return 0;
 }
 int TLuaInterpreter::paste( lua_State * L )
@@ -1314,23 +1287,19 @@ int TLuaInterpreter::paste( lua_State * L )
     else
         luaWindowName = "main";
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
     if( luaWindowName == "main" )
-        pHost->mpConsole->paste();
+        host.mpConsole->paste();
     else
-       mudlet::self()->pasteWindow( pHost, windowName );
+       mudlet::self()->pasteWindow(&host, windowName );
     return 0;
 }
 
 
 int TLuaInterpreter::feedTriggers( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "feedTriggers: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     std::string text;
     if (!lua_isstring(L, 1)) {
@@ -1342,23 +1311,23 @@ int TLuaInterpreter::feedTriggers( lua_State * L )
         text = lua_tostring( L, 1 );
     }
 
-    pHost->mpConsole->printOnDisplay(text);
+    host.mpConsole->printOnDisplay(text);
     return 0;
 }
 
 
 int TLuaInterpreter::isPrompt( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    int userCursorY = pHost->mpConsole->getLineNumber();
-    if( userCursorY < pHost->mpConsole->buffer.promptBuffer.size() && userCursorY >= 0 )
+    Host& host = getHostFromLua(L);
+    int userCursorY = host.mpConsole->getLineNumber();
+    if( userCursorY < host.mpConsole->buffer.promptBuffer.size() && userCursorY >= 0 )
     {
-        lua_pushboolean( L, pHost->mpConsole->buffer.promptBuffer.at( userCursorY ) );
+        lua_pushboolean( L, host.mpConsole->buffer.promptBuffer.at( userCursorY ) );
         return 1;
     }
     else
     {
-        if( pHost->mpConsole->mTriggerEngineMode && pHost->mpConsole->mIsPromptLine )
+        if( host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine )
             lua_pushboolean( L, true );
         else
             lua_pushboolean( L, false );
@@ -1391,12 +1360,12 @@ int TLuaInterpreter::setWindowWrap( lua_State * L )
         luaFrom = lua_tointeger( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString name = luaSendText.c_str();
     if( name == "main" )
-        pHost->mpConsole->setWrapAt( luaFrom );
+        host.mpConsole->setWrapAt( luaFrom );
     else
-        mudlet::self()->setWindowWrap( pHost, name, luaFrom );
+        mudlet::self()->setWindowWrap(&host, name, luaFrom );
     return 0;
 }
 
@@ -1425,25 +1394,25 @@ int TLuaInterpreter::setWindowWrapIndent( lua_State * L )
         luaFrom = lua_tointeger( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString name = luaSendText.c_str();
-    mudlet::self()->setWindowWrapIndent( pHost, name, luaFrom );
+    mudlet::self()->setWindowWrapIndent(&host, name, luaFrom );
     return 0;
 }
 
 int TLuaInterpreter::getLineCount( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( lua_isstring( L, 1 ) )
     {
         string window = lua_tostring( L, 1 );
         QString _window = window.c_str();
-        lua_pushnumber( L, mudlet::self()->getLastLineNumber( pHost, _window ) + 1 );
+        lua_pushnumber( L, mudlet::self()->getLastLineNumber(&host, _window ) + 1 );
         return 1;
     }
     else
     {
-        int lineNumber = pHost->mpConsole->getLineCount();
+        int lineNumber = host.mpConsole->getLineCount();
         lua_pushnumber( L, lineNumber );
         return 1;
     }
@@ -1452,17 +1421,17 @@ int TLuaInterpreter::getLineCount( lua_State * L )
 
 int TLuaInterpreter::getColumnNumber( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( lua_isstring( L, 1 ) )
     {
         string window = lua_tostring( L, 1 );
         QString _window = window.c_str();
-        lua_pushnumber( L, mudlet::self()->getColumnNumber( pHost, _window ) );
+        lua_pushnumber( L, mudlet::self()->getColumnNumber( &host, _window ) );
         return 1;
     }
     else
     {
-        lua_pushnumber( L, pHost->mpConsole->getColumnNumber() );
+        lua_pushnumber( L, host.mpConsole->getColumnNumber() );
         return 1;
     }
     return 0;
@@ -1482,16 +1451,16 @@ int TLuaInterpreter::getStopWatchTime( lua_State * L )
     {
         watchID = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    double time = pHost->getStopWatchTime( watchID );
+    Host& host = getHostFromLua(L);
+    double time = host.getStopWatchTime( watchID );
     lua_pushnumber( L, time );
     return 1;
 }
 
 int TLuaInterpreter::createStopWatch( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    double watchID = pHost->createStopWatch();
+    Host& host = getHostFromLua(L);
+    double watchID = host.createStopWatch();
     lua_pushnumber( L, watchID );
     return 1;
 }
@@ -1509,8 +1478,8 @@ int TLuaInterpreter::stopStopWatch( lua_State * L )
     {
         watchID = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    double time = pHost->stopStopWatch( watchID );
+    Host& host = getHostFromLua(L);
+    double time = host.stopStopWatch( watchID );
     lua_pushnumber( L, time );
     return 1;
 }
@@ -1528,8 +1497,8 @@ int TLuaInterpreter::startStopWatch( lua_State * L )
     {
         watchID = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool b = pHost->startStopWatch( watchID );
+    Host& host = getHostFromLua(L);
+    bool b = host.startStopWatch( watchID );
     lua_pushboolean( L, b );
     return 1;
 }
@@ -1547,8 +1516,8 @@ int TLuaInterpreter::resetStopWatch( lua_State * L )
     {
         watchID = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool b = pHost->resetStopWatch( watchID );
+    Host& host = getHostFromLua(L);
+    bool b = host.resetStopWatch( watchID );
     lua_pushboolean( L, b );
     return 1;
 }
@@ -1598,17 +1567,17 @@ int TLuaInterpreter::selectSection( lua_State * L )
         luaTo=lua_tointeger( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     bool ret;
     if( n > 2 )
     {
         QString _name = a1.c_str();
-        ret = mudlet::self()->selectSection( pHost, _name, luaFrom, luaTo );
+        ret = mudlet::self()->selectSection( &host, _name, luaFrom, luaTo );
     }
     else
     {
-        ret = pHost->mpConsole->selectSection( luaFrom, luaTo );
+        ret = host.mpConsole->selectSection( luaFrom, luaTo );
     }
     lua_pushboolean( L, ret );
     return 1;
@@ -1659,14 +1628,14 @@ int TLuaInterpreter::moveCursor( lua_State * L )
         luaTo=lua_tointeger( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     if( a1 == "main" || n < 3 )
-        lua_pushboolean( L, pHost->mpConsole->moveCursor( luaFrom, luaTo ) );
+        lua_pushboolean( L, host.mpConsole->moveCursor( luaFrom, luaTo ) );
     else
     {
         QString windowName = a1.c_str();
-        lua_pushboolean( L, mudlet::self()->moveCursor( pHost, windowName, luaFrom, luaTo ) );
+        lua_pushboolean( L, mudlet::self()->moveCursor( &host, windowName, luaFrom, luaTo ) );
     }
     return 1;
 }
@@ -1715,16 +1684,16 @@ int TLuaInterpreter::setConsoleBufferSize( lua_State * L )
         luaTo=lua_tointeger( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     if( a1 == "main" || n < 3 )
     {
-        pHost->mpConsole->buffer.setBufferSize( luaFrom, luaTo );
+        host.mpConsole->buffer.setBufferSize( luaFrom, luaTo );
     }
     else
     {
         QString windowName = a1.c_str();
-        mudlet::self()->setConsoleBufferSize( pHost, windowName, luaFrom, luaTo );
+        mudlet::self()->setConsoleBufferSize( &host, windowName, luaFrom, luaTo );
     }
     return 0;
 }
@@ -1764,11 +1733,11 @@ int TLuaInterpreter::replace( lua_State * L )
         }
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( n == 1 )
-        pHost->mpConsole->replace( QString(a1.c_str()) );
+        host.mpConsole->replace( QString(a1.c_str()) );
     else
-        mudlet::self()->replace( pHost, _name, QString(a2.c_str()) );
+        mudlet::self()->replace( &host, _name, QString(a2.c_str()) );
     return 0;
 }
 
@@ -1790,12 +1759,12 @@ int TLuaInterpreter::deleteLine( lua_State * L )
     }
 
     QString _name( name.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     if( name == "" )
-        pHost->mpConsole->skipLine();
+        host.mpConsole->skipLine();
     else
-        mudlet::self()->deleteLine( pHost, _name );
+        mudlet::self()->deleteLine( &host, _name );
     return 0;
 }
 
@@ -1817,9 +1786,9 @@ int TLuaInterpreter::saveMap( lua_State * L )
     }
 
     QString _location( location.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
-    bool error = pHost->mpConsole->saveMap(_location);
+    bool error = host.mpConsole->saveMap(_location);
     lua_pushboolean( L, error );
     return 1;
 }
@@ -1856,9 +1825,9 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
         status = lua_toboolean(L,3);
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( !pHost->mpMap ) return 0;
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    Host& host = getHostFromLua(L);
+    if( !host.mpMap ) return 0;
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( !pR )
     {
         lua_pushstring( L, "setExitStub: RoomId doesn't exist" );
@@ -1916,9 +1885,9 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
             return 1;
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( !pHost->mpMap ) return 0;
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    Host& host = getHostFromLua(L);
+    if( !host.mpMap ) return 0;
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR )
     {
         lua_pushstring( L, "connectExitStub: RoomId doesn't exist" );
@@ -1933,15 +1902,15 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
     }
     if ( roomsGiven )
     {
-        TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( toRoom );
+        TRoom * pR_to = host.mpMap->mpRoomDB->getRoom( toRoom );
         if ( ! pR_to )
         {
             lua_pushstring( L, "connectExitStubs: toRoom doesn't exist" );
             lua_error( L );
             return 1;
         }
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        lua_pushboolean(L, pHost->mpMap->setExit( roomId, toRoom, dirType ) );
+        Host& host = getHostFromLua(L);
+        lua_pushboolean(L, host.mpMap->setExit( roomId, toRoom, dirType ) );
     }
     else
     {
@@ -1951,12 +1920,12 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
             lua_error( L );
             return 1;
         }
-        pHost->mpMap->connectExitStub( roomId, dirType );
+        host.mpMap->connectExitStub( roomId, dirType );
 // Nothing has yet been put onto stack for a LUA return value in this case,
 // and it should always be possible to add a stub exit, so provide a true value :
         lua_pushboolean(L, true );
     }
-    pHost->mpMap->mMapGraphNeedsUpdate = true;
+    host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
 
@@ -1967,13 +1936,8 @@ int TLuaInterpreter::connectExitStub( lua_State * L  ){
 // well, to aide disabiguation of the nil value.
 int TLuaInterpreter::getExitStubs( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getExitStubs: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getExitStubs: no map present or loaded!");
         return 2;
@@ -1991,7 +1955,7 @@ int TLuaInterpreter::getExitStubs( lua_State * L )
     }
 
     // Previously threw a Lua error on non-existent room!
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getExitStubs: bad argument #1 value (number %d is not a valid room id).",
@@ -2020,13 +1984,8 @@ int TLuaInterpreter::getExitStubs( lua_State * L )
 
 int TLuaInterpreter::getExitStubs1( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getExitStubs1: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getExitStubs1: no map present or loaded!");
         return 2;
@@ -2044,7 +2003,7 @@ int TLuaInterpreter::getExitStubs1( lua_State * L )
     }
 
     // Previously threw a Lua error on non-existent room!
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getExitStubs1: bad argument #1 value (number %d is not a valid room id).",
@@ -2081,8 +2040,8 @@ int TLuaInterpreter::getModulePath( lua_State *L )
     }
     else
         moduleName = lua_tostring( L, 1 );
-    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
-    QMap<QString, QStringList> modules = mpHost->mInstalledModules;
+    Host& host = getHostFromLua(L);
+    QMap<QString, QStringList> modules = host.mInstalledModules;
     if (modules.contains(moduleName)){
         QString modPath = modules[moduleName][0];
         lua_pushstring( L, modPath.toLatin1().data() );
@@ -2101,9 +2060,9 @@ int TLuaInterpreter::getModulePriority( lua_State * L  )
     }
     else
         moduleName = lua_tostring(L,1);
-    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (mpHost->mModulePriorities.contains(moduleName)){
-        int priority = mpHost->mModulePriorities[moduleName];
+    Host& host = getHostFromLua(L);
+    if (host.mModulePriorities.contains(moduleName)){
+        int priority = host.mModulePriorities[moduleName];
         lua_pushnumber( L, priority );
         return 1;
     }
@@ -2132,9 +2091,9 @@ int TLuaInterpreter::setModulePriority( lua_State * L  ){
     }
     else
         modulePriority = lua_tonumber(L,2);
-    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (mpHost->mModulePriorities.contains(moduleName))
-        mpHost->mModulePriorities[moduleName] = modulePriority;
+    Host& host = getHostFromLua(L);
+    if (host.mModulePriorities.contains(moduleName))
+        host.mModulePriorities[moduleName] = modulePriority;
     else{
         lua_pushstring(L, "setModulePriority: Module doesn't exist");
         lua_error(L);
@@ -2146,12 +2105,7 @@ int TLuaInterpreter::setModulePriority( lua_State * L  ){
 // Now identifies and handles XML map files...
 int TLuaInterpreter::loadMap( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "loadMap: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     QString location;
     if( lua_gettop( L ) ) {
@@ -2170,7 +2124,7 @@ int TLuaInterpreter::loadMap( lua_State * L )
     bool isOk = false;
     if( ! location.isEmpty() && location.endsWith( QStringLiteral( ".xml" ), Qt::CaseInsensitive ) ) {
         QString errMsg;
-        isOk = pHost->mpConsole->importMap( location, & errMsg );
+        isOk = host.mpConsole->importMap( location, & errMsg );
         if( ! isOk ) {
             // A false was returned which indicates an error, convert it to a nil
             lua_pushnil( L );
@@ -2186,7 +2140,7 @@ int TLuaInterpreter::loadMap( lua_State * L )
         }
     }
     else {
-        isOk = pHost->mpConsole->loadMap( location );
+        isOk = host.mpConsole->loadMap( location );
     }
     lua_pushboolean( L, isOk );
     return 1;
@@ -2206,9 +2160,9 @@ int TLuaInterpreter::enableTimer( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getTimerUnit()->enableTimer( text );
+    bool error = host.getTimerUnit()->enableTimer( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2227,9 +2181,9 @@ int TLuaInterpreter::disableTimer( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getTimerUnit()->disableTimer( text );
+    bool error = host.getTimerUnit()->disableTimer( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2247,9 +2201,9 @@ int TLuaInterpreter::enableKey( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getKeyUnit()->enableKey( text );
+    bool error = host.getKeyUnit()->enableKey( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2268,9 +2222,9 @@ int TLuaInterpreter::disableKey( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getKeyUnit()->disableKey( text );
+    bool error = host.getKeyUnit()->disableKey( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2288,9 +2242,9 @@ int TLuaInterpreter::enableAlias( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getAliasUnit()->enableAlias( text );
+    bool error = host.getAliasUnit()->enableAlias( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2309,9 +2263,9 @@ int TLuaInterpreter::disableAlias( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getAliasUnit()->disableAlias( text );
+    bool error = host.getAliasUnit()->disableAlias( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2329,9 +2283,9 @@ int TLuaInterpreter::killAlias( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    lua_pushboolean( L, pHost->getAliasUnit()->killAlias( text ) );
+    lua_pushboolean( L, host.getAliasUnit()->killAlias( text ) );
     return 1;
 }
 
@@ -2349,9 +2303,9 @@ int TLuaInterpreter::enableTrigger( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getTriggerUnit()->enableTrigger( text );
+    bool error = host.getTriggerUnit()->enableTrigger( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2370,9 +2324,9 @@ int TLuaInterpreter::disableTrigger( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    bool error = pHost->getTriggerUnit()->disableTrigger( text );
+    bool error = host.getTriggerUnit()->disableTrigger( text );
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2391,9 +2345,9 @@ int TLuaInterpreter::killTimer( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    lua_pushboolean( L, pHost->killTimer( text ) );
+    lua_pushboolean( L, host.killTimer( text ) );
     return 1;
 }
 
@@ -2410,9 +2364,9 @@ int TLuaInterpreter::killTrigger( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    lua_pushboolean( L, pHost->killTrigger( text ) );
+    lua_pushboolean( L, host.killTrigger( text ) );
     return 1;
 }
 
@@ -2435,18 +2389,14 @@ int TLuaInterpreter::saveWindowLayout(lua_State *L) {
 
 int TLuaInterpreter::saveProfile(lua_State* L)
 {
-    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (!pHost) {
-        lua_pushstring(L, QLatin1String("saveProfile: NULL Host pointer - something is wrong!").data());
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     QString saveToDir;
     if (lua_isstring(L, 1)) {
         saveToDir = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    std::tuple<bool, QString, QString> result = pHost->saveProfile(saveToDir);
+    std::tuple<bool, QString, QString> result = host.saveProfile(saveToDir);
 
     if (std::get<0>(result) == true) {
         lua_pushboolean(L, true);
@@ -2454,7 +2404,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(pHost->getName()).arg(std::get<1>(result)).arg(std::get<2>(result)).toUtf8().constData());
+        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
         return 2;
     }
 }
@@ -2479,9 +2429,9 @@ int TLuaInterpreter::openUserWindow( lua_State *L )
         loadLayout = lua_toboolean(L, 2);
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    lua_pushboolean( L, mudlet::self()->openWindow( pHost, text, loadLayout ));
+    lua_pushboolean( L, mudlet::self()->openWindow( &host, text, loadLayout ));
     return 1;
 }
 
@@ -2539,9 +2489,9 @@ int TLuaInterpreter::createMiniConsole( lua_State *L )
     {
         height = lua_tonumber( L, 5 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    lua_pushboolean( L, mudlet::self()->createMiniConsole( pHost, name, x, y, width, height ) );
+    lua_pushboolean( L, mudlet::self()->createMiniConsole( &host, name, x, y, width, height ) );
     return 1;
 }
 
@@ -2610,9 +2560,9 @@ int TLuaInterpreter::createLabel( lua_State *L )
     {
         fillBackground = lua_toboolean( L, 6 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    lua_pushboolean( L, mudlet::self()->createLabel( pHost, name, x, y, width, height, fillBackground ) );
+    lua_pushboolean( L, mudlet::self()->createLabel( &host, name, x, y, width, height, fillBackground ) );
     return 1;
 }
 
@@ -2659,8 +2609,8 @@ int TLuaInterpreter::createMapper( lua_State *L )
     {
         height = lua_tonumber( L, 4 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->createMapper( x, y, width, height );
+    Host& host = getHostFromLua(L);
+    host.mpConsole->createMapper( x, y, width, height );
     return 0;
 }
 
@@ -2731,10 +2681,10 @@ int TLuaInterpreter::createButton( lua_State *L )
     {
         fillBackground = lua_toboolean( L, 6 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
     //TODO FIXME
-    mudlet::self()->createLabel( pHost, name, x, y, width, height, fillBackground );
+    mudlet::self()->createLabel( &host, name, x, y, width, height, fillBackground );
     return 0;
 }
 
@@ -2752,9 +2702,9 @@ int TLuaInterpreter::createBuffer( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    mudlet::self()->createBuffer( pHost, text );
+    mudlet::self()->createBuffer( &host, text );
     return 0;
 }
 
@@ -2763,18 +2713,18 @@ int TLuaInterpreter::clearUserWindow( lua_State *L )
     string luaSendText="";
     if( ! lua_isstring( L, 1 ) )
     {
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        pHost->mpConsole->buffer.clear();
-        pHost->mpConsole->console->forceUpdate();
+        Host& host = getHostFromLua(L);
+        host.mpConsole->buffer.clear();
+        host.mpConsole->console->forceUpdate();
         return 0;
     }
     else
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    mudlet::self()->clearWindow( pHost, text );
+    mudlet::self()->clearWindow( &host, text );
 
     return 0;
 }
@@ -2792,9 +2742,9 @@ int TLuaInterpreter::closeUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    mudlet::self()->closeWindow( pHost, text );
+    mudlet::self()->closeWindow(&host, text);
 
     return 0;
 }
@@ -2812,10 +2762,9 @@ int TLuaInterpreter::hideUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    //pHost->mpConsole->hideWindow( text );
-    mudlet::self()->hideWindow(pHost, text);
+    mudlet::self()->hideWindow(&host, text);
 
     return 0;
 }
@@ -2833,14 +2782,14 @@ int TLuaInterpreter::setBorderTop( lua_State *L )
     {
         x1 = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mBorderTopHeight = x1;
+    Host& host = getHostFromLua(L);
+    host.mBorderTopHeight = x1;
     int x,y;
-    x = pHost->mpConsole->width();
-    y = pHost->mpConsole->height();
+    x = host.mpConsole->width();
+    y = host.mpConsole->height();
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent( pHost->mpConsole, &event);
+    QApplication::sendEvent( host.mpConsole, &event);
     return 0;
 }
 
@@ -2857,14 +2806,14 @@ int TLuaInterpreter::setBorderBottom( lua_State *L )
     {
         x1 = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mBorderBottomHeight = x1;
+    Host& host = getHostFromLua(L);
+    host.mBorderBottomHeight = x1;
     int x,y;
-    x = pHost->mpConsole->width();
-    y = pHost->mpConsole->height();
+    x = host.mpConsole->width();
+    y = host.mpConsole->height();
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent( pHost->mpConsole, &event);
+    QApplication::sendEvent( host.mpConsole, &event);
     return 0;
 }
 
@@ -2881,14 +2830,14 @@ int TLuaInterpreter::setBorderLeft( lua_State *L )
     {
         x1 = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mBorderLeftWidth = x1;
+    Host& host = getHostFromLua(L);
+    host.mBorderLeftWidth = x1;
     int x,y;
-    x = pHost->mpConsole->width();
-    y = pHost->mpConsole->height();
+    x = host.mpConsole->width();
+    y = host.mpConsole->height();
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent( pHost->mpConsole, &event);
+    QApplication::sendEvent( host.mpConsole, &event);
     return 0;
 }
 
@@ -2905,14 +2854,14 @@ int TLuaInterpreter::setBorderRight( lua_State *L )
     {
         x1 = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mBorderRightWidth = x1;
+    Host& host = getHostFromLua(L);
+    host.mBorderRightWidth = x1;
     int x,y;
-    x = pHost->mpConsole->width();
-    y = pHost->mpConsole->height();
+    x = host.mpConsole->width();
+    y = host.mpConsole->height();
     QSize s = QSize(x,y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent( pHost->mpConsole, &event);
+    QApplication::sendEvent( host.mpConsole, &event);
     return 0;
 }
 
@@ -2952,9 +2901,9 @@ int TLuaInterpreter::resizeUserWindow( lua_State *L )
         y1 = lua_tonumber( L, 3 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    mudlet::self()->resizeWindow( pHost, text, static_cast<int>(x1), static_cast<int>(y1) );
+    mudlet::self()->resizeWindow( &host, text, static_cast<int>(x1), static_cast<int>(y1) );
 
     return 0;
 }
@@ -2995,10 +2944,10 @@ int TLuaInterpreter::moveWindow( lua_State *L )
         y1 = lua_tonumber( L, 3 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     QString text(luaSendText.c_str());
-    mudlet::self()->moveWindow( pHost, text, static_cast<int>(x1), static_cast<int>(y1) );
+    mudlet::self()->moveWindow( &host, text, static_cast<int>(x1), static_cast<int>(y1) );
     return 0;
 }
 
@@ -3089,9 +3038,9 @@ int TLuaInterpreter::setBackgroundColor( lua_State *L )
     {
         y2 = lua_tonumber( L, 5 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    mudlet::self()->setBackgroundColor( pHost, text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2) );
+    mudlet::self()->setBackgroundColor( &host, text, static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2), static_cast<int>(y2) );
 
     return 0;
 }
@@ -3141,12 +3090,7 @@ int TLuaInterpreter::calcFontSize( lua_State *L )
 //   -2 = logging was already not in progress so no change in logging state
 int TLuaInterpreter::startLogging( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "startLogging: NULL Host pointer - something is wrong!");
-        lua_error(L);
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     bool logOn = true;
     if( ! lua_isboolean( L, 1 ) ) {
@@ -3160,41 +3104,41 @@ int TLuaInterpreter::startLogging( lua_State *L )
     }
 
     QString savedLogFileName;
-    if( pHost->mpConsole->mLogToLogFile ) {
-        savedLogFileName = pHost->mpConsole->mLogFileName;
+    if( host.mpConsole->mLogToLogFile ) {
+        savedLogFileName = host.mpConsole->mLogFileName;
     // Don't assume we will be able to find the file name once recording has
     // stopped.
     }
 
-    if( pHost->mpConsole->mLogToLogFile != logOn ) {
-        pHost->mpConsole->toggleLogging( false );
-        // Changes state of pHost->mpConsole->mLogToLogFile, but that can't be
+    if( host.mpConsole->mLogToLogFile != logOn ) {
+        host.mpConsole->toggleLogging( false );
+        // Changes state of host.mpConsole->mLogToLogFile, but that can't be
         // really be called a side-effect!
 
         lua_pushboolean( L, true );
-        if( pHost->mpConsole->mLogToLogFile ) {
-            pHost->mpConsole->logButton->setChecked(true);
+        if( host.mpConsole->mLogToLogFile ) {
+            host.mpConsole->logButton->setChecked(true);
             // Sets the button as checked but clicked() & pressed() signals are NOT generated
             lua_pushfstring(L, "Main console output has started to be logged to file: %s.",
-                            pHost->mpConsole->mLogFileName.toUtf8().constData());
-            lua_pushstring(L, pHost->mpConsole->mLogFileName.toUtf8().constData());
+                            host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 1);
         }
         else {
-            pHost->mpConsole->logButton->setChecked(false);
+            host.mpConsole->logButton->setChecked(false);
             lua_pushfstring(L, "Main console output has stopped being logged to file: %s.",
                             savedLogFileName.toUtf8().constData());
-            lua_pushstring(L, pHost->mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 0);
         }
 
     }
     else {
         lua_pushnil( L );
-        if( pHost->mpConsole->mLogToLogFile ) {
+        if( host.mpConsole->mLogToLogFile ) {
             lua_pushfstring(L, "Main console output is already being logged to file: %s.",
-                            pHost->mpConsole->mLogFileName.toUtf8().constData());
-            lua_pushstring(L, pHost->mpConsole->mLogFileName.toUtf8().constData());
+                            host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, -1);
         }
         else {
@@ -3232,21 +3176,17 @@ int TLuaInterpreter::setBackgroundImage( lua_State *L )
         luaName = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
     QString name(luaName.c_str());
-    mudlet::self()->setBackgroundImage( pHost, text, name );
+    mudlet::self()->setBackgroundImage( &host, text, name );
 
     return 0;
 }
 
 int TLuaInterpreter::setLabelClickCallback( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "setLabelClickCallback: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
@@ -3294,7 +3234,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelClickCallback(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3307,11 +3247,7 @@ int TLuaInterpreter::setLabelClickCallback( lua_State *L )
 
 int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "setLabelReleaseCallback: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
@@ -3359,7 +3295,7 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelReleaseCallback(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3372,11 +3308,7 @@ int TLuaInterpreter::setLabelReleaseCallback( lua_State *L )
 
 int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "setLabelOnEnter: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
@@ -3424,7 +3356,7 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelOnEnter(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3437,11 +3369,7 @@ int TLuaInterpreter::setLabelOnEnter( lua_State *L )
 
 int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if(! pHost) {
-        lua_pushstring(L, "setLabelOnLeave: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     QString labelName;
     if (! lua_isstring(L, 1)) {
@@ -3489,7 +3417,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
         }
     }
 
-    if (mudlet::self()->setLabelOnLeave(pHost, labelName, eventName, event)) {
+    if (mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
@@ -3502,12 +3430,7 @@ int TLuaInterpreter::setLabelOnLeave( lua_State *L )
 
 int TLuaInterpreter::setTextFormat( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setTextFormat: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     int n = lua_gettop( L );
     int s = 0;
@@ -3682,7 +3605,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
 
     if( windowName.isEmpty() || windowName.compare( QStringLiteral("main"), Qt::CaseSensitive ) )
     {
-        TConsole * pC = pHost->mpConsole;
+        TConsole * pC = host.mpConsole;
         pC->mFormatCurrent.bgR = colorComponents.at(0);
         pC->mFormatCurrent.bgG = colorComponents.at(1);
         pC->mFormatCurrent.bgB = colorComponents.at(2);
@@ -3699,7 +3622,7 @@ int TLuaInterpreter::setTextFormat( lua_State * L )
     }
     else
     {
-        lua_pushboolean( L, mudlet::self()->setTextFormat( pHost, windowName,
+        lua_pushboolean( L, mudlet::self()->setTextFormat( &host, windowName,
                                                            colorComponents.at(0), colorComponents.at(1), colorComponents.at(2),
                                                            colorComponents.at(3), colorComponents.at(4), colorComponents.at(5),
                                                            bold, underline, italics, strikeout ) );
@@ -3721,8 +3644,8 @@ int TLuaInterpreter::raiseWindow( lua_State *L )
     {
         windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean( L, pHost->mpConsole->raiseWindow( windowName ));
+    Host& host = getHostFromLua(L);
+    lua_pushboolean( L, host.mpConsole->raiseWindow( windowName ));
     return 1;
 }
 
@@ -3739,8 +3662,8 @@ int TLuaInterpreter::lowerWindow( lua_State *L )
     {
         windowName = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean( L, pHost->mpConsole->lowerWindow( windowName ));
+    Host& host = getHostFromLua(L);
+    lua_pushboolean( L, host.mpConsole->lowerWindow( windowName ));
     return 1;
 }
 
@@ -3757,10 +3680,9 @@ int TLuaInterpreter::showUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-    //lua_pushboolean( L, pHost->mpConsole->showWindow( text ));
-    lua_pushboolean( L, mudlet::self()->showWindow(pHost, text));
+    lua_pushboolean(L, mudlet::self()->showWindow(&host, text));
     return 1;
 }
 
@@ -3810,9 +3732,9 @@ int TLuaInterpreter::setMapperView( lua_State *L )
     {
         zoom = lua_tonumber( L, 4 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
-    pHost->mpMap->setView( x, y, z, zoom  );
+    host.mpMap->setView( x, y, z, zoom  );
     return 0;
 }
 
@@ -3839,8 +3761,8 @@ int TLuaInterpreter::setRoomEnv( lua_State *L )
     {
         env = lua_tonumber( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( pR )
     {
         pR->environment = env;
@@ -3851,13 +3773,8 @@ int TLuaInterpreter::setRoomEnv( lua_State *L )
 
 int TLuaInterpreter::setRoomName( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setRoomName: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setRoomName: no map present or loaded!");
         return 2;
@@ -3885,7 +3802,7 @@ int TLuaInterpreter::setRoomName( lua_State *L )
         name = QString::fromUtf8( lua_tostring( L, 2 ) );
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR ) {
         pR->name = name;
         lua_pushboolean( L, true ); // Might conceivably wish to update the mappers after this...!
@@ -3901,13 +3818,8 @@ int TLuaInterpreter::setRoomName( lua_State *L )
 
 int TLuaInterpreter::getRoomName( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getRoomName: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getRoomName: no map present or loaded!");
         return 2;
@@ -3924,7 +3836,7 @@ int TLuaInterpreter::getRoomName( lua_State *L )
         id = lua_tonumber( L, 1 );
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR ) {
         lua_pushstring(L, pR->name.toUtf8().constData());
         return 1;
@@ -3961,46 +3873,79 @@ int TLuaInterpreter::setRoomWeight( lua_State *L )
     {
         w = lua_tonumber( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         pR->setWeight(w);
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
     return 0;
 }
 
-int TLuaInterpreter::connectToServer( lua_State *L )
+int TLuaInterpreter::connectToServer(lua_State* L)
 {
-    int port;
+    // The lua_tointeger(...) call can return a 64-bit integer number, on
+    // Windows Platform that is bigger than the int32_t type (a.k.a. "int" AND
+    // "long" types on that platform)! 8-O
+    lua_Integer port = 23;
     string url;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        url = lua_tostring( L, 1 );
+    bool isToSaveToProfile = false;
+
+    Host& host = getHostFromLua(L);
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "connectToServer: bad argument #1 type (url as string expected, got %s!)", lua_typename(L, 1));
+        return lua_error(L);
+    } else {
+        url = lua_tostring(L, 1);
     }
 
-    if( ! lua_isnumber( L, 2 ) )
-    {
-        lua_pushstring( L, "connectToServer: wrong argument type" );
-        lua_error( L );
-        return 1;
+    if (!lua_isnoneornil(L, 2)) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "connectToServer: bad argument #2 type (port number as number is optional {default = 23}, got %s!)", lua_typename(L, 2));
+            return lua_error(L);
+        } else {
+            port = lua_tointeger(L, 2);
+            if (port > 65535 || port < 1) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}", port);
+                return 2;
+            }
+        }
     }
-    else
-    {
-        port = lua_tonumber( L, 2 );
+
+    // Optional argument to save this new connection to disk for this profile.
+    if (!lua_isnoneornil(L, 3)) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "connectToServer: bad argument #3 type (save host name and port number as boolean expected, got %1!)", lua_typename(L, 3));
+            return lua_error(L);
+        } else {
+            isToSaveToProfile = lua_toboolean(L, 3);
+        }
     }
-    QString _url = url.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.connectIt( _url, port );
-    return 0;
+
+    if (isToSaveToProfile) {
+        QPair<bool, QString> result = host.writeProfileData(QLatin1String("url"), url.c_str());
+        if (!result.first) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "unable to save host name, reason: %s", result.second.toUtf8().constData());
+            return 2;
+        }
+
+        result = host.writeProfileData(QLatin1String("url"), QString::number(port));
+        if (!result.first) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "unable to save port number, reason: %s", result.second.toUtf8().constData());
+            return 2;
+        }
+    }
+
+    host.mTelnet.connectIt(url.c_str(), port);
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
@@ -4027,8 +3972,8 @@ int TLuaInterpreter::setRoomIDbyHash( lua_State *L )
     {
         hash = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpMap->mpRoomDB->hashTable[QString(hash.c_str())] = id;
+    Host& host = getHostFromLua(L);
+    host.mpMap->mpRoomDB->hashTable[QString(hash.c_str())] = id;
     return 0;
 }
 
@@ -4045,12 +3990,12 @@ int TLuaInterpreter::getRoomIDbyHash( lua_State *L )
     {
         hash = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     int retID = -1;
     QString _hash = hash.c_str();
-    if( pHost->mpMap->mpRoomDB->hashTable.contains( _hash ) )
+    if( host.mpMap->mpRoomDB->hashTable.contains( _hash ) )
     {
-        retID = pHost->mpMap->mpRoomDB->hashTable[_hash];
+        retID = host.mpMap->mpRoomDB->hashTable[_hash];
         lua_pushnumber( L, retID );
     }
     else
@@ -4081,8 +4026,8 @@ int TLuaInterpreter::roomLocked( lua_State *L )
         id = lua_tonumber( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         bool r = pR->isLocked;
@@ -4120,12 +4065,12 @@ int TLuaInterpreter::lockRoom( lua_State *L )
     {
         b = lua_toboolean( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         pR->isLocked = b;
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     }
     else
@@ -4169,12 +4114,12 @@ int TLuaInterpreter::lockExit( lua_State *L )
     {
         b = lua_toboolean( L, 3 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         pR->setExitLock( dir, b );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -4227,13 +4172,13 @@ int TLuaInterpreter::lockSpecialExit( lua_State *L )
     {
         b = lua_toboolean( L, 4 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         QString _dir = dir.c_str();
         pR->setSpecialExitLock( to, _dir, b );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
 }
@@ -4274,8 +4219,8 @@ int TLuaInterpreter::hasSpecialExitLock( lua_State *L )
     {
         dir = lua_tostring( L, 3 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         QString _dir = dir.c_str();
@@ -4308,8 +4253,8 @@ int TLuaInterpreter::hasExitLock( lua_State *L )
         return 1;
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         lua_pushboolean( L, pR->hasExitLock(dir) );
@@ -4332,8 +4277,8 @@ int TLuaInterpreter::getRoomExits( lua_State *L )
         id = lua_tonumber( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(id);
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom(id);
     if( pR )
     {
         lua_newtable(L);
@@ -4431,19 +4376,14 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
        roomId = lua_tonumber( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAllRoomEntrances: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAllRoomEntrances: no map present or loaded!");
         return 2;
     }
     else {
-        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+        TRoom * pR = host.mpMap->mpRoomDB->getRoom(roomId);
         if( ! pR ) {
             lua_pushnil( L );
             lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %d is not a valid room id).",
@@ -4451,7 +4391,7 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
             return 2;
         }
         lua_newtable(L);
-        QList<int> entrances = pHost->mpMap->mpRoomDB->getEntranceHash().values( roomId );
+        QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values( roomId );
         // Could use a .toSet().toList() to remove duplicates values
         if( entrances.count() > 1 ) {
             std::sort( entrances.begin(), entrances.end() );
@@ -4477,13 +4417,8 @@ int TLuaInterpreter::getAllRoomEntrances( lua_State *L )
 // which both default to false if omitted to reproduce the original action.
 int TLuaInterpreter::searchRoom( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "searchRoom: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "searchRoom: no map present or loaded!");
         return 2;
@@ -4532,7 +4467,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
     }
 
     if( gotRoomID ) {
-        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom(room_id);
+        TRoom * pR = host.mpMap->mpRoomDB->getRoom(room_id);
         if( pR ) {
             lua_pushstring(L, pR->name.toUtf8().constData());
             return 1;
@@ -4545,7 +4480,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
         }
     }
     else {
-        QList<TRoom *> roomList = pHost->mpMap->mpRoomDB->getRoomPtrList();
+        QList<TRoom *> roomList = host.mpMap->mpRoomDB->getRoomPtrList();
         lua_newtable(L);
         QList<int> roomIdsFound;
         for(auto pR : roomList) {
@@ -4562,7 +4497,7 @@ int TLuaInterpreter::searchRoom( lua_State *L )
         }
         if( ! roomIdsFound.isEmpty() ) {
             for(int i : roomIdsFound) {
-                TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( i );
+                TRoom * pR = host.mpMap->mpRoomDB->getRoom( i );
                 QString name = pR->name;
                 int roomID = pR->getId();
                 lua_pushnumber( L, roomID );
@@ -4586,13 +4521,8 @@ int TLuaInterpreter::searchRoom( lua_State *L )
 //     return a sorted lua "array" of the unique "keys" found in all rooms
 int TLuaInterpreter::searchRoomUserData( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "searchRoomUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "searchRoomUserData: no map present or loaded!");
         return 2;
@@ -4627,7 +4557,7 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
 
     lua_newtable(L);
 
-    QHashIterator<int, TRoom *> itRoom( pHost->mpMap->mpRoomDB->getRoomMap() );
+    QHashIterator<int, TRoom *> itRoom( host.mpMap->mpRoomDB->getRoomMap() );
     // For best performance do the three different types of action in three
     // different branches each with a loop - rather than choosing a branch
     // within a loop for each room
@@ -4705,13 +4635,8 @@ int TLuaInterpreter::searchRoomUserData( lua_State *L )
 // Derived from searchRoomUserData(...)
 int TLuaInterpreter::searchAreaUserData( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "searchAreaUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "searchAreaUserData: no map present or loaded!");
         return 2;
@@ -4746,7 +4671,7 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
 
     lua_newtable(L);
 
-    QMapIterator<int, TArea *> itArea( pHost->mpMap->mpRoomDB->getAreaMap() );
+    QMapIterator<int, TArea *> itArea( host.mpMap->mpRoomDB->getAreaMap() );
     // For best performance do the three different types of action in three
     // different branches each with a loop - rather than choosing a branch
     // within a loop for each room
@@ -4823,19 +4748,14 @@ int TLuaInterpreter::searchAreaUserData( lua_State *L )
 
 int TLuaInterpreter::getAreaTable( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAreaTable: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAreaTable: no map present or loaded!");
         return 2;
     }
 
-    QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
+    QMapIterator<int, QString> it( host.mpMap->mpRoomDB->getAreaNamesMap() );
     lua_newtable(L);
     while( it.hasNext() ) {
         it.next();
@@ -4850,19 +4770,14 @@ int TLuaInterpreter::getAreaTable( lua_State *L )
 
 int TLuaInterpreter::getAreaTableSwap( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAreaTableSwap: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+     if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAreaTableSwap: no map present or loaded!");
         return 2;
     }
 
-    QMapIterator<int, QString> it( pHost->mpMap->mpRoomDB->getAreaNamesMap() );
+    QMapIterator<int, QString> it( host.mpMap->mpRoomDB->getAreaNamesMap() );
     lua_newtable(L);
     while( it.hasNext() ) {
         it.next();
@@ -4888,8 +4803,8 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
     {
         area = lua_tonumber( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    Host& host = getHostFromLua(L);
+    TArea * pA = host.mpMap->mpRoomDB->getArea( area );
     if( !pA )
     {
         lua_pushnil(L);
@@ -4912,9 +4827,9 @@ int TLuaInterpreter::getAreaRooms( lua_State *L )
 
 int TLuaInterpreter::getRooms( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     lua_newtable(L);
-    QHashIterator<int,TRoom*> it(pHost->mpMap->mpRoomDB->getRoomMap());
+    QHashIterator<int,TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
     while( it.hasNext() )
     {
         it.next();
@@ -4959,8 +4874,8 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
         }
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    Host& host = getHostFromLua(L);
+    TArea * pA = host.mpMap->mpRoomDB->getArea( area );
     if( !pA ) {
         lua_pushnil(L);
         lua_pushfstring(L, "getAreaExits: bad argument #1 value (number %d is not a valid area id).",
@@ -5002,14 +4917,14 @@ int TLuaInterpreter::getAreaExits( lua_State *L )
 // Now audits the whole map
 int TLuaInterpreter::auditAreas( lua_State * L )
 {
-    Host * pH = TLuaInterpreter::luaInterpreterMap[L];
-    pH->mpMap->audit();
+    Host& host = getHostFromLua(L);
+    host.mpMap->audit();
     return 0;
 }
 
 int TLuaInterpreter::getRoomWeight( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     int roomId;
     if( lua_gettop( L ) > 0 )
     {
@@ -5026,10 +4941,10 @@ int TLuaInterpreter::getRoomWeight( lua_State *L )
     }
     else
     {
-        roomId = pHost->mpMap->mRoomIdHash.value( pHost->getName() );
+        roomId = host.mpMap->mRoomIdHash.value( host.getName() );
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( pR )
     {
         lua_pushnumber( L, pR->getWeight() );
@@ -5056,31 +4971,26 @@ int TLuaInterpreter::gotoRoom( lua_State *L )
         targetRoomId = lua_tonumber( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "gotoRoom: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "gotoRoom: no map present or loaded!");
         return 2;
     }
-    else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
+    else if( ! host.mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
         lua_pushnil( L );
         lua_pushfstring(L, "gotoRoom: bad argument #1 value (number %d is not a valid target room id).",
                         targetRoomId);
         return 2;
     }
 
-    if( pHost->mpMap->gotoRoom( targetRoomId ) ) {
-        pHost->startSpeedWalk();
+    if( host.mpMap->gotoRoom( targetRoomId ) ) {
+        host.startSpeedWalk();
         lua_pushboolean( L, true );
         return 1;
     }
     else {
-        int totalWeight = pHost->assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
+        int totalWeight = host.assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
         Q_UNUSED(totalWeight);
         lua_pushboolean( L, false );
         lua_pushfstring(L, "gotoRoom: no path found from current room to room with id %d!",
@@ -5113,32 +5023,27 @@ int TLuaInterpreter::getPath( lua_State *L )
         targetRoomId = lua_tonumber( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getPath: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getPath: no map present or loaded!");
         return 2;
     }
-    else if( ! pHost->mpMap->mpRoomDB->getRoom( originRoomId ) ) {
+    else if( ! host.mpMap->mpRoomDB->getRoom( originRoomId ) ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getPath: bad argument #1 value (number %d is not a valid source room id).",
                         originRoomId);
         return 2;
     }
-    else if( ! pHost->mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
+    else if( ! host.mpMap->mpRoomDB->getRoom( targetRoomId ) ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getPath: bad argument #2 value (number %d is not a valid target room id).",
                         targetRoomId);
         return 2;
     }
 
-    bool ret = pHost->mpMap->gotoRoom( originRoomId, targetRoomId );
-    int totalWeight = pHost->assemblePath(); // Needed even if unsucessful, to clear lua tables then
+    bool ret = host.mpMap->gotoRoom( originRoomId, targetRoomId );
+    int totalWeight = host.assemblePath(); // Needed even if unsucessful, to clear lua tables then
     if( ret )
     {
         lua_pushboolean( L, true );
@@ -5156,12 +5061,7 @@ int TLuaInterpreter::getPath( lua_State *L )
 
 int TLuaInterpreter::deselect( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "deselect: NULL Host pointer - something is wrong!");
-        lua_error( L );
-        return 1;
-    }
+    Host& host = getHostFromLua(L);
 
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if( lua_gettop( L ) > 0 ) {
@@ -5184,11 +5084,11 @@ int TLuaInterpreter::deselect( lua_State *L )
     }
 
     if( windowName.isEmpty() ) {
-        pHost->mpConsole->deselect();
+        host.mpConsole->deselect();
         lua_pushboolean( L, true );
     }
     else {
-        lua_pushboolean( L, mudlet::self()->deselect( pHost, windowName ) );
+        lua_pushboolean( L, mudlet::self()->deselect( &host, windowName ) );
     }
 
     return 1;
@@ -5196,12 +5096,7 @@ int TLuaInterpreter::deselect( lua_State *L )
 
 int TLuaInterpreter::resetFormat( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushstring(L, "resetFormat: NULL Host pointer - something is wrong!");
-        lua_error( L );
-        return 1;
-    }
+    Host& host = getHostFromLua(L);
 
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if( lua_gettop( L ) > 0 ) {
@@ -5224,11 +5119,11 @@ int TLuaInterpreter::resetFormat( lua_State *L )
     }
 
     if( windowName.isEmpty() ) {
-        pHost->mpConsole->reset();
+        host.mpConsole->reset();
         lua_pushboolean( L, true );
     }
     else {
-        lua_pushboolean( L, mudlet::self()->resetFormat( pHost, windowName ) );
+        lua_pushboolean( L, mudlet::self()->resetFormat( &host, windowName ) );
     }
 
     return 1;
@@ -5236,8 +5131,8 @@ int TLuaInterpreter::resetFormat( lua_State *L )
 
 int TLuaInterpreter::hasFocus( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean( L, pHost->mpConsole->hasFocus() );//FIXME
+    Host& host = getHostFromLua(L);
+    lua_pushboolean( L, host.mpConsole->hasFocus() );//FIXME
     return 1;
 }
 
@@ -5266,10 +5161,10 @@ int TLuaInterpreter::echoUserWindow( lua_State *L )
     {
         luaSendText = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
     QString windowName(luaWindowName.c_str());
-    mudlet::self()->echoWindow( pHost, windowName, text );
+    mudlet::self()->echoWindow( &host, windowName, text );
     return 0;
 }
 
@@ -5338,12 +5233,13 @@ int TLuaInterpreter::moveCursorEnd( lua_State *L )
     else
         luaWindowName = "main";
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
-    if( luaWindowName == "main" )
-        pHost->mpConsole->moveCursorEnd();
-    else
-       mudlet::self()->moveCursorEnd( pHost, windowName );
+    if (luaWindowName == "main") {
+        host.mpConsole->moveCursorEnd();
+    } else {
+        mudlet::self()->moveCursorEnd(&host, windowName);
+    }
     return 0;
 }
 
@@ -5361,13 +5257,14 @@ int TLuaInterpreter::getLastLineNumber( lua_State *L )
         luaWindowName = lua_tostring( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
     int number;
-    if( luaWindowName == "main" )
-        number = pHost->mpConsole->getLastLineNumber();
-    else
-        number = mudlet::self()->getLastLineNumber( pHost, windowName );
+    if( luaWindowName == "main" ) {
+        number = host.mpConsole->getLastLineNumber();
+    } else {
+        number = mudlet::self()->getLastLineNumber( &host, windowName );
+    }
     lua_pushnumber( L, number );
     return 1;
 }
@@ -5378,8 +5275,8 @@ int TLuaInterpreter::getMudletHomeDir( lua_State * L )
 {
     QString home = QDir::homePath();
     home.append( "/.config/mudlet/profiles/" );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString name = pHost->getName();
+    Host& host = getHostFromLua(L);
+    QString name = host.getName();
     home.append( name );
     QString erg = QDir::toNativeSeparators( home );
     lua_pushstring( L, erg.toLatin1().data() );
@@ -5416,15 +5313,15 @@ int TLuaInterpreter::getMudletLuaDefaultPaths( lua_State * L )
 
 int TLuaInterpreter::disconnect( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.disconnect();
+    Host& host = getHostFromLua(L);
+    host.mTelnet.disconnect();
     return 0;
 }
 
 int TLuaInterpreter::reconnect( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.connectIt( pHost->getUrl(), pHost->getPort() );
+    Host& host = getHostFromLua(L);
+    host.mTelnet.connectIt( host.getUrl(), host.getPort() );
     return 0;
 }
 
@@ -5458,9 +5355,9 @@ int TLuaInterpreter::setTriggerStayOpen( lua_State *L )
         b = lua_tonumber( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
-    pHost->getTriggerUnit()->setTriggerStayOpen( QString( luaWindowName.c_str() ), static_cast<int>(b) );
+    host.getTriggerUnit()->setTriggerStayOpen( QString( luaWindowName.c_str() ), static_cast<int>(b) );
     return 0;
 }
 
@@ -5510,17 +5407,18 @@ int TLuaInterpreter::setLink( lua_State * L )
     }
 
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
     QString _linkText = "";//QString(linkText.c_str());
     QStringList _linkFunction;
     _linkFunction <<  QString(linkFunction.c_str());
     QStringList _linkHint;
     _linkHint << QString(linkHint.c_str());
-    if( windowName.size() > 0 )
-        mudlet::self()->setLink( pHost, windowName, _linkText, _linkFunction, _linkHint );
-    else
-        pHost->mpConsole->setLink( _linkText, _linkFunction, _linkHint );
+    if( windowName.size() > 0 ) {
+        mudlet::self()->setLink( &host, windowName, _linkText, _linkFunction, _linkHint );
+    } else {
+        host.mpConsole->setLink( _linkText, _linkFunction, _linkHint );
+    }
     return 0;
 }
 
@@ -5609,7 +5507,7 @@ int TLuaInterpreter::setPopup( lua_State *L )
         customFormat = lua_toboolean( L, s );
     }
 */
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString txt = a2.c_str();
     QString name = a1.c_str();
     if( _commandList.size() != _hintList.size() )
@@ -5621,11 +5519,11 @@ int TLuaInterpreter::setPopup( lua_State *L )
 
     if( a1 == "" )
     {
-        pHost->mpConsole->setLink( txt, _commandList, _hintList );
+        host.mpConsole->setLink( txt, _commandList, _hintList );
     }
     else
     {
-        mudlet::self()->setLink( pHost, name, txt, _commandList, _hintList );
+        mudlet::self()->setLink( &host, name, txt, _commandList, _hintList );
     }
 
     return 0;
@@ -5633,12 +5531,7 @@ int TLuaInterpreter::setPopup( lua_State *L )
 
 int TLuaInterpreter::setBold( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setBold: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     QString windowName;
     int s = 0;
@@ -5673,23 +5566,18 @@ int TLuaInterpreter::setBold( lua_State * L )
 
     if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
     {
-        pHost->mpConsole->setBold( isAtttributeEnabled );
+        host.mpConsole->setBold( isAtttributeEnabled );
     }
     else
     {
-        mudlet::self()->setBold( pHost, windowName, isAtttributeEnabled );
+        mudlet::self()->setBold( &host, windowName, isAtttributeEnabled );
     }
     return 0;
 }
 
 int TLuaInterpreter::setItalics( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setItalics: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     QString windowName;
     int s = 0;
@@ -5724,23 +5612,18 @@ int TLuaInterpreter::setItalics( lua_State * L )
 
     if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
     {
-        pHost->mpConsole->setItalics( isAtttributeEnabled );
+        host.mpConsole->setItalics( isAtttributeEnabled );
     }
     else
     {
-        mudlet::self()->setItalics( pHost, windowName, isAtttributeEnabled );
+        mudlet::self()->setItalics( &host, windowName, isAtttributeEnabled );
     }
     return 0;
 }
 
 int TLuaInterpreter::setUnderline( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setUnderline: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     QString windowName;
     int s = 0;
@@ -5775,23 +5658,18 @@ int TLuaInterpreter::setUnderline( lua_State *L )
 
     if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
     {
-        pHost->mpConsole->setUnderline( isAtttributeEnabled );
+        host.mpConsole->setUnderline( isAtttributeEnabled );
     }
     else
     {
-        mudlet::self()->setUnderline( pHost, windowName, isAtttributeEnabled );
+        mudlet::self()->setUnderline( &host, windowName, isAtttributeEnabled );
     }
     return 0;
 }
 
 int TLuaInterpreter::setStrikeOut( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setStrikeOut: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     QString windowName;
     int s = 0;
@@ -5826,17 +5704,18 @@ int TLuaInterpreter::setStrikeOut( lua_State * L )
 
     if( windowName.isEmpty() || windowName.compare( QStringLiteral( "main" ), Qt::CaseSensitive ) )
     {
-        pHost->mpConsole->setStrikeOut( isAtttributeEnabled );
+        host.mpConsole->setStrikeOut( isAtttributeEnabled );
     }
     else
     {
-        mudlet::self()->setStrikeOut( pHost, windowName, isAtttributeEnabled );
+        mudlet::self()->setStrikeOut( &host, windowName, isAtttributeEnabled );
     }
     return 0;
 }
 
 int TLuaInterpreter::debug( lua_State *L )
 {
+    Host& host = getHostFromLua(L);
     int nbargs = lua_gettop(L);
     QString luaDebugText="";
     for (int i=0; i<nbargs; i++)
@@ -5847,11 +5726,10 @@ int TLuaInterpreter::debug( lua_State *L )
         auto black = QColor(Qt::black);
         QString s1 = QString("[DEBUG:]");
         QString s2 = QString("%1\n").arg(luaDebugText);
-        Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
-        if( mpHost->mpEditorDialog )
+        if( host.mpEditorDialog )
         {
-            mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
-            mpHost->mpEditorDialog->mpErrorConsole->printDebug(green, black, s2);
+            host.mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
+            host.mpEditorDialog->mpErrorConsole->printDebug(green, black, s2);
         }
     }
     return 0;
@@ -5871,9 +5749,9 @@ int TLuaInterpreter::hideToolBar( lua_State *L )
         luaWindowName = lua_tostring( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
-    pHost->getActionUnit()->hideToolBar( windowName );
+    host.getActionUnit()->hideToolBar( windowName );
     return 0;
 }
 
@@ -5891,9 +5769,9 @@ int TLuaInterpreter::showToolBar( lua_State *L )
         luaWindowName = lua_tostring( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString windowName(luaWindowName.c_str());
-    pHost->getActionUnit()->showToolBar( windowName );
+    host.getActionUnit()->showToolBar( windowName );
     return 0;
 }
 
@@ -5934,8 +5812,8 @@ int TLuaInterpreter::sendATCP( lua_State *L )
     _h += TN_IAC;
     _h += TN_SE;
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.socketOutRaw( _h );
+    Host& host = getHostFromLua(L);
+    host.mTelnet.socketOutRaw( _h );
     return 0;
 }
 
@@ -5971,8 +5849,8 @@ int TLuaInterpreter::sendGMCP( lua_State *L )
     _h += TN_IAC;
     _h += TN_SE;
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.socketOutRaw( _h );
+    Host& host = getHostFromLua(L);
+    host.mTelnet.socketOutRaw( _h );
     return 0;
 }
 
@@ -6016,8 +5894,8 @@ int TLuaInterpreter::sendMSDP( lua_State *L )
     _h += TN_IAC;
     _h += TN_SE;
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.socketOutRaw( _h );
+    Host& host = getHostFromLua(L);
+    host.mTelnet.socketOutRaw( _h );
     return 0;
 }
 
@@ -6042,42 +5920,42 @@ int TLuaInterpreter::sendTelnetChannel102( lua_State *L )
     _h += TN_IAC;
     _h += TN_SE;
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.socketOutRaw( _h );
+    Host& host = getHostFromLua(L);
+    host.mTelnet.socketOutRaw( _h );
     return 0;
 }
 
 int TLuaInterpreter::getButtonState( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     int state;
-    state = pHost->mpConsole->getButtonState();
+    state = host.mpConsole->getButtonState();
     lua_pushnumber( L, state );
     return 1;
 }
 
 int TLuaInterpreter::getNetworkLatency( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     double number;
-    number = pHost->mTelnet.networkLatency;
+    number = host.mTelnet.networkLatency;
     lua_pushnumber( L, number );
     return 1;
 }
 
 int TLuaInterpreter::getMainConsoleWidth( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    int fw = QFontMetrics(pHost->mDisplayFont).width("W");
-    fw *= pHost->mWrapAt + 1;
+    Host& host = getHostFromLua(L);
+    int fw = QFontMetrics(host.mDisplayFont).width("W");
+    fw *= host.mWrapAt + 1;
     lua_pushnumber( L, fw );
     return 1;
 }
 
 int TLuaInterpreter::getMainWindowSize( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QSize mainWindowSize = pHost->mpConsole->getMainWindowSize();
+    Host& host = getHostFromLua(L);
+    QSize mainWindowSize = host.mpConsole->getMainWindowSize();
 
     lua_pushnumber( L, mainWindowSize.width() );
     lua_pushnumber( L, mainWindowSize.height() );
@@ -6087,14 +5965,9 @@ int TLuaInterpreter::getMainWindowSize( lua_State *L )
 
 int TLuaInterpreter::getMousePosition( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getMousePosition: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
-    QPoint pos = pHost->mpConsole->mapFromGlobal(QCursor::pos());
+    QPoint pos = host.mpConsole->mapFromGlobal(QCursor::pos());
 
     lua_pushnumber( L, pos.x() );
     lua_pushnumber( L, pos.y() );
@@ -6120,11 +5993,11 @@ int TLuaInterpreter::tempTimer( lua_State *L )
     string luaFunction;
     if( lua_isfunction( L, 2 ) )
     {
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+        Host& host = getHostFromLua(L);
+        TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
         QString _fun;
         int timerID = pLuaInterpreter->startTempTimer( luaTimeout, _fun );
-        TTimer * pT = pHost->getTimerUnit()->getTimer( timerID );
+        TTimer * pT = host.getTimerUnit()->getTimer( timerID );
         pT->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata( L, pT );
         lua_pushvalue( L, 2 );
@@ -6143,8 +6016,8 @@ int TLuaInterpreter::tempTimer( lua_State *L )
         luaFunction = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempTimer( luaTimeout, _fun );
     lua_pushnumber( L, timerID );
@@ -6177,8 +6050,8 @@ int TLuaInterpreter::tempExactMatchTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _reg = luaRegex.c_str();
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempExactMatchTrigger( _reg, _fun );
@@ -6212,8 +6085,8 @@ int TLuaInterpreter::tempBeginOfLineTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _reg = luaRegex.c_str();
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempBeginOfLineTrigger( _reg, _fun );
@@ -6249,8 +6122,8 @@ int TLuaInterpreter::tempTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _reg = luaRegex.c_str();
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempTrigger( _reg, _fun );
@@ -6298,8 +6171,8 @@ int TLuaInterpreter::tempColorTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 3 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempColorTrigger( luaFrom, luaTo, _fun );
     lua_pushnumber( L, timerID );
@@ -6345,8 +6218,8 @@ int TLuaInterpreter::tempLineTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 3 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _fun = luaFunction.c_str();
     int timerID = pLuaInterpreter->startTempLineTrigger( luaFrom, luaTo, _fun );
     lua_pushnumber( L, timerID );
@@ -6491,13 +6364,11 @@ int TLuaInterpreter::tempComplexRegexTrigger( lua_State *L )
         lineDelta = lua_tonumber( L, 12 );
     }
 
-    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
-    //TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
-    //mpHost = pLuaInterpreter->mpHost;
+    Host& host = getHostFromLua(L);
     TTrigger * pT;
     QList<int> propertyList;
 
-    TTrigger * pP = mpHost->getTriggerUnit()->findTrigger( parent );
+    TTrigger * pP = host.getTriggerUnit()->findTrigger( parent );
 
     if( !pP )
     {
@@ -6512,7 +6383,7 @@ int TLuaInterpreter::tempComplexRegexTrigger( lua_State *L )
         propertyList = pP->getRegexCodePropertyList();
     }
 
-    pT = new TTrigger( "a", regexList, propertyList, multiLine, mpHost );
+    pT = new TTrigger( "a", regexList, propertyList, multiLine, &host );
     //pT->setRegexCodeList( regexList, propertyList );
     pT->setIsFolder( 0 );
     pT->setIsActive( true );
@@ -6579,13 +6450,12 @@ int TLuaInterpreter::tempButton( lua_State *L){
         orientation = lua_tonumber( L, 3 );
     }
 
-
-    Host * mpHost = TLuaInterpreter::luaInterpreterMap[L];
-    TAction * pP = mpHost->getActionUnit()->findAction( toolbar );
+    Host& host = getHostFromLua(L);
+    TAction * pP = host.getActionUnit()->findAction( toolbar );
     if (!pP) return 0;
-    TAction * pT = mpHost->getActionUnit()->findAction( name );
+    TAction * pT = host.getActionUnit()->findAction( name );
     if (pT) return 0;
-    pT = new TAction( pP, mpHost );
+    pT = new TAction( pP, &host );
     pT->setName( name );
     pT->setCommandButtonUp( cmdButtonUp );
     pT->setCommandButtonDown( cmdButtonDown );
@@ -6616,7 +6486,7 @@ int TLuaInterpreter::tempButton( lua_State *L){
 
     pT->registerAction();
 // N/U:     int childID = pT->getID();
-    mpHost->getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateToolbar();
     return 1;
 }
 
@@ -6662,14 +6532,14 @@ int TLuaInterpreter::tempButtonToolbar( lua_State *L  )
     }
 
     if( location > 0 ) location++;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TAction * pT = pHost->getActionUnit()->findAction( name );
+    Host& host = getHostFromLua(L);
+    TAction * pT = host.getActionUnit()->findAction( name );
     if (pT) return 0;
 
         //insert a new root item
     //ROOT_ACTION:
 
-    pT = new TAction( name, pHost );
+    pT = new TAction( name, &host );
     pT->setCommandButtonUp( cmdButtonUp );
     QStringList nl;
     nl << name;
@@ -6685,7 +6555,7 @@ int TLuaInterpreter::tempButtonToolbar( lua_State *L  )
     pT->setIsActive( true );
     pT->registerAction();
 // N/U:     int childID = pT->getID();
-    pHost->getActionUnit()->updateToolbar();
+    host.getActionUnit()->updateToolbar();
 
 
 
@@ -6720,8 +6590,8 @@ int TLuaInterpreter::tempRegexTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
     QString _luaRegex = luaRegex.c_str();
     int timerID = pLuaInterpreter->startTempRegexTrigger( _luaRegex, _luaFunction );
@@ -6755,8 +6625,8 @@ int TLuaInterpreter::tempAlias( lua_State *L )
         luaFunction = lua_tostring( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
     QString _luaRegex = luaRegex.c_str();
     int timerID = pLuaInterpreter->startTempAlias( _luaRegex, _luaFunction );
@@ -6788,15 +6658,15 @@ int TLuaInterpreter::exists( lua_State * L )
     {
         _type = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     int cnt = 0;
     QString type = _type.c_str();
     type = type.toLower();
     QString name = _name.c_str();
     if( type == "timer")
     {
-        QMap<QString, TTimer *>::const_iterator it1 = pHost->getTimerUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getTimerUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TTimer *>::const_iterator it1 = host.getTimerUnit()->mLookupTable.find( name );
+        while( it1 != host.getTimerUnit()->mLookupTable.end() && it1.key() == name )
         {
             cnt++;
             it1++;
@@ -6804,8 +6674,8 @@ int TLuaInterpreter::exists( lua_State * L )
     }
     else if( type == "trigger")
     {
-        QMap<QString, TTrigger *>::const_iterator it1 = pHost->getTriggerUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getTriggerUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TTrigger *>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.find( name );
+        while( it1 != host.getTriggerUnit()->mLookupTable.end() && it1.key() == name )
         {
             cnt++;
             it1++;
@@ -6813,8 +6683,8 @@ int TLuaInterpreter::exists( lua_State * L )
     }
     else if( type == "alias")
     {
-        QMap<QString, TAlias *>::const_iterator it1 = pHost->getAliasUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getAliasUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TAlias *>::const_iterator it1 = host.getAliasUnit()->mLookupTable.find( name );
+        while( it1 != host.getAliasUnit()->mLookupTable.end() && it1.key() == name )
         {
             cnt++;
             it1++;
@@ -6848,15 +6718,15 @@ int TLuaInterpreter::isActive( lua_State * L )
     {
         _type = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     int cnt = 0;
     QString type = _type.c_str();
     type = type.toLower();
     QString name = _name.c_str();
     if( type == "timer")
     {
-        QMap<QString, TTimer *>::const_iterator it1 = pHost->getTimerUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getTimerUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TTimer *>::const_iterator it1 = host.getTimerUnit()->mLookupTable.find( name );
+        while( it1 != host.getTimerUnit()->mLookupTable.end() && it1.key() == name )
         {
             if( it1.value()->isActive() )
             {
@@ -6867,8 +6737,8 @@ int TLuaInterpreter::isActive( lua_State * L )
     }
     else if( type == "trigger")
     {
-        QMap<QString, TTrigger *>::const_iterator it1 = pHost->getTriggerUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getTriggerUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TTrigger *>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.find( name );
+        while( it1 != host.getTriggerUnit()->mLookupTable.end() && it1.key() == name )
         {
             if( it1.value()->isActive() )
             {
@@ -6879,8 +6749,8 @@ int TLuaInterpreter::isActive( lua_State * L )
     }
     else if( type == "alias")
     {
-        QMap<QString, TAlias *>::const_iterator it1 = pHost->getAliasUnit()->mLookupTable.find( name );
-        while( it1 != pHost->getAliasUnit()->mLookupTable.end() && it1.key() == name )
+        QMap<QString, TAlias *>::const_iterator it1 = host.getAliasUnit()->mLookupTable.find( name );
+        while( it1 != host.getAliasUnit()->mLookupTable.end() && it1.key() == name )
         {
             if( it1.value()->isActive() )
             {
@@ -6945,8 +6815,8 @@ int TLuaInterpreter::permAlias( lua_State *L )
         luaFunction = lua_tostring( L, 4 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _luaName = luaName.c_str();
     QString _luaParent = luaParent.c_str();
     QString _luaFunction = luaFunction.c_str();
@@ -7005,8 +6875,8 @@ int TLuaInterpreter::permTimer( lua_State * L )
         luaFunction = lua_tostring( L, 4 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _name = luaName.c_str();
     QString _parent = luaParent.c_str();
     QString _fun = luaFunction.c_str();
@@ -7075,8 +6945,8 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
         luaFunction = lua_tostring( L, 4 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _name = name.c_str();
     QString _parent = parent.c_str();
     QString _luaFunction = luaFunction.c_str();
@@ -7148,8 +7018,8 @@ int TLuaInterpreter::permBeginOfLineStringTrigger( lua_State * L )
         luaFunction = lua_tostring( L, 4 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _name = name.c_str();
     QString _parent = parent.c_str();
     QString _luaFunction = luaFunction.c_str();
@@ -7221,8 +7091,8 @@ int TLuaInterpreter::permRegexTrigger( lua_State *L )
         luaFunction = lua_tostring( L, 4 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TLuaInterpreter * pLuaInterpreter = pHost->getLuaInterpreter();
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _name = name.c_str();
     QString _parent = parent.c_str();
     QString _luaFunction = luaFunction.c_str();
@@ -7305,12 +7175,12 @@ int TLuaInterpreter::getTimestamp( lua_State * L )
     {
         luaLine = lua_tointeger( L, n );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( name == "" )
     {
-        if( luaLine > 0 && luaLine < pHost->mpConsole->buffer.timeBuffer.size() )
+        if( luaLine > 0 && luaLine < host.mpConsole->buffer.timeBuffer.size() )
         {
-            lua_pushstring( L, pHost->mpConsole->buffer.timeBuffer.at(luaLine).toLatin1().data() );
+            lua_pushstring( L, host.mpConsole->buffer.timeBuffer.at(luaLine).toLatin1().data() );
         }
         else
         {
@@ -7319,7 +7189,7 @@ int TLuaInterpreter::getTimestamp( lua_State * L )
         return 1;
     }
     QString _name = name.c_str();
-    QMap<QString, TConsole *> & dockWindowConsoleMap = mudlet::self()->mHostConsoleMap[pHost];
+    QMap<QString, TConsole *> & dockWindowConsoleMap = mudlet::self()->mHostConsoleMap[&host];
     if( dockWindowConsoleMap.contains( _name ) )
     {
         TConsole * pC = dockWindowConsoleMap[_name];
@@ -7374,12 +7244,12 @@ int TLuaInterpreter::setBorderColor( lua_State *L )
         luaBlue = lua_tointeger( L, 3 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QPalette framePalette;
     framePalette.setColor( QPalette::Text, QColor(Qt::black) );
     framePalette.setColor( QPalette::Highlight, QColor(55,55,255) );
     framePalette.setColor( QPalette::Window, QColor( luaRed, luaGreen, luaBlue, 255 ) );
-    pHost->mpConsole->mpMainFrame->setPalette( framePalette );
+    host.mpConsole->mpMainFrame->setPalette( framePalette );
     return 0;
 }
 
@@ -7434,8 +7304,8 @@ int TLuaInterpreter::setRoomCoordinates( lua_State *L )
         z = lua_tointeger( L, 4 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean(L, pHost->mpMap->setRoomCoordinates( id, x, y, z ) );
+    Host& host = getHostFromLua(L);
+    lua_pushboolean(L, host.mpMap->setRoomCoordinates( id, x, y, z ) );
     return 1;
 }
 
@@ -7501,8 +7371,8 @@ int TLuaInterpreter::setCustomEnvColor( lua_State *L )
         alpha = lua_tointeger( L, 5 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpMap->customEnvColors[id] = QColor( r,g,b,alpha );
+    Host& host = getHostFromLua(L);
+    host.mpMap->customEnvColors[id] = QColor( r,g,b,alpha );
     return 0;
 }
 
@@ -7511,13 +7381,8 @@ int TLuaInterpreter::setAreaName( lua_State *L )
     int id = -1;
     QString existingName;
     QString newName;
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setAreaName: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setAreaName: no map present or loaded!");
         return 2;
@@ -7536,7 +7401,7 @@ int TLuaInterpreter::setAreaName( lua_State *L )
 // with this ID, but without a TArea instance to accompany it (the latter was/is
 // instantiated as needed when a room is moved to the relevent area...) and we
 // need to continue to allow this - Slysven
-//        else if( ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
+//        else if( ! host.mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
 //            lua_pushnil( L );
 //            lua_pushstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id)."
 //                           id);
@@ -7545,19 +7410,19 @@ int TLuaInterpreter::setAreaName( lua_State *L )
     }
     else if( lua_isstring( L, 1 ) ) {
         existingName = QString::fromUtf8( lua_tostring( L, 1 ) );
-        id = pHost->mpMap->mpRoomDB->getAreaNamesMap().key( existingName, 0 );
+        id = host.mpMap->mpRoomDB->getAreaNamesMap().key( existingName, 0 );
         if( existingName.isEmpty() ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setAreaName: bad argument #1 value (area name cannot be empty).");
             return 2;
         }
-        else if( ! pHost->mpMap->mpRoomDB->getAreaNamesMap().values().contains( existingName ) ) {
+        else if( ! host.mpMap->mpRoomDB->getAreaNamesMap().values().contains( existingName ) ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setAreaName: bad argument #1 value (area name \"%s\" does not exist).",
                             existingName.toUtf8().constData());
             return 2;
         }
-        else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( -1 ).contains( existingName ) ) {
+        else if( host.mpMap->mpRoomDB->getAreaNamesMap().value( -1 ).contains( existingName ) ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setAreaName: bad argument #1 value (area name \"%s\" is reserved and\n"
                                "protected - it cannot be changed).",
@@ -7591,16 +7456,16 @@ int TLuaInterpreter::setAreaName( lua_State *L )
                            "{and spaces are trimmed from the ends})!");
         return 2;
     }
-    else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().values().count( newName ) > 0 ) {
+    else if( host.mpMap->mpRoomDB->getAreaNamesMap().values().count( newName ) > 0 ) {
         // That name is already IN the areaNamesMap, and since we now enforce
         // uniqueness there can be only one of it - so we can check if this is a
         // problem or just pointless quite easily...!
-        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) != newName ) {
+        if( host.mpMap->mpRoomDB->getAreaNamesMap().value( id ) != newName ) {
             lua_pushnil( L );
             // And it isn't the trivial case, where the given areaID already IS that name
             lua_pushfstring(L, "setAreaName: bad argument #2 value (area names may not be duplicated and area\n"
                                "id %d already has the name \"%s\").",
-                            pHost->mpMap->mpRoomDB->getAreaNamesMap().key(newName),
+                            host.mpMap->mpRoomDB->getAreaNamesMap().key(newName),
                             newName.toUtf8().constData());
             return 2;
         }
@@ -7612,19 +7477,19 @@ int TLuaInterpreter::setAreaName( lua_State *L )
     }
 
     bool isCurrentAreaRenamed = false;
-    if( pHost->mpMap->mpMapper ) {
-        if( id > 0 && pHost->mpMap->mpRoomDB->getAreaNamesMap().value( id ) == pHost->mpMap->mpMapper->showArea->currentText() ) {
+    if( host.mpMap->mpMapper ) {
+        if( id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value( id ) == host.mpMap->mpMapper->showArea->currentText() ) {
             isCurrentAreaRenamed = true;
         }
     }
 
-    bool result = pHost->mpMap->mpRoomDB->setAreaName( id, newName );
+    bool result = host.mpMap->mpRoomDB->setAreaName( id, newName );
     if( result ) {
         // Update mapper Area names widget, using method designed for it...!
-        if( pHost->mpMap->mpMapper ) {
-            pHost->mpMap->mpMapper->updateAreaComboBox();
+        if( host.mpMap->mpMapper ) {
+            host.mpMap->mpMapper->updateAreaComboBox();
             if( isCurrentAreaRenamed ) {
-                pHost->mpMap->mpMapper->showArea->setCurrentText( newName );
+                host.mpMap->mpMapper->showArea->setCurrentText( newName );
             }
         }
     }
@@ -7636,13 +7501,8 @@ int TLuaInterpreter::setAreaName( lua_State *L )
 // respectively if given the other...
 int TLuaInterpreter::getRoomAreaName( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getRoomAreaName: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getRoomAreaName: no map present or loaded!");
         return 2;
@@ -7667,7 +7527,7 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
     }
 
     if( ! name.isNull() ) {
-        int result = pHost->mpMap->mpRoomDB->getAreaNamesMap().key( name, -1 );
+        int result = host.mpMap->mpRoomDB->getAreaNamesMap().key( name, -1 );
         lua_pushnumber( L, result );
         if( result != -1 ) {
             return 1;
@@ -7680,8 +7540,8 @@ int TLuaInterpreter::getRoomAreaName( lua_State *L )
         }
     }
     else {
-        if( pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
-            lua_pushstring( L, pHost->mpMap->mpRoomDB->getAreaNamesMap().value(id).toUtf8().constData() );
+        if( host.mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
+            lua_pushstring( L, host.mpMap->mpRoomDB->getAreaNamesMap().value(id).toUtf8().constData() );
             return 1;
         }
         else {
@@ -7708,13 +7568,8 @@ int TLuaInterpreter::addAreaName( lua_State *L )
         name = QString::fromUtf8( lua_tostring( L, 1 ) ).trimmed();
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "addAreaName: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ( ! pHost->mpMap ) || ( ! pHost->mpMap->mpRoomDB ) ) {
+    Host& host = getHostFromLua(L);
+    if( ( ! host.mpMap ) || ( ! host.mpMap->mpRoomDB ) ) {
         lua_pushnil( L );
         lua_pushstring(L, "addAreaName: error, no map seems to be loaded!");
         return 2;
@@ -7726,21 +7581,21 @@ int TLuaInterpreter::addAreaName( lua_State *L )
                            "spaces are trimmed from the ends})!");
         return 2;
     }
-    else if( pHost->mpMap->mpRoomDB->getAreaNamesMap().values().count( name ) > 0 ) {
+    else if( host.mpMap->mpRoomDB->getAreaNamesMap().values().count( name ) > 0 ) {
         // That name is already IN the areaNamesMap
         lua_pushnil( L );
         lua_pushfstring(L, "addAreaName: bad argument #2 value (area names may not be duplicated and area\n"
                            "id %d already has the name \"%s\").",
-                        pHost->mpMap->mpRoomDB->getAreaNamesMap().key(name),
+                        host.mpMap->mpRoomDB->getAreaNamesMap().key(name),
                         name.toUtf8().constData());
         return 2;
     }
 
-    lua_pushnumber( L, pHost->mpMap->mpRoomDB->addArea( name ) );
+    lua_pushnumber( L, host.mpMap->mpRoomDB->addArea( name ) );
 
     // Update mapper Area names widget, using method designed for it...!
-    if( pHost->mpMap->mpMapper ) {
-        pHost->mpMap->mpMapper->updateAreaComboBox();
+    if( host.mpMap->mpMapper ) {
+        host.mpMap->mpMapper->updateAreaComboBox();
     }
 
     return 1;
@@ -7751,13 +7606,8 @@ int TLuaInterpreter::deleteArea( lua_State *L )
     int id = 0;
     QString name;
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "deleteArea: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "deleteArea: no map present or loaded!");
         return 2;
@@ -7772,8 +7622,8 @@ int TLuaInterpreter::deleteArea( lua_State *L )
                             id);
             return 2;
         }
-        else if(    ! pHost->mpMap->mpRoomDB->getAreaIDList().contains( id )
-                 && ! pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
+        else if(    ! host.mpMap->mpRoomDB->getAreaIDList().contains( id )
+                 && ! host.mpMap->mpRoomDB->getAreaNamesMap().contains( id ) ) {
             lua_pushnil( L );
             lua_pushfstring(L, "deleteArea: bad argument #1 value (number %d is not a valid area id).",
                             id);
@@ -7787,7 +7637,7 @@ int TLuaInterpreter::deleteArea( lua_State *L )
             lua_pushstring(L, "deleteArea: bad argument #1 value (an empty string is not a valid area name).");
             return 2;
         }
-        else if( ! pHost->mpMap->mpRoomDB->getAreaNamesMap().values().contains( name ) ) {
+        else if( ! host.mpMap->mpRoomDB->getAreaNamesMap().values().contains( name ) ) {
             lua_pushnil( L );
             lua_pushfstring(L, "deleteArea: bad argument #1 value (string \"%s\" is not a valid\n"
                                "area name).",
@@ -7805,18 +7655,18 @@ int TLuaInterpreter::deleteArea( lua_State *L )
 
     bool result = false;
     if( ! id ) {
-        result = pHost->mpMap->mpRoomDB->removeArea( name );
+        result = host.mpMap->mpRoomDB->removeArea( name );
     }
     else {
-        result = pHost->mpMap->mpRoomDB->removeArea( id );
+        result = host.mpMap->mpRoomDB->removeArea( id );
     }
 
     if( result ) {
         // Update mapper Area names widget, using method designed for it...!
-        if( pHost->mpMap->mpMapper ) {
-            pHost->mpMap->mpMapper->updateAreaComboBox();
+        if( host.mpMap->mpMapper ) {
+            host.mpMap->mpMapper->updateAreaComboBox();
         }
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean( L, result );
     return 1;
@@ -7838,8 +7688,8 @@ int TLuaInterpreter::deleteRoom( lua_State *L )
         return 1;
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean( L, pHost->mpMap->mpRoomDB->removeRoom( id ) );
+    Host& host = getHostFromLua(L);
+    lua_pushboolean( L, host.mpMap->mpRoomDB->removeRoom( id ) );
     return 1;
 }
 
@@ -7877,9 +7727,9 @@ int TLuaInterpreter::setExit( lua_State *L )
         return 1;
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushboolean(L, pHost->mpMap->setExit( from, to, dir ) );
-    pHost->mpMap->mMapGraphNeedsUpdate = true;
+    Host& host = getHostFromLua(L);
+    lua_pushboolean(L, host.mpMap->setExit( from, to, dir ) );
+    host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
 
@@ -7897,8 +7747,8 @@ int TLuaInterpreter::getRoomCoordinates( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( !pR )
     {
         lua_pushnil( L );
@@ -7929,8 +7779,8 @@ int TLuaInterpreter::getRoomArea( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( !pR )
     {
         lua_pushnil(L);
@@ -7957,8 +7807,8 @@ int TLuaInterpreter::roomExists( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( pR )
         lua_pushboolean( L, true );
     else
@@ -7979,12 +7829,12 @@ int TLuaInterpreter::addRoom( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    bool added = pHost->mpMap->addRoom( id );
+    Host& host = getHostFromLua(L);
+    bool added = host.mpMap->addRoom( id );
     lua_pushboolean( L, added );
     if( added ) {
-        pHost->mpMap->setRoomArea( id, -1, false );
-        pHost->mpMap->mMapGraphNeedsUpdate = true;
+        host.mpMap->setRoomArea( id, -1, false );
+        host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
     return 1;
@@ -7992,13 +7842,8 @@ int TLuaInterpreter::addRoom( lua_State * L )
 
 int TLuaInterpreter::createRoomID( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "createRoomID: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "createRoomID: no map present or loaded!");
         return 2;
@@ -8021,10 +7866,10 @@ int TLuaInterpreter::createRoomID( lua_State * L )
                 return 2;
             }
         }
-        lua_pushnumber( L, pHost->mpMap->createNewRoomID( lua_tointeger( L, 1 ) ) );
+        lua_pushnumber( L, host.mpMap->createNewRoomID( lua_tointeger( L, 1 ) ) );
     }
     else {
-        lua_pushnumber( L, pHost->mpMap->createNewRoomID() );
+        lua_pushnumber( L, host.mpMap->createNewRoomID() );
     }
     return 1;
 }
@@ -8042,14 +7887,14 @@ int TLuaInterpreter::unHighlightRoom( lua_State * L )
     {
         id = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( pR )
     {
         pR->highlight = false;
-        if( pHost->mpMap )
-            if( pHost->mpMap->mpMapper )
-                pHost->mpMap->mpMapper->mp2dMap->update();
+        if( host.mpMap )
+            if( host.mpMap->mpMapper )
+                host.mpMap->mpMapper->mp2dMap->update();
         lua_pushboolean( L, true );
     }
     else
@@ -8170,8 +8015,8 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
         alpha2 = lua_tointeger( L, 10 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( pR )
     {
         auto fg = QColor(fgr,fgg,fgb,alpha1);
@@ -8181,9 +8026,9 @@ int TLuaInterpreter::highlightRoom( lua_State * L )
         pR->highlightColor2 = bg;
         pR->highlightRadius = radius;
 
-        if( pHost->mpMap->mpMapper )
-            if( pHost->mpMap->mpMapper->mp2dMap )
-                pHost->mpMap->mpMapper->mp2dMap->update();
+        if( host.mpMap->mpMapper )
+            if( host.mpMap->mpMapper->mp2dMap )
+                host.mpMap->mpMapper->mp2dMap->update();
         lua_pushboolean( L, true );
     }
     else
@@ -8378,10 +8223,10 @@ int TLuaInterpreter::createMapLabel( lua_State * L )
     }
 
     QString _text = text.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     auto fg = QColor(fgr,fgg,fgb);
     auto bg = QColor(bgr, bgg, bgb);
-    lua_pushinteger( L, pHost->mpMap->createMapLabel( area, _text, posx, posy, posz, fg, bg, showOnTop, noScaling, zoom, fontSize ) );
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, _text, posx, posy, posz, fg, bg, showOnTop, noScaling, zoom, fontSize));
     return 1;
 }
 
@@ -8398,11 +8243,11 @@ int TLuaInterpreter::setMapZoom( lua_State * L )
     {
         zoom = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap )
-        if( pHost->mpMap->mpMapper )
-            if( pHost->mpMap->mpMapper->mp2dMap )
-                pHost->mpMap->mpMapper->mp2dMap->setMapZoom( zoom );
+    Host& host = getHostFromLua(L);
+    if( host.mpMap )
+        if( host.mpMap->mpMapper )
+            if( host.mpMap->mpMapper->mp2dMap )
+                host.mpMap->mpMapper->mp2dMap->setMapZoom( zoom );
     return 0;
 }
 
@@ -8515,8 +8360,8 @@ int TLuaInterpreter::createMapImageLabel( lua_State * L )
     }
 
     QString _text = text.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    lua_pushinteger( L, pHost->mpMap->createMapImageLabel( area, _text, posx, posy, posz, width, height, zoom, showOnTop, false ) );
+    Host& host = getHostFromLua(L);
+    lua_pushinteger( L, host.mpMap->createMapImageLabel( area, _text, posx, posy, posz, width, height, zoom, showOnTop, false ) );
     return 1;
 }
 
@@ -8545,13 +8390,8 @@ int TLuaInterpreter::createMapImageLabel( lua_State * L )
 // * false if valid but ineffective (door status unchanged)
 int TLuaInterpreter::setDoor( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setDoor: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setDoor: no map present or loaded!");
         return 2;
@@ -8567,7 +8407,7 @@ int TLuaInterpreter::setDoor( lua_State * L )
     }
     else {
         roomId = lua_tointeger( L, 1 );
-        pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+        pR = host.mpMap->mpRoomDB->getRoom( roomId );
         if( ! pR ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setDoor: bad argument #1 value (number %d is not a valid room id.)",
@@ -8661,8 +8501,8 @@ int TLuaInterpreter::setDoor( lua_State * L )
 
     bool result = pR->setDoor( exitCmd, doorStatus );
     if( result ) {
-        if( pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap ) {
-            pHost->mpMap->mpMapper->mp2dMap->update();
+        if( host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap ) {
+            host.mpMap->mpMapper->mp2dMap->update();
         }
     }
     lua_pushboolean( L, result );
@@ -8672,13 +8512,8 @@ int TLuaInterpreter::setDoor( lua_State * L )
 //SYNTAX: doors table = getDoors( roomId )
 int TLuaInterpreter::getDoors( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getDoors: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getDoors: no map present or loaded!");
         return 2;
@@ -8694,7 +8529,7 @@ int TLuaInterpreter::getDoors( lua_State * L )
     }
     else {
         roomId = lua_tointeger( L, 1 );
-        pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+        pR = host.mpMap->mpRoomDB->getRoom( roomId );
         if( ! pR ) {
             lua_pushnil( L );
             lua_pushfstring(L, "getDoors: bad argument #1 value (number %d is not a valid room id).",
@@ -8750,8 +8585,8 @@ int TLuaInterpreter::setExitWeight( lua_State * L )
     }
 
     text = text.toLower();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
         pR->setExitWeight(text, weight );
@@ -8786,8 +8621,8 @@ int TLuaInterpreter::addCustomLine( lua_State * L )
     else if ( lua_isnumber( L, 2 ) )
     {
         id_to = lua_tointeger( L, 2 );
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_to );
+        Host& host = getHostFromLua(L);
+        TRoom * pR = host.mpMap->mpRoomDB->getRoom( id_to );
         if (pR) {
             x.append((qreal)pR->x);
             y.append((qreal)pR->y);
@@ -8886,8 +8721,8 @@ int TLuaInterpreter::addCustomLine( lua_State * L )
         }
         points.append(QPointF(x.at(i),y.at(i)));
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id_from );
     if( pR ) //note: pR is 0 for non existing rooms
     {
         QList<int> colors;
@@ -8917,8 +8752,8 @@ int TLuaInterpreter::getCustomLines( lua_State * L )
         roomID = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
         lua_newtable(L); //return table customLines[]
@@ -8990,8 +8825,8 @@ int TLuaInterpreter::getExitWeights( lua_State * L )
         roomID = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomID );
     lua_newtable(L);
     if( pR )
     {
@@ -9029,8 +8864,8 @@ int TLuaInterpreter::deleteMapLabel( lua_State * L )
     {
         labelID = lua_tointeger( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpMap->deleteMapLabel( area, labelID );
+    Host& host = getHostFromLua(L);
+    host.mpMap->deleteMapLabel( area, labelID );
     return 0;
 }
 
@@ -9047,11 +8882,11 @@ int TLuaInterpreter::getMapLabels( lua_State * L )
     {
         area = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->mapLabels.contains( area ) )
+    Host& host = getHostFromLua(L);
+    if( host.mpMap->mapLabels.contains( area ) )
     {
         lua_newtable(L);
-        QMapIterator<int,TMapLabel> it(pHost->mpMap->mapLabels[area]);
+        QMapIterator<int,TMapLabel> it(host.mpMap->mapLabels[area]);
         while( it.hasNext() )
         {
             it.next();
@@ -9088,13 +8923,13 @@ int TLuaInterpreter::getMapLabel( lua_State * L )
         else
             labelText = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->mapLabels.contains( area ) )
+    Host& host = getHostFromLua(L);
+    if( host.mpMap->mapLabels.contains( area ) )
     {
         lua_newtable(L);
         if (labelId != -1){
-            if (pHost->mpMap->mapLabels[area].contains(labelId)){
-                TMapLabel label =  pHost->mpMap->mapLabels[area][labelId];
+            if (host.mpMap->mapLabels[area].contains(labelId)){
+                TMapLabel label =  host.mpMap->mapLabels[area][labelId];
                 int x = label.pos.x();
                 int y = label.pos.y();
                 int z = label.pos.z();
@@ -9127,7 +8962,7 @@ int TLuaInterpreter::getMapLabel( lua_State * L )
             }
         }
         else{
-            QMapIterator<int,TMapLabel> it(pHost->mpMap->mapLabels[area]);
+            QMapIterator<int,TMapLabel> it(host.mpMap->mapLabels[area]);
             while( it.hasNext() )
             {
                 it.next();
@@ -9206,9 +9041,9 @@ int TLuaInterpreter::addSpecialExit( lua_State * L )
         dir = lua_tostring( L, 3 );
     }
     QString _dir = dir.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR_from = pHost->mpMap->mpRoomDB->getRoom( id_from );
-    TRoom * pR_to = pHost->mpMap->mpRoomDB->getRoom( id_to );
+    Host& host = getHostFromLua(L);
+    TRoom * pR_from = host.mpMap->mpRoomDB->getRoom( id_from );
+    TRoom * pR_to = host.mpMap->mpRoomDB->getRoom( id_to );
     if( pR_from && pR_to )
     {
         pR_from->setSpecialExit( id_to, _dir );
@@ -9242,8 +9077,8 @@ int TLuaInterpreter::removeSpecialExit( lua_State * L )
         dir = lua_tostring( L, 2 );
     }
     QString _dir = dir.c_str();
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( pR )
     {
         pR->setSpecialExit( -1, _dir );
@@ -9256,13 +9091,8 @@ int TLuaInterpreter::removeSpecialExit( lua_State * L )
 // found for given roomID
 int TLuaInterpreter::clearRoomUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "clearRoomUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "clearRoomUserData: no map present or loaded!");
         return 2;
@@ -9279,7 +9109,7 @@ int TLuaInterpreter::clearRoomUserData( lua_State * L )
         roomId = lua_tointeger( L, 1 );
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "clearRoomUserData: bad argument #1 value (number %d is not a valid room id).",
@@ -9304,13 +9134,8 @@ int TLuaInterpreter::clearRoomUserData( lua_State * L )
 // present in the data. Returns nil if the room for the roomID not found.
 int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "clearRoomUserDataItem: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "clearRoomUserDataItem: no map present or loaded!");
         return 2;
@@ -9339,7 +9164,7 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
         key = QString::fromUtf8( lua_tostring( L, 2 ) );
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "clearRoomUserDataItem: bad argument #1 value (number %d is not a valid room id).",
@@ -9367,13 +9192,8 @@ int TLuaInterpreter::clearRoomUserDataItem( lua_State * L )
 // Derived from clearRoomUserData
 int TLuaInterpreter::clearAreaUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "clearAreaUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "clearAreaUserData: no map present or loaded!");
         return 2;
@@ -9390,7 +9210,7 @@ int TLuaInterpreter::clearAreaUserData( lua_State * L )
         areaId = lua_tointeger( L, 1 );
     }
 
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    TArea * pA = host.mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
         lua_pushfstring(L, "clearAreaUserData: bad argument #1 value (number %d is not a valid area id).",
@@ -9412,13 +9232,8 @@ int TLuaInterpreter::clearAreaUserData( lua_State * L )
 // Derived from clearRoomUserDataItem
 int TLuaInterpreter::clearAreaUserDataItem( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "clearAreaUserDataItem: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "clearAreaUserDataItem: no map present or loaded!");
         return 2;
@@ -9446,7 +9261,7 @@ int TLuaInterpreter::clearAreaUserDataItem( lua_State * L )
         key = QString::fromUtf8( lua_tostring( L, 2 ) );
     }
 
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    TArea * pA = host.mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
         lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 value (number %d is not a valid area id).",
@@ -9470,20 +9285,15 @@ int TLuaInterpreter::clearAreaUserDataItem( lua_State * L )
 // But as there is only one instance it takes no arguments
 int TLuaInterpreter::clearMapUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "clearMapUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap ) {
         lua_pushnil( L );
         lua_pushstring(L, "clearMapUserData: no map present or loaded!");
         return 2;
     }
 
-    if( ! pHost->mpMap->mUserData.isEmpty() ) {
-        pHost->mpMap->mUserData.clear();
+    if( ! host.mpMap->mUserData.isEmpty() ) {
+        host.mpMap->mUserData.clear();
         lua_pushboolean( L, true );
     }
     else {
@@ -9496,13 +9306,8 @@ int TLuaInterpreter::clearMapUserData( lua_State * L )
 // But as there is only one instance it only takes one argument
 int TLuaInterpreter::clearMapUserDataItem( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "clearMapUserDataItem: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap ) {
         lua_pushnil( L );
         lua_pushstring(L, "clearMapUserDataItem: no map present or loaded!");
         return 2;
@@ -9523,7 +9328,7 @@ int TLuaInterpreter::clearMapUserDataItem( lua_State * L )
             return 2;
         }
         else {
-            lua_pushboolean( L, (pHost->mpMap->mUserData.remove(key) > 0) );
+            lua_pushboolean( L, (host.mpMap->mUserData.remove(key) > 0) );
             return 1;
         }
     }
@@ -9542,8 +9347,8 @@ int TLuaInterpreter::clearSpecialExits( lua_State * L )
     {
         id_from = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id_from );
     if( pR )
     {
         pR->clearSpecialExits();
@@ -9564,8 +9369,8 @@ int TLuaInterpreter::getSpecialExits( lua_State * L )
     {
         id_from = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id_from );
     if( pR )
     {
         QMapIterator<int, QString> it(pR->getOtherMap());
@@ -9611,8 +9416,8 @@ int TLuaInterpreter::getSpecialExitsSwap( lua_State * L )
     {
         id_from = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id_from );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id_from );
     if( pR )
     {
         QMapIterator<int, QString> it(pR->getOtherMap());
@@ -9657,8 +9462,8 @@ int TLuaInterpreter::getRoomEnv( lua_State * L )
         roomID = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomID );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomID );
     if( pR )
     {
         lua_pushnumber( L, pR->environment );
@@ -9680,13 +9485,8 @@ int TLuaInterpreter::getRoomEnv( lua_State * L )
 // an empty string in the cases of no room with id or no key with given name.
 int TLuaInterpreter::getRoomUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getRoomUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getRoomUserData: no map present or loaded!");
         return 2;
@@ -9728,7 +9528,7 @@ int TLuaInterpreter::getRoomUserData( lua_State * L )
         }
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         if( isBackwardCompatibilityRequired ) {
             lua_pushstring( L, QString().toUtf8().constData() );
@@ -9792,18 +9592,13 @@ int TLuaInterpreter::getAreaUserData( lua_State * L )
         }
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAreaUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAreaUserData: no map present or loaded!");
         return 2;
     }
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    TArea * pA = host.mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getAreaUserData: bad argument #1 value (number %d is not a valid area id).",
@@ -9829,13 +9624,8 @@ int TLuaInterpreter::getAreaUserData( lua_State * L )
 // argument is needed
 int TLuaInterpreter::getMapUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getMapUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap ) {
         lua_pushnil( L );
         lua_pushstring(L, "getMapUserData: no map present or loaded!");
         return 2;
@@ -9852,8 +9642,8 @@ int TLuaInterpreter::getMapUserData( lua_State * L )
         key = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
 
-    if( pHost->mpMap->mUserData.contains( key ) ) {
-        lua_pushstring( L, pHost->mpMap->mUserData.value( key ).toUtf8().constData() );
+    if( host.mpMap->mUserData.contains( key ) ) {
+        lua_pushstring( L, host.mpMap->mUserData.value( key ).toUtf8().constData() );
         return 1;
     }
     else {
@@ -9866,13 +9656,8 @@ int TLuaInterpreter::getMapUserData( lua_State * L )
 
 int TLuaInterpreter::setRoomUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setRoomUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setRoomUserData: no map present or loaded!");
         return 2;
@@ -9912,7 +9697,7 @@ int TLuaInterpreter::setRoomUserData( lua_State * L )
         value = QString::fromUtf8( lua_tostring( L, 3 ) );
     }
 
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "setRoomUserData: bad argument #1 value (number %d is not a valid room id).",
@@ -9968,13 +9753,8 @@ int TLuaInterpreter::setAreaUserData( lua_State * L )
         value = QString::fromUtf8( lua_tostring( L, 3 ) );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setAreaUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setAreaUserData: no map present or loaded!");
         return 2;
@@ -9983,20 +9763,20 @@ int TLuaInterpreter::setAreaUserData( lua_State * L )
     // TODO: Remove this block of code once it is not needed (map file format updated to 17)
     {
         static bool isWarningIssued = false;
-        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+        if( !isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17 ) {
             QString warnMsg = tr( "[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!" );
             QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
                                               "and although that has been coded it is NOT enabled so this feature's effects\n"
                                               "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
                                               "To avoid filling the screen up with repeated messages, this is your only warning about\n"
                                               "this command...!" );
-            pHost->postMessage( warnMsg );
-            pHost->postMessage( infoMsg );
+            host.postMessage( warnMsg );
+            host.postMessage( infoMsg );
             isWarningIssued = true;
         }
     }
 
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    TArea * pA = host.mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
         lua_pushfstring(L, "setAreaUserData: bad argument #1 value (number %d is not a valid area id).",
@@ -10014,13 +9794,8 @@ int TLuaInterpreter::setAreaUserData( lua_State * L )
 // But as there is only one instance there is only two arguments, key and value
 int TLuaInterpreter::setMapUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setMapUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap ) {
         lua_pushnil( L );
         lua_pushstring(L, "setMapUserData: no map present or loaded!");
         return 2;
@@ -10056,20 +9831,20 @@ int TLuaInterpreter::setMapUserData( lua_State * L )
     // TODO: Remove this block of code once it is not needed (map file format updated to 17)
     {
         static bool isWarningIssued = false;
-        if( !isWarningIssued && pHost->mpMap->mDefaultVersion <= 16 && pHost->mpMap->mSaveVersion < 17 ) {
+        if( !isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17 ) {
             QString warnMsg = tr( "[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!" );
             QString infoMsg = tr( "[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
                                               "and although that has been coded it is NOT enabled so this feature's effects\n"
                                               "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
                                               "To avoid filling the screen up with repeated messages, this is your only warning about\n"
                                               "this command...!" );
-            pHost->postMessage( warnMsg );
-            pHost->postMessage( infoMsg );
+            host.postMessage( warnMsg );
+            host.postMessage( infoMsg );
             isWarningIssued = true;
         }
     }
 
-    pHost->mpMap->mUserData[key] = value;
+    host.mpMap->mUserData[key] = value;
     lua_pushboolean( L, true );
     return 1;
 }
@@ -10082,13 +9857,8 @@ int TLuaInterpreter::setMapUserData( lua_State * L )
 // In hindsight - is a little pointless when we can use getAllRoomUserData() directly
 int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getRoomUserDataKeys: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getRoomUserDataKeys: no map present or loaded!");
         return 2;
@@ -10106,7 +9876,7 @@ int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
     }
 
     QStringList keys;
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 value (number %d is not a valid room id).",
@@ -10131,13 +9901,8 @@ int TLuaInterpreter::getRoomUserDataKeys( lua_State * L )
 // roomID.
 int TLuaInterpreter::getAllRoomUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAllRoomUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAllRoomUserData: no map present or loaded!");
         return 2;
@@ -10156,7 +9921,7 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
 
     QStringList keys;
     QStringList values;
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( roomId );
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( roomId );
     if( ! pR ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getAllRoomUserData: bad argument #1 value (number %d is not a valid room id).",
@@ -10179,13 +9944,8 @@ int TLuaInterpreter::getAllRoomUserData( lua_State * L )
 // Derived from getAllRoomUserData(...)
 int TLuaInterpreter::getAllAreaUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAllAreaUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAllAreaUserData: no map present or loaded!");
         return 2;
@@ -10204,7 +9964,7 @@ int TLuaInterpreter::getAllAreaUserData( lua_State * L )
 
     QStringList keys;
     QStringList values;
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( areaId );
+    TArea * pA = host.mpMap->mpRoomDB->getArea( areaId );
     if( ! pA ) {
         lua_pushnil( L );
         lua_pushfstring(L, "getAllAreaUserData: bad argument #1 value (number %d is not a valid area id).",
@@ -10228,13 +9988,8 @@ int TLuaInterpreter::getAllAreaUserData( lua_State * L )
 // But as there is only one instance there are no arguments
 int TLuaInterpreter::getAllMapUserData( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "getAllMapUserData: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap ) {
         lua_pushnil( L );
         lua_pushstring(L, "getAllMapUserData: no map present or loaded!");
         return 2;
@@ -10242,8 +9997,8 @@ int TLuaInterpreter::getAllMapUserData( lua_State * L )
 
     QStringList keys;
     QStringList values;
-    keys = pHost->mpMap->mUserData.keys();
-    values = pHost->mpMap->mUserData.values();
+    keys = host.mpMap->mUserData.keys();
+    values = host.mpMap->mUserData.values();
     lua_newtable( L );
     for( int i=0; i<keys.size(); i++ ) {
         lua_pushstring( L, keys.at(i).toUtf8().constData() );
@@ -10255,12 +10010,7 @@ int TLuaInterpreter::getAllMapUserData( lua_State * L )
 
 int TLuaInterpreter::downloadFile( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "downloadFile: NULL Host pointer - something is wrong!");
-        return 2;
-    }
+    Host& host = getHostFromLua(L);
 
     QString localFile;
     if( ! lua_isstring( L, 1 ) ) {
@@ -10296,19 +10046,16 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 
     QNetworkRequest request = QNetworkRequest( url );
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    request.setRawHeader( QByteArray( "User-Agent" ),
-                          QByteArray( QStringLiteral( "Mozilla/5.0 (Mudlet/%1%2)" )
-                                      .arg( APP_VERSION )
-                                      .arg( APP_BUILD )
-                                      .toUtf8().constData() ) );
+    qDebug() << QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData());
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_OPENSSL
     if( url.scheme() == QStringLiteral( "https" ) ) {
         QSslConfiguration config( QSslConfiguration::defaultConfiguration() );
         request.setSslConfiguration( config );
     }
 #endif
-    QNetworkReply * reply = pHost->mLuaInterpreter.mpFileDownloader->get( request );
-    pHost->mLuaInterpreter.downloadMap.insert( reply, localFile );
+    QNetworkReply * reply = host.mLuaInterpreter.mpFileDownloader->get( request );
+    host.mLuaInterpreter.downloadMap.insert( reply, localFile );
     lua_pushboolean( L, true );
     lua_pushstring( L, reply->url().toString().toUtf8().constData() ); // Returns the Url that was ACTUALLY used
     return 2;
@@ -10321,13 +10068,8 @@ int TLuaInterpreter::downloadFile( lua_State * L )
 // TRoomDB::areaNamesMap...
 int TLuaInterpreter::setRoomArea( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setRoomArea: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setRoomArea: no map present or loaded!");
         return 2;
@@ -10342,7 +10084,7 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
     }
     else {
         id = lua_tointeger( L, 1 );
-        if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
+        if( ! host.mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %d is not a valid room id).",
                             id);
@@ -10361,7 +10103,7 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
                             areaId);
             return 2;
         }
-        else if( !pHost->mpMap->mpRoomDB->getAreaNamesMap().contains( areaId ) ) {
+        else if( !host.mpMap->mpRoomDB->getAreaNamesMap().contains( areaId ) ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %d is not a valid area id as it does not exist).",
                             areaId);
@@ -10376,7 +10118,7 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
             lua_pushstring(L, "setRoomArea: bad argument #2 value (area name cannot be empty).");
             return 2;
         }
-        areaId = pHost->mpMap->mpRoomDB->getAreaNamesMap().key( areaName, 0 );
+        areaId = host.mpMap->mpRoomDB->getAreaNamesMap().key( areaName, 0 );
         if( ! areaId ) {
             lua_pushnil( L );
             lua_pushfstring(L, "setRoomArea: bad argument #2 value (area name \"%s\" does not exist).",
@@ -10392,16 +10134,16 @@ int TLuaInterpreter::setRoomArea( lua_State * L )
         return 1;
     }
 
-    bool result = pHost->mpMap->setRoomArea( id, areaId, false );
+    bool result = host.mpMap->setRoomArea( id, areaId, false );
     if( result ) {
         // As a sucessfull result WILL change the area a room is in then the map
         // should be updated.  The GUI code that modifies room(s) areas already
         // includes such a call to update the mapper.
-        if( pHost->mpMap->mpMapper ) {
-            pHost->mpMap->mpMapper->mp2dMap->update();
+        if( host.mpMap->mpMapper ) {
+            host.mpMap->mpMapper->mp2dMap->update();
         }
-        if( pHost->mpMap->mpM ) {
-            pHost->mpMap->mpM->update();
+        if( host.mpMap->mpM ) {
+            host.mpMap->mpM->update();
         }
     }
     lua_pushboolean( L, result );
@@ -10422,34 +10164,29 @@ int TLuaInterpreter::resetRoomArea( lua_State * L )
         id = lua_tointeger( L, 1 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "resetRoomArea: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "resetRoomArea: no map present or loaded!");
         return 2;
     }
-    else if( ! pHost->mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
+    else if( ! host.mpMap->mpRoomDB->getRoomIDList().contains( id ) ) {
         lua_pushnil( L );
         lua_pushfstring(L, "resetRoomArea: bad argument #1 value (number %d is not a valid room id).",
                         id);
         return 2;
     }
     else {
-        bool result = pHost->mpMap->setRoomArea( id, -1, false );
+        bool result = host.mpMap->setRoomArea( id, -1, false );
         if( result ) {
             // As a sucessfull result WILL change the area a room is in then the map
             // should be updated.  The GUI code that modifies room(s) areas already
             // includes such a call to update the mapper.
-            if( pHost->mpMap->mpMapper ) {
-                pHost->mpMap->mpMapper->mp2dMap->update();
+            if( host.mpMap->mpMapper ) {
+                host.mpMap->mpMapper->mp2dMap->update();
             }
-            if( pHost->mpMap->mpM ) {
-                pHost->mpMap->mpM->update();
+            if( host.mpMap->mpM ) {
+                host.mpMap->mpM->update();
             }
         }
         lua_pushboolean( L, result );
@@ -10481,8 +10218,8 @@ int TLuaInterpreter::setRoomChar( lua_State * L )
     {
         c = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( !pR )
     {
         lua_pushstring( L, "setRoomChar: room ID does not exist");
@@ -10512,8 +10249,8 @@ int TLuaInterpreter::getRoomChar( lua_State * L )
     {
         id = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TRoom * pR = pHost->mpMap->mpRoomDB->getRoom( id );
+    Host& host = getHostFromLua(L);
+    TRoom * pR = host.mpMap->mpRoomDB->getRoom( id );
     if( !pR )
     {
         lua_pushstring( L, "getRoomChar: room ID does not exist");
@@ -10575,8 +10312,8 @@ int TLuaInterpreter::getRoomsByPosition( lua_State * L )
     }
 
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    Host& host = getHostFromLua(L);
+    TArea * pA = host.mpMap->mpRoomDB->getArea( area );
     if( !pA )
     {
         lua_pushnil( L );
@@ -10621,8 +10358,8 @@ int TLuaInterpreter::setGridMode( lua_State * L )
         gridMode = lua_toboolean( L, 2 );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    TArea * pA = pHost->mpMap->mpRoomDB->getArea( area );
+    Host& host = getHostFromLua(L);
+    TArea * pA = host.mpMap->mpRoomDB->getArea( area );
     if( !pA )
     {
         lua_pushboolean( L, false);
@@ -10632,15 +10369,15 @@ int TLuaInterpreter::setGridMode( lua_State * L )
     {
         pA->gridMode = gridMode;
         pA->calcSpan();
-        if( pHost->mpMap->mpMapper )
+        if( host.mpMap->mpMapper )
         {
-            if( pHost->mpMap->mpMapper->mp2dMap )
+            if( host.mpMap->mpMapper->mp2dMap )
             {
 // Not needed IMHO - Slysven
-//                pHost->mpMap->mpMapper->mp2dMap->init();
+//                host.mpMap->mpMapper->mp2dMap->init();
 //                cout << "NEW GRID MAP: init" << endl;
 // But this is:
-                pHost->mpMap->mpMapper->update();
+                host.mpMap->mpMapper->update();
             }
         }
     }
@@ -10702,11 +10439,12 @@ int TLuaInterpreter::setFgColor( lua_State *L )
     }
 
     QString _name( a1.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( n < 4 )
-        pHost->mpConsole->setFgColor( luaRed, luaGreen, luaBlue );
-    else
-        mudlet::self()->setFgColor( pHost, _name, luaRed, luaGreen, luaBlue );
+    Host& host = getHostFromLua(L);
+    if( n < 4 ) {
+        host.mpConsole->setFgColor( luaRed, luaGreen, luaBlue );
+    } else {
+        mudlet::self()->setFgColor( &host, _name, luaRed, luaGreen, luaBlue );
+    }
     return 0;
 }
 
@@ -10762,11 +10500,11 @@ int TLuaInterpreter::setBgColor( lua_State *L )
     }
 
     QString _name( a1.c_str() );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( n < 4 )
-        pHost->mpConsole->setBgColor( luaRed, luaGreen, luaBlue );
+        host.mpConsole->setBgColor( luaRed, luaGreen, luaBlue );
     else
-        mudlet::self()->setBgColor( pHost, _name, luaRed, luaGreen, luaBlue );
+        mudlet::self()->setBgColor( &host, _name, luaRed, luaGreen, luaBlue );
     return 0;
 }
 
@@ -10808,14 +10546,14 @@ int TLuaInterpreter::insertLink( lua_State *L )
     command << sL[2];
     hint << sL[3];
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     if( _name == "main" )
     {
-        pHost->mpConsole->insertLink( printScreen, command, hint, b );
+        host.mpConsole->insertLink( printScreen, command, hint, b );
     }
     else
     {
-        mudlet::self()->insertLink( pHost, _name, printScreen, command, hint, b );
+        mudlet::self()->insertLink( &host, _name, printScreen, command, hint, b );
     }
 
     return 0;
@@ -10906,7 +10644,7 @@ int TLuaInterpreter::insertPopup( lua_State *L )
         customFormat = lua_toboolean( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString txt = a2.c_str();
     QString name = a1.c_str();
     if( _commandList.size() != _hintList.size() )
@@ -10918,11 +10656,11 @@ int TLuaInterpreter::insertPopup( lua_State *L )
 
     if( a1 == "" )
     {
-        pHost->mpConsole->insertLink( txt, _commandList, _hintList, customFormat );
+        host.mpConsole->insertLink( txt, _commandList, _hintList, customFormat );
     }
     else
     {
-        mudlet::self()->insertLink( pHost, name, txt, _commandList, _hintList, customFormat );
+        mudlet::self()->insertLink( &host, name, txt, _commandList, _hintList, customFormat );
     }
 
     return 0;
@@ -10960,11 +10698,12 @@ int TLuaInterpreter::insertText( lua_State *L )
             a2 = lua_tostring( L, s );
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( n == 1 )
-        pHost->mpConsole->insertText( QString(a1.c_str()) );
-    else
-        mudlet::self()->insertText( pHost, _name, QString( a2.c_str() ) );
+    Host& host = getHostFromLua(L);
+    if (n == 1) {
+        host.mpConsole->insertText(QString(a1.c_str()));
+    } else {
+        mudlet::self()->insertText(&host, _name, QString(a2.c_str()));
+    }
     return 0;
 }
 
@@ -10981,8 +10720,8 @@ int TLuaInterpreter::insertHTML( lua_State *L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->insertHTML( QString(luaSendText.c_str()) );
+    Host& host = getHostFromLua(L);
+    host.mpConsole->insertHTML( QString(luaSendText.c_str()) );
     return 0;
 }
 
@@ -10999,8 +10738,8 @@ int TLuaInterpreter::addSupportedTelnetOption( lua_State *L )
     {
         option = lua_tointeger( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.supportedTelnetOptions[option] = true;
+    Host& host = getHostFromLua(L);
+    host.mTelnet.supportedTelnetOptions[option] = true;
     return 0;
 }
 
@@ -11008,11 +10747,7 @@ int TLuaInterpreter::addSupportedTelnetOption( lua_State *L )
 // "echo" - so THAT is the name that should be displayed as the function name!
 int TLuaInterpreter::Echo( lua_State *L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if (! pHost) {
-        lua_pushstring(L, "echo: NULL Host pointer - something is wrong!");
-        return lua_error(L);
-    }
+    Host& host = getHostFromLua(L);
 
     QString consoleName;
     QString displayText;
@@ -11049,15 +10784,15 @@ int TLuaInterpreter::Echo( lua_State *L )
     }
 
     if (consoleName.isEmpty()) {
-        pHost->mpConsole->buffer.mEchoText = true;
-        pHost->mpConsole->echo(displayText);
-        pHost->mpConsole->buffer.mEchoText = false;
+        host.mpConsole->buffer.mEchoText = true;
+        host.mpConsole->echo(displayText);
+        host.mpConsole->buffer.mEchoText = false;
         // Writing to the main window must always succeed, but for consistent
         // results, we now return a true for that
         lua_pushboolean(L, true);
         return 1;
     } else {
-        if (mudlet::self()->echoWindow(pHost, consoleName, displayText)) {
+        if (mudlet::self()->echoWindow(&host, consoleName, displayText)) {
             lua_pushboolean(L, true);
             return 1;
         } else {
@@ -11156,7 +10891,7 @@ int TLuaInterpreter::echoPopup( lua_State *L )
         customFormat = lua_toboolean( L, s );
     }
 
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString txt = a2.c_str();
     QString name = a1.c_str();
     if( _commandList.size() != _hintList.size() )
@@ -11168,11 +10903,11 @@ int TLuaInterpreter::echoPopup( lua_State *L )
 
     if( a1 == "" )
     {
-        pHost->mpConsole->echoLink( txt, _commandList, _hintList, customFormat );
+        host.mpConsole->echoLink( txt, _commandList, _hintList, customFormat );
     }
     else
     {
-        mudlet::self()->echoLink( pHost, name, txt, _commandList, _hintList, customFormat );
+        mudlet::self()->echoLink( &host, name, txt, _commandList, _hintList, customFormat );
     }
 
     return 0;
@@ -11259,7 +10994,7 @@ int TLuaInterpreter::echoLink( lua_State *L )
             s++;
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString txt;
     QString name;
     QStringList func;
@@ -11269,7 +11004,7 @@ int TLuaInterpreter::echoLink( lua_State *L )
         txt = a1.c_str();
         func << a2.c_str();
         hint << a3.c_str();
-        pHost->mpConsole->echoLink( txt, func, hint, a5 );
+        host.mpConsole->echoLink( txt, func, hint, a5 );
     }
     else
     {
@@ -11277,7 +11012,7 @@ int TLuaInterpreter::echoLink( lua_State *L )
         func << a3.c_str();
         hint << a4.c_str();
         name = a1.c_str();
-        mudlet::self()->echoLink( pHost, name, txt, func, hint, a5 );
+        mudlet::self()->echoLink( &host, name, txt, func, hint, a5 );
     }
 
     return 0;
@@ -11285,7 +11020,7 @@ int TLuaInterpreter::echoLink( lua_State *L )
 
 int TLuaInterpreter::setMergeTables( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     QStringList modulesList;
     int n = lua_gettop(L);
@@ -11300,8 +11035,8 @@ int TLuaInterpreter::setMergeTables( lua_State * L )
         modulesList << QString(lua_tostring(L, i));
     }
 
-    pHost->mGMCP_merge_table_keys = pHost->mGMCP_merge_table_keys + modulesList;
-    pHost->mGMCP_merge_table_keys.removeDuplicates();
+    host.mGMCP_merge_table_keys = host.mGMCP_merge_table_keys + modulesList;
+    host.mGMCP_merge_table_keys.removeDuplicates();
 
     return 0;
 }
@@ -11319,9 +11054,9 @@ int TLuaInterpreter::pasteWindow( lua_State *L )
     {
         luaName = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString name( luaName.c_str());
-    mudlet::self()->pasteWindow( pHost, name );
+    mudlet::self()->pasteWindow( &host, name );
     return 0;
 }
 
@@ -11331,9 +11066,9 @@ int TLuaInterpreter::exportAreaImage( lua_State *L )
     if( lua_isnumber( L, 1 ) )
     {
         areaID = lua_tointeger( L, 1 );
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-        if( pHost->mpMap->mpMapper )
-            pHost->mpMap->mpMapper->mp2dMap->exportAreaImage( areaID );
+        Host& host = getHostFromLua(L);
+        if( host.mpMap->mpMapper )
+            host.mpMap->mpMapper->mp2dMap->exportAreaImage( areaID );
     }
     return 0;
 }
@@ -11380,19 +11115,19 @@ int TLuaInterpreter::setLabelStyleSheet( lua_State * L )
     {
         a2 = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     //qDebug()<<"CSS: name:"<<luaSendText.c_str()<<"<"<<a2.c_str()<<">";
-    pHost->mpConsole->setLabelStyleSheet( luaSendText, a2 );
+    host.mpConsole->setLabelStyleSheet( luaSendText, a2 );
     return 0;
 }
 
 int TLuaInterpreter::getCustomEnvColorTable( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( pHost->mpMap->customEnvColors.size() > 0 )
+    Host& host = getHostFromLua(L);
+    if( host.mpMap->customEnvColors.size() > 0 )
     {
         lua_newtable( L );
-        QList<int> colorList = pHost->mpMap->customEnvColors.keys();
+        QList<int> colorList = host.mpMap->customEnvColors.keys();
         for(int & idx : colorList)
         {
             lua_pushnumber( L, idx );
@@ -11400,19 +11135,19 @@ int TLuaInterpreter::getCustomEnvColorTable( lua_State * L )
             // red component
             {
                 lua_pushnumber( L, 1 );
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[idx].red() );
+                lua_pushnumber( L, host.mpMap->customEnvColors[idx].red() );
                 lua_settable( L, -3 );//match in matches
             }
             // green component
             {
                 lua_pushnumber( L, 2 );
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[idx].green() );
+                lua_pushnumber( L, host.mpMap->customEnvColors[idx].green() );
                 lua_settable( L, -3 );//match in matches
             }
             // blue component
             {
                 lua_pushnumber( L, 3 );
-                lua_pushnumber( L, pHost->mpMap->customEnvColors[idx].blue() );
+                lua_pushnumber( L, host.mpMap->customEnvColors[idx].blue() );
                 lua_settable( L, -3 );//match in matches
             }
             lua_settable( L, -3 );//matches in regex
@@ -11654,16 +11389,16 @@ int TLuaInterpreter::appendBuffer( lua_State *L )
             s++;
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
 
     if( s == 1 )
     {
-        pHost->mpConsole->appendBuffer();
+        host.mpConsole->appendBuffer();
     }
     else
     {
         QString name = a1.c_str();
-        mudlet::self()->appendBuffer( pHost, name );
+        mudlet::self()->appendBuffer( &host, name );
     }
 
     return 0;
@@ -11682,20 +11417,20 @@ int TLuaInterpreter::appendCmdLine( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString curText = pHost->mpConsole->mpCommandLine->toPlainText();
-    pHost->mpConsole->mpCommandLine->setPlainText( curText + QString( luaSendText.c_str() ) );
-    QTextCursor cur = pHost->mpConsole->mpCommandLine->textCursor();
+    Host& host = getHostFromLua(L);
+    QString curText = host.mpConsole->mpCommandLine->toPlainText();
+    host.mpConsole->mpCommandLine->setPlainText( curText + QString( luaSendText.c_str() ) );
+    QTextCursor cur = host.mpConsole->mpCommandLine->textCursor();
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
-    pHost->mpConsole->mpCommandLine->setTextCursor(cur);
+    host.mpConsole->mpCommandLine->setTextCursor(cur);
     return 0;
 }
 
 int TLuaInterpreter::getCmdLine( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    QString curText = pHost->mpConsole->mpCommandLine->toPlainText();
+    Host& host = getHostFromLua(L);
+    QString curText = host.mpConsole->mpCommandLine->toPlainText();
     lua_pushstring( L, curText.toUtf8().constData() );
     return 1;
 }
@@ -11713,10 +11448,9 @@ int TLuaInterpreter::installPackage( lua_State * L )
     {
         event = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString package = event.c_str();
-    if( pHost )
-        pHost->installPackage( package, 0 );
+    host.installPackage( package, 0 );
     return 0;
 }
 
@@ -11733,10 +11467,9 @@ int TLuaInterpreter::uninstallPackage( lua_State * L )
     {
         event = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString package = event.c_str();
-    if( pHost )
-        pHost->uninstallPackage( package, 0 );
+    host.uninstallPackage( package, 0 );
     return 0;
 }
 
@@ -11751,11 +11484,11 @@ int TLuaInterpreter::installModule( lua_State * L)
     }
     else
         modName = lua_tostring( L, 1);
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName.c_str());
-    if( pHost )
-        if ( pHost->installPackage( module, 3 ) && mudlet::self()->moduleTableVisible() )
-            mudlet::self()->layoutModules();
+    if (host.installPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
+        mudlet::self()->layoutModules();
+    }
     return 0;
 }
 
@@ -11770,11 +11503,11 @@ int TLuaInterpreter::uninstallModule( lua_State * L)
     }
     else
         modName = lua_tostring( L, 1);
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString module = modName.c_str();
-    if( pHost )
-        if ( pHost->uninstallPackage( module, 3 ) && mudlet::self()->moduleTableVisible() )
-            mudlet::self()->layoutModules();
+    if (host.uninstallPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
+        mudlet::self()->layoutModules();
+    }
     return 1;
 }
 
@@ -11789,10 +11522,9 @@ int TLuaInterpreter::reloadModule( lua_State * L)
     }
     else
         modName = lua_tostring( L, 1);
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString module = modName.c_str();
-    if( pHost )
-        pHost->reloadModule( module );
+    host.reloadModule( module );
     return 0;
 }
 
@@ -11811,13 +11543,8 @@ int TLuaInterpreter::reloadModule( lua_State * L)
 // nil value - both with an accompied error string - if there are problems.
 int TLuaInterpreter::setDefaultAreaVisible( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    if( ! pHost ) {
-        lua_pushnil( L );
-        lua_pushstring(L, "setDefaultAreaVisible: NULL Host pointer - something is wrong!");
-        return 2;
-    }
-    else if( ! pHost->mpMap || ! pHost->mpMap->mpRoomDB ) {
+    Host& host = getHostFromLua(L);
+    if( ! host.mpMap || ! host.mpMap->mpRoomDB ) {
         lua_pushnil( L );
         lua_pushstring(L, "setDefaultAreaVisible: no map present or loaded!");
         return 2;
@@ -11830,24 +11557,24 @@ int TLuaInterpreter::setDefaultAreaVisible( lua_State * L )
     }
     else {
         bool isToShowDefaultArea = lua_toboolean( L, 1 );
-        if( pHost->mpMap->mpMapper ) {
+        if( host.mpMap->mpMapper ) {
             // If we are reenabled the display of the default area
             // AND the mapper was showing the default area
             // the area widget will NOT be showing the correct area name afterwards
             bool isAreaWidgetInNeedOfResetting = false;
-            if(  ( ! pHost->mpMap->mpMapper->getDefaultAreaShown() )
+            if(  ( ! host.mpMap->mpMapper->getDefaultAreaShown() )
               && ( isToShowDefaultArea )
-              && ( pHost->mpMap->mpMapper->mp2dMap->mAID == -1 ) ) {
+              && ( host.mpMap->mpMapper->mp2dMap->mAID == -1 ) ) {
                 isAreaWidgetInNeedOfResetting = true;
             }
 
-            pHost->mpMap->mpMapper->setDefaultAreaShown( isToShowDefaultArea );
+            host.mpMap->mpMapper->setDefaultAreaShown( isToShowDefaultArea );
             if( isAreaWidgetInNeedOfResetting ) {
                 // Corner case fixup:
-                pHost->mpMap->mpMapper->showArea->setCurrentText( pHost->mpMap->mpRoomDB->getDefaultAreaName() );
+                host.mpMap->mpMapper->showArea->setCurrentText( host.mpMap->mpRoomDB->getDefaultAreaName() );
             }
-            pHost->mpMap->mpMapper->mp2dMap->repaint();
-            pHost->mpMap->mpMapper->update();
+            host.mpMap->mpMapper->mp2dMap->repaint();
+            host.mpMap->mpMapper->update();
             lua_pushboolean( L, true );
         }
         else {
@@ -11882,10 +11609,10 @@ int TLuaInterpreter::registerAnonymousEventHandler( lua_State * L )
     {
         func = lua_tostring( L, 2 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+    Host& host = getHostFromLua(L);
     QString e = event.c_str();
     QString f = func.c_str();
-    pHost->registerAnonymousEventHandler( e, f );
+    host.registerAnonymousEventHandler( e, f );
     return 0;
 }
 
@@ -11917,8 +11644,8 @@ int TLuaInterpreter::Send( lua_State * L )
             wantPrint = lua_toboolean( L, 2 );
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->send( QString( luaSendText.c_str() ), wantPrint, false );
+    Host& host = getHostFromLua(L);
+    host.send( QString( luaSendText.c_str() ), wantPrint, false );
     return 0;
 }
 
@@ -11935,19 +11662,19 @@ int TLuaInterpreter::printCmdLine( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->mpCommandLine->setPlainText( QString( luaSendText.c_str() ) );
-    QTextCursor cur = pHost->mpConsole->mpCommandLine->textCursor();
+    Host& host = getHostFromLua(L);
+    host.mpConsole->mpCommandLine->setPlainText( QString( luaSendText.c_str() ) );
+    QTextCursor cur = host.mpConsole->mpCommandLine->textCursor();
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
-    pHost->mpConsole->mpCommandLine->setTextCursor(cur);
+    host.mpConsole->mpCommandLine->setTextCursor(cur);
     return 0;
 }
 
 int TLuaInterpreter::clearCmdLine( lua_State * L )
 {
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mpConsole->mpCommandLine->clear();
+    Host& host = getHostFromLua(L);
+    host.mpConsole->mpCommandLine->clear();
     return 0;
 }
 
@@ -11978,8 +11705,8 @@ int TLuaInterpreter::sendRaw( lua_State * L )
             wantPrint = lua_toboolean( L, 2 );
         }
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->send( QString(luaSendText.c_str()), wantPrint, true );
+    Host& host = getHostFromLua(L);
+    host.send( QString(luaSendText.c_str()), wantPrint, true );
     return 0;
 }
 
@@ -11996,8 +11723,8 @@ int TLuaInterpreter::sendSocket( lua_State * L )
     {
         luaSendText = lua_tostring( L, 1 );
     }
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->mTelnet.socketOutRaw( luaSendText );
+    Host& host = getHostFromLua(L);
+    host.mTelnet.socketOutRaw( luaSendText );
     return 0;
 }
 
@@ -12032,6 +11759,60 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 0;
 }
 
+int TLuaInterpreter::setServerEncoding(lua_State * L)
+{
+    Host& host = getHostFromLua(L);
+
+    QString newEncoding;
+    if (! lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error( L );
+    }
+    else {
+        newEncoding = QString::fromUtf8(lua_tostring(L,1));
+    }
+
+    QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
+
+    if(results.first) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    else {
+        lua_pushnil(L);
+        lua_pushfstring(L, results.second.toLatin1().constData());
+        return 2;
+    }
+}
+
+int TLuaInterpreter::getServerEncoding(lua_State * L)
+{
+    Host& host = getHostFromLua(L);
+
+    QString encoding = host.mTelnet.getEncoding();
+    if(encoding.isEmpty()) {
+        encoding = QLatin1String("ASCII");
+    }
+    lua_pushstring(L, encoding.toLatin1().constData());
+    return 1;
+}
+
+int TLuaInterpreter::getServerEncodingsList(lua_State * L)
+{
+    Host& host = getHostFromLua(L);
+
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushstring(L, "ASCII");
+    lua_settable( L, -3);
+    for (int i = 0, total = host.mTelnet.getEncodingsList().count(); i < total; ++i) {
+        lua_pushnumber(L, i+2); // Lua indexes start with 1 but we already have one entry
+        lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
 
 bool TLuaInterpreter::compileAndExecuteScript(const QString & code )
 {
@@ -12224,8 +12005,8 @@ void TLuaInterpreter::setAtcpTable(const QString & var, const QString & arg )
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
     event.mArgumentList.append( arg );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->raiseEvent( event );
+    Host& host = getHostFromLua(L);
+    host.raiseEvent( event );
 }
 
 
@@ -12290,8 +12071,7 @@ void TLuaInterpreter::parseJSON( QString & key, const QString & string_data, con
     if( lua_istable(L, -1) )
     {
         // only merge tables (instead of replacing them) if the key has been registered as a need to merge key by the user default is Char.Status only
-        if( mpHost->mGMCP_merge_table_keys.contains( key ) )
-        {
+        if (mpHost->mGMCP_merge_table_keys.contains(key)) {
             __needMerge = true;
         }
     }
@@ -12370,15 +12150,15 @@ void TLuaInterpreter::parseJSON( QString & key, const QString & string_data, con
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append( key );
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
+        Host& host = getHostFromLua(L);
         if( mudlet::debugMode )
         {
             QString msg = QString("\n%1 event <").arg(protocol);
             msg.append( token );
             msg.append(QString("> display(%1) to see the full content\n").arg(protocol));
-            pHost->mpConsole->printSystemMessage(msg);
+            host.mpConsole->printSystemMessage(msg);
         }
-        pHost->raiseEvent( event );
+        host.raiseEvent( event );
     }
     // auto-detect IRE composer
     if( tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit")
@@ -12389,12 +12169,12 @@ void TLuaInterpreter::parseJSON( QString & key, const QString & string_data, con
             QString title = rx.cap(1);
             QString initialText = rx.cap(2);
             initialText.replace(QString("\\n"), QString("\n"));
-            Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-            if( pHost->mTelnet.mpComposer ) return;
-            pHost->mTelnet.mpComposer = new dlgComposer( pHost );
-            pHost->mTelnet.mpComposer->init( title, initialText );
-            pHost->mTelnet.mpComposer->raise();
-            pHost->mTelnet.mpComposer->show();
+            Host& host = getHostFromLua(L);
+            if( host.mTelnet.mpComposer ) return;
+            host.mTelnet.mpComposer = new dlgComposer( &host );
+            host.mTelnet.mpComposer->init( title, initialText );
+            host.mTelnet.mpComposer->raise();
+            host.mTelnet.mpComposer->show();
         }
     }
     lua_pop( L, lua_gettop( L ) );
@@ -12555,8 +12335,8 @@ void TLuaInterpreter::setChannel102Table( int & var, int & arg )
     event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
     event.mArgumentList.append( QString::number(arg) );
     event.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-    Host * pHost = TLuaInterpreter::luaInterpreterMap[L];
-    pHost->raiseEvent( event );
+    Host& host = getHostFromLua(L);
+    host.raiseEvent( event );
 }
 
 bool TLuaInterpreter::call_luafunction( void * pT )
@@ -12660,33 +12440,30 @@ bool TLuaInterpreter::call(const QString & function, const QString & mName )
 
 void TLuaInterpreter::logError( std::string & e, const QString & name, const QString & function )
 {
-    //QDateTime time = QDateTime::currentDateTime();
-    // QString entry = QString("[%1]object:<%2> function:<%3> error:<%4>").arg(time.toString("MMM:dd:yyyy hh-mm-ss")).arg(name).arg(function).arg(e.c_str());
-    //mpHost->mErrorLogStream << entry << endl;
     auto blue = QColor(Qt::blue);
     auto green = QColor(Qt::green);
     auto red = QColor(Qt::red);
     auto black = QColor(Qt::black);
     QString s1 = QString("[ERROR:]");
-    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name).arg(function);
+    QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name).arg(function).arg(e.c_str());
+    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
 
-    if( mpHost->mpEditorDialog )
-    {
-        mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1 );
-        mpHost->mpEditorDialog->mpErrorConsole->printDebug(green, black, s2 );
-        mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3 );
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
+        mpHost->mpEditorDialog->mpErrorConsole->printDebug(green, black, s2);
+        mpHost->mpEditorDialog->mpErrorConsole->printDebug(red, black, s3);
     }
 
-    if( mpHost->mEchoLuaErrors )
-    {
+    if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of it's own and is not prepended to the previous line
-        if( mpHost->mpConsole->buffer.size() > 0 )
-            if( !mpHost->mpConsole->buffer.lineBuffer.at( mpHost->mpConsole->buffer.lineBuffer.size() - 1 ).isEmpty() )
-              mpHost->postMessage("\n");
+        if (mpHost->mpConsole->buffer.size() > 0) {
+            if (!mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+                mpHost->postMessage("\n");
+            }
+        }
 
-        mpHost->postMessage( msg );
+        mpHost->postMessage(msg);
     }
 }
 
@@ -12970,12 +12747,14 @@ static lua_State* newstate()
 
 #endif // _MSC_VER && _DEBUG
 
+static void storeHostInLua(lua_State *L, Host *h);
+
 // this function initializes the Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
 {
     pGlobalLua = newstate();
-    TLuaInterpreter::luaInterpreterMap[pGlobalLua]=mpHost;
+    storeHostInLua(pGlobalLua, mpHost);
 
     luaL_openlibs( pGlobalLua );
 
@@ -13265,8 +13044,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName );
     lua_register( pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent );
     lua_register( pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile );
+    lua_register( pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding );
+    lua_register( pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding );
+    lua_register( pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList );
+    lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
 
 
+// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
     lua_setglobal( pGlobalLua, "yajl" );
 
@@ -13788,3 +13572,50 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
 
 }
 
+int TLuaInterpreter::alert( lua_State * L )
+{
+    double luaAlertDuration = 0.0;
+
+    if( lua_gettop( L ) > 0 )
+    {
+        if( ! lua_isnumber( L, 1 ) )
+        {
+            lua_pushfstring( L, "alert: bad argument #1 type (alert duration in seconds as number expected, got %s!)",
+                            luaL_typename( L, 1 ));
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaAlertDuration = lua_tonumber( L, 1 );
+
+            if( luaAlertDuration < 0.000 )
+            {
+                lua_pushstring( L, "alert: duration, in seconds, is optional but if given must be zero or greater." );
+                return lua_error( L );
+            }
+        }
+    }
+
+    // QApplication::alert expects milliseconds, not seconds
+    QApplication::alert(mudlet::self(), qRound( luaAlertDuration * 1000.0 ));
+
+    return 0;
+}
+
+static int host_key = 0;
+
+static void storeHostInLua(lua_State *L, Host *h) {
+    lua_pushlightuserdata(L, &host_key); // 1 - push unique key
+    lua_pushlightuserdata(L, h);         // 2 - push host ptr
+    lua_rawset(L, LUA_REGISTRYINDEX);    // 0 - register[key] = host
+}
+
+Host& getHostFromLua(lua_State* L) {
+    lua_pushlightuserdata(L, &host_key);    // 1 - push unique key
+    lua_rawget(L, LUA_REGISTRYINDEX);       // 1 - pop key, push host ptr
+    Host* h = (Host*)lua_touserdata(L, -1); // 1 - get host ptr
+    lua_pop(L, 1);                          // 0 - pop host ptr
+    assert(h);
+    return *h;
+}

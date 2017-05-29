@@ -63,8 +63,8 @@ public:
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
     void updateToolbar();
-    std::list<TToolBar*> getToolBarList();
-    std::list<TEasyButtonBar*> getEasyButtonBarList();
+    std::list<QPointer<TToolBar>> getToolBarList();
+    std::list<QPointer<TEasyButtonBar>> getEasyButtonBarList();
     TAction* getHeadAction(TToolBar*);
     TAction* getHeadAction(TEasyButtonBar*);
     void constructToolbar(TAction*, TToolBar* pTB);
@@ -86,11 +86,11 @@ private:
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
     int mMaxID;
-    TToolBar* mpToolBar;
-    TEasyButtonBar* mpEasyButtonBar;
+    QPointer<TToolBar> mpToolBar;
+    QPointer<TEasyButtonBar> mpEasyButtonBar;
     bool mModuleMember;
-    std::list<TToolBar*> mToolBarList;
-    std::list<TEasyButtonBar*> mEasyButtonBarList;
+    std::list<QPointer<TToolBar>> mToolBarList;
+    std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 };
 
 #endif // MUDLET_ACTIONUNIT_H

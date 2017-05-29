@@ -61,6 +61,8 @@ private:
 
 public slots:
     void slot_pressed(const bool);
+    void slot_topLevelChanged(bool);
+    void slot_dockLocationChanged(Qt::DockWidgetArea);
 };
 
 #endif // MUDLET_TTOOLBAR_H

@@ -690,8 +690,8 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             QString alertMsg = tr( "[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                   " Look for further messsages related to the rooms that are supposed to\n"
-                                   " be in this/these area(s)...",
+                                   " Look for further messsages related to the rooms that are supposed\n"
+                                   " to be in this/these area(s)...",
                                    "Making use of %n to allow quantity dependent message form 8-) !",
                                    missingAreasNeeded.count() );
             mpMap->postMessage(alertMsg);
@@ -715,22 +715,20 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Sort the ids so that the reporting is ordered, which could be
             // helpful if there is a large number of faults
             std::sort(missingAreasNeeded.begin(), missingAreasNeeded.end());
-            for (int newAreaId : missingAreasNeeded) {
-
-                // This will create a new "Default" area name if there is not one
-                // already for this id - and we do not anticipate that it could ever
-                // fail and return false...
-                addArea(newAreaId);
-                infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"")
-                               .arg(newAreaId)
-                               .arg(areaNamesMap.value(newAreaId)));
-            }
-
-            // Didn't really needed to be done, but as we have finished with it
-            // now, clearing it may make tracking the overall processes going on
-            // in the debugger a little clearer...
-            missingAreasNeeded.clear();
         }
+
+        for (int newAreaId : missingAreasNeeded) {
+            // This will create a new "Default" area name if there is not one
+            // already for this id - and we do not anticipate that it could ever
+            // fail and return false...
+            addArea(newAreaId);
+            infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"").arg(QString::number(newAreaId), areaNamesMap.value(newAreaId)));
+        }
+
+        // Didn't really needed to be done, but as we have finished with it
+        // now, clearing it may make tracking the overall processes going on
+        // in the debugger a little clearer...
+        missingAreasNeeded.clear();
 
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             mpMap->postMessage(infoMsg);
@@ -769,7 +767,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Insert replacement value into hash
             itRemappedArea.setValue(replacementAreaId);
             if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
-                infoMsg.append(QStringLiteral("\n%1 ==> %2").arg(faultyAreaId).arg(replacementAreaId));
+                infoMsg.append(QStringLiteral("\n%1 ==> %2").arg(QString::number(faultyAreaId), QString::number(replacementAreaId)));
             }
 
             mpMap->appendAreaErrorMsg(faultyAreaId, tr("[ INFO ]  - The area with this bad id was renumbered to: %1.").arg(replacementAreaId), true);
@@ -852,7 +850,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
             validUsedRoomIds.insert(newRoomId);
             if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
-                infoMsg.append(QStringLiteral("%1 ==> %2").arg(itRenumberedRoomId.key()).arg(itRenumberedRoomId.value()));
+                infoMsg.append(QStringLiteral("%1 ==> %2").arg(QString::number(itRenumberedRoomId.key()), QString::number(itRenumberedRoomId.value())));
             }
 
             mpMap->appendRoomErrorMsg(itRenumberedRoomId.key(), tr("[ INFO ]  - This room with the bad id was renumbered to: %1.").arg(itRenumberedRoomId.value()), true);
@@ -1164,9 +1162,9 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             while (itRemappedNames.hasPrevious()) {
                 itRemappedNames.previous();
                 QString oldName = itRemappedNames.key().isEmpty() ? tr("<nothing>") : itRemappedNames.key();
-                detailText.append(QStringLiteral("(%1) \"%2\" ==> \"%3\"\n").arg(areaNamesMap.key(itRemappedNames.value())).arg(oldName).arg(itRemappedNames.value()));
+                detailText.append(QStringLiteral("(%1) \"%2\" ==> \"%3\"\n").arg(areaNamesMap.key(itRemappedNames.value())).arg(oldName, itRemappedNames.value()));
                 mpMap->appendAreaErrorMsg(areaNamesMap.key(itRemappedNames.value()),
-                                          tr("[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: \"%1\", new name: \"%2\".").arg(oldName).arg(itRemappedNames.value()),
+                                          tr("[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: \"%1\", new name: \"%2\".").arg(oldName, itRemappedNames.value()),
                                           true);
                 ;
             }
@@ -1190,8 +1188,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "  If there were more than one area without a name then all but the\n"
                                  "first will also gain a suffix in this manner.\n"
                                  "%2")
-                                      .arg(mUnnamedAreaName)
-                                      .arg(extraTextForMatchingSuffixAlreadyUsed);
+                                      .arg(mUnnamedAreaName, extraTextForMatchingSuffixAlreadyUsed);
         } else if (renamedMap.size()) {
             // Duplicates but no unnnamed area
             alertText = tr("[ ALERT ] - Duplicate area names detected in the Map file!");
