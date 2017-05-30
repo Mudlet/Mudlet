@@ -986,7 +986,7 @@ void dlgConnectionProfiles::fillout_form()
     QPixmap pd1 = pd.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
     QIcon mi5(pd1);
     pM->setIcon(mi5);
-    description = getDescription(QLatin1String("3k.org"), 3000, mudServer);
+    description = getDescription(QStringLiteral("3k.org"), 3000, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1000,7 +1000,7 @@ void dlgConnectionProfiles::fillout_form()
     QPixmap pc1 = pc.scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
     QIcon mi4(pc1);
     pM->setIcon(mi4);
-    description = getDescription(QLatin1String("3k.org"), 3200, mudServer);
+    description = getDescription(QStringLiteral("3k.org"), 3200, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1012,7 +1012,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/lusternia_120_30.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("lusternia.com"), 0, mudServer);
+    description = getDescription(QStringLiteral("lusternia.com"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1026,7 +1026,7 @@ void dlgConnectionProfiles::fillout_form()
     pM->setForeground(QColor(Qt::white));
     profiles_tree_widget->addItem( pM );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("batmud.bat.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1038,7 +1038,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/gw2.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("godwars2.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("godwars2.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1050,7 +1050,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/Slothmud.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("slothmud.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("slothmud.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1062,7 +1062,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/aardwolf_mud.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("aardmud.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("aardmud.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1074,7 +1074,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/materiaMagicaIcon" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("materiamagica.com"), 0, mudServer);
+    description = getDescription(QStringLiteral("materiamagica.com"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1086,7 +1086,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/120x30RoDLogo.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("realmsofdespair.com"), 0, mudServer);
+    description = getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1098,7 +1098,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/zombiemud.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("zombiemud.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("zombiemud.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1110,7 +1110,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/aetolia_120_30.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("aetolia.com"), 0, mudServer);
+    description = getDescription(QStringLiteral("aetolia.com"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1122,7 +1122,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QStringLiteral( ":/icons/imperian_120_30.png" ) );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("imperian.com"), 0, mudServer);
+    description = getDescription(QStringLiteral("imperian.com"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1134,7 +1134,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QPixmap( QStringLiteral( ":/icons/wotmudicon.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("game.wotmud.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
@@ -1146,7 +1146,7 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->addItem( pM );
     mi = QIcon( QPixmap( QStringLiteral( ":/icons/midnightsun2.png" ) ).scaled(QSize(120,30),Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy() );
     pM->setIcon(mi);
-    description = getDescription(QLatin1String("midnightsun2.org"), 0, mudServer);
+    description = getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer);
     if (!description.isEmpty()) {
         pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>") );
     }
