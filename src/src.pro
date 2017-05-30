@@ -24,6 +24,8 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 
 # Including IRC Library
 include(../3rdparty/communi/src/core/core.pri)
+include(../3rdparty/communi/src/util/util.pri)
+include(../3rdparty/communi/src/model/model.pri)
 
 include(../3rdparty/lua_yajl/src.pri)
 
