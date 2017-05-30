@@ -598,6 +598,69 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     }
 }
 
+// Use the URL so we can use the same descriptions for user generated copies of
+// predefined MUDs - but also need the port number to disabiguate the 3K ones!
+QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name)
+{
+    if (hostUrl == QLatin1String("realmsofdespair.com")) {
+        return QLatin1String(
+                "The Realms of Despair is the original SMAUG MUD and is FREE to play. We have an active Roleplaying community, an active player-killing (deadly) community, and a very active "
+                "peaceful community. Players can choose from 13 classes (including a deadly-only class) and 13 races. Character appearances are customizable on creation and we have a vast "
+                "collection of equipment that is level, gender, class, race and alignment specific. We boast well over 150 original, exclusive areas, with a total of over 20,000 rooms. Mob killing, "
+                "or 'running' is one of our most popular activities, with monster difficulties varying from easy one-player kills to difficult group kills. We have four deadly-only Clans, twelve "
+                "peaceful-only Guilds, eight Orders, and fourteen Role-playing Nations that players can join to interact more closely with other players. We have two mortal councils that actively "
+                "work toward helping players: The Symposium hears ideas for changes, and the Newbie Council assists new players. Our team of Immortals are always willing to answer questions and to "
+                "help out however necessary. Best of all, playing the Realms of Despair is totally FREE!");
+    } else if (hostUrl == QLatin1String("zombiemud.org")) {
+        return QLatin1String(
+                "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in "
+                "from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your "
+                "achievements on the game is your own imagination and will to succeed.");
+    } else if (hostUrl == QLatin1String("godwars2.org")) {
+        return QLatin1String(
+                "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to "
+                "new situations. Take on the role of a godlike supernatural being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless possibilities.");
+    } else if (hostUrl == QLatin1String("3k.org")) {
+        if (port == 3200) {
+            return QLatin1String(
+                    "3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but unique and twisted in so many ways.  3Scapes offers a faster pace of play, along with "
+                    "an assortment "
+                    "of new guilds, features, and areas.");
+        } else { // port==3000
+            return QLatin1String(
+                    "Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms is a colossal adventure through which many years of active and continued development by its "
+                    "dedicated coding staff.  Based around the mighty town of Pinnacle, three main realms beckon the player to explore. These kingdoms are known as: Fantasy, a vast medieval realm "
+                    "full "
+                    "of orcs, elves, dragons, and a myriad of other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-distant future; and Chaos, a transient realm where the "
+                    "enormous realities of Fantasy and Science collide to produce creatures so bizarre that they have yet to be categorized.  During their exploration of the realms, players have the "
+                    "opportunity to join any of well over a dozen different guilds, which grant special, unique powers to the player, furthering their abilities as they explore the vast expanses of "
+                    "each realm. Add in the comprehensive skill system that 3K offers and you are able to extensively customize your characters.");
+        }
+    } else if (hostUrl == QLatin1String("slothmud.org")) {
+        return QLatin1String(
+                "SlothMUD... the ultimate in DIKUMUD! The most active, intricate, exciting FREE MUD of its kind. This text based multiplayer free online rpg game and is enjoyed continuously by "
+                "players worldwide. With over 27,500 uniquely described rooms, 9,300 distinct creatures, 14,200 characters, and 87,100 pieces of equipment, charms, trinkets and other items, our "
+                "online rpg world is absolutely enormous and ready to explore.");
+    } else if (hostUrl == QLatin1String("game.wotmud.org")) {
+        return QLatin1String(
+                "WoTMUD is the most popular on-line game based on the late Robert Jordan's epic Wheel of Time fantasy novels.\n"
+                "Not only totally FREE to play since it started in 1993 it was officially sanctioned by the Author himself.\n"
+                "Explore a World very like that of Rand al'Thor's; from the Blight in the North down to the Isle of Madmen far, far south.\n"
+                "Wander around in any of the towns from the books such as Caemlyn, Tar Valon or Tear, or start your adventure in the Two Rivers area, not YET the home of the Dragon Reborn.\n"
+                "Will you join one of the Clans working for the triumph of the Light over the creatures and minions of the Dark One; or will you be one of the returning invaders in the South West, "
+                "descendants of Artur Hawkwing's long-thought lost Armies; or just maybe you are skilled enough to be a hideous Trolloc, creature of the Dark, who like Humans - but only as a source "
+                "of sustenance.\n"
+                "Very definitely a Player Verses Player (PvP) world but with strong Role Playing (RP) too; nowhere is totally safe but some parts are much more dangerous than others - once you "
+                "enter you may never leave...");
+    } else if (hostUrl == QStringLiteral("midnightsun2.org")) {
+        return QLatin1String(
+                "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong "
+                "sense of community.");
+    } else {
+        return readProfileData(profile_name, QLatin1String("description"));
+    }
+}
+
 void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 {
     if( !pItem )
@@ -610,87 +673,86 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 
     QString profile = profile_name;
 
-
-    QString val = readProfileData( profile, QStringLiteral( "url" ) );
-    if( val.isEmpty() )
+    QString host_url = readProfileData( profile, QStringLiteral( "url" ) );
+    if( host_url.isEmpty() )
     {
         // Host to connect to, see below for port
         if( profile_name == QStringLiteral( "Avalon.de" ) )
-            val = QStringLiteral( "avalon.mud.de" );
+            host_url = QStringLiteral( "avalon.mud.de" );
         if( profile_name == QStringLiteral( "God Wars II" ) )
-            val = QStringLiteral( "godwars2.org" );
+            host_url = QStringLiteral( "godwars2.org" );
         if( profile_name == QStringLiteral( "Materia Magica" ) )
-            val = QStringLiteral( "materiamagica.com" );
+            host_url = QStringLiteral( "materiamagica.com" );
         if( profile_name == QStringLiteral( "BatMUD" ) )
-            val = QStringLiteral( "batmud.bat.org" );
+            host_url = QStringLiteral( "batmud.bat.org" );
         if( profile_name == QStringLiteral( "Aardwolf" ) )
-            val = QStringLiteral( "aardmud.org" );
+            host_url = QStringLiteral( "aardmud.org" );
         if( profile_name == QStringLiteral( "Achaea" ) )
-            val = QStringLiteral( "achaea.com" );
+            host_url = QStringLiteral( "achaea.com" );
         if( profile_name == QStringLiteral( "Aetolia" ) )
-            val = QStringLiteral( "aetolia.com" );
+            host_url = QStringLiteral( "aetolia.com" );
         if( profile_name == QStringLiteral( "Lusternia" ) )
-            val = QStringLiteral( "lusternia.com" );
+            host_url = QStringLiteral( "lusternia.com" );
         if( profile_name == QStringLiteral( "Imperian" ) )
-            val = QStringLiteral( "imperian.com" );
+            host_url = QStringLiteral( "imperian.com" );
         if( profile_name == QStringLiteral( "Realms of Despair" ) )
-            val = QStringLiteral( "realmsofdespair.com" );
+            host_url = QStringLiteral( "realmsofdespair.com" );
         if( profile_name == QStringLiteral( "ZombieMUD" ) )
-            val = QStringLiteral( "zombiemud.org" );
+            host_url = QStringLiteral( "zombiemud.org" );
         if( profile_name == QStringLiteral( "3Scapes" ) )
-            val = QStringLiteral( "3k.org" );
+            host_url = QStringLiteral( "3k.org" );
         if( profile_name == QStringLiteral( "3Kingdoms" ) )
-            val = QStringLiteral( "3k.org" );
+            host_url = QStringLiteral( "3k.org" );
         if( profile_name == QStringLiteral( "Slothmud" ) )
-            val = QStringLiteral( "slothmud.org" );
+            host_url = QStringLiteral( "slothmud.org" );
         if( profile_name == QStringLiteral( "WoTMUD" ) )
-            val = QStringLiteral( "game.wotmud.org" );
+            host_url = QStringLiteral( "game.wotmud.org" );
         if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
-            val = QStringLiteral( "midnightsun2.org" );
+            host_url = QStringLiteral( "midnightsun2.org" );
 
     }
-    host_name_entry->setText( val );
+    host_name_entry->setText( host_url );
 
-    val = readProfileData( profile, QStringLiteral( "port" ) );
-    if( val.isEmpty() )
+    QString host_port = readProfileData( profile, QStringLiteral( "port" ) );
+    if( host_port.isEmpty() )
     {
         // Port to connect to
         if( profile_name == QStringLiteral( "Avalon.de" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "God Wars II" ) )
-            val = QStringLiteral( "3000" );
+            host_port = QStringLiteral( "3000" );
         if( profile_name == QStringLiteral( "Materia Magica" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "BatMUD" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "Aardwolf" ) )
-            val = QStringLiteral( "4000" );
+            host_port = QStringLiteral( "4000" );
         if( profile_name == QStringLiteral( "Achaea" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "Aetolia" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "Lusternia" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "Imperian" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "Realms of Despair" ) )
-            val = QStringLiteral( "4000" );
+            host_port = QStringLiteral( "4000" );
         if( profile_name == QStringLiteral( "ZombieMUD" ) )
-            val = QStringLiteral( "23" );
+            host_port = QStringLiteral( "23" );
         if( profile_name == QStringLiteral( "3Scapes" ) )
-            val = QStringLiteral( "3200" );
+            host_port = QStringLiteral( "3200" );
         if( profile_name == QStringLiteral( "3Kingdoms" ) )
-            val = QStringLiteral( "3000" );
+            host_port = QStringLiteral( "3000" );
         if( profile_name == QStringLiteral( "Slothmud" ) )
-            val = QStringLiteral( "6101" );
+            host_port = QStringLiteral( "6101" );
         if( profile_name == QStringLiteral( "WoTMUD" ) )
-            val = QStringLiteral( "2224" );
+            host_port = QStringLiteral( "2224" );
         if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
-            val = QStringLiteral( "3000" );
+            host_port = QStringLiteral( "3000" );
     }
-    port_entry->setText( val );
+    port_entry->setText( host_port );
 
-    val = readProfileData( profile, QStringLiteral( "password" ) );
+    QString val = readProfileData( profile, QStringLiteral( "password" ) );
     character_password_entry->setText( val );
 
     val = readProfileData( profile, QStringLiteral( "login" ) );
@@ -706,30 +768,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
         autologin_checkBox->setChecked( false );
     }
 
-    if( profile_name == QStringLiteral("Realms of Despair") )
-        val = tr( "The Realms of Despair is the original SMAUG MUD and is FREE to play. We have an active Roleplaying community, an active player-killing (deadly) community, and a very active peaceful community. Players can choose from 13 classes (including a deadly-only class) and 13 races. Character appearances are customizable on creation and we have a vast collection of equipment that is level, gender, class, race and alignment specific. We boast well over 150 original, exclusive areas, with a total of over 20,000 rooms. Mob killing, or 'running' is one of our most popular activities, with monster difficulties varying from easy one-player kills to difficult group kills. We have four deadly-only Clans, twelve peaceful-only Guilds, eight Orders, and fourteen Role-playing Nations that players can join to interact more closely with other players. We have two mortal councils that actively work toward helping players: The Symposium hears ideas for changes, and the Newbie Council assists new players. Our team of Immortals are always willing to answer questions and to help out however necessary. Best of all, playing the Realms of Despair is totally FREE!" );
-    else if( profile_name == QStringLiteral( "ZombieMUD" ) )
-        val = tr( "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your achievements on the game is your own imagination and will to succeed." );
-    else if( profile_name == QStringLiteral("God Wars II") )
-        val = tr( "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to new situations. Take on the role of a godlike supernatural being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless possibilities." );
-    else if( profile_name == QStringLiteral( "3Scapes" ))
-        val = tr( "3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but unique and twisted in so many ways.  3Scapes offers a faster pace of play, along with an assortment of new guilds, features, and areas." );
-    else if ( profile_name == QStringLiteral( "3Kingdoms" ))
-        val = tr( "Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms is a colossal adventure through which many years of active and continued development by its dedicated coding staff.  Based around the mighty town of Pinnacle, three main realms beckon the player to explore. These kingdoms are known as: Fantasy, a vast medieval realm full of orcs, elves, dragons, and a myriad of other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-distant future; and Chaos, a transient realm where the enormous realities of Fantasy and Science collide to produce creatures so bizarre that they have yet to be categorized.  During their exploration of the realms, players have the opportunity to join any of well over a dozen different guilds, which grant special, unique powers to the player, furthering their abilities as they explore the vast expanses of each realm. Add in the comprehensive skill system that 3K offers and you are able to extensively customize your characters." );
-    else if( profile_name == QStringLiteral( "Slothmud" ) )
-        val = tr( "SlothMUD... the ultimate in DIKUMUD! The most active, intricate, exciting FREE MUD of its kind. This text based multiplayer free online rpg game and is enjoyed continuously by players worldwide. With over 27,500 uniquely described rooms, 9,300 distinct creatures, 14,200 characters, and 87,100 pieces of equipment, charms, trinkets and other items, our online rpg world is absolutely enormous and ready to explore." );
-    else if( profile_name == QStringLiteral( "WoTMUD" ) )
-        val = tr( "WoTMUD is the most popular on-line game based on the late Robert Jordan's epic Wheel of Time fantasy novels.\n"
-                  "Not only totally FREE to play since it started in 1993 it was officially sanctioned by the Author himself.\n"
-                  "Explore a World very like that of Rand al'Thor's; from the Blight in the North down to the Isle of Madmen far, far south.\n"
-                  "Wander around in any of the towns from the books such as Caemlyn, Tar Valon or Tear, or start your adventure in the Two Rivers area, not YET the home of the Dragon Reborn.\n"
-                  "Will you join one of the Clans working for the triumph of the Light over the creatures and minions of the Dark One; or will you be one of the returning invaders in the South West, descendants of Artur Hawkwing's long-thought lost Armies; or just maybe you are skilled enough to be a hideous Trolloc, creature of the Dark, who like Humans - but only as a source of sustenance.\n"
-                  "Very definitely a Player Verses Player (PvP) world but with strong Role Playing (RP) too; nowhere is totally safe but some parts are much more dangerous than others - once you enter you may never leave..." );
-    else if( profile_name == QStringLiteral( "Midnight Sun 2" ) )
-        val = tr( "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong sense of community." );
-    else
-        val = readProfileData( profile, QStringLiteral( "description" ) );
-    mud_description_textedit->setPlainText(val);
+    mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
 
     val = readProfileData( profile, QStringLiteral( "website" ) );
     if( val.isEmpty() )
