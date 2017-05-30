@@ -1160,7 +1160,7 @@ void dlgConnectionProfiles::fillout_form()
     {
         QString s = mProfileList.at(i);
         if( s.isEmpty() )
-            continue;        
+            continue;
 
         auto pItem = new QListWidgetItem( mProfileList.at(i) );
 
