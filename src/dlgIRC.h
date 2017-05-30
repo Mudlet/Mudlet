@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,11 +26,17 @@
 #include "pre_guard.h"
 #include "ui_irc.h"
 #include <Irc>
+#include <IrcBuffer>
+#include <IrcBufferModel>
 #include <IrcCommand>
+#include <IrcCommandParser>
+#include <IrcCompleter>
 #include <IrcConnection>
 #include <IrcMessage>
+#include <IrcTextFormat>
+#include <IrcUser>
+#include <IrcUserModel>
 #include "post_guard.h"
-
 
 class dlgIRC : public QMainWindow, public Ui::irc_dlg
 {
@@ -39,23 +46,47 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
 
 public:
     dlgIRC();
+    ~dlgIRC();
 
     IrcConnection* connection;
+    bool sendMsg(const QString& target, const QString& message);
 
-public slots:
-    void onMessageReceived(IrcMessage*);
-    void anchorClicked(const QUrl& link);
-    void sendMsg();
-    void onConnected();
+private slots:
+    void slot_onConnected();
+    void slot_onConnecting();
+    void slot_onDisconnected();
+    void slot_onTextEdited();
+    void slot_onTextEntered();
+    void slot_nameCompletion();
+    void slot_nameCompleted(const QString& text, int cursor);
+    void slot_onBufferAdded(IrcBuffer* buffer);
+    void slot_onBufferRemoved(IrcBuffer* buffer);
+    void slot_onBufferActivated(const QModelIndex& index);
+    void slot_onUserActivated(const QModelIndex& index);
+    void slot_nickNameRequired(const QString& reserved, QString* alt);
+    void slot_nickNameChanged(const QString& nick);
+    void slot_receiveMessage(IrcMessage* message);
+    void slot_onAnchorClicked(const QUrl& link);
 
 private:
-    void irc_gotMsg(QString, QString, QString);
-    void irc_gotMsg2(QString a, QStringList c);
-    void irc_gotMsg3(QString a, uint code, QStringList c);
-    void slot_joined(QString, QString);
-    void slot_parted(QString, QString, QString);
+    void setupCommandParser();
+    void setupBuffers();
+    void processIrcMessage(IrcMessage*);
+    bool processCustomCommand(IrcCommand*);
+    void displayHelp(const QString&);
 
-    QString mNick;
+    IrcCompleter* completer;
+    IrcCommandParser* commandParser;
+    IrcBufferModel* bufferModel;
+    QHash<IrcBuffer*, IrcUserModel*> userModels;
+    QHash<IrcBuffer*, QTextDocument*> bufferTexts;
+    quint64 mPingStarted;
+    QString mHostName;
+    int mHostPort;
+    QString mNickName;
+    QString mUserName;
+    QString mRealName;
+    QString mChannel;
 };
 
 #endif // MUDLET_DLGIRC_H
