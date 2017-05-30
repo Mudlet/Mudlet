@@ -928,7 +928,12 @@ void dlgConnectionProfiles::fillout_form()
 
         // collapse the width as the default is too big and set the height to a reasonable default
         // to fit all of the 'Welcome' message
+#if defined(Q_OS_MAC)
+        // macOS requires 15px more width to get 3 columns of MUD listings in
+        resize(minimumSize().width()+15, 300);
+#else
         resize(minimumSize().width(), 300);
+#endif
     }
     else
     {
