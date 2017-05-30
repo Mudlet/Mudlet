@@ -582,15 +582,21 @@ QStringList dlgConnectionProfiles::readProfileHistory( QString profile, QString 
     return historyList;
 }
 
-void dlgConnectionProfiles::writeProfileData( QString profile, QString item, QString what )
+QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" ).arg( QDir::homePath(), profile, item ) );
-    file.open( QIODevice::WriteOnly | QIODevice::Unbuffered );
-    QDataStream ofs( & file );
-    ofs << what;
-    file.close();
-}
+    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), profile, item));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&file);
+        ofs << what;
+        file.close();
+    }
 
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    } else {
+        return qMakePair(false, file.errorString());
+    }
+}
 
 void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem *pItem)
 {
