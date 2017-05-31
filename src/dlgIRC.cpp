@@ -70,6 +70,7 @@ dlgIRC::dlgIRC()
     connect(connection, SIGNAL(nickNameRequired(QString,QString*)), this, SLOT(slot_nickNameRequired(QString,QString*)));
     connect(connection, SIGNAL(nickNameChanged(QString)), this, SLOT(slot_nickNameChanged(QString)));
     connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
+    connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
 
     // TODO FIXME : This needs to be updated to use methods provided by Host.
     qsrand(QTime::currentTime().msec());
@@ -94,7 +95,7 @@ dlgIRC::dlgIRC()
     mRealName = mudlet::self()->version;
     mHostName = "irc.freenode.net";
     mHostPort = 6667;
-    mChannel = "#mudlet";
+    mChannels << "#mudlet";
 
     connection->setNickName(mNickName);
     connection->setUserName(mUserName);
@@ -102,7 +103,7 @@ dlgIRC::dlgIRC()
     connection->setHost(mHostName);
     connection->setPort(mHostPort);
 
-    connection->sendCommand(IrcCommand::createJoin(mChannel));
+    connection->sendCommand(IrcCommand::createJoin(mChannels));
     connection->open();
 
     setupBuffers();
@@ -110,7 +111,7 @@ dlgIRC::dlgIRC()
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Statring Mudlet IRC Client...")));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mHostName, QString::number(mHostPort))));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mNickName)));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channel: %1").arg(mChannel)));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channels: %1").arg(mChannels.join(" "))));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ This client supports Auto-Completion using the Tab key.")));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Type <b>/help</b> for commands or <b>/help [command]</b> for command syntax.")));
     ircBrowser->append("\n");
@@ -526,3 +527,18 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
     mNickName = nick;
 }
 
+void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
+{
+    QString chan = message->channel();
+    if (!mChannels.contains(chan)) {
+        mChannels << chan;
+    }
+}
+
+void dlgIRC::slot_partedChannel(IrcPartMessage *message)
+{
+    QString chan = message->channel();
+    if (mChannels.contains(chan)) {
+        mChannels.removeAll(chan);
+    }
+}

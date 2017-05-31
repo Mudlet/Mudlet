@@ -66,6 +66,7 @@ private slots:
     void slot_nickNameRequired(const QString& reserved, QString* alt);
     void slot_nickNameChanged(const QString& nick);
     void slot_joinedChannel(IrcJoinMessage* message);
+    void slot_partedChannel(IrcPartMessage* message);
     void slot_receiveMessage(IrcMessage* message);
     void slot_onAnchorClicked(const QUrl& link);
     void slot_onHistoryCompletion();
@@ -92,7 +93,7 @@ private:
     QString mNickName;
     QString mUserName;
     QString mRealName;
-    QString mChannel;
+    QStringList mChannels;
 };
 
 #endif // MUDLET_DLGIRC_H
