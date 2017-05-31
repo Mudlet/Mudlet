@@ -27,6 +27,10 @@
 QString IrcMessageFormatter::formatMessage(IrcMessage* message)
 {
     QString formatted;
+    QString color = "#f29010";
+
+    IrcNumericMessage* nMsg;
+
     switch (message->type()) {
         case IrcMessage::Away:
             formatted = formatAwayMessage(static_cast<IrcAwayMessage*>(message));
@@ -66,6 +70,7 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message)
             break;
         case IrcMessage::Topic:
             formatted = formatTopicMessage(static_cast<IrcTopicMessage*>(message));
+            color = "#3283bc";
             break;
         case IrcMessage::Whois:
             formatted = formatWhoisMessage(static_cast<IrcWhoisMessage*>(message));
@@ -78,29 +83,41 @@ QString IrcMessageFormatter::formatMessage(IrcMessage* message)
             break;
         case IrcMessage::Error:
             formatted = formatErrorMessage(static_cast<IrcErrorMessage*>(message));
+            color = "indianred";
             break;
         case IrcMessage::Unknown:
             formatted = formatUnknownMessage(message);
             break;
         case IrcMessage::Numeric:
-            formatted = formatNumericMessage(static_cast<IrcNumericMessage*>(message));
+            nMsg = static_cast<IrcNumericMessage*>(message);
+            formatted = formatNumericMessage(nMsg);
+            // if you change this, change formatErrorMessage too
+            if (Irc::codeToString(nMsg->code()).startsWith("ERR_")) {
+                color = "indianred";
+            }
             break;
         default:
             break;
     }
-    return formatMessage(formatted);
+    return formatMessage(formatted, color);
 }
 
-QString IrcMessageFormatter::formatMessage(const QString& message)
+QString IrcMessageFormatter::formatMessage(const QString& message, QString color)
 {
     if (!message.isEmpty()) {
-        QString formatted = QObject::tr("[%1] %2").arg(QTime::currentTime().toString(), message);
+        QString formatted = QString("[%1] %2").arg(QTime::currentTime().toString(), message);
         if (message.startsWith("!"))
-            formatted = QObject::tr("<font color='gray'>%1</font>").arg(formatted);
+            formatted = QString("<font color='gray'>%1</font>").arg(formatted);
         else if (message.startsWith("*"))
-            formatted = QObject::tr("<font color='maroon'>%1</font>").arg(formatted);
-        else if (message.startsWith("["))
-            formatted = QObject::tr("<font color='indianred'>%1</font>").arg(formatted);
+            formatted = QString("<font color='maroon'>%1</font>").arg(formatted);
+        else if (message.startsWith("$"))
+            formatted = QString("<font color='#3cc46e'>%1</font>").arg(formatted);
+        else if (message.startsWith("[")) {
+            if (color.isEmpty()) {
+                color = "#f29010";
+            }
+            formatted = QString("<font color='%2'>%1</font>").arg(formatted, color);
+        }
         return formatted;
     }
     return QString();
@@ -251,13 +268,15 @@ QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message)
     return QObject::tr("! %1 replied in %2 seconds").arg(message->nick(), secs);
 }
 
+// Normal messages sent to channels are processed by our client as if they are
+// private messages.  This is maybe a bug in Communi..
 QString IrcMessageFormatter::formatPrivateMessage(IrcPrivateMessage* message)
 {
     const QString content = IrcTextFormat().toHtml(message->content());
     if (message->isAction())
         return QObject::tr("* %1 %2").arg(message->nick(), content);
     else
-        return QObject::tr("&lt;%1&gt; %2").arg(message->nick(),content);
+        return QObject::tr("<b>&lt;%1&gt;</b> %2").arg(message->nick(),content);
 }
 
 QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message)
@@ -270,9 +289,6 @@ QString IrcMessageFormatter::formatQuitMessage(IrcQuitMessage* message)
 
 QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message)
 {
-    if (message->flags() & IrcMessage::Implicit)
-        return QString();
-
     if (message->isReply()) {
         if (message->topic().isEmpty())
             return QObject::tr("! no topic");

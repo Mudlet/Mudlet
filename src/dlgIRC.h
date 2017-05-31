@@ -65,8 +65,10 @@ private slots:
     void slot_onUserActivated(const QModelIndex& index);
     void slot_nickNameRequired(const QString& reserved, QString* alt);
     void slot_nickNameChanged(const QString& nick);
+    void slot_joinedChannel(IrcJoinMessage* message);
     void slot_receiveMessage(IrcMessage* message);
     void slot_onAnchorClicked(const QUrl& link);
+    void slot_onHistoryCompletion();
 
 private:
     void setupCommandParser();
@@ -80,6 +82,10 @@ private:
     IrcBufferModel* bufferModel;
     QHash<IrcBuffer*, IrcUserModel*> userModels;
     QHash<IrcBuffer*, QTextDocument*> bufferTexts;
+    QStringList mInputHistory;
+    int mInputHistoryMax;
+    int mInputHistoryIdxNext;
+    int mInputHistoryIdxCurrent;
     quint64 mPingStarted;
     QString mHostName;
     int mHostPort;

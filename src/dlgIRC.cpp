@@ -40,6 +40,8 @@
 
 dlgIRC::dlgIRC()
 {
+    mInputHistoryMax = 8;
+
     setupUi(this);
     setupCommandParser();
 
@@ -55,6 +57,8 @@ dlgIRC::dlgIRC()
     connect(completer, SIGNAL(completed(QString,int)), this, SLOT(slot_nameCompleted(QString,int)));
     QShortcut* shortcut = new QShortcut(Qt::Key_Tab, this);
     connect(shortcut, SIGNAL(activated()), this, SLOT(slot_nameCompletion()));
+    QShortcut* shortcut2 = new QShortcut(Qt::Key_Up, this);
+    connect(shortcut2, SIGNAL(activated()), this, SLOT(slot_onHistoryCompletion()));
 
     connect(lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_onTextEntered()));
     connect(lineEdit, SIGNAL(textEdited(QString)), this, SLOT(slot_onTextEdited()));
@@ -65,6 +69,7 @@ dlgIRC::dlgIRC()
     connect(connection, SIGNAL(disconnected()), this, SLOT(slot_onDisconnected()));
     connect(connection, SIGNAL(nickNameRequired(QString,QString*)), this, SLOT(slot_nickNameRequired(QString,QString*)));
     connect(connection, SIGNAL(nickNameChanged(QString)), this, SLOT(slot_nickNameChanged(QString)));
+    connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
 
     // TODO FIXME : This needs to be updated to use methods provided by Host.
     qsrand(QTime::currentTime().msec());
@@ -101,6 +106,14 @@ dlgIRC::dlgIRC()
     connection->open();
 
     setupBuffers();
+
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Statring Mudlet IRC Client...")));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mHostName, QString::number(mHostPort))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mNickName)));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channel: %1").arg(mChannel)));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ This client supports Auto-Completion using the Tab key.")));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Type <b>/help</b> for commands or <b>/help [command]</b> for command syntax.")));
+    ircBrowser->append("\n");
 }
 
 dlgIRC::~dlgIRC() {
@@ -164,6 +177,7 @@ void dlgIRC::setupCommandParser() {
     commandParser->addCommand(IrcCommand::Whois, "WHOIS <user>");
     commandParser->addCommand(IrcCommand::Whowas, "WHOWAS <user>");
 
+    commandParser->addCommand(IrcCommand::Custom, "MSG <target> <message...>");  // replaces the old /msg command.
     commandParser->addCommand(IrcCommand::Custom, "CLEAR (<buffer>)");  // clears the given buffer, or the current active if none are given.
     commandParser->addCommand(IrcCommand::Custom, "CLOSE (<buffer>)");  // closes the buffer and removes it from the list, uses current active buffer if none are given.
     commandParser->addCommand(IrcCommand::Custom, "RECONNECT");  // Issues a Quit command and closes the IRC connection then reconnects to the IRC server.
@@ -235,6 +249,21 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 
         return false;
     }
+    if (cmdName == "MSG") {
+        QString target;
+        QString msgText;
+        if (cmd->parameters().count() > 1) {
+            target = QString(cmd->parameters().at(1));
+        }
+        if (target.isEmpty()) {
+            target = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>()->title();
+        }
+        if (cmd->parameters().count() > 2) {
+            msgText = QString(cmd->parameters().mid(2).join(" "));
+        }
+
+        sendMsg(target, msgText);
+    }
 
     return false;
 }
@@ -253,7 +282,7 @@ void dlgIRC::displayHelp(const QString& cmdName = "") {
 void dlgIRC::slot_onConnected()
 {
     ircBrowser->append(IrcMessageFormatter::formatMessage("! Connected to %1.").arg(mHostName));
-    ircBrowser->append(IrcMessageFormatter::formatMessage("! Joining %1...").arg(mChannel));
+    ircBrowser->append(IrcMessageFormatter::formatMessage("! Joining %1...").arg(mChannels.join(" ")));
 }
 
 void dlgIRC::slot_onConnecting()
@@ -275,6 +304,23 @@ void dlgIRC::slot_onTextEdited()
 void dlgIRC::slot_onTextEntered()
 {
     QString input = lineEdit->text();
+
+    // add this line to our history list.
+    if (!input.isEmpty()) {
+        if (mInputHistoryIdxNext >= mInputHistoryMax) {
+            mInputHistoryIdxNext = 0;
+        }
+        if (mInputHistory.count() > mInputHistoryIdxNext) {
+            mInputHistory[mInputHistoryIdxNext] = input;
+        } else {
+            mInputHistory << input;
+        }
+        mInputHistoryIdxCurrent = mInputHistoryIdxNext;
+        ++mInputHistoryIdxNext;
+
+        qDebug() << "History Count:"<< mInputHistory.count();
+    }
+
     IrcCommand* command = commandParser->parse(input);
     if (command) {
         // handle custom commands
@@ -313,7 +359,7 @@ void dlgIRC::slot_onTextEntered()
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace("<", "&lt;").replace(">", "&gt;"));
         else
             error = tr("[ERROR] Unknown command: %1").arg(command);
-        ircBrowser->append(IrcMessageFormatter::formatMessage(error));
+        ircBrowser->append(IrcMessageFormatter::formatMessage(error, "indianred"));
         lineEdit->setStyleSheet("background: salmon");
     }
 }
@@ -327,6 +373,21 @@ void dlgIRC::slot_nameCompleted(const QString& text, int cursor)
 {
     lineEdit->setText(text);
     lineEdit->setCursorPosition(cursor);
+}
+
+void dlgIRC::slot_onHistoryCompletion()
+{
+    if (mInputHistoryIdxCurrent >= mInputHistory.count()) {
+        qDebug() << "reset current index" << mInputHistoryIdxCurrent;
+        mInputHistoryIdxCurrent = 0;
+    }
+
+    if (mInputHistory.count() == 0) {
+        return;
+    }
+
+    lineEdit->setText( mInputHistory.at(mInputHistoryIdxCurrent) );
+    ++mInputHistoryIdxCurrent;
 }
 
 void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
@@ -464,3 +525,4 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
     mudlet::self()->getHostManager().postIrcMessage(mNickName, nick, tr("Your nick has changed."));
     mNickName = nick;
 }
+

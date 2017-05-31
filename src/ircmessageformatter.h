@@ -30,7 +30,7 @@ class IrcMessageFormatter
 {
 public:
     static QString formatMessage(IrcMessage* message);
-    static QString formatMessage(const QString& message);
+    static QString formatMessage(const QString& message, QString color = "#f29010");
     static QString formatSeconds(int secs);
     static QString formatDuration(int secs);
 private:
