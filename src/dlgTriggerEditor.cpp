@@ -195,6 +195,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
              this,
              SLOT(slot_updateStatusBar(QString))
          );
+    simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(.+?) \|)");
 
     // Updating the editor preferences
 
@@ -7242,9 +7243,19 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     pB->setStyleSheet( styleSheet );
 }
 
-void dlgTriggerEditor::slot_updateStatusBar( QString statusText)
+void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
 {
-    QMainWindow::statusBar()->showMessage( statusText );
+    // edbee adds the scope and last command which is rather technical debugging information,
+    // so strip it away by removing the first pipe and everything after it
+    QRegularExpressionMatch match = simplifyEdbeeStatusBarRegex->match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
+    QString stripped;
+    if (match.hasPartialMatch() || match.hasMatch()) {
+        stripped = match.captured(1);
+    } else {
+        stripped = statusText;
+    }
+
+    QMainWindow::statusBar()->showMessage(stripped);
 }
 
 void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )

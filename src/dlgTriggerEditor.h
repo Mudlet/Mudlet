@@ -285,6 +285,8 @@ private:
     edbee::TextEditorWidget *   mpSourceEditorEdbee;
     edbee::TextDocument *       mpSourceEditorEdbeeDocument;
     edbee::TextSearcher *       mpSourceEditorSearcher;
+
+    QRegularExpression* simplifyEdbeeStatusBarRegex;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
