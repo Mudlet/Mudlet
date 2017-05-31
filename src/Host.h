@@ -175,6 +175,7 @@ public:
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
+    QString readProfileData(const QString &);
 
 public:
     cTelnet mTelnet;
