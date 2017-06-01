@@ -135,7 +135,6 @@ mudlet::mudlet()
 , mShowToolbar( true )
 , mWindowMinimized( false )
 , mReplaySpeed( 1 )
-, mpIRC( 0 )
 , version( QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD) )
 , mpCurrentActiveHost( 0 )
 , mIsGoingDown( false )
@@ -249,8 +248,8 @@ mudlet::mudlet()
     actionVars->setToolTip(tr("Show and edit lua variables"));
     mpMainToolBar->addAction( actionVars );
 
-    QAction * actionIRC = new QAction( QIcon( QStringLiteral( ":/icons/internet-telephony.png" ) ), tr("Help Chat"), this);
-    actionIRC->setToolTip(tr("Join Mudlet help chat on IRC"));
+    QAction * actionIRC = new QAction( QIcon( QStringLiteral( ":/icons/internet-telephony.png" ) ), tr("IRC"), this);
+    actionIRC->setToolTip(tr("Open the Mudlet IRC client."));
     mpMainToolBar->addAction( actionIRC );
 
     QAction * actionMapper = new QAction( QIcon( QStringLiteral( ":/icons/applications-internet.png" ) ), tr("Map"), this);
@@ -777,6 +776,12 @@ void mudlet::slot_close_profile_requested( int tab )
         }
     }
 
+    // close IRC client window if it is open.
+    if( mpIrcClientMap[pH] ) {
+        mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
+        mpIrcClientMap[pH]->deleteLater();
+    }
+
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
     {
@@ -835,6 +840,12 @@ void mudlet::slot_close_profile()
                         pTB->setAttribute( Qt::WA_DeleteOnClose );
                         pTB->deleteLater();
                     }
+                }
+
+                // close IRC client window if it is open.
+                if( mpIrcClientMap[pH] ) {
+                    mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
+                    mpIrcClientMap[pH]->deleteLater();
                 }
 
                 mConsoleMap[ pH ]->close();
@@ -2323,16 +2334,16 @@ void mudlet::slot_notes()
 
 void mudlet::slot_irc()
 {
-    if( ! mpIRC )
-    {
-        mpIRC = new dlgIRC();
-        mpIRC->setWindowTitle( tr( "Mudlet live IRC Help Channel #mudlet-help on irc.freenode.net" ) );
-        mpIRC->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
-        mpIRC->resize(660,380);
-    }
+    Host * pHost = getActiveHost();
+    if( ! pHost ) return;
 
-    mpIRC->raise();
-    mpIRC->show();
+    if( ! mpIrcClientMap[pHost] )
+    {
+        mpIrcClientMap[pHost] = new dlgIRC(pHost);
+        mpIrcClientMap[pHost]->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
+    }
+    mpIrcClientMap[pHost]->raise();
+    mpIrcClientMap[pHost]->show();
 }
 
 void mudlet::slot_reconnect()

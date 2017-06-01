@@ -38,6 +38,8 @@
 #include <IrcUserModel>
 #include "post_guard.h"
 
+class Host;
+
 class dlgIRC : public QMainWindow, public Ui::irc_dlg
 {
     Q_OBJECT
@@ -45,7 +47,7 @@ class dlgIRC : public QMainWindow, public Ui::irc_dlg
     Q_DISABLE_COPY(dlgIRC)
 
 public:
-    dlgIRC();
+    dlgIRC(Host*);
     ~dlgIRC();
 
     IrcConnection* connection;
@@ -78,6 +80,7 @@ private:
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
 
+    Host* mpHost;
     IrcCompleter* completer;
     IrcCommandParser* commandParser;
     IrcBufferModel* bufferModel;

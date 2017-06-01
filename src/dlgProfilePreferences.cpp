@@ -1258,8 +1258,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     QDataStream ofs(&file);
     ofs << new_nick;
     file.close();
-    if (mudlet::self()->mpIRC) {
-        mudlet::self()->mpIRC->connection->setNickName(new_nick);
+    if (mudlet::self()->mpIrcClientMap[pHost]) {
+        mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(new_nick);
     }
 
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {

@@ -11754,10 +11754,17 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     }
     QString chan = who.c_str();
     QString txt = text.c_str();
-    if( ! mudlet::self()->mpIRC ) return 0;
+    Host* host = &getHostFromLua(L);
+    if( ! host ) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    if( ! mudlet::self()->mpIrcClientMap[host] ) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    lua_pushboolean(L, mudlet::self()->mpIRC->sendMsg(chan, txt));
-
+    lua_pushboolean(L, mudlet::self()->mpIrcClientMap[host]->sendMsg(chan, txt));
     return 1;
 }
 

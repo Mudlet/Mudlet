@@ -22,6 +22,7 @@
 
 
 #include "dlgIRC.h"
+#include "Host.h"
 #include "ircmessageformatter.h"
 
 #include "mudlet.h"
@@ -38,11 +39,13 @@
 #include "post_guard.h"
 
 
-dlgIRC::dlgIRC()
+dlgIRC::dlgIRC(Host* pHost) :
+  mpHost(pHost)
+, mInputHistoryMax(8)
 {
-    mInputHistoryMax = 8;
-
     setupUi(this);
+    setWindowTitle(tr("%1 - Mudlet IRC Client").arg(mpHost->getName()));
+
     setupCommandParser();
 
     connection = new IrcConnection(this);
@@ -492,13 +495,13 @@ void dlgIRC::processIrcMessage(IrcMessage* msg)
     case IrcMessage::Notice: {
         IrcNoticeMessage* msgNotice = static_cast<IrcNoticeMessage*>(msg);
         const QString content = IrcTextFormat().toPlainText(msgNotice->content());
-        mudlet::self()->getHostManager().postIrcMessage(msgNotice->nick(), msgNotice->target(), content);
+        mpHost->postIrcMessage(msgNotice->nick(), msgNotice->target(), content);
         break;
     }
     case IrcMessage::Private : {
         IrcPrivateMessage* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
         const QString content = IrcTextFormat().toPlainText(msgPrivate->content());
-        mudlet::self()->getHostManager().postIrcMessage(msgPrivate->nick(), msgPrivate->target(), content);
+        mpHost->postIrcMessage(msgPrivate->nick(), msgPrivate->target(), content);
         break;
     }
     }
@@ -523,7 +526,7 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
     }
 
     // send a notice to Lua about the nick name change.
-    mudlet::self()->getHostManager().postIrcMessage(mNickName, nick, tr("Your nick has changed."));
+    mpHost->postIrcMessage(mNickName, nick, tr("Your nick has changed."));
     mNickName = nick;
 }
 
