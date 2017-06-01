@@ -947,7 +947,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                                               .arg(_cmd, _nc);
                     mpRoomDB->mpMap->postMessage(warnMsg);
                 }
-                mpRoomDB->mpMap->appendRoomErrorMsg( id, tr( "[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: \"%2\" now: \"%3\"." )
+                mpRoomDB->mpMap->appendRoomErrorMsg( id, tr( R"([ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: "%2" now: "%3".)" )
                                                              .arg( _nk, 6, QLatin1Char( '0' ) )
                                                              .arg( _cmd, _nc ) );
             }
@@ -985,7 +985,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                     mpRoomDB->mpMap->postMessage(infoMsg);
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id,
-                                                    tr("[ INFO ]  - Room needed correcting of special exit \"%1\" that was to room with an exit to invalid room: %2 to now go to: %3.")
+                                                    tr(R"([ INFO ]  - Room needed correcting of special exit "%1" that was to room with an exit to invalid room: %2 to now go to: %3.)")
                                                             .arg(exitName)
                                                             .arg(exitRoomId)
                                                             .arg(roomRemapping.value(exitRoomId)));
@@ -1028,9 +1028,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                         mpRoomDB->mpMap->postMessage(warnMsg);
                     }
                     mpRoomDB->mpMap->appendRoomErrorMsg(id,
-                                                        tr("[ WARN ]  - Room has a special exit \"%1\" with an exit to: %2 but that room does not exist."
-                                                           "  The exit will be removed (but the destination room id will be stored in the room user data under a key:"
-                                                           "\"%3\").")
+                                                        tr(R"([ WARN ]  - Room has a special exit "%1" with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:"%3").)")
                                                                 .arg(exitName)
                                                                 .arg(exitRoomId)
                                                                 .arg(auditKey),
@@ -1081,9 +1079,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                     mpRoomDB->mpMap->postMessage(infoMsg);
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id,
-                                                    tr("[ INFO ]  - Room had special exit \"%1\" that was to room with an invalid room: %2 that does not exist."
-                                                       "  The exit will be removed (the bad destination room id will be stored in the room user data under a key:"
-                                                       "\"%3\").")
+                                                    tr(R"([ INFO ]  - Room had special exit "%1" that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:"%3").)")
                                                             .arg(exitName)
                                                             .arg(exitRoomId)
                                                             .arg(auditKey),
@@ -1304,7 +1300,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                                       .arg(roomRemapping.value(exitRoomId));
             mpRoomDB->mpMap->postMessage(infoMsg);
         }
-        mpRoomDB->mpMap->appendRoomErrorMsg( id, tr( "[ INFO ]  - Correcting exit \"%1\" that was to invalid room id: %2 to now go to: %3." )
+        mpRoomDB->mpMap->appendRoomErrorMsg( id, tr( R"([ INFO ]  - Correcting exit "%1" that was to invalid room id: %2 to now go to: %3.)" )
                                                      .arg( displayName )
                                                      .arg( exitRoomId )
                                                      .arg( roomRemapping.value( exitRoomId ) ), true );
@@ -1330,9 +1326,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                 mpRoomDB->mpMap->postMessage(warnMsg);
             }
             mpRoomDB->mpMap->appendRoomErrorMsg(id,
-                                                tr("[ WARN ]  - Room has an exit \"%1\" to: %2 but that room does not exist."
-                                                   "  The exit will be removed (but the destination room id will be stored in the room user data under a key: "
-                                                   "\"%4\") and the exit will be turned into a stub.")
+                                                tr(R"([ WARN ]  - Room has an exit "%1" to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: "%4") and the exit will be turned into a stub.)")
                                                         .arg(displayName)
                                                         .arg(exitRoomId)
                                                         .arg(auditKey),
@@ -1386,7 +1380,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg(
                         id,
-                        tr("[ ALERT ] - Room has an exit \"%1\" to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.")
+                        tr(R"([ ALERT ] - Room has an exit "%1" to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.)")
                                 .arg(displayName)
                                 .arg(exitRoomId),
                         true);
@@ -1452,8 +1446,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                               .arg(exitRoomId)
                               .arg(auditKey);
         }
-        QString logMsg = tr("[ INFO ]  - Room exit \"%1\" that was to a room with an invalid id: %2 that does not exist."
-                            "  The exit will be removed (the bad destination room id will be stored in the room user data under a key:\"%4\") and the exit will be turned into a stub.")
+        QString logMsg = tr(R"([ INFO ]  - Room exit "%1" that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:"%4") and the exit will be turned into a stub.)")
                                  .arg(displayName)
                                  .arg(exitRoomId)
                                  .arg(auditKey);
@@ -1473,7 +1466,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                                   "\"%1\".")
                                        .arg(auditKeyLocked));
             }
-            logMsg.append(tr("  It was locked, this is recorded as user data with key: \"%1\".").arg(auditKeyLocked));
+            logMsg.append(tr(R"(  It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked));
             exitLocks.removeAll(dirCode);
         }
 
@@ -1485,7 +1478,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                                   "\"%1\".")
                                        .arg(auditKeyWeight));
             }
-            logMsg.append(tr("  It had a weight, this is recorded as user data with key: \"%1\".").arg(auditKeyWeight));
+            logMsg.append(tr(R"(  It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight));
             exitWeights.remove(doorAndWeight);
         }
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {

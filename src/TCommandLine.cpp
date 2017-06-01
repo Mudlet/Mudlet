@@ -534,7 +534,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), "\n");
     buffer.replace(QChar('\n'), " ");
 
-    QStringList wordList = buffer.split(QRegExp("\\b"), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegExp(R"(\b)"), QString::SkipEmptyParts);
     if (direction) {
         mTabCompletionCount++;
     } else {
@@ -545,14 +545,14 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegExp reg = QRegExp("\\b(\\w+)$");
+        QRegExp reg = QRegExp(R"(\b(\w+)$)");
         int typePosition = reg.indexIn(mTabCompletionTyped);
         if (reg.captureCount() >= 1) {
             lastWord = reg.cap(1);
         } else {
             lastWord = "";
         }
-        QStringList filterList = wordList.filter(QRegExp("^" + lastWord + "\\w+", Qt::CaseInsensitive));
+        QStringList filterList = wordList.filter(QRegExp("^" + lastWord + R"(\w+)", Qt::CaseInsensitive));
         if (filterList.size() < 1) {
             return;
         }

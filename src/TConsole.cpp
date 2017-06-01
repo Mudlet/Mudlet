@@ -1626,7 +1626,7 @@ bool TConsole::loadMap(const QString& location)
         pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) at %1 report" ).arg( now.toString( Qt::ISODate ) ), true );
     }
     else {
-        pHost->mpMap->pushErrorMessagesToFile( tr( "Loading map(1) \"%1\" at %2 report" ).arg(location, now.toString( Qt::ISODate) ), true );
+        pHost->mpMap->pushErrorMessagesToFile( tr( R"(Loading map(1) "%1" at %2 report)" ).arg(location, now.toString( Qt::ISODate) ), true );
     }
 
     return result;
@@ -1718,12 +1718,11 @@ bool TConsole::importMap( const QString & location, QString * errMsg )
         result = pHost->mpMap->importMap( file, errMsg );
 
         file.close();
-        pHost->mpMap->pushErrorMessagesToFile( tr( "Importing map(1) \"%1\" at %2 report" ).arg(location, now.toString( Qt::ISODate) ) );
+        pHost->mpMap->pushErrorMessagesToFile( tr( R"(Importing map(1) "%1" at %2 report)" ).arg(location, now.toString( Qt::ISODate) ) );
     }
     else {
         if( ! errMsg ) {
-            QString infoMsg = tr( "[ INFO ]  - Map file located but it could not opened, please check permissions on:"
-                                  "\"%1\"." )
+            QString infoMsg = tr( R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)" )
                               .arg( filePathNameString );
             pHost->postMessage( infoMsg );
         }
