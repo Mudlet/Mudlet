@@ -419,10 +419,10 @@ mudlet::mudlet()
     if(  mStatusBarState & statusBarAlwaysShown
       || mStatusBarState & statusBarAutoShown ) {
 
-        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!)" ), 15000 );
+        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!))" ), 15000 );
     }
     else {
-        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
+        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar disabled via options, will not show again this session!))" ), 5000 );
     }
 }
 
@@ -1294,7 +1294,7 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
     {
         if( QDir::homePath().contains('\\') )
         {
-            path.replace('/', "\\");
+            path.replace('/', R"(\)");
         }
         else
             path.replace('\\', "/");
