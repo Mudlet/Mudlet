@@ -1112,7 +1112,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         }
         if (areaNamesMap.values().contains(nonEmptyAreaName)) {
             // Oh dear, we have a duplicate
-            if (nonEmptyAreaName.contains(QRegExp("_\\d\\d\\d$"))) {
+            if (nonEmptyAreaName.contains(QRegExp(R"(_\d\d\d$)"))) {
                 // the areaName already is of form "something_###" where # is a
                 // digit, have to strip that off and remember so warning message
                 // can include advice on this change
@@ -1147,11 +1147,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         QString extraTextForMatchingSuffixAlreadyUsed;
         QString detailText;
         if (isMatchingSuffixAlreadyPresent) {
-            extraTextForMatchingSuffixAlreadyUsed = tr("It has been detected that \"_###\" form suffixes have already been used, for "
-                                                       "simplicity in the renaming algorithm these will have been removed and possibly "
-                                                       "changed as Mudlet sorts this matter out, if a number assigned in this way "
-                                                       "<b>is</b> important to you, you can change it back, provided you rename the area "
-                                                       "that has been allocated the suffix that was wanted first...!</p>");
+            extraTextForMatchingSuffixAlreadyUsed = tr(R"(It has been detected that "_###" form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way <b>is</b> important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!</p>)");
         }
         if (renamedMap.size()) {
             detailText = tr("[  OK  ]  - The changes made are:\n"
@@ -1164,7 +1160,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                 QString oldName = itRemappedNames.key().isEmpty() ? tr("<nothing>") : itRemappedNames.key();
                 detailText.append(QStringLiteral("(%1) \"%2\" ==> \"%3\"\n").arg(areaNamesMap.key(itRemappedNames.value())).arg(oldName, itRemappedNames.value()));
                 mpMap->appendAreaErrorMsg(areaNamesMap.key(itRemappedNames.value()),
-                                          tr("[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: \"%1\", new name: \"%2\".").arg(oldName, itRemappedNames.value()),
+                                          tr(R"([ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: "%1", new name: "%2".)").arg(oldName, itRemappedNames.value()),
                                           true);
                 ;
             }

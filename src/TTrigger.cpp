@@ -188,13 +188,13 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                                                  << error
                                                                  << "\n"
                                                                  >> 0;
-                    TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in: \""
+                    TDebug( QColor(Qt::red), QColor(Qt::gray) ) << R"(in: ")"
                                                                 << local8Bit.constData()
                                                                 << "\"\n"
                                                                 >>0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr("Error: in item %1, perl regex: \"%2\", it failed to compile, reason: \"%3\".").arg(QString::number(i), local8Bit.constData(), error)));
+                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i), local8Bit.constData(), error)));
                 state = false;
             }
             else
@@ -219,7 +219,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
              if( ! mpLua->compile( code, error, QString::fromStdString(funcName) ) )
              {
                  setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                  .arg(tr("Error: in item %1, lua condition function \"%2\" failed to compile, reason:%3.").arg(QString::number(i), regexList.at(i), error)));
+                                  .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason:%3.)").arg(QString::number(i), regexList.at(i), error)));
                  state = false;
                  if( mudlet::debugMode )
                  {
@@ -227,7 +227,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
                                                                   << error
                                                                   << "\n"
                                                                   >> 0;
-                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << "in lua condition function: \""
+                     TDebug( QColor(Qt::red), QColor(Qt::gray) ) << R"(in lua condition function: ")"
                                                                  << regexList.at( i )
                                                                  << "\"\n"
                                                                  >> 0;
@@ -241,7 +241,7 @@ bool TTrigger::setRegexCodeList( QStringList regexList, QList<int> propertyList 
 
         if( propertyList[i] == REGEX_COLOR_PATTERN )
         {
-            QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
+            QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
             int _pos = regex.indexIn( regexList[i] );
             if( _pos == -1 )
             {
