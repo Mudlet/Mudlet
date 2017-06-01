@@ -75,30 +75,12 @@ dlgIRC::dlgIRC(Host* pHost) :
     connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
     connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
 
-    // TODO FIXME : This needs to be updated to use methods provided by Host.
-    qsrand(QTime::currentTime().msec());
-    QFile file(QDir::homePath() + "/.config/mudlet/irc_nick");
-    file.open(QIODevice::ReadOnly);
-    QDataStream ifs(&file);
-    QString nick;
-    ifs >> nick;
-    file.close();
-
-    if (nick.isEmpty()) {
-        nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
-        QFile file(QDir::homePath() + "/.config/mudlet/irc_nick");
-        file.open(QIODevice::WriteOnly | QIODevice::Unbuffered);
-        QDataStream ofs(&file);
-        ofs << nick;
-        file.close();
-    }
-
-    mNickName = nick;
+    mNickName = loadNickName();
     mUserName = "mudlet";
     mRealName = mudlet::self()->version;
-    mHostName = "irc.freenode.net";
-    mHostPort = 6667;
-    mChannels << "#mudlet";
+    mHostName = loadHostName();
+    mHostPort = loadHostPort();
+    mChannels = loadChannels();
 
     connection->setNickName(mNickName);
     connection->setUserName(mUserName);
@@ -120,12 +102,77 @@ dlgIRC::dlgIRC(Host* pHost) :
     ircBrowser->append("\n");
 }
 
-dlgIRC::~dlgIRC() {
+dlgIRC::~dlgIRC()
+{
     if (connection->isActive()) {
         const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
         connection->quit(quitMsg);
         connection->close();
     }
+}
+
+QString dlgIRC::loadHostName()
+{
+    QString hostname = mpHost->readProfileData("irc_hostname");
+    if (hostname.isEmpty()) {
+        hostname = "irc.freenode.net";
+    }
+    return hostname;
+}
+
+int dlgIRC::loadHostPort()
+{
+    QString portStr = mpHost->readProfileData("irc_hostport");
+    bool ok;
+    int port = portStr.toInt(&ok);
+    if (portStr.isEmpty() || !ok) {
+        port = 6667;
+    } else if (port > 65535 || port < 1) {
+        port = 6667;
+    }
+    return port;
+}
+
+QString dlgIRC::loadNickName()
+{
+    QString nick = mpHost->readProfileData("irc_nickname");
+    if (nick.isEmpty()) {
+        qsrand(QTime::currentTime().msec());
+        nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
+    }
+    return nick;
+}
+
+QStringList dlgIRC::loadChannels()
+{
+    QStringList channels;
+    QString channelstr = mpHost->readProfileData("irc_channels");
+    if (channelstr.isEmpty()) {
+        channels << "#mudlet";
+    } else {
+        channels = channelstr.split(" ", QString::SkipEmptyParts);
+    }
+    return channels;
+}
+
+QPair<bool, QString> dlgIRC::saveHostName(const QString& hostname)
+{
+    return mpHost->writeProfileData("irc_hostname", hostname);
+}
+
+QPair<bool, QString> dlgIRC::saveHostPort(int port)
+{
+    return mpHost->writeProfileData("irc_hostport", QString::number(port));
+}
+
+QPair<bool, QString> dlgIRC::saveNickName(const QString& nickname)
+{
+    return mpHost->writeProfileData("irc_nickname", nickname);
+}
+
+QPair<bool, QString> dlgIRC::saveChannels(const QStringList& channels)
+{
+    return mpHost->writeProfileData("irc_channels", channels.join(" "));
 }
 
 bool dlgIRC::sendMsg(const QString &target, const QString &message)
@@ -142,6 +189,30 @@ bool dlgIRC::sendMsg(const QString &target, const QString &message)
         delete msg;
     }
     return rv;
+}
+
+void dlgIRC::ircRestart(bool reloadConfigs)
+{
+    QString msg = tr("Restart IRC Client");
+    ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
+    if (connection->isConnected())
+        connection->quit(msg);
+    connection->close();
+
+    if (reloadConfigs) {
+        mHostName = loadHostName();
+        mHostPort = loadHostPort();
+        mNickName = loadNickName();
+        mChannels = loadChannels();
+
+        connection->setNickName(mNickName);
+        connection->setHost(mHostName);
+        connection->setPort(mHostPort);
+    }
+
+    // queue auto-joined channels and reopen the connection.
+    connection->sendCommand(IrcCommand::createJoin(mChannels));
+    connection->open();
 }
 
 void dlgIRC::setupCommandParser() {
@@ -248,8 +319,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         return false;
     }
     if (cmdName == "RECONNECT") {
-        connection->close();
-        connection->open();
+        ircRestart();
 
         return false;
     }

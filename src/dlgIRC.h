@@ -52,6 +52,19 @@ public:
 
     IrcConnection* connection;
     bool sendMsg(const QString& target, const QString& message);
+    QString loadHostName();
+    int loadHostPort();
+    QString loadNickName();
+    QStringList loadChannels();
+    QPair<bool, QString> saveHostName(const QString&);
+    QPair<bool, QString> saveHostPort(int);
+    QPair<bool, QString> saveNickName(const QString&);
+    QPair<bool, QString> saveChannels(const QStringList&);
+    QString getHostName() { return mHostName; }
+    int getHostPort() { return mHostPort; }
+    QString getNickName() { return mNickName; }
+    QStringList getChannels() { return mChannels; }
+    void ircRestart(bool reloadConfigs = true);
 
 private slots:
     void slot_onConnected();
