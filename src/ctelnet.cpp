@@ -107,7 +107,7 @@ cTelnet::cTelnet( Host * pH )
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << QLatin1String("UTF-8");
         mAcceptableEncodings << QLatin1String("ISO 8859-1");
-        mAcceptableEncodings << TBuffer::getHardCodedEncodingTableKeys();
+        mAcceptableEncodings << TBuffer::getEncodingNames();
     }
 
     // initialize the socket

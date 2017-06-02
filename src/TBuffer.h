@@ -143,7 +143,7 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getHardCodedEncodingTableKeys() {return csmEncodingTable.keys();}
+    static const QList<QString> getEncodingNames() {return csmEncodingTable.keys();}
 
 
     std::deque<TChar> bufferLine;
