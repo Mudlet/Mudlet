@@ -4770,8 +4770,6 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpSourceEditor->setPlainText( "" );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
-
-    mpScriptsMainArea->listWidget_registered_event_handlers->clear();
     mpScriptsMainArea->lineEdit_scripts_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
     TScript * pT = mpHost->getScriptUnit()->getScript(ID);
