@@ -208,11 +208,11 @@ QPair<bool, QString> cTelnet::setEncoding(const QString & newEncoding, const boo
     } else if (!mAcceptableEncodings.contains(newEncoding)) {
         // Not in list - so reject it
         return qMakePair(false,
-                         QLatin1String("Encoding \"")
+                         QLatin1String(R"(Encoding ")")
                          % newEncoding
                          % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
-                         % mAcceptableEncodings.join(QLatin1String("\", \""))
-                         % QLatin1String("\"."));
+                         % mAcceptableEncodings.join(QLatin1String(R"(", ")"))
+                         % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
         if (isToStore) {
@@ -609,7 +609,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h = TN_IAC;
               _h += TN_SB;
               _h += GMCP;
-              _h += string("Core.Hello { \"client\": \"Mudlet\", \"version\": \"") + APP_VERSION + APP_BUILD + string("\" }");
+              _h += string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + APP_BUILD + string(R"(" })");
               _h += TN_IAC;
               _h += TN_SE;
 
@@ -618,7 +618,7 @@ void cTelnet::processTelnetCommand( const string & command )
               _h = TN_IAC;
               _h += TN_SB;
               _h += GMCP;
-              _h += "Core.Supports.Set [ \"Char 1\", \"Char.Skills 1\", \"Char.Items 1\", \"Room 1\", \"IRE.Rift 1\", \"IRE.Composer 1\"]";
+              _h += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1"])";
               _h += TN_IAC;
               _h += TN_SE;
 
@@ -1693,7 +1693,7 @@ void cTelnet::readPipe()
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
-    qDebug("Replay data: \"%s\"", loadBuffer);
+    qDebug(R"(Replay data: "%s")", loadBuffer);
     for( int i = 0; i < datalen; i++ )
     {
         char ch = loadBuffer[i];

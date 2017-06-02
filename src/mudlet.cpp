@@ -419,17 +419,17 @@ mudlet::mudlet()
     auto timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
-    timerAutologin->start( 1000 );
+    timerAutologin->start( 50 );
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
     if(  mStatusBarState & statusBarAlwaysShown
       || mStatusBarState & statusBarAutoShown ) {
 
-        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!)" ), 15000 );
+        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!))" ), 15000 );
     }
     else {
-        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
+        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar disabled via options, will not show again this session!))" ), 5000 );
     }
 
     // Edbee has a singleton that needs some initialisation
@@ -769,6 +769,7 @@ void mudlet::slot_close_profile_requested( int tab )
     Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
+    list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
     QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
 
@@ -796,6 +797,13 @@ void mudlet::slot_close_profile_requested( int tab )
     }
     mHostDockConsoleMap.remove(pH);
     mHostConsoleMap.remove(pH);
+
+    for( TToolBar* pTB : hostToolBarMap ) {
+        if (pTB) {
+            pTB->setAttribute( Qt::WA_DeleteOnClose );
+            pTB->deleteLater();
+        }
+    }
 
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
@@ -825,6 +833,7 @@ void mudlet::slot_close_profile()
             Host * pH = mpCurrentActiveHost;
             if( pH )
             {
+                list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
                 QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
                 QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
                 QString name = pH->getName();
@@ -848,6 +857,13 @@ void mudlet::slot_close_profile()
                 }
                 mHostDockConsoleMap.remove(pH);
                 mHostConsoleMap.remove(pH);
+
+                for( TToolBar* pTB : hostTToolBarMap ) {
+                    if (pTB) {
+                        pTB->setAttribute( Qt::WA_DeleteOnClose );
+                        pTB->deleteLater();
+                    }
+                }
 
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )
@@ -1295,7 +1311,7 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
     {
         if( QDir::homePath().contains('\\') )
         {
-            path.replace('/', "\\");
+            path.replace('/', R"(\)");
         }
         else
             path.replace('\\', "/");

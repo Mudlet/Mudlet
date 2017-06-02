@@ -116,11 +116,23 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     if (!pChild) {
         return;
     }
+
     if (pOldParent) {
+        pChild->setDataChanged();
         pOldParent->popChild(pChild);
+        pOldParent->setDataChanged();
+
+        // clear references to old parent toolbars and buttonbars.
+        if( pOldParent->mpToolBar == pChild->mpToolBar ) {
+            pChild->mpToolBar = 0;
+        }
+        if( pOldParent->mpEasyButtonBar == pChild->mpEasyButtonBar ) {
+            pChild->mpEasyButtonBar = 0;
+        }
     }
     if (!pOldParent) {
         removeActionRootNode(pChild);
+        pChild->setDataChanged();
     }
 
     if (pNewParent) {
@@ -128,6 +140,8 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         if (pChild) {
             pChild->Tree<TAction>::setParent(pNewParent);
         }
+        pChild->setDataChanged();
+        pNewParent->setDataChanged();
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {
@@ -135,6 +149,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         addActionRootNode(pChild, parentPosition, childPosition);
     }
 
+    pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
         if (pChild->mpEasyButtonBar) {
@@ -264,13 +279,16 @@ int ActionUnit::getNewID()
     return ++mMaxID;
 }
 
-std::list<TToolBar*> ActionUnit::getToolBarList()
+std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 {
     for (auto& action : mActionRootNodeList) {
+        if( action->mLocation != 4 ) {
+            continue;  // skip over any root action node that is NOT going to be a TToolBar.
+        }
         if (action->mPackageName.size() > 0) {
             for (auto& childAction : *action->mpMyChildrenList) {
                 bool found = false;
-                TToolBar* pTB = 0;
+                QPointer<TToolBar> pTB = 0;
                 for (auto& toolBar : mToolBarList) {
                     if (toolBar == childAction->mpToolBar) {
                         found = true;
@@ -293,7 +311,7 @@ std::list<TToolBar*> ActionUnit::getToolBarList()
             continue; //action package
         }
         bool found = false;
-        TToolBar* pTB = 0;
+        QPointer<TToolBar> pTB = 0;
         for (auto& toolBar : mToolBarList) {
             if (toolBar == action->mpToolBar) {
                 found = true;
@@ -317,9 +335,12 @@ std::list<TToolBar*> ActionUnit::getToolBarList()
     return mToolBarList;
 }
 
-std::list<TEasyButtonBar*> ActionUnit::getEasyButtonBarList()
+std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
 {
     for (auto& rootAction : mActionRootNodeList) {
+        if( rootAction->mLocation == 4 ) {
+            continue; // skip over any root action node that IS going to be a TToolBar.
+        }
         if (rootAction->mPackageName.size() > 0) {
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
                 bool found = false;
@@ -411,6 +432,10 @@ void ActionUnit::hideToolBar(const QString& name)
 
 void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
 {
+    if( ! pA->isDataChanged() ) {
+        return;
+    }
+
     pTB->clear();
     if ((pA->mLocation != 4) || (!pA->isActive())) {
         pTB->setFloating(false);
@@ -439,17 +464,23 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
     pTB->setTitleBarWidget(0);
     pTB->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pA->mLocation == 4) {
-        mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pTB); //float toolbar
-        pTB->setFloating(true);
-        QPoint pos = QPoint(pA->mPosX, pA->mPosY);
-        pTB->show();
-        pTB->move(pos);
+        mudlet::self()->addDockWidget(pA->mToolbarLastDockArea, pTB);
+        if (pA->mToolbarLastFloatingState) {
+            pTB->setFloating(true);
+            QPoint pos = QPoint(pA->mPosX, pA->mPosY);
+            pTB->show();
+            pTB->move(pos);
+        } else {
+            pTB->setFloating(false);
+            pTB->show();
+        }
         pTB->mpTAction = pA;
         pTB->recordMove();
     } else
         pTB->show();
 
     pTB->setStyleSheet(pTB->mpTAction->css);
+    pA->setDataSaved();
 }
 
 TAction* ActionUnit::getHeadAction(TEasyButtonBar* pT)

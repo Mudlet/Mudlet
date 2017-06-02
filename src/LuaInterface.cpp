@@ -352,7 +352,7 @@ bool LuaInterface::setValue(TVar* var)
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
             newName.append("[" + vars[i]->getName() + "]");
         } else {
-            newName.append("[\"" + vars[i]->getName() + "\"]");
+            newName.append(R"([")" + vars[i]->getName() + R"("])");
         }
     }
     switch (var->getValueType()) {
@@ -390,7 +390,7 @@ void LuaInterface::deleteVar(TVar* var)
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
             oldName.append("[" + vars[i]->getName() + "]");
         } else {
-            oldName.append("[\"" + vars[i]->getName() + "\"]");
+            oldName.append(R"([")" + vars[i]->getName() + R"("])");
         }
     }
     //delete it
@@ -575,15 +575,15 @@ void LuaInterface::renameVar(TVar* var)
             renameCVar(vars);
             return;
         } else {
-            oldName.append("[\"" + vars[i]->getName() + "\"]");
+            oldName.append(R"([")" + vars[i]->getName() + R"("])");
             if (i < vars.size() - 1)
-                newName.append("[\"" + vars[i]->getName() + "\"]");
+                newName.append(R"([")" + vars[i]->getName() + R"("])");
         }
     }
     if (var->getNewKeyType() == LUA_TNUMBER) {
         newName.append("[" + vars.back()->getNewName() + "]");
     } else {
-        newName.append("[\"" + vars.back()->getNewName() + "\"]");
+        newName.append(R"([")" + vars.back()->getNewName() + R"("])");
     }
     QString addString = QString(newName + " = " + oldName);
     luaL_loadstring(L, addString.toLatin1().data());

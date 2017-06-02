@@ -94,7 +94,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     QDir dir(path);
 
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegExp rex("\\.dic$");
+    QRegExp rex(R"(\.dic$)");
     entries = entries.filter(rex);
     for (int i = 0; i < entries.size(); i++) {
         QString n = entries[i].replace(".dic", "");
@@ -364,7 +364,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
         if (pHost->mpMap->mpMapper) {
             checkBox_showDefaultArea->show();
-            checkBox_showDefaultArea->setText(tr("Show \"%1\" in the map area selection").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+            checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
             checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
         } else {
             checkBox_showDefaultArea->hide();

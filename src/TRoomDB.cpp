@@ -690,8 +690,8 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             QString alertMsg = tr( "[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                   " Look for further messsages related to the rooms that are supposed to\n"
-                                   " be in this/these area(s)...",
+                                   " Look for further messsages related to the rooms that are supposed\n"
+                                   " to be in this/these area(s)...",
                                    "Making use of %n to allow quantity dependent message form 8-) !",
                                    missingAreasNeeded.count() );
             mpMap->postMessage(alertMsg);
@@ -715,22 +715,20 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Sort the ids so that the reporting is ordered, which could be
             // helpful if there is a large number of faults
             std::sort(missingAreasNeeded.begin(), missingAreasNeeded.end());
-            for (int newAreaId : missingAreasNeeded) {
-
-                // This will create a new "Default" area name if there is not one
-                // already for this id - and we do not anticipate that it could ever
-                // fail and return false...
-                addArea(newAreaId);
-                infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"")
-                               .arg(newAreaId)
-                               .arg(areaNamesMap.value(newAreaId)));
-            }
-
-            // Didn't really needed to be done, but as we have finished with it
-            // now, clearing it may make tracking the overall processes going on
-            // in the debugger a little clearer...
-            missingAreasNeeded.clear();
         }
+
+        for (int newAreaId : missingAreasNeeded) {
+            // This will create a new "Default" area name if there is not one
+            // already for this id - and we do not anticipate that it could ever
+            // fail and return false...
+            addArea(newAreaId);
+            infoMsg.append(QStringLiteral("\n%1 ==> \"%2\"").arg(QString::number(newAreaId), areaNamesMap.value(newAreaId)));
+        }
+
+        // Didn't really needed to be done, but as we have finished with it
+        // now, clearing it may make tracking the overall processes going on
+        // in the debugger a little clearer...
+        missingAreasNeeded.clear();
 
         if (mudlet::self()->getAuditErrorsToConsoleEnabled()) {
             mpMap->postMessage(infoMsg);
@@ -1114,7 +1112,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         }
         if (areaNamesMap.values().contains(nonEmptyAreaName)) {
             // Oh dear, we have a duplicate
-            if (nonEmptyAreaName.contains(QRegExp("_\\d\\d\\d$"))) {
+            if (nonEmptyAreaName.contains(QRegExp(R"(_\d\d\d$)"))) {
                 // the areaName already is of form "something_###" where # is a
                 // digit, have to strip that off and remember so warning message
                 // can include advice on this change
@@ -1149,11 +1147,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         QString extraTextForMatchingSuffixAlreadyUsed;
         QString detailText;
         if (isMatchingSuffixAlreadyPresent) {
-            extraTextForMatchingSuffixAlreadyUsed = tr("It has been detected that \"_###\" form suffixes have already been used, for "
-                                                       "simplicity in the renaming algorithm these will have been removed and possibly "
-                                                       "changed as Mudlet sorts this matter out, if a number assigned in this way "
-                                                       "<b>is</b> important to you, you can change it back, provided you rename the area "
-                                                       "that has been allocated the suffix that was wanted first...!</p>");
+            extraTextForMatchingSuffixAlreadyUsed = tr(R"(It has been detected that "_###" form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way <b>is</b> important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!</p>)");
         }
         if (renamedMap.size()) {
             detailText = tr("[  OK  ]  - The changes made are:\n"
@@ -1166,7 +1160,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                 QString oldName = itRemappedNames.key().isEmpty() ? tr("<nothing>") : itRemappedNames.key();
                 detailText.append(QStringLiteral("(%1) \"%2\" ==> \"%3\"\n").arg(areaNamesMap.key(itRemappedNames.value())).arg(oldName, itRemappedNames.value()));
                 mpMap->appendAreaErrorMsg(areaNamesMap.key(itRemappedNames.value()),
-                                          tr("[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: \"%1\", new name: \"%2\".").arg(oldName, itRemappedNames.value()),
+                                          tr(R"([ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: "%1", new name: "%2".)").arg(oldName, itRemappedNames.value()),
                                           true);
                 ;
             }
