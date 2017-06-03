@@ -36,6 +36,8 @@
 #include <IrcTextFormat>
 #include <IrcUser>
 #include <IrcUserModel>
+
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -50,16 +52,26 @@ public:
     dlgIRC(Host*);
     ~dlgIRC();
 
+    static QString HostNameCfgItem;
+    static QString HostPortCfgItem;
+    static QString NickNameCfgItem;
+    static QString ChannelsCfgItem;
+    static QString DefaultHostName;
+    static int DefaultHostPort;
+    static QString DefaultNickName;
+    static QStringList DefaultChannels;
+
+    static QString readIrcHostName(Host* pH);
+    static int readIrcHostPort(Host* pH);
+    static QString readIrcNickName(Host* pH);
+    static QStringList readIrcChannels(Host* pH);
+    static QPair<bool, QString> writeIrcHostName(Host* pH, const QString& hostname);
+    static QPair<bool, QString> writeIrcHostPort(Host* pH, int port);
+    static QPair<bool, QString> writeIrcNickName(Host* pH, const QString& nickname);
+    static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
+
     IrcConnection* connection;
     bool sendMsg(const QString& target, const QString& message);
-    QString loadHostName();
-    int loadHostPort();
-    QString loadNickName();
-    QStringList loadChannels();
-    QPair<bool, QString> saveHostName(const QString&);
-    QPair<bool, QString> saveHostPort(int);
-    QPair<bool, QString> saveNickName(const QString&);
-    QPair<bool, QString> saveChannels(const QStringList&);
     QString getHostName() { return mHostName; }
     int getHostPort() { return mHostPort; }
     QString getNickName() { return mNickName; }
@@ -87,18 +99,24 @@ private slots:
     void slot_onHistoryCompletion();
 
 private:
+    void startClient();
     void setupCommandParser();
     void setupBuffers();
     void processIrcMessage(IrcMessage*);
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
+    void appendHtml(QTextDocument*, const QString&);
+
+    void showEvent(QShowEvent *event) override;
 
     Host* mpHost;
+    bool mIrcStarted;
     IrcCompleter* completer;
     IrcCommandParser* commandParser;
     IrcBufferModel* bufferModel;
     QHash<IrcBuffer*, IrcUserModel*> userModels;
     QHash<IrcBuffer*, QTextDocument*> bufferTexts;
+    QPointer<IrcBuffer> serverBuffer;
     QStringList mInputHistory;
     int mInputHistoryMax;
     int mInputHistoryIdxNext;

@@ -362,8 +362,6 @@ private:
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
-    QString mIRCNick;
-
     QStringList mActiveModules;
     bool mModuleSaveBlock;
 

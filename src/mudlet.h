@@ -175,7 +175,6 @@ public:
     QString version;
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
-    QString mIrcNick;
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;

@@ -62,16 +62,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
-    QString nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
-    QFile file(QDir::homePath() + "/.config/mudlet/irc_nick");
-    file.open(QIODevice::ReadOnly);
-    QDataStream ifs(&file);
-    ifs >> nick;
-    file.close();
-    if (nick.isEmpty()) {
-        nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
-    }
-    ircNick->setText(nick);
+
+    ircHostName->setText(dlgIRC::readIrcHostName(mpHost));
+    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(mpHost)));
+    ircChannels->setText(dlgIRC::readIrcChannels(mpHost).join(" "));
+    ircNick->setText(dlgIRC::readIrcNickName(mpHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pH->mEnableSpellCheck);
@@ -1247,19 +1242,78 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     mudlet::self()->mStatusBarState = mudlet::StatusBarOptions(comboBox_statusBarSetting->currentData().toInt());
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-    //pHost->mIRCNick = ircNick->text();
-    QString old_nick = mudlet::self()->mIrcNick;
-    QString new_nick = ircNick->text();
-    if (new_nick.isEmpty()) {
-        new_nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
+
+    QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+    QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
+    QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+    QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
+
+    QString newIrcNick = ircNick->text();
+    QString newIrcHost = ircHostName->text();
+    QString newIrcPort = ircHostPort->text();
+    QString newIrcChannels = ircChannels->text();
+    QStringList newChanList;
+    int nIrcPort;
+    bool restartIrcClient = false;
+
+    if (newIrcHost.isEmpty()) {
+        newIrcHost = dlgIRC::DefaultHostName;
     }
-    QFile file(QDir::homePath() + "/.config/mudlet/irc_nick");
-    file.open(QIODevice::WriteOnly | QIODevice::Unbuffered);
-    QDataStream ofs(&file);
-    ofs << new_nick;
-    file.close();
-    if (mudlet::self()->mpIrcClientMap[pHost]) {
-        mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(new_nick);
+
+    if (!newIrcPort.isEmpty()) {
+        bool ok;
+        nIrcPort = newIrcPort.toInt(&ok);
+        if (!ok) {
+            nIrcPort = dlgIRC::DefaultHostPort;
+        } else if (nIrcPort > 65535 || nIrcPort < 1) {
+            nIrcPort = dlgIRC::DefaultHostPort;
+        }
+        newIrcPort = QString::number(nIrcPort);
+    }
+
+    if (newIrcNick.isEmpty()) {
+        qsrand(QTime::currentTime().msec());
+        newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+    }
+
+    if (!newIrcChannels.isEmpty()) {
+        QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
+        for( QString s : tL ) {
+            if( s.startsWith("#") || s.startsWith("&") || s.startsWith("+") ) {
+                newChanList << s;
+            }
+        }
+    } else {
+        newChanList = dlgIRC::DefaultChannels;
+    }
+    newIrcChannels = newChanList.join(" ");
+
+    if (oldIrcNick != newIrcNick) {
+        dlgIRC::writeIrcNickName(pHost, newIrcNick);
+
+        // if the client is active, update our client nickname.
+        if (mudlet::self()->mpIrcClientMap[pHost]) {
+            mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
+        }
+    }
+
+    if( oldIrcChannels != newIrcChannels ) {
+        dlgIRC::writeIrcChannels(pHost, newChanList);
+    }
+
+    if( oldIrcHost != newIrcHost ) {
+        dlgIRC::writeIrcHostName(pHost, newIrcHost);
+        restartIrcClient = true;
+    }
+
+    if( oldIrcPort != newIrcPort ) {
+        dlgIRC::writeIrcHostPort(pHost, nIrcPort);
+        restartIrcClient = true;
+    }
+
+    // restart the irc client if it is active and we have changed host/port.
+    if (restartIrcClient && mudlet::self()->mpIrcClientMap[pHost]) {
+        mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
     }
 
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {

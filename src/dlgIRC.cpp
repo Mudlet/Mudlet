@@ -28,6 +28,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtEvents>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
@@ -39,9 +40,19 @@
 #include "post_guard.h"
 
 
+QString dlgIRC::HostNameCfgItem = "irc_host";
+QString dlgIRC::HostPortCfgItem = "irc_port";
+QString dlgIRC::NickNameCfgItem = "irc_nick";
+QString dlgIRC::ChannelsCfgItem = "irc_channels";
+QString dlgIRC::DefaultHostName = "irc.freenode.net";
+int dlgIRC::DefaultHostPort = 6667;
+QString dlgIRC::DefaultNickName = "Mudlet";
+QStringList dlgIRC::DefaultChannels = QStringList() << "#mudlet";
+
 dlgIRC::dlgIRC(Host* pHost) :
   mpHost(pHost)
 , mInputHistoryMax(8)
+, mIrcStarted(false)
 {
     setupUi(this);
     setWindowTitle(tr("%1 - Mudlet IRC Client").arg(mpHost->getName()));
@@ -75,18 +86,33 @@ dlgIRC::dlgIRC(Host* pHost) :
     connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
     connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
 
-    mNickName = loadNickName();
     mUserName = "mudlet";
     mRealName = mudlet::self()->version;
-    mHostName = loadHostName();
-    mHostPort = loadHostPort();
-    mChannels = loadChannels();
+    mHostName = readIrcHostName(mpHost);
+    mHostPort = readIrcHostPort(mpHost);
+    mNickName = readIrcNickName(mpHost);
+    mChannels = readIrcChannels(mpHost);
 
     connection->setNickName(mNickName);
     connection->setUserName(mUserName);
     connection->setRealName(mRealName);
     connection->setHost(mHostName);
     connection->setPort(mHostPort);
+}
+
+dlgIRC::~dlgIRC()
+{
+    if (connection->isActive()) {
+        const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
+        connection->quit(quitMsg);
+        connection->close();
+    }
+}
+
+void dlgIRC::startClient() {
+    if (mIrcStarted) {
+        return;
+    }
 
     connection->sendCommand(IrcCommand::createJoin(mChannels));
     connection->open();
@@ -100,79 +126,8 @@ dlgIRC::dlgIRC(Host* pHost) :
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ This client supports Auto-Completion using the Tab key.")));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Type <b>/help</b> for commands or <b>/help [command]</b> for command syntax.")));
     ircBrowser->append("\n");
-}
 
-dlgIRC::~dlgIRC()
-{
-    if (connection->isActive()) {
-        const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
-        connection->quit(quitMsg);
-        connection->close();
-    }
-}
-
-QString dlgIRC::loadHostName()
-{
-    QString hostname = mpHost->readProfileData("irc_hostname");
-    if (hostname.isEmpty()) {
-        hostname = "irc.freenode.net";
-    }
-    return hostname;
-}
-
-int dlgIRC::loadHostPort()
-{
-    QString portStr = mpHost->readProfileData("irc_hostport");
-    bool ok;
-    int port = portStr.toInt(&ok);
-    if (portStr.isEmpty() || !ok) {
-        port = 6667;
-    } else if (port > 65535 || port < 1) {
-        port = 6667;
-    }
-    return port;
-}
-
-QString dlgIRC::loadNickName()
-{
-    QString nick = mpHost->readProfileData("irc_nickname");
-    if (nick.isEmpty()) {
-        qsrand(QTime::currentTime().msec());
-        nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
-    }
-    return nick;
-}
-
-QStringList dlgIRC::loadChannels()
-{
-    QStringList channels;
-    QString channelstr = mpHost->readProfileData("irc_channels");
-    if (channelstr.isEmpty()) {
-        channels << "#mudlet";
-    } else {
-        channels = channelstr.split(" ", QString::SkipEmptyParts);
-    }
-    return channels;
-}
-
-QPair<bool, QString> dlgIRC::saveHostName(const QString& hostname)
-{
-    return mpHost->writeProfileData("irc_hostname", hostname);
-}
-
-QPair<bool, QString> dlgIRC::saveHostPort(int port)
-{
-    return mpHost->writeProfileData("irc_hostport", QString::number(port));
-}
-
-QPair<bool, QString> dlgIRC::saveNickName(const QString& nickname)
-{
-    return mpHost->writeProfileData("irc_nickname", nickname);
-}
-
-QPair<bool, QString> dlgIRC::saveChannels(const QStringList& channels)
-{
-    return mpHost->writeProfileData("irc_channels", channels.join(" "));
+    mIrcStarted = true;
 }
 
 bool dlgIRC::sendMsg(const QString &target, const QString &message)
@@ -193,17 +148,17 @@ bool dlgIRC::sendMsg(const QString &target, const QString &message)
 
 void dlgIRC::ircRestart(bool reloadConfigs)
 {
-    QString msg = tr("Restart IRC Client");
+    QString msg = tr("Restarting IRC Client");
     ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
     if (connection->isConnected())
         connection->quit(msg);
     connection->close();
 
     if (reloadConfigs) {
-        mHostName = loadHostName();
-        mHostPort = loadHostPort();
-        mNickName = loadNickName();
-        mChannels = loadChannels();
+        mHostName = readIrcHostName(mpHost);
+        mHostPort = readIrcHostPort(mpHost);
+        mNickName = readIrcNickName(mpHost);
+        mChannels = readIrcChannels(mpHost);
 
         connection->setNickName(mNickName);
         connection->setHost(mHostName);
@@ -213,6 +168,8 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     // queue auto-joined channels and reopen the connection.
     connection->sendCommand(IrcCommand::createJoin(mChannels));
     connection->open();
+
+    serverBuffer->setName(connection->host());
 }
 
 void dlgIRC::setupCommandParser() {
@@ -270,7 +227,8 @@ void dlgIRC::setupBuffers()
     // keep track of the current buffer, see also onBufferActivated()
     connect(bufferList->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(slot_onBufferActivated(QModelIndex)));
     // create a server buffer for non-targeted messages...
-    IrcBuffer* serverBuffer = bufferModel->add( connection->host() );
+    serverBuffer = bufferModel->add( connection->host() );
+    serverBuffer->setName( connection->host() );
     connect(bufferModel, SIGNAL(messageIgnored(IrcMessage*)), serverBuffer, SLOT(receiveMessage(IrcMessage*)));
 }
 
@@ -303,9 +261,8 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
                 buffer = bufferModel->find(bufferName);
             }
         }
-        if (buffer) {
+        if (buffer && buffer->title() != serverBuffer->title()) {
             bufferList->setCurrentIndex(bufferModel->index(bufferModel->find(connection->host())));
-            //bufferModel->remove(buffer);
             buffer->close();
         }
         return false;
@@ -517,7 +474,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     }
 }
 
-static void appendHtml(QTextDocument* document, const QString& html)
+void dlgIRC::appendHtml(QTextDocument* document, const QString& html)
 {
     QTextCursor cursor(document);
     cursor.beginEditBlock();
@@ -551,7 +508,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
             if (document == ircBrowser->document())
                 ircBrowser->append(html);
             else
-                appendHtml(document, html);
+                dlgIRC::appendHtml(document, html);
         }
     }
 }
@@ -614,4 +571,74 @@ void dlgIRC::slot_partedChannel(IrcPartMessage *message)
     if (mChannels.contains(chan)) {
         mChannels.removeAll(chan);
     }
+}
+
+void dlgIRC::showEvent(QShowEvent *event)
+{
+    startClient();
+    event->ignore();
+}
+
+QString dlgIRC::readIrcHostName(Host* pH)
+{
+    QString hostname = pH->readProfileData(dlgIRC::HostNameCfgItem);
+    if (hostname.isEmpty()) {
+        hostname = dlgIRC::DefaultHostName;
+    }
+    return hostname;
+}
+
+int dlgIRC::readIrcHostPort(Host* pH)
+{
+    QString portStr = pH->readProfileData(dlgIRC::HostPortCfgItem);
+    bool ok;
+    int port = portStr.toInt(&ok);
+    if (portStr.isEmpty() || !ok) {
+        port = dlgIRC::DefaultHostPort;
+    } else if (port > 65535 || port < 1) {
+        port = dlgIRC::DefaultHostPort;
+    }
+    return port;
+}
+
+QString dlgIRC::readIrcNickName(Host* pH)
+{
+    QString nick = pH->readProfileData(dlgIRC::NickNameCfgItem);
+    if (nick.isEmpty()) {
+        qsrand(QTime::currentTime().msec());
+        nick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+    }
+    return nick;
+}
+
+QStringList dlgIRC::readIrcChannels(Host* pH)
+{
+    QStringList channels;
+    QString channelstr = pH->readProfileData(dlgIRC::ChannelsCfgItem);
+    if (channelstr.isEmpty()) {
+        channels << dlgIRC::DefaultChannels;
+    } else {
+        channels = channelstr.split(" ", QString::SkipEmptyParts);
+    }
+    return channels;
+}
+
+QPair<bool, QString> dlgIRC::writeIrcHostName(Host* pH, const QString& hostname)
+{
+    return pH->writeProfileData(dlgIRC::HostNameCfgItem, hostname);
+}
+
+QPair<bool, QString> dlgIRC::writeIrcHostPort(Host* pH, int port)
+{
+    return pH->writeProfileData(dlgIRC::HostPortCfgItem, QString::number(port));
+}
+
+QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
+{
+    return pH->writeProfileData(dlgIRC::NickNameCfgItem, nickname);
+}
+
+QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)
+{
+    return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(" "));
 }
