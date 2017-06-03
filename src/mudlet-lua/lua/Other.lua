@@ -636,3 +636,29 @@ function shms(seconds, bool)
 		return hh, mm, ss
 	end
 end
+
+-- returns true if your Mudlet is older than the given version
+-- for example, it'll return true if you're on 2.1 and you do mudletOlderThan("3.1")
+-- it'll return false if you're on 4.0 and you do mudletOlderThan("4.0.0")
+-- credit to https://stackoverflow.com/a/16187766/72944 for the algorithm
+function mudletOlderThan(version)
+  local tonumber = tonumber
+	
+	-- strip trailing zeros from input version
+  local input = rex.gsub(version, [[(\.0+)+$]], ''):split('%.')
+	local mudlets = {getMudletVersion("table")}
+	
+	-- strip any build suffixes from Mudlets version so we only
+	-- have to deal with numbers in the comparison
+	if tonumber(mudlets[#mudlets]) == nil then mudlets[#mudlets] = nil end
+	
+	local minlength = math.min(#input, #mudlets)
+
+    local diff
+	for i = 1, minlength do
+	  diff = tonumber(input[i]) - mudlets[i]
+		if diff ~= 0 then break end
+	end
+	
+	if diff > 0 then return true else return false end
+end
