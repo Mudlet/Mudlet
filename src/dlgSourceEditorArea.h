@@ -23,10 +23,13 @@
 
 
 #include "pre_guard.h"
+#include "edbee/edbee.h"
+#include "edbee/texteditorwidget.h"
 #include "ui_source_editor_area.h"
 #include "post_guard.h"
 
-class THighlighter;
+
+//class THighlighter;
 
 
 class dlgSourceEditorArea : public QWidget, public Ui::source_editor_area
@@ -39,7 +42,7 @@ public:
     dlgSourceEditorArea(QWidget*);
 
 //private:
-    THighlighter* highlighter;
+    //THighlighter* highlighter;
 };
 
 #endif // MUDLET_DLGSOURCEEDITORAREA_H
