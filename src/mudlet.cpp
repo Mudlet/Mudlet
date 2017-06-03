@@ -2340,7 +2340,6 @@ void mudlet::slot_irc()
     if( ! mpIrcClientMap[pHost] )
     {
         mpIrcClientMap[pHost] = new dlgIRC(pHost);
-        mpIrcClientMap[pHost]->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
     }
     mpIrcClientMap[pHost]->raise();
     mpIrcClientMap[pHost]->show();

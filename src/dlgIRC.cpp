@@ -56,6 +56,7 @@ dlgIRC::dlgIRC(Host* pHost) :
 {
     setupUi(this);
     setWindowTitle(tr("%1 - Mudlet IRC Client").arg(mpHost->getName()));
+    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
 
     setupCommandParser();
 
