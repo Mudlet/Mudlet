@@ -95,7 +95,7 @@ struct TMxpElement
 
 class TBuffer
 {
-    static const QMap<QString, QVector<QChar>> csmEncodingTable; // private!
+    static const QMap<QPair<QString, QString>, QVector<QChar>> csmEncodingTable; // private!
 
 
 public:
@@ -143,7 +143,7 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getEncodingNames() {return csmEncodingTable.keys();}
+    static const QList<QString> getFriendlyEncodingNames();
 
 
     std::deque<TChar> bufferLine;
