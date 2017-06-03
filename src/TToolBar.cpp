@@ -46,6 +46,10 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
+    setObjectName(QString("dockToolBar_%1").arg(name));
+
+    connect(this, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)), this, SLOT(slot_dockLocationChanged(Qt::DockWidgetArea)));
+    connect(this, SIGNAL(topLevelChanged(bool)), this, SLOT(slot_topLevelChanged(bool)));
 
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout(mpWidget);
@@ -61,8 +65,18 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
     mpWidget->setStyleSheet(mpTAction->css);
 }
 
+void TToolBar::resizeEvent(QResizeEvent *e) {
+    if( ! mudlet::self()->mIsLoadingLayout ) {
+        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    }
+}
+
 void TToolBar::moveEvent(QMoveEvent* e)
 {
+    if( ! mudlet::self()->mIsLoadingLayout ) {
+        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    }
+
     if (mRecordMove) {
         if (!mpTAction) {
             return;
@@ -71,6 +85,18 @@ void TToolBar::moveEvent(QMoveEvent* e)
         mpTAction->mPosY = e->pos().y();
     }
     e->ignore();
+}
+
+void TToolBar::slot_dockLocationChanged(Qt::DockWidgetArea dwArea) {
+    if (mpTAction) {
+        mpTAction->mToolbarLastDockArea = dwArea;
+    }
+}
+
+void TToolBar::slot_topLevelChanged(bool topLevel) {
+    if (mpTAction) {
+        mpTAction->mToolbarLastFloatingState = topLevel;
+    }
 }
 
 void TToolBar::addButton(TFlipButton* pB)

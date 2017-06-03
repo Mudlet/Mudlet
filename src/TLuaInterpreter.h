@@ -226,6 +226,8 @@ public:
     static int setBgColor(lua_State* L);
     static int tempTimer(lua_State* L);
     static int closeMudlet(lua_State* L);
+    static int loadWindowLayout(lua_State* L);
+    static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
     static int openUserWindow(lua_State* L);
     static int echoUserWindow(lua_State* L);
@@ -387,6 +389,11 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+    static int setServerEncoding(lua_State *);
+    static int getServerEncoding(lua_State *);
+    static int getServerEncodingsList(lua_State *);
+    static int alert(lua_State* L);
+// PLACEMARKER: End of Lua functions declarations
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
@@ -402,7 +409,6 @@ private:
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     void logError(std::string& e, const QString&, const QString& function);
 
-    static std::map<lua_State*, Host*> luaInterpreterMap;
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
@@ -412,5 +418,7 @@ private:
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
 };
+
+Host& getHostFromLua(lua_State* L);
 
 #endif // MUDLET_LUAINTERPRETER_H

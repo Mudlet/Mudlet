@@ -123,7 +123,7 @@ public:
     void print(const char*);
     void printDebug(QColor&, QColor&, const QString&);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&);
+    void printOnDisplay(std::string&, const bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
@@ -262,6 +262,7 @@ public:
     int mCurrentSearchResult;
     QList<int> mSearchResults;
     QString mSearchQuery;
+    bool mSaveLayoutRequested;
 
 signals:
 

@@ -176,8 +176,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                                          "\"%1\"\n"
                                          "reports it has a version (%2) it must have come from a later Mudlet version,\n"
                                          "and this one cannot read it, you need a newer Mudlet!")
-                                          .arg(pfile->fileName())
-                                          .arg(versionString);
+                                          .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
                     return false;
                 }
@@ -1029,7 +1028,7 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
             if (name() == "name") {
                 pT->setName(readElementText());
             } else if (name() == "script") {
-                QString tempScript = readElementText();
+                QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                 }
@@ -1124,7 +1123,7 @@ void XMLimport::readTimerGroup(TTimer* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                QString tempScript = readElementText();
+                QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not compile timer's lua code for: " << pT->getName();
                 }
@@ -1187,7 +1186,7 @@ void XMLimport::readAliasGroup(TAlias* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                QString tempScript = readElementText();
+                QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                 }
@@ -1246,7 +1245,7 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                QString tempScript = readElementText();
+                QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not compile action's lua code for: " << pT->getName();
                 }
@@ -1328,7 +1327,7 @@ void XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                QString tempScript = readElementText();
+                QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName();
                 }
@@ -1383,7 +1382,7 @@ void XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                QString tempScript = readElementText();
+                QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not compile key's lua code for: " << pT->getName();
                 }
@@ -1467,10 +1466,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                     // Using qFatal() seems a little, erm, fatalistic but it
                     // seems no lesser one will always be detectable on the
                     // RELEASE version on Windows? - Slysven
-                    qFatal("XMLimport::readIntegerList(...) ERROR: unable to "
-                           "convert: \"%s\" to a number when reading the "
-                           "'regexCodePropertyList' element of the 'Trigger' "
-                           "or 'TriggerGroup' element \"%s\"!",
+                    qFatal(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
                            numberText.toUtf8().constData(),
                            parentName.toUtf8().constData());
                 }
@@ -1486,4 +1482,50 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
 void XMLimport::getVersionString(QString& versionString)
 {
     versionString = QString::number((mVersionMajor * 1000 + mVersionMinor) / 1000.0, 'f', 3);
+}
+
+QString XMLimport::readScriptElement()
+{
+
+    QString localScript = readElementText();
+    if (Error() != NoError) {
+        qDebug() << "XMLimport::readScriptElement() ERROR:"
+                 << errorString();
+    }
+
+    if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0) ) {
+        // This is NOT the original version, so it will have control characters
+        // encoded up using Object Replacement and Control Symbol (for relevant ASCII control code) code-points
+        localScript.replace(QStringLiteral("\xFFFC\x2401"), QChar('\x01')); // SOH
+        localScript.replace(QStringLiteral("\xFFFC\x2402"), QChar('\x02')); // STX
+        localScript.replace(QStringLiteral("\xFFFC\x2403"), QChar('\x03')); // ETX
+        localScript.replace(QStringLiteral("\xFFFC\x2404"), QChar('\x04')); // EOT
+        localScript.replace(QStringLiteral("\xFFFC\x2405"), QChar('\x05')); // ENQ
+        localScript.replace(QStringLiteral("\xFFFC\x2406"), QChar('\x06')); // ACK
+        localScript.replace(QStringLiteral("\xFFFC\x2407"), QChar('\x07')); // BEL
+        localScript.replace(QStringLiteral("\xFFFC\x2408"), QChar('\x08')); // BS
+        localScript.replace(QStringLiteral("\xFFFC\x240B"), QChar('\x0B')); // VT
+        localScript.replace(QStringLiteral("\xFFFC\x240C"), QChar('\x0C')); // FF
+        localScript.replace(QStringLiteral("\xFFFC\x240E"), QChar('\x0E')); // SS
+        localScript.replace(QStringLiteral("\xFFFC\x240F"), QChar('\x0F')); // SI
+        localScript.replace(QStringLiteral("\xFFFC\x2410"), QChar('\x10')); // DLE
+        localScript.replace(QStringLiteral("\xFFFC\x2411"), QChar('\x11')); // DC1
+        localScript.replace(QStringLiteral("\xFFFC\x2412"), QChar('\x12')); // DC2
+        localScript.replace(QStringLiteral("\xFFFC\x2413"), QChar('\x13')); // DC3
+        localScript.replace(QStringLiteral("\xFFFC\x2414"), QChar('\x14')); // DC4
+        localScript.replace(QStringLiteral("\xFFFC\x2415"), QChar('\x15')); // NAK
+        localScript.replace(QStringLiteral("\xFFFC\x2416"), QChar('\x16')); // SYN
+        localScript.replace(QStringLiteral("\xFFFC\x2417"), QChar('\x17')); // ETB
+        localScript.replace(QStringLiteral("\xFFFC\x2418"), QChar('\x18')); // CAN
+        localScript.replace(QStringLiteral("\xFFFC\x2419"), QChar('\x19')); // EM
+        localScript.replace(QStringLiteral("\xFFFC\x241A"), QChar('\x1A')); // SUB
+        localScript.replace(QStringLiteral("\xFFFC\x241B"), QChar('\x1B')); // ESC
+        localScript.replace(QStringLiteral("\xFFFC\x241C"), QChar('\x1C')); // FS
+        localScript.replace(QStringLiteral("\xFFFC\x241D"), QChar('\x1D')); // GS
+        localScript.replace(QStringLiteral("\xFFFC\x241E"), QChar('\x1E')); // RS
+        localScript.replace(QStringLiteral("\xFFFC\x241F"), QChar('\x1F')); // US
+        localScript.replace(QStringLiteral("\xFFFC\x2421"), QChar('\x7F')); // DEL
+    }
+
+    return localScript;
 }

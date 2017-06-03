@@ -159,6 +159,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
+, mpDockableMapWidget()
 , mHaveMapperScript(false)
 {
    // mLogStatus = mudlet::self()->mAutolog;
@@ -190,7 +191,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->deleteLater();
+    }
     mIsGoingDown = true;
+    mIsClosingDown = true;
     mTelnet.disconnect();
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -663,11 +668,16 @@ void Host::connectToServer()
     mTelnet.connectIt(mUrl, mPort);
 }
 
-bool Host::closingDown()
+void Host::closingDown()
 {
     QMutexLocker locker(&mLock);
-    bool shutdown = mIsClosingDown;
-    return shutdown;
+    mIsClosingDown = true;
+}
+
+bool Host::isClosingDown()
+{
+    QMutexLocker locker(&mLock);
+    return mIsClosingDown;
 }
 
 bool Host::installPackage(const QString& fileName, int module)
@@ -721,11 +731,9 @@ bool Host::installPackage(const QString& fileName, int module)
       || fileName.endsWith( QStringLiteral( ".mpackage"), Qt::CaseInsensitive ) )
     {
         QString _home = QStringLiteral( "%1/.config/mudlet/profiles/%2" )
-                        .arg( QDir::homePath() )
-                        .arg( getName() );
+                        .arg( QDir::homePath(), getName() );
         QString _dest = QStringLiteral( "%1/%2/" )
-                        .arg( _home )
-                        .arg( packageName );
+                        .arg( _home, packageName );
         QDir _tmpDir( _home ); // home directory for the PROFILE
         _tmpDir.mkpath( _dest );
 
@@ -791,7 +799,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 if (entryInArchive.endsWith(QLatin1Char('/'))) {
 //                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a DIRECTORY...!";
                     if (!directoriesNeededMap.contains(pathInArchive)) {
-                        QString pathInProfile(QStringLiteral("%1/%2").arg(packageName).arg(pathInArchive));
+                        QString pathInProfile(QStringLiteral("%1/%2").arg(packageName, pathInArchive));
                         directoriesNeededMap.insert(pathInArchive, pathInProfile);
 //                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
                     }
@@ -804,7 +812,7 @@ bool Host::installPackage(const QString& fileName, int module)
                     // Extract needed path from name for archives that do NOT
                     // explicitly list directories
                     if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
-                        QString pathInProfile(QStringLiteral("%1/%2").arg(packageName).arg(pathInArchive));
+                        QString pathInProfile(QStringLiteral("%1/%2").arg(packageName, pathInArchive));
                         directoriesNeededMap.insert(pathInArchive, pathInProfile);
 //                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
                     }
@@ -865,7 +873,7 @@ bool Host::installPackage(const QString& fileName, int module)
                     return false;
                 }
 
-                QFile fd(QStringLiteral("%1%2").arg(_dest).arg(entryInArchive));
+                QFile fd(QStringLiteral("%1%2").arg(_dest, entryInArchive));
 
                 if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                     //FIXME: report error to user
@@ -874,7 +882,7 @@ bool Host::installPackage(const QString& fileName, int module)
                              << ","
                              << module
                              << ")\n    ERROR opening:"
-                             << QStringLiteral( "%1%2" ).arg( _dest ).arg( entryInArchive )
+                             << QStringLiteral( "%1%2" ).arg(_dest, entryInArchive)
                              << "!\n    Reported error was:"
                              << fd.errorString();
                     zip_fclose(zf);
@@ -961,7 +969,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath(QStringLiteral("%1/%2/").arg(_home).arg(packageName));
+            QString newpath(QStringLiteral("%1/%2/").arg(_home, packageName));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir(newpath);
         }
@@ -1183,7 +1191,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     QString _home = QDir::homePath();
     _home.append("/.config/mudlet/profiles/");
     _home.append(getName());
-    QString _dest = QString("%1/%2/").arg(_home).arg(packageName);
+    QString _dest = QString("%1/%2/").arg(_home, packageName);
     removeDir(_dest, _dest);
     saveProfile();
     //NOW we reset if we're uninstalling a module
@@ -1250,11 +1258,30 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
             qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str()).arg(e.c_str());
+        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
         lua_pop(L, -1);
         lua_close(L);
+    }
+}
+
+// Derived from the one in dlgConnectionProfile class - but it does not need a
+// host name argument...
+QPair<bool, QString> Host::writeProfileData(const QString & item, const QString & what)
+{
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                .arg(QDir::homePath(), getName(), item) );
+    if (file.open( QIODevice::WriteOnly | QIODevice::Unbuffered )) {
+        QDataStream ofs( & file );
+        ofs << what;
+        file.close();
+    }
+
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    } else {
+        return qMakePair(false, file.errorString());
     }
 }

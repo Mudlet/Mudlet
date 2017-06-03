@@ -25,7 +25,26 @@ TDockWidget::TDockWidget( Host * pH, const QString & consoleName ) : QDockWidget
     widgetConsoleName = consoleName;
 }
 
-void TDockWidget::closeEvent(QCloseEvent * event) {
-    mudlet::self()->hideWindow(mpHost, widgetConsoleName);
-    event->ignore();
+void TDockWidget::closeEvent(QCloseEvent * event)
+{
+    if( ! mpHost->isClosingDown() ) {
+        mudlet::self()->hideWindow(mpHost, widgetConsoleName);
+        event->ignore();
+        return;
+    } else {
+        event->accept();
+        return;
+    }
+}
+
+void TDockWidget::resizeEvent(QResizeEvent *event) {
+    if( ! mudlet::self()->mIsLoadingLayout ) {
+        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
+    }
+}
+
+void TDockWidget::moveEvent(QMoveEvent *event) {
+    if( ! mudlet::self()->mIsLoadingLayout ) {
+        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
+    }
 }

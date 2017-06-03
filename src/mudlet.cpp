@@ -32,12 +32,13 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
-#include "TDockWidget.h"
+#include "TToolBar.h"
 #include "XMLimport.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
@@ -100,7 +101,15 @@ bool TConsoleMonitor::eventFilter(QObject *obj, QEvent *event)
 // number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
 // agreement and consideration from the Project management, even a minor part
 // increment should not be done without justification...!
-const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.0f, 'f', 3 );
+// XML version Change history (what and why):
+// 1.001    Added method to allow XML format to permit ASCII control codes
+//          0x01-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f to be stored as part of the
+//          "script" element for a Mudlet "item" (0x09, 0x0a, 0x0d are the only
+//          ones that ARE permitted) - this is wanted so that, for instance
+//          ANSI ESC codes can be included in a Lua script without breaking
+//          the XML format used to store it - prior to this embedding such
+//          codes would break or destroy the script that used it.
+const QString mudlet::scmMudletXmlDefaultVersion = QString::number( 1.001f, 'f', 3 );
 
 QPointer<TConsole> mudlet::mpDebugConsole = 0;
 QMainWindow* mudlet::mpDebugArea = 0;
@@ -141,6 +150,10 @@ mudlet::mudlet()
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
 , mIsToDisplayMapAuditErrorsToConsole( false )
+, mpAboutDlg( 0 )
+, mpModuleDlg( 0 )
+, mpPackageManagerDlg( 0 )
+, mpProfilePreferencesDlg( 0 )
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac( true );
@@ -154,6 +167,7 @@ mudlet::mudlet()
     // On at least my platform (Linux) the status bar does not seem to exist
     // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar( this );
+    mpMainToolBar->setObjectName("mpMainToolBar");
     addToolBar( mpMainToolBar );
     mpMainToolBar->setMovable( false );
     addToolBarBreak();
@@ -399,17 +413,17 @@ mudlet::mudlet()
     auto timerAutologin = new QTimer( this );
     timerAutologin->setSingleShot( true );
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
-    timerAutologin->start( 1000 );
+    timerAutologin->start( 50 );
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
     // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
     if(  mStatusBarState & statusBarAlwaysShown
       || mStatusBarState & statusBarAutoShown ) {
 
-        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!)" ), 15000 );
+        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!))" ), 15000 );
     }
     else {
-        mpMainStatusBar->showMessage( tr( "Click on the \"Connect\" button to choose a profile to start... (status bar disabled via options, will not show again this session!)" ), 5000 );
+        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar disabled via options, will not show again this session!))" ), 5000 );
     }
 }
 
@@ -483,28 +497,42 @@ void mudlet::layoutModules(){
 
 void mudlet::slot_module_manager(){
     Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/module_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    moduleTable = d->findChild<QTableWidget *>("moduleTable");
-    moduleUninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    moduleInstallButton = d->findChild<QPushButton *>("installButton");
-    moduleHelpButton = d->findChild<QPushButton *>("helpButton");
-    if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) return;
-    layoutModules();
-    connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
-    connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
-    connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
-    connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
-    connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-    d->setWindowTitle("Module Manager");
-    d->show();
-    d->raise();
+    if( ! pH ) {
+        return;
+    }
 
+    if( !mpModuleDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/module_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpModuleDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        if( !mpModuleDlg ) {
+            return;
+        }
+
+        moduleTable = mpModuleDlg->findChild<QTableWidget *>("moduleTable");
+        moduleUninstallButton = mpModuleDlg->findChild<QPushButton *>("uninstallButton");
+        moduleInstallButton = mpModuleDlg->findChild<QPushButton *>("installButton");
+        moduleHelpButton = mpModuleDlg->findChild<QPushButton *>("helpButton");
+
+        if( !moduleTable || !moduleUninstallButton || !moduleHelpButton) {
+            return;
+        }
+
+        layoutModules();
+        connect(moduleUninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_module()));
+        connect(moduleInstallButton, SIGNAL(clicked()), this, SLOT(slot_install_module()));
+        connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
+        connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
+        connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
+        mpModuleDlg->setWindowTitle(tr("Module Manager"));
+        mpModuleDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpModuleDlg->raise();
+    mpModuleDlg->show();
 }
 
 bool mudlet::openWebPage(const QString& path){
@@ -597,8 +625,7 @@ void mudlet::slot_install_module()
     {
         QMessageBox::warning(this, tr("Load Mudlet Module:"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
 
@@ -626,23 +653,38 @@ void mudlet::slot_uninstall_module()
 void mudlet::slot_package_manager()
 {
     Host * pH = getActiveHost();
-    if( ! pH ) return;
-    QUiLoader loader;
-    QFile file(":/ui/package_manager.ui");
-    file.open(QFile::ReadOnly);
-    QDialog * d = dynamic_cast<QDialog *>(loader.load(&file, this));
-    file.close();
-    if( ! d ) return;
-    packageList = d->findChild<QListWidget *>("packageList");
-    uninstallButton = d->findChild<QPushButton *>("uninstallButton");
-    installButton = d->findChild<QPushButton *>("installButton");
-    if( ! packageList || ! uninstallButton ) return;
-    packageList->addItems( pH->mInstalledPackages );
-    connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
-    connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
-    d->setWindowTitle("Package Manager");
-    d->show();
-    d->raise();
+    if( ! pH ) {
+        return;
+    }
+
+    if( ! mpPackageManagerDlg ) {
+        QUiLoader loader;
+        QFile file(":/ui/package_manager.ui");
+        file.open(QFile::ReadOnly);
+        mpPackageManagerDlg = dynamic_cast<QDialog *>(loader.load(&file, this));
+        file.close();
+
+        if( !mpPackageManagerDlg ) {
+            return;
+        }
+
+        packageList = mpPackageManagerDlg->findChild<QListWidget *>("packageList");
+        uninstallButton = mpPackageManagerDlg->findChild<QPushButton *>("uninstallButton");
+        installButton = mpPackageManagerDlg->findChild<QPushButton *>("installButton");
+
+        if( ! packageList || ! uninstallButton ) {
+            return;
+        }
+
+        packageList->addItems( pH->mInstalledPackages );
+        connect(uninstallButton, SIGNAL(clicked()), this, SLOT(slot_uninstall_package()));
+        connect(installButton, SIGNAL(clicked()), this, SLOT(slot_install_package()));
+        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
+        mpPackageManagerDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpPackageManagerDlg->raise();
+    mpPackageManagerDlg->show();
 }
 
 void mudlet::slot_install_package()
@@ -657,8 +699,7 @@ void mudlet::slot_install_package()
     {
         QMessageBox::warning(this, tr("Import Mudlet Package:"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
 
@@ -700,17 +741,42 @@ void mudlet::slot_close_profile_requested( int tab )
     Host* pH = getHostManager().getHost(name);
     if( ! pH ) return;
 
+    list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
+    QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
 
     if( ! pH->mpConsole->close() )
         return;
     else
         pH->mpConsole->mUserAgreedToCloseConsole = true;
+    pH->closingDown();
+
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    pH->mTelnet.disconnect();
+
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
-    for( auto dockName : dockWindowMap.keys() ) {
-        dockWindowMap[dockName]->close();
+    for( auto consoleName : hostConsoleMap.keys() ) {
+        hostConsoleMap[consoleName]->close();
+        hostConsoleMap.remove(consoleName);
+
+        if( dockWindowMap.contains(consoleName) ) {
+            dockWindowMap[consoleName]->setAttribute( Qt::WA_DeleteOnClose );
+            dockWindowMap[consoleName]->close();
+            removeDockWidget( dockWindowMap[consoleName] );
+            dockWindowMap.remove(consoleName);
+        }
     }
+    mHostDockConsoleMap.remove(pH);
+    mHostConsoleMap.remove(pH);
+
+    for( TToolBar* pTB : hostToolBarMap ) {
+        if (pTB) {
+            pTB->setAttribute( Qt::WA_DeleteOnClose );
+            pTB->deleteLater();
+        }
+    }
+
     mConsoleMap[pH]->close();
     if( mTabMap.contains( pH->getName() ) )
     {
@@ -739,12 +805,38 @@ void mudlet::slot_close_profile()
             Host * pH = mpCurrentActiveHost;
             if( pH )
             {
+                list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
                 QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pH];
+                QMap<QString, TConsole*> & hostConsoleMap = mHostConsoleMap[pH];
                 QString name = pH->getName();
+
+                pH->closingDown();
+
+                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+                pH->mTelnet.disconnect();
+
                 mpCurrentActiveHost->mpEditorDialog->close();
-                for( auto dockName : dockWindowMap.keys() ) {
-                    dockWindowMap[dockName]->close();
+                for( auto consoleName : hostConsoleMap.keys() ) {
+                    hostConsoleMap[consoleName]->close();
+                    hostConsoleMap.remove(consoleName);
+
+                    if( dockWindowMap.contains(consoleName) ) {
+                        dockWindowMap[consoleName]->setAttribute( Qt::WA_DeleteOnClose );
+                        dockWindowMap[consoleName]->close();
+                        removeDockWidget( dockWindowMap[consoleName] );
+                        dockWindowMap.remove(consoleName);
+                    }
                 }
+                mHostDockConsoleMap.remove(pH);
+                mHostConsoleMap.remove(pH);
+
+                for( TToolBar* pTB : hostTToolBarMap ) {
+                    if (pTB) {
+                        pTB->setAttribute( Qt::WA_DeleteOnClose );
+                        pTB->deleteLater();
+                    }
+                }
+
                 mConsoleMap[ pH ]->close();
                 if( mTabMap.contains( name ) )
                 {
@@ -860,10 +952,16 @@ void mudlet::addConsoleForNewHost( Host * pH )
     pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
+    QMap<QString, TDockWidget*> dockConsoleMap;
+    mHostDockConsoleMap[mpCurrentActiveHost] = dockConsoleMap;
     QMap<QString, TConsole *> miniConsoleMap;
     mHostConsoleMap[mpCurrentActiveHost] = miniConsoleMap;
     QMap<QString, TLabel *> labelMap;
     mHostLabelMap[mpCurrentActiveHost] = labelMap;
+    QList<QString> dockUpdateMap;
+    mHostDockLayoutChangeMap[mpCurrentActiveHost] = dockUpdateMap;
+    QList<TToolBar*> toolbarUpdateMap;
+    mHostToolbarLayoutChangeMap[mpCurrentActiveHost] = toolbarUpdateMap;
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -953,19 +1051,119 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[14]->setEnabled( true );
 }
 
-bool mudlet::openWindow( Host * pHost, const QString & name )
+bool mudlet::saveWindowLayout() {
+    qDebug() << "mudlet::saveWindowLayout() - Already-Saved:" << mHasSavedLayout;
+    if( mHasSavedLayout ) { return false; }
+
+    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+
+    QFile layoutFile(layoutFilePath);
+    if (layoutFile.open(QIODevice::WriteOnly)) {
+        // revert update markers to ready objects for saving.
+        commitLayoutUpdates();
+
+        QByteArray layoutData = saveState();
+        QDataStream ofs(&layoutFile);
+        ofs << layoutData;
+        layoutFile.close();
+        mHasSavedLayout = true;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::loadWindowLayout() {
+    qDebug() << "mudlet::loadWindowLayout() - loading layout.";
+
+    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+
+    QFile layoutFile(layoutFilePath);
+    if (layoutFile.exists()) {
+        if (layoutFile.open(QIODevice::ReadOnly)) {
+            mIsLoadingLayout = true;
+
+            QByteArray layoutData;
+            QDataStream ifs(&layoutFile);
+            ifs >> layoutData;
+            layoutFile.close();
+
+            bool rv = restoreState(layoutData);
+
+            mIsLoadingLayout = false;
+            return rv;
+        }
+    }
+    return false;
+}
+
+void mudlet::setDockLayoutUpdated(Host* pHost, const QString & name) {
+    if( !pHost ) return;
+
+    QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
+    QList<QString> & mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
+    if( !mDockLayoutUpdateMap.contains(name) && dockWindowMap.contains(name) ) {
+        dockWindowMap[name]->setObjectName( QString("%1_changed").arg(dockWindowMap[name]->objectName()) );
+        mDockLayoutUpdateMap.append(name);
+
+        mHasSavedLayout = false;
+    }
+}
+
+void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar * pTB) {
+    if( !pHost ) return;
+
+    QList<TToolBar*> & mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+    if( !mToolbarLayoutUpdateMap.contains(pTB) ) {
+        pTB->setObjectName( QString("%1_changed").arg(pTB->objectName()) );
+        mToolbarLayoutUpdateMap.append(pTB);
+
+        mHasSavedLayout = false;
+    }
+}
+
+void mudlet::commitLayoutUpdates() {
+    // commit changes for dockwidget consoles. (user windows)
+    for( Host* pHost : mHostDockLayoutChangeMap.keys() ) {
+        QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
+        QList<QString> & mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
+
+        for( QString TDockName : mDockLayoutUpdateMap ) {
+            if( dockWindowMap.contains(TDockName) ) {
+                QString rename = QString("dockWindow_%1_%2").arg(pHost->getName(), TDockName);
+                dockWindowMap[TDockName]->setObjectName(rename);
+            }
+            mDockLayoutUpdateMap.removeAll(TDockName);
+        }
+    }
+
+    // commit changes for dockable/floating toolbars.
+    for( Host* pHost : mHostToolbarLayoutChangeMap.keys()  ) {
+        QList<TToolBar*> & mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+
+        for( TToolBar* pTB : mToolbarLayoutUpdateMap ) {
+            pTB->setObjectName(QString("dockToolBar_%1").arg( pTB->getName() ));
+            mToolbarLayoutUpdateMap.removeAll(pTB);
+        }
+    }
+}
+
+bool mudlet::openWindow( Host * pHost, const QString & name, bool loadLayout )
 {
+    if( ! pHost ) return false;
+
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
 
     if( ! dockWindowMap.contains(name) && ! dockWindowConsoleMap.contains(name) )
     {
         auto pD = new TDockWidget(pHost, name);
+        pD->setObjectName(QString("dockWindow_%1_%2").arg(pHost->getName(), name));
         pD->setContentsMargins(0,0,0,0);
         pD->setFeatures( QDockWidget::AllDockWidgetFeatures );
-        pD->setWindowTitle( name );
+        pD->setWindowTitle( QString("%1 - %2").arg(name, pHost->getName()) );
         dockWindowMap[name] = pD;
-        auto pC = new TConsole( pHost, false );
+        auto pC = new TConsole( pHost, false, pD );
         pC->setContentsMargins(0,0,0,0);
         pD->setWidget( pC );
         pC->show();
@@ -974,12 +1172,19 @@ bool mudlet::openWindow( Host * pHost, const QString & name )
         pC->setUserWindow();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
+
+        if(loadLayout)
+            loadWindowLayout();
+
         return true;
     } else if( dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name) ) {
-        dockWindowMap[name]->show();
         dockWindowMap[name]->update();
-        dockWindowConsoleMap[name]->console->show();
-        dockWindowConsoleMap[name]->console->forceUpdate();
+        dockWindowMap[name]->show();
+        dockWindowConsoleMap[name]->showWindow(name);
+
+        if(loadLayout)
+            loadWindowLayout();
+
         return true;
     }
 
@@ -1078,7 +1283,7 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
     {
         if( QDir::homePath().contains('\\') )
         {
-            path.replace('/', "\\");
+            path.replace('/', R"(\)");
         }
         else
             path.replace('\\', "/");
@@ -1172,6 +1377,9 @@ bool mudlet::clearWindow( Host * pHost, const QString & name )
 
 bool mudlet::showWindow( Host * pHost, const QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     // check labels first as they are shown/hidden more often
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1185,10 +1393,9 @@ bool mudlet::showWindow( Host * pHost, const QString & name )
     {
         QMap<QString, TDockWidget *> & dockWindowMap = mHostDockConsoleMap[pHost];
         if( dockWindowMap.contains(name) ) {
-            dockWindowMap[name]->show();
             dockWindowMap[name]->update();
-            dockWindowConsoleMap[name]->console->show();
-            dockWindowConsoleMap[name]->console->forceUpdate();
+            dockWindowMap[name]->show();
+            dockWindowConsoleMap[name]->showWindow(name);
 
             return true;
         }
@@ -1213,6 +1420,9 @@ bool mudlet::paste( Host * pHost, const QString & name )
 
 bool mudlet::hideWindow( Host * pHost, const QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     // check labels first as they are shown/hidden more often
     QMap<QString, TLabel *> & labelMap = mHostLabelMap[pHost];
     if( labelMap.contains( name ) )
@@ -1228,14 +1438,11 @@ bool mudlet::hideWindow( Host * pHost, const QString & name )
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->hide();
             dockWindowMap[name]->update();
-            dockWindowConsoleMap[name]->console->hide();
-            dockWindowConsoleMap[name]->console->forceUpdate();
+            dockWindowConsoleMap[name]->hideWindow(name);
 
             return true;
         }
 
-        //dockWindowConsoleMap[name]->console->hide();
-        //dockWindowConsoleMap[name]->console->forceUpdate();
         return pHost->mpConsole->hideWindow(name);
     }
 
@@ -1315,6 +1522,9 @@ bool mudlet::moveWindow( Host * pHost, const QString & name, int x1, int y1 )
 
 bool mudlet::closeWindow( Host * pHost, const QString & name )
 {
+    if( ! pHost ) return false;
+    if( ! pHost->mpConsole ) return false;
+
     QMap<QString, TConsole *> & dockWindowConsoleMap = mHostConsoleMap[pHost];
     if( dockWindowConsoleMap.contains(name) )
     {
@@ -1322,14 +1532,11 @@ bool mudlet::closeWindow( Host * pHost, const QString & name )
         if( dockWindowMap.contains(name) ) {
             dockWindowMap[name]->hide();
             dockWindowMap[name]->update();
-            dockWindowConsoleMap[name]->console->hide();
-            dockWindowConsoleMap[name]->console->forceUpdate();
+            dockWindowConsoleMap[name]->hideWindow(name);
 
             return true;
         }
 
-        //dockWindowConsoleMap[name]->console->hide();
-        //dockWindowConsoleMap[name]->console->forceUpdate();
         return pHost->mpConsole->hideWindow(name);
     }
     else
@@ -1740,6 +1947,9 @@ void mudlet::closeEvent(QCloseEvent *event)
     {
         if( pC->mpHost->getName() != "default_host" )
         {
+            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+            pC->mpHost->mTelnet.disconnect();
+
             // close script-editor
             if( pC->mpHost->mpEditorDialog )
             {
@@ -1752,7 +1962,6 @@ void mudlet::closeEvent(QCloseEvent *event)
                 pC->mpHost->mpNotePad->setAttribute( Qt::WA_DeleteOnClose );
                 pC->mpHost->mpNotePad->close();
             }
-
 
             // close console
             pC->close();
@@ -1945,13 +2154,20 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog()
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
-    auto pDlg = new dlgProfilePreferences( this, pHost );
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_data_protocol, SLOT(hide()));
-    connect(actionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    connect(dactionReconnect, SIGNAL(triggered()), pDlg->need_reconnect_for_specialoption, SLOT(hide()));
-    pDlg->show();
+    if( ! pHost ) {
+        return;
+    }
+
+    if( ! mpProfilePreferencesDlg ) {
+        mpProfilePreferencesDlg = new dlgProfilePreferences( this, pHost );
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_data_protocol, SLOT(hide()));
+        connect(actionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        connect(dactionReconnect, SIGNAL(triggered()), mpProfilePreferencesDlg->need_reconnect_for_specialoption, SLOT(hide()));
+        mpProfilePreferencesDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+    mpProfilePreferencesDlg->raise();
+    mpProfilePreferencesDlg->show();
 }
 
 void mudlet::show_help_dialog()
@@ -1986,20 +2202,26 @@ void mudlet::slot_mapper()
 void mudlet::createMapper( bool isToLoadDefaultMapFile )
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
+    if( ! pHost )
+    {
+        return;
+    }
     if( pHost->mpMap->mpMapper )
     {
         bool visStatus = pHost->mpMap->mpMapper->isVisible();
         if ( pHost->mpMap->mpMapper->parentWidget()->inherits("QDockWidget") )
+        {
             pHost->mpMap->mpMapper->parentWidget()->setVisible( !visStatus );
+        }
         pHost->mpMap->mpMapper->setVisible( !visStatus );
         return;
     }
 
-    QDockWidget * pDock = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
-    pHost->mpMap->mpMapper = new dlgMapper( pDock, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
+    pHost->mpDockableMapWidget = new QDockWidget( tr("Map - %1").arg(pHost->getName()) );
+    pHost->mpDockableMapWidget->setObjectName( QString("dockMap_%1").arg(pHost->getName()) );
+    pHost->mpMap->mpMapper = new dlgMapper( pHost->mpDockableMapWidget, pHost, pHost->mpMap.data() );//FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
-    pDock->setWidget( pHost->mpMap->mpMapper );
+    pHost->mpDockableMapWidget->setWidget( pHost->mpMap->mpMapper );
 
     if( isToLoadDefaultMapFile && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
@@ -2024,7 +2246,9 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
             pHost->mpMap->mpMapper->show();
         }
     }
-    addDockWidget(Qt::RightDockWidgetArea, pDock);
+    addDockWidget(Qt::RightDockWidgetArea, pHost->mpDockableMapWidget);
+
+    loadWindowLayout();
 
     check_for_mappingscript();
     TEvent mapOpenEvent;
@@ -2067,9 +2291,13 @@ void mudlet::slot_show_help_dialog_download()
 
 void mudlet::slot_show_about_dialog()
 {
-    auto pDlg = new dlgAboutDialog( this );
-    pDlg->raise();
-    pDlg->show();
+    if( ! mpAboutDlg ) {
+        mpAboutDlg = new dlgAboutDialog( this );
+        mpAboutDlg->setAttribute( Qt::WA_DeleteOnClose );
+    }
+
+    mpAboutDlg->raise();
+    mpAboutDlg->show();
 }
 
 void mudlet::slot_notes()
@@ -2138,8 +2366,7 @@ void mudlet::slot_replay()
     {
         QMessageBox::warning(this, tr("Select Replay"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(fileName)
-                             .arg(file.errorString()));
+                             .arg(fileName, file.errorString()));
         return;
     }
     //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
@@ -2464,6 +2691,11 @@ void mudlet::stopSounds()
 
 void mudlet::playSound(QString s, int soundVolume)
 {
+    QPointer<Host> pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
     QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
     QMediaPlayer* pPlayer = 0;
 
@@ -2481,31 +2713,38 @@ void mudlet::playSound(QString s, int soundVolume)
     if (!pPlayer) {
         pPlayer = new QMediaPlayer(this);
 
-        auto pHost = getActiveHost();
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            if (pHost) {
-                pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
-            }
+            pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
             return;
         }
 
-        connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
-            if (state == QMediaPlayer::StoppedState) {
-                TEvent soundFinished;
-                soundFinished.mArgumentList.append("sysSoundFinished");
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
-                soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                pHost->raiseEvent(soundFinished);
-            }
-        });
-
         mMusicBoxList.append(pPlayer);
     }
+
+    // Remove any previous connection to the signal of this QMediaPlayer,
+    // theoretically this might be movable to be within the lambda function of
+    // the following connect(...) but that does seem a bit twisty and this works
+    // well enough!
+    disconnect(pPlayer, &QMediaPlayer::stateChanged, 0, 0);
+
+    connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
+        if (state == QMediaPlayer::StoppedState) {
+            TEvent soundFinished;
+            soundFinished.mArgumentList.append("sysSoundFinished");
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            if (pHost) {
+                // The host may have gone away if the sound was a long one
+                // and we are multi-playing so we ought to test it...
+                pHost->raiseEvent(soundFinished);
+            }
+        }
+    });
 
     /* set volume and play sound */
     pPlayer->setMedia(QUrl::fromLocalFile(s));

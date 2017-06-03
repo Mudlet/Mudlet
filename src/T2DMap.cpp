@@ -169,7 +169,7 @@ void T2DMap::init()
        {
            j++;
            QPixmap b(gzoom,gzoom);
-           b.fill(QColor(0,0,0,0));
+           b.fill(Qt::transparent);
            QPainter p(&b);
            QColor c = _getColor(k);
            p.setPen(c);
@@ -1576,7 +1576,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _gradient.setColorAt(0.799,QColor(150,100,100,100));
                 _gradient.setColorAt(0.7, QColor(255,0,0,200));
                 _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1628,7 +1628,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     QRadialGradient _gradient(_center,_radius);
                     _gradient.setColorAt(0.85, c);
                     _gradient.setColorAt(0, QColor(255,255,255,255));
-                    QPen myPen(QColor(0,0,0,0));
+                    QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
                     p.setPen(myPen);
@@ -1648,7 +1648,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 QRadialGradient _gradient(_center,_radius);
                 _gradient.setColorAt(0.85, pR->highlightColor);
                 _gradient.setColorAt(0, pR->highlightColor2 );
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1679,7 +1679,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 _gradient.setColorAt(0.799,QColor(150,100,100,100));
                 _gradient.setColorAt(0.7, QColor(255,0,0,200));
                 _gradient.setColorAt(0, QColor(255,255,255,255));
-                QPen myPen(QColor(0,0,0,0));
+                QPen myPen(Qt::transparent);
                 QPainterPath myPath;
                 p.setBrush(_gradient);
                 p.setPen(myPen);
@@ -1855,7 +1855,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                     _gradient.setColorAt(0.799,QColor(150,100,100,100));
                     _gradient.setColorAt(0.7, QColor(255,0,0,200));
                     _gradient.setColorAt(0, QColor(255,255,255,255));
-                    QPen myPen(QColor(0,0,0,0));
+                    QPen myPen(Qt::transparent);
                     QPainterPath myPath;
                     p.setBrush(_gradient);
                     p.setPen(myPen);
@@ -1971,7 +1971,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
     if( ! mShiftMode )
     {
         p.save();
-        QPen myPen(QColor(0,0,0,0));
+        QPen myPen(Qt::transparent);
         QPainterPath myPath;
         if( mpHost->mMapStrongHighlight )
         {   // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -2034,7 +2034,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value( _iaid );
             if( _paid )
             {
-                infoText = tr( "Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n").arg(_paid_name).arg(_iaid).arg(_paid->min_x).arg(_paid->max_x).arg(_paid->min_y).arg(_paid->max_y).arg(_paid->min_z).arg(_paid->max_z);
+                infoText = tr( "Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n").arg(_paid_name, QString::number(_iaid), QString::number(_paid->min_x), QString::number(_paid->max_x), QString::number(_paid->min_y), QString::number(_paid->max_y), QString::number(_paid->min_z), QString::number((_paid->max_z)));
             }
             else
             {
@@ -2058,7 +2058,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             switch( selectionSize )
             {
             case 0:
-                infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                infoText.append( tr("Room ID: %1 (Current) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)) );
                 if( playerArea != mAID ) {
                     f.setItalic( true );
                 }
@@ -2067,7 +2067,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 break;
             case 1:
-                infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)) );
+                infoText.append( tr("Room ID: %1 (Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)) );
                 f.setBold( true );
                 if( infoColor.lightness() > 127 ) {
                     infoColor = QColor( 255, 223, 191 ); // Slightly orange white
@@ -2077,7 +2077,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
                 }
                 break;
             default:
-                infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid)).arg(QString::number(_prid->x)).arg(QString::number(_prid->y)).arg(QString::number(_prid->z)).arg(QString::number(selectionSize)) );
+                infoText.append( tr("Room ID: %1 (%5 Selected) Position on Map: (%2,%3,%4)\n").arg(QString::number(__rid), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z), QString::number(selectionSize)) );
                 f.setBold( true );
                 if( infoColor.lightness() > 127 ) {
                     infoColor = QColor( 255, 223, 191 ); // Slightly orange white
@@ -2089,7 +2089,7 @@ void T2DMap::paintEvent( QPaintEvent * e )
             }
         }
 
-        infoText.append( tr("render time: %1S mO: (%2,%3,%4)").arg( __time.nsecsElapsed() * 1.0e-9,0,'f',3).arg(QString::number(mOx)).arg(QString::number(mOy)).arg(QString::number(mOz)) );
+        infoText.append( tr("render time: %1S mO: (%2,%3,%4)").arg( __time.nsecsElapsed() * 1.0e-9,0,'f',3).arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)) );
 
         uint infoLeftSideAvoid = 10; // Left margin for info widget
         if( mMultiSelectionListWidget.isVisible() ) { // Room Selection Widget showing, so increase margin to avoid
@@ -2857,7 +2857,7 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
                         else
                         {
                             action2->setEnabled(false);
-                            action2->setStatusTip(tr("use \"delete line\" to remove the only segment ending in an editable point"));
+                            action2->setStatusTip(tr(R"(use "delete line" to remove the only segment ending in an editable point)"));
                         }
                     }
                     else
@@ -3033,7 +3033,7 @@ void T2DMap::slot_customLineProperties()
                     }
                 }
                 if( ! isFound )
-                    qWarning("T2DMap::slot_customLineProperties() - WARNING: missing command \"%s\" from custom lines for room id %i",
+                    qWarning(R"(T2DMap::slot_customLineProperties() - WARNING: missing command "%s" from custom lines for room id %i)",
                              qPrintable( exit ),
                              pR->getId() );
             }
@@ -3515,7 +3515,7 @@ void T2DMap::slot_setCharacter()
                     itSymbolUsed.next();
                     if( itSymbolUsed.value() == symbolCountsList.at(i) )
                     {
-                        displayStrings.append( tr("%1 {count:%2}").arg(itSymbolUsed.key()).arg(itSymbolUsed.value()));
+                        displayStrings.append( tr("%1 {count:%2}").arg(itSymbolUsed.key(), itSymbolUsed.value()));
                     }
                 }
             }
@@ -3993,11 +3993,11 @@ void T2DMap::slot_setRoomWeight()
                     {
                         if( itWeightsUsed.key() == 1 )
                         { // Indicate the "default" value which is unity weight
-                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
+                            displayStrings.append( tr("%1 {count:%2, default}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
                         }
                         else
                         {
-                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key()).arg(itWeightsUsed.value()));
+                            displayStrings.append( tr("%1 {count:%2}").arg(itWeightsUsed.key(), itWeightsUsed.value()));
                         }
                     }
                 }
@@ -4075,7 +4075,7 @@ void T2DMap::slot_setArea()
         it.next();
         int areaID = it.key();
         if( areaID > 0 ) {
-            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value() ).arg( areaID ), QVariant(areaID) );
+            arealist_combobox->addItem( QStringLiteral( "%1 (%2)" ).arg( it.value(), QString::number(areaID) ), QVariant(areaID) );
         }
     }
 
@@ -4589,7 +4589,7 @@ void T2DMap::slot_setCustomLine()
         || ! mpCurrentLineStyle
         || ! mpCurrentLineArrow )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"nw\" exit line button or another element of the dialog!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "nw" exit line button or another element of the dialog!)");
         return;
     }
     else if( pR->getNorthwest() <= 0 )
@@ -4607,7 +4607,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("n");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"n\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "n" exit line button!)");
         return;
     }
     else if( pR->getNorth() <= 0 )
@@ -4625,7 +4625,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("ne");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"ne\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "ne" exit line button!)");
         return;
     }
     else if( pR->getNortheast() <= 0 )
@@ -4643,7 +4643,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("up");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"up\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "up" exit line button!)");
         return;
     }
     else if( pR->getUp() <= 0 )
@@ -4661,7 +4661,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("w");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"w\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "w" exit line button!)");
         return;
     }
     else if( pR->getWest() <= 0 )
@@ -4679,7 +4679,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("e");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"e\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "e" exit line button!)");
         return;
     }
     else if( pR->getEast() <= 0 )
@@ -4697,7 +4697,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("down");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"down\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "down" exit line button!)");
         return;
     }
     else if( pR->getDown() <= 0 )
@@ -4715,7 +4715,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("sw");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"sw\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "sw" exit line button!)");
         return;
     }
     else if( pR->getSouthwest() <= 0 )
@@ -4733,7 +4733,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("s");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"s\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "s" exit line button!)");
         return;
     }
     else if( pR->getSouth() <= 0 )
@@ -4751,7 +4751,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("se");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"se\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "se" exit line button!)");
         return;
     }
     else if( pR->getSoutheast() <= 0 )
@@ -4769,7 +4769,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("in");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"in\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "in" exit line button!)");
         return;
     }
     else if( pR->getIn() <= 0 )
@@ -4787,7 +4787,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("out");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"out\" exit line button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "out" exit line button!)");
         return;
     }
     else if( pR->getOut() <= 0 )
@@ -4826,7 +4826,7 @@ void T2DMap::slot_setCustomLine()
     b_ = d->findChild<QPushButton*>("button_cancel");
     if( !b_ )
     {
-        qWarning("T2DMap::slot_setCustomLine() ERROR: failed to find \"cancel\" button!");
+        qWarning(R"(T2DMap::slot_setCustomLine() ERROR: failed to find "cancel" button!)");
         return;
     }
     connect(b_, SIGNAL(clicked()), d, SLOT(reject()));
@@ -4925,7 +4925,7 @@ void T2DMap::slot_setCustomLine2()
         mCustomLinesRoomTo = pR->getOut();
     else
     {
-        qWarning("T2DMap::slot_setCustomLine2(): unable to identify exit \"%s\"to use!", qPrintable(exit));
+        qWarning(R"(T2DMap::slot_setCustomLine2(): unable to identify exit "%s"to use!)", qPrintable(exit));
         return;
     }
     QList<QPointF> _list;
@@ -5179,7 +5179,7 @@ void T2DMap::paintMap()
 //                }
 //                QRectF lr = QRectF( 0, 0, 1000, 100 );
 //                QPixmap pix( lr.size().toSize() );
-//                pix.fill(QColor(0,0,0,0));
+//                pix.fill(Qt::transparent);
 //                QPainter lp( &pix );
 
 //                if( it.value().hilite )
@@ -5932,7 +5932,7 @@ void T2DMap::paintMap()
 //                _gradient.setColorAt(0.799,QColor(150,100,100,100));
 //                _gradient.setColorAt(0.7, QColor(255,0,0,200));
 //                _gradient.setColorAt(0, QColor(255,255,255,255));
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -5984,7 +5984,7 @@ void T2DMap::paintMap()
 //                    QRadialGradient _gradient(_center,_radius);
 //                    _gradient.setColorAt(0.85, c);
 //                    _gradient.setColorAt(0, QColor(255,255,255,255));
-//                    QPen myPen(QColor(0,0,0,0));
+//                    QPen myPen(Qt::transparent);
 //                    QPainterPath myPath;
 //                    p.setBrush(_gradient);
 //                    p.setPen(myPen);
@@ -6001,7 +6001,7 @@ void T2DMap::paintMap()
 //                QRadialGradient _gradient(_center,_radius);
 //                _gradient.setColorAt(0.85, mpMap->rooms[pArea->rooms[i]]->highlightColor);
 //                _gradient.setColorAt(0, mpMap->rooms[pArea->rooms[i]]->highlightColor2 );
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);
@@ -6030,7 +6030,7 @@ void T2DMap::paintMap()
 //                _gradient.setColorAt(0.799,QColor(150,100,100,100));
 //                _gradient.setColorAt(0.7, QColor(255,0,0,200));
 //                _gradient.setColorAt(0, QColor(255,255,255,255));
-//                QPen myPen(QColor(0,0,0,0));
+//                QPen myPen(Qt::transparent);
 //                QPainterPath myPath;
 //                p.setBrush(_gradient);
 //                p.setPen(myPen);

@@ -84,19 +84,14 @@ public:
     bool exportScript(TScript*);
     bool exportKey(TKey*);
 
-    bool            exportToClipboard( TTrigger * );
-    bool            exportToClipboard( TTimer * );
-    bool            exportToClipboard( TAlias * );
-    bool            exportToClipboard( TAction * );
-    bool            exportToClipboard( TScript * );
-    bool            exportToClipboard( TKey * );
-
-/*    bool            exportTriggerToClipboard( TTrigger * );
-    bool            exportTimerToClipboard( TTimer * );
-    bool            exportAliasToClipboard( TAlias * );
-    bool            exportActionToClipboard( TAction * );
-    bool            exportScriptToClipboard( TScript * );
-    bool            exportKeyToClipboard( TKey * );*/
+    bool exportToClipboard( TTrigger * );
+    bool exportToClipboard( TTimer * );
+    bool exportToClipboard( TAlias * );
+    bool exportToClipboard( TAction * );
+    bool exportToClipboard( TScript * );
+    bool exportToClipboard( TKey * );
+    
+    bool writeScriptElement(const QString &);
 
 private:
     QPointer<Host> mpHost;

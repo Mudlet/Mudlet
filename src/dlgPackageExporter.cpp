@@ -84,7 +84,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     }
 
     tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mpHost->getName() + "/tmp/";
-    packagePath.replace("\\", "/");
+    packagePath.replace(R"(\)", "/");
     tempDir = tempDir + "/" + packageName;
     QDir packageDir = QDir(tempDir);
     if (!packageDir.exists()) {
@@ -97,7 +97,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
-        out << "mpackage = \"" << packageName << "\"\n";
+        out << R"(mpackage = ")" << packageName << "\"\n";
         out.flush();
         configFile.close();
     }

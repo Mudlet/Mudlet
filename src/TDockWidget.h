@@ -39,6 +39,8 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *) override;
+    void resizeEvent(QResizeEvent *) override;
+    void moveEvent(QMoveEvent *) override;
 
 private:
     QPointer<Host> mpHost;

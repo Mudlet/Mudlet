@@ -97,6 +97,7 @@ private:
     void readIntegerList(QList<int>&, const QString&);
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
+    QString readScriptElement();
 
 
     QPointer<Host> mpHost;
