@@ -255,8 +255,8 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
-            if( ! (*it)->isTempKey() && (*it)->mModuleMember ) {
-                if( ! writeKey( *it ) ) {
+            if (!(*it)->isTempKey() && (*it)->mModuleMember) {
+                if (!writeKey(*it)) {
                     isOk = false;
                 } else {
                     isNodeWritten = true;
@@ -280,7 +280,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
         writeEndElement(); // </HelpPackage>
     }
 
-//     writeEndElement();//end hostpackage - NOT NEEDED HERE!
+    //     writeEndElement();//end hostpackage - NOT NEEDED HERE!
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
