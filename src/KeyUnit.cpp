@@ -77,11 +77,11 @@ void KeyUnit::compileAll()
     }
 }
 
-TKey * KeyUnit::findKey( QString & name ) {
-    QMap<QString, TKey *>::const_iterator it = mLookupTable.find( name );
-    while( it != mLookupTable.end() && it.key() == name )
-    {
-        TKey * pT = it.value();
+TKey* KeyUnit::findKey(QString& name)
+{
+    QMap<QString, TKey*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TKey* pT = it.value();
         return pT;
     }
     return 0;
@@ -109,21 +109,17 @@ bool KeyUnit::disableKey(const QString& name)
     return found;
 }
 
-bool KeyUnit::killKey( QString & name ) {
-    for( auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
-    {
-        TKey * pChild = *it;
-        if( pChild->getName() == name )
-        {
+bool KeyUnit::killKey(QString& name)
+{
+    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
+        TKey* pChild = *it;
+        if (pChild->getName() == name) {
             // only temporary Keys can be killed
-            if( ! pChild->isTempKey() )
-            {
+            if (!pChild->isTempKey()) {
                 return false;
-            }
-            else
-            {
-                pChild->setIsActive( false );
-                markCleanup( pChild );
+            } else {
+                pChild->setIsActive(false);
+                markCleanup(pChild);
                 return true;
             }
         }
@@ -190,17 +186,15 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
 
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
-    if( ! pT ) return;
-    if( ! pT->isTempKey() )
-    {
-        mLookupTable.remove( pT->getName(), pT );
+    if (!pT)
+        return;
+    if (!pT->isTempKey()) {
+        mLookupTable.remove(pT->getName(), pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
-    else
-    {
-        mLookupTable.remove( pT->getName() );
-    }
-    mKeyMap.remove( pT->getID() );
-    mKeyRootNodeList.remove( pT );
+    mKeyMap.remove(pT->getID());
+    mKeyRootNodeList.remove(pT);
 }
 
 TKey* KeyUnit::getKey(int id)
@@ -266,16 +260,14 @@ void KeyUnit::addKey(TKey* pT)
 
 void KeyUnit::removeKey(TKey* pT)
 {
-    if( ! pT ) return;
-    if( ! pT->isTempKey() )
-    {
-        mLookupTable.remove( pT->getName(), pT );
+    if (!pT)
+        return;
+    if (!pT->isTempKey()) {
+        mLookupTable.remove(pT->getName(), pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
-    else
-    {
-        mLookupTable.remove( pT->getName() );
-    }
-    mKeyMap.remove( pT->getID() );
+    mKeyMap.remove(pT->getID());
 }
 
 
@@ -337,15 +329,16 @@ void KeyUnit::initStats()
     statsTempKeysKilled = 0;
 }
 
-void KeyUnit::_assembleReport( TKey * pChild )
+void KeyUnit::_assembleReport(TKey* pChild)
 {
-    list<TKey*> * childrenList = pChild->mpMyChildrenList;
-    for( auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
-    {
-        TKey * pT = *it2;
-        _assembleReport( pT );
-        if( pT->isActive() ) statsActiveKeys++;
-        if( pT->isTempKey() ) statsTempKeys++;
+    list<TKey*>* childrenList = pChild->mpMyChildrenList;
+    for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
+        TKey* pT = *it2;
+        _assembleReport(pT);
+        if (pT->isActive())
+            statsActiveKeys++;
+        if (pT->isTempKey())
+            statsTempKeys++;
         statsKeyTotal++;
     }
 }
@@ -355,19 +348,21 @@ QString KeyUnit::assembleReport()
     statsActiveKeys = 0;
     statsKeyTotal = 0;
     statsTempKeys = 0;
-    for( auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++)
-    {
-        TKey * pChild = *it;
-        if( pChild->isActive() ) statsActiveKeys++;
-        if( pChild->isTempKey() ) statsTempKeys++;
+    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
+        TKey* pChild = *it;
+        if (pChild->isActive())
+            statsActiveKeys++;
+        if (pChild->isTempKey())
+            statsTempKeys++;
         statsKeyTotal++;
-        list<TKey*> * childrenList = pChild->mpMyChildrenList;
-        for( auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++)
-        {
-            TKey * pT = *it2;
-            _assembleReport( pT );
-            if( pT->isActive() ) statsActiveKeys++;
-            if( pT->isTempKey() ) statsTempKeys++;
+        list<TKey*>* childrenList = pChild->mpMyChildrenList;
+        for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
+            TKey* pT = *it2;
+            _assembleReport(pT);
+            if (pT->isActive())
+                statsActiveKeys++;
+            if (pT->isTempKey())
+                statsTempKeys++;
             statsKeyTotal++;
         }
     }
@@ -375,34 +370,22 @@ QString KeyUnit::assembleReport()
     msg << "Keys current total: " << QString::number(statsKeyTotal) << "\n"
         << "tempKeys current total: " << QString::number(statsTempKeys) << "\n"
         << "active Keys: " << QString::number(statsActiveKeys) << "\n";
-        /*<< "active Aliass max this session: " << QString::number(statsActiveAliassMax) << "\n"
-        << "active Aliass min this session: " << QString::number(statsActiveAliassMin) << "\n"
-        << "active Aliass average this session: " << QString::number(statsActiveAliassAverage) << "\n"*/
-        //<< "tempAliass created this session: " << QString::number(statsTempAliassCreated) << "\n"
-        //<< "tempAliass killed this session: " << QString::number(statsTempAliassKilled) << "\n"
-        //<< "current total regex Aliass: " << QString::number(statsRegexAliass) << "\n"
-        //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
-        //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
-        //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
     return msg.join("");
 }
 
-void KeyUnit::markCleanup( TKey * pT )
+void KeyUnit::markCleanup(TKey* pT)
 {
-    for( auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
-    {
-        if( *it == pT )
-        {
+    for (auto it = mCleanupList.begin(); it != mCleanupList.end(); it++) {
+        if (*it == pT) {
             return;
         }
     }
-    mCleanupList.push_back( pT );
+    mCleanupList.push_back(pT);
 }
 
 void KeyUnit::doCleanup()
 {
-    for( auto it = mCleanupList.begin(); it != mCleanupList.end(); it++)
-    {
+    for (auto it = mCleanupList.begin(); it != mCleanupList.end(); it++) {
         delete *it;
     }
     mCleanupList.clear();
