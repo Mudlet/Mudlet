@@ -196,7 +196,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
              this,
              SLOT(slot_updateStatusBar(QString))
          );
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(.+?) \|)");
+    simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
 
     // Updating the editor preferences
 
