@@ -53,6 +53,7 @@ dlgIRC::dlgIRC(Host* pHost) :
   mpHost(pHost)
 , mInputHistoryMax(8)
 , mIrcStarted(false)
+, mReadyForSending(false)
 {
     setupUi(this);
     setWindowTitle(tr("%1 - Mudlet IRC Client").arg(mpHost->getName()));
@@ -560,6 +561,10 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
 
 void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 {
+    if (!mReadyForSending) {
+        mReadyForSending = true;
+    }
+
     QString chan = message->channel();
     if (!mChannels.contains(chan)) {
         mChannels << chan;

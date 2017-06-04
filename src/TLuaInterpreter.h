@@ -147,6 +147,13 @@ public:
     static int getRooms(lua_State*);
     static int connectToServer(lua_State* L);
     static int sendIrc(lua_State*);
+    static int ircGetNick(lua_State*);
+    static int ircGetServer(lua_State*);
+    static int ircGetChannels(lua_State*);
+    static int ircSaveNick(lua_State*);
+    static int ircSaveServer(lua_State*);
+    static int ircSaveChannels(lua_State*);
+    static int ircRestart(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State* L);

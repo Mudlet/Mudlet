@@ -71,6 +71,7 @@ public:
     static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
 
     IrcConnection* connection;
+    bool mReadyForSending;
     bool sendMsg(const QString& target, const QString& message);
     QString getHostName() { return mHostName; }
     int getHostPort() { return mHostPort; }
