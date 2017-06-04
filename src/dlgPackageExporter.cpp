@@ -449,9 +449,9 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
     if (!childList->size()) {
         return;
     }
-    list<TKey *>::iterator it;
-    for(it=childList->begin(); it!=childList->end();it++){
-        TKey * pChild = *it;
+    list<TKey*>::iterator it;
+    for (it = childList->begin(); it != childList->end(); it++) {
+        TKey* pChild = *it;
         if (pChild->isTempKey())
             continue;
         QStringList sl;
@@ -468,13 +468,12 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
 void dlgPackageExporter::listKeys()
 {
     KeyUnit* tu = mpHost->getKeyUnit();
-    list<TKey *>::const_iterator it;
-    std::list<TKey *> tList = tu->getKeyRootNodeList();
-    QList<QTreeWidgetItem *> items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
-    QTreeWidgetItem * top = items.first();
-    for(it = tList.begin(); it != tList.end(); it++)
-    {
-        TKey * pChild = *it;
+    list<TKey*>::const_iterator it;
+    std::list<TKey*> tList = tu->getKeyRootNodeList();
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
+    QTreeWidgetItem* top = items.first();
+    for (it = tList.begin(); it != tList.end(); it++) {
+        TKey* pChild = *it;
         if (pChild->isTempKey())
             continue;
         QStringList sl;
