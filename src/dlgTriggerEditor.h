@@ -58,6 +58,8 @@
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"
 #include "edbee/texteditorcontroller.h"
+#include "edbee/models/textundostack.h"
+#include "edbee/models/chardocument/chartextdocument.h"
 
 #include "edbee/models/textsearcher.h" // These three are required for search highlighting
 #include "edbee/views/texttheme.h"
@@ -233,6 +235,8 @@ private:
     void exportAction(QFile&);
     void exportScript(QFile&);
     void exportKey(QFile&);
+
+    void clearDocument(edbee::TextEditorWidget* ew);
 
     QToolBar* toolBar;
     QToolBar* toolBar2;

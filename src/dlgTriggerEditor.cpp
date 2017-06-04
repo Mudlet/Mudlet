@@ -2566,7 +2566,9 @@ void dlgTriggerEditor::addTrigger( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpTriggersMainArea->lineEdit_trigger_name->clear();
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
-    mpSourceEditorEdbeeDocument->setText( QString());
+
+    clearDocument(mpSourceEditorEdbee); // New Trigger
+
     mpTriggersMainArea->trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked( false );
     mpTriggersMainArea->spinBox_stayOpen->setValue( 0 );
@@ -2670,7 +2672,7 @@ void dlgTriggerEditor::addTimer( bool isFolder )
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_command->clear();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // New Timer
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem( pNewItem );
     showInfo( msgInfoAddTimer );
@@ -2836,7 +2838,7 @@ void dlgTriggerEditor::addKey( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->setText("no key chosen");
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // New Key
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem( pNewItem );
     showInfo( msgInfoAddKey );
@@ -2932,7 +2934,7 @@ ROOT_ALIAS:
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // New Alias
 
     mpAliasMainArea->lineEdit_alias_name->setText( name );
 
@@ -3035,7 +3037,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // New Action
 
 
     // This prevents reloading a Floating toolbar when an empty action is added.
@@ -4170,7 +4172,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // Trigger Select
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked( false );
     mpTriggersMainArea->perlSlashGOption->setChecked( false );
     mpTriggersMainArea->filterTrigger->setChecked( false );
@@ -4326,7 +4328,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->pattern_textedit->clear();
     mpAliasMainArea->substitution->clear();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // Alias Select
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0,Qt::UserRole).toInt();
@@ -4366,7 +4368,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
     mpKeysMainArea->lineEdit_command->clear();
     mpKeysMainArea->lineEdit_key->clear();
     mpKeysMainArea->lineEdit_name->clear();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // Key Select
 
     mpKeysMainArea->lineEdit_key->setText( pItem->text(0) );
     int ID = pItem->data( 0, Qt::UserRole ).toInt();
@@ -4561,7 +4563,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     {
         mpVarsMainArea->hideVariable->setChecked( false );
         mpVarsMainArea->lineEdit_var_name->setText("");
-        mpSourceEditorEdbeeDocument->setText( QString());
+        clearDocument(mpSourceEditorEdbee); // Var Select
         //check for temp item
         var = vu->getTVar( pItem );
         if ( var && var->getValueType() == LUA_TTABLE )
@@ -4659,7 +4661,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
     mpSourceEditorEdbee->show();
 
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // Action Select
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
@@ -4804,7 +4806,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // Script Select
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     mpScriptsMainArea->listWidget_registered_event_handlers->clear();
 
@@ -4843,7 +4845,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpSourceEditorEdbeeDocument->setText( QString());
+    clearDocument(mpSourceEditorEdbee); // Timer Select
 
     mpTimersMainArea->lineEdit_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
@@ -6063,10 +6065,10 @@ void dlgTriggerEditor::changeView( int view )
     }
 
     // Edbee doesn't have a readonly option, so I'm using setEnabled
-    mpSourceEditorEdbee->setEnabled(true);
+    // mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
-        mpSourceEditorEdbeeDocument->setText( QString());
+        clearDocument(mpSourceEditorEdbee); // Change View
     }
     mCurrentView = view;
 
@@ -7302,4 +7304,19 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 
     config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces);
     config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
+}
+
+//
+// clearDocument( edbee::TextEditorWidget* ew)
+//
+// A temporary measure for dealing with the undo spanning over multiple documents bug,
+// in place until we create a proper multi-document solution. This gets called whenever
+// the editor needs to be "cleared", usually when a different alias/trigger/etc is
+// made or selected.
+
+void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew) {
+
+    // This will cause a crash on the next redoClear because of an unregistered view and a >0 redo count
+    ew->textDocument()->textUndoStack()->clear();
+    //ew->textDocument()->textUndoStack()->registerContoller( ew->controller());
 }
