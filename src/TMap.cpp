@@ -1310,7 +1310,7 @@ bool TMap::restore( QString location )
                     : location );
 
         if( ! file.open( QFile::ReadOnly ) ) {
-            QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
+            QString errMsg = tr( R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)" )
                              .arg( file.fileName() );
             appendErrorMsg( errMsg, false );
             postMessage( errMsg );
@@ -1354,7 +1354,7 @@ bool TMap::restore( QString location )
             QString infoMsg = tr( "[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait..." )
                                   .arg( mVersion )
                                   .arg( file.fileName() );
-            appendErrorMsg( tr( "[ INFO ]  - Reading map (format version:%1) file: \"%2\"." )
+            appendErrorMsg( tr( R"([ INFO ]  - Reading map (format version:%1) file: "%2".)" )
                                 .arg( mVersion )
                                 .arg( file.fileName() ), false );
             postMessage( infoMsg );
@@ -1585,7 +1585,7 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
     QFile file( QStringLiteral( "%1%2" ).arg(folder, entries.at( 0) ) );
 
     if( ! file.open( QFile::ReadOnly ) ) {
-        QString errMsg = tr( "[ ERROR ] - Unable to open (for reading) map file: \"%1\"!" )
+        QString errMsg = tr( R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)" )
                          .arg( file.fileName() );
         appendErrorMsg( errMsg, false );
         postMessage( errMsg );
@@ -1599,7 +1599,7 @@ bool TMap::retrieveMapFileStats( QString profile, QString * latestFileName = 0, 
     QDataStream ifs( & file );
     ifs >> otherProfileVersion;
 
-    QString infoMsg = tr( "[ INFO ]  - Checking map file: \"%1\", format version:%2..." )
+    QString infoMsg = tr( R"([ INFO ]  - Checking map file: "%1", format version:%2...)" )
                       .arg( file.fileName() )
                       .arg( otherProfileVersion );
     appendErrorMsg( infoMsg, false );
@@ -2023,7 +2023,7 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
         itAreasMsg.next();
         QString titleText;
         if( ! mpRoomDB->getAreaNamesMap().value( itAreasMsg.key() ).isEmpty() ) {
-            titleText = tr( "Area id: %1 \"%2\"" )
+            titleText = tr( R"(Area id: %1 "%2")" )
                             .arg( itAreasMsg.key() )
                             .arg( mpRoomDB->getAreaNamesMap().value( itAreasMsg.key() ) );
         }
@@ -2044,7 +2044,7 @@ void TMap::pushErrorMessagesToFile( const QString title, const bool isACleanup )
         QString titleText;
         TRoom * pR = mpRoomDB->getRoom( itRoomsMsg.key() );
         if( pR && ! pR->name.isEmpty() ) {
-            titleText = tr( "Room id: %1 \"%2\"" )
+            titleText = tr( R"(Room id: %1 "%2")" )
                             .arg( itRoomsMsg.key() )
                             .arg( pR->name );
         }

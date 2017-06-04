@@ -345,10 +345,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     profileSaveAction->setEnabled( true );
     profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     profileSaveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                  .arg(tr("Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p>"
-                                          "<p>It also makes a backup of your profile, you can load an older version of it when connecting.</p>"
-                                          "<p>Should there be any modules that are marked to be \"<i>synced</i>\" this will also cause them to be saved and reloaded into other profiles if they too are active.")));
-    profileSaveAction->setStatusTip(tr("Saves your entire profile (triggers, aliases, etc, but not the map); also \"synchronizes\" modules that are so marked."));
+                                  .arg(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
+    profileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, etc, but not the map); also "synchronizes" modules that are so marked.)"));
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * saveProfileAsAction = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Save Profile As"), this);
@@ -2294,19 +2292,19 @@ void dlgTriggerEditor::slot_action_toggle_active()
     {
         if( pT->shouldBeActive() )
         {
-            showInfo( tr( "Trying to activate a button/menu/toolbar or the part of a module \"%1\" that contains them <em>succeeded</em>." )
+            showInfo( tr( R"(Trying to activate a button/menu/toolbar or the part of a module "%1" that contains them <em>succeeded</em>.)" )
                       .arg( pT->getName() ) );
         }
         else
         {
-            showInfo( tr( "Trying to deactivate a button/menu/toolbar or the part of a module \"%1\" that contains them <em>succeeded</em>." )
+            showInfo( tr( R"(Trying to deactivate a button/menu/toolbar or the part of a module "%1" that contains them <em>succeeded</em>.)" )
                       .arg( pT->getName() ) );
         }
     }
     else
     {
         pT->setIsActive( false );
-        showError( tr( "Unable to activate (and automatically deactivating) a button/menu/toolbar or the part of a module \"%1\" that contains them; reason: %2." )
+        showError( tr( R"(Unable to activate (and automatically deactivating) a button/menu/toolbar or the part of a module "%1" that contains them; reason: %2.)" )
                    .arg( pT->getName(), pT->getError() ) );
         icon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-report-bug.png" ) ), QIcon::Normal, QIcon::Off );
     }
@@ -7153,7 +7151,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     if( ! pI ) return;
 
     QString pattern = pI->lineEdit->text();
-    QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
+    QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
     int _pos = regex.indexIn( pattern );
     int ansiFg, ansiBg;
     if( _pos == -1 )
@@ -7205,7 +7203,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     if( ! pI ) return;
 
     QString pattern = pI->lineEdit->text();
-    QRegExp regex = QRegExp("FG(\\d+)BG(\\d+)");
+    QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
     int _pos = regex.indexIn( pattern );
     int ansiFg, ansiBg;
     if( _pos == -1 )

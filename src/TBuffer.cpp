@@ -1967,7 +1967,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                             _ref = _ref.replace( "&amp", "&" );
                             _ref = _ref.replace('\'', "" );//NEU
                             _ref = _ref.replace( '\"', "" );//NEU
-                            _ref = _ref.replace( "&#34", "\"" );
+                            _ref = _ref.replace( "&#34", R"(")" );
 
                             pRef = _t2.indexOf( "HINT=" );
                             QString _hint;
@@ -1991,7 +1991,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                 _hint = _hint.replace( "&amp", "&" );
                                 _hint = _hint.replace('\'', "" );//NEU
                                 _hint = _hint.replace( '\"', "" );//NEU
-                                _hint = _hint.replace( "&#34", "\"" );
+                                _hint = _hint.replace( "&#34", R"(")" );
                             }
                             TMxpElement _element;
                             _element.name = _tn;
@@ -2088,10 +2088,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                             }
                         }
                         // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
-                        if( _tp.contains("=\'") )
-                            _rex = QRegExp("\\b(\\w+)=\\\'([^\\\']*) ?");
+                        if( _tp.contains(R"(=')") )
+                            _rex = QRegExp(R"(\b(\w+)=\'([^\']*) ?)");
                         else
-                            _rex = QRegExp("\\b(\\w+)=\\\"([^\\\"]*) ?");
+                            _rex = QRegExp(R"(\b(\w+)=\"([^\"]*) ?)");
 
                         int _rpos = 0;
                         while( ( _rpos = _rex.indexIn( _tp, _rpos ) ) != -1 )
@@ -2153,10 +2153,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                         mLinkStore[mLinkID] = _tl;
 
-                        _t3 = _t3.replace( "&quot;", "\"" );
+                        _t3 = _t3.replace( "&quot;", R"(")" );
                         _t3 = _t3.replace( "&amp;", "&" );
                         _t3 = _t3.replace( "&apos;", "'" );
-                        _t3 = _t3.replace( "&#34;", "\"" );
+                        _t3 = _t3.replace( "&#34;", R"(")" );
 
                         QStringList _tl2 = _t3.split('|');
                         _tl2.replaceInStrings("|", "");
@@ -4024,8 +4024,8 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int
     {
         firstSpan = false;
         // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
-        s.append("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); ");
-        s.append("font-weight: normal; font-style: normal; text-decoration: normal\">");
+        s.append(R"(<span style="color: rgb(200,150,0); background: rgb(22,22,22); )");
+        s.append(R"(font-weight: normal; font-style: normal; text-decoration: normal">)");
         s.append(timeBuffer[y].left(13));
     }
     if( spacePadding > 0 )
@@ -4107,7 +4107,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int
 //                }
                 textDecoration = textDecoration.trimmed();
             }
-            s += "<span style=\"";
+            s += R"(<span style=")";
 //            if( inverse )
 //            {
 //                s += "color: rgb(" + QString::number(bgR) + ","
@@ -4128,7 +4128,7 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int
 //            }
             s += " font-weight: " + fontWeight +
                  "; font-style: " + fontStyle +
-                 "; text-decoration: " + textDecoration + "\">";
+                 "; text-decoration: " + textDecoration + R"(">)";
         }
         if( lineBuffer[y][x] == '<' ) {
             s.append("&lt;");

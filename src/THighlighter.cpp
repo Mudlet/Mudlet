@@ -29,30 +29,30 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
     keywordFormat.setForeground(Qt::darkBlue);
     keywordFormat.setFontWeight(QFont::Bold);
     QStringList keywordPatterns;
-    keywordPatterns << "\\btrue\\b"
-                    << "\\bfalse\\b"
-                    << "\\bnil\\b"
-                    << "\\bnot\\b"
-                    << "\\band\\b"
-                    << "\\bor\\b"
-                    << "\\bfunction\\b"
-                    << "\\blocal\\b"
-                    << "\\end\\b"
-                    << "\\bwhile\\b"
-                    << "\\bdo\\b"
-                    << "\\bif\\b"
-                    << "\\bthen\\b"
-                    << "\\belse\\b"
-                    << "\\bwhile\\b"
-                    << "\\brepeat\\b"
-                    << "\\bfor\\b"
-                    << "\\bpairs\\b"
-                    << "\\bipairs\\b"
-                    << "\\bin\\b"
-                    << "\\buntil\\b"
-                    << "\\bbreak\\b"
-                    << "\\breturn\\b"
-                    << "\\belseif\\b";
+    keywordPatterns << R"(\btrue\b)"
+                    << R"(\bfalse\b)"
+                    << R"(\bnil\b)"
+                    << R"(\bnot\b)"
+                    << R"(\band\b)"
+                    << R"(\bor\b)"
+                    << R"(\bfunction\b)"
+                    << R"(\blocal\b)"
+                    << R"(\end\b)"
+                    << R"(\bwhile\b)"
+                    << R"(\bdo\b)"
+                    << R"(\bif\b)"
+                    << R"(\bthen\b)"
+                    << R"(\belse\b)"
+                    << R"(\bwhile\b)"
+                    << R"(\brepeat\b)"
+                    << R"(\bfor\b)"
+                    << R"(\bpairs\b)"
+                    << R"(\bipairs\b)"
+                    << R"(\bin\b)"
+                    << R"(\buntil\b)"
+                    << R"(\bbreak\b)"
+                    << R"(\breturn\b)"
+                    << R"(\belseif\b)";
     foreach (QString pattern, keywordPatterns) {
         rule.pattern = QRegExp(pattern);
         rule.format = keywordFormat;
@@ -62,23 +62,23 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 
     classFormat.setFontWeight(QFont::Bold);
     classFormat.setForeground(Qt::darkMagenta);
-    rule.pattern = QRegExp("\\bQ[A-Za-z]+\\b");
+    rule.pattern = QRegExp(R"(\bQ[A-Za-z]+\b)");
     rule.format = classFormat;
     highlightingRules.append(rule);
 
     functionFormat.setFontItalic(false);
     functionFormat.setFontWeight(QFont::Bold);
     functionFormat.setForeground(Qt::black);
-    rule.pattern = QRegExp("\\b[A-Za-z0-9_]+(?=\\()");
+    rule.pattern = QRegExp(R"(\b[A-Za-z0-9_]+(?=\())");
     rule.format = functionFormat;
     highlightingRules.append(rule);
 
     quotationFormat.setForeground(Qt::darkGreen);
-    rule.pattern = QRegExp("\"[^\"]*\"");
+    rule.pattern = QRegExp(R"("[^"]*")");
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 
-    rule.pattern = QRegExp("\\[\\[[^\\]\\]]*\\]\\]");
+    rule.pattern = QRegExp(R"(\[\[[^\]\]]*\]\])");
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 
@@ -89,11 +89,11 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 
     multiLineCommentFormat.setForeground(Qt::darkGreen);
 
-    stringStart = QRegExp("\\[\\[");
-    stringEnd = QRegExp("\\]\\]");
+    stringStart = QRegExp(R"(\[\[)");
+    stringEnd = QRegExp(R"(\]\])");
 
-    commentStartExpression = QRegExp("\\[\\[");
-    commentEndExpression = QRegExp("\\]\\]");
+    commentStartExpression = QRegExp(R"(\[\[)");
+    commentEndExpression = QRegExp(R"(\]\])");
 
 
     searchFormat.setForeground(QColor(Qt::black));

@@ -1415,10 +1415,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                     // Using qFatal() seems a little, erm, fatalistic but it
                     // seems no lesser one will always be detectable on the
                     // RELEASE version on Windows? - Slysven
-                    qFatal("XMLimport::readIntegerList(...) ERROR: unable to "
-                           "convert: \"%s\" to a number when reading the "
-                           "'regexCodePropertyList' element of the 'Trigger' "
-                           "or 'TriggerGroup' element \"%s\"!",
+                    qFatal(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
                            numberText.toUtf8().constData(),
                            parentName.toUtf8().constData());
                 }
@@ -1445,7 +1442,7 @@ QString XMLimport::readScriptElement()
                  << errorString();
     }
 
-    if (mVersionMajor > 1 || mVersionMajor == 1 && mVersionMinor > 0 ) {
+    if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0) ) {
         // This is NOT the original version, so it will have control characters
         // encoded up using Object Replacement and Control Symbol (for relevant ASCII control code) code-points
         localScript.replace(QStringLiteral("\xFFFC\x2401"), QChar('\x01')); // SOH

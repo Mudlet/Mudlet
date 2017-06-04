@@ -1274,7 +1274,7 @@ bool mudlet::setBackgroundImage( Host * pHost, const QString & name, QString & p
     {
         if( QDir::homePath().contains('\\') )
         {
-            path.replace('/', "\\");
+            path.replace('/', R"(\)");
         }
         else
             path.replace('\\', "/");
