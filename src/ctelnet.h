@@ -175,7 +175,6 @@ private:
     z_stream mZstream;
 
     bool mNeedDecompression;
-    bool mWaitingForCompressedStreamToStart;
     std::string command;
     bool iac, iac2, insb;
     bool myOptionState[256], hisOptionState[256];
