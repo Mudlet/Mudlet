@@ -638,27 +638,20 @@ function shms(seconds, bool)
 end
 
 -- returns true if your Mudlet is older than the given version
--- for example, it'll return true if you're on 2.1 and you do mudletOlderThan("3.1")
--- it'll return false if you're on 4.0 and you do mudletOlderThan("4.0.0")
--- credit to https://stackoverflow.com/a/16187766/72944 for the algorithm
-function mudletOlderThan(version)
-  local tonumber = tonumber
-	
-	-- strip trailing zeros from input version
-  local input = rex.gsub(version, [[(\.0+)+$]], ''):split('%.')
-	local mudlets = {getMudletVersion("table")}
-	
-	-- strip any build suffixes from Mudlets version so we only
-	-- have to deal with numbers in the comparison
-	if tonumber(mudlets[#mudlets]) == nil then mudlets[#mudlets] = nil end
-	
-	local minlength = math.min(#input, #mudlets)
+-- for example, it'll return true if you're on 2.1 and you do mudletOlderThan(3,1)
+-- it'll return false if you're on 4.0 and you do mudletOlderThan(4,0,0)
+function mudletOlderThan(inputmajor, inputminor, inputpatch)
+  local mudletmajor, mudletminor, mudletpatch = getMudletVersion("table")
+  local type, sformat = type, string.format
 
-    local diff
-	for i = 1, minlength do
-	  diff = tonumber(input[i]) - mudlets[i]
-		if diff ~= 0 then break end
-	end
-	
-	if diff > 0 then return true else return false end
+  assert(type(inputmajor) == "number", sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor)))
+  assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
+  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #2 type (optional patch version as number expected, got %s!)", type(inputpatch)))
+
+
+  if mudletmajor < inputmajor then return true end
+  if inputminor and (mudletminor < inputminor) then return true end
+  if inputpatch and (mudletpatch < inputpatch) then return true end
+
+  return false
 end
