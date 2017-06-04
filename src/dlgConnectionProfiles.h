@@ -35,7 +35,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::profile_dialog
 public:
     dlgConnectionProfiles(QWidget* parent = 0);
     void fillout_form();
-    void writeProfileData(QString, QString, QString);
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(QString, QString);
     QStringList readProfileHistory(QString, QString);
     void accept() override;
@@ -66,6 +66,7 @@ public slots:
 
 private:
     void copyFolder(QString sourceFolder, QString destFolder);
+    QString getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name);
 
     bool validName;
     bool validUrl;
