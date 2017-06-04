@@ -2190,22 +2190,19 @@ int TLuaInterpreter::disableTimer( lua_State *L )
 
 int TLuaInterpreter::enableKey( lua_State *L )
 {
-    string luaNameID = "";
+    QString keyName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, tr( "enableKey: bad argument #1 type (key name as string expected, got %1!)" )
-            .arg( luaL_typename( L, 1 ) )
-            .toUtf8().constData() );
-        lua_error( L );
-        return 1;
+        lua_pushfstring(L, "enableKey: bad argument #1 type (key name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
     else
     {
-        luaNameID = lua_tostring( L, 1 );
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString text(luaNameID.c_str());
-    bool error = host.getKeyUnit()->enableKey( text );
+    bool error = host.getKeyUnit()->enableKey(keyName);
     lua_pushboolean( L, error );
     return 1;
 }
