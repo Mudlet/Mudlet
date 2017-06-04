@@ -336,7 +336,7 @@ mudlet::mudlet()
     mpTabBar->setFont( mdiFont );
 
     mainPane->show();
-    connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(actionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(actionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
@@ -370,8 +370,8 @@ mudlet::mudlet()
     QAction * mactionAbout = new QAction(tr("About"), this);
     QAction * mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
-    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
+    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
     connect(dactionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
     connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
     connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
@@ -416,15 +416,6 @@ mudlet::mudlet()
     timerAutologin->start( 50 );
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
-    // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
-    if(  mStatusBarState & statusBarAlwaysShown
-      || mStatusBarState & statusBarAutoShown ) {
-
-        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!))" ), 15000 );
-    }
-    else {
-        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar disabled via options, will not show again this session!))" ), 5000 );
-    }
 }
 
 bool mudlet::moduleTableVisible()
@@ -2064,7 +2055,7 @@ void mudlet::writeSettings()
     settings.setValue("reportMapIssuesToConsole", mIsToDisplayMapAuditErrorsToConsole );
 }
 
-void mudlet::connectToServer()
+void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
     connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
@@ -2401,19 +2392,20 @@ QString mudlet::readProfileData( const QString& profile, const QString& item )
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
-    hostList.removeAll(".");
-    hostList.removeAll("..");
-    for( int i = 0; i< hostList.size(); i++ )
-    {
-        QString item = "autologin";
-        QString val = readProfileData( hostList[i], item );
-        if( val.toInt() == Qt::Checked )
-        {
-            doAutoLogin( hostList[i] );
+    QStringList hostList = QDir(QDir::homePath() + "/.config/mudlet/profiles").entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    bool openedProfile = false;
+
+    for (auto host : hostList) {
+        QString val = readProfileData(host, QStringLiteral("autologin"));
+        if (val.toInt() == Qt::Checked) {
+            doAutoLogin(host);
+            openedProfile = true;
         }
     }
 
+    if (!openedProfile) {
+        slot_show_connection_dialog();
+    }
 }
 
 void mudlet::doAutoLogin( const QString & profile_name )
