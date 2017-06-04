@@ -646,7 +646,7 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
 
   assert(type(inputmajor) == "number", sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor)))
   assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
-  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #2 type (optional patch version as number expected, got %s!)", type(inputpatch)))
+  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch)))
 
 
   if mudletmajor < inputmajor then return true end
