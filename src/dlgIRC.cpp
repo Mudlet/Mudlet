@@ -152,8 +152,19 @@ void dlgIRC::ircRestart(bool reloadConfigs)
 {
     QString msg = tr("Restarting IRC Client");
     ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
+
+    // issue a quit message to the network if we're connected.
     if (connection->isConnected())
         connection->quit(msg);
+
+    // remove the old buffers.
+    for( QString chName : mChannels ) {
+        if (chName == serverBuffer->name()) {
+            continue;  // skip the server-buffer.
+        }
+        bufferModel->remove(chName);
+    }
+
     connection->close();
 
     if (reloadConfigs) {
