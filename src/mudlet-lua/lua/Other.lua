@@ -2,6 +2,10 @@
 --- Mudlet Unsorted Stuff
 ----------------------------------------------------------------------------------
 
+mudlet = mudlet or {}
+mudlet.supports = {
+  coroutines = true
+}
 
 -- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {
