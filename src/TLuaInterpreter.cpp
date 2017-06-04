@@ -2189,20 +2189,19 @@ int TLuaInterpreter::disableTimer( lua_State *L )
 
 int TLuaInterpreter::enableKey( lua_State *L )
 {
-    string luaSendText="";
+    QString keyName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "enableKey: wrong argument type" );
-        lua_error( L );
-        return 1;
+        lua_pushfstring(L, "enableKey: bad argument #1 type (key name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
     else
     {
-        luaSendText = lua_tostring( L, 1 );
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
-    bool error = host.getKeyUnit()->enableKey( text );
+    bool error = host.getKeyUnit()->enableKey(keyName);
     lua_pushboolean( L, error );
     return 1;
 }
@@ -2210,20 +2209,38 @@ int TLuaInterpreter::enableKey( lua_State *L )
 // disableTimer( session, timer_name )
 int TLuaInterpreter::disableKey( lua_State *L )
 {
-    string luaSendText="";
+    QString keyName;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "disableKey: wrong argument type" );
-        lua_error( L );
-        return 1;
+        lua_pushfstring(L, "disableKey: bad argument #1 type (key name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
     else
     {
-        luaSendText = lua_tostring( L, 1 );
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
-    bool error = host.getKeyUnit()->disableKey( text );
+    bool error = host.getKeyUnit()->disableKey(keyName);
+    lua_pushboolean( L, error );
+    return 1;
+}
+
+int TLuaInterpreter::killKey( lua_State *L )
+{
+    QString keyName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushfstring(L, "killKey: bad argument #1 type (key name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    else
+    {
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+    Host& host = getHostFromLua(L);
+    bool error = host.getKeyUnit()->killKey(keyName);
     lua_pushboolean( L, error );
     return 1;
 }
@@ -6626,8 +6643,8 @@ int TLuaInterpreter::tempAlias( lua_State *L )
     TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
     QString _luaFunction = luaFunction.c_str();
     QString _luaRegex = luaRegex.c_str();
-    int timerID = pLuaInterpreter->startTempAlias( _luaRegex, _luaFunction );
-    lua_pushnumber( L, timerID );
+    int aliasID = pLuaInterpreter->startTempAlias( _luaRegex, _luaFunction );
+    lua_pushnumber( L, aliasID );
     return 1;
 }
 
@@ -6662,30 +6679,19 @@ int TLuaInterpreter::exists( lua_State * L )
     QString name = _name.c_str();
     if( type == "timer")
     {
-        QMap<QString, TTimer *>::const_iterator it1 = host.getTimerUnit()->mLookupTable.find( name );
-        while( it1 != host.getTimerUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += host.getTimerUnit()->mLookupTable.count( name );
     }
     else if( type == "trigger")
     {
-        QMap<QString, TTrigger *>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.find( name );
-        while( it1 != host.getTriggerUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += host.getTriggerUnit()->mLookupTable.count( name );
     }
     else if( type == "alias")
     {
-        QMap<QString, TAlias *>::const_iterator it1 = host.getAliasUnit()->mLookupTable.find( name );
-        while( it1 != host.getAliasUnit()->mLookupTable.end() && it1.key() == name )
-        {
-            cnt++;
-            it1++;
-        }
+        cnt += host.getAliasUnit()->mLookupTable.count( name );
+    }
+    else if( type == "keybind")
+    {
+        cnt += host.getKeyUnit()->mLookupTable.count( name );
     }
     lua_pushnumber( L, cnt );
     return 1;
@@ -6756,6 +6762,18 @@ int TLuaInterpreter::isActive( lua_State * L )
             it1++;
         }
     }
+    else if( type == "keybind")
+    {
+        QMap<QString, TKey *>::const_iterator it1 = host.getKeyUnit()->mLookupTable.find( name );
+        while( it1 != host.getKeyUnit()->mLookupTable.end() && it1.key() == name )
+        {
+            if( it1.value()->isActive() )
+            {
+                cnt++;
+            }
+            it1++;
+        }
+    }
     lua_pushnumber( L, cnt );
     return 1;
 }
@@ -6798,7 +6816,6 @@ int TLuaInterpreter::permAlias( lua_State *L )
     {
         luaRegex = lua_tostring( L, 3 );
     }
-
 
     string luaFunction;
     if( ! lua_isstring( L, 4 ) )
@@ -6952,6 +6969,143 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
                                                           _regList,
                                                           _luaFunction );
     lua_pushnumber( L, ret );
+    return 1;
+}
+
+int TLuaInterpreter::permKey( lua_State *L )
+{
+    int n = lua_gettop( L );
+    int i = 3;
+
+    QString keyName;
+    if( ! lua_isstring( L, 1 ) )
+    {
+        lua_pushfstring(L, "permKey: bad argument #1 type (key name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    else
+    {
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QString parentGroup = "";
+    if( ! lua_isstring( L, 2 ) )
+    {
+        lua_pushfstring(L, "permKey: bad argument #2 type (key parent group as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    else
+    {
+        parentGroup = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    int luaModifier = 0x00000000;
+    if (n > 4) {
+        if( ! lua_isstring( L, i ) )
+        {
+            lua_pushfstring(L, "permKey: bad argument type (key modifier as string expected, got %s!)",
+                            luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        else
+        {
+            luaModifier = lua_tointeger( L, i );
+        }
+        i++;
+    }
+
+    int luaKeyCode;
+    if( ! lua_isstring( L, i ) )
+    {
+        lua_pushfstring(L, "permKey: bad argument type (key code as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    else
+    {
+        luaKeyCode = lua_tointeger( L, i );
+    }
+    i++;
+
+    QString luaFunction;
+    if( ! lua_isstring( L, i ) )
+    {
+        lua_pushfstring(L, "permKey: bad argument type (lua code as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, i );
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
+    int keyID = pLuaInterpreter->startPermKey( keyName, parentGroup, luaModifier, luaKeyCode, luaFunction );
+    lua_pushnumber( L, keyID );
+    return 1;
+}
+
+int TLuaInterpreter::tempKey( lua_State *L )
+{
+    int n = lua_gettop( L );    //Number of values being passed in lua_State *L
+    int i = 1;                  //Index of current value being acted upon
+
+    int luaModifier = 0x00000000;
+    if (n > 2) {
+        if( ! lua_isstring( L, i ) )
+        {
+            lua_pushstring( L, tr( "tempKey: bad argument type (key modifier as string expected, got %1!)" )
+                .arg( luaL_typename( L, i ) )
+                .toUtf8().constData() );
+            lua_error( L );
+            return 1;
+        }
+        else
+        {
+            luaModifier = lua_tointeger( L, i );
+        }
+        i++;
+    }
+
+    int luaKeyCode;
+    if( ! lua_isstring( L, i ) )
+    {
+        lua_pushstring( L, tr( "tempKey: bad argument type (key code as string expected, got %1!)" )
+            .arg( luaL_typename( L, i ) )
+            .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaKeyCode = lua_tointeger( L, i );
+    }
+    i++;
+
+    string luaFunction = "";
+    if( ! lua_isstring( L, i ) )
+    {
+        lua_pushstring( L, tr( "permKey: bad argument type (lua code as string expected, got %1!)" )
+            .arg( luaL_typename( L, i ) )
+            .toUtf8().constData() );
+        lua_error( L );
+        return 1;
+    }
+    else
+    {
+        luaFunction = lua_tostring( L, i );
+    }
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
+    QString _luaFunction = luaFunction.c_str();
+    int _luaModifier = luaModifier;
+    int _luaKeyCode = luaKeyCode;
+    int timerID = pLuaInterpreter->startTempKey( _luaModifier, _luaKeyCode, _luaFunction );
+    lua_pushnumber( L, timerID );
     return 1;
 }
 
@@ -12786,6 +12940,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "disableTimer", TLuaInterpreter::disableTimer );
     lua_register( pGlobalLua, "enableKey", TLuaInterpreter::enableKey );
     lua_register( pGlobalLua, "disableKey", TLuaInterpreter::disableKey );
+    lua_register( pGlobalLua, "killKey", TLuaInterpreter::killKey );
     lua_register( pGlobalLua, "clearUserWindow", TLuaInterpreter::clearUserWindow );
     lua_register( pGlobalLua, "clearWindow", TLuaInterpreter::clearUserWindow );
     lua_register( pGlobalLua, "killTimer", TLuaInterpreter::killTimer );
@@ -12882,6 +13037,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger );
     lua_register( pGlobalLua, "permTimer", TLuaInterpreter::permTimer );
     lua_register( pGlobalLua, "permAlias", TLuaInterpreter::permAlias );
+    lua_register( pGlobalLua, "permKey", TLuaInterpreter::permKey );
+    lua_register( pGlobalLua, "tempKey", TLuaInterpreter::tempKey );
     lua_register( pGlobalLua, "exists", TLuaInterpreter::exists );
     lua_register( pGlobalLua, "isActive", TLuaInterpreter::isActive );
     lua_register( pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias );
@@ -13044,7 +13201,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding );
     lua_register( pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList );
     lua_register( pGlobalLua, "alert", TLuaInterpreter::alert );
-
 
 // PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
@@ -13341,6 +13497,52 @@ int TLuaInterpreter::startTempAlias(const QString & regex, const QString & funct
     pT->setIsActive( true );
     pT->setIsTempAlias( true );
     pT->registerAlias();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( QString::number( id ) );
+    return id;
+}
+
+int TLuaInterpreter::startPermKey( QString & name, QString & parent, int & keycode, int & modifier, QString & function )
+{
+    TKey * pT;
+
+    if( parent.isEmpty() )
+    {
+        pT = new TKey("a", mpHost );
+    }
+    else
+    {
+        TKey * pP = mpHost->getKeyUnit()->findKey( parent );
+        if( !pP )
+        {
+            return -1;//parent not found
+        }
+        pT = new TKey( pP, mpHost );
+    }
+    pT->setKeyCode( keycode );
+    pT->setKeyModifiers( modifier );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempKey( false );
+    pT->registerKey();
+    pT->setScript( function );
+    int id = pT->getID();
+    pT->setName( name );
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    return id;
+}
+
+int TLuaInterpreter::startTempKey( int & modifier, int & keycode, QString & function )
+{
+    TKey * pT;
+    pT = new TKey( "a", mpHost );
+    pT->setKeyCode( keycode );
+    pT->setKeyModifiers( modifier );
+    pT->setIsFolder( false );
+    pT->setIsActive( true );
+    pT->setIsTempKey( true );
+    pT->registerKey();
     pT->setScript( function );
     int id = pT->getID();
     pT->setName( QString::number( id ) );

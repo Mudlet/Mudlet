@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QApplication>
+#include <QDesktopWidget>
 #include <QDir>
 #include <QFile>
 #include <QPainter>
@@ -339,10 +340,15 @@ int main(int argc, char* argv[])
         app->processEvents();
     }
 
+    // seed random number generator (should be done once per lifetime)
+    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
+
     QString directory = QDir::homePath() + "/.config/mudlet";
     QDir dir;
+    bool first_launch = false;
     if (!dir.exists(directory)) {
         dir.mkpath(directory);
+        first_launch = true;
     }
 
     if (show_splash) {
@@ -411,7 +417,17 @@ int main(int argc, char* argv[])
     QString homeLink = QDir::homePath() + "/mudlet-data";
     QFile::link(home, homeLink);
     mudlet::start();
+
+    if (first_launch) {
+        // give Mudlet window decent size - most of the screen on non-HiDPI displays
+        auto desktop = qApp->desktop();
+        auto initialSpace = desktop->availableGeometry(desktop->screenNumber());
+        mudlet::self()->resize(initialSpace.width() * 3 / 4, initialSpace.height() * 3 / 4);
+        mudlet::self()->move(initialSpace.width() / 8, initialSpace.height() / 8);
+    }
+
     mudlet::self()->show();
+
     if (show_splash) {
         splash.finish(mudlet::self());
     }
