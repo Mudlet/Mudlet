@@ -150,6 +150,7 @@ public:
     static int ircGetNick(lua_State*);
     static int ircGetServer(lua_State*);
     static int ircGetChannels(lua_State*);
+    static int ircGetConnectedHost(lua_State*);
     static int ircSaveNick(lua_State*);
     static int ircSaveServer(lua_State*);
     static int ircSaveChannels(lua_State*);

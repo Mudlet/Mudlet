@@ -54,6 +54,7 @@ dlgIRC::dlgIRC(Host* pHost) :
 , mInputHistoryMax(8)
 , mIrcStarted(false)
 , mReadyForSending(false)
+, mConnectedHostName()
 {
     setupUi(this);
     setWindowTitle(tr("%1 - Mudlet IRC Client").arg(mpHost->getName()));
@@ -87,6 +88,7 @@ dlgIRC::dlgIRC(Host* pHost) :
     connect(connection, SIGNAL(nickNameChanged(QString)), this, SLOT(slot_nickNameChanged(QString)));
     connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
     connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
+    connect(connection, SIGNAL(numericMessageReceived(IrcNumericMessage*)), this, SLOT(slot_receiveNumericMessage(IrcNumericMessage*)));
 
     mUserName = "mudlet";
     mRealName = mudlet::self()->version;
@@ -134,11 +136,45 @@ void dlgIRC::startClient() {
 
 bool dlgIRC::sendMsg(const QString &target, const QString &message)
 {
-    // I think it would be interesting to see a command parser used here.
-    // Maybe doing that would be an easier way to expose IRC commands to Lua
-    // without the need to write more code in the lua interpreter.
-    IrcCommand* command = IrcCommand::createMessage( target, message );
+    if (message.isEmpty()) {
+        return true;
+    }
+
+    QString msgTarget = target;
+    if (target.isEmpty()) {
+        msgTarget = mChannels.first();
+    }
+
+    // inform the command parser of the target for this message.
+    // parses the message and then reverts the target to avoid confusing our UI.
+    QString lastParserTarget = commandParser->target();
+    commandParser->setTarget( msgTarget );
+    IrcCommand* command = commandParser->parse(message);
+    commandParser->setTarget( lastParserTarget );
+
+    if (!command) {
+        return false;
+    }
+
+    bool sendCommand = processCustomCommand(command);
+    if( !sendCommand ) {
+        return true;
+    }
+
+    // update ping-started time if this command was a ping
+    if (command->type() == IrcCommand::Ping) {
+        mPingStarted = QDateTime::currentMSecsSinceEpoch();
+    }
+
     bool rv = connection->sendCommand(command);
+
+    // if the command was a quit command we should close the IRC window.
+    if (command->type() == IrcCommand::Quit) {
+        setAttribute(Qt::WA_DeleteOnClose);
+        close();
+        return true;
+    }
+
     // echo own messages (servers do not send our own messages back)
     if (command->type() == IrcCommand::Message || command->type() == IrcCommand::CtcpAction) {
         IrcMessage* msg = command->toMessage(connection->nickName(), connection);
@@ -361,8 +397,6 @@ void dlgIRC::slot_onTextEntered()
         }
         mInputHistoryIdxCurrent = mInputHistoryIdxNext;
         ++mInputHistoryIdxNext;
-
-        qDebug() << "History Count:"<< mInputHistory.count();
     }
 
     IrcCommand* command = commandParser->parse(input);
@@ -422,7 +456,6 @@ void dlgIRC::slot_nameCompleted(const QString& text, int cursor)
 void dlgIRC::slot_onHistoryCompletion()
 {
     if (mInputHistoryIdxCurrent >= mInputHistory.count()) {
-        qDebug() << "reset current index" << mInputHistoryIdxCurrent;
         mInputHistoryIdxCurrent = 0;
     }
 
@@ -506,11 +539,6 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
         mPingStarted = 0;
     }
 
-    // Handle posting IRC related events for messages sent to us.
-    if( message->flags() ^ IrcMessage::Own ) {
-        processIrcMessage( message );
-    }
-
     IrcBuffer* buffer = qobject_cast<IrcBuffer*>(sender());
     if (!buffer)
         buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
@@ -518,32 +546,22 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
     if (document) {
         QString html = IrcMessageFormatter::formatMessage(message);
         if (!html.isEmpty()) {
+            // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
+            if ( !message->isOwn() ) {
+                QString textToLua = IrcMessageFormatter::formatMessage(message, true);
+                if (!textToLua.isEmpty()) {
+                    QString from = message->nick();
+                    QString to = getMessageTarget(message, buffer->title());
+                    mpHost->postIrcMessage(from, to, textToLua);
+                }
+            }
+
+            // add the HTML formatted copy to the buffer.
             if (document == ircBrowser->document())
                 ircBrowser->append(html);
             else
                 dlgIRC::appendHtml(document, html);
         }
-    }
-}
-
-void dlgIRC::processIrcMessage(IrcMessage* msg)
-{
-    // TODO FIXME we should replace this with a variation to the messageFormatter
-    //  which simply provides a plain-text variation of the IRC texts for posting to lua.
-    IrcMessage::Type msgType = msg->type();
-    switch( msgType ) {
-    case IrcMessage::Notice: {
-        IrcNoticeMessage* msgNotice = static_cast<IrcNoticeMessage*>(msg);
-        const QString content = IrcTextFormat().toPlainText(msgNotice->content());
-        mpHost->postIrcMessage(msgNotice->nick(), msgNotice->target(), content);
-        break;
-    }
-    case IrcMessage::Private : {
-        IrcPrivateMessage* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
-        const QString content = IrcTextFormat().toPlainText(msgPrivate->content());
-        mpHost->postIrcMessage(msgPrivate->nick(), msgPrivate->target(), content);
-        break;
-    }
     }
 }
 
@@ -555,7 +573,7 @@ void dlgIRC::slot_onAnchorClicked(const QUrl& link)
 void dlgIRC::slot_nickNameRequired(const QString &reserved, QString *alt)
 {
     QString newNick = QString("%1_%2").arg(reserved, QString::number(rand() % 10000) );
-    ircBrowser->append(IrcMessageFormatter::formatMessage("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick)));
     connection->setNickName( newNick );
 }
 
@@ -580,6 +598,11 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
     if (!mChannels.contains(chan)) {
         mChannels << chan;
     }
+
+    if (message->isOwn()) {
+        QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
+        mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
+    }
 }
 
 void dlgIRC::slot_partedChannel(IrcPartMessage *message)
@@ -588,12 +611,44 @@ void dlgIRC::slot_partedChannel(IrcPartMessage *message)
     if (mChannels.contains(chan)) {
         mChannels.removeAll(chan);
     }
+
+    if (message->isOwn()) {
+        QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
+        mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
+    }
+}
+
+void dlgIRC::slot_receiveNumericMessage(IrcNumericMessage* msg)
+{
+    // set the connected host name and update the serverBuffer name to match it.
+    if (msg->code() == Irc::RPL_YOURHOST) {
+        serverBuffer->setName( msg->nick() );
+        mConnectedHostName = msg->nick();
+    }
 }
 
 void dlgIRC::showEvent(QShowEvent *event)
 {
     startClient();
     event->ignore();
+}
+
+QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
+{
+    QString target = bufferName;
+    switch( msg->type() ) {
+    case IrcMessage::Notice: {
+        IrcNoticeMessage* msgNotice = static_cast<IrcNoticeMessage*>(msg);
+        target = msgNotice->target();
+        break;
+    }
+    case IrcMessage::Private : {
+        IrcPrivateMessage* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
+        target = msgPrivate->target();
+        break;
+    }
+    }
+    return target;
 }
 
 QString dlgIRC::readIrcHostName(Host* pH)

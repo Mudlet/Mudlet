@@ -11824,6 +11824,23 @@ int TLuaInterpreter::ircGetChannels(lua_State* L)
     return 1;
 }
 
+/** ircGetConnectedHost()
+ *  Returns the Hostname of the connected IRC Server, as provided by the server itself.
+ *  This will return an empty string until the IRC Client has connected and received
+ *  a hostname message from the server.
+ */
+int TLuaInterpreter::ircGetConnectedHost(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    QString cHostName = "";
+    if (mudlet::self()->mpIrcClientMap[pHost]) {
+        cHostName = mudlet::self()->mpIrcClientMap[pHost]->getConnectedHost();
+    }
+
+    lua_pushstring(L, cHostName.toUtf8().constData());
+    return 1;
+}
+
 /** ircSaveNick( Nick )
  *  Updates IRC client nickname configuration value.
  *  Does not apply changes to active client until ircRestart() is called.
@@ -13193,6 +13210,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "ircGetNick", TLuaInterpreter::ircGetNick );
     lua_register( pGlobalLua, "ircGetServer", TLuaInterpreter::ircGetServer );
     lua_register( pGlobalLua, "ircGetChannels", TLuaInterpreter::ircGetChannels );
+    lua_register( pGlobalLua, "ircGetConnectedHost", TLuaInterpreter::ircGetConnectedHost );
     lua_register( pGlobalLua, "ircSaveNick", TLuaInterpreter::ircSaveNick );
     lua_register( pGlobalLua, "ircSaveServer", TLuaInterpreter::ircSaveServer );
     lua_register( pGlobalLua, "ircSaveChannels", TLuaInterpreter::ircSaveChannels );

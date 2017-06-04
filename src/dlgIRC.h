@@ -77,6 +77,7 @@ public:
     int getHostPort() { return mHostPort; }
     QString getNickName() { return mNickName; }
     QStringList getChannels() { return mChannels; }
+    QString getConnectedHost() { return mConnectedHostName; }
     void ircRestart(bool reloadConfigs = true);
 
 private slots:
@@ -98,15 +99,16 @@ private slots:
     void slot_receiveMessage(IrcMessage* message);
     void slot_onAnchorClicked(const QUrl& link);
     void slot_onHistoryCompletion();
+    void slot_receiveNumericMessage(IrcNumericMessage* msg);
 
 private:
     void startClient();
     void setupCommandParser();
     void setupBuffers();
-    void processIrcMessage(IrcMessage*);
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
     void appendHtml(QTextDocument*, const QString&);
+    QString getMessageTarget(IrcMessage*, const QString&);
 
     void showEvent(QShowEvent *event) override;
 
@@ -123,6 +125,7 @@ private:
     int mInputHistoryIdxNext;
     int mInputHistoryIdxCurrent;
     quint64 mPingStarted;
+    QString mConnectedHostName;
     QString mHostName;
     int mHostPort;
     QString mNickName;
