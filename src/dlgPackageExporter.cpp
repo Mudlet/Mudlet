@@ -452,6 +452,8 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
     list<TKey*>::iterator it;
     for (it = childList->begin(); it != childList->end(); it++) {
         TKey* pChild = *it;
+        if (pChild->isTempKey())
+            continue;
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
@@ -472,6 +474,8 @@ void dlgPackageExporter::listKeys()
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TKey* pChild = *it;
+        if (pChild->isTempKey())
+            continue;
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);

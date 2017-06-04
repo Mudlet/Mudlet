@@ -101,6 +101,7 @@ public:
 
     int startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
+    int startTempKey(int& keycode, int& modifier, QString& function);
     int startTempTrigger(const QString&, const QString&);
     int startTempBeginOfLineTrigger(const QString&, const QString&);
     int startTempExactMatchTrigger(const QString&, const QString&);
@@ -112,6 +113,7 @@ public:
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
+    int startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
@@ -262,8 +264,11 @@ public:
     static int getRoomWeight(lua_State* L);
     static int gotoRoom(lua_State* L);
     static int setMapperView(lua_State* L);
-    static int enableKey(lua_State*);
-    static int disableKey(lua_State*);
+    static int permKey(lua_State* L);
+    static int tempKey(lua_State* L);
+    static int enableKey(lua_State* L);
+    static int disableKey(lua_State* L);
+    static int killKey(lua_State* L);
     static int debug(lua_State* L);
     static int setWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
