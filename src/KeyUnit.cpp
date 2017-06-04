@@ -60,12 +60,14 @@ void KeyUnit::uninstall(const QString& packageName)
 
 bool KeyUnit::processDataStream(int key, int modifier)
 {
+    bool isAtLeastOneMatch = false;
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier))
-            return true;
+        if (keyObject->match(key, modifier)) {
+            isAtLeastOneMatch = true;
+        }
     }
 
-    return false;
+    return isAtLeastOneMatch;
 }
 
 void KeyUnit::compileAll()

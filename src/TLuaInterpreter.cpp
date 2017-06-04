@@ -6974,138 +6974,90 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
 
 int TLuaInterpreter::permKey( lua_State *L )
 {
-    int n = lua_gettop( L );
-    int i = 3;
-
+    quint8 argIndex = 0;
     QString keyName;
-    if( ! lua_isstring( L, 1 ) )
-    {
-        lua_pushfstring(L, "permKey: bad argument #1 type (key name as string expected, got %s!)",
-                        luaL_typename(L, 1));
+    if (!lua_isstring(L, ++argIndex)) {
+        lua_pushfstring(L, "permKey: bad argument #1 type (key name as string expected, got %s!)", luaL_typename(L, argIndex));
         return lua_error(L);
-    }
-    else
-    {
-        keyName = QString::fromUtf8(lua_tostring(L, 1));
+    } else {
+        keyName = QString::fromUtf8(lua_tostring(L, argIndex));
     }
 
-    QString parentGroup = "";
-    if( ! lua_isstring( L, 2 ) )
-    {
-        lua_pushfstring(L, "permKey: bad argument #2 type (key parent group as string expected, got %s!)",
-                        luaL_typename(L, 1));
+    QString parentGroup;
+    if (!lua_isstring(L, ++argIndex)) {
+        lua_pushfstring(L, "permKey: bad argument #2 type (key parent group as string expected, got %s!)", luaL_typename(L, argIndex));
         return lua_error(L);
-    }
-    else
-    {
-        parentGroup = QString::fromUtf8(lua_tostring(L, 2));
+    } else {
+        parentGroup = QString::fromUtf8(lua_tostring(L, argIndex));
     }
 
-    int luaModifier = 0x00000000;
-    if (n > 4) {
-        if( ! lua_isstring( L, i ) )
-        {
-            lua_pushfstring(L, "permKey: bad argument type (key modifier as string expected, got %s!)",
-                            luaL_typename(L, 1));
+    int keyModifier = Qt::NoModifier;
+    if (lua_gettop(L) > 4) {
+        if (!lua_isnumber(L, ++argIndex)) {
+            lua_pushfstring(L, "permKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
             return lua_error(L);
+        } else {
+            keyModifier = lua_tointeger(L, argIndex);
         }
-        else
-        {
-            luaModifier = lua_tointeger( L, i );
-        }
-        i++;
     }
 
-    int luaKeyCode;
-    if( ! lua_isstring( L, i ) )
-    {
-        lua_pushfstring(L, "permKey: bad argument type (key code as string expected, got %s!)",
-                        luaL_typename(L, 1));
+    int KeyCode = 0;
+    if (!lua_isnumber(L, ++argIndex)) {
+        lua_pushfstring(L, "permKey: bad argument #%d type (key code as number expected, got %s!)", argIndex, luaL_typename(L, argIndex));
         return lua_error(L);
+    } else {
+        KeyCode = lua_tointeger(L, argIndex);
     }
-    else
-    {
-        luaKeyCode = lua_tointeger( L, i );
-    }
-    i++;
 
     QString luaFunction;
-    if( ! lua_isstring( L, i ) )
-    {
-        lua_pushfstring(L, "permKey: bad argument type (lua code as string expected, got %s!)",
-                        luaL_typename(L, 1));
+    if (!lua_isstring(L, ++argIndex)) {
+        lua_pushfstring(L, "permKey: bad argument #%d type (lua script as string expected, got %s!)", argIndex, luaL_typename(L, argIndex));
         return lua_error(L);
-    }
-    else
-    {
-        luaFunction = lua_tostring( L, i );
+    } else {
+        luaFunction = QString::fromUtf8(lua_tostring(L, argIndex));
     }
 
     Host& host = getHostFromLua(L);
-    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
-    int keyID = pLuaInterpreter->startPermKey( keyName, parentGroup, luaModifier, luaKeyCode, luaFunction );
-    lua_pushnumber( L, keyID );
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    // FIXME: The script in the luaFunction could fail to compile - although this will still create a key (which will error each time it is encountered)
+    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, KeyCode, keyModifier, luaFunction);
+    lua_pushnumber(L, keyID);
     return 1;
 }
 
 int TLuaInterpreter::tempKey( lua_State *L )
 {
-    int n = lua_gettop( L );    //Number of values being passed in lua_State *L
-    int i = 1;                  //Index of current value being acted upon
-
-    int luaModifier = 0x00000000;
-    if (n > 2) {
-        if( ! lua_isstring( L, i ) )
-        {
-            lua_pushstring( L, tr( "tempKey: bad argument type (key modifier as string expected, got %1!)" )
-                .arg( luaL_typename( L, i ) )
-                .toUtf8().constData() );
-            lua_error( L );
-            return 1;
+    quint8 argIndex = 0;
+    int keyModifier = Qt::NoModifier;
+    if (lua_gettop(L) > 2) {
+        if (!lua_isnumber(L, ++argIndex)) {
+            lua_pushfstring(L, "tempKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
+            return lua_error(L);
+        } else {
+            keyModifier = lua_tointeger(L, argIndex);
         }
-        else
-        {
-            luaModifier = lua_tointeger( L, i );
-        }
-        i++;
     }
 
-    int luaKeyCode;
-    if( ! lua_isstring( L, i ) )
-    {
-        lua_pushstring( L, tr( "tempKey: bad argument type (key code as string expected, got %1!)" )
-            .arg( luaL_typename( L, i ) )
-            .toUtf8().constData() );
-        lua_error( L );
-        return 1;
+    int keyCode = 0;
+    if (!lua_isnumber(L, ++argIndex)) {
+        lua_pushfstring(L, "tempKey: bad argument #%d type (key code as number expected, got %s!)", argIndex, luaL_typename(L, argIndex));
+        return lua_error(L);
+    } else {
+        keyCode = lua_tointeger(L, argIndex);
     }
-    else
-    {
-        luaKeyCode = lua_tointeger( L, i );
-    }
-    i++;
 
-    string luaFunction = "";
-    if( ! lua_isstring( L, i ) )
-    {
-        lua_pushstring( L, tr( "permKey: bad argument type (lua code as string expected, got %1!)" )
-            .arg( luaL_typename( L, i ) )
-            .toUtf8().constData() );
-        lua_error( L );
-        return 1;
-    }
-    else
-    {
-        luaFunction = lua_tostring( L, i );
+    QString luaFunction;
+    if (!lua_isstring(L, ++argIndex)) {
+        lua_pushfstring(L, "tempKey: bad argument #%d type (lua script as string expected, got %s!)", argIndex, luaL_typename(L, argIndex));
+        return lua_error(L);
+    } else {
+        luaFunction = QString::fromUtf8(lua_tostring(L, argIndex));
     }
 
     Host& host = getHostFromLua(L);
-    TLuaInterpreter * pLuaInterpreter = host.getLuaInterpreter();
-    QString _luaFunction = luaFunction.c_str();
-    int _luaModifier = luaModifier;
-    int _luaKeyCode = luaKeyCode;
-    int timerID = pLuaInterpreter->startTempKey( _luaModifier, _luaKeyCode, _luaFunction );
-    lua_pushnumber( L, timerID );
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    int timerID = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
+    lua_pushnumber(L, timerID);
     return 1;
 }
 
@@ -13505,47 +13457,44 @@ int TLuaInterpreter::startTempAlias(const QString & regex, const QString & funct
 
 int TLuaInterpreter::startPermKey( QString & name, QString & parent, int & keycode, int & modifier, QString & function )
 {
-    TKey * pT;
+    TKey* pT;
 
-    if( parent.isEmpty() )
-    {
-        pT = new TKey("a", mpHost );
-    }
-    else
-    {
-        TKey * pP = mpHost->getKeyUnit()->findKey( parent );
-        if( !pP )
-        {
-            return -1;//parent not found
+    if (parent.isEmpty()) {
+        pT = new TKey("a", mpHost); // The use of "a" seems a bit arbitary...!
+    } else {
+        TKey* pP = mpHost->getKeyUnit()->findKey(parent);
+        if (!pP) {
+            return -1; //parent not found
         }
-        pT = new TKey( pP, mpHost );
+        pT = new TKey(pP, mpHost);
     }
-    pT->setKeyCode( keycode );
-    pT->setKeyModifiers( modifier );
-    pT->setIsFolder( false );
-    pT->setIsActive( true );
-    pT->setIsTempKey( false );
+    pT->setKeyCode(keycode);
+    pT->setKeyModifiers(modifier);
+    pT->setIsFolder(false);
+    pT->setIsActive(true);
+    pT->setIsTempKey(false);
     pT->registerKey();
-    pT->setScript( function );
+    // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
+    pT->setScript(function);
     int id = pT->getID();
-    pT->setName( name );
+    pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
     return id;
 }
 
 int TLuaInterpreter::startTempKey( int & modifier, int & keycode, QString & function )
 {
-    TKey * pT;
-    pT = new TKey( "a", mpHost );
-    pT->setKeyCode( keycode );
-    pT->setKeyModifiers( modifier );
-    pT->setIsFolder( false );
-    pT->setIsActive( true );
-    pT->setIsTempKey( true );
+    TKey* pT;
+    pT = new TKey("a", mpHost);
+    pT->setKeyCode(keycode);
+    pT->setKeyModifiers(modifier);
+    pT->setIsFolder(false);
+    pT->setIsActive(true);
+    pT->setIsTempKey(true);
     pT->registerKey();
-    pT->setScript( function );
+    pT->setScript(function);
     int id = pT->getID();
-    pT->setName( QString::number( id ) );
+    pT->setName(QString::number(id));
     return id;
 }
 
