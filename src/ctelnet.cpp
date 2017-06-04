@@ -1598,6 +1598,9 @@ int cTelnet::decompressBuffer( char *& in_buffer, int& length, char* out_buffer 
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
+        hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
+        hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
+
         // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
         initStreamDecompressor();
         qDebug() << "Listening for new compression sequences";
