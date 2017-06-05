@@ -636,3 +636,22 @@ function shms(seconds, bool)
 		return hh, mm, ss
 	end
 end
+
+-- returns true if your Mudlet is older than the given version
+-- for example, it'll return true if you're on 2.1 and you do mudletOlderThan(3,1)
+-- it'll return false if you're on 4.0 and you do mudletOlderThan(4,0,0)
+function mudletOlderThan(inputmajor, inputminor, inputpatch)
+  local mudletmajor, mudletminor, mudletpatch = getMudletVersion("table")
+  local type, sformat = type, string.format
+
+  assert(type(inputmajor) == "number", sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor)))
+  assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
+  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch)))
+
+
+  if mudletmajor < inputmajor then return true end
+  if inputminor and (mudletminor < inputminor) then return true end
+  if inputpatch and (mudletpatch < inputpatch) then return true end
+
+  return false
+end
