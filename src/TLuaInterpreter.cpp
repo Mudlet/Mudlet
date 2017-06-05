@@ -7001,12 +7001,12 @@ int TLuaInterpreter::permKey( lua_State *L )
         }
     }
 
-    int KeyCode = 0;
+    int keyCode = 0;
     if (!lua_isnumber(L, ++argIndex)) {
         lua_pushfstring(L, "permKey: bad argument #%d type (key code as number expected, got %s!)", argIndex, luaL_typename(L, argIndex));
         return lua_error(L);
     } else {
-        KeyCode = lua_tointeger(L, argIndex);
+        keyCode = lua_tointeger(L, argIndex);
     }
 
     QString luaFunction;
@@ -7020,7 +7020,7 @@ int TLuaInterpreter::permKey( lua_State *L )
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     // FIXME: The script in the luaFunction could fail to compile - although this will still create a key (which will error each time it is encountered)
-    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, KeyCode, keyModifier, luaFunction);
+    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
     lua_pushnumber(L, keyID);
     return 1;
 }
