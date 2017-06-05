@@ -6974,7 +6974,7 @@ int TLuaInterpreter::permSubstringTrigger( lua_State * L )
 
 int TLuaInterpreter::permKey( lua_State *L )
 {
-    quint8 argIndex = 0;
+    uint_fast8_t argIndex = 0;
     QString keyName;
     if (!lua_isstring(L, ++argIndex)) {
         lua_pushfstring(L, "permKey: bad argument #1 type (key name as string expected, got %s!)", luaL_typename(L, argIndex));
@@ -7027,7 +7027,7 @@ int TLuaInterpreter::permKey( lua_State *L )
 
 int TLuaInterpreter::tempKey( lua_State *L )
 {
-    quint8 argIndex = 0;
+    uint_fast8_t argIndex = 0;
     int keyModifier = Qt::NoModifier;
     if (lua_gettop(L) > 2) {
         if (!lua_isnumber(L, ++argIndex)) {
