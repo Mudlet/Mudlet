@@ -61,8 +61,9 @@ void KeyUnit::uninstall(const QString& packageName)
 bool KeyUnit::processDataStream(int key, int modifier)
 {
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier))
+        if (keyObject->match(key, modifier)) {
             return true;
+        }
     }
 
     return false;
