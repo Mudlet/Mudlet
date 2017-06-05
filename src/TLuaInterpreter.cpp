@@ -7028,7 +7028,7 @@ int TLuaInterpreter::permKey( lua_State *L )
 int TLuaInterpreter::tempKey( lua_State *L )
 {
     uint_fast8_t argIndex = 0;
-    int l = Qt::NoModifier;
+    int keyModifier = Qt::NoModifier;
     if (lua_gettop(L) > 2) {
         if (!lua_isnumber(L, ++argIndex) && !lua_isnil(L, argIndex)) {
             lua_pushfstring(L, "tempKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
