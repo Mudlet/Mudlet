@@ -2692,7 +2692,8 @@ void dlgTriggerEditor::addVar( bool isFolder )
         mpVarsMainArea->var_type->setCurrentIndex(4);
         mpVarsMainArea->lineEdit_var_name->setText("");
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
-        mpSourceEditorEdbeeDocument->setText( QString("NewTable"));
+
+        clearDocument( mpSourceEditorEdbee, QLatin1Literal("NewTable"));
         name="";
     }
     else{
@@ -3140,7 +3141,8 @@ void dlgTriggerEditor::addScript( bool isFolder )
     if( pParent ) pParent->setExpanded( true );
     mpScriptsMainArea->lineEdit_scripts_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
-    mpSourceEditorEdbeeDocument->setText( script);
+
+    clearDocument( mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;
     treeWidget_scripts->setCurrentItem( pNewItem );
     slot_scripts_selected( treeWidget_scripts->currentItem() );
@@ -4306,8 +4308,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem *pItem)
         mpTriggersMainArea->pushButtonFgColor->setPalette( FgColorPalette );
         mpTriggersMainArea->pushButtonBgColor->setPalette( BgColorPalette );
         mpTriggersMainArea->colorizerTrigger->setChecked( pT->isColorizerTrigger() );
-        QString script = pT->getScript();
-        mpSourceEditorEdbeeDocument->setText( script);
+
+        clearDocument( mpSourceEditorEdbee, pT->getScript());
 
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -4347,8 +4349,8 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem *pItem)
         mpAliasMainArea->substitution->setText( command );
         mpAliasMainArea->lineEdit_alias_name->setText( name );
 
-        QString script = pT->getScript();
-        mpSourceEditorEdbeeDocument->setText( script);
+        clearDocument( mpSourceEditorEdbee, pT->getScript());
+
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -4382,8 +4384,9 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem *pItem)
         mpKeysMainArea->lineEdit_name->setText( name );
         QString keyName = mpHost->getKeyUnit()->getKeyName( pT->getKeyCode(), pT->getKeyModifiers() );
         mpKeysMainArea->lineEdit_key->setText( keyName );
-        QString script = pT->getScript();
-        mpSourceEditorEdbeeDocument->setText( script);
+
+        clearDocument( mpSourceEditorEdbee, pT->getScript());
+
         if( ! pT->state() ) showError( pT->getError() );
     }
 }
@@ -4632,7 +4635,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     }
     mpVarsMainArea->hideVariable->setChecked( vu->isHidden( var ) );
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
-    mpSourceEditorEdbeeDocument->setText( lI->getValue( var ));
+    clearDocument( mpSourceEditorEdbee, lI->getValue( var));
     pItem->setFlags(Qt::ItemIsEnabled|Qt::ItemIsSelectable|Qt::ItemIsDropEnabled|Qt::ItemIsDragEnabled|Qt::ItemIsTristate|Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
@@ -4692,7 +4695,9 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem *pItem)
         mpActionsMainArea->lineEdit_action_icon->setText( pT->getIcon() );
         mpActionsMainArea->lineEdit_command_down->setText( pT->getCommandButtonDown() );
         mpActionsMainArea->lineEdit_command_up->setText( pT->getCommandButtonUp() );
-        mpSourceEditorEdbeeDocument->setText(pT->getScript());
+
+        clearDocument( mpSourceEditorEdbee, pT->getScript());
+
         // location = 1 = location = bottom is no longer supported
         int location = pT->mLocation;
         if( location > 0 ) location--;
@@ -4826,7 +4831,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem *pItem)
         }
         mpScriptsMainArea->lineEdit_scripts_name->clear();
         QString script = pT->getScript();
-        mpSourceEditorEdbeeDocument->setText( script);
+        clearDocument( mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_scripts_name->setText( name );
         if( ! pT->state() ) showError( pT->getError() );
@@ -4885,8 +4890,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem *pItem)
         QTime t5(0,0,0,msecs);
         mpTimersMainArea->timeEdit_msecs->setTime(t5);
 
-        QString script = pT->getScript();
-        mpSourceEditorEdbeeDocument->setText( script);
+        clearDocument( mpSourceEditorEdbee, pT->getScript());
 
         if( ! pT->state() ) showError( pT->getError() );
     }
@@ -7314,9 +7318,42 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 // the editor needs to be "cleared", usually when a different alias/trigger/etc is
 // made or selected.
 
-void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew) {
+void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText) {
 
     // This will cause a crash on the next redoClear because of an unregistered view and a >0 redo count
-    ew->textDocument()->textUndoStack()->clear();
-    //ew->textDocument()->textUndoStack()->registerContoller( ew->controller());
+    mpSourceEditorEdbeeDocument = newTextDocument();
+    ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
+
+    // If undo is not disabled when setting the initial text, the
+    // settings of the text will be undoable.
+
+    mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
+    mpSourceEditorEdbeeDocument->setText( initialText);
+    mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
+}
+
+edbee::CharTextDocument* dlgTriggerEditor::newTextDocument() {
+    edbee::CharTextDocument* newDoc = new edbee::CharTextDocument();
+
+    edbee::TextEditorConfig* config = newDoc->config();
+
+    newDoc->setLanguageGrammar(
+                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+
+    config->beginChanges();
+
+    config->setSmartTab(true); // I'm not fully sure what this does, but it says "Smart" so it must be good
+    config->setCaretBlinkRate(200);
+
+    config->setIndentSize(2); // 2 spaces is the Lua default
+
+    config->setThemeName(QLatin1Literal("Mudlet"));
+    config->setCaretWidth(1);
+
+    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+
+    config->endChanges();
+
+    return newDoc;
 }
