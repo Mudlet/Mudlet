@@ -7032,7 +7032,6 @@ void dlgTriggerEditor::slot_copy_xml()
 
 void dlgTriggerEditor::slot_paste_xml()
 {
-    int savedView = mCurrentView;
     switch (mCurrentView) {
     case cmTriggerView:
         saveTrigger();
@@ -7066,7 +7065,7 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_scripts->clear();
 
     XMLimport reader(mpHost);
-    savedView = reader.importFromClipboard();
+    int importedItemType = reader.importFromClipboard();
 
     mpHost->setName(profileName);
     mpHost->setLogin(login);
@@ -7083,8 +7082,8 @@ void dlgTriggerEditor::slot_paste_xml()
     mpCurrentActionItem = 0;
     mpCurrentKeyItem = 0;
 
-    mCurrentView = savedView;
-    switch (mCurrentView) {
+    mCurrentView = importedItemType;
+    switch (importedItemType) {
     case cmTriggerView:
         slot_show_triggers();
         break;
