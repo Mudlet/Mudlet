@@ -28,6 +28,12 @@ PROJECT(communi)
 FIND_PACKAGE(Qt5Core REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 
+INCLUDE_DIRECTORIES(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcCore
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcModel
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcUtil
+)
+
 SET(SRCS
   src/core/irc.cpp
   src/core/irccommand.cpp
@@ -143,7 +149,11 @@ QT5_GENERATE_MOC(include/IrcModel/ircusermodel.h ${CMAKE_CURRENT_BINARY_DIR}/Irc
 QT5_GENERATE_MOC(include/IrcUtil/irccompleter.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccompleter.cpp)
 QT5_GENERATE_MOC(include/IrcUtil/irccommandparser.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandparser.cpp)
 QT5_GENERATE_MOC(include/IrcUtil/irccommandqueue.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irccommandqueue_p.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue_p.cpp)
 QT5_GENERATE_MOC(include/IrcUtil/irclagtimer.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irclagtimer_p.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer_p.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irctextformat.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irctextformat.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/ircpalette.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_ircpalette.cpp)
 
 SET_PROPERTY(SOURCE src/core/irc.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_irc.cpp)
@@ -167,6 +177,8 @@ SET_PROPERTY(SOURCE src/model/ircbuffer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffer.cpp)
 SET_PROPERTY(SOURCE src/model/ircbuffermodel.cpp 
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel.cpp)
+SET_PROPERTY(SOURCE src/model/ircbuffermodel.cpp 
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel_p.cpp)
 SET_PROPERTY(SOURCE src/model/ircuser.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircuser.cpp)
 SET_PROPERTY(SOURCE src/model/ircusermodel.cpp 
@@ -177,10 +189,16 @@ SET_PROPERTY(SOURCE src/util/irccommandparser.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandparser.cpp)
 SET_PROPERTY(SOURCE src/util/irccommandqueue.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue.cpp)
+SET_PROPERTY(SOURCE src/util/irccommandqueue.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue_p.cpp)
 SET_PROPERTY(SOURCE src/util/irclagtimer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer.cpp)
+SET_PROPERTY(SOURCE src/util/irclagtimer.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer_p.cpp)
 SET_PROPERTY(SOURCE src/util/irctextformat.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irctextformat.cpp)
+SET_PROPERTY(SOURCE src/util/ircpalette.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_ircpalette.cpp)
 
 ADD_LIBRARY(communi STATIC ${SRCS} ${HDRS} ${PUB_HDRS})
 

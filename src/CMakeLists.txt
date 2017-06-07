@@ -89,6 +89,7 @@ SET(mudlet_SRCS
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp
+    ircmessageformatter.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -196,6 +197,7 @@ SET(mudlet_HDRS
     VarUnit.h
     XMLexport.h
     XMLimport.h
+    ircmessageformatter.h
 )
 
 IF(MSVC)
