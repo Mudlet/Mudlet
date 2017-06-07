@@ -7033,26 +7033,25 @@ void dlgTriggerEditor::slot_copy_xml()
 void dlgTriggerEditor::slot_paste_xml()
 {
     int savedView = mCurrentView;
-    switch( mCurrentView )
-    {
-        case cmTriggerView:
-            saveTrigger();
-            break;
-        case cmTimerView:
-            saveTimer();
-            break;
-        case cmAliasView:
-            saveAlias();
-            break;
-        case cmScriptView:
-            saveScript();
-            break;
-        case cmActionView:
-            saveAction();
-            break;
-        case cmKeysView:
-            saveKey();
-            break;
+    switch (mCurrentView) {
+    case cmTriggerView:
+        saveTrigger();
+        break;
+    case cmTimerView:
+        saveTimer();
+        break;
+    case cmAliasView:
+        saveAlias();
+        break;
+    case cmScriptView:
+        saveScript();
+        break;
+    case cmActionView:
+        saveAction();
+        break;
+    case cmKeysView:
+        saveKey();
+        break;
     };
 
     QString profileName = mpHost->getName();
@@ -7066,12 +7065,12 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
 
-    XMLimport reader( mpHost );
-    savedView = reader.importFromClipboard( );
+    XMLimport reader(mpHost);
+    savedView = reader.importFromClipboard();
 
-    mpHost->setName( profileName );
-    mpHost->setLogin( login );
-    mpHost->setPass( pass );
+    mpHost->setName(profileName);
+    mpHost->setLogin(login);
+    mpHost->setPass(pass);
 
     slot_profileSaveAction();
 
@@ -7085,8 +7084,7 @@ void dlgTriggerEditor::slot_paste_xml()
     mpCurrentKeyItem = 0;
 
     mCurrentView = savedView;
-    switch( mCurrentView )
-    {
+    switch (mCurrentView) {
     case cmTriggerView:
         slot_show_triggers();
         break;
