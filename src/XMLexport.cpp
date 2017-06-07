@@ -254,7 +254,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
-            if ((*it)->mModuleMember) {
+            if (!(*it)->isTempKey() && (*it)->mModuleMember) {
                 if (!writeKey(*it)) {
                     isOk = false;
                 } else {
@@ -279,7 +279,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
         writeEndElement(); // </HelpPackage>
     }
 
-//     writeEndElement();//end hostpackage - NOT NEEDED HERE!
+    //     writeEndElement();//end hostpackage - NOT NEEDED HERE!
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
@@ -537,8 +537,8 @@ bool XMLexport::writeHost(Host* pHost)
 
     if (isOk) {
         writeStartElement("KeyPackage");
-        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->mModuleMember) {
+        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
+            if( ! (*it) || (*it)->isTempKey() || (*it)->mModuleMember) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -702,10 +702,10 @@ bool XMLexport::writeGenericPackage(Host* pHost)
         writeEndElement(); // </ScriptPackage>
     }
 
-    if (isOk) {
-        writeStartElement("KeyPackage");
-        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
-            if (!(*it)) {
+    if( isOk ) {
+        writeStartElement( "KeyPackage" );
+        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
+            if( ! (*it) || (*it)->isTempKey() ) {
                 continue;
             }
             if (!writeKey(*it)) {

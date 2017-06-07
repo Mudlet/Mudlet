@@ -61,8 +61,9 @@ void KeyUnit::uninstall(const QString& packageName)
 bool KeyUnit::processDataStream(int key, int modifier)
 {
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier))
+        if (keyObject->match(key, modifier)) {
             return true;
+        }
     }
 
     return false;
@@ -75,6 +76,16 @@ void KeyUnit::compileAll()
             key->compileAll();
         }
     }
+}
+
+TKey* KeyUnit::findKey(QString& name)
+{
+    QMap<QString, TKey*>::const_iterator it = mLookupTable.find(name);
+    while (it != mLookupTable.end() && it.key() == name) {
+        TKey* pT = it.value();
+        return pT;
+    }
+    return 0;
 }
 
 bool KeyUnit::enableKey(const QString& name)
@@ -97,6 +108,24 @@ bool KeyUnit::disableKey(const QString& name)
         found = true;
     }
     return found;
+}
+
+bool KeyUnit::killKey(QString& name)
+{
+    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
+        TKey* pChild = *it;
+        if (pChild->getName() == name) {
+            // only temporary Keys can be killed
+            if (!pChild->isTempKey()) {
+                return false;
+            } else {
+                pChild->setIsActive(false);
+                markCleanup(pChild);
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void KeyUnit::addKeyRootNode(TKey* pT, int parentPosition, int childPosition)
@@ -158,9 +187,14 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
 
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
-    if (!pT) {
+    if (!pT)
         return;
+    if (!pT->isTempKey()) {
+        mLookupTable.remove(pT->getName(), pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
+    mKeyMap.remove(pT->getID());
     mKeyRootNodeList.remove(pT);
 }
 
@@ -227,8 +261,12 @@ void KeyUnit::addKey(TKey* pT)
 
 void KeyUnit::removeKey(TKey* pT)
 {
-    if (!pT) {
+    if (!pT)
         return;
+    if (!pT->isTempKey()) {
+        mLookupTable.remove(pT->getName(), pT);
+    } else {
+        mLookupTable.remove(pT->getName());
     }
     mKeyMap.remove(pT->getID());
 }
@@ -280,6 +318,79 @@ QString KeyUnit::getKeyName(int keyCode, int modifierCode)
     }
 }
 
+void KeyUnit::initStats()
+{
+    statsKeyTotal = 0;
+    statsTempKeys = 0;
+    statsActiveKeys = 0;
+    statsActiveKeysMax = 0;
+    statsActiveKeysMin = 0;
+    statsActiveKeysAverage = 0;
+    statsTempKeysCreated = 0;
+    statsTempKeysKilled = 0;
+}
+
+void KeyUnit::_assembleReport(TKey* pChild)
+{
+    list<TKey*>* childrenList = pChild->mpMyChildrenList;
+    for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
+        TKey* pT = *it2;
+        _assembleReport(pT);
+        if (pT->isActive())
+            statsActiveKeys++;
+        if (pT->isTempKey())
+            statsTempKeys++;
+        statsKeyTotal++;
+    }
+}
+
+QString KeyUnit::assembleReport()
+{
+    statsActiveKeys = 0;
+    statsKeyTotal = 0;
+    statsTempKeys = 0;
+    for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
+        TKey* pChild = *it;
+        if (pChild->isActive())
+            statsActiveKeys++;
+        if (pChild->isTempKey())
+            statsTempKeys++;
+        statsKeyTotal++;
+        list<TKey*>* childrenList = pChild->mpMyChildrenList;
+        for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
+            TKey* pT = *it2;
+            _assembleReport(pT);
+            if (pT->isActive())
+                statsActiveKeys++;
+            if (pT->isTempKey())
+                statsTempKeys++;
+            statsKeyTotal++;
+        }
+    }
+    QStringList msg;
+    msg << "Keys current total: " << QString::number(statsKeyTotal) << "\n"
+        << "tempKeys current total: " << QString::number(statsTempKeys) << "\n"
+        << "active Keys: " << QString::number(statsActiveKeys) << "\n";
+    return msg.join("");
+}
+
+void KeyUnit::markCleanup(TKey* pT)
+{
+    for (auto it = mCleanupList.begin(); it != mCleanupList.end(); it++) {
+        if (*it == pT) {
+            return;
+        }
+    }
+    mCleanupList.push_back(pT);
+}
+
+void KeyUnit::doCleanup()
+{
+    for (auto it = mCleanupList.begin(); it != mCleanupList.end(); it++) {
+        delete *it;
+    }
+    mCleanupList.clear();
+}
 
 void KeyUnit::setupKeyNames()
 {

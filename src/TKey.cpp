@@ -33,6 +33,7 @@ TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mIsTempKey( false )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
@@ -43,9 +44,10 @@ TKey::TKey( TKey * parent, Host * pHost )
 }
 
 TKey::TKey( QString name, Host * pHost )
-: Tree<TKey>(0)
-, exportItem(true)
-, mModuleMasterFolder(false)
+: Tree<TKey>( 0 )
+, exportItem( true )
+, mModuleMasterFolder( false )
+, mIsTempKey( false )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
@@ -64,6 +66,15 @@ TKey::~TKey()
     mpHost->getKeyUnit()->unregisterKey(this);
 }
 
+void TKey::setName( const QString& name )
+{
+    if( ! mIsTempKey )
+    {
+        mpHost->getKeyUnit()->mLookupTable.remove( mName, this );
+    }
+    mName = name;
+    mpHost->getKeyUnit()->mLookupTable.insertMulti( name, this );
+}
 
 bool TKey::match(int key, int modifier)
 {

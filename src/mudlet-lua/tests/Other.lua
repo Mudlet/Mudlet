@@ -70,4 +70,37 @@ describe("Tests Other.lua functions", function()
       assert.spy(tempTimer).was.called(6)
     end)
   end)
+
+  describe("Tests mudletOlderThan()", function()
+    setup(function()
+      -- fake getMudletversion here
+      --[[
+      local function getMudletVersion()
+        return 2,0,1,"-dev"
+      end
+      ]]
+    end)
+
+    it("tests the comparisons", function()
+      -- should be true
+      display(mudletOlderThan("2.5.10.4159"))
+      -- should be true
+      display(mudletOlderThan("3.5.10.4159"))
+      -- should be false
+      display(mudletOlderThan("1.0.0"))
+      --[[mudletOlderThan("0.5")
+      mudletOlderThan("0.4.1")
+      mudletOlderThan("1")
+      mudletOlderThan("1.1")
+      mudletOlderThan("0.0.0")
+      mudletOlderThan("2.5.0")
+      mudletOlderThan("2")
+      mudletOlderThan("0.0")
+      mudletOlderThan("2.5.10")
+      mudletOlderThan("10.5")
+      mudletOlderThan("1.25.4")
+      mudletOlderThan("1.2.15")]]
+
+    end)
+  end)
 end)
