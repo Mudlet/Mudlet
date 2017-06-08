@@ -1843,6 +1843,41 @@ int TLuaInterpreter::setExitStub( lua_State * L  ){
     return 0;
 }
 
+int TLuaInterpreter::clearExitStub(lua_State* L)
+{
+    int roomId, dirType;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "clearExitStub: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        roomId = lua_tonumber(L, 1);
+    }
+    dirType = dirToNumber(L, 2);
+    if (!dirType) {
+        lua_pushfstring(L, "clearExitStub: bad argument #2 type (direction as string or number expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        return 1;
+    }
+
+    Host* pHost = TLuaInterpreter::luaInterpreterMap[L];
+    if (!pHost->mpMap)
+        return 0;
+    TRoom* pR = pHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        lua_pushfstring(L, "clearExitStub: room %s doesn't exist", roomId);
+        lua_error(L);
+        return 1;
+    }
+    if (dirType > 12 || dirType < 1) {
+        lua_pushstring(L, "clearExitStub: direction as a number must be between 1 and 12");
+        lua_error(L);
+        return 1;
+    }
+    pR->setExitStub(dirType, false);
+    return 0;
+}
+
 int TLuaInterpreter::connectExitStub( lua_State * L  ){
     //takes exit stubs from the selected room, finds the room in that direction and if
     //that room has a stub, a two way exit is formed
@@ -13096,6 +13131,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "lockSpecialExit", TLuaInterpreter::lockSpecialExit );
     lua_register( pGlobalLua, "hasSpecialExitLock", TLuaInterpreter::hasSpecialExitLock );
     lua_register( pGlobalLua, "setExitStub", TLuaInterpreter::setExitStub );
+    lua_register( pGlobalLua, "clearExitStub", TLuaInterpreter::clearExitStub );
     lua_register( pGlobalLua, "connectExitStub", TLuaInterpreter::connectExitStub );
     lua_register( pGlobalLua, "getExitStubs", TLuaInterpreter::getExitStubs );
     lua_register( pGlobalLua, "getExitStubs1", TLuaInterpreter::getExitStubs1 );
