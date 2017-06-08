@@ -361,8 +361,15 @@ ADD_DEFINITIONS(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_
 IF(UNIX)
     SET(DATAROOTDIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "The platform-specific directory in which read-only data is generally installed")
     SET(DATADIR "${DATAROOTDIR}/mudlet" CACHE STRING "Directory in which mudlet installs its read-only data")
-    SET(LUA_DEFAULT_DIR "${DATADIR}/lua" CACHE STRING "Directory in which mudlet installs its read-only lua scripts")
 ENDIF(UNIX)
+
+# Allow to define a different path to look for Mudlet's lua files by using
+# the MUDLET_LUA_DEFAULT_DIR environment variable
+IF(DEFINED ENV{MUDLET_LUA_DEFAULT_DIR} AND NOT $ENV{MUDLET_LUA_DEFAULT_DIR} STREQUAL "")
+  SET(LUA_DEFAULT_DIR $ENV{MUDLET_LUA_DEFAULT_DIR})
+ELSEIF(UNIX)
+  SET(LUA_DEFAULT_DIR "${DATADIR}/lua")
+ENDIF()
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a

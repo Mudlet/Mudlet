@@ -139,6 +139,14 @@ unix:!macx {
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
 }
+
+# Override LUA_DEFAULT_DIR, if the environement variable MUDLET_LUA_DEFAULT_DIR
+# was set
+LUA_DEFAULT_DIR_ENV = $$(MUDLET_LUA_DEFAULT_DIR)
+!isEmpty( LUA_DEFAULT_DIR_ENV ){
+  LUA_DEFAULT_DIR = $$LUA_DEFAULT_DIR_ENV
+}
+
 unix:!macx {
 #   the "target" install set is handled automagically, just not very well...
     target.path = $${BINDIR}
