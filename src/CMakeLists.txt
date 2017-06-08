@@ -426,6 +426,7 @@ TARGET_LINK_LIBRARIES(mudlet
     ${ZLIB_LIBRARIES}
     communi
     lua_yajl
+    edbee-lib
 )
 
 IF(PC_ZIP_FOUND)
