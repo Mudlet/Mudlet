@@ -59,11 +59,11 @@ private:
 
     void readHostPackage();
     int readTriggerPackage();
-    void readTimerPackage();
-    void readAliasPackage();
-    void readActionPackage();
-    void readScriptPackage();
-    void readKeyPackage();
+    int readTimerPackage();
+    int readAliasPackage();
+    int readActionPackage();
+    int readScriptPackage();
+    int readKeyPackage();
     void readVariablePackage();
     void readUnknownMapElement();
     void readMap();
@@ -84,12 +84,12 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
-    int readTriggerGroup(TTrigger *);
-    void readTimerGroup(TTimer*);
-    void readAliasGroup(TAlias*);
-    void readActionGroup(TAction*);
-    void readScriptGroup(TScript*);
-    void readKeyGroup(TKey*);
+    int readTriggerGroup(TTrigger*);
+    int readTimerGroup(TTimer*);
+    int readAliasGroup(TAlias*);
+    int readActionGroup(TAction*);
+    int readScriptGroup(TScript*);
+    int readKeyGroup(TKey*);
     void readVariableGroup(TVar*);
     void readHiddenVariables();
 
