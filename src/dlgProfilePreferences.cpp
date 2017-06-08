@@ -57,7 +57,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // This is currently empty so can be hidden until needed, but provides a
     // location on the last (Special Options) tab where temporary/development
     // /testing controls can be placed if needed...
-    groupBox_Debug->hide();
+    // Reenabled for temporary holding of groupBox_encoding
+    // groupBox_Debug->hide();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
