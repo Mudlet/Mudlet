@@ -235,6 +235,13 @@ private:
     void addAction(bool isFolder);
     void addKey(bool);
 
+    void selectTriggerByID(int id);
+    void selectTimerByID(int id);
+    void selectAliasByID(int id);
+    void selectScriptByID(int id);
+    void selectActionByID(int id);
+    void selectKeyByID(int id);
+
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
     void expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
