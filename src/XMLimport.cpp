@@ -235,16 +235,16 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
     return !error();
 }
 
-int XMLimport::importFromClipboard( )
+pair<int, int> XMLimport::importFromClipboard()
 {
 
     QString xml;
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard *clipboard = QApplication::clipboard();
 
     int packageType = 0;
-    int result = 0;
+    pair<int, int> result;
 
-    xml = cb->text(QClipboard::Clipboard);
+    xml = clipboard->text(QClipboard::Clipboard);
             //setText( xml, QClipboard::Clipboard );
 
     QByteArray ba = xml.toUtf8();
@@ -270,7 +270,7 @@ int XMLimport::importFromClipboard( )
         }
     }
 
-    return error() ? -1 : result;
+    return result;
     //return ! error();
 }
 
@@ -556,9 +556,10 @@ void XMLimport::readUnknownMapElement()
     }
 }
 
-int XMLimport::readPackage()
+pair<int, int> XMLimport::readPackage()
 {
     int objectType = 0;
+    int lastItemID = -1;
     while (!atEnd()) {
         readNext();
 
@@ -569,7 +570,7 @@ int XMLimport::readPackage()
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
                 objectType = dlgTriggerEditor::cmTriggerView;
-                readTriggerPackage();
+                lastItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
                 objectType = dlgTriggerEditor::cmTimerView;
                 readTimerPackage();
@@ -595,7 +596,7 @@ int XMLimport::readPackage()
             }
         }
     }
-    return objectType;
+    return make_pair(objectType, lastItemID);
 }
 
 void XMLimport::readHelpPackage()
@@ -627,7 +628,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            int result = readPackage();
+            auto result = readPackage();
         }
     }
 }
@@ -978,8 +979,11 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 }
 
-void XMLimport::readTriggerPackage()
+// returns the ID of the last imported trigger
+int XMLimport::readTriggerPackage()
 {
+    int lastImportedTriggerID = -1;
+
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -989,15 +993,18 @@ void XMLimport::readTriggerPackage()
         if (isStartElement()) {
             if (name() == "TriggerGroup" || name() == "Trigger") {
                 gotTrigger = true;
-                readTriggerGroup(mPackageName.isEmpty() ? 0 : mpTrigger);
+                lastImportedTriggerID = readTriggerGroup(mPackageName.isEmpty() ? 0 : mpTrigger);
             } else {
                 readUnknownTriggerElement();
             }
         }
     }
+
+    return lastImportedTriggerID;
 }
 
-void XMLimport::readTriggerGroup(TTrigger* pParent)
+// imports a trigger and returns its ID
+int XMLimport::readTriggerGroup(TTrigger *pParent)
 {
     auto pT = new TTrigger(pParent, mpHost);
 
@@ -1018,6 +1025,7 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mColorTrigger = (attributes().value("isColorTrigger") == "yes");
     pT->mColorTriggerBg = (attributes().value("isColorTriggerBg") == "yes");
     pT->mColorTriggerFg = (attributes().value("isColorTriggerFg") == "yes");
+
 
     while (!atEnd()) {
         readNext();
@@ -1080,6 +1088,8 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
                               "initialize pattern list for trigger: "
                            << pT->getName();
     }
+
+    return pT->getID();
 }
 
 void XMLimport::readTimerPackage()

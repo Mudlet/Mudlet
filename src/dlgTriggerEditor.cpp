@@ -7114,7 +7114,8 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_scripts->clear();
 
     XMLimport reader(mpHost);
-    int importedItemType = reader.importFromClipboard();
+    int importedItemType, importedItemID;
+    std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
 
     mpHost->setName(profileName);
     mpHost->setLogin(login);
@@ -7133,9 +7134,21 @@ void dlgTriggerEditor::slot_paste_xml()
 
     mCurrentView = importedItemType;
     switch (importedItemType) {
-    case cmTriggerView:
+    case cmTriggerView: {
         slot_show_triggers();
+        QTreeWidgetItemIterator it(treeWidget_triggers);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == importedItemID) {
+                slot_trigger_selected((*it));
+                treeWidget_triggers->setCurrentItem((*it), 0);
+                treeWidget_triggers->scrollToItem((*it));
+                mpCurrentTriggerItem = (*it);
+            }
+            ++it;
+        }
+
         break;
+    }
     case cmTimerView:
         slot_show_timers();
         break;

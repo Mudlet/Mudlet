@@ -51,14 +51,14 @@ class XMLimport : public QXmlStreamReader
 public:
     XMLimport(Host*);
     bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
-    int importFromClipboard();
+    std::pair<int, int> importFromClipboard();
 
 private:
-    int  readPackage();
+    std::pair<int, int> readPackage();
     void readUnknownPackage();
 
     void readHostPackage();
-    void readTriggerPackage();
+    int readTriggerPackage();
     void readTimerPackage();
     void readAliasPackage();
     void readActionPackage();
@@ -84,7 +84,7 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
-    void readTriggerGroup(TTrigger*);
+    int readTriggerGroup(TTrigger *);
     void readTimerGroup(TTimer*);
     void readAliasGroup(TAlias*);
     void readActionGroup(TAction*);
