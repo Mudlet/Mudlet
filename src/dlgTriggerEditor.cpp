@@ -7171,6 +7171,9 @@ void dlgTriggerEditor::slot_copy_xml()
 
 void dlgTriggerEditor::slot_paste_xml()
 {
+    XMLimport reader(mpHost);
+    int importedItemType, importedItemID;
+
     switch (mCurrentView) {
     case cmTriggerView:
         saveTrigger();
@@ -7192,10 +7195,6 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     };
 
-    QString profileName = mpHost->getName();
-    QString login = mpHost->getLogin();
-    QString pass = mpHost->getPass();
-
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
     treeWidget_actions->clear();
@@ -7203,24 +7202,11 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
 
-    XMLimport reader(mpHost);
-    int importedItemType, importedItemID;
     std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
-
-    mpHost->setName(profileName);
-    mpHost->setLogin(login);
-    mpHost->setPass(pass);
 
     slot_profileSaveAction();
 
     fillout_form(); // This resets mCurrentView
-
-    mpCurrentTriggerItem = 0;
-    mpCurrentTimerItem = 0;
-    mpCurrentAliasItem = 0;
-    mpCurrentScriptItem = 0;
-    mpCurrentActionItem = 0;
-    mpCurrentKeyItem = 0;
 
     mCurrentView = importedItemType;
     switch (importedItemType) {
