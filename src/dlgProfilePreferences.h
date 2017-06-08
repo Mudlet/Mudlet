@@ -114,6 +114,8 @@ private:
 
     int mFontSize;
     QPointer<Host> mpHost;
+
+    void slot_editor_tab_selected(int tabIndex);
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

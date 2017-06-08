@@ -34,6 +34,14 @@
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/edbee.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/texteditorconfig.h"
+#include "edbee/models/textgrammar.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/texteditorscrollarea.h"
+#include "edbee/views/textrenderer.h"
+#include "edbee/views/texttheme.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -58,6 +66,24 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // location on the last (Special Options) tab where temporary/development
     // /testing controls can be placed if needed...
     groupBox_Debug->hide();
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setSmartTab(true);
+    config->setCaretBlinkRate(200);
+    config->setIndentSize(2);
+    config->setThemeName(QLatin1Literal("Mudlet"));
+    config->setCaretWidth(1);
+    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(
+            edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
+    edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
+    script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
+    theme_download_label->hide();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
@@ -105,8 +131,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
     }
 
-    if (pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-        || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+    if (pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
         || pH->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
         || pH->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
         downloadMapOptions->setVisible(true);
@@ -115,8 +140,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         downloadMapOptions->setVisible(false);
     }
 
-
-    connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
+    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
+    connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
 
     pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
     pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
@@ -343,8 +368,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
         comboBox_mapFileSaveFormatVersion->setEnabled(false);
         label_mapFileSaveFormatVersion->setEnabled(false);
-        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion
-            || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
+        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
             for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
                 if (i == pHost->mpMap->mDefaultVersion) {
                     continue;
@@ -372,7 +396,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         comboBox_encoding->addItem(QLatin1String("ASCII"));
         comboBox_encoding->addItems(pHost->mTelnet.getEncodingsList());
-        if(pHost->mTelnet.getEncoding().isEmpty()) {
+        if (pHost->mTelnet.getEncoding().isEmpty()) {
             // cTelnet::mEncoding is (or should be) empty for the default 7-bit
             // ASCII case, so need to set the control specially to its (the
             // first) value
@@ -380,7 +404,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         } else {
             comboBox_encoding->setCurrentText(pHost->mTelnet.getEncoding());
         }
-        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString &)), this, SLOT(slot_setEncoding(const QString &)));
+        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
     }
 }
 
@@ -1313,4 +1337,17 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
 void dlgProfilePreferences::slot_setEncoding( const QString & newEncoding )
 {
     mpHost->mTelnet.setEncoding(newEncoding);
+}
+
+void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
+{
+    if (tabIndex != 3) {
+        return;
+    }
+
+    QDir dir;
+    if (!dir.mkpath(QStringLiteral("%1/.config/mudlet/edbee").arg(QDir::homePath()))) {
+        return;
+    }
+
 }
