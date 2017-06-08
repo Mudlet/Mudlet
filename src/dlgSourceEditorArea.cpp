@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,14 +21,41 @@
 
 
 #include "dlgSourceEditorArea.h"
+#include "edbee/edbee.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/texteditorconfig.h"
+#include "edbee/models/textgrammar.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/texteditorscrollarea.h"
+#include "edbee/views/textrenderer.h"
+#include "edbee/views/texttheme.h"
 
-#include "THighlighter.h"
-
+//#include "ui_source_editor_area.h"
 
 dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    highlighter = new THighlighter(editor->document());
-    editor->setTabStopWidth(25);
+
+    // Configuring the editor widget with defaults
+
+    edbee::TextEditorConfig* config = edbeeEditorWidget->config();
+
+    config->beginChanges();
+
+    config->setSmartTab(true); // I'm not fully sure what this does, but it says "Smart" so it must be good
+    config->setCaretBlinkRate(200);
+
+    config->setIndentSize(2); // 2 spaces is the Lua default
+
+    config->setThemeName(QLatin1Literal("Mudlet"));
+    config->setCaretWidth(1);
+
+    config->endChanges();
+
+    edbeeEditorWidget->textDocument()->setLanguageGrammar(
+                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+
+    // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
+    edbeeEditorWidget->textScrollArea()->enableShadowWidget(false);
 }

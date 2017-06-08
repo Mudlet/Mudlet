@@ -31,6 +31,8 @@ macx: {
     include(../3rdparty/luazip/src.pri)
 }
 
+include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
+
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
 VERSION = 3.2.0

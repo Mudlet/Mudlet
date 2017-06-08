@@ -74,5 +74,6 @@ ADD_SUBDIRECTORY(3rdparty/lua_yajl)
 IF(APPLE)
   ADD_SUBDIRECTORY(3rdparty/luazip)
 ENDIF()
+ADD_SUBDIRECTORY(3rdparty/edbee-lib/edbee-lib)
 
 ADD_SUBDIRECTORY(src)

@@ -4,6 +4,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -63,6 +64,12 @@
 #include <QToolBar>
 #include "post_guard.h"
 
+#include "edbee/edbee.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/texttheme.h"
+#include "edbee/models/textgrammar.h"
+
+#include <QDir>
 
 using namespace std;
 
@@ -416,6 +423,26 @@ mudlet::mudlet()
     timerAutologin->start( 50 );
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
+
+    // Edbee has a singleton that needs some initialisation
+    initEdbee();
+}
+
+void mudlet::initEdbee() {
+
+    // We only need the single Lua lexer, problably ever
+    // Optional additional themes will be added in future
+
+    edbee::Edbee* edbee = edbee::Edbee::instance();
+
+    edbee->autoInit();
+    edbee->autoShutDownOnAppExit();
+
+    edbee::TextGrammarManager* grammarManager = edbee->grammarManager();
+    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+
+    edbee::TextThemeManager* themeManager = edbee->themeManager();
+    themeManager->readThemeFile(QLatin1Literal(":/edbee_defaults/Mudlet.tmTheme"));
 }
 
 bool mudlet::moduleTableVisible()
