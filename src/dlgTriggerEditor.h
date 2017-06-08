@@ -288,16 +288,6 @@ private:
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
 
-    // these variables track the last imported item of its type, via paste,
-    // package import or anything else
-    QTreeWidgetItem* mpLastImportedActionItem;
-    QTreeWidgetItem* mpLastImportedKeyItem;
-    QTreeWidgetItem* mpLastImportedTimerItem;
-    QTreeWidgetItem* mpLastImportedScriptItem;
-    QTreeWidgetItem* mpLastImportedTriggerItem;
-    QTreeWidgetItem* mpLastImportedAliasItem;
-    QTreeWidgetItem* mpLastImportedVarItem;
-
     QLineEdit* mpCursorPositionIndicator;
     int mCurrentView;
 
