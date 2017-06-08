@@ -276,6 +276,9 @@ private slots:
     void slot_statusBarMessageChanged(QString);
 
 private:
+
+    void initEdbee();
+
     void goingDown() { mIsGoingDown = true; }
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
@@ -317,6 +320,7 @@ private:
     QStatusBar* mpMainStatusBar;
 
     bool mIsToDisplayMapAuditErrorsToConsole;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
