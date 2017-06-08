@@ -7132,38 +7132,51 @@ void dlgTriggerEditor::slot_paste_xml()
     mpCurrentActionItem = 0;
     mpCurrentKeyItem = 0;
 
+    auto select = [this](auto slot_item_selector, TTreeWidget* itemTreeWidget, QTreeWidgetItem* currentItemPointer, int importedItemID) {
+        QTreeWidgetItemIterator it(itemTreeWidget);
+        while (*it) {
+            if ((*it)->data(0, Qt::UserRole).toInt() == importedItemID) {
+                (this->*slot_item_selector)(*it);
+                itemTreeWidget->setCurrentItem((*it), 0);
+                itemTreeWidget->scrollToItem((*it));
+                currentItemPointer = (*it);
+            }
+            ++it;
+        }
+    };
+
     mCurrentView = importedItemType;
     switch (importedItemType) {
     case cmTriggerView: {
         slot_show_triggers();
-        QTreeWidgetItemIterator it(treeWidget_triggers);
-        while (*it) {
-            if ((*it)->data(0, Qt::UserRole).toInt() == importedItemID) {
-                slot_trigger_selected((*it));
-                treeWidget_triggers->setCurrentItem((*it), 0);
-                treeWidget_triggers->scrollToItem((*it));
-                mpCurrentTriggerItem = (*it);
-            }
-            ++it;
-        }
-
+        select(&dlgTriggerEditor::slot_trigger_selected, treeWidget_triggers, mpCurrentTriggerItem, importedItemID);
         break;
     }
-    case cmTimerView:
+    case cmTimerView: {
         slot_show_timers();
+        select(&dlgTriggerEditor::slot_timer_selected, treeWidget_timers, mpCurrentTimerItem, importedItemID);
         break;
-    case cmAliasView:
+    }
+    case cmAliasView: {
         slot_show_aliases();
+        select(&dlgTriggerEditor::slot_alias_selected, treeWidget_aliases, mpCurrentAliasItem, importedItemID);
         break;
-    case cmScriptView:
+    }
+    case cmScriptView: {
         slot_show_scripts();
+        select(&dlgTriggerEditor::slot_scripts_selected, treeWidget_scripts, mpCurrentScriptItem, importedItemID);
         break;
-    case cmActionView:
+    }
+    case cmActionView: {
         slot_show_actions();
+        select(&dlgTriggerEditor::slot_action_selected, treeWidget_actions, mpCurrentActionItem, importedItemID);
         break;
-    case cmKeysView:
+    }
+    case cmKeysView: {
         slot_show_keys();
+        select(&dlgTriggerEditor::slot_key_selected, treeWidget_keys, mpCurrentKeyItem, importedItemID);
         break;
+    }
     }
 }
 

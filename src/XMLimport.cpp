@@ -559,7 +559,7 @@ void XMLimport::readUnknownMapElement()
 pair<int, int> XMLimport::readPackage()
 {
     int objectType = 0;
-    int lastItemID = -1;
+    int rootItemID = -1;
     while (!atEnd()) {
         readNext();
 
@@ -570,22 +570,22 @@ pair<int, int> XMLimport::readPackage()
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
                 objectType = dlgTriggerEditor::cmTriggerView;
-                lastItemID = readTriggerPackage();
+                rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
                 objectType = dlgTriggerEditor::cmTimerView;
-                lastItemID = readTimerPackage();
+                rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
                 objectType = dlgTriggerEditor::cmAliasView;
-                lastItemID = readAliasPackage();
+                rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
                 objectType = dlgTriggerEditor::cmActionView;
-                lastItemID = readActionPackage();
+                rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
                 objectType = dlgTriggerEditor::cmScriptView;
-                lastItemID = readScriptPackage();
+                rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
                 objectType = dlgTriggerEditor::cmKeysView;
-                lastItemID = readKeyPackage();
+                rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
@@ -596,7 +596,7 @@ pair<int, int> XMLimport::readPackage()
             }
         }
     }
-    return make_pair(objectType, lastItemID);
+    return make_pair(objectType, rootItemID);
 }
 
 void XMLimport::readHelpPackage()
@@ -979,10 +979,10 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 }
 
-// returns the ID of the last imported trigger
+// returns the ID of the root imported trigger/group
 int XMLimport::readTriggerPackage()
 {
-    int lastImportedTriggerID = -1;
+    int parentItemID = -1;
 
     while (!atEnd()) {
         readNext();
@@ -993,17 +993,18 @@ int XMLimport::readTriggerPackage()
         if (isStartElement()) {
             if (name() == "TriggerGroup" || name() == "Trigger") {
                 gotTrigger = true;
-                lastImportedTriggerID = readTriggerGroup(mPackageName.isEmpty() ? 0 : mpTrigger);
+                parentItemID = readTriggerGroup(mPackageName.isEmpty() ? 0 : mpTrigger);
             } else {
                 readUnknownTriggerElement();
             }
         }
     }
 
-    return lastImportedTriggerID;
+    return parentItemID;
 }
 
-// imports a trigger and returns its ID
+// imports a trigger and returns its ID - in case of a group, returns the ID
+// of the top-level trigger group.
 int XMLimport::readTriggerGroup(TTrigger *pParent)
 {
     auto pT = new TTrigger(pParent, mpHost);
