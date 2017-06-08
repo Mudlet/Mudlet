@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -152,7 +152,7 @@ public:
    bool                          moduleTableVisible();
    bool                          mWindowMinimized;
    void                          doAutoLogin( const QString & );
-   void                          deselect( Host * pHost, const QString & name );
+   bool                          deselect( Host * pHost, const QString & name );
    void                          stopSounds();
    void                          playSound( QString s );
    QTime                         mReplayTime;

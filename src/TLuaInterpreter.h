@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -82,14 +82,13 @@ public:
     void parseJSON(QString & key, const QString & string_data, const QString& protocol);
     void startLuaExecThread();
     void msdp2Lua(char *src, int srclen);
-    void threadLuaInterpreterExec( std::string code );
+// Not Used:    void threadLuaInterpreterExec( std::string code );
     void initLuaGlobals();
     bool call(const QString & function, const QString & mName );
     bool callMulti(const QString & function, const QString & mName );
     bool callConditionFunction( std::string & function, const QString & mName );
     bool call_luafunction( void * );
-    bool compile(const QString & );
-    bool compile(const QString & code, QString & error );
+    bool compile(const QString & code, QString & error, const QString & name );
     bool compileScript(const QString & );
     void setAtcpTable(const QString &, const QString & );
     void setGMCPTable(QString &, const QString & );
@@ -233,7 +232,7 @@ public:
     static int Send( lua_State * L );
     static int sendRaw( lua_State * L );
     static int Echo( lua_State * L );
-    static int select( lua_State * L );
+    static int selectString( lua_State * L ); // Was select but I think it clashes with the Lua command with that name
     static int getMainConsoleWidth( lua_State * L );
     static int selectSection( lua_State * L );
     static int replace( lua_State * L );
@@ -284,12 +283,14 @@ public:
     static int debug( lua_State * L );
     static int setWindowWrap( lua_State * );
     static int setWindowWrapIndent( lua_State * );
-    static int reset( lua_State * );
+    static int resetFormat( lua_State * );
     static int moveCursorEnd( lua_State * );
     static int getLastLineNumber( lua_State * );
     static int getNetworkLatency( lua_State * );
     static int appendBuffer( lua_State * );
     static int createBuffer( lua_State * );
+    static int raiseWindow( lua_State * );
+    static int lowerWindow( lua_State * );
     static int showUserWindow( lua_State * );
     static int hideUserWindow( lua_State * );
     static int closeUserWindow( lua_State * );
@@ -327,7 +328,7 @@ public:
     static int disconnect( lua_State * );
     static int reconnect( lua_State * );
     static int getMudletHomeDir( lua_State * );
-    static int getMudletLuaDefaultPath( lua_State * );
+    static int getMudletLuaDefaultPaths( lua_State * );
     static int setTriggerStayOpen( lua_State * );
     static int wrapLine( lua_State * );
     static int getFgColor( lua_State * );
@@ -387,9 +388,9 @@ public:
     static int getMapMenus(lua_State * L);
     static int getMudletVersion( lua_State * L );
     static int openWebPage( lua_State * L );
-    static int getRoomUserDataKeys( lua_State * L );
-    static int getAllRoomUserData( lua_State * L );
-    static int getAllRoomEntrances( lua_State * L );
+    static int getAllRoomEntrances( lua_State * );
+    static int getRoomUserDataKeys( lua_State * );
+    static int getAllRoomUserData( lua_State * );
     static int searchAreaUserData( lua_State * );
     static int getMapUserData( lua_State * );
     static int getAreaUserData( lua_State * );
@@ -402,6 +403,8 @@ public:
     static int clearMapUserData( lua_State * );
     static int clearMapUserDataItem( lua_State * );
     static int setDefaultAreaVisible( lua_State * );
+    static int getProfileName( lua_State * );
+    static int raiseGlobalEvent( lua_State * );
 
 
     std::list<std::string> mCaptureGroupList;
@@ -416,43 +419,43 @@ public:
 
 signals:
 
-    void signalOpenUserWindow( int, const QString& );
-    void signalEchoUserWindow( int, const QString&, const QString& );
-    void signalClearUserWindow( int, const QString& );
-    void signalEnableTimer( int, const QString& );
-    void signalDisableTimer( int, const QString& );
-    void signalNewJob(const QString& );
-    void signalEchoMessage( int, const QString& );
-    void signalSelect( int, const QString&, int );
-    void signalSelectSection( int, int, int );
-    void signalReplace( int, const QString& );
-    void signalSetFgColor( int, int, int, int );
-    void signalSetBgColor( int, int, int, int );
-    void signalTempTimer( int, double, const QString&, const QString& );
-    void signalNewCommand( int, const QString& ); //signal of the lua thread unit command dispatcher for the main event loop to post events
-    void signalNewLuaCodeToExecute(const QString& );
+// Not Used:    void signalOpenUserWindow( int, const QString& );
+// Not Used:    void signalEchoUserWindow( int, const QString&, const QString& );
+// Not Used:    void signalClearUserWindow( int, const QString& );
+// Not Used:    void signalEnableTimer( int, const QString& );
+// Not Used:    void signalDisableTimer( int, const QString& );
+// Not Used:    void signalNewJob(const QString& );
+// Not Used:    void signalEchoMessage( int, const QString& );
+// Not Used:    void signalSelect( int, const QString&, int );
+// Not Used:    void signalSelectSection( int, int, int );
+// Not Used:    void signalReplace( int, const QString& );
+// Not Used:    void signalSetFgColor( int, int, int, int );
+// Not Used:    void signalSetBgColor( int, int, int, int );
+// Not Used:    void signalTempTimer( int, double, const QString&, const QString& );
+// Not Used:    void signalNewCommand( int, const QString& ); //signal of the lua thread unit command dispatcher for the main event loop to post events
+// Not Used:    void signalNewLuaCodeToExecute(const QString& );
 
 public slots:
 
     void slot_replyFinished( QNetworkReply * );
-    void slotOpenUserWindow( int, const QString& );
-    void slotEchoUserWindow( int, const QString&, const QString& );
-    void slotClearUserWindow( int, const QString& );
-    void slotEnableTimer( int, const QString& );
-    void slotDisableTimer( int, const QString& );
-    void slotReplace( int, const QString& );
-    void slotEchoMessage( int, const QString& );
-    void slotNewCommand( int, const QString& );
-    void slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName );
+// Not Used:    void slotOpenUserWindow( int, const QString& );
+// Not Used:    void slotEchoUserWindow( int, const QString&, const QString& );
+// Not Used:    void slotClearUserWindow( int, const QString& );
+// Not Used:    void slotEnableTimer( int, const QString& );
+// Not Used:    void slotDisableTimer( int, const QString& );
+// Not Used:    void slotReplace( int, const QString& );
+// Not Used:    void slotEchoMessage( int, const QString& );
+// Not Used:    void slotNewCommand( int, const QString& );
+// Not Used:    void slotTempTimer( int hostID, double timeout, const QString& function, const QString& timerName );
     void slotPurge();
     void slotDeleteSender();
 
-        //void slotNewEcho(int,QString);
+// Not Used:    void slotNewEcho(int,QString);
 
     //public:
 private:
 
-    lua_State * getLuaExecutionUnit( int unit );
+// Not Used:    lua_State * getLuaExecutionUnit( int unit );
     lua_State* pGlobalLua;
     TLuaMainThread * mpLuaSessionThread;
 
@@ -463,11 +466,11 @@ private:
     QTimer purgeTimer;
 
 
-    lua_State * pGlobalLuaAliasExecutionUnit;
-    lua_State * pGlobalLuaTriggerExecutionUnit;
-    lua_State * pGlobalLuaGuiExecutionUnit;
-    lua_State * pGlobalLuaScriptExecutionUnit;
-    lua_State * pGlobalLuaTimerExecutionUnit;
+// Not Used:    lua_State * pGlobalLuaAliasExecutionUnit;
+// Not Used:    lua_State * pGlobalLuaTriggerExecutionUnit;
+// Not Used:    lua_State * pGlobalLuaGuiExecutionUnit;
+// Not Used:    lua_State * pGlobalLuaScriptExecutionUnit;
+// Not Used:    lua_State * pGlobalLuaTimerExecutionUnit;
 };
 
 /*
@@ -490,52 +493,56 @@ class TLuaMainThread : public QThread
 public:
 
   TLuaMainThread( TLuaInterpreter * pL ){ pLuaInterpreter = pL;  }
-  void run() override
-  {
-     std::cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<std::endl;
-      //pLuaInterpreter->initLuaGlobals();
-     exit=false;
-     while( ! exit )
-     {
-         if( ! mJobQueue.empty() )
-         {
-             pLuaInterpreter->threadLuaInterpreterExec( getJob() );
-         }
-         else
-         {
-             msleep(100);
-         }
-     }
-     std::cout << "TLuaMainThread::run() done exit." << std::endl;
-  }
 
-  std::string getJob()
-  {
-      mutex.lock();
-      std::string job = mJobQueue.front();
-      mJobQueue.pop();
-      mutex.unlock();
-      return job;
-  }
+// Not Used:
+//  void run() override
+//  {
+//     std::cout << "TLuaMainThread::run() called. Initializing Gatekeeper..."<<std::endl;
+//      //pLuaInterpreter->initLuaGlobals();
+//     exit=false;
+//     while( ! exit )
+//     {
+//         if( ! mJobQueue.empty() )
+//         {
+//             pLuaInterpreter->threadLuaInterpreterExec( getJob() );
+//         }
+//         else
+//         {
+//             msleep(100);
+//         }
+//     }
+//     std::cout << "TLuaMainThread::run() done exit." << std::endl;
+//  }
 
-  void postJob(QString code)
-  {
-     std::cout << "posting new job <"<<code.toLatin1().data()<<">"<<std::endl;
-     std::string job = code.toLatin1().data();
-     mutex.lock();
-     mJobQueue.push(job);
-     mutex.unlock();
-     std::cout << "DONE posting new job"<<std::endl;
-  }
+// Not Used {was in code above}:
+//  std::string getJob()
+//  {
+//      mutex.lock();
+//      std::string job = mJobQueue.front();
+//      mJobQueue.pop();
+//      mutex.unlock();
+//      return job;
+//  }
 
-  void callExit(){ exit = true; }
+// Not Used:
+//  void postJob(QString code)
+//  {
+//     std::cout << "posting new job <"<<code.toLatin1().data()<<">"<<std::endl;
+//     std::string job = code.toLatin1().data();
+//     mutex.lock();
+//     mJobQueue.push(job);
+//     mutex.unlock();
+//     std::cout << "DONE posting new job"<<std::endl;
+//  }
+
+// Not Used:  void callExit(){ exit = true; }
 
 private:
 
   TLuaInterpreter * pLuaInterpreter;
   QString code;
-  QMutex mutex;
-  std::queue<std::string> mJobQueue;
+// Not Used:  QMutex mutex;
+// Not Used:  std::queue<std::string> mJobQueue;
 
   bool exit;
 };

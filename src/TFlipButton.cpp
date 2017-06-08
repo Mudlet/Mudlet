@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,6 +26,7 @@
 #include "Host.h"
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
+#include "TAction.h"
 
 #include "pre_guard.h"
 #include <QMenu>
@@ -32,29 +34,14 @@
 #include <QStylePainter>
 #include "post_guard.h"
 
-
-TFlipButton::TFlipButton( TToolBar * parent, TAction * pTAction, int id, Host * pHost )
+TFlipButton::TFlipButton( TAction * pTAction, Host * pHost )
 : QPushButton( 0 )
 , mpTAction( pTAction )
-, mID( id )
+, mID( pTAction->getID() )
 , mpHost( pHost )
+, mOrientation( Qt::Horizontal )
+, mMirrored( false )
 {
-    init();
-}
-
-TFlipButton::TFlipButton( TEasyButtonBar * parent, TAction * pTAction, int id, Host * pHost )
-: QPushButton( 0 )
-, mpTAction( pTAction )
-, mID( id )
-, mpHost( pHost )
-{
-    init();
-}
-
-void TFlipButton::init()
-{
-    mOrientation = Qt::Horizontal;
-    mMirrored = false;
 }
 
 Qt::Orientation TFlipButton::orientation() const

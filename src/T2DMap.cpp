@@ -96,8 +96,8 @@ T2DMap::T2DMap(QWidget * parent)
     connect(&mMultiSelectionListWidget, SIGNAL(itemSelectionChanged()), this, SLOT(slot_roomSelectionChanged()));
     mMoveLabel = false;
     mLabelHilite = false;
-    xzoom = 30;
-    yzoom = 30;
+    xzoom = 20;
+    yzoom = 20;
     gzoom = 20;
     mPick = false;
     mTarget = 0;
@@ -2343,7 +2343,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         if( mCustomLinesRoomFrom > 0 )
         {
             if( mDialogLock )
-                return; // Prevent any line drawing until ready
+            {
+                 return; // Prevent any line drawing until ready
+            }
 
             TRoom * pR = mpMap->mpRoomDB->getRoom( mCustomLinesRoomFrom );
             if( pR )
@@ -2636,7 +2638,9 @@ void T2DMap::mousePressEvent(QMouseEvent *event)
         if( mCustomLinesRoomFrom > 0 )
         {
             if( mDialogLock )
-                return;
+            {
+                 return;
+            }
 
             TRoom * pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if( pR )
@@ -4541,6 +4545,7 @@ void T2DMap::slot_setCustomLine()
         mpCustomLinesDialog->raise();
         return;
     }
+
     QUiLoader loader;
 
     QFile file(":/ui/custom_lines.ui");
@@ -4550,11 +4555,7 @@ void T2DMap::slot_setCustomLine()
     if( ! d ) {
         return;
     }
-
     d->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-    mpCustomLinesDialog = d;
-    mpCustomLinesDialog->setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_custom_exit.png" ) ) );
-
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit = "";

@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -43,7 +44,6 @@ class XMLexport : public QXmlStreamWriter
 {
 public:
                     XMLexport( Host * );
-                    XMLexport( Host *, bool );
                     XMLexport( TTrigger * );
                     XMLexport( TTimer * );
                     XMLexport( TAlias * );
@@ -65,7 +65,7 @@ public:
 
     bool            exportHost( QIODevice * );
     bool            exportGenericPackage( QIODevice * device );
-    bool            writeGenericPackage( Host * pT );
+    bool            writeGenericPackage( Host * );
     bool            exportTrigger( QIODevice * );
     bool            exportTimer( QIODevice * );
     bool            exportAlias( QIODevice * );
@@ -88,7 +88,6 @@ private:
     TAction *       mpAction;
     TScript *       mpScript;
     TKey *          mpKey;
-    QString         mType;
 };
 
 #endif // MUDLET_XMLEXPORT_H

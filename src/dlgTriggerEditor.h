@@ -130,6 +130,7 @@ public slots:
     void                        slot_show_aliases();
     void                        slot_show_actions();
     void                        slot_show_keys();
+    void                        slot_tree_selection_changed();
     void                        slot_trigger_selected( QTreeWidgetItem *pItem );
     void                        slot_timer_selected( QTreeWidgetItem *pItem );
     void                        slot_scripts_selected( QTreeWidgetItem *pItem );
@@ -189,6 +190,7 @@ public slots:
 
 private slots:
     void                        slot_changeEditorTextOptions( QTextOption::Flags );
+    void                        slot_toggle_isPushDownButton( const int );
 
 private:
 

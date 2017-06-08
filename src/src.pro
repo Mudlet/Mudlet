@@ -24,7 +24,7 @@ lessThan(QT_MAJOR_VERSION, 5) {
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.0.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -56,7 +56,7 @@ QT += network opengl uitools multimedia gui
 # (it is NOT a Qt built-in variable) for a release build or, if you are
 # distributing modified code, it would be useful if you could put something to
 # distinguish the version:
-BUILD = -dev
+BUILD = "-dev"
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -119,7 +119,7 @@ unix:!macx {
         -lopengl32 \
         -lglut \
         -lglu32
-    INCLUDEPATH += "C:\\mingw32\\include"
+    INCLUDEPATH += "C:\\mingw32\\include" 
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
 #    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
@@ -278,12 +278,13 @@ HEADERS += \
     irc/include/irc.h \
     irc/include/irccodecplugin.h \
     irc/include/irccommand.h \
+    irc/include/ircdecoder_p.h \
     irc/include/ircglobal.h \
     irc/include/ircmessage.h \
+    irc/include/ircparser_p.h \
+    irc/include/ircsender.h \
     irc/include/ircsession.h \
     irc/include/ircutil.h \
-    irc/include/IrcGlobal \
-    irc/include/IrcSender \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -300,6 +301,7 @@ HEADERS += \
     TConsole.h \
     TDebug.h \
     TEasyButtonBar.h \
+    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -420,7 +422,16 @@ macx: {
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
     # Set the .app's icns file
-    ICON = osx-installer/osx.icns
+    ICON = icons/osx.icns
+}
+
+win32: {
+    # set the Windows binary icon
+    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+
+    # specify some windows information about the binary
+    QMAKE_TARGET_COMPANY = "Mudlet makers"
+    QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
@@ -459,7 +470,9 @@ DISTFILES += \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
-    ../cmake/FindZIP.cmake
+    ../cmake/FindZIP.cmake \
+    .clang-format

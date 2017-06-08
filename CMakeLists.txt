@@ -19,13 +19,7 @@
 ############################################################################
 
 PROJECT(mudlet)
-
-# Windows builds need 2.8.11, but for other platforms 2.8.9 should be enough
-IF(MSVC)
-  CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
-ELSE()
-  CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
-ENDIF()
+CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 
 IF(CMAKE_CONFIGURATION_TYPES)
   ADD_CUSTOM_TARGET(check COMMAND ${CMAKE_CTEST_COMMAND}
@@ -50,7 +44,7 @@ ELSE()
     SET(APP_TARGET mudlet)
 ENDIF()
 
-SET(APP_VERSION 3.0.1)
+SET(APP_VERSION 3.0.0)
 SET(APP_BUILD "-dev")
 # APP_BUILD should only be empty/null in official "release" builds,
 # developers may like to set it to their user and branch names to make it easier
