@@ -53,6 +53,21 @@
 #include <QTableWidgetItem>
 #include "post_guard.h"
 
+// Edbee Editor Includes
+
+#include "edbee/texteditorwidget.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/texteditorconfig.h"
+#include "edbee/models/textgrammar.h"
+#include "edbee/texteditorcontroller.h"
+#include "edbee/models/textundostack.h"
+#include "edbee/models/chardocument/chartextdocument.h"
+#include "edbee/edbee.h"
+
+#include "edbee/models/textsearcher.h" // These three are required for search highlighting
+#include "edbee/views/texttheme.h"
+#include "edbee/views/textrenderer.h"
+
 class dlgTimersMainArea;
 class dlgSystemMessageArea;
 class dlgSourceEditorArea;
@@ -117,7 +132,6 @@ public slots:
     void slot_var_changed(QTreeWidgetItem*);
     void slot_show_vars();
     void slot_viewErrorsAction();
-    void slot_cursorPositionChanged();
     void slot_set_pattern_type_color(int);
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
@@ -194,6 +208,8 @@ public slots:
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
 
+    void slot_updateStatusBar( const QString statusText); // For the source code editor
+
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(const int);
@@ -241,6 +257,10 @@ private:
     void exportKeyToClipboard();
 
     void importFromClipboard();
+
+    void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
+    edbee::CharTextDocument* newTextDocument();
+
     QToolBar* toolBar;
     QToolBar* toolBar2;
     bool showHiddenVars;
@@ -280,8 +300,13 @@ private:
     QList<dlgTriggerPatternEdit*> mTriggerPatternEdit;
     dlgVarsMainArea* mpVarsMainArea;
     bool mChangingVar;
-    QPlainTextEdit* mpSourceEditor;
-    QTextDocument* mpSourceEditorDocument;
+
+    QTextDocument *             mpSourceEditorDocument;
+    edbee::TextEditorWidget *   mpSourceEditorEdbee;
+    edbee::TextDocument *       mpSourceEditorEdbeeDocument;
+    edbee::TextSearcher *       mpSourceEditorSearcher;
+
+    QRegularExpression* simplifyEdbeeStatusBarRegex;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
