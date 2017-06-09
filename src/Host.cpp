@@ -765,7 +765,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = unzip(fileName, module, packageName, _dest, _tmpDir);
+        auto successful = unzip(fileName, packageName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
         if (!successful) {
@@ -895,7 +895,7 @@ bool Host::installPackage(const QString& fileName, int module)
     return true;
 }
 
-bool Host::unzip(const QString &fileName, int module, const QString &packageName, const QString &_dest, const QDir &_tmpDir) const
+bool Host::unzip(const QString &archiveName, const QString &packageName, const QString &destination, const QDir &tmpDir) const
 {
     int err = 0;
     //from: https://gist.github.com/mobius/1759816
@@ -903,7 +903,7 @@ bool Host::unzip(const QString &fileName, int module, const QString &packageName
     struct zip_file* zf;
     zip_uint64_t bytesRead = 0;
     char buf[4096]; // Was 100 but that seems unduly stingy...!
-    zip* archive = zip_open(fileName.toStdString().c_str(), 0, &err);
+    zip* archive = zip_open(archiveName.toStdString().c_str(), 0, &err);
     if (err != 0) {
         zip_error_to_str(buf, sizeof(buf), err, errno);
         return false;
@@ -928,7 +928,7 @@ bool Host::unzip(const QString &fileName, int module, const QString &packageName
                 if (!directoriesNeededMap.contains(pathInArchive)) {
                     QString pathInProfile(QStringLiteral("%1/%2").arg(packageName, pathInArchive));
                     directoriesNeededMap.insert(pathInArchive, pathInProfile);
-//                    qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
+//                    qDebug() << "Added:" << pathInArchive << "to list of sub-directoridirectoriesNeededMapes to be made.";
 //                } else {
 //                    qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
                 }
@@ -949,20 +949,22 @@ bool Host::unzip(const QString &fileName, int module, const QString &packageName
         }
     }
 
+    qDebug() << "directoriesNeededMap: " << directoriesNeededMap;
+
     // Now create the needed directories:
     QMapIterator<QString, QString> itPath(directoriesNeededMap);
     while (itPath.hasNext()) {
         itPath.next();
 //        qDebug() << "Host::installPackage(...)    INFO testing for presence of:" << itPath.value() << "relative to:" << _home;
-        if (!_tmpDir.exists(itPath.value())) {
-            if (!_tmpDir.mkpath(itPath.value())) {
+        if (!tmpDir.exists(itPath.value())) {
+            if (!tmpDir.mkpath(itPath.value())) {
                 // TODO: report failure to create needed sub-directory
                 // within package destination directory in profile directory
 
                 zip_close(archive);
                 return false; // Abort reading rest of archive
             }
-            _tmpDir.refresh();
+            tmpDir.refresh();
         }
     }
 
@@ -984,11 +986,11 @@ bool Host::unzip(const QString &fileName, int module, const QString &packageName
                 return false;
             }
 
-            QFile fd(QStringLiteral("%1%2").arg(_dest, entryInArchive));
+            QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                 //FIXME: report error to user
-//                qDebug() << "Host::installPackage(" << fileName << "," << module << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(_dest, entryInArchive)
+//                qDebug() << "Host::installPackage(" << archiveName << "," << module << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(destination, entryInArchive)
 //                         << "!\n    Reported error was:" << fd.errorString();
                 zip_fclose(zf);
                 zip_close(archive);

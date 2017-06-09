@@ -374,7 +374,7 @@ private:
 
     bool mHaveMapperScript;
 
-    bool unzip(const QString &fileName, int module, const QString &packageName, const QString &_dest, const QDir &_tmpDir) const;
+    bool unzip(const QString &archiveName, const QString &packageName, const QString &destination, const QDir &tmpDir) const;
 };
 
 #endif // MUDLET_HOST_H
