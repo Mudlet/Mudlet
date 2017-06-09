@@ -13469,7 +13469,7 @@ void TLuaInterpreter::initLuaGlobals()
     }
     else
     {
-        QString msg = "[  OK  ]  - Lua module lfs loaded";
+        QString msg = "[  OK  ]  - Lua module lfs loaded.";
         mpHost->postMessage( msg );
     }
 
@@ -13489,7 +13489,28 @@ void TLuaInterpreter::initLuaGlobals()
     }
     else
     {
-        QString msg = "[  OK  ]  - Lua module sqlite3 loaded";
+        QString msg = "[  OK  ]  - Lua module sqlite3 loaded.";
+        mpHost->postMessage( msg );
+    }
+
+
+    error = luaL_dostring( pGlobalLua, R"(utf8 = require "lua-utf8")" );
+    if( error != 0 )
+    {
+        string e = "no error message available from Lua";
+        if( lua_isstring( pGlobalLua, -1 ) )
+        {
+            e = "Lua error:";
+            e+=lua_tostring( pGlobalLua, -1 );
+        }
+        QString msg = "[ ERROR ] - Cannot find Lua module utf8.\n"
+                                  "utf8.* Lua functions won't be available.\n";
+        msg.append( e.c_str() );
+        mpHost->postMessage( msg );
+    }
+    else
+    {
+        QString msg = "[  OK  ]  - Lua module utf8 loaded.";
         mpHost->postMessage( msg );
     }
 
