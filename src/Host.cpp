@@ -765,7 +765,9 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = unzip(fileName, module, pUnzipDialog, packageName, _dest, _tmpDir);
+        auto successful = unzip(fileName, module, packageName, _dest, _tmpDir);
+        pUnzipDialog->deleteLater();
+        pUnzipDialog = Q_NULLPTR;
         if (!successful) {
             return false;
         }
@@ -893,7 +895,7 @@ bool Host::installPackage(const QString& fileName, int module)
     return true;
 }
 
-bool Host::unzip(const QString& fileName, int module, QDialog* pUnzipDialog, const QString& packageName, const QString& _dest, const QDir& _tmpDir) const
+bool Host::unzip(const QString &fileName, int module, const QString &packageName, const QString &_dest, const QDir &_tmpDir) const
 {
     int err = 0;
     //from: https://gist.github.com/mobius/1759816
@@ -922,29 +924,25 @@ bool Host::unzip(const QString& fileName, int module, QDialog* pUnzipDialog, con
             // "valid" one itself) in zs before using them:
             // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
             if (entryInArchive.endsWith(QLatin1Char('/'))) {
-                //                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a DIRECTORY...!";
+//                qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a DIRECTORY...!";
                 if (!directoriesNeededMap.contains(pathInArchive)) {
                     QString pathInProfile(QStringLiteral("%1/%2").arg(packageName, pathInArchive));
                     directoriesNeededMap.insert(pathInArchive, pathInProfile);
-                    //                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
+//                    qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
+//                } else {
+//                    qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
                 }
-                //                    else
-                //                    {
-                //                        qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
-                //                    }
             } else {
-                //                    qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a FILE...!";
+//                qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a FILE...!";
                 // Extract needed path from name for archives that do NOT
                 // explicitly list directories
                 if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
                     QString pathInProfile(QStringLiteral("%1/%2").arg(packageName, pathInArchive));
                     directoriesNeededMap.insert(pathInArchive, pathInProfile);
-                    //                        qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
+//                    qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
+//                } else {
+//                    qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
                 }
-                //                    else
-                //                    {
-                //                        qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
-                //                    }
             }
         } else {
             // TODO: Report failure to obtain an archive entry to parse
@@ -955,10 +953,7 @@ bool Host::unzip(const QString& fileName, int module, QDialog* pUnzipDialog, con
     QMapIterator<QString, QString> itPath(directoriesNeededMap);
     while (itPath.hasNext()) {
         itPath.next();
-        //            qDebug() << "Host::installPackage(...)    INFO testing for presence of:"
-        //                     << itPath.value()
-        //                     << "relative to:"
-        //                     << _home;
+//        qDebug() << "Host::installPackage(...)    INFO testing for presence of:" << itPath.value() << "relative to:" << _home;
         if (!_tmpDir.exists(itPath.value())) {
             if (!_tmpDir.mkpath(itPath.value())) {
                 // TODO: report failure to create needed sub-directory
@@ -993,8 +988,8 @@ bool Host::unzip(const QString& fileName, int module, QDialog* pUnzipDialog, con
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                 //FIXME: report error to user
-                qDebug() << "Host::installPackage(" << fileName << "," << module << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(_dest, entryInArchive)
-                         << "!\n    Reported error was:" << fd.errorString();
+//                qDebug() << "Host::installPackage(" << fileName << "," << module << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(_dest, entryInArchive)
+//                         << "!\n    Reported error was:" << fd.errorString();
                 zip_fclose(zf);
                 zip_close(archive);
                 return false;
@@ -1031,6 +1026,8 @@ bool Host::unzip(const QString& fileName, int module, QDialog* pUnzipDialog, con
         zip_error_to_str(buf, sizeof(buf), err, errno);
         return false;
     }
+
+    return true;
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
