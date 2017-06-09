@@ -73,7 +73,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(QLatin1Literal("Mudlet"));
+    config->setThemeName(QStringLiteral("Mudlet"));
     config->setCaretWidth(1);
     config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -82,6 +82,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
             edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
+    edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
+
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
     theme_download_label->hide();
@@ -143,7 +145,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
-    connect(code_editor_theme_selection_combobox, &QComboBox::currentIndex, this, &dlgProfilePreferences::slot_theme_selected);
+    connect(code_editor_theme_selection_combobox, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
 
     pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
     pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
@@ -1433,17 +1435,32 @@ void dlgProfilePreferences::loadEdbeeThemes()
     auto themesArray = loadDoc.array();
 
     QList<QString> themeNames;
-    edbee::Edbee* edbee = edbee::Edbee::instance();
+    auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
     for (auto theme : themesArray) {
-        themeNames << QString("%1").arg(theme.toObject()["Title"].toString());
-        themeManager->readThemeFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%s").arg(theme.toObject()["FileName"].toString()));
+        QString themeName = QString("%1").arg(theme.toObject()["Title"].toString());
+        if (themeName.contains(QChar(' '))) {continue;} // FIXME
+
+        themeNames << themeName;
+        // read the themes in now not to incur a delay on switching between them
+        QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme.toObject()["FileName"].toString());
+        auto result = themeManager->readThemeFile(themeLocation);
+        if (result == 0) {
+            qDebug() << "failed to load " << themeLocation;
+        }
     }
+
 
     code_editor_theme_selection_combobox->insertItems(0, themeNames);
 }
 
-void dlgProfilePreferences::slot_theme_selected(int currentIndex)
+void dlgProfilePreferences::slot_theme_selected(const QString &theme)
 {
-    qDebug() << currentIndex;
+    qDebug() << theme;
+    auto config = edbeePreviewWidget->config();
+    auto edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+    config->beginChanges();
+    config->setThemeName(theme);
+    config->endChanges();
 }

@@ -48,7 +48,7 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 
     config->setIndentSize(2); // 2 spaces is the Lua default
 
-    config->setThemeName(QLatin1Literal("Mudlet"));
+    config->setThemeName(QStringLiteral("Mudlet"));
     config->setCaretWidth(1);
 
     config->endChanges();

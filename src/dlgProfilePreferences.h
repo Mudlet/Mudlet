@@ -119,7 +119,7 @@ private:
 
     void loadEdbeeThemes();
 
-    void slot_theme_selected(int currentIndex);
+    void slot_theme_selected(const QString &theme);
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
