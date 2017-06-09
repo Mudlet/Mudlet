@@ -334,6 +334,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect( addTriggerAction, SIGNAL(triggered()), this, SLOT( slot_add_new()));
 
     QAction * deleteTriggerAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-delete-shred.png" ) ), tr("Delete Item"), this);
+    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
     connect( deleteTriggerAction, SIGNAL(triggered()), this, SLOT( slot_delete_item()));
 
