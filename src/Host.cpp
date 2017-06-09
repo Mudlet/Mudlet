@@ -990,8 +990,8 @@ bool Host::unzip(const QString &archiveName, const QString &packageName, const Q
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                 //FIXME: report error to user
-//                qDebug() << "Host::installPackage(" << archiveName << "," << module << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(destination, entryInArchive)
-//                         << "!\n    Reported error was:" << fd.errorString();
+                qDebug() << "Host::installPackage(" << archiveName << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(destination, entryInArchive)
+                         << "!\n    Reported error was:" << fd.errorString();
                 zip_fclose(zf);
                 zip_close(archive);
                 return false;

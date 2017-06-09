@@ -169,6 +169,9 @@ public:
     {
     };
 
+
+    bool unzip(const QString &archiveName, const QString &packageName, const QString &destination, const QDir &tmpDir) const;
+
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
@@ -373,8 +376,6 @@ private:
     QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
-
-    bool unzip(const QString &archiveName, const QString &packageName, const QString &destination, const QDir &tmpDir) const;
 };
 
 #endif // MUDLET_HOST_H

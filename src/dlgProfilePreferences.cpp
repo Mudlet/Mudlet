@@ -1367,12 +1367,16 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     // save the default value in settings so the field is visible for editing in config file if needed
     settings.setValue("colorSublimeThemesURL", themesURL);
 
-    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
-    QNetworkDiskCache* diskCache = new QNetworkDiskCache(this);
+    auto manager = new QNetworkAccessManager(this);
+    auto diskCache = new QNetworkDiskCache(this);
     diskCache->setCacheDirectory(cacheDir);
     manager->setCache(diskCache);
 
-    QNetworkReply* getReply = manager->get(QNetworkRequest(QUrl(themesURL)));
+    QUrl url(themesURL);
+    QNetworkRequest req(url);
+    req.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+
+    QNetworkReply* getReply = manager->get(req);
 
     void (QNetworkReply::*error_fun)(QNetworkReply::NetworkError) = &QNetworkReply::error;
     connect(getReply,
@@ -1404,7 +1408,27 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
                         qDebug() << "downloaded!";
 
-                        QByteArray archive = reply->readAll();
+                        QByteArray downloadedArchive = reply->readAll();
+
+                        QTemporaryFile file;
+                        if (file.open()) {
+                            file.write(downloadedArchive);
+                            file.close();
+                        }
+
+                        QTemporaryDir temporaryDir;
+                        if (!temporaryDir.isValid()) {
+                            return;
+                        }
+
+                        qDebug() << "tmp file name: " << file.fileName();
+                        qDebug() << "tmp dir: " << temporaryDir.path();
+
+                        auto success = mpHost->unzip(file.fileName(), QStringLiteral(""),
+                                      QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+
+                        qDebug() << "unzip: " << success;
+
 
                         loadEdbeeThemes();
 
