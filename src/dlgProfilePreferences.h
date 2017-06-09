@@ -116,6 +116,10 @@ private:
     QPointer<Host> mpHost;
 
     void slot_editor_tab_selected(int tabIndex);
+
+    void loadEdbeeThemes();
+
+    void slot_theme_selected(int currentIndex);
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

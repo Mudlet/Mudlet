@@ -49,6 +49,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QMainWindow>
+#include <QNetworkDiskCache>
 #include <QPalette>
 #include <QRegExp>
 #include <QTextOption>
@@ -142,6 +143,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
+    connect(code_editor_theme_selection_combobox, &QComboBox::currentIndex, this, &dlgProfilePreferences::slot_theme_selected);
 
     pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
     pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
@@ -1309,6 +1311,11 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+
+    // clear out this pointer as we setup some timers in the editor tab that could fire when
+    // the dialog has been destroyed
+    theme_download_label = Q_NULLPTR;
+
     close();
 }
 
@@ -1345,9 +1352,98 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
         return;
     }
 
+    theme_download_label->show();
+
     QDir dir;
-    if (!dir.mkpath(QStringLiteral("%1/.config/mudlet/edbee").arg(QDir::homePath()))) {
+    QString cacheDir = QStringLiteral("%1/.config/mudlet/edbee/cache").arg(QDir::homePath());
+    if (!dir.mkpath(cacheDir)) {
         return;
     }
 
+    QSettings settings("mudlet", "Mudlet");
+    QString themesURL = settings.value("colorSublimeThemesURL", QStringLiteral("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
+    // save the default value in settings so the field is visible for editing in config file if needed
+    settings.setValue("colorSublimeThemesURL", themesURL);
+
+    QNetworkAccessManager* manager = new QNetworkAccessManager(this);
+    QNetworkDiskCache* diskCache = new QNetworkDiskCache(this);
+    diskCache->setCacheDirectory(cacheDir);
+    manager->setCache(diskCache);
+
+    QNetworkReply* getReply = manager->get(QNetworkRequest(QUrl(themesURL)));
+
+    void (QNetworkReply::*error_fun)(QNetworkReply::NetworkError) = &QNetworkReply::error;
+    connect(getReply,
+            error_fun,
+            std::bind(
+                    [&](QNetworkReply* reply, QNetworkReply::NetworkError) {
+
+                            theme_download_label->setText(tr("Couldn't download themes: %1").arg(reply->errorString()));
+
+                            QTimer::singleShot(2 * 1000, theme_download_label, [label = theme_download_label] {
+                                label->hide();
+                                label->setText("Getting themes");
+                            });
+
+                        reply->deleteLater();
+                    },
+                    getReply,
+                    std::placeholders::_1));
+
+    connect(getReply,
+            &QNetworkReply::finished,
+            this,
+            std::bind(
+                    [=](QNetworkReply* reply) {
+                        // don't do anything if there was an error
+                        if (reply->error() != QNetworkReply::NoError) {
+                            return;
+                        }
+
+                        qDebug() << "downloaded!";
+
+                        QByteArray archive = reply->readAll();
+
+                        loadEdbeeThemes();
+
+                        reply->deleteLater();
+                    },
+                    getReply));
+}
+
+void dlgProfilePreferences::loadEdbeeThemes()
+{
+    QFile loadFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
+
+    if (!loadFile.open(QIODevice::ReadOnly)) {
+        theme_download_label->setText(tr("Couldn't open themes.json file."));
+
+        QTimer::singleShot(2 * 1000, [&] {
+            if (theme_download_label) {
+                theme_download_label->hide();
+                // TODO: fix crash when dialog is closed before timer fires
+                theme_download_label->setText("Getting themes");
+            }
+        });
+        return;
+    }
+
+    auto saveData = loadFile.readAll();
+    auto loadDoc(QJsonDocument::fromJson(saveData));
+    auto themesArray = loadDoc.array();
+
+    QList<QString> themeNames;
+    edbee::Edbee* edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+    for (auto theme : themesArray) {
+        themeNames << QString("%1").arg(theme.toObject()["Title"].toString());
+        themeManager->readThemeFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%s").arg(theme.toObject()["FileName"].toString()));
+    }
+
+    code_editor_theme_selection_combobox->insertItems(0, themeNames);
+}
+
+void dlgProfilePreferences::slot_theme_selected(int currentIndex)
+{
+    qDebug() << currentIndex;
 }
