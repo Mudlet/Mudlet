@@ -1226,9 +1226,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         bool isAreaWidgetInNeedOfResetting = false;
-        if(  ( ! pHost->mpMap->mpMapper->getDefaultAreaShown() )
-          && ( checkBox_showDefaultArea->isChecked() )
-          && ( pHost->mpMap->mpMapper->mp2dMap->mAID == -1 ) ) {
+        if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAID == -1)) {
             isAreaWidgetInNeedOfResetting = true;
         }
 
@@ -1244,7 +1242,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
-//qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+    //qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
@@ -1310,10 +1308,9 @@ void dlgProfilePreferences::slot_save_and_exit()
         QSize s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
-//qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+        //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
-    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(),
-                                         checkBox_showLineFeedsAndParagraphs->isChecked());
+    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
 
