@@ -116,7 +116,7 @@ private:
     QPointer<Host> mpHost;
 
     void slot_editor_tab_selected(int tabIndex);
-    void loadEdbeeThemes();
+    void loadEdbeeThemes(bool updateThemeManager = false);
     void slot_theme_selected(int index);
 };
 

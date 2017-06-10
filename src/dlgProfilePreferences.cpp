@@ -34,14 +34,7 @@
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
-#include "edbee/edbee.h"
-#include "edbee/models/textdocument.h"
-#include "edbee/models/texteditorconfig.h"
-#include "edbee/models/textgrammar.h"
-#include "edbee/texteditorwidget.h"
 #include "edbee/views/texteditorscrollarea.h"
-#include "edbee/views/textrenderer.h"
-#include "edbee/views/texttheme.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -84,7 +77,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
+    loadEdbeeThemes();
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
+    qDebug() << "theme" << mpHost->mEditorTheme << "index" <<  code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme);
     code_editor_theme_selection_combobox->setCurrentIndex(
             code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
     );
@@ -287,8 +282,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         wrap_at_spinBox->setValue(pHost->mWrapAt);
         indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
-
-        code_editor_theme_selection_combobox->setCurrentText(pHost->mEditorTheme);
 
         show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
         auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
@@ -1388,11 +1381,11 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
             std::bind(
                     [&](QNetworkReply* reply, QNetworkReply::NetworkError) {
 
-                        theme_download_label->setText(tr("Couldn't download themes: %1").arg(reply->errorString()));
+                        theme_download_label->setText(tr("Couldn't update themes: %1").arg(reply->errorString()));
 
                         QTimer::singleShot(5'1000, theme_download_label, [label = theme_download_label] {
                             label->hide();
-                            label->setText(tr("Getting themes from colorsublime.com..."));
+                            label->setText(tr("Updating themes from colorsublime.com..."));
                         });
 
                         reply->deleteLater();
@@ -1425,7 +1418,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
                         auto success = mpHost->unzip(file.fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
 
-                        loadEdbeeThemes();
+                        loadEdbeeThemes(true);
                         theme_download_label->hide();
 
                         reply->deleteLater();
@@ -1434,8 +1427,9 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 }
 
 // reloads the latest edbee themes from disk and fills up the
-// selection combobox with them
-void dlgProfilePreferences::loadEdbeeThemes()
+// selection combobox with them, optionally also loading them
+// into edbee's theme manager
+void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
 {
     QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
     auto edbee = edbee::Edbee::instance();
@@ -1453,6 +1447,7 @@ void dlgProfilePreferences::loadEdbeeThemes()
         QString themeFileName = theme.toObject()["FileName"].toString();
         sortedThemes << make_pair(themeText, themeFileName);
     }
+    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
@@ -1460,12 +1455,13 @@ void dlgProfilePreferences::loadEdbeeThemes()
         QString themeText = key.first;
         QString themeFileName = key.second;
 
-        // read the themes in now not to incur a delay on switching between them
-        QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
-        auto result = themeManager->readThemeFile(themeLocation);
-        if (result == 0) {
-            qWarning() << themeManager->lastErrorMessage();
-            continue;
+        if (updateThemeManager) {
+            QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
+            auto result = themeManager->readThemeFile(themeLocation);
+            if (result == 0) {
+                qWarning() << themeManager->lastErrorMessage();
+                continue;
+            }
         }
 
         // store the actual theme file as data because edbee needs that,

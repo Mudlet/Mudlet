@@ -747,7 +747,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
-    pHost->mEditorTheme = attributes().value("mEditorTheme").toString();
+    if (attributes().hasAttribute(QLatin1String("mEditorTheme"))) {
+        pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
+    }
     if (attributes().hasAttribute(QLatin1String("mEditorThemeFile"))) {
         pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     }
