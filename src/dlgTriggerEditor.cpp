@@ -206,12 +206,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
              SLOT(slot_changeEditorTextOptions(QTextOption::Flags))
          );
 
-    auto config = mpSourceEditorEdbee->config();
-    config->beginChanges();
-    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
-    config->endChanges();
+//    auto config = mpSourceEditorEdbee->config();
+//    config->beginChanges();
+//    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+//    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+//    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+//    config->endChanges();
 
     mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
 
@@ -7326,6 +7326,12 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     mpSourceEditorEdbeeDocument = newTextDocument();
     ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
 
+    // FIXME: set this to be set once and only updated when the value in settings is changed
+    auto config = ew->config();
+    config->beginChanges();
+    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->endChanges();
+
     // If undo is not disabled when setting the initial text, the
     // setting of the text will be undoable.
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
@@ -7347,8 +7353,6 @@ edbee::CharTextDocument* dlgTriggerEditor::newTextDocument()
     config->setCaretBlinkRate(200);
 
     config->setIndentSize(2); // 2 spaces is the Lua default
-
-    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
 
     connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=]() {
         config->beginChanges();

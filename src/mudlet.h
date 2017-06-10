@@ -194,6 +194,8 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    void setEditorTheme(const QString &theme);
+
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display
         statusBarAutoShown = 0x1, // Currently shown but to hide as soon as there is no text to display
@@ -320,8 +322,6 @@ private:
     QStatusBar* mpMainStatusBar;
 
     bool mIsToDisplayMapAuditErrorsToConsole;
-
-    void setEditorTheme(const QString &theme);
 
     void loadEditorThemesCache();
 };

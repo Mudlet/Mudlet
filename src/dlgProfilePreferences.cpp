@@ -79,7 +79,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
     loadEdbeeThemes();
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
-    qDebug() << "theme" << mpHost->mEditorTheme << "index" <<  code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme);
     code_editor_theme_selection_combobox->setCurrentIndex(
             code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
     );
@@ -1312,6 +1311,10 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
 
     pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+    mudlet::self()->setEditorTheme(code_editor_theme_selection_combobox->currentData().toString());
+
+    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
     pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData(Qt::UserRole).toString();
 
     close();
@@ -1436,6 +1439,7 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
     auto themeManager = edbee->themeManager();
 
     if (!themesFile.open(QIODevice::ReadOnly)) {
+        qWarning() << "Couldn't open" << themesFile.fileName();
         return;
     }
 
