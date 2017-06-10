@@ -1310,7 +1310,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
-    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
+    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked(),
+                                         code_editor_theme_selection_combobox->currentText(), code_editor_theme_selection_combobox->currentData().toString());
     mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
 
@@ -1389,7 +1390,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
                         QTimer::singleShot(5'1000, theme_download_label, [label = theme_download_label] {
                             label->hide();
-                            label->setText(tr("Getting themes"));
+                            label->setText(tr("Getting themes from colorsublime.com..."));
                         });
 
                         reply->deleteLater();
@@ -1439,7 +1440,7 @@ void dlgProfilePreferences::loadEdbeeThemes()
 
         QTimer::singleShot(5'1000, theme_download_label, [label = theme_download_label] {
             label->hide();
-            label->setText(tr("Getting themes"));
+            label->setText(tr("Getting themes from colorsublime.com..."));
         });
         return;
     }

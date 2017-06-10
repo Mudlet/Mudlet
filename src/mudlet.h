@@ -194,8 +194,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
 
-    void setEditorTextoptions(const bool, const bool);
-
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display
         statusBarAutoShown = 0x1, // Currently shown but to hide as soon as there is no text to display
@@ -322,6 +320,7 @@ private:
 
     bool mIsToDisplayMapAuditErrorsToConsole;
 
+    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown, const QString& themeName, const QString& themeFile);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
