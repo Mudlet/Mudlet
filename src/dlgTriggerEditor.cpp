@@ -206,8 +206,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
              SLOT(slot_changeEditorTextOptions(QTextOption::Flags))
          );
 
-    mpSourceEditorEdbee->config()->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    mpSourceEditorEdbee->config()->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->endChanges();
 
     mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
 
@@ -7323,20 +7327,19 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
 
     // If undo is not disabled when setting the initial text, the
-    // settings of the text will be undoable.
-
+    // setting of the text will be undoable.
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
-    mpSourceEditorEdbeeDocument->setText( initialText);
+    mpSourceEditorEdbeeDocument->setText(initialText);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
 
-edbee::CharTextDocument* dlgTriggerEditor::newTextDocument() {
+edbee::CharTextDocument* dlgTriggerEditor::newTextDocument()
+{
     edbee::CharTextDocument* newDoc = new edbee::CharTextDocument();
 
     edbee::TextEditorConfig* config = newDoc->config();
 
-    newDoc->setLanguageGrammar(
-                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    newDoc->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
 
     config->beginChanges();
 
@@ -7345,11 +7348,18 @@ edbee::CharTextDocument* dlgTriggerEditor::newTextDocument() {
 
     config->setIndentSize(2); // 2 spaces is the Lua default
 
-    config->setThemeName(QLatin1Literal("Mudlet"));
+    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+
+    connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=]() {
+        config->beginChanges();
+        config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+        config->endChanges();
+    });
+
     config->setCaretWidth(1);
 
-    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
     config->endChanges();
 

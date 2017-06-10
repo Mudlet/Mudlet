@@ -73,7 +73,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(QStringLiteral("Mudlet"));
+    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
     config->setCaretWidth(1);
     config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -85,6 +85,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
+    code_editor_theme_selection_combobox->setCurrentIndex(
+            code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
+    );
+
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
     theme_download_label->hide();
 
@@ -1314,6 +1318,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
 
+    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData(Qt::UserRole).toString();
+
     close();
 }
 
@@ -1419,11 +1426,15 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         auto success = mpHost->unzip(file.fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
 
                         loadEdbeeThemes();
+                        theme_download_label->hide();
+
                         reply->deleteLater();
                     },
                     getReply));
 }
 
+// reloads the latest edbee themes from disk and fills up the
+// selection combobox with them
 void dlgProfilePreferences::loadEdbeeThemes()
 {
     QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
@@ -1431,23 +1442,23 @@ void dlgProfilePreferences::loadEdbeeThemes()
     auto themeManager = edbee->themeManager();
 
     if (!themesFile.open(QIODevice::ReadOnly)) {
-        theme_download_label->setText(tr("Couldn't open themes.json file."));
-
-        QTimer::singleShot(5'1000, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Getting themes from colorsublime.com..."));
-        });
         return;
     }
 
-    theme_download_label->hide();
+    auto unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
+    QList<std::pair<QString, QString>> sortedThemes;
 
-    auto themesFileText = themesFile.readAll();
-    auto loadDoc(QJsonDocument::fromJson(themesFileText));
-    auto themesArray = loadDoc.array();
-    for (auto theme : themesArray) {
-        QString themeName = QString("%1").arg(theme.toObject()["Title"].toString());
-        QString themeFileName = QString("%1").arg(theme.toObject()["FileName"].toString());
+    for (auto theme : unsortedThemes) {
+        QString themeText = QString("%1").arg(theme.toObject()["Title"].toString());
+        QString themeFileName = theme.toObject()["FileName"].toString();
+        sortedThemes << make_pair(themeText, themeFileName);
+    }
+
+    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
+
+    for (auto key : sortedThemes) {
+        QString themeText = key.first;
+        QString themeFileName = key.second;
 
         // read the themes in now not to incur a delay on switching between them
         QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
@@ -1459,7 +1470,7 @@ void dlgProfilePreferences::loadEdbeeThemes()
 
         // store the actual theme file as data because edbee needs that,
         // not the name, for choosing the theme even after the theme file was loaded
-        code_editor_theme_selection_combobox->addItem(themeName, themeFileName);
+        code_editor_theme_selection_combobox->addItem(themeText, themeFileName);
     }
 }
 

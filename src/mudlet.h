@@ -193,7 +193,7 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-
+    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display
         statusBarAutoShown = 0x1, // Currently shown but to hide as soon as there is no text to display
@@ -257,6 +257,7 @@ protected:
 
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
+    void signal_editorThemeChanged(QString);
     void signal_profileMapReloadRequested(QList<QString>);
 
 private slots:
@@ -320,7 +321,9 @@ private:
 
     bool mIsToDisplayMapAuditErrorsToConsole;
 
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    void setEditorTheme(const QString &theme);
+
+    void loadEdbeeThemes();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)

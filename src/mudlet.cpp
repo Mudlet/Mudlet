@@ -426,6 +426,7 @@ mudlet::mudlet()
 
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+    loadEdbeeThemes();
 }
 
 
@@ -2774,6 +2775,12 @@ void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const boo
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
 }
 
+
+void mudlet::setEditorTheme(const QString& theme)
+{
+    emit signal_editorThemeChanged(theme);
+}
+
 void mudlet::slot_statusBarMessageChanged( QString text )
 {
     if( mStatusBarState & statusBarAutoShown ) {
@@ -2803,3 +2810,26 @@ void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
     emit signal_profileMapReloadRequested( affectedProfiles );
 }
 
+// load edbee themes from disk into the edbee theme manager
+void mudlet::loadEdbeeThemes()
+{
+    QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
+    auto edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+
+    if (!themesFile.open(QIODevice::ReadOnly)) {
+        return;
+    }
+
+    auto themes = QJsonDocument::fromJson(themesFile.readAll()).array();
+    for (auto theme : themes) {
+        QString themeFileName = theme.toObject()["FileName"].toString();
+
+        QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
+        auto result = themeManager->readThemeFile(themeLocation);
+        if (result == nullptr) {
+            qWarning() << themeManager->lastErrorMessage();
+            continue;
+        }
+    }
+}

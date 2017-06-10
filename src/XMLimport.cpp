@@ -747,6 +747,10 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
+    pHost->mEditorTheme = attributes().value("mEditorTheme").toString();
+    if (attributes().hasAttribute(QLatin1String("mEditorThemeFile"))) {
+        pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    }
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
