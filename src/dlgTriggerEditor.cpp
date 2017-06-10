@@ -344,8 +344,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QAction * saveAction = new QAction( QIcon( QStringLiteral( ":/icons/document-save-as.png" ) ), tr("Save Item"), this);
     saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                           .arg(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
-    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, so new changes take effect - does not save to disk though..."));
+                           .arg(tr("Saves the selected item. (CTRL+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
+    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
     QAction * importAction = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Import"), this);
@@ -360,8 +360,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     profileSaveAction->setEnabled( true );
     profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     profileSaveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                  .arg(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
-    profileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, etc, but not the map); also "synchronizes" modules that are so marked.)"));
+                                  .arg(tr(R"(Saves your profile. (CTRL+SHIFT+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
+    profileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * saveProfileAsAction = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Save Profile As"), this);
