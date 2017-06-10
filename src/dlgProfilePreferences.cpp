@@ -284,6 +284,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         wrap_at_spinBox->setValue(pHost->mWrapAt);
         indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
 
+        code_editor_theme_selection_combobox->setCurrentText(pHost->mEditorTheme);
+
         show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
         auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
         command_separator_lineedit->setText(pHost->mCommandSeparator);
@@ -352,7 +354,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
 
-        // label to show on sucessful map file action
+        // label to show on successful map file action
         label_mapFileActionResult->hide();
 
         connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
@@ -1310,14 +1312,10 @@ void dlgProfilePreferences::slot_save_and_exit()
         QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
-    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked(),
-                                         code_editor_theme_selection_combobox->currentText(), code_editor_theme_selection_combobox->currentData().toString());
+    mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(),
+                                         checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
-
-    // clear out this pointer as we setup some timers in the editor tab that could fire when
-    // the dialog has been destroyed
-    theme_download_label = Q_NULLPTR;
 
     close();
 }

@@ -161,6 +161,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mHaveMapperScript(false)
+, mEditorTheme("Mudlet")
+, mEditorThemeFile("Mudlet")
 {
    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));

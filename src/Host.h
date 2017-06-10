@@ -244,6 +244,9 @@ public:
     int mWrapAt;
     int mWrapIndentCount;
 
+    QString mEditorTheme;
+    QString mEditorThemeFile;
+
     QColor mBlack;
     QColor mLightBlack;
     QColor mRed;

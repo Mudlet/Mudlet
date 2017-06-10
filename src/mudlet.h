@@ -320,7 +320,7 @@ private:
 
     bool mIsToDisplayMapAuditErrorsToConsole;
 
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown, const QString& themeName, const QString& themeFile);
+    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)

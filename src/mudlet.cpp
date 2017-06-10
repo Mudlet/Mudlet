@@ -2768,7 +2768,7 @@ void mudlet::playSound(QString s, int soundVolume)
     pPlayer->play();
 }
 
-void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown, const QString& themeName, const QString& themeFile)
+void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
 {
     mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0) | (isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0));
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
