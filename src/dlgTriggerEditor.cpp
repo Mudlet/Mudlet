@@ -7330,6 +7330,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     auto config = ew->config();
     config->beginChanges();
     config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->setFont(mpHost->mDisplayFont);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
