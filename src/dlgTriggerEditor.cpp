@@ -7352,6 +7352,7 @@ edbee::CharTextDocument* dlgTriggerEditor::newTextDocument()
 
     connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=]() {
         config->beginChanges();
+        qDebug() << "editor theme changed!";
         config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
         config->endChanges();
     });

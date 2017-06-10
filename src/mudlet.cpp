@@ -426,7 +426,7 @@ mudlet::mudlet()
 
     // Edbee has a singleton that needs some initialisation
     initEdbee();
-    loadEdbeeThemes();
+    loadEditorThemesCache();
 }
 
 
@@ -2811,7 +2811,7 @@ void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
 }
 
 // load edbee themes from disk into the edbee theme manager
-void mudlet::loadEdbeeThemes()
+void mudlet::loadEditorThemesCache()
 {
     QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
     auto edbee = edbee::Edbee::instance();

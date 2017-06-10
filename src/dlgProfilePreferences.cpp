@@ -1456,6 +1456,9 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
         QString themeFileName = key.second;
 
         if (updateThemeManager) {
+            // skip loading Mudlet theme as it's embedded inside Mudlet, not on disk
+            if (themeFileName == QLatin1String("Mudlet")) { continue; }
+
             QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
             auto result = themeManager->readThemeFile(themeLocation);
             if (result == 0) {

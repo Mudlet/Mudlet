@@ -323,7 +323,7 @@ private:
 
     void setEditorTheme(const QString &theme);
 
-    void loadEdbeeThemes();
+    void loadEditorThemesCache();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
