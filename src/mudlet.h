@@ -210,9 +210,9 @@ public:
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
 
-    const bool getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
-    void setAuditErrorsToConsoleEnabled(const bool state) { mIsToDisplayMapAuditErrorsToConsole = state; }
-    void createMapper(bool isToLoadDefaultMapFile = true);
+    const bool getShowMapAuditErrors() { return mshowMapAuditErrors; }
+    void showMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void createMapper(bool loadDefaultMap = true);
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -233,7 +233,7 @@ public slots:
     void slot_multi_view();
     void slot_stopAllTriggers();
     void slot_userToolBar_hovered(QAction* pA);
-    void slot_connection_dlg_finnished(const QString& profile, int historyVersion);
+    void slot_connection_dlg_finished(const QString &profile, int historyVersion);
     void slot_timer_fires();
     void slot_send_login();
     void slot_send_pass();
@@ -320,7 +320,7 @@ private:
     HostManager mHostManager;
     QStatusBar* mpMainStatusBar;
 
-    bool mIsToDisplayMapAuditErrorsToConsole;
+    bool mshowMapAuditErrors;
 
 };
 

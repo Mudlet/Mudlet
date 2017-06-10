@@ -239,7 +239,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         comboBox_statusBarSetting->setCurrentIndex(_indexForStatusBarSetting);
     }
 
-    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->getAuditErrorsToConsoleEnabled());
+    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->getShowMapAuditErrors());
     Host* pHost = mpHost;
     if (pHost) {
         mFontSize = pHost->mDisplayFont.pointSize();
@@ -883,8 +883,8 @@ void dlgProfilePreferences::loadMap()
     label_mapFileActionResult->show();
 
     // Ensure the setting is already made as the loadMap(...) uses the set value
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    bool showAuditErrors = mudlet::self()->getShowMapAuditErrors();
+    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
         label_mapFileActionResult->setText(tr("Importing map - please wait..."));
@@ -909,7 +909,7 @@ void dlgProfilePreferences::loadMap()
     QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
 
     // Restore setting immediately before we used it
-    mudlet::self()->setAuditErrorsToConsoleEnabled(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->showMapAuditErrors(showAuditErrors);
 }
 
 void dlgProfilePreferences::saveMap()
@@ -922,7 +922,7 @@ void dlgProfilePreferences::saveMap()
     QString fileName = QFileDialog::getSaveFileName( this,
                                                      tr( "Save Mudlet map" ),
                                                      QDir::homePath(),
-                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programatically!" ) );
+                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!" ) );
     if (fileName.isEmpty()) {
         return;
     }
@@ -942,8 +942,8 @@ void dlgProfilePreferences::saveMap()
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
     // Ensure the setting is already made as the saveMap(...) uses the set value
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    bool showAuditErrors = mudlet::self()->getShowMapAuditErrors();
+    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (pHost->mpConsole->saveMap(fileName)) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
@@ -952,7 +952,7 @@ void dlgProfilePreferences::saveMap()
     }
     // Then restore prior version
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
-    mudlet::self()->setAuditErrorsToConsoleEnabled(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->showMapAuditErrors(showAuditErrors);
 
     QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
 }
@@ -1019,8 +1019,8 @@ void dlgProfilePreferences::copyMap()
 
     // Ensure the setting is already made as the value could be used in the
     // code following after
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getShowMapAuditErrors();
+    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
     // stored their maps - if we do not already know where the player is in the
@@ -1163,7 +1163,7 @@ void dlgProfilePreferences::copyMap()
 
     // CHECK: Race condition? We might be changing this whilst other profile
     // are accessing it...
-    mudlet::self()->setAuditErrorsToConsoleEnabled(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->showMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
@@ -1283,7 +1283,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
     close();
 }
