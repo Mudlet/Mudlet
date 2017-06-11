@@ -61,30 +61,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // /testing controls can be placed if needed...
     groupBox_Debug->hide();
 
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setSmartTab(true);
-    config->setCaretBlinkRate(200);
-    config->setIndentSize(2);
-    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
-    config->setCaretWidth(1);
-    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->endChanges();
-    edbeePreviewWidget->textDocument()->setLanguageGrammar(
-            edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
-    // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
-    edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
-    edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
-
-    loadEdbeeThemes();
-    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
-    code_editor_theme_selection_combobox->setCurrentIndex(
-            code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
-    );
-
-    script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
-    theme_download_label->hide();
+    loadEditorTab();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
@@ -408,6 +385,34 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
         connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
     }
+}
+
+void dlgProfilePreferences::loadEditorTab() {
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setSmartTab(true);
+    config->setCaretBlinkRate(200);
+    config->setIndentSize(2);
+    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->setCaretWidth(1);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(
+            edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
+    edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
+    edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
+
+    loadEdbeeThemes();
+    loadAvailableScripts();
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
+    code_editor_theme_selection_combobox->setCurrentIndex(
+            code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
+    );
+
+    script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
+    theme_download_label->hide();
 }
 
 void dlgProfilePreferences::setColors()
@@ -1347,6 +1352,64 @@ void dlgProfilePreferences::slot_setEncoding( const QString & newEncoding )
     mpHost->mTelnet.setEncoding(newEncoding);
 }
 
+// loads available Lua scripts from triggers, aliases, scripts, etc into the
+// editor tab combobox
+void dlgProfilePreferences::loadAvailableScripts()
+{
+    // a items of item name ("My first alias") and item type ("alias")
+    std::vector<std::pair<QString, QString>> items;
+
+    std::list<TTrigger*> triggers = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    for (auto trigger : triggers) {
+        items.push_back(std::make_pair(trigger->getName(), QStringLiteral("trigger")));
+        //                recursiveSearchTriggers( trigger, s );
+    }
+
+    std::list<TAlias*> aliases = mpHost->getAliasUnit()->getAliasRootNodeList();
+    for (auto alias : aliases) {
+        items.push_back(std::make_pair(alias->getName(), QStringLiteral("alias")));
+        //                recursiveSearchAlias( alias, s );
+    }
+
+    std::list<TScript*> scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
+    for (auto script : scripts) {
+        items.push_back(std::make_pair(script->getName(), QStringLiteral("script")));
+
+        //                recursiveSearchScripts( script, s );
+    }
+
+    std::list<TAction*> actions = mpHost->getActionUnit()->getActionRootNodeList();
+    for (auto action : actions) {
+        items.push_back(std::make_pair(action->getName(), QStringLiteral("button")));
+//        recursiveSearchActions(action, s);
+    }
+
+    std::list<TTimer*> timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    for (auto timer : timers) {
+        items.push_back(std::make_pair(timer->getName(), QStringLiteral("timer")));
+//        recursiveSearchTimers(timer, s);
+    }
+
+    std::list<TKey*> keys = mpHost->getKeyUnit()->getKeyRootNodeList();
+    for (auto key : keys) {
+        items.push_back(std::make_pair(key->getName(), QStringLiteral("key")));
+
+//        recursiveSearchKeys(key, s);
+    }
+
+
+    auto combobox = script_preview_combobox;
+    combobox->setUpdatesEnabled(false);
+    combobox->setDuplicatesEnabled(true);
+    combobox->clear();
+
+    for (auto item : items) {
+        combobox->addItem(QStringLiteral("%1 (%2)").arg(item.first, item.second));
+    }
+
+    combobox->setUpdatesEnabled(true);
+}
+
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 {
     // bail out if this is not an editor tab
@@ -1455,6 +1518,7 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
+    code_editor_theme_selection_combobox->setUpdatesEnabled(false);
     for (auto key : sortedThemes) {
         QString themeText = key.first;
         QString themeFileName = key.second;
@@ -1475,6 +1539,7 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(themeText, themeFileName);
     }
+    code_editor_theme_selection_combobox->setUpdatesEnabled(true);
 }
 
 void dlgProfilePreferences::slot_theme_selected(int index)

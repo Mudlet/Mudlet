@@ -118,6 +118,10 @@ private:
     void slot_editor_tab_selected(int tabIndex);
     void loadEdbeeThemes(bool updateThemeManager = false);
     void slot_theme_selected(int index);
+
+    void loadAvailableScripts();
+
+    void loadEditorTab();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
