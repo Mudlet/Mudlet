@@ -239,7 +239,6 @@ private:
     void exportKey(QFile&);
 
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
-    edbee::CharTextDocument* newTextDocument();
 
     QToolBar* toolBar;
     QToolBar* toolBar2;
