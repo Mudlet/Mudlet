@@ -404,8 +404,6 @@ void dlgProfilePreferences::loadEditorTab() {
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
-    loadEdbeeThemes();
-    loadAvailableScripts();
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
     code_editor_theme_selection_combobox->setCurrentIndex(
             code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
@@ -413,6 +411,18 @@ void dlgProfilePreferences::loadEditorTab() {
 
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
     theme_download_label->hide();
+
+    loadEdbeeThemes();
+    loadAvailableScripts();
+
+    connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            [=](int index){
+//                auto itemType = script_preview_combobox->text
+//                auto itemId
+            });
+
+    // fire tab selection event manually should the dialog open on it by default
+    if (tabWidgeta->currentIndex() == 3) { slot_editor_tab_selected(3); }
 }
 
 void dlgProfilePreferences::setColors()
@@ -1356,47 +1366,46 @@ void dlgProfilePreferences::slot_setEncoding( const QString & newEncoding )
 // editor tab combobox
 void dlgProfilePreferences::loadAvailableScripts()
 {
-    // a items of item name ("My first alias") and item type ("alias")
-    std::vector<std::pair<QString, QString>> items;
+    // a items of item name ("My first alias"), item type ("alias"), and item ID
+    std::vector<std::tuple<QString, QString, int>> items;
 
     std::list<TTrigger*> triggers = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
-        items.push_back(std::make_pair(trigger->getName(), QStringLiteral("trigger")));
+        items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
         //                recursiveSearchTriggers( trigger, s );
     }
 
     std::list<TAlias*> aliases = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
-        items.push_back(std::make_pair(alias->getName(), QStringLiteral("alias")));
+        items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
         //                recursiveSearchAlias( alias, s );
     }
 
     std::list<TScript*> scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : scripts) {
-        items.push_back(std::make_pair(script->getName(), QStringLiteral("script")));
+        items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
 
         //                recursiveSearchScripts( script, s );
     }
 
-    std::list<TAction*> actions = mpHost->getActionUnit()->getActionRootNodeList();
-    for (auto action : actions) {
-        items.push_back(std::make_pair(action->getName(), QStringLiteral("button")));
-//        recursiveSearchActions(action, s);
-    }
-
     std::list<TTimer*> timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
-        items.push_back(std::make_pair(timer->getName(), QStringLiteral("timer")));
-//        recursiveSearchTimers(timer, s);
+        items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+        //        recursiveSearchTimers(timer, s);
     }
 
     std::list<TKey*> keys = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
-        items.push_back(std::make_pair(key->getName(), QStringLiteral("key")));
+        items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
 
-//        recursiveSearchKeys(key, s);
+        //        recursiveSearchKeys(key, s);
     }
 
+    std::list<TAction*> actions = mpHost->getActionUnit()->getActionRootNodeList();
+    for (auto action : actions) {
+        items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+        //        recursiveSearchActions(action, s);
+    }
 
     auto combobox = script_preview_combobox;
     combobox->setUpdatesEnabled(false);
@@ -1404,10 +1413,15 @@ void dlgProfilePreferences::loadAvailableScripts()
     combobox->clear();
 
     for (auto item : items) {
-        combobox->addItem(QStringLiteral("%1 (%2)").arg(item.first, item.second));
+        combobox->addItem(QStringLiteral("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)), std::get<2>(item));
     }
 
     combobox->setUpdatesEnabled(true);
+}
+
+void dlgProfilePreferences::slot_theme_preview_script_selected()
+{
+
 }
 
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
