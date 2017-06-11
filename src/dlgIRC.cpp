@@ -49,16 +49,11 @@ int dlgIRC::DefaultHostPort = 6667;
 QString dlgIRC::DefaultNickName = "Mudlet";
 QStringList dlgIRC::DefaultChannels = QStringList() << "#mudlet";
 
-dlgIRC::dlgIRC(Host* pHost) :
-  mpHost(pHost)
-, mInputHistoryMax(8)
-, mIrcStarted(false)
-, mReadyForSending(false)
-, mConnectedHostName()
+dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
 {
     setupUi(this);
     setWindowTitle(tr("%1 - Mudlet IRC Client").arg(mpHost->getName()));
-    setWindowIcon( QIcon( QStringLiteral( ":/icons/mudlet_irc.png" ) ) );
+    setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_irc.png")));
 
     setupCommandParser();
 
@@ -66,12 +61,12 @@ dlgIRC::dlgIRC(Host* pHost) :
     connection->setReconnectDelay(5);
 
     lineEdit->setAttribute(Qt::WA_MacShowFocusRect, false);
-    ircBrowser->setFocusProxy( lineEdit );
+    ircBrowser->setFocusProxy(lineEdit);
 
     // nick name completion
     completer = new IrcCompleter(this);
     completer->setParser(commandParser);
-    connect(completer, SIGNAL(completed(QString,int)), this, SLOT(slot_nameCompleted(QString,int)));
+    connect(completer, SIGNAL(completed(QString, int)), this, SLOT(slot_nameCompleted(QString, int)));
     QShortcut* shortcut = new QShortcut(Qt::Key_Tab, this);
     connect(shortcut, SIGNAL(activated()), this, SLOT(slot_nameCompletion()));
     QShortcut* shortcut2 = new QShortcut(Qt::Key_Up, this);
@@ -84,7 +79,7 @@ dlgIRC::dlgIRC(Host* pHost) :
     connect(connection, SIGNAL(connected()), this, SLOT(slot_onConnected()));
     connect(connection, SIGNAL(connecting()), this, SLOT(slot_onConnecting()));
     connect(connection, SIGNAL(disconnected()), this, SLOT(slot_onDisconnected()));
-    connect(connection, SIGNAL(nickNameRequired(QString,QString*)), this, SLOT(slot_nickNameRequired(QString,QString*)));
+    connect(connection, SIGNAL(nickNameRequired(QString, QString*)), this, SLOT(slot_nickNameRequired(QString, QString*)));
     connect(connection, SIGNAL(nickNameChanged(QString)), this, SLOT(slot_nickNameChanged(QString)));
     connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
     connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
@@ -113,7 +108,8 @@ dlgIRC::~dlgIRC()
     }
 }
 
-void dlgIRC::startClient() {
+void dlgIRC::startClient()
+{
     if (mIrcStarted) {
         return;
     }
@@ -134,7 +130,7 @@ void dlgIRC::startClient() {
     mIrcStarted = true;
 }
 
-bool dlgIRC::sendMsg(const QString &target, const QString &message)
+bool dlgIRC::sendMsg(const QString& target, const QString& message)
 {
     if (message.isEmpty()) {
         return true;
@@ -148,16 +144,16 @@ bool dlgIRC::sendMsg(const QString &target, const QString &message)
     // inform the command parser of the target for this message.
     // parses the message and then reverts the target to avoid confusing our UI.
     QString lastParserTarget = commandParser->target();
-    commandParser->setTarget( msgTarget );
+    commandParser->setTarget(msgTarget);
     IrcCommand* command = commandParser->parse(message);
-    commandParser->setTarget( lastParserTarget );
+    commandParser->setTarget(lastParserTarget);
 
     if (!command) {
         return false;
     }
 
     bool sendCommand = processCustomCommand(command);
-    if( !sendCommand ) {
+    if (!sendCommand) {
         return true;
     }
 
@@ -194,9 +190,9 @@ void dlgIRC::ircRestart(bool reloadConfigs)
         connection->quit(msg);
 
     // remove the old buffers.
-    for( QString chName : mChannels ) {
+    for (QString chName : mChannels) {
         if (chName == serverBuffer->name()) {
-            continue;  // skip the server-buffer.
+            continue; // skip the server-buffer.
         }
         bufferModel->remove(chName);
     }
@@ -221,7 +217,8 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     serverBuffer->setName(connection->host());
 }
 
-void dlgIRC::setupCommandParser() {
+void dlgIRC::setupCommandParser()
+{
     // create a command parser and teach it some commands. notice also
     // that we must keep the command parser aware of the context in
     // setupBuffers() and onBufferActivated()
@@ -258,11 +255,11 @@ void dlgIRC::setupCommandParser() {
     commandParser->addCommand(IrcCommand::Whois, "WHOIS <user>");
     commandParser->addCommand(IrcCommand::Whowas, "WHOWAS <user>");
 
-    commandParser->addCommand(IrcCommand::Custom, "MSG <target> <message...>");  // replaces the old /msg command.
-    commandParser->addCommand(IrcCommand::Custom, "CLEAR (<buffer>)");  // clears the given buffer, or the current active if none are given.
-    commandParser->addCommand(IrcCommand::Custom, "CLOSE (<buffer>)");  // closes the buffer and removes it from the list, uses current active buffer if none are given.
-    commandParser->addCommand(IrcCommand::Custom, "RECONNECT");  // Issues a Quit command and closes the IRC connection then reconnects to the IRC server.
-    commandParser->addCommand(IrcCommand::Custom, "HELP (<command>)");  // displays some help information about a given command or lists all available commands.
+    commandParser->addCommand(IrcCommand::Custom, "MSG <target> <message...>"); // replaces the old /msg command.
+    commandParser->addCommand(IrcCommand::Custom, "CLEAR (<buffer>)");          // clears the given buffer, or the current active if none are given.
+    commandParser->addCommand(IrcCommand::Custom, "CLOSE (<buffer>)");          // closes the buffer and removes it from the list, uses current active buffer if none are given.
+    commandParser->addCommand(IrcCommand::Custom, "RECONNECT");                 // Issues a Quit command and closes the IRC connection then reconnects to the IRC server.
+    commandParser->addCommand(IrcCommand::Custom, "HELP (<command>)");          // displays some help information about a given command or lists all available commands.
 }
 
 void dlgIRC::setupBuffers()
@@ -274,10 +271,10 @@ void dlgIRC::setupBuffers()
     // keep the command parser aware of the context
     connect(bufferModel, SIGNAL(channelsChanged(QStringList)), commandParser, SLOT(setChannels(QStringList)));
     // keep track of the current buffer, see also onBufferActivated()
-    connect(bufferList->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(slot_onBufferActivated(QModelIndex)));
+    connect(bufferList->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)), this, SLOT(slot_onBufferActivated(QModelIndex)));
     // create a server buffer for non-targeted messages...
-    serverBuffer = bufferModel->add( connection->host() );
-    serverBuffer->setName( connection->host() );
+    serverBuffer = bufferModel->add(connection->host());
+    serverBuffer->setName(connection->host());
     connect(bufferModel, SIGNAL(messageIgnored(IrcMessage*)), serverBuffer, SLOT(receiveMessage(IrcMessage*)));
 }
 
@@ -297,7 +294,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
                 buffer = bufferModel->find(bufferName);
             }
         }
-        if(buffer) {
+        if (buffer) {
             bufferTexts.value(buffer)->clear();
         }
         return false;
@@ -348,15 +345,16 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
     return false;
 }
 
-void dlgIRC::displayHelp(const QString& cmdName = "") {
+void dlgIRC::displayHelp(const QString& cmdName = "")
+{
     QString help;
     if (cmdName.isEmpty()) {
-        help = tr("[HELP] Available Commands: %1").arg( commandParser->commands().join("  ") );
+        help = tr("[HELP] Available Commands: %1").arg(commandParser->commands().join("  "));
     } else {
         help = tr("[HELP] Syntax: %1").arg(commandParser->syntax(cmdName).replace("<", "&lt;").replace(">", "&gt;"));
     }
 
-    ircBrowser->append(IrcMessageFormatter::formatMessage( help ));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(help));
 }
 
 void dlgIRC::slot_onConnected()
@@ -403,7 +401,7 @@ void dlgIRC::slot_onTextEntered()
     if (command) {
         // handle custom commands
         bool sendCommand = processCustomCommand(command);
-        if( !sendCommand ) {
+        if (!sendCommand) {
             lineEdit->clear();
             return;
         }
@@ -463,7 +461,7 @@ void dlgIRC::slot_onHistoryCompletion()
         return;
     }
 
-    lineEdit->setText( mInputHistory.at(mInputHistoryIdxCurrent) );
+    lineEdit->setText(mInputHistory.at(mInputHistoryIdxCurrent));
     ++mInputHistoryIdxCurrent;
 }
 
@@ -509,7 +507,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
     IrcUser* user = index.data(Irc::UserRole).value<IrcUser*>();
     if (user) {
         // ensure the "user" isn't our own client, can only do this by name.
-        if( user->name() == mNickName ) {
+        if (user->name() == mNickName) {
             return;
         }
         IrcBuffer* buffer = bufferModel->add(user->name());
@@ -535,7 +533,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
 {
     // update timestamp of ping/pong messages.
     if (message->type() == IrcMessage::Pong && mPingStarted) {
-        message->setTimeStamp( QDateTime::fromMSecsSinceEpoch(mPingStarted) );
+        message->setTimeStamp(QDateTime::fromMSecsSinceEpoch(mPingStarted));
         mPingStarted = 0;
     }
 
@@ -547,7 +545,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
         QString html = IrcMessageFormatter::formatMessage(message);
         if (!html.isEmpty()) {
             // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
-            if ( !message->isOwn() ) {
+            if (!message->isOwn()) {
                 QString textToLua = IrcMessageFormatter::formatMessage(message, true);
                 if (!textToLua.isEmpty()) {
                     QString from = message->nick();
@@ -570,16 +568,16 @@ void dlgIRC::slot_onAnchorClicked(const QUrl& link)
     QDesktopServices::openUrl(link);
 }
 
-void dlgIRC::slot_nickNameRequired(const QString &reserved, QString *alt)
+void dlgIRC::slot_nickNameRequired(const QString& reserved, QString* alt)
 {
-    QString newNick = QString("%1_%2").arg(reserved, QString::number(rand() % 10000) );
+    QString newNick = QString("%1_%2").arg(reserved, QString::number(rand() % 10000));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick)));
-    connection->setNickName( newNick );
+    connection->setNickName(newNick);
 }
 
 void dlgIRC::slot_nickNameChanged(const QString& nick)
 {
-    if( nick == mNickName ) {
+    if (nick == mNickName) {
         return;
     }
 
@@ -605,7 +603,7 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
     }
 }
 
-void dlgIRC::slot_partedChannel(IrcPartMessage *message)
+void dlgIRC::slot_partedChannel(IrcPartMessage* message)
 {
     QString chan = message->channel();
     if (mChannels.contains(chan)) {
@@ -622,12 +620,12 @@ void dlgIRC::slot_receiveNumericMessage(IrcNumericMessage* msg)
 {
     // set the connected host name and update the serverBuffer name to match it.
     if (msg->code() == Irc::RPL_YOURHOST) {
-        serverBuffer->setName( msg->nick() );
+        serverBuffer->setName(msg->nick());
         mConnectedHostName = msg->nick();
     }
 }
 
-void dlgIRC::showEvent(QShowEvent *event)
+void dlgIRC::showEvent(QShowEvent* event)
 {
     startClient();
     event->ignore();
@@ -636,13 +634,13 @@ void dlgIRC::showEvent(QShowEvent *event)
 QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
 {
     QString target = bufferName;
-    switch( msg->type() ) {
+    switch (msg->type()) {
     case IrcMessage::Notice: {
         IrcNoticeMessage* msgNotice = static_cast<IrcNoticeMessage*>(msg);
         target = msgNotice->target();
         break;
     }
-    case IrcMessage::Private : {
+    case IrcMessage::Private: {
         IrcPrivateMessage* msgPrivate = static_cast<IrcPrivateMessage*>(msg);
         target = msgPrivate->target();
         break;

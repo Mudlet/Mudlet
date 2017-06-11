@@ -110,7 +110,7 @@ private:
     void appendHtml(QTextDocument*, const QString&);
     QString getMessageTarget(IrcMessage*, const QString&);
 
-    void showEvent(QShowEvent *event) override;
+    void showEvent(QShowEvent* event) override;
 
     Host* mpHost;
     bool mIrcStarted;

@@ -22,9 +22,9 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
-#include <IrcMessage>
 #include <QString>
 #include "post_guard.h"
+#include <IrcMessage>
 
 class IrcMessageFormatter
 {
@@ -33,6 +33,7 @@ public:
     static QString formatMessage(const QString& message, QString color = "#f29010", bool isForLua = false);
     static QString formatSeconds(int secs);
     static QString formatDuration(int secs);
+
 private:
     static QString formatAwayMessage(IrcAwayMessage* message, bool isForLua = false);
     static QString formatInviteMessage(IrcInviteMessage* message, bool isForLua = false);
