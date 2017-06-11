@@ -417,8 +417,11 @@ void dlgProfilePreferences::loadEditorTab() {
 
     connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             [=](int index){
-//                auto itemType = script_preview_combobox->text
-//                auto itemId
+                auto data = script_preview_combobox->currentData().value<QPair>();
+                auto itemType = data.first;
+                auto itemId = data.second;
+
+
             });
 
     // fire tab selection event manually should the dialog open on it by default
@@ -1413,15 +1416,12 @@ void dlgProfilePreferences::loadAvailableScripts()
     combobox->clear();
 
     for (auto item : items) {
-        combobox->addItem(QStringLiteral("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)), std::get<2>(item));
+        combobox->addItem(QStringLiteral("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)),
+                          // store the item type and ID in data so we can pull up the script for it later
+                          QVariant::fromValue(QPair<QString, int>(std::get<1>(item), std::get<2>(item))));
     }
 
     combobox->setUpdatesEnabled(true);
-}
-
-void dlgProfilePreferences::slot_theme_preview_script_selected()
-{
-
 }
 
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)

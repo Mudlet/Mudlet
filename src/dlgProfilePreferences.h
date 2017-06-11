@@ -123,7 +123,6 @@ private:
 
     void loadEditorTab();
 
-    void slot_theme_preview_script_selected();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
