@@ -23,6 +23,12 @@
  ***************************************************************************/
 
 
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
+#include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
@@ -120,9 +126,13 @@ private:
     void slot_theme_selected(int index);
 
     void loadAvailableScripts();
-
     void loadEditorTab();
-
+    void addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
+    void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

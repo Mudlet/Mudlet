@@ -1387,40 +1387,50 @@ void dlgProfilePreferences::loadAvailableScripts()
 
     std::list<TTrigger*> triggers = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
-        items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
-        //                recursiveSearchTriggers( trigger, s );
+        if (!trigger->getScript().isEmpty() && !trigger->isTempTrigger()) {
+            items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
+        }
+        addTriggersToPreview(trigger, items);
     }
 
     std::list<TAlias*> aliases = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
-        items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
-        //                recursiveSearchAlias( alias, s );
+        if (!alias->getScript().isEmpty() && !alias->isTempAlias()) {
+            items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
+        }
+        addAliasesToPreview(alias, items);
     }
 
     std::list<TScript*> scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : scripts) {
-        items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
-
-        //                recursiveSearchScripts( script, s );
+        if (!script->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
+        }
+        addScriptsToPreview(script, items);
     }
 
     std::list<TTimer*> timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
-        items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
-        //        recursiveSearchTimers(timer, s);
+        if (!timer->getScript().isEmpty() && !timer->isTempTimer()) {
+            items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+        }
+        addTimersToPreview(timer, items);
     }
 
     std::list<TKey*> keys = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
-        items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
-
-        //        recursiveSearchKeys(key, s);
+        if (!key->getScript().isEmpty() && !key->isTempKey()) {
+            items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
+        }
+        addKeysToPreview(key, items);
     }
 
     std::list<TAction*> actions = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : actions) {
-        items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
-        //        recursiveSearchActions(action, s);
+        if (!action->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+        }
+        addActionsToPreview(action, items);
     }
 
     auto combobox = script_preview_combobox;
@@ -1433,8 +1443,97 @@ void dlgProfilePreferences::loadAvailableScripts()
                           // store the item type and ID in data so we can pull up the script for it later
                           QVariant::fromValue(QPair<QString, int>(std::get<1>(item), std::get<2>(item))));
     }
-
     combobox->setUpdatesEnabled(true);
+}
+
+// adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
+    for (auto trigger : *childTriggers) {
+        if (!trigger->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
+        }
+
+        if (trigger->hasChildren()) {
+            addTriggersToPreview(trigger, items);
+        }
+    }
+}
+
+// adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TAlias*>* childrenList = pAliasParent->getChildrenList();
+    for (auto alias : *childrenList) {
+        if (!alias->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
+        }
+
+        if (alias->hasChildren()) {
+            addAliasesToPreview(alias, items);
+        }
+    }
+}
+
+// adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TTimer*>* childrenList = pTimerParent->getChildrenList();
+    for (auto timer : *childrenList) {
+        if (!timer->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+        }
+
+        if (timer->hasChildren()) {
+            addTimersToPreview(timer, items);
+        }
+    }
+}
+
+// adds key name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TKey*>* childrenList = pKeyParent->getChildrenList();
+    for (auto key : *childrenList) {
+        if (!key->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
+        }
+
+        if (key->hasChildren()) {
+            addKeysToPreview(key, items);
+        }
+    }
+}
+
+// adds script name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TScript*>* childrenList = pScriptParent->getChildrenList();
+    for (auto script : *childrenList) {
+        if (!script->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
+        }
+
+        if (script->hasChildren()) {
+            addScriptsToPreview(script, items);
+        }
+    }
+}
+
+// adds action name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TAction*>* childrenList = pActionParent->getChildrenList();
+    for (auto action : *childrenList) {
+        if (!action->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+        }
+
+        if (action->hasChildren()) {
+            addActionsToPreview(action, items);
+        }
+    }
 }
 
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
