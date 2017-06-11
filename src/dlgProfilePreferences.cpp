@@ -404,6 +404,10 @@ void dlgProfilePreferences::loadEditorTab() {
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
+    loadEdbeeThemes();
+    loadAvailableScripts();
+
+    // pre-select the current theme after all edbee themes have been loaded
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
     code_editor_theme_selection_combobox->setCurrentIndex(
             code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
@@ -412,9 +416,7 @@ void dlgProfilePreferences::loadEditorTab() {
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
     theme_download_label->hide();
 
-    loadEdbeeThemes();
-    loadAvailableScripts();
-
+    // allows people to select a script of theirs to preview
     connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             [=](int index){
                 auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
