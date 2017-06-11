@@ -675,7 +675,6 @@ QString dlgIRC::readIrcNickName(Host* pH)
 {
     QString nick = pH->readProfileData(dlgIRC::NickNameCfgItem);
     if (nick.isEmpty()) {
-        qsrand(QTime::currentTime().msec());
         nick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
     }
     return nick;
