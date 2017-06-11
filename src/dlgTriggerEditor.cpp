@@ -336,6 +336,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     QAction * deleteTriggerAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-delete-shred.png" ) ), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
+    deleteTriggerAction->setToolTip(QStringLiteral("<html><head/><body><p>%1 (%2)</p></body></html>")
+                           .arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
+    deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
+    frame_left->addAction(deleteTriggerAction);
     connect( deleteTriggerAction, SIGNAL(triggered()), this, SLOT( slot_delete_item()));
 
     QAction * addFolderAction = new QAction( QIcon( QStringLiteral( ":/icons/folder-new.png" ) ), tr("Add Group"), this);
