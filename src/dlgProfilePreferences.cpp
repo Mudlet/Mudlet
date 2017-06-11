@@ -417,11 +417,24 @@ void dlgProfilePreferences::loadEditorTab() {
 
     connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             [=](int index){
-                auto data = script_preview_combobox->currentData().value<QPair>();
+                auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
                 auto itemType = data.first;
                 auto itemId = data.second;
 
-
+                auto preview = edbeePreviewWidget->textDocument();
+                if (itemType == QStringLiteral("trigger")) {
+                    preview->setText(mpHost->getTriggerUnit()->getTrigger(itemId)->getScript());
+                } else if (itemType == QStringLiteral("alias")) {
+                    preview->setText(mpHost->getAliasUnit()->getAlias(itemId)->getScript());
+                } else if (itemType == QStringLiteral("script")) {
+                    preview->setText(mpHost->getScriptUnit()->getScript(itemId)->getScript());
+                } else if (itemType == QStringLiteral("timer")) {
+                    preview->setText(mpHost->getTimerUnit()->getTimer(itemId)->getScript());
+                } else if (itemType == QStringLiteral("key")) {
+                    preview->setText(mpHost->getKeyUnit()->getKey(itemId)->getScript());
+                } else if (itemType == QStringLiteral("button")) {
+                    preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
+                }
             });
 
     // fire tab selection event manually should the dialog open on it by default
