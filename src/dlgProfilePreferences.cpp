@@ -1617,15 +1617,18 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                             return;
                         }
 
-                        QFuture<bool> future = QtConcurrent::run(*mpHost, &Host::unzip, file.fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                        // perform unzipping in a worker thread so as not to freeze the UI
+                        auto future = QtConcurrent::run(mpHost.data(), &Host::unzip, file.fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                        auto watcher = new QFutureWatcher<bool>;
+                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+                            if (future.result() == false) {
+                                qWarning() << "failed to unzip";
+                                return;
+                            }
 
-//                        QFuture<int> future = QtConcurrent::run(/*our Sequence*/ vec, /*our FilterFunction*/ [=](const int& x) {
-//                            QThread::sleep(10); //you can skip this, but it will show you that main thread and user interface will not hang
-//                            return x % 2 == 0;
-//                        });
-                        QFutureWatcher<bool>* watcher = new QFutureWatcher<bool>;
-                        //we need this to grab result when all will be done
-                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() { qDebug() << "Result: " << future.results(); });
+                            loadEdbeeThemes(true);
+
+                        });
                         watcher->setFuture(future);
 
 //                        loadEdbeeThemes(true);
