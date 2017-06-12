@@ -753,6 +753,12 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("mEditorThemeFile"))) {
         pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     }
+    if (attributes().hasAttribute(QLatin1String("mThemePreviewScript"))) {
+        pHost->mThemePreviewScript = attributes().value(QLatin1String("mThemePreviewScript")).toString();
+    }
+    if (attributes().hasAttribute(QLatin1String("mThemePreviewType"))) {
+        pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
+    }
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {

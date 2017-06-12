@@ -125,8 +125,8 @@ private:
     void loadEdbeeThemes(bool updateThemeManager = false);
     void slot_theme_selected(int index);
 
-    void loadAvailableScripts();
     void loadEditorTab();
+    void loadAvailableScripts();
     void addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items);

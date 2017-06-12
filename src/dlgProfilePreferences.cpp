@@ -409,11 +409,18 @@ void dlgProfilePreferences::loadEditorTab() {
 
     // pre-select the current theme after all edbee themes have been loaded
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
-    code_editor_theme_selection_combobox->setCurrentIndex(
-            code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme)
-    );
+    code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme));
+    code_editor_theme_selection_combobox->setInsertPolicy(QComboBox::NoInsert);
+    code_editor_theme_selection_combobox->setMaxVisibleItems(20);
+    code_editor_theme_selection_combobox->setDuplicatesEnabled(false);
 
+    // pre-select the last shown script to preview
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
+//    script_preview_combobox->setCurrentIndex()
+    script_preview_combobox->setInsertPolicy(QComboBox::NoInsert);
+    script_preview_combobox->setMaxVisibleItems(20);
+    script_preview_combobox->setDuplicatesEnabled(true);
+
     theme_download_label->hide();
 
     // allows people to select a script of theirs to preview
@@ -1437,7 +1444,6 @@ void dlgProfilePreferences::loadAvailableScripts()
 
     auto combobox = script_preview_combobox;
     combobox->setUpdatesEnabled(false);
-    combobox->setDuplicatesEnabled(true);
     combobox->clear();
 
     for (auto item : items) {
@@ -1647,6 +1653,8 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
+    auto currentSelection = code_editor_theme_selection_combobox->currentText();
+    code_editor_theme_selection_combobox->clear();
     for (auto key : sortedThemes) {
         QString themeText = key.first;
         QString themeFileName = key.second;
@@ -1667,6 +1675,7 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(themeText, themeFileName);
     }
+    code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
 }
 

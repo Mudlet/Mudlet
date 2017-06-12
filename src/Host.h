@@ -244,8 +244,15 @@ public:
     int mWrapAt;
     int mWrapIndentCount;
 
+    // code editor theme (human-friendly name)
     QString mEditorTheme;
+    // code editor theme file on disk for edbee to load
     QString mEditorThemeFile;
+
+    // trigger/alias/script/etc Lua code to show when previewing a theme
+    QString mThemePreviewScript;
+    // the type of item (a trigger, an alias, etc) that's previewed
+    QString mThemePreviewType;
 
     QColor mBlack;
     QColor mLightBlack;
