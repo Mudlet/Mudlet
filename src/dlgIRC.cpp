@@ -60,7 +60,6 @@ dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(fa
     connection = new IrcConnection(this);
     connection->setReconnectDelay(5);
 
-    lineEdit->setAttribute(Qt::WA_MacShowFocusRect, false);
     ircBrowser->setFocusProxy(lineEdit);
 
     // nick name completion
