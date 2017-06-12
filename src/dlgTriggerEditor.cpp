@@ -4,6 +4,7 @@
  *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -7323,14 +7324,12 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText) {
 
-    // This will cause a crash on the next redoClear because of an unregistered view and a >0 redo count
-
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
 
     // If undo is not disabled when setting the initial text, the
-    // settings of the text will be undoable.
+    // setting of the text will be undoable.
 
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
     mpSourceEditorEdbeeDocument->setText( initialText);
