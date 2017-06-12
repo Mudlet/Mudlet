@@ -4,6 +4,7 @@
  *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -7337,40 +7338,17 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText) {
 
-    // This will cause a crash on the next redoClear because of an unregistered view and a >0 redo count
-    mpSourceEditorEdbeeDocument = newTextDocument();
+    mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
+    // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
+    // lexer directly by name previously gave problems.
+    mpSourceEditorEdbeeDocument->setLanguageGrammar(
+        edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
 
     // If undo is not disabled when setting the initial text, the
-    // settings of the text will be undoable.
+    // setting of the text will be undoable.
 
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
     mpSourceEditorEdbeeDocument->setText( initialText);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
-}
-
-edbee::CharTextDocument* dlgTriggerEditor::newTextDocument() {
-    edbee::CharTextDocument* newDoc = new edbee::CharTextDocument();
-
-    edbee::TextEditorConfig* config = newDoc->config();
-
-    newDoc->setLanguageGrammar(
-                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
-
-    config->beginChanges();
-
-    config->setSmartTab(true); // I'm not fully sure what this does, but it says "Smart" so it must be good
-    config->setCaretBlinkRate(200);
-
-    config->setIndentSize(2); // 2 spaces is the Lua default
-
-    config->setThemeName(QLatin1Literal("Mudlet"));
-    config->setCaretWidth(1);
-
-    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-
-    config->endChanges();
-
-    return newDoc;
 }
