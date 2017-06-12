@@ -1605,12 +1605,12 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         }
                         QByteArray downloadedArchive = reply->readAll();
 
-                        QTemporaryFile file;
-                        if (!file.open()) {
+                        tempThemesArchive = new QTemporaryFile();
+                        if (!tempThemesArchive->open()) {
                             return;
                         }
-                        file.write(downloadedArchive);
-                        file.close();
+                        tempThemesArchive->write(downloadedArchive);
+                        tempThemesArchive->close();
 
                         QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
@@ -1618,22 +1618,19 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mpHost.data(), &Host::unzip, file.fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                        auto future =
+                                QtConcurrent::run(mpHost.data(), &Host::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
                             if (future.result() == false) {
-                                qWarning() << "failed to unzip";
                                 return;
                             }
 
                             loadEdbeeThemes(true);
-
+                            theme_download_label->hide();
+                            tempThemesArchive->deleteLater();
                         });
                         watcher->setFuture(future);
-
-//                        loadEdbeeThemes(true);
-//                        theme_download_label->hide();
-
                         reply->deleteLater();
                     },
                     getReply));

@@ -120,6 +120,7 @@ private:
 
     int mFontSize;
     QPointer<Host> mpHost;
+    QPointer<QTemporaryFile> tempThemesArchive;
 
     void slot_editor_tab_selected(int tabIndex);
     void loadEdbeeThemes(bool updateThemeManager = false);
