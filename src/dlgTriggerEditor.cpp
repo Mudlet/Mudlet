@@ -7325,7 +7325,10 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText) {
 
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
+    // lexer directly by name previously gave problems.
+    mpSourceEditorEdbeeDocument->setLanguageGrammar(
+        edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
 
     // If undo is not disabled when setting the initial text, the
