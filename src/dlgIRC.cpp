@@ -40,14 +40,14 @@
 #include "post_guard.h"
 
 
-QString dlgIRC::HostNameCfgItem = "irc_host";
-QString dlgIRC::HostPortCfgItem = "irc_port";
-QString dlgIRC::NickNameCfgItem = "irc_nick";
-QString dlgIRC::ChannelsCfgItem = "irc_channels";
-QString dlgIRC::DefaultHostName = "irc.freenode.net";
+QString dlgIRC::HostNameCfgItem = QStringLiteral("irc_host");
+QString dlgIRC::HostPortCfgItem = QStringLiteral("irc_port");
+QString dlgIRC::NickNameCfgItem = QStringLiteral("irc_nick");
+QString dlgIRC::ChannelsCfgItem = QStringLiteral("irc_channels");
+QString dlgIRC::DefaultHostName = QStringLiteral("irc.freenode.net");
 int dlgIRC::DefaultHostPort = 6667;
-QString dlgIRC::DefaultNickName = "Mudlet";
-QStringList dlgIRC::DefaultChannels = QStringList() << "#mudlet";
+QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
+QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 
 dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
 {
@@ -84,7 +84,7 @@ dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(fa
     connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
     connect(connection, SIGNAL(numericMessageReceived(IrcNumericMessage*)), this, SLOT(slot_receiveNumericMessage(IrcNumericMessage*)));
 
-    mUserName = "mudlet";
+    mUserName = QStringLiteral("mudlet");
     mRealName = mudlet::self()->version;
     mHostName = readIrcHostName(mpHost);
     mHostPort = readIrcHostPort(mpHost);
