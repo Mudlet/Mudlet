@@ -62,27 +62,28 @@ dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(fa
 
     ircBrowser->setFocusProxy(lineEdit);
 
-    // nick name completion
+    // nick name completion & command history
     completer = new IrcCompleter(this);
     completer->setParser(commandParser);
-    connect(completer, SIGNAL(completed(QString, int)), this, SLOT(slot_nameCompleted(QString, int)));
+    connect(completer, &IrcCompleter::completed, this, &dlgIRC::slot_nameCompleted);
     QShortcut* shortcut = new QShortcut(Qt::Key_Tab, this);
-    connect(shortcut, SIGNAL(activated()), this, SLOT(slot_nameCompletion()));
     QShortcut* shortcut2 = new QShortcut(Qt::Key_Up, this);
-    connect(shortcut2, SIGNAL(activated()), this, SLOT(slot_onHistoryCompletion()));
+    connect(shortcut, &QShortcut::activated, this, &dlgIRC::slot_nameCompletion);
+    connect(shortcut2, &QShortcut::activated, this, &dlgIRC::slot_onHistoryCompletion);
 
-    connect(lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_onTextEntered()));
-    connect(lineEdit, SIGNAL(textEdited(QString)), this, SLOT(slot_onTextEdited()));
-    connect(ircBrowser, SIGNAL(anchorClicked(QUrl)), this, SLOT(slot_onAnchorClicked(QUrl)));
-    connect(userList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slot_onUserActivated(QModelIndex)));
-    connect(connection, SIGNAL(connected()), this, SLOT(slot_onConnected()));
-    connect(connection, SIGNAL(connecting()), this, SLOT(slot_onConnecting()));
-    connect(connection, SIGNAL(disconnected()), this, SLOT(slot_onDisconnected()));
-    connect(connection, SIGNAL(nickNameRequired(QString, QString*)), this, SLOT(slot_nickNameRequired(QString, QString*)));
-    connect(connection, SIGNAL(nickNameChanged(QString)), this, SLOT(slot_nickNameChanged(QString)));
-    connect(connection, SIGNAL(joinMessageReceived(IrcJoinMessage*)), this, SLOT(slot_joinedChannel(IrcJoinMessage*)));
-    connect(connection, SIGNAL(partMessageReceived(IrcPartMessage*)), this, SLOT(slot_partedChannel(IrcPartMessage*)));
-    connect(connection, SIGNAL(numericMessageReceived(IrcNumericMessage*)), this, SLOT(slot_receiveNumericMessage(IrcNumericMessage*)));
+
+    connect(lineEdit, &QLineEdit::returnPressed, this, &dlgIRC::slot_onTextEntered);
+    connect(lineEdit, &QLineEdit::textEdited, this, &dlgIRC::slot_onTextEdited);
+    connect(ircBrowser, &QTextBrowser::anchorClicked, this, &dlgIRC::slot_onAnchorClicked);
+    connect(userList, &QListView::doubleClicked, this, &dlgIRC::slot_onUserActivated);
+    connect(connection, &IrcConnection::connected, this, &dlgIRC::slot_onConnected);
+    connect(connection, &IrcConnection::connecting, this, &dlgIRC::slot_onConnecting);
+    connect(connection, &IrcConnection::disconnected, this, &dlgIRC::slot_onDisconnected);
+    connect(connection, &IrcConnection::nickNameRequired, this, &dlgIRC::slot_nickNameRequired);
+    connect(connection, &IrcConnection::nickNameChanged, this, &dlgIRC::slot_nickNameChanged);
+    connect(connection, &IrcConnection::joinMessageReceived, this, &dlgIRC::slot_joinedChannel);
+    connect(connection, &IrcConnection::partMessageReceived, this, &dlgIRC::slot_partedChannel);
+    connect(connection, &IrcConnection::numericMessageReceived, this, &dlgIRC::slot_receiveNumericMessage);
 
     mUserName = QStringLiteral("mudlet");
     mRealName = mudlet::self()->version;
@@ -264,17 +265,17 @@ void dlgIRC::setupCommandParser()
 void dlgIRC::setupBuffers()
 {
     bufferModel = new IrcBufferModel(connection);
-    connect(bufferModel, SIGNAL(added(IrcBuffer*)), this, SLOT(slot_onBufferAdded(IrcBuffer*)));
-    connect(bufferModel, SIGNAL(removed(IrcBuffer*)), this, SLOT(slot_onBufferRemoved(IrcBuffer*)));
+    connect(bufferModel, &IrcBufferModel::added, this, &dlgIRC::slot_onBufferAdded);
+    connect(bufferModel, &IrcBufferModel::removed, this, &dlgIRC::slot_onBufferRemoved);
     bufferList->setModel(bufferModel);
     // keep the command parser aware of the context
-    connect(bufferModel, SIGNAL(channelsChanged(QStringList)), commandParser, SLOT(setChannels(QStringList)));
+    connect(bufferModel, &IrcBufferModel::channelsChanged, commandParser, &IrcCommandParser::setChannels);
     // keep track of the current buffer, see also onBufferActivated()
-    connect(bufferList->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)), this, SLOT(slot_onBufferActivated(QModelIndex)));
+    connect(bufferList->selectionModel(), &QItemSelectionModel::currentChanged, this, &dlgIRC::slot_onBufferActivated);
     // create a server buffer for non-targeted messages...
     serverBuffer = bufferModel->add(connection->host());
     serverBuffer->setName(connection->host());
-    connect(bufferModel, SIGNAL(messageIgnored(IrcMessage*)), serverBuffer, SLOT(receiveMessage(IrcMessage*)));
+    connect(bufferModel, &IrcBufferModel::messageIgnored, serverBuffer, &IrcBuffer::receiveMessage);
 }
 
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
@@ -467,7 +468,7 @@ void dlgIRC::slot_onHistoryCompletion()
 void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
 {
     // joined a buffer - start listening to buffer specific messages
-    connect(buffer, SIGNAL(messageReceived(IrcMessage*)), this, SLOT(slot_receiveMessage(IrcMessage*)));
+    connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
     QTextDocument* document = new QTextDocument(buffer);
     bufferTexts.insert(buffer, document);
