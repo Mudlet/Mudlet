@@ -934,26 +934,14 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
             // "valid" one itself) in zs before using them:
             // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
             if (entryInArchive.endsWith(QLatin1Char('/'))) {
-//                qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a DIRECTORY...!";
                 if (!directoriesNeededMap.contains(pathInArchive)) {
                     directoriesNeededMap.insert(pathInArchive, pathInArchive);
-//                    qDebug() << "Added:" << pathInArchive << "to list of sub-directoridirectoriesNeededMapes to be made.";
-//                } else {
-//                    qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
                 }
             } else {
-//                qDebug() << "Host::installPackage() Scanning archive (for directories) found item:" << i << "called:" << entryInArchive << "this is a FILE...!";
-                // Extract needed path from name for archives that do NOT
-                // explicitly list directories
                 if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
                     directoriesNeededMap.insert(pathInArchive, pathInArchive);
-//                    qDebug() << "Added:" << pathInArchive << "to list of sub-directories to be made.";
-//                } else {
-//                    qDebug() << "No need to add:" << pathInArchive << "we have already spotted the need for it!";
                 }
             }
-        } else {
-            // TODO: Report failure to obtain an archive entry to parse
         }
     }
 
@@ -962,7 +950,6 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
     while (itPath.hasNext()) {
         itPath.next();
         QString folderToCreate = QStringLiteral("%1/%2").arg(destination, itPath.value());
-//        qDebug() << "Host::installPackage(...)    INFO testing for presence of:" << folderToCreate;
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
                 zip_close(archive);
@@ -981,11 +968,6 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
             if (!zf) {
-                int sep = 0;
-                zip_error_get(archive, &err, &sep);
-                zip_error_to_str(buf, sizeof(buf), err, errno);
-                // FIXME: report error to user, zip_error_to_str(...) is
-                // already deprecated, if not obsoleted...! - Slysven
                 zip_close(archive);
                 return false;
             }
@@ -993,9 +975,6 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
             QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
-                //FIXME: report error to user
-                qDebug() << "Host::installPackage(" << archivePath << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(destination, entryInArchive)
-                         << "!\n    Reported error was:" << fd.errorString();
                 zip_fclose(zf);
                 zip_close(archive);
                 return false;
@@ -1006,7 +985,6 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
                 zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
                 if (len < 0) {
-                    //FIXME: report error to user qDebug()<<"zip_fread error"<<len;
                     fd.close();
                     zip_fclose(zf);
                     zip_close(archive);
@@ -1014,7 +992,6 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
                 }
 
                 if (fd.write(buf, len) == -1) {
-                    // TODO: Report failure to write data to actual file
                     fd.close();
                     zip_fclose(zf);
                     zip_close(archive);
