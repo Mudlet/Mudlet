@@ -909,13 +909,7 @@ bool Host::unzip(const QString &archivePath, const QString &destination, const Q
     char buf[4096]; // Was 100 but that seems unduly stingy...!
     zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
     if (err != 0) {
-//        zip_error_to_str(buf, sizeof(buf), err, errno);
-
-        zip_error_t error;
-        zip_error_init_with_code(&error, err);
-        qDebug() << "unzip error:" << zip_error_strerror(&error);
-        zip_error_fini(&error);
-
+        zip_error_to_str(buf, sizeof(buf), err, errno);
         return false;
     }
 
