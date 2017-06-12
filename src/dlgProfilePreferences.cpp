@@ -1644,20 +1644,22 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
     QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
+    QList<std::pair<QString, QString>> sortedThemes;
+    QJsonArray unsortedThemes;
 
+    // skip reading themes in if there's no file available
     if (!themesFile.open(QIODevice::ReadOnly)) {
-        qWarning() << "Couldn't open" << themesFile.fileName();
-        return;
+        goto process;
     }
 
-    auto unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-    QList<std::pair<QString, QString>> sortedThemes;
-
+    unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
     for (auto theme : unsortedThemes) {
         QString themeText = QString("%1").arg(theme.toObject()["Title"].toString());
         QString themeFileName = theme.toObject()["FileName"].toString();
         sortedThemes << make_pair(themeText, themeFileName);
     }
+
+process:
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
@@ -1671,7 +1673,9 @@ void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
 
         if (updateThemeManager) {
             // skip loading Mudlet theme as it's embedded inside Mudlet, not on disk
-            if (themeFileName == QLatin1String("Mudlet")) { continue; }
+            if (themeFileName == QLatin1String("Mudlet")) {
+                continue;
+            }
 
             QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
             auto result = themeManager->readThemeFile(themeLocation);
