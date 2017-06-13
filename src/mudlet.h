@@ -214,6 +214,8 @@ public:
     void setAuditErrorsToConsoleEnabled(const bool state) { mIsToDisplayMapAuditErrorsToConsole = state; }
     void createMapper(bool isToLoadDefaultMapFile = true);
 
+    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();

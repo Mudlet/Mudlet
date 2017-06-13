@@ -43,9 +43,9 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
-#include <zip.h>
 
 #include <errno.h>
+#include <zip.h>
 
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -769,7 +769,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = unzip(fileName, _dest, _tmpDir);
+        auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
         if (!successful) {
@@ -895,114 +895,6 @@ bool Host::installPackage(const QString& fileName, int module)
     detailedInstallEvent.mArgumentList.append(fileName);
     detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedInstallEvent);
-
-    return true;
-}
-
-bool Host::unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir)
-{
-    int err = 0;
-    //from: https://gist.github.com/mobius/1759816
-    struct zip_stat zs;
-    struct zip_file* zf;
-    zip_uint64_t bytesRead = 0;
-    char buf[4096]; // Was 100 but that seems unduly stingy...!
-    zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
-        return false;
-    }
-
-    // We now scan for directories first, and gather needed ones first, not
-    // just relying on (zero length) archive entries ending in '/' as some
-    // (possibly broken) archive building libraries seem to forget to
-    // include them.
-    QMap<QString, QString> directoriesNeededMap;
-    //   Key is: relative path stored in archive
-    // Value is: absolute path needed when extracting files
-    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            QString entryInArchive(QString::fromUtf8(zs.name));
-            QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
-            // TODO: We are supposed to validate the fields (except the
-            // "valid" one itself) in zs before using them:
-            // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
-            if (entryInArchive.endsWith(QLatin1Char('/'))) {
-                if (!directoriesNeededMap.contains(pathInArchive)) {
-                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
-                }
-            } else {
-                if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
-                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
-                }
-            }
-        }
-    }
-
-    // Now create the needed directories:
-    QMapIterator<QString, QString> itPath(directoriesNeededMap);
-    while (itPath.hasNext()) {
-        itPath.next();
-        QString folderToCreate = QStringLiteral("%1/%2").arg(destination, itPath.value());
-        if (!tmpDir.exists(folderToCreate)) {
-            if (!tmpDir.mkpath(folderToCreate)) {
-                zip_close(archive);
-                return false; // Abort reading rest of archive
-            }
-            tmpDir.refresh();
-        }
-    }
-
-    // Now extract the files
-    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
-        // No need to check return value as we've already done it first time
-        zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        QString entryInArchive(QString::fromUtf8(zs.name));
-        if (!entryInArchive.endsWith(QLatin1Char('/'))) {
-            // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
-            zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
-            if (!zf) {
-                zip_close(archive);
-                return false;
-            }
-
-            QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
-
-            if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
-                zip_fclose(zf);
-                zip_close(archive);
-                return false;
-            }
-
-            bytesRead = 0;
-            zip_uint64_t bytesExpected = zs.size;
-            while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
-                zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
-                if (len < 0) {
-                    fd.close();
-                    zip_fclose(zf);
-                    zip_close(archive);
-                    return false;
-                }
-
-                if (fd.write(buf, len) == -1) {
-                    fd.close();
-                    zip_fclose(zf);
-                    zip_close(archive);
-                    return false;
-                }
-                bytesRead += static_cast<zip_uint64_t>(len);
-            }
-            fd.close();
-            zip_fclose(zf);
-        }
-    }
-
-    err = zip_close(archive);
-    if (err) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
-        return false;
-    }
 
     return true;
 }

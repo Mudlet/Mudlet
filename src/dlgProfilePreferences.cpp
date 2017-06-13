@@ -1619,14 +1619,13 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future =
-                                QtConcurrent::run(Host::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                                QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-                            if (future.result() == false) {
-                                return;
+                            if (future.result() == true) {
+                                loadEdbeeThemes(true);
                             }
 
-                            loadEdbeeThemes(true);
                             theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                         });

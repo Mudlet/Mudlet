@@ -170,8 +170,6 @@ public:
     };
 
 
-    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
-
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
