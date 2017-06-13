@@ -899,7 +899,7 @@ bool Host::installPackage(const QString& fileName, int module)
     return true;
 }
 
-bool Host::unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir) const
+bool Host::unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir)
 {
     int err = 0;
     //from: https://gist.github.com/mobius/1759816

@@ -170,7 +170,7 @@ public:
     };
 
 
-    bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir) const;
+    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);

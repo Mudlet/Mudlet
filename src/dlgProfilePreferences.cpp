@@ -1619,7 +1619,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future =
-                                QtConcurrent::run(mpHost.data(), &Host::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                                QtConcurrent::run(Host::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
                             if (future.result() == false) {
@@ -1688,7 +1688,8 @@ process:
             }
 
             QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
-            auto result = themeManager->loadThemeFile(themeLocation, themeFileName);
+            // FIXME: should be loadThemeFile
+            auto result = themeManager->readThemeFile(themeLocation, themeFileName);
             if (result == 0) {
                 qWarning() << themeManager->lastErrorMessage();
                 continue;
