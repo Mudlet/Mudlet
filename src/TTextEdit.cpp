@@ -301,24 +301,11 @@ void TTextEdit::updateScreenView()
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
     if( ! mIsDebugConsole && ! mIsMiniConsole )
     {
-        if( mpHost->mScreenWidth > currentScreenWidth )
-        {
-            if( currentScreenWidth < 100 )
-            {
-                mScreenWidth = 100;
-            }
-            else
-            {
-                mScreenWidth = currentScreenWidth;
-                mpHost->mScreenWidth = mScreenWidth;
-            }
-        }
-        else
-        {
-            mpHost->mScreenWidth = currentScreenWidth;
-            mScreenWidth = currentScreenWidth;
-        }
+        // This is the MAIN console - we do not want it to ever disappear!
+        mScreenWidth = qMax(40, currentScreenWidth);
 
+        // Note the values in the "parent" Host instance
+        mpHost->mScreenWidth = mScreenWidth;
         mpHost->mScreenHeight = mScreenHeight;
     }
     else
@@ -649,7 +636,12 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
     }
     else
     {
-        mScrollVector = lineOffset - mLastRenderBottom;
+        // Was: mScrollVector = lineOffset - mLastRenderBottom;
+        if (mLastRenderBottom) {
+            mScrollVector = lineOffset - mLastRenderBottom;
+        } else {
+            mScrollVector = y2 + lineOffset;
+        }
     }
 
     bool noScroll = false;
@@ -799,6 +791,7 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
         mScreenMap = pixmap.copy();
     }
     mScrollVector = 0;
+    // Only place this value is changed (apart from initialisation to 0):
     mLastRenderBottom = lineOffset;
     mForceUpdate = false;
 }
