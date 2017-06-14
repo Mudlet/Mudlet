@@ -675,9 +675,27 @@ QString dlgIRC::readIrcNickName(Host* pH)
 {
     QString nick = pH->readProfileData(dlgIRC::NickNameCfgItem);
     if (nick.isEmpty()) {
-        nick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+        // if the new config doesn't exist, try loading the old one.
+        nick = readOldIrcNick();
+
+        if (nick.isEmpty()) {
+            nick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+        }
     }
     return nick;
+}
+
+QString dlgIRC::readOldIrcNick()
+{
+    QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
+    bool opened = file.open(QIODevice::ReadOnly);
+    QString rstr;
+    if (opened) {
+        QDataStream ifs(&file);
+        ifs >> rstr;
+        file.close();
+    }
+    return rstr;
 }
 
 QStringList dlgIRC::readIrcChannels(Host* pH)

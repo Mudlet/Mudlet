@@ -109,6 +109,7 @@ private:
     void displayHelp(const QString&);
     void appendHtml(QTextDocument*, const QString&);
     QString getMessageTarget(IrcMessage*, const QString&);
+    static QString readOldIrcNick();
 
     void showEvent(QShowEvent* event) override;
 
