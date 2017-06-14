@@ -353,7 +353,7 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mHaveMapperScript", pHost->mHaveMapperScript ? "yes" : "no");
     writeAttribute("mEditorTheme", pHost->mEditorTheme);
     writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
-    writeAttribute("mThemePreviewScript", pHost->mThemePreviewScript);
+    writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
     writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);

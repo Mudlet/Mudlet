@@ -134,6 +134,8 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+
+    void slot_script_selected(int index);
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

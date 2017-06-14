@@ -120,8 +120,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     }
 
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
-    connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
-    connect(code_editor_theme_selection_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
 
     pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
     pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
@@ -389,6 +387,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 }
 
 void dlgProfilePreferences::loadEditorTab() {
+    connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
+
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
     config->setSmartTab(true);
@@ -413,39 +413,24 @@ void dlgProfilePreferences::loadEditorTab() {
     code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme));
     code_editor_theme_selection_combobox->setInsertPolicy(QComboBox::NoInsert);
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
-    code_editor_theme_selection_combobox->setDuplicatesEnabled(false);
 
     // pre-select the last shown script to preview
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
-//    script_preview_combobox->setCurrentIndex()
+    auto index = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(mpHost->mThemePreviewType, mpHost->mThemePreviewItemID)));
+    script_preview_combobox->setCurrentIndex(index == -1 ? 1 : index);
+    slot_script_selected(index == -1 ? 1 : index);
+
     script_preview_combobox->setInsertPolicy(QComboBox::NoInsert);
     script_preview_combobox->setMaxVisibleItems(20);
     script_preview_combobox->setDuplicatesEnabled(true);
 
     theme_download_label->hide();
 
-    // allows people to select a script of theirs to preview
-    connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
-            [=](int index){
-                auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
-                auto itemType = data.first;
-                auto itemId = data.second;
+    // changes the theme being previewed
+    connect(code_editor_theme_selection_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
 
-                auto preview = edbeePreviewWidget->textDocument();
-                if (itemType == QStringLiteral("trigger")) {
-                    preview->setText(mpHost->getTriggerUnit()->getTrigger(itemId)->getScript());
-                } else if (itemType == QStringLiteral("alias")) {
-                    preview->setText(mpHost->getAliasUnit()->getAlias(itemId)->getScript());
-                } else if (itemType == QStringLiteral("script")) {
-                    preview->setText(mpHost->getScriptUnit()->getScript(itemId)->getScript());
-                } else if (itemType == QStringLiteral("timer")) {
-                    preview->setText(mpHost->getTimerUnit()->getTimer(itemId)->getScript());
-                } else if (itemType == QStringLiteral("key")) {
-                    preview->setText(mpHost->getKeyUnit()->getKey(itemId)->getScript());
-                } else if (itemType == QStringLiteral("button")) {
-                    preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
-                }
-            });
+    // allows people to select a script of theirs to preview
+    connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_script_selected);
 
     // fire tab selection event manually should the dialog open on it by default
     if (tabWidgeta->currentIndex() == 3) { slot_editor_tab_selected(3); }
@@ -1355,8 +1340,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
     mudlet::self()->setEditorTheme(code_editor_theme_selection_combobox->currentData().toString());
 
-    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
-    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData(Qt::UserRole).toString();
+    auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
+    pHost->mThemePreviewItemID = data.second;
+    pHost->mThemePreviewType = data.first;
 
     close();
 }
@@ -1695,4 +1681,25 @@ void dlgProfilePreferences::slot_theme_selected(int index)
     config->beginChanges();
     config->setThemeName(themeFileName.replace(QLatin1String(".tmTheme"), QLatin1String("")));
     config->endChanges();
+}
+
+void dlgProfilePreferences::slot_script_selected(int index){
+    auto data = script_preview_combobox->itemData(index).value<QPair<QString, int>>();
+    auto itemType = data.first;
+    auto itemId = data.second;
+
+    auto preview = edbeePreviewWidget->textDocument();
+    if (itemType == QStringLiteral("trigger")) {
+        preview->setText(mpHost->getTriggerUnit()->getTrigger(itemId)->getScript());
+    } else if (itemType == QStringLiteral("alias")) {
+        preview->setText(mpHost->getAliasUnit()->getAlias(itemId)->getScript());
+    } else if (itemType == QStringLiteral("script")) {
+        preview->setText(mpHost->getScriptUnit()->getScript(itemId)->getScript());
+    } else if (itemType == QStringLiteral("timer")) {
+        preview->setText(mpHost->getTimerUnit()->getTimer(itemId)->getScript());
+    } else if (itemType == QStringLiteral("key")) {
+        preview->setText(mpHost->getKeyUnit()->getKey(itemId)->getScript());
+    } else if (itemType == QStringLiteral("button")) {
+        preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
+    }
 }
