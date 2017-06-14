@@ -204,7 +204,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
 
-    loadEdbeeTheme(mpHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(mpHost->mEditorThemeFile);
 
     // option areas
 
@@ -7364,15 +7364,3 @@ edbee::CharTextDocument* dlgTriggerEditor::newTextDocument()
     return newDoc;
 }
 
-// loads the needed edbee theme from disk for use
-void dlgTriggerEditor::loadEdbeeTheme(const QString &theme)
-{
-    auto edbee = edbee::Edbee::instance();
-    auto themeManager = edbee->themeManager();
-
-    QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme);
-    auto result = themeManager->readThemeFile(themeLocation);
-    if (result == nullptr) {
-        qWarning() << themeManager->lastErrorMessage();
-    }
-}

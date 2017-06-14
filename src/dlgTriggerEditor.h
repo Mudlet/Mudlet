@@ -295,7 +295,6 @@ private:
 
     QRegularExpression* simplifyEdbeeStatusBarRegex;
 
-    void loadEdbeeTheme(const QString &theme);
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

@@ -29,6 +29,7 @@
 
 #include "pre_guard.h"
 #include "ui_main_window.h"
+#include "edbee/views/texttheme.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
@@ -195,6 +196,7 @@ public:
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
     void setEditorTheme(const QString &theme);
+    static void loadEdbeeTheme(const QString &theme);
 
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display
@@ -325,7 +327,6 @@ private:
 
     bool mIsToDisplayMapAuditErrorsToConsole;
 
-    void loadEditorThemesCache();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)

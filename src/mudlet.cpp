@@ -426,7 +426,6 @@ mudlet::mudlet()
 
     // Edbee has a singleton that needs some initialisation
     initEdbee();
-//    loadEditorThemesCache();
 }
 
 
@@ -2811,30 +2810,6 @@ void mudlet::requestProfilesToReloadMaps( QList<QString> affectedProfiles )
     emit signal_profileMapReloadRequested( affectedProfiles );
 }
 
-// load edbee themes from disk into the edbee theme manager
-void mudlet::loadEditorThemesCache()
-{
-    QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
-    auto edbee = edbee::Edbee::instance();
-    auto themeManager = edbee->themeManager();
-
-    if (!themesFile.open(QIODevice::ReadOnly)) {
-        return;
-    }
-
-    auto themes = QJsonDocument::fromJson(themesFile.readAll()).array();
-    for (auto theme : themes) {
-        QString themeFileName = theme.toObject()["FileName"].toString();
-
-        QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
-        auto result = themeManager->readThemeFile(themeLocation);
-        if (result == nullptr) {
-            qWarning() << themeManager->lastErrorMessage();
-            continue;
-        }
-    }
-}
-
 bool mudlet::unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir)
 {
     int err = 0;
@@ -2941,4 +2916,17 @@ bool mudlet::unzip(const QString &archivePath, const QString &destination, const
     }
 
     return true;
+}
+
+// loads the needed edbee theme from disk for use
+void mudlet::loadEdbeeTheme(const QString& theme)
+{
+    auto edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+
+    QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme);
+    auto result = themeManager->readThemeFile(themeLocation);
+    if (result == nullptr) {
+        qWarning() << themeManager->lastErrorMessage();
+    }
 }

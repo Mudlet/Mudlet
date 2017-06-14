@@ -405,20 +405,24 @@ void dlgProfilePreferences::loadEditorTab()
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
-    loadEdbeeThemes();
-    loadAvailableScripts();
+    populateThemesList();
+    mudlet::loadEdbeeTheme(mpHost->mEditorThemeFile);
+    populateScriptsList();
 
-    // pre-select the current theme after all edbee themes have been loaded
+    // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
-    code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme));
+    auto themeIndex = code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme);
+    code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
+    slot_theme_selected(themeIndex);
+
     code_editor_theme_selection_combobox->setInsertPolicy(QComboBox::NoInsert);
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
 
     // pre-select the last shown script to preview
     script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
-    auto index = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(mpHost->mThemePreviewType, mpHost->mThemePreviewItemID)));
-    script_preview_combobox->setCurrentIndex(index == -1 ? 1 : index);
-    slot_script_selected(index == -1 ? 1 : index);
+    auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(mpHost->mThemePreviewType, mpHost->mThemePreviewItemID)));
+    script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
+    slot_script_selected(scriptIndex == -1 ? 1 : scriptIndex);
 
     script_preview_combobox->setInsertPolicy(QComboBox::NoInsert);
     script_preview_combobox->setMaxVisibleItems(20);
@@ -1372,7 +1376,7 @@ void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 
 // loads available Lua scripts from triggers, aliases, scripts, etc into the
 // editor tab combobox
-void dlgProfilePreferences::loadAvailableScripts()
+void dlgProfilePreferences::populateScriptsList()
 {
     // a items of item name ("My first alias"), item type ("alias"), and item ID
     std::vector<std::tuple<QString, QString, int>> items;
@@ -1605,7 +1609,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
                             if (future.result() == true) {
-                                loadEdbeeThemes();
+                                populateThemesList();
                             }
 
                             theme_download_label->hide();
@@ -1619,7 +1623,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
 // reloads the latest edbee themes from disk and fills up the
 // selection combobox with them
-void dlgProfilePreferences::loadEdbeeThemes()
+void dlgProfilePreferences::populateThemesList()
 {
     QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
     QList<std::pair<QString, QString>> sortedThemes;
@@ -1675,7 +1679,7 @@ void dlgProfilePreferences::slot_theme_selected(int index)
 
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
-    config->setThemeName(themeFileName.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->setThemeName(themeName);
     config->endChanges();
 }
 

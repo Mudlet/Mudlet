@@ -124,11 +124,11 @@ private:
     QPointer<QTemporaryFile> tempThemesArchive;
 
     void slot_editor_tab_selected(int tabIndex);
-    void loadEdbeeThemes();
     void slot_theme_selected(int index);
 
     void loadEditorTab();
-    void loadAvailableScripts();
+    void populateThemesList();
+    void populateScriptsList();
     void addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items);
