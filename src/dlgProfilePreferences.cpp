@@ -1569,14 +1569,11 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
             error_fun,
             std::bind(
                     [&](QNetworkReply* reply, QNetworkReply::NetworkError) {
-
                         theme_download_label->setText(tr("Couldn't update themes: %1").arg(reply->errorString()));
-
                         QTimer::singleShot(5'1000, theme_download_label, [label = theme_download_label] {
                             label->hide();
                             label->setText(tr("Updating themes from colorsublime.com..."));
                         });
-
                         reply->deleteLater();
                     },
                     getReply,
