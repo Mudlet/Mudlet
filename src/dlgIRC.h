@@ -72,7 +72,7 @@ public:
 
     IrcConnection* connection;
     bool mReadyForSending;
-    bool sendMsg(const QString& target, const QString& message);
+    QPair<bool, QString> sendMsg(const QString& target, const QString& message);
     QString getHostName() { return mHostName; }
     int getHostPort() { return mHostPort; }
     QString getNickName() { return mNickName; }

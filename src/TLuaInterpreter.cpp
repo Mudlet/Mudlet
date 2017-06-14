@@ -11832,7 +11832,7 @@ int TLuaInterpreter::sendSocket( lua_State * L )
 
 /** sendIrc( target, message )
  *  Sends a message to given target.
- *  Returns true or false if the message was able to be sent.
+ *  Returns true or false if the message was able to be sent and a message about what happened.
  */
 int TLuaInterpreter::sendIrc( lua_State * L )
 {
@@ -11862,11 +11862,15 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     // wait for our client to be ready before sending messages.
     if (!mudlet::self()->mpIrcClientMap[pHost]->mReadyForSending) {
         lua_pushboolean(L, false);
+        lua_pushstring(L, "not ready to send.");
         return 2;
     }
 
-    lua_pushboolean(L, mudlet::self()->mpIrcClientMap[pHost]->sendMsg(target, msg));
-    return 1;
+    QPair<bool, QString> rval = mudlet::self()->mpIrcClientMap[pHost]->sendMsg(target, msg);
+
+    lua_pushboolean(L, rval.first);
+    lua_pushstring(L, rval.second.toUtf8().constData());
+    return 2;
 }
 
 /** ircGetNick();
@@ -11928,18 +11932,29 @@ int TLuaInterpreter::ircGetChannels(lua_State* L)
 
 /** ircGetConnectedHost()
  *  Returns the Hostname of the connected IRC Server, as provided by the server itself.
- *  This will return an empty string until the IRC Client has connected and received
+ *  This will return false + error message until the IRC Client has connected and received
  *  a hostname message from the server.
  */
 int TLuaInterpreter::ircGetConnectedHost(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString cHostName = "";
+    QString error = "no client active.";
     if (mudlet::self()->mpIrcClientMap[pHost]) {
         cHostName = mudlet::self()->mpIrcClientMap[pHost]->getConnectedHost();
+
+        if (cHostName.isEmpty()) {
+            error = "not yet connected.";
+        }
     }
 
-    lua_pushstring(L, cHostName.toUtf8().constData());
+    if (cHostName.isEmpty()) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, error.toUtf8().constData());
+    } else {
+        lua_pushboolean(L, true);
+        lua_pushstring(L, cHostName.toUtf8().constData());
+    }
     return 1;
 }
 

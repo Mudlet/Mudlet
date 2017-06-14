@@ -130,10 +130,10 @@ void dlgIRC::startClient()
     mIrcStarted = true;
 }
 
-bool dlgIRC::sendMsg(const QString& target, const QString& message)
+QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
     if (message.isEmpty()) {
-        return true;
+        return QPair<bool, QString>(true, "message processed by client.");
     }
 
     QString msgTarget = target;
@@ -149,12 +149,12 @@ bool dlgIRC::sendMsg(const QString& target, const QString& message)
     commandParser->setTarget(lastParserTarget);
 
     if (!command) {
-        return false;
+        return QPair<bool, QString>(false, "command or message could not be parsed.");
     }
 
     bool sendCommand = processCustomCommand(command);
     if (!sendCommand) {
-        return true;
+        return QPair<bool, QString>(true, "command processed by client.");
     }
 
     // update ping-started time if this command was a ping
@@ -168,7 +168,7 @@ bool dlgIRC::sendMsg(const QString& target, const QString& message)
     if (command->type() == IrcCommand::Quit) {
         setAttribute(Qt::WA_DeleteOnClose);
         close();
-        return true;
+        return QPair<bool, QString>(true, "closing client.");
     }
 
     // echo own messages (servers do not send our own messages back)
@@ -177,7 +177,12 @@ bool dlgIRC::sendMsg(const QString& target, const QString& message)
         slot_receiveMessage(msg);
         delete msg;
     }
-    return rv;
+
+    if(rv) {
+        return QPair<bool, QString>(true, "sent to server.");
+    } else {
+        return QPair<bool, QString>(false, "filtered by client.");
+    }
 }
 
 void dlgIRC::ircRestart(bool reloadConfigs)
