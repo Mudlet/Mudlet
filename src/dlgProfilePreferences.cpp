@@ -386,7 +386,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     }
 }
 
-void dlgProfilePreferences::loadEditorTab() {
+void dlgProfilePreferences::loadEditorTab()
+{
     connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
 
     auto config = edbeePreviewWidget->config();
@@ -399,8 +400,7 @@ void dlgProfilePreferences::loadEditorTab() {
     config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
-    edbeePreviewWidget->textDocument()->setLanguageGrammar(
-            edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
@@ -427,13 +427,15 @@ void dlgProfilePreferences::loadEditorTab() {
     theme_download_label->hide();
 
     // changes the theme being previewed
-    connect(code_editor_theme_selection_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
+    connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
 
     // allows people to select a script of theirs to preview
-    connect(script_preview_combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_script_selected);
+    connect(script_preview_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_script_selected);
 
     // fire tab selection event manually should the dialog open on it by default
-    if (tabWidgeta->currentIndex() == 3) { slot_editor_tab_selected(3); }
+    if (tabWidgeta->currentIndex() == 3) {
+        slot_editor_tab_selected(3);
+    }
 }
 
 void dlgProfilePreferences::setColors()
@@ -1122,7 +1124,7 @@ void dlgProfilePreferences::copyMap()
                      << otherProfileRoomCount
                      << "\n    the player was located in:"
                      << otherProfileCurrentRoomId;
-            itOtherProfile.setValue( otherProfileCurrentRoomId );
+            itOtherProfile.setValue(otherProfileCurrentRoomId);
             // Using a mutable iterator we must modify (mutate) the data through
             // the iterator!
             if (pHost->mpMap->mpRoomDB->getRoom(otherProfileCurrentRoomId)) {
@@ -1157,18 +1159,15 @@ void dlgProfilePreferences::copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString sourceMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
-                                 .arg( QDir::homePath(), pHost->getName() ) );
-    QStringList mProfileList = QDir( sourceMapFolder )
-                                   .entryList( QDir::Files | QDir::NoDotAndDotDot, QDir::Time );
+    QString sourceMapFolder(QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), pHost->getName()));
+    QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
         if (thisProfileLatestMapPathFileName.isEmpty()) {
             continue;
         }
 
-        thisProfileLatestMapFile.setFileName( QStringLiteral( "%1/%2" )
-                                                  .arg( sourceMapFolder, thisProfileLatestMapPathFileName ) );
+        thisProfileLatestMapFile.setFileName(QStringLiteral("%1/%2").arg(sourceMapFolder, thisProfileLatestMapPathFileName));
         break;
     }
 
@@ -1190,15 +1189,12 @@ void dlgProfilePreferences::copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if( ! thisProfileLatestMapFile.copy( QStringLiteral( "%1/.config/mudlet/profiles/%2/map/%3" )
-                                                 .arg( QDir::homePath(), otherHostName, thisProfileLatestMapPathFileName ) ) ) {
-            label_mapFileActionResult->setText( tr( "Could not copy the map to %1 - unable to copy the new map file over." )
-                                                        .arg( otherHostName ));
+        if (!thisProfileLatestMapFile.copy(QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3").arg(QDir::homePath(), otherHostName, thisProfileLatestMapPathFileName))) {
+            label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
             continue; // Try again with next profile
         } else {
-            label_mapFileActionResult->setText( tr( "Map copied successfully to other profile %1." )
-                                                    .arg( otherHostName ) );
+            label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
             qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                    // Just in case is needed to make the above message
                                    // show up when saving big maps
@@ -1369,7 +1365,7 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
     }
 }
 
-void dlgProfilePreferences::slot_setEncoding( const QString & newEncoding )
+void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 {
     mpHost->mTelnet.setEncoding(newEncoding);
 }
@@ -1531,6 +1527,7 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
     }
 }
 
+// updates latest edbee themes when the user opens up the editor tab
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 {
     // bail out if this is not an editor tab
@@ -1604,8 +1601,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future =
-                                QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
                             if (future.result() == true) {
@@ -1683,7 +1679,8 @@ void dlgProfilePreferences::slot_theme_selected(int index)
     config->endChanges();
 }
 
-void dlgProfilePreferences::slot_script_selected(int index){
+void dlgProfilePreferences::slot_script_selected(int index)
+{
     auto data = script_preview_combobox->itemData(index).value<QPair<QString, int>>();
     auto itemType = data.first;
     auto itemId = data.second;
