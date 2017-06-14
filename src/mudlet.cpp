@@ -2918,7 +2918,7 @@ bool mudlet::unzip(const QString &archivePath, const QString &destination, const
 }
 
 // loads the needed edbee theme from disk for use
-void mudlet::loadEdbeeTheme(const QString &themeName, const QString &themeFile)
+bool mudlet::loadEdbeeTheme(const QString &themeName, const QString &themeFile)
 {
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
@@ -2932,5 +2932,8 @@ void mudlet::loadEdbeeTheme(const QString &themeName, const QString &themeFile)
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
+        return false;
     }
+
+    return true;
 }

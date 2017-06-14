@@ -196,7 +196,7 @@ public:
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
     void setEditorTheme(const QString &theme);
-    static void loadEdbeeTheme(const QString &themeName, const QString &themeFile);
+    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
 
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display

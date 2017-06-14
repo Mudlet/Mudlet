@@ -7330,7 +7330,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     // FIXME: set this to be set once and only updated when the value in settings is changed
     auto config = ew->config();
     config->beginChanges();
-    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
     config->endChanges();
 
@@ -7338,7 +7338,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
 /*    connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=]() {
         config->beginChanges();
         qDebug() << "editor theme changed!";
-        config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+        config->setThemeName(mpHost->mEditorTheme);
         config->endChanges();
     });
 */    

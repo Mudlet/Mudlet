@@ -395,7 +395,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
-    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
+    config->setThemeName(mpHost->mEditorTheme);
     config->setCaretWidth(1);
     config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -1643,11 +1643,14 @@ void dlgProfilePreferences::populateThemesList()
     }
 
 process:
-    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet"));
+    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
+    // temporary disable painting and event updates while we refill the list
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
+    code_editor_theme_selection_combobox->blockSignals(true);
+
     auto currentSelection = code_editor_theme_selection_combobox->currentText();
     code_editor_theme_selection_combobox->clear();
     for (auto key : sortedThemes) {
@@ -1658,24 +1661,17 @@ process:
 
     code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
+    code_editor_theme_selection_combobox->blockSignals(false);
 }
 
 // user has picked a different theme to preview, so apply it
 void dlgProfilePreferences::slot_theme_selected(int index)
 {
-    auto edbee = edbee::Edbee::instance();
-    auto themeManager = edbee->themeManager();
     auto themeFileName = code_editor_theme_selection_combobox->itemData(index).toString();
     auto themeName = code_editor_theme_selection_combobox->itemText(index);
 
-    // by theme name, edbee really means the theme path, sans .tmTheme
-    if (themeFileName != QStringLiteral("Mudlet")) {
-        QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFileName);
-        auto result = themeManager->readThemeFile(themeLocation, themeName);
-        if (result == nullptr) {
-            qWarning() << themeManager->lastErrorMessage();
-            return;
-        }
+    if (!mudlet::loadEdbeeTheme(themeName, themeFileName)) {
+        return;
     }
 
     auto config = edbeePreviewWidget->config();
