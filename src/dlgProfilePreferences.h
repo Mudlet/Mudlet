@@ -123,7 +123,7 @@ private:
     QPointer<QTemporaryFile> tempThemesArchive;
 
     void slot_editor_tab_selected(int tabIndex);
-    void loadEdbeeThemes(bool updateThemeManager = false);
+    void loadEdbeeThemes();
     void slot_theme_selected(int index);
 
     void loadEditorTab();

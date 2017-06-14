@@ -1605,7 +1605,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
                             if (future.result() == true) {
-                                loadEdbeeThemes(true);
+                                loadEdbeeThemes();
                             }
 
                             theme_download_label->hide();
@@ -1618,9 +1618,8 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 }
 
 // reloads the latest edbee themes from disk and fills up the
-// selection combobox with them, optionally also loading them
-// into edbee's theme manager
-void dlgProfilePreferences::loadEdbeeThemes(bool updateThemeManager)
+// selection combobox with them
+void dlgProfilePreferences::loadEdbeeThemes()
 {
     QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
     QList<std::pair<QString, QString>> sortedThemes;
