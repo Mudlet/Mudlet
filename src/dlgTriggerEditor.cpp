@@ -178,19 +178,16 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(itemClicked ( QListWidgetItem * )), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
 
     // source editor area
-
     mpSourceEditorArea = new dlgSourceEditorArea( mainArea );
     QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpSourceEditorArea->setSizePolicy( sizePolicy5 );
     pVB1->addWidget( mpSourceEditorArea );
 
     // And the new edbee widget - Go Buck!
-
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
-    // Updating the status bar on changes
-
+    // Update the status bar on changes
     connect( mpSourceEditorEdbee->controller(),
              SIGNAL(updateStatusTextSignal(QString)),
              this,
@@ -198,22 +195,16 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
          );
     simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
 
-    // Updating the editor preferences
-
+    // Update the editor preferences
     connect( mudlet::self(),
              SIGNAL(signal_editorTextOptionsChanged(QTextOption::Flags)),
              this,
              SLOT(slot_changeEditorTextOptions(QTextOption::Flags))
          );
 
-//    auto config = mpSourceEditorEdbee->config();
-//    config->beginChanges();
-//    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-//    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-//    config->setThemeName(mpHost->mEditorThemeFile.replace(QLatin1String(".tmTheme"), QLatin1String("")));
-//    config->endChanges();
-
     mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
+
+    loadEdbeeTheme(mpHost->mEditorThemeFile);
 
     // option areas
 
@@ -431,6 +422,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar );
 
+    // FIXME: still needed?
     mpSourceEditorEdbee->config()->setFont( mpHost->mDisplayFont);
 
     connect( comboBox_searchTerms, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
@@ -7370,4 +7362,17 @@ edbee::CharTextDocument* dlgTriggerEditor::newTextDocument()
     config->endChanges();
 
     return newDoc;
+}
+
+// loads the needed edbee theme from disk for use
+void dlgTriggerEditor::loadEdbeeTheme(const QString &theme)
+{
+    auto edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+
+    QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme);
+    auto result = themeManager->readThemeFile(themeLocation);
+    if (result == nullptr) {
+        qWarning() << themeManager->lastErrorMessage();
+    }
 }

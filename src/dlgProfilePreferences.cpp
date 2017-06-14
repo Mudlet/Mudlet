@@ -1655,6 +1655,7 @@ process:
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
 }
 
+// user has picked a different theme to preview, so apply it
 void dlgProfilePreferences::slot_theme_selected(int index)
 {
     auto edbee = edbee::Edbee::instance();
@@ -1678,6 +1679,7 @@ void dlgProfilePreferences::slot_theme_selected(int index)
     config->endChanges();
 }
 
+// user has picked a different script to preview, so show it
 void dlgProfilePreferences::slot_script_selected(int index)
 {
     auto data = script_preview_combobox->itemData(index).value<QPair<QString, int>>();

@@ -426,7 +426,7 @@ mudlet::mudlet()
 
     // Edbee has a singleton that needs some initialisation
     initEdbee();
-    loadEditorThemesCache();
+//    loadEditorThemesCache();
 }
 
 

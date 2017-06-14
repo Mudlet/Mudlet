@@ -29,6 +29,7 @@
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+
 #include "pre_guard.h"
 #include "ui_profile_preferences.h"
 #include <QtCore>
