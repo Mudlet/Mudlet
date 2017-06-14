@@ -11830,21 +11830,21 @@ int TLuaInterpreter::sendSocket( lua_State * L )
     return 0;
 }
 
-/** sendIrc( Target, Message )
- *  Sends a Message to given Target.
+/** sendIrc( target, message )
+ *  Sends a message to given target.
  *  Returns true or false if the message was able to be sent.
  */
 int TLuaInterpreter::sendIrc( lua_State * L )
 {
     string who, text;
     if( ! lua_isstring( L, 1 ) ) {
-        lua_pushfstring(L, "sendIrc: bad argument #1 type (Target as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "sendIrc: bad argument #1 type (target as string expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     } else {
         who = lua_tostring( L, 1 );
     }
     if( ! lua_isstring( L, 2 ) ) {
-        lua_pushfstring(L, "sendIrc: bad argument #2 type (Message as string expected, got %s!)", lua_typename(L, 2));
+        lua_pushfstring(L, "sendIrc: bad argument #2 type (message as string expected, got %s!)", lua_typename(L, 2));
         return lua_error(L);
     } else {
         text = lua_tostring( L, 2 );
@@ -11943,7 +11943,7 @@ int TLuaInterpreter::ircGetConnectedHost(lua_State* L)
     return 1;
 }
 
-/** ircSaveNick( Nick )
+/** ircSaveNick( nick )
  *  Updates IRC client nickname configuration value.
  *  Does not apply changes to active client until ircRestart() is called.
  */
@@ -11951,13 +11951,13 @@ int TLuaInterpreter::ircSaveNick(lua_State* L)
 {
     string nick;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ircSaveNick: bad argument #1 type (Nick as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "ircSaveNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     } else {
         nick = lua_tostring( L, 1 );
         if (nick.empty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, "ircSaveNick: bad argument #1 value (Nick must not be empty!)");
+            lua_pushfstring(L, "bad argument #1 value (nick must not be empty!)");
             return 2;
         }
     }
@@ -11974,8 +11974,8 @@ int TLuaInterpreter::ircSaveNick(lua_State* L)
     return 1;
 }
 
-/** ircSaveServer( Hostname, Port )
- *  Updates IRC client connection configuration values with the given Hostname and Port values.
+/** ircSaveServer( hostname, port )
+ *  Updates IRC client connection configuration values with the given hostname and port values.
  *  Port argument is optional and defaults to 6667.
  *  Does not apply changes to active client until ircRestart() is called.
  */
@@ -11984,19 +11984,19 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
     string addr;
     int port = 6667;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ircSaveServer: bad argument #1 type (Hostname as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "ircSaveServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     } else {
         addr = lua_tostring( L, 1 );
         if (addr.empty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, "ircSaveServer: bad argument #1 value (Hostname must not be empty!)");
+            lua_pushfstring(L, "bad argument #1 value (hostname must not be empty!)");
             return 2;
         }
     }
     if (!lua_isnoneornil(L, 2)) {
         if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "ircSaveServer: bad argument #2 type (Port number as number is optional {default = 6667}, got %s!)", lua_typename(L, 2));
+            lua_pushfstring(L, "ircSaveServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, 2));
             return lua_error(L);
         } else {
             port = lua_tointeger(L, 2);
@@ -12012,14 +12012,14 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
     QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromStdString(addr));
     if (!result.first) {
         lua_pushnil(L);
-        lua_pushfstring(L, "unable to save Hostname, reason: %s", result.second.toUtf8().constData());
+        lua_pushfstring(L, "unable to save hostname, reason: %s", result.second.toUtf8().constData());
         return 2;
     }
 
     result = dlgIRC::writeIrcHostPort(pHost, port);
     if (!result.first) {
         lua_pushnil(L);
-        lua_pushfstring(L, "unable to save Port, reason: %s", result.second.toUtf8().constData());
+        lua_pushfstring(L, "unable to save port, reason: %s", result.second.toUtf8().constData());
         return 2;
     }
 
@@ -12027,7 +12027,7 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
     return 1;
 }
 
-/** ircSaveChannels( Channels )
+/** ircSaveChannels( channels )
  *  Updates IRC client auto-join channels configuration value.
  *  Channels must be a string containing one or more valid channels separated with
  *  a single space character.
@@ -12037,13 +12037,13 @@ int TLuaInterpreter::ircSaveChannels(lua_State* L)
 {
     string nchans;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ircSaveChannels: bad argument #1 type (Channels as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "ircSaveChannels: bad argument #1 type (channels as string expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     } else {
         nchans = lua_tostring( L, 1 );
         if (nchans.empty()) {
             lua_pushnil(L);
-            lua_pushstring(L, "ircSaveChannels: bad argument #1 value (Channels must not be empty!)");
+            lua_pushstring(L, "bad argument #1 value (channels must not be empty!)");
             return 2;
         }
     }
@@ -12057,7 +12057,7 @@ int TLuaInterpreter::ircSaveChannels(lua_State* L)
 
     if (chans.count() == 0) {
         lua_pushnil(L);
-        lua_pushstring(L, "ircSaveChannels: bad argument #1 value (Channels must contain valid channel names seperated by spaces!");
+        lua_pushstring(L, "bad argument #1 value (channels must contain valid channel names seperated by spaces!");
         return 2;
     }
 
@@ -12065,7 +12065,7 @@ int TLuaInterpreter::ircSaveChannels(lua_State* L)
     QPair<bool, QString> result = dlgIRC::writeIrcChannels(pHost, chans);
     if (!result.first) {
         lua_pushnil(L);
-        lua_pushfstring(L, "unable to save Channels, reason: %s", result.second.toUtf8().constData());
+        lua_pushfstring(L, "unable to save channels, reason: %s", result.second.toUtf8().constData());
         return 2;
     }
 
