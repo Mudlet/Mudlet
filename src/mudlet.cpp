@@ -438,8 +438,7 @@ void mudlet::initEdbee() {
     auto grammarManager = edbee->grammarManager();
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
-    auto themeManager = edbee->themeManager();
-    themeManager->readThemeFile(QLatin1Literal(":/edbee_defaults/Mudlet.tmTheme"));
+    loadEdbeeTheme("Mudlet.tmTheme");
 }
 
 bool mudlet::moduleTableVisible()
@@ -2924,7 +2923,12 @@ void mudlet::loadEdbeeTheme(const QString& theme)
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
 
-    QString themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme);
+    QString themeLocation;
+    if (theme == QStringLiteral("Mudlet.tmTheme")) {
+        themeLocation = QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
+    } else {
+        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme);
+    }
     auto result = themeManager->readThemeFile(themeLocation);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
