@@ -438,7 +438,7 @@ void mudlet::initEdbee() {
     auto grammarManager = edbee->grammarManager();
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
-    loadEdbeeTheme("Mudlet.tmTheme");
+    loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 }
 
 bool mudlet::moduleTableVisible()
@@ -2918,18 +2918,18 @@ bool mudlet::unzip(const QString &archivePath, const QString &destination, const
 }
 
 // loads the needed edbee theme from disk for use
-void mudlet::loadEdbeeTheme(const QString& theme)
+void mudlet::loadEdbeeTheme(const QString &themeName, const QString &themeFile)
 {
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
 
     QString themeLocation;
-    if (theme == QStringLiteral("Mudlet.tmTheme")) {
+    if (themeFile == QStringLiteral("Mudlet.tmTheme")) {
         themeLocation = QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
     } else {
-        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), theme);
+        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFile);
     }
-    auto result = themeManager->readThemeFile(themeLocation);
+    auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
     }

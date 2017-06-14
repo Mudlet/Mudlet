@@ -407,7 +407,7 @@ void dlgProfilePreferences::loadEditorTab()
 
     populateThemesList();
     qDebug() << "mpHost->mEditorThemeFile: " << mpHost->mEditorThemeFile;
-    mudlet::loadEdbeeTheme(mpHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
     populateScriptsList();
 
     // pre-select the current theme

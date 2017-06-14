@@ -205,7 +205,7 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
 
-    mudlet::loadEdbeeTheme(mpHost->mEditorThemeFile);
+    mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
     // option areas
 
