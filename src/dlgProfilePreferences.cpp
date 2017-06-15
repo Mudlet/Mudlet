@@ -406,7 +406,6 @@ void dlgProfilePreferences::loadEditorTab()
     edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
     populateThemesList();
-    qDebug() << "mpHost->mEditorThemeFile: " << mpHost->mEditorThemeFile;
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
     populateScriptsList();
 
