@@ -12051,8 +12051,7 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
 
 /** ircSaveChannels( channels )
  *  Updates IRC client auto-join channels configuration value.
- *  Channels must be a string containing one or more valid channels separated with
- *  a single space character.
+ *  Channels must a table containing at least one valid channel name string.
  *  Does not apply changes to active client until ircRestart() is called.
  */
 int TLuaInterpreter::ircSaveChannels(lua_State* L)
