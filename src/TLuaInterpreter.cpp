@@ -11912,7 +11912,7 @@ int TLuaInterpreter::ircGetServer(lua_State* L)
 }
 
 /** ircGetChannels();
- *  Returns a string containing channels separated by a space.
+ *  Returns a table containing channel names.
  *  If a client is active the list contains channels currently joined.
  *  Otherwise the list is read from IRC client settings.
  */
@@ -11926,7 +11926,13 @@ int TLuaInterpreter::ircGetChannels(lua_State* L)
         channels = dlgIRC::readIrcChannels(pHost);
     }
 
-    lua_pushstring(L, channels.join(" ").toUtf8().constData());
+    lua_newtable(L);
+    int total = channels.count();
+    for (int i = 0; i < total; ++i) {
+        lua_pushnumber(L, i+1);
+        lua_pushstring(L, channels[i].toUtf8().data());
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -12039,7 +12045,8 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
     }
 
     lua_pushboolean(L, true);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 /** ircSaveChannels( channels )
@@ -12050,34 +12057,37 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
  */
 int TLuaInterpreter::ircSaveChannels(lua_State* L)
 {
-    string nchans;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ircSaveChannels: bad argument #1 type (channels as string expected, got %s!)", lua_typename(L, 1));
+    QStringList newchannels;
+    if (!lua_istable(L, 1) )
+    {
+        lua_pushfstring(L, "ircSaveChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
-    } else {
-        nchans = lua_tostring( L, 1 );
-        if (nchans.empty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "bad argument #1 value (channels must not be empty!)");
-            return 2;
+    }
+    else
+    {
+        lua_pushnil( L );
+        while( lua_next( L, 1 ) != 0 )
+        {
+            // key at index -2 and value at index -1
+            if( lua_type(L, -1) == LUA_TSTRING )
+            {
+                QString c = lua_tostring( L, -1 );
+                if (!c.isEmpty() && (c.startsWith("#") || c.startsWith("&") || c.startsWith("+")) ) {
+                    newchannels << c;
+                }
+            }
+            lua_pop(L, 1);
         }
     }
 
-    QStringList chans = QString::fromStdString(nchans).split(" ", QString::SkipEmptyParts);
-    for( QString c : chans ) {
-        if (!c.startsWith("#") && !c.startsWith("&") && !c.startsWith("+")) {
-            chans.removeOne(c);
-        }
-    }
-
-    if (chans.count() == 0) {
+    if (newchannels.count() == 0) {
         lua_pushnil(L);
-        lua_pushstring(L, "bad argument #1 value (channels must contain valid channel names seperated by spaces!");
+        lua_pushstring(L, "bad argument #1 value (channels must contain at least 1 valid channel name!)");
         return 2;
     }
 
     Host* pHost = &getHostFromLua(L);
-    QPair<bool, QString> result = dlgIRC::writeIrcChannels(pHost, chans);
+    QPair<bool, QString> result = dlgIRC::writeIrcChannels(pHost, newchannels);
     if (!result.first) {
         lua_pushnil(L);
         lua_pushfstring(L, "unable to save channels, reason: %s", result.second.toUtf8().constData());
