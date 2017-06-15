@@ -11861,7 +11861,7 @@ int TLuaInterpreter::sendIrc( lua_State * L )
 
     // wait for our client to be ready before sending messages.
     if (!mudlet::self()->mpIrcClientMap[pHost]->mReadyForSending) {
-        lua_pushboolean(L, false);
+        lua_pushnil(L);
         lua_pushstring(L, "not ready to send.");
         return 2;
     }
