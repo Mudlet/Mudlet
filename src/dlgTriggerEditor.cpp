@@ -4,6 +4,7 @@
  *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -335,6 +336,11 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
 
     QAction * deleteTriggerAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-delete-shred.png" ) ), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
+    deleteTriggerAction->setToolTip(QStringLiteral("<html><head/><body><p>%1 (%2)</p></body></html>")
+                           .arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
+    deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
+    frame_left->addAction(deleteTriggerAction);
     connect( deleteTriggerAction, SIGNAL(triggered()), this, SLOT( slot_delete_item()));
 
     QAction * addFolderAction = new QAction( QIcon( QStringLiteral( ":/icons/folder-new.png" ) ), tr("Add Group"), this);
@@ -344,8 +350,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QAction * saveAction = new QAction( QIcon( QStringLiteral( ":/icons/document-save-as.png" ) ), tr("Save Item"), this);
     saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                           .arg(tr("Saves the selected trigger, script, alias or etc, so new changes take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
-    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, so new changes take effect - does not save to disk though..."));
+                           .arg(tr("Saves the selected item. (CTRL+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
+    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect( saveAction, SIGNAL(triggered()), this, SLOT( slot_save_edit() ));
 
     QAction * importAction = new QAction( QIcon( QStringLiteral( ":/icons/import.png" ) ), tr("Import"), this);
@@ -360,8 +366,8 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     profileSaveAction->setEnabled( true );
     profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     profileSaveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                  .arg(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
-    profileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, etc, but not the map); also "synchronizes" modules that are so marked.)"));
+                                  .arg(tr(R"(Saves your profile. (CTRL+SHIFT+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
+    profileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
     connect( profileSaveAction, SIGNAL(triggered()), this, SLOT( slot_profileSaveAction()));
 
     QAction * saveProfileAsAction = new QAction( QIcon( QStringLiteral( ":/icons/utilities-file-archiver.png" ) ), tr("Save Profile As"), this);
@@ -7318,40 +7324,17 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText) {
 
-    // This will cause a crash on the next redoClear because of an unregistered view and a >0 redo count
-    mpSourceEditorEdbeeDocument = newTextDocument();
+    mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
+    // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
+    // lexer directly by name previously gave problems.
+    mpSourceEditorEdbeeDocument->setLanguageGrammar(
+        edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
 
     // If undo is not disabled when setting the initial text, the
-    // settings of the text will be undoable.
+    // setting of the text will be undoable.
 
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
     mpSourceEditorEdbeeDocument->setText( initialText);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
-}
-
-edbee::CharTextDocument* dlgTriggerEditor::newTextDocument() {
-    edbee::CharTextDocument* newDoc = new edbee::CharTextDocument();
-
-    edbee::TextEditorConfig* config = newDoc->config();
-
-    newDoc->setLanguageGrammar(
-                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
-
-    config->beginChanges();
-
-    config->setSmartTab(true); // I'm not fully sure what this does, but it says "Smart" so it must be good
-    config->setCaretBlinkRate(200);
-
-    config->setIndentSize(2); // 2 spaces is the Lua default
-
-    config->setThemeName(QLatin1Literal("Mudlet"));
-    config->setCaretWidth(1);
-
-    config->setShowWhitespaceMode( mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    config->setUseLineSeparator( mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-
-    config->endChanges();
-
-    return newDoc;
 }

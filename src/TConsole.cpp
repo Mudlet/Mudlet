@@ -750,6 +750,7 @@ void TConsole::closeEvent( QCloseEvent *event )
 
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
+            mudlet::self()->saveWindowLayout();
             mpHost->modulesToWrite.clear();
             mpHost->saveProfile();
 
