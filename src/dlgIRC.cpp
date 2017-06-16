@@ -119,7 +119,7 @@ void dlgIRC::startClient()
 
     setupBuffers();
 
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Statring Mudlet IRC Client...")));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Starting Mudlet IRC Client...")));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mHostName, QString::number(mHostPort))));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mNickName)));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channels: %1").arg(mChannels.join(" "))));
