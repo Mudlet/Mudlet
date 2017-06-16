@@ -11873,10 +11873,10 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     return 2;
 }
 
-/** ircGetNick();
+/** getIrcNick();
  *  Returns a string containing the IRC client nickname.
  */
-int TLuaInterpreter::ircGetNick(lua_State* L)
+int TLuaInterpreter::getIrcNick(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString nick;
@@ -11890,10 +11890,10 @@ int TLuaInterpreter::ircGetNick(lua_State* L)
     return 1;
 }
 
-/** ircGetServer();
+/** getIrcServer();
  *  Returns a pair containing the IRC server and port.
  */
-int TLuaInterpreter::ircGetServer(lua_State* L)
+int TLuaInterpreter::getIrcServer(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString hname;
@@ -11911,12 +11911,12 @@ int TLuaInterpreter::ircGetServer(lua_State* L)
     return 2;
 }
 
-/** ircGetChannels();
+/** getIrcChannels();
  *  Returns a table containing channel names.
  *  If a client is active the list contains channels currently joined.
  *  Otherwise the list is read from IRC client settings.
  */
-int TLuaInterpreter::ircGetChannels(lua_State* L)
+int TLuaInterpreter::getIrcChannels(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QStringList channels;
@@ -11936,12 +11936,12 @@ int TLuaInterpreter::ircGetChannels(lua_State* L)
     return 1;
 }
 
-/** ircGetConnectedHost()
+/** getIrcConnectedHost()
  *  Returns the Hostname of the connected IRC Server, as provided by the server itself.
  *  This will return false + error message until the IRC Client has connected and received
  *  a hostname message from the server.
  */
-int TLuaInterpreter::ircGetConnectedHost(lua_State* L)
+int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString cHostName = "";
@@ -11964,15 +11964,15 @@ int TLuaInterpreter::ircGetConnectedHost(lua_State* L)
     return 1;
 }
 
-/** ircSaveNick( nick )
+/** setIrcNick( nick )
  *  Updates IRC client nickname configuration value.
  *  Does not apply changes to active client until ircRestart() is called.
  */
-int TLuaInterpreter::ircSaveNick(lua_State* L)
+int TLuaInterpreter::setIrcNick(lua_State* L)
 {
     string nick;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ircSaveNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "setIrcNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     } else {
         nick = lua_tostring( L, 1 );
@@ -11995,17 +11995,17 @@ int TLuaInterpreter::ircSaveNick(lua_State* L)
     return 1;
 }
 
-/** ircSaveServer( hostname, port )
+/** setIrcServer( hostname, port )
  *  Updates IRC client connection configuration values with the given hostname and port values.
  *  Port argument is optional and defaults to 6667.
  *  Does not apply changes to active client until ircRestart() is called.
  */
-int TLuaInterpreter::ircSaveServer(lua_State* L)
+int TLuaInterpreter::setIrcServer(lua_State* L)
 {
     string addr;
     int port = 6667;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ircSaveServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "setIrcServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     } else {
         addr = lua_tostring( L, 1 );
@@ -12017,7 +12017,7 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
     }
     if (!lua_isnoneornil(L, 2)) {
         if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "ircSaveServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, 2));
+            lua_pushfstring(L, "setIrcServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, 2));
             return lua_error(L);
         } else {
             port = lua_tointeger(L, 2);
@@ -12049,17 +12049,17 @@ int TLuaInterpreter::ircSaveServer(lua_State* L)
     return 2;
 }
 
-/** ircSaveChannels( channels )
+/** setIrcChannels( channels )
  *  Updates IRC client auto-join channels configuration value.
  *  Channels must a table containing at least one valid channel name string.
  *  Does not apply changes to active client until ircRestart() is called.
  */
-int TLuaInterpreter::ircSaveChannels(lua_State* L)
+int TLuaInterpreter::setIrcChannels(lua_State* L)
 {
     QStringList newchannels;
     if (!lua_istable(L, 1) )
     {
-        lua_pushfstring(L, "ircSaveChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        lua_pushfstring(L, "setIrcChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
     }
     else
@@ -13336,13 +13336,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize );
     lua_register( pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet );
     lua_register( pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc );
-    lua_register( pGlobalLua, "ircGetNick", TLuaInterpreter::ircGetNick );
-    lua_register( pGlobalLua, "ircGetServer", TLuaInterpreter::ircGetServer );
-    lua_register( pGlobalLua, "ircGetChannels", TLuaInterpreter::ircGetChannels );
-    lua_register( pGlobalLua, "ircGetConnectedHost", TLuaInterpreter::ircGetConnectedHost );
-    lua_register( pGlobalLua, "ircSaveNick", TLuaInterpreter::ircSaveNick );
-    lua_register( pGlobalLua, "ircSaveServer", TLuaInterpreter::ircSaveServer );
-    lua_register( pGlobalLua, "ircSaveChannels", TLuaInterpreter::ircSaveChannels );
+    lua_register( pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick );
+    lua_register( pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer );
+    lua_register( pGlobalLua, "getIrcChannels", TLuaInterpreter::getIrcChannels );
+    lua_register( pGlobalLua, "getIrcConnectedHost", TLuaInterpreter::getIrcConnectedHost );
+    lua_register( pGlobalLua, "setIrcNick", TLuaInterpreter::setIrcNick );
+    lua_register( pGlobalLua, "setIrcServer", TLuaInterpreter::setIrcServer );
+    lua_register( pGlobalLua, "setIrcChannels", TLuaInterpreter::setIrcChannels );
     lua_register( pGlobalLua, "ircRestart", TLuaInterpreter::ircRestart );
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
     lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
