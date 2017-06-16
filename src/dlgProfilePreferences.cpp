@@ -239,7 +239,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         comboBox_statusBarSetting->setCurrentIndex(_indexForStatusBarSetting);
     }
 
-    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->getShowMapAuditErrors());
+    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
     Host* pHost = mpHost;
     if (pHost) {
         mFontSize = pHost->mDisplayFont.pointSize();
@@ -883,7 +883,7 @@ void dlgProfilePreferences::loadMap()
     label_mapFileActionResult->show();
 
     // Ensure the setting is already made as the loadMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->getShowMapAuditErrors();
+    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
@@ -942,7 +942,7 @@ void dlgProfilePreferences::saveMap()
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
     // Ensure the setting is already made as the saveMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->getShowMapAuditErrors();
+    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (pHost->mpConsole->saveMap(fileName)) {
@@ -1019,7 +1019,7 @@ void dlgProfilePreferences::copyMap()
 
     // Ensure the setting is already made as the value could be used in the
     // code following after
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getShowMapAuditErrors();
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
     mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
