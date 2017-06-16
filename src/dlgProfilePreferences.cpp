@@ -1338,7 +1338,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
     pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
-    mudlet::self()->setEditorTheme(code_editor_theme_selection_combobox->currentData().toString());
+    mudlet::self()->setEditorTheme(pHost->mEditorTheme);
 
     auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
     pHost->mThemePreviewItemID = data.second;

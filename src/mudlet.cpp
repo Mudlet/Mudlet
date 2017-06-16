@@ -2776,8 +2776,7 @@ void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const boo
 
 void mudlet::setEditorTheme(const QString& theme)
 {
-    // FIXME crashes right now
-//    emit signal_editorThemeChanged(theme);
+    emit signal_editorThemeChanged(theme);
 }
 
 void mudlet::slot_statusBarMessageChanged( QString text )
