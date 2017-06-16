@@ -1623,9 +1623,12 @@ void dlgProfilePreferences::populateThemesList()
     if (themesFile.open(QIODevice::ReadOnly)) {
         unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
         for (auto theme : unsortedThemes) {
-            QString themeText = QString("%1").arg(theme.toObject()["Title"].toString());
+            QString themeText = theme.toObject()["Title"].toString();
             QString themeFileName = theme.toObject()["FileName"].toString();
-            sortedThemes << make_pair(themeText, themeFileName);
+
+            if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
+                sortedThemes << make_pair(themeText, themeFileName);
+            }
         }
     }
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
