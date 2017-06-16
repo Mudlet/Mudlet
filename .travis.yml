@@ -42,11 +42,6 @@ before_script:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt56/bin/qt56-env.sh; fi
   # source the set-build-info as it exports some variables for us!
   - source CI/travis.set-build-info.sh
-  # add GCC 5 to path
-  - mkdir -p latest-gcc-symlinks
-  - ln -s /usr/bin/g++-5 latest-gcc-symlinks/g++
-  - ln -s /usr/bin/gcc-5 latest-gcc-symlinks/gcc
-  - export PATH=$PWD/latest-gcc-symlinks:$PATH
   - mkdir build
   - cd src
 script:
