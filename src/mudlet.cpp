@@ -2852,7 +2852,7 @@ void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadBut
 
 void mudlet::slot_gamepadConnected(int deviceId)
 {
-    Host* pH = getActiveHost(
+    Host* pH = getActiveHost();
     if (!pH) {
         return;
     }
