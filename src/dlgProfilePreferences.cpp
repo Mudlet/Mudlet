@@ -1544,6 +1544,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     QDir dir;
     QString cacheDir = QStringLiteral("%1/.config/mudlet/edbee/cache").arg(QDir::homePath());
     if (!dir.mkpath(cacheDir)) {
+        qWarning() << "Couldn't create edbee themes cache directory: " << cacheDir;
         return;
     }
 
