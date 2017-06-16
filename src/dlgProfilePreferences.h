@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,8 +25,8 @@
 
 #include "pre_guard.h"
 #include "ui_profile_preferences.h"
-#include <QDialog>
 #include <QtCore>
+#include <QDialog>
 #include <QDir>
 #include "post_guard.h"
 
@@ -36,11 +37,10 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgProfilePreferences)
+
 public:
     dlgProfilePreferences(QWidget*, Host*);
-
-    int mFontSize;
-
 
 public slots:
     // Fonts.
@@ -99,16 +99,20 @@ public slots:
     void loadMap();
     void saveMap();
     void copyMap();
-    void slot_chooseProfilesChanged(QAction *);
+    void slot_chooseProfilesChanged(QAction*);
 
     // Save.
     void slot_save_and_exit();
 
     void hideActionLabel();
+    void slot_setEncoding(const QString&);
+
 
 private:
     void setColors();
     void setColor(QPushButton* b, QColor& c);
+
+    int mFontSize;
     QPointer<Host> mpHost;
 };
 

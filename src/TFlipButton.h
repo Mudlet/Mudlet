@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,38 +30,32 @@
 
 class Host;
 class TAction;
-class TEasyButtonBar;
-class TToolBar;
 
 class TFlipButton : public QPushButton
 {
 public:
-    TFlipButton( TToolBar *, TAction *, int, Host * );
-    TFlipButton( TEasyButtonBar *, TAction *, int, Host * );
-    TFlipButton( const QString & text, QWidget* parent = 0);
-    TFlipButton( const QIcon & icon, const QString & text, QWidget * parent = 0 );
+    TFlipButton(TAction*, Host*);
 
     Qt::Orientation orientation() const;
-    void setOrientation( Qt::Orientation orientation );
+    void setOrientation(Qt::Orientation);
 
     bool mirrored() const;
-    void setMirrored( bool mirrored );
+    void setMirrored(bool);
 
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
 protected:
-    void paintEvent( QPaintEvent * event ) override;
+    void paintEvent(QPaintEvent*) override;
 
 public:
     QStyleOptionButton getStyleOption() const;
-    void init();
 
-    Qt::Orientation mOrientation;
-    bool mMirrored;
-    TAction * mpTAction;
+    TAction* mpTAction;
     int mID;
     QPointer<Host> mpHost;
+    Qt::Orientation mOrientation;
+    bool mMirrored;
 };
 
 #endif // MUDLET_TFLIPBUTTON_H

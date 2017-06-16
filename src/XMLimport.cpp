@@ -36,41 +36,40 @@
 #include "VarUnit.h"
 #include "mudlet.h"
 
-// clang-format: off
 #include "pre_guard.h"
-// clang-format: on
+#include <QtMath>
 #include <QDebug>
 #include <QStringList>
-// clang-format: off
 #include "post_guard.h"
-// clang-format: on
 
 XMLimport::XMLimport(Host* pH)
-    : mpHost(pH)
-    , mPackageName(QString())
-    , mpTrigger(Q_NULLPTR)
-    , mpTimer(Q_NULLPTR)
-    , mpAlias(Q_NULLPTR)
-    , mpKey(Q_NULLPTR)
-    , mpAction(Q_NULLPTR)
-    , mpScript(Q_NULLPTR)
-    , mpVar(Q_NULLPTR)
-    , gotTrigger(false)
-    , gotTimer(false)
-    , gotAlias(false)
-    , gotKey(false)
-    , gotAction(false)
-    , gotScript(false)
-    , module(0)
-    , mMaxRoomId(0)
-    , mMaxAreaId(-1)
+: mpHost(pH)
+, mPackageName(QString())
+, mpTrigger(Q_NULLPTR)
+, mpTimer(Q_NULLPTR)
+, mpAlias(Q_NULLPTR)
+, mpKey(Q_NULLPTR)
+, mpAction(Q_NULLPTR)
+, mpScript(Q_NULLPTR)
+, mpVar(Q_NULLPTR)
+, gotTrigger(false)
+, gotTimer(false)
+, gotAlias(false)
+, gotKey(false)
+, gotAction(false)
+, gotScript(false)
+, module(0)
+, mMaxRoomId(0)
+, mMaxAreaId(-1)
+, mVersionMajor(1) // 0 to 255
+, mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 
-bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFlag)
+bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
-    setDevice(device);
+    setDevice(pfile);
 
     module = moduleFlag;
 
@@ -149,7 +148,36 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
         readNext();
 
         if (isStartElement()) {
-            if (name() == "MudletPackage") {
+            if (name() == QStringLiteral("MudletPackage")) {
+                QString versionString;
+                if (attributes().hasAttribute(QStringLiteral("version"))) {
+                    versionString = attributes().value(QStringLiteral("version")).toString();
+                    if (!versionString.isEmpty()) {
+                        bool isOk = false;
+                        float versionNumber = versionString.toFloat(&isOk);
+                        if (isOk) {
+                            mVersionMajor = qFloor(versionNumber);
+                            mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
+                        }
+                        if (pVersionString) {
+                            *pVersionString = versionString;
+                        }
+                    }
+                }
+
+                if (mVersionMajor > 1
+                    /*||(mVersionMajor==1&&mVersionMinor)*/) {
+                    // Minor check is not currently relevant, just abort on 2.000f or more
+
+                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                                         "\"%1\"\n"
+                                         "reports it has a version (%2) it must have come from a later Mudlet version,\n"
+                                         "and this one cannot read it, you need a newer Mudlet!")
+                                          .arg(pfile->fileName(), versionString);
+                    mpHost->postMessage(moanMsg);
+                    return false;
+                }
+
                 readPackage();
             } else if (name() == "map") {
                 readMap();
@@ -206,7 +234,8 @@ bool XMLimport::importPackage(QIODevice* device, QString packName, int moduleFla
 
 void XMLimport::readVariableGroup(TVar* pParent)
 {
-    TVar* var = new TVar(pParent);
+    auto var = new TVar(pParent);
+
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     QString keyName, value;
@@ -241,6 +270,8 @@ void XMLimport::readVariableGroup(TVar* pParent)
             }
         }
     }
+
+    delete var;
 }
 
 void XMLimport::readHiddenVariables()
@@ -392,7 +423,7 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
 {
-    TRoom* pT = new TRoom(mpHost->mpMap->mpRoomDB);
+    auto pT = new TRoom(mpHost->mpMap->mpRoomDB);
 
     pT->id = attributes().value(QStringLiteral("id")).toString().toInt();
     pT->area = attributes().value(QStringLiteral("area")).toString().toInt();
@@ -446,6 +477,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             pT->x = attributes().value(QStringLiteral("x")).toString().toInt();
             pT->y = attributes().value(QStringLiteral("y")).toString().toInt();
             pT->z = attributes().value(QStringLiteral("z")).toString().toInt();
+            continue;
         } else if (Q_UNLIKELY(name().isEmpty())) {
             continue;
         }
@@ -702,6 +734,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
     pHost->mIsNextLogFileInHtmlFormat = (attributes().value("mRawStreamDump") == "yes");
+    pHost->mIsLoggingTimestamps = (attributes().value("mIsLoggingTimestamps") == "yes");
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
@@ -723,15 +756,15 @@ void XMLimport::readHostPackage(Host* pHost)
     }
     pHost->mLineSize = attributes().value("mLineSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
-        pHost->mLineSize = 1.0; // Same value as is in Host class initalizer list
+        pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
     }
     pHost->mBubbleMode = (attributes().value("mBubbleMode") == "yes");
     pHost->mShowRoomID = (attributes().value("mShowRoomIDs") == "yes");
     pHost->mShowPanel = (attributes().value("mShowPanel") == "yes");
     pHost->mHaveMapperScript = (attributes().value("mHaveMapperScript") == "yes");
     QStringRef ignore = attributes().value("mDoubleClickIgnore");
-    for (int i = 0, total = ignore.size(); i < total; ++i) {
-        pHost->mDoubleClickIgnore.insert(ignore.at(i));
+    for (auto character : ignore) {
+        pHost->mDoubleClickIgnore.insert(character);
     }
 
     while (!atEnd()) {
@@ -915,7 +948,7 @@ void XMLimport::readTriggerPackage()
 
 void XMLimport::readTriggerGroup(TTrigger* pParent)
 {
-    TTrigger* pT = new TTrigger(pParent, mpHost);
+    auto pT = new TTrigger(pParent, mpHost);
 
     if (module) {
         pT->mModuleMember = true;
@@ -935,7 +968,6 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mColorTriggerBg = (attributes().value("isColorTriggerBg") == "yes");
     pT->mColorTriggerFg = (attributes().value("isColorTriggerFg") == "yes");
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
 
@@ -945,7 +977,10 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
             if (name() == "name") {
                 pT->setName(readElementText());
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readScriptElement();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
+                }
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "triggerType") {
@@ -967,6 +1002,10 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
             } else if (name() == "mSoundFile") {
                 pT->mSoundFile = readElementText();
             } else if (name() == "regexCodeList") {
+                // This and the next one ought to be combined into a single element
+                // in the next revision - sample code for "RegexCode" elements
+                // inside a "RegexList" container (with a "size" attribute) is
+                // commented out in the XMLexporter class.
                 readStringList(pT->mRegexCodeList);
             } else if (name() == "regexCodePropertyList") {
                 readIntegerList(pT->mRegexCodePropertyList, pT->getName());
@@ -990,12 +1029,6 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
                               "initialize pattern list for trigger: "
                            << pT->getName();
     }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
-                              "compile trigger's script for: "
-                           << pT->getName();
-    }
 }
 
 void XMLimport::readTimerPackage()
@@ -1017,7 +1050,7 @@ void XMLimport::readTimerPackage()
 
 void XMLimport::readTimerGroup(TTimer* pParent)
 {
-    TTimer* pT = new TTimer(pParent, mpHost);
+    auto pT = new TTimer(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     pT->mIsTempTimer = (attributes().value("isTempTimer") == "yes");
@@ -1029,7 +1062,6 @@ void XMLimport::readTimerGroup(TTimer* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1040,7 +1072,10 @@ void XMLimport::readTimerGroup(TTimer* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readScriptElement();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not compile timer's lua code for: " << pT->getName();
+                }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "time") {
@@ -1051,12 +1086,6 @@ void XMLimport::readTimerGroup(TTimer* pParent)
                 readUnknownTimerElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not "
-                              "compile timer's script for: "
-                           << pT->getName();
     }
 
     mudlet::self()->registerTimer(pT, pT->mpTimer);
@@ -1086,7 +1115,7 @@ void XMLimport::readAliasPackage()
 
 void XMLimport::readAliasGroup(TAlias* pParent)
 {
-    TAlias* pT = new TAlias(pParent, mpHost);
+    auto pT = new TAlias(pParent, mpHost);
 
     mpHost->getAliasUnit()->registerAlias(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
@@ -1095,7 +1124,6 @@ void XMLimport::readAliasGroup(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
 
@@ -1107,7 +1135,10 @@ void XMLimport::readAliasGroup(TAlias* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readScriptElement();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not compile alias's lua code for: " << pT->getName();
+                }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "regex") {
@@ -1118,12 +1149,6 @@ void XMLimport::readAliasGroup(TAlias* pParent)
                 readUnknownAliasElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not "
-                              "compile alias's script for: "
-                           << pT->getName();
     }
 }
 
@@ -1146,7 +1171,7 @@ void XMLimport::readActionPackage()
 
 void XMLimport::readActionGroup(TAction* pParent)
 {
-    TAction* pT = new TAction(pParent, mpHost);
+    auto pT = new TAction(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     pT->mIsPushDownButton = (attributes().value("isPushButton") == "yes");
@@ -1159,7 +1184,6 @@ void XMLimport::readActionGroup(TAction* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1170,7 +1194,10 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readScriptElement();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not compile action's lua code for: " << pT->getName();
+                }
             } else if (name() == "css") {
                 pT->css = readElementText();
             } else if (name() == "commandButtonUp") {
@@ -1190,7 +1217,9 @@ void XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "sizeY") {
                 pT->mSizeY = readElementText().toInt();
             } else if (name() == "mButtonState") {
-                pT->mButtonState = readElementText().toInt();
+                // We now use a boolean but file must use original "1" (false)
+                // or "2" (true) for backward compatibility
+                pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
                 pT->mButtonColor.setNamedColor(readElementText());
             } else if (name() == "buttonColumn") {
@@ -1205,12 +1234,6 @@ void XMLimport::readActionGroup(TAction* pParent)
                 readUnknownActionElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not "
-                              "compile action's script for: "
-                           << pT->getName();
     }
 }
 
@@ -1233,7 +1256,7 @@ void XMLimport::readScriptPackage()
 
 void XMLimport::readScriptGroup(TScript* pParent)
 {
-    TScript* pT = new TScript(pParent, mpHost);
+    auto pT = new TScript(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
     mpHost->getScriptUnit()->registerScript(pT);
@@ -1243,7 +1266,6 @@ void XMLimport::readScriptGroup(TScript* pParent)
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1254,7 +1276,10 @@ void XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readScriptElement();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName();
+                }
             } else if (name() == "eventHandlerList") {
                 readStringList(pT->mEventHandlerList);
                 pT->setEventHandlerList(pT->mEventHandlerList);
@@ -1264,12 +1289,6 @@ void XMLimport::readScriptGroup(TScript* pParent)
                 readUnknownScriptElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not "
-                              "compile script's script for: "
-                           << pT->getName();
     }
 }
 
@@ -1292,28 +1311,30 @@ void XMLimport::readKeyPackage()
 
 void XMLimport::readKeyGroup(TKey* pParent)
 {
-    TKey* pT = new TKey(pParent, mpHost);
+    auto pT = new TKey(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
     mpHost->getKeyUnit()->registerKey(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
-
+    pT->mIsFolder = (attributes().value("isFolder") == "yes");
     if (module) {
         pT->mModuleMember = true;
     }
 
-    QString tempScript;
     while (!atEnd()) {
         readNext();
+
         if (isEndElement()) {
             break;
         } else if (isStartElement()) {
             if (name() == "name") {
-                pT->mName = readElementText();
+                pT->setName(readElementText());
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
             } else if (name() == "script") {
-                tempScript = readElementText();
+                QString tempScript = readScriptElement();
+                if (!pT->setScript(tempScript)) {
+                    qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not compile key's lua code for: " << pT->getName();
+                }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "keyCode") {
@@ -1326,12 +1347,6 @@ void XMLimport::readKeyGroup(TKey* pParent)
                 readUnknownKeyElement();
             }
         }
-    }
-
-    if (!pT->setScript(tempScript)) {
-        qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not "
-                              "compile key's script for: "
-                           << pT->getName();
     }
 }
 
@@ -1400,15 +1415,66 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                     // Using qFatal() seems a little, erm, fatalistic but it
                     // seems no lesser one will always be detectable on the
                     // RELEASE version on Windows? - Slysven
-                    qFatal("XMLimport::readIntegerList(...) ERROR: unable to "
-                           "convert: \"%s\" to a number when reading the "
-                           "'regexCodePropertyList' element of the 'Trigger' "
-                           "or 'TriggerGroup' element \"%s\"!",
-                           numberText.toUtf8().constData(), parentName.toUtf8().constData());
+                    qFatal(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
+                           numberText.toUtf8().constData(),
+                           parentName.toUtf8().constData());
                 }
             } else {
                 readUnknownTriggerElement();
             }
         }
     }
+}
+
+// This will be a string representation of a decimal float with three places of
+// decimals
+void XMLimport::getVersionString(QString& versionString)
+{
+    versionString = QString::number((mVersionMajor * 1000 + mVersionMinor) / 1000.0, 'f', 3);
+}
+
+QString XMLimport::readScriptElement()
+{
+
+    QString localScript = readElementText();
+    if (Error() != NoError) {
+        qDebug() << "XMLimport::readScriptElement() ERROR:"
+                 << errorString();
+    }
+
+    if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0) ) {
+        // This is NOT the original version, so it will have control characters
+        // encoded up using Object Replacement and Control Symbol (for relevant ASCII control code) code-points
+        localScript.replace(QStringLiteral("\xFFFC\x2401"), QChar('\x01')); // SOH
+        localScript.replace(QStringLiteral("\xFFFC\x2402"), QChar('\x02')); // STX
+        localScript.replace(QStringLiteral("\xFFFC\x2403"), QChar('\x03')); // ETX
+        localScript.replace(QStringLiteral("\xFFFC\x2404"), QChar('\x04')); // EOT
+        localScript.replace(QStringLiteral("\xFFFC\x2405"), QChar('\x05')); // ENQ
+        localScript.replace(QStringLiteral("\xFFFC\x2406"), QChar('\x06')); // ACK
+        localScript.replace(QStringLiteral("\xFFFC\x2407"), QChar('\x07')); // BEL
+        localScript.replace(QStringLiteral("\xFFFC\x2408"), QChar('\x08')); // BS
+        localScript.replace(QStringLiteral("\xFFFC\x240B"), QChar('\x0B')); // VT
+        localScript.replace(QStringLiteral("\xFFFC\x240C"), QChar('\x0C')); // FF
+        localScript.replace(QStringLiteral("\xFFFC\x240E"), QChar('\x0E')); // SS
+        localScript.replace(QStringLiteral("\xFFFC\x240F"), QChar('\x0F')); // SI
+        localScript.replace(QStringLiteral("\xFFFC\x2410"), QChar('\x10')); // DLE
+        localScript.replace(QStringLiteral("\xFFFC\x2411"), QChar('\x11')); // DC1
+        localScript.replace(QStringLiteral("\xFFFC\x2412"), QChar('\x12')); // DC2
+        localScript.replace(QStringLiteral("\xFFFC\x2413"), QChar('\x13')); // DC3
+        localScript.replace(QStringLiteral("\xFFFC\x2414"), QChar('\x14')); // DC4
+        localScript.replace(QStringLiteral("\xFFFC\x2415"), QChar('\x15')); // NAK
+        localScript.replace(QStringLiteral("\xFFFC\x2416"), QChar('\x16')); // SYN
+        localScript.replace(QStringLiteral("\xFFFC\x2417"), QChar('\x17')); // ETB
+        localScript.replace(QStringLiteral("\xFFFC\x2418"), QChar('\x18')); // CAN
+        localScript.replace(QStringLiteral("\xFFFC\x2419"), QChar('\x19')); // EM
+        localScript.replace(QStringLiteral("\xFFFC\x241A"), QChar('\x1A')); // SUB
+        localScript.replace(QStringLiteral("\xFFFC\x241B"), QChar('\x1B')); // ESC
+        localScript.replace(QStringLiteral("\xFFFC\x241C"), QChar('\x1C')); // FS
+        localScript.replace(QStringLiteral("\xFFFC\x241D"), QChar('\x1D')); // GS
+        localScript.replace(QStringLiteral("\xFFFC\x241E"), QChar('\x1E')); // RS
+        localScript.replace(QStringLiteral("\xFFFC\x241F"), QChar('\x1F')); // US
+        localScript.replace(QStringLiteral("\xFFFC\x2421"), QChar('\x7F')); // DEL
+    }
+
+    return localScript;
 }

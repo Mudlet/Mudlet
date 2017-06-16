@@ -2,6 +2,10 @@
 --- Mudlet Unsorted Stuff
 ----------------------------------------------------------------------------------
 
+mudlet = mudlet or {}
+mudlet.supports = {
+  coroutines = true
+}
 
 -- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {
@@ -124,10 +128,25 @@ function sendAll(...)
 end
 
 
+--- Table of functions used by permGroup to create the appropriate group, based on itemtype.
+local group_creation_functions = {
+    timer = function(name, parent)
+        return not (permTimer(name, parent, 0, "") == -1)
+       end,
+    trigger = function(name, parent)
+        return not (permSubstringTrigger(name, parent, {""}, "") == -1)
+      end,
+    alias = function(name, parent)
+        return not (permAlias(name, parent, "", "") == -1)
+      end
+ }
+
 --- Creates a group of a given type that will persist through sessions.
 ---
---- @param name name of the teim
+--- @param name name of the item
 --- @param itemtype type of the item - can be trigger, alias, or timer
+--- @param parent optional name of existing item which the new item
+---   will be created as a child of
 ---
 --- @usage
 --- <pre>
@@ -141,24 +160,11 @@ end
 ---     permGroup("Defensive aliases", "alias")
 ---   end
 --- </pre>
-function permGroup(name, itemtype)
+function permGroup(name, itemtype, parent)
   assert(type(name) == "string", "permGroup: need a name for the new thing")
-
-  local t = {
-    timer = function(name)
-        return (permTimer(name, "", 0, "") == -1) and false or true
-       end,
-    trigger = function(name)
-        return (permSubstringTrigger(name, "", {""}, "") == -1) and false or true
-      end,
-    alias = function(name)
-        return (permAlias(name, "", "", "") == -1) and false or true
-      end
- }
-
- assert(t[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
-
- return t[itemtype](name)
+  parent = parent or ""
+  assert(group_creation_functions[itemtype], "permGroup: "..tostring(itemtype).." isn't a valid type")
+  return group_creation_functions[itemtype](name, parent)
 end
 
 
@@ -513,24 +519,26 @@ end
 
 --- <b><u>TODO</u></b> getColorWildcard(color)
 function getColorWildcard(color)
-	local color = tonumber(color)
-	local startc
-	local endc
-	local results = {}
+        local color, results, startc, endc = tonumber(color), {}, nil, nil
 
-	for i = 1, string.len(line) do
-		selectSection(i, 1)
-		if isAnsiFgColor(color) then
-			if not startc then if i == 1 then startc = 1 else startc = i + 1 end
-			else endc = i + 1
-				if i == line:len() then results[#results + 1] = line:sub(startc, endc) end
-			end
-		elseif startc then
-			results[#results + 1] = line:sub(startc, endc)
-			startc = nil
-		end
-	end
-	return results[1] and results or false
+        for i = 0, string.len(line) do
+                selectSection(i, 1)
+                if isAnsiFgColor(color) then
+                        if not startc then 
+                                startc = i + 1
+                                endc = i + 1
+                        else 
+                                endc = i + 1
+                                if i == line:len() then
+                                        results[#results + 1] = line:sub(startc, endc)
+                                end
+                        end
+                elseif startc then
+                        results[#results + 1] = line:sub(startc, endc)
+                        startc = nil
+                end
+        end
+        return results[1] and results or false
 end
 
 
@@ -631,4 +639,23 @@ function shms(seconds, bool)
 	else
 		return hh, mm, ss
 	end
+end
+
+-- returns true if your Mudlet is older than the given version
+-- for example, it'll return true if you're on 2.1 and you do mudletOlderThan(3,1)
+-- it'll return false if you're on 4.0 and you do mudletOlderThan(4,0,0)
+function mudletOlderThan(inputmajor, inputminor, inputpatch)
+  local mudletmajor, mudletminor, mudletpatch = getMudletVersion("table")
+  local type, sformat = type, string.format
+
+  assert(type(inputmajor) == "number", sformat("bad argument #1 type (major version as number expected, got %s!)", type(inputmajor)))
+  assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
+  assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch)))
+
+
+  if mudletmajor < inputmajor then return true end
+  if inputminor and (mudletminor < inputminor) then return true end
+  if inputpatch and (mudletpatch < inputpatch) then return true end
+
+  return false
 end

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -34,8 +34,8 @@
 #include <QClipboard>
 #include <QMenu>
 #include <QPainter>
-#include <QString>
 #include <QScrollBar>
+#include <QString>
 #include <QToolTip>
 #include "post_guard.h"
 
@@ -46,7 +46,6 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
 , mIsCommandPopup( false )
 , mIsTailMode( true )
 , mShowTimeStamps( isDebugConsole )
-//private
 , mForceUpdate( false )
 , mHighlight_on( false )
 , mHighlightingBegin( false )
@@ -77,7 +76,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         }
 
         mpHost->mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mpHost->mDisplayFont);
@@ -97,7 +96,7 @@ TTextEdit::TTextEdit( TConsole * pC, QWidget * pW, TBuffer * pB, Host * pH, bool
         mFontWidth = QFontMetrics( mDisplayFont ).width( QChar('W') );
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         p.setFont(mDisplayFont);
@@ -195,9 +194,9 @@ void TTextEdit::slot_scrollBarMoved( int line )
 void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192,192,192);
-    mBgColor = QColor(0,0,0);
+    mBgColor = QColor(Qt::black);
     mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         int width = mScreenWidth*mFontWidth*2;
         int height = mFontHeight*2;
         // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -231,7 +230,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( 2000,600 );
         QPainter p(&pixmap);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -254,7 +253,7 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap( mScreenWidth*mFontWidth*2, mFontHeight*2 );
         QPainter p(&pixmap);
         mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
@@ -276,7 +275,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics( mDisplayFont ).descent();
         mFontAscent = QFontMetrics( mDisplayFont ).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         int width = mScreenWidth*mFontWidth*2;
         int height = mFontHeight*2;
         // sometimes mScreenWidth is 0, and QPainter doesn't like dimensions of 0x#. Need to work out why is
@@ -441,23 +440,26 @@ inline void TTextEdit::drawBackground( QPainter & painter,
 }
 
 inline void TTextEdit::drawCharacters( QPainter & painter,
-                                const QRect & rect,
-                                QString & text,
-                                bool isBold,
-                                bool isUnderline,
-                                bool isItalics,
-                                bool isStrikeOut,
-                                QColor & fgColor,
-                                QColor & bgColor )
+                                       const QRect & rect,
+                                       QString & text,
+                                       bool isBold,
+                                       bool isUnderline,
+                                       bool isItalics,
+                                       bool isStrikeOut,
+                                       QColor & fgColor,
+                                       QColor & bgColor )
 {
-    if( ( painter.font().bold() != isBold ) || ( painter.font().underline() != isUnderline ) || (painter.font().italic() != isItalics) || (painter.font().strikeOut() != isStrikeOut))
+    if( ( painter.font().bold() != isBold )
+     || ( painter.font().underline() != isUnderline )
+     || ( painter.font().italic() != isItalics )
+     || ( painter.font().strikeOut() != isStrikeOut) )
     {
         QFont font = painter.font();
         font.setBold( isBold );
         font.setUnderline( isUnderline );
         font.setItalic( isItalics );
         font.setStrikeOut( isStrikeOut );
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
         font.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
 #endif
         painter.setFont( font );
@@ -466,7 +468,7 @@ inline void TTextEdit::drawCharacters( QPainter & painter,
     {
         painter.setPen( fgColor );
     }
-#if defined(Q_OS_MAC) || (defined(Q_OS_LINUX) && QT_VERSION >= 0x040800)
+#if defined(Q_OS_MAC) || defined(Q_OS_LINUX)
     QPointF _p(rect.x(), rect.bottom()-mFontDescent);
     painter.drawText( _p, text );
 #else
@@ -525,8 +527,8 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
                                         mFontHeight );
-                QColor bgTime = QColor(22,22,22);
-                QColor fgTime = QColor(200,150,0);
+                auto bgTime = QColor(22,22,22);
+                auto fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
                 drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
@@ -540,8 +542,8 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                 text = mpBuffer->lineBuffer[i+lineOffset].at(i2-timeOffset);
                 TChar & f = mpBuffer->buffer[i+lineOffset][i2-timeOffset];
                 int delta = 1;
-                QColor fgColor = QColor(f.fgR, f.fgG, f.fgB );
-                QColor bgColor = QColor(f.bgR, f.bgG, f.bgB );
+                auto fgColor = QColor(f.fgR, f.fgG, f.fgB );
+                auto bgColor = QColor(f.bgR, f.bgG, f.bgB );
                 while( i2+delta+timeOffset < lineLength )
                 {
                     if( mpBuffer->buffer[i+lineOffset][i2+delta-timeOffset] == f )
@@ -566,7 +568,10 @@ void TTextEdit::drawFrame( QPainter & p, const QRect & rect )
                     else
                         drawBackground( p, textRect, bgColor );
                 }
-                if( ( p.font().bold() != bool(f.flags & TCHAR_BOLD) ) || ( p.font().underline() != bool(f.flags & TCHAR_UNDERLINE) ) || (p.font().italic() != bool(f.flags & TCHAR_ITALICS)) || (p.font().strikeOut() != bool(f.flags & TCHAR_STRIKEOUT)))
+                if( ( p.font().bold() != static_cast<bool>(f.flags & TCHAR_BOLD) )
+                 || ( p.font().underline() != static_cast<bool>(f.flags & TCHAR_UNDERLINE) )
+                 || ( p.font().italic() != static_cast<bool>(f.flags & TCHAR_ITALICS) )
+                 || ( p.font().strikeOut() != static_cast<bool>(f.flags & TCHAR_STRIKEOUT) ) )
                 {
                     QFont font = p.font();
                     font.setBold( f.flags & TCHAR_BOLD );
@@ -732,8 +737,8 @@ void TTextEdit::drawForeground( QPainter & painter, const QRect & r )
                                         mFontHeight * i,
                                         mFontWidth * timeOffset,
                                         mFontHeight );
-                QColor bgTime = QColor(22,22,22);
-                QColor fgTime = QColor(200,150,0);
+                auto bgTime = QColor(22,22,22);
+                auto fgTime = QColor(200,150,0);
                 drawBackground( p, textRect, bgTime );
                 drawCharacters( p, textRect, text, isBold, isUnderline, isItalics, isStrikeOut, fgTime, bgTime );
                 i2+=timeOffset;
@@ -1007,15 +1012,15 @@ void TTextEdit::mouseMoveEvent( QMouseEvent * event )
         
         if( oldAY < mPA.y() ){
           for( int y = oldAY; y < mPA.y(); y++ ){
-            for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-              mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+            for(auto & x : mpBuffer->buffer[y]){
+              x.flags &= ~(TCHAR_INVERSE);
             }
           }
         }
         if( oldBY > mPB.y() ){
             for( int y = mPB.y()+1; y <= oldBY; y++ ){
-                for( int x = 0; x < static_cast<int>(mpBuffer->buffer[y].size()); x++ ){
-                    mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                for(auto & x : mpBuffer->buffer[y]){
+                    x.flags &= ~(TCHAR_INVERSE);
                 }
             }
         }
@@ -1148,33 +1153,32 @@ void TTextEdit::slot_popupMenu()
 
 void TTextEdit::mousePressEvent( QMouseEvent * event )
 {
-    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
-    {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMousePressEvent" );
-        switch( event->button() )
-        {
+    if (!mpConsole->mIsSubConsole && !mpConsole->mIsDebugConsole) {
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append(QLatin1String("sysWindowMousePressEvent"));
+        switch (event->button()) {
         case Qt::LeftButton:
-            me.mArgumentList.append( QString::number(1) );
+            mudletEvent.mArgumentList.append(QString::number(1));
             break;
         case Qt::RightButton:
-            me.mArgumentList.append( QString::number(2) );
+            mudletEvent.mArgumentList.append(QString::number(2));
             break;
         case Qt::MidButton:
-            me.mArgumentList.append( QString::number(3) );
+            mudletEvent.mArgumentList.append(QString::number(3));
             break;
-        default:
-            me.mArgumentList.append( 0 );
+        default: // TODO: What about those of us with more than three mouse buttons?
+            mudletEvent.mArgumentList.append(0);
             break;
         }
-        me.mArgumentList.append( QString::number(event->x()) );
-        me.mArgumentList.append( QString::number(event->y()) );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        mudletEvent.mArgumentList.append(QString::number(event->x()));
+        mudletEvent.mArgumentList.append(QString::number(event->y()));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(mudletEvent);
     }
+
     if( event->button() == Qt::LeftButton )
     {
         if( event->modifiers() & Qt::ControlModifier ) {
@@ -1226,7 +1230,9 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     break;
                 xind++;
             }
-            if ( mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)) )
+            // For ignoring user specified characters, we first stop at space boundaries, then we
+            // proceed to search within these spaces for ignored characters and chop off any we find.
+            while(xind>0 && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind-1)))
                 xind--;
             mPB.setX ( xind-1 );
             mPB.setY ( yind );
@@ -1236,8 +1242,10 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                 if (c == ' ')
                     break;
             }
-            if ( xind > 0 ||
-                 mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at( xind ) ) )
+            int lsize = mpBuffer->lineBuffer[yind].size();
+            while(xind+1 < lsize && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind+1)))
+                xind++;
+            if ( xind > 0 )
                 mPA.setX ( xind+1 );
             else
                 mPA.setX ( qMax( 0, xind ) );
@@ -1291,7 +1299,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
                     QStringList hint = mpBuffer->mHintStore[mpBuffer->buffer[y][x].link];
                     if( command.size() > 1 )
                     {
-                        QMenu * popup = new QMenu( this );
+                        auto popup = new QMenu( this );
                         for( int i=0; i<command.size(); i++ )
                         {
                             QAction * pA;
@@ -1322,7 +1330,7 @@ void TTextEdit::mousePressEvent( QMouseEvent * event )
         QAction * action2 = new QAction("copy HTML", this );
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect( action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
-        QMenu * popup = new QMenu( this );
+        auto popup = new QMenu( this );
         popup->addAction( action );
         popup->addAction( action2 );
         popup->popup( mapToGlobal( event->pos() ), action );
@@ -1379,6 +1387,11 @@ void TTextEdit::copySelectionToClipboard()
             forceUpdate();
             return;
         }
+        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
+        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y())
+        {
+            text.append( mpBuffer->timeBuffer[y].left(13) );
+        }
         int x = 0;
         if( y == mPA.y() ) x = mPA.x();
         while( x < static_cast<int>( mpBuffer->buffer[y].size() ) )
@@ -1417,16 +1430,19 @@ void TTextEdit::copySelectionToClipboardHTML()
     }
     else if( this->mIsMiniConsole ) {
         if( ! this->mpHost->mpConsole->mSubConsoleMap.empty() ) {
-            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin(); it != this->mpHost->mpConsole->mSubConsoleMap.cend(); ++it ) {
+            for( auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin();
+                 it != this->mpHost->mpConsole->mSubConsoleMap.cend();
+                 ++it ) {
+
                 if( (*it).second == this->mpConsole ) {
-                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg( (*it).first.data() ).arg( this->mpHost->getName() );
+                    title = tr( "Mudlet, %1 mini-console extract from %2 profile" ).arg((*it).first.data(), this->mpHost->getName() );
                     break;
                 }
             }
         }
     }
     else {
-        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg( this->mpConsole->mConsoleName ).arg(  this->mpHost->getName() );
+        title = tr( "Mudlet, %1 console extract from %2 profile" ).arg(this->mpConsole->mConsoleName, this->mpHost->getName() );
     }
 
     QStringList fontsList; // List of fonts to become the font-family entry for
@@ -1487,21 +1503,14 @@ void TTextEdit::copySelectionToClipboardHTML()
         int x = 0;
         if( y == mPA.y() ) {// First line of selection
             x = mPA.x();
-            if( x ) {
-                text.append( "<span>" );
-                text.append( QString( x, QLatin1Char(' ') ) );
-                text.append( "</span>" );
-                // Pad out with spaces to the right so a partial first line lines up
-            }
-
-            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(x,y), QPoint(-1,y), mShowTimeStamps, x));
         }
         else if ( y == mPB.y() ) {// Last line of selection
             x = mPB.x();
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(x,y), mShowTimeStamps));
         }
         else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y)));
+            text.append(mpBuffer->bufferToHtml( QPoint(0,y), QPoint(-1,y), mShowTimeStamps));
         }
     }
     text.append( QStringLiteral( " </div></body>\n"
@@ -1516,37 +1525,35 @@ void TTextEdit::copySelectionToClipboardHTML()
 
 void TTextEdit::mouseReleaseEvent( QMouseEvent * event )
 {
-    if( event->button() == Qt::LeftButton )
-    {
+    if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
     }
-    if( ! mpConsole->mIsSubConsole && ! mpConsole->mIsDebugConsole )
-    {
-        TEvent me;
-        me.mArgumentList.append( "sysWindowMouseReleaseEvent" );
-        switch( event->button() )
-        {
+
+    if (!mpConsole->mIsSubConsole && !mpConsole->mIsDebugConsole) {
+        TEvent mudletEvent;
+        mudletEvent.mArgumentList.append(QLatin1String("sysWindowMouseReleaseEvent"));
+        switch (event->button()) {
         case Qt::LeftButton:
-            me.mArgumentList.append( QString::number(1) );
+            mudletEvent.mArgumentList.append(QString::number(1));
             break;
         case Qt::RightButton:
-            me.mArgumentList.append( QString::number(2) );
+            mudletEvent.mArgumentList.append(QString::number(2));
             break;
         case Qt::MidButton:
-            me.mArgumentList.append( QString::number(3) );
+            mudletEvent.mArgumentList.append(QString::number(3));
             break;
         default:
-            me.mArgumentList.append( QString::number(0) );
+            mudletEvent.mArgumentList.append(QString::number(0));
             break;
         }
-        me.mArgumentList.append( QString::number(event->x()) );
-        me.mArgumentList.append( QString::number(event->y()) );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_STRING );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        me.mArgumentTypeList.append( ARGUMENT_TYPE_NUMBER );
-        mpHost->raiseEvent( me );
+        mudletEvent.mArgumentList.append(QString::number(event->x()));
+        mudletEvent.mArgumentList.append(QString::number(event->y()));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(mudletEvent);
     }
 }
 

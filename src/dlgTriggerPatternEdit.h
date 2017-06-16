@@ -31,8 +31,12 @@ class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgTriggerPatternEdit)
+
 public:
     dlgTriggerPatternEdit(QWidget*);
+
+//private:
     int mRow;
 };
 

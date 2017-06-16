@@ -31,6 +31,8 @@ class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgTimersMainArea)
+
 public:
     dlgTimersMainArea(QWidget*);
 };

@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,36 +37,32 @@ class QGridLayout;
 
 class TEasyButtonBar : public QWidget
 {
-Q_OBJECT
+    Q_OBJECT
+
+    Q_DISABLE_COPY(TEasyButtonBar)
 
 public:
-                     TEasyButtonBar( TAction *, QString, QWidget * pW = 0 );
-    void             addButton( TFlipButton * pW );
-    void             setVerticalOrientation(){ mVerticalOrientation = true; }
-    void             setHorizontalOrientation(){ mVerticalOrientation = false; }
-    void             clear();
-    void             finalize();
-    TAction *        mpTAction;
-    void             recordMove(){ mRecordMove = true; }
+    TEasyButtonBar(TAction*, QString, QWidget* pW = 0);
+    void addButton(TFlipButton* pW);
+    void setVerticalOrientation() { mVerticalOrientation = true; }
+    void setHorizontalOrientation() { mVerticalOrientation = false; }
+    void clear();
+    void finalize();
+    TAction* mpTAction;
+    void recordMove() { mRecordMove = true; }
 
-//private:
-
-    bool             mVerticalOrientation;
-    QWidget *        mpWidget;
-    QString          mName;
-    bool             mRecordMove;
-    QGridLayout *    mpLayout;
-    int              mItemCount;
-    QWidget *        mpBar;
-    std::list<TFlipButton *> mButtonList;
-
-signals:
-
+private:
+    bool mVerticalOrientation;
+    QWidget* mpWidget;
+    QString mName;
+    bool mRecordMove;
+    QGridLayout* mpLayout;
+    int mItemCount;
+    QWidget* mpBar;
+    std::list<TFlipButton*> mButtonList;
 
 public slots:
-
-    void slot_pressed();
-
+    void slot_pressed(const bool);
 };
 
 #endif // MUDLET_TEASYBUTTONBAR_H

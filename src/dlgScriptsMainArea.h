@@ -31,6 +31,8 @@ class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(dlgScriptsMainArea)
+
 public:
     dlgScriptsMainArea(QWidget*);
 };

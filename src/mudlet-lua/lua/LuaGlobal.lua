@@ -116,6 +116,7 @@ local packages = {
 	"GUIUtils.lua",
 	"Other.lua",
 	"GMCP.lua",
+	"KeyCodes.lua"
 }
 
 -- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
@@ -128,8 +129,14 @@ local packages = {
 -- TODO: extend to support common Lua code being placed in system shared directory
 -- tree as ought to happen for *nix install builds.
 local prefixes = {"../src/mudlet-lua/lua/", "../Resources/mudlet-lua/lua/",
-    "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua",
-    getMudletLuaDefaultPath()}
+    "mudlet.app/Contents/Resources/mudlet-lua/lua/", "mudlet-lua/lua"}
+
+-- add default search paths coming from the C++ side as well
+if getMudletLuaDefaultPaths then
+    for _, path in ipairs(getMudletLuaDefaultPaths()) do
+        prefixes[#prefixes+1] = path
+    end
+end
 
 local prefix
 for i = 1, #prefixes do

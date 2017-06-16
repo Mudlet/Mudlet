@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2013-2014, 2016 by Stephen Lyons                        *
  *                                            - slysven@virginmedia.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QApplication>
+#include <QDesktopWidget>
 #include <QDir>
 #include <QFile>
 #include <QPainter>
@@ -38,8 +39,8 @@
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
 // leak detection does not work when it is not defined.
-#include <pcre.h>
 #include <Windows.h>
+#include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
 #include <iostream>
@@ -47,9 +48,7 @@
 
 using namespace std;
 
-TConsole *  spDebugConsole = 0;
-
-extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+TConsole* spDebugConsole = 0;
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -68,81 +67,77 @@ static void pcre_free_dbg(void* ptr)
 
 #endif // _DEBUG && _MSC_VER
 
-QCoreApplication * createApplication(int &argc, char *argv[], unsigned int &action)
+QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action)
 {
     action = 0;
 
 // A crude and simplistic commandline options processor - note that Qt deals
 // with its options automagically!
-#if ! ( defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC) )
-// Handle other currently unconsidered OSs - what are they - by returning the
-// normal GUI type application handle.
+#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MAC))
+    // Handle other currently unconsidered OSs - what are they - by returning the
+    // normal GUI type application handle.
     return new QApplication(argc, argv);
 #endif
 
-    for(int i = 1; i < argc; ++i)
-    {
+    for (int i = 1; i < argc; ++i) {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
-        if( qstrcmp(argv[i], "--") == 0 )
+        if (qstrcmp(argv[i], "--") == 0)
             break; // Bail out on end of option type arguments
 #endif
 
         char argument = 0;
         bool isOption = false;
 #if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
-        if( strlen(argv[i]) > 2 && strncmp(argv[i], "--", 2) == 0 )
-        {
+        if (strlen(argv[i]) > 2 && strncmp(argv[i], "--", 2) == 0) {
             argument = argv[i][2];
             isOption = true;
-        }
-        else if( strlen(argv[i]) > 1 && strncmp(argv[i], "-", 1) == 0 )
-        {
+        } else if (strlen(argv[i]) > 1 && strncmp(argv[i], "-", 1) == 0) {
             argument = argv[i][1];
             isOption = true;
         }
 #elif defined(Q_OS_WIN32)
-// TODO: Do Qt builds for Windows use Unix '-' as option prefix or is the normal (for them) '/' used - as assumed here and in the help text
-        if( strlen(argv[i]) > 1 && strncmp(argv[i], "/", 1) == 0 )
-        {
+        // TODO: Do Qt builds for Windows use Unix '-' as option prefix or is the normal (for them) '/' used - as assumed here and in the help text
+        if (strlen(argv[i]) > 1 && strncmp(argv[i], "/", 1) == 0) {
             argument = argv[i][1];
             isOption = true;
         }
 #endif
 
-        if( isOption )
-        {
-            if(tolower(argument) == 'v')
-            {
+        if (isOption) {
+            if (tolower(argument) == 'v') {
                 action = 2; // Make this the only action to do and do it directly
                 break;
             }
 
-            if(tolower(argument) == 'h' || argument == '?')
-            {
+            if (tolower(argument) == 'h' || argument == '?') {
                 action = 1; // Make this the only action to do and do it directly
                 break;
             }
 
-            if(tolower(argument) == 'q')
-            {
+            if (tolower(argument) == 'q') {
                 action |= 4;
             }
-
         }
     }
 
-    if( (action) & ( 1 | 2) )
-        return new QCoreApplication(argc, argv);  // Ah, we're gonna bail out early, just need a command-line application
+    if ((action) & (1 | 2))
+        // Ah, we're gonna bail out early, just need a command-line application
+        return new QCoreApplication(argc, argv);
     else {
-#if defined (Q_OS_WIN32)        
+#if defined(Q_OS_MACOS)
+        // Workaround for horrible mac rendering issues once the mapper widget is open
+        // see https://bugreports.qt.io/browse/QTBUG-41257
+        QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#endif
+#if defined(Q_OS_WIN32)
         // Force OpenGL use as we use some functions that aren't provided by Qt's OpenGL layer on Windows (QOpenGLFunctions)
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
-#endif        
+#endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Enable leak detection for MSVC debug builds.
@@ -160,8 +155,7 @@ int main(int argc, char *argv[])
         _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
         // Create a log file for writing leaks.
-        HANDLE hLogFile;
-        hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
+        HANDLE hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
             FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL, NULL);
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -183,14 +177,12 @@ int main(int argc, char *argv[])
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
 
-    QApplication * app = qobject_cast<QApplication *>(initApp.data());
+    QApplication* app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-    if( app == 0 )
-    {
-        if( startupAction & 2 )
-        {
+    if (app == 0) {
+        if (startupAction & 2) {
             // Do "version" action - wording and format is quite tightly specified by the coding standards
             std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;
             std::cout << "Qt libraries " << QT_VERSION_STR << "(compilation) " << qVersion() << "(runtime)" << std::endl;
@@ -199,11 +191,10 @@ int main(int argc, char *argv[])
             std::cout << "This is free software: you are free to change and redistribute it." << std::endl;
             std::cout << "There is NO WARRANTY, to the extent permitted by law." << std::endl;
         }
-        if( startupAction & 1 )
-        {
+        if (startupAction & 1) {
             // Do "help" action -
-            std::cout << "Usage: " << std::string(APP_TARGET) << "[OPTION...]" <<std::endl;
-#if defined (Q_OS_WIN32)
+            std::cout << "Usage: " << std::string(APP_TARGET) << "[OPTION...]" << std::endl;
+#if defined(Q_OS_WIN32)
             std::cout << "   /h, /help           displays this message." << std::endl;
             std::cout << "   /v, /version        displays version information." << std::endl;
             std::cout << "   /q, /quiet          no splash screen on startup." << std::endl;
@@ -216,12 +207,12 @@ int main(int argc, char *argv[])
 #endif
             std::cout << "There are other inherited options that arise from the Qt Libraries which" << std::endl;
             std::cout << "are not likely to be useful for normal use of this application:" << std::endl;
-// From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
+            // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
             std::cout << "       " << OPT_PREFIX << "dograb         ignore any implicit or explicit -nograb." << std::endl;
-            std::cout << "                       " << OPT_PREFIX << "dograb wins over " << OPT_PREFIX <<"nograb even when" << std::endl;
+            std::cout << "                       " << OPT_PREFIX << "dograb wins over " << OPT_PREFIX << "nograb even when" << std::endl;
             std::cout << "                       " << OPT_PREFIX << "nograb is last on the command line." << std::endl;
-            std::cout << "       " << OPT_PREFIX << "nograb         the application should never grab the mouse or the"<< std::endl;
-#if defined( Q_OS_LINUX )
+            std::cout << "       " << OPT_PREFIX << "nograb         the application should never grab the mouse or the" << std::endl;
+#if defined(Q_OS_LINUX)
             std::cout << "                       keyboard. This option is set by default when Mudlet is" << std::endl;
             std::cout << "                       running in the gdb debugger under Linux." << std::endl;
 #else
@@ -229,7 +220,7 @@ int main(int argc, char *argv[])
 #endif
             std::cout << "        " << OPT_PREFIX << "reverse       sets the application's layout direction to" << std::endl;
             std::cout << "                       right to left." << std::endl;
-            std::cout << "        " << OPT_PREFIX << "style= style  sets the application GUI style. Possible values depend"  << std::endl;
+            std::cout << "        " << OPT_PREFIX << "style= style  sets the application GUI style. Possible values depend" << std::endl;
             std::cout << "                       on your system configuration. If Qt was compiled with" << std::endl;
             std::cout << "                       additional styles or has additional styles as plugins" << std::endl;
             std::cout << "                       these will be available to the -style command line" << std::endl;
@@ -244,7 +235,7 @@ int main(int argc, char *argv[])
             std::cout << "                       file are relative to the Style Sheet file's path." << std::endl;
             std::cout << "        " << OPT_PREFIX << "stylesheet stylesheet" << std::endl;
             std::cout << "                       is the same as listed above." << std::endl;
-#if defined( Q_OS_UNIX )
+#if defined(Q_OS_UNIX)
             std::cout << "        " << OPT_PREFIX << "sync          runs Mudlet in X synchronous mode. Synchronous mode" << std::endl;
             std::cout << "                       forces the X server to perform each X client request" << std::endl;
             std::cout << "                       immediately and not use buffer optimization. It makes" << std::endl;
@@ -257,17 +248,17 @@ int main(int argc, char *argv[])
             std::cout << "        " << OPT_PREFIX << "qmljsdebugger=1234[,block]" << std::endl;
             std::cout << "                       activates the QML/JS debugger with a specified port." << std::endl;
             std::cout << "                       The number is the port value and block is optional" << std::endl;
-            std::cout << "                       and will make the application wait until a debugger"  << std::endl;
+            std::cout << "                       and will make the application wait until a debugger" << std::endl;
             std::cout << "                       connects to it." << std::endl;
             std::cout << std::endl;
-            std::cout << "Report bugs to: <https://bugs.launchpad.net/mudlet/+filebug>" << std::endl;
+            std::cout << "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>" << std::endl;
             std::cout << "pkg home page: <http://www.mudlet.org/>" << std::endl;
         }
         return 0;
     }
 
-// Turn the cursor into the waiting one during startup, so something shows
-// activity even if the quiet, no splashscreen startup has been used
+    // Turn the cursor into the waiting one during startup, so something shows
+    // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName("Mudlet");
     app->setApplicationName("Mudlet");
@@ -277,40 +268,38 @@ int main(int argc, char *argv[])
 
     QImage splashImage(":/Mudlet_splashscreen_main.png");
     if (show_splash) {
-        QPainter painter( &splashImage );
+        QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString( "Version: " APP_VERSION APP_BUILD );
+        QString sourceVersionText = QString("Version: " APP_VERSION APP_BUILD);
 
         bool isWithinSpace = false;
-        while( ! isWithinSpace )
-        {
-            QFont font( "DejaVu Serif", fontSize, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
-            QTextLayout versionTextLayout( sourceVersionText, font, painter.device() );
+        while (!isWithinSpace) {
+            QFont font("DejaVu Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
             QTextLine versionTextline = versionTextLayout.createLine();
             // First draw (one line from) the text we have put in on the layout to
             // see how wide it is..., assuming accutally that it will only take one
             // line of text
-            versionTextline.setLineWidth( 280 );
+            versionTextline.setLineWidth(280);
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
-            versionTextline.setPosition( QPointF( 0, 0 ) );
+            versionTextline.setPosition(QPointF(0, 0));
             // Only pretend, so we can see how much space it will take
             QTextLine dummy = versionTextLayout.createLine();
-            if( ! dummy.isValid() )
-            { // No second line so have got all text in first so can do it
+            if (!dummy.isValid()) {
+                // No second line so have got all text in first so can do it
                 isWithinSpace = true;
                 qreal versionTextWidth = versionTextline.naturalTextWidth();
                 // This is the ACTUAL width of the created text
-                versionTextline.setPosition( QPointF( (320 - versionTextWidth) / 2.0 , 270 ) );
+                versionTextline.setPosition(QPointF((320 - versionTextWidth) / 2.0, 270));
                 // And now we can place it centred horizontally
                 versionTextLayout.endLayout();
                 // end the layout process and paint it out
-                painter.setPen( QColor( 176, 64, 0, 255 ) ); // #b04000
-                versionTextLayout.draw( &painter, QPointF( 0, 0 ) );
-            }
-            else
-            { // Too big - text has spilled over onto a second line - so try again
+                painter.setPen(QColor(176, 64, 0, 255)); // #b04000
+                versionTextLayout.draw(&painter, QPointF(0, 0));
+            } else {
+                // Too big - text has spilled over onto a second line - so try again
                 fontSize--;
                 versionTextLayout.clearLayout();
                 versionTextLayout.endLayout();
@@ -318,18 +307,18 @@ int main(int argc, char *argv[])
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar( 169 ) % QString( " Mudlet makers 2008-" ) % QString(__DATE__).mid(7);
-        QFont font( "DejaVu Serif", 16, QFont::Bold|QFont::Serif|QFont::PreferMatch|QFont::PreferAntialias );
-        QTextLayout copyrightTextLayout( sourceCopyrightText, font, painter.device() );
+        QString sourceCopyrightText = QChar(169) % QString(" Mudlet makers 2008-") % QString(__DATE__).mid(7);
+        QFont font("DejaVu Serif", 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
-        copyrightTextline.setLineWidth( 280 );
-        copyrightTextline.setPosition( QPointF( 1, 1 ) );
+        copyrightTextline.setLineWidth(280);
+        copyrightTextline.setPosition(QPointF(1, 1));
         qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
-        copyrightTextline.setPosition( QPointF( (320 - copyrightTextWidth) / 2.0 , 340 ) );
+        copyrightTextline.setPosition(QPointF((320 - copyrightTextWidth) / 2.0, 340));
         copyrightTextLayout.endLayout();
-        painter.setPen( QColor( 112, 16, 0, 255 ) ); // #701000
-        copyrightTextLayout.draw( &painter, QPointF( 0, 0 ) );
+        painter.setPen(QColor(112, 16, 0, 255)); // #701000
+        copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
     QPixmap pixmap = QPixmap::fromImage(splashImage);
     QSplashScreen splash(pixmap);
@@ -347,84 +336,98 @@ int main(int argc, char *argv[])
                               "certain conditions; select the\n"
                               "'About' item for details.\n\n");
         splash_message.append("Locating profiles... ");
-        splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
+        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
-    QString directory = QDir::homePath()+"/.config/mudlet";
+    // seed random number generator (should be done once per lifetime)
+    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
+
+    QString directory = QDir::homePath() + "/.config/mudlet";
     QDir dir;
-    if( ! dir.exists( directory ) )
-    {
-        dir.mkpath( directory );
+    bool first_launch = false;
+    if (!dir.exists(directory)) {
+        dir.mkpath(directory);
+        first_launch = true;
     }
 
     if (show_splash) {
         splash_message.append("Done.\n\nLoading font files... ");
-        splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
+        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
-    if (!QFile::exists(directory+"/COPYRIGHT.TXT")) {
+    if (!QFile::exists(directory + "/COPYRIGHT.TXT")) {
         QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
-        file_f1.copy( directory+"/COPYRIGHT.TXT" );
+        file_f1.copy(directory + "/COPYRIGHT.TXT");
     }
 
-    if (!QFile::exists(directory+"/RELEASENOTES.TXT")) {
+    if (!QFile::exists(directory + "/RELEASENOTES.TXT")) {
         QFile file_f2(":/fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT");
-        file_f2.copy( directory+"/RELEASENOTES.TXT" );
+        file_f2.copy(directory + "/RELEASENOTES.TXT");
     }
 
-    if (!QFile::exists(directory+"/VeraMoIt.ttf")) {
+    if (!QFile::exists(directory + "/VeraMoIt.ttf")) {
         QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
-        file_f3.copy( directory+"/VeraMoIt.ttf" );
+        file_f3.copy(directory + "/VeraMoIt.ttf");
     }
 
-    if (!QFile::exists(directory+"/local.conf")) {
+    if (!QFile::exists(directory + "/local.conf")) {
         QFile file_f4(":/fonts/ttf-bitstream-vera-1.10/local.conf");
-        file_f4.copy( directory+"/local.conf" );
+        file_f4.copy(directory + "/local.conf");
     }
 
-    if (!QFile::exists(directory+"/VeraMoBd.ttf")) {
+    if (!QFile::exists(directory + "/VeraMoBd.ttf")) {
         QFile file_f5(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
-        file_f5.copy( directory+"/VeraMoBd.ttf" );
+        file_f5.copy(directory + "/VeraMoBd.ttf");
     }
 
-    if (!QFile::exists(directory+"/VeraMoBd.ttf")) {
+    if (!QFile::exists(directory + "/VeraMoBd.ttf")) {
         QFile file_f6(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
-        file_f6.copy( directory+"/VeraMoBd.ttf" );
+        file_f6.copy(directory + "/VeraMoBd.ttf");
     }
 
-    if (!QFile::exists(directory+"/README.TXT")) {
+    if (!QFile::exists(directory + "/README.TXT")) {
         QFile file_f7(":/fonts/ttf-bitstream-vera-1.10/README.TXT");
-        file_f7.copy( directory+"/README.TXT" );
+        file_f7.copy(directory + "/README.TXT");
     }
 
-    if (!QFile::exists(directory+"/VeraMoBI.ttf")) {
+    if (!QFile::exists(directory + "/VeraMoBI.ttf")) {
         QFile file_f8(":/fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf");
-        file_f8.copy( directory+"/VeraMoBI.ttf" );
+        file_f8.copy(directory + "/VeraMoBI.ttf");
     }
 
-    if (!QFile::exists(directory+"/VeraMono.ttf")) {
+    if (!QFile::exists(directory + "/VeraMono.ttf")) {
         QFile file_f9(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf");
-        file_f9.copy( directory+"/VeraMono.ttf" );
+        file_f9.copy(directory + "/VeraMono.ttf");
     }
 
     if (show_splash) {
         splash_message.append("Done.\n\n"
                               "All data has been loaded successfully.\n\n"
                               "Starting... Have fun!\n\n");
-        splash.showMessage(splash_message, Qt::AlignHCenter|Qt::AlignTop);
+        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
 
     mudlet::debugMode = false;
     FontManager fm;
     fm.addFonts();
-    QString home = QDir::homePath()+"/.config/mudlet";
-    QString homeLink = QDir::homePath()+"/mudlet-data";
+    QString home = QDir::homePath() + "/.config/mudlet";
+    QString homeLink = QDir::homePath() + "/mudlet-data";
     QFile::link(home, homeLink);
     mudlet::start();
+
+    if (first_launch) {
+        // give Mudlet window decent size - most of the screen on non-HiDPI displays
+        auto desktop = qApp->desktop();
+        auto initialSpace = desktop->availableGeometry(desktop->screenNumber());
+        mudlet::self()->resize(initialSpace.width() * 3 / 4, initialSpace.height() * 3 / 4);
+        mudlet::self()->move(initialSpace.width() / 8, initialSpace.height() / 8);
+    }
+
     mudlet::self()->show();
+
     if (show_splash) {
         splash.finish(mudlet::self());
     }

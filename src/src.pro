@@ -18,13 +18,24 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5) {
-  error("requires Qt 5.0 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
+    error("Mudlet requires Qt 5.6 or later")
 }
+
+# Including IRC Library
+include(../3rdparty/communi/src/core/core.pri)
+
+include(../3rdparty/lua_yajl/src.pri)
+
+macx: {
+    include(../3rdparty/luazip/src.pri)
+}
+
+include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.0.1
+VERSION = 3.2.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -51,14 +62,18 @@ msvc:QMAKE_CXXFLAGS += -MP
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
-
 qtHaveModule(gamepad): QT += gamepad
 
-# Leave the value of the following empty, line should be "BUILD =" without quotes
-# (it is NOT a Qt built-in variable) for a release build or, if you are
-# distributing modified code, it would be useful if you could put something to
-# distinguish the version:
-BUILD = -dev
+# if you are distributing modified code, it would be useful if you
+# put something distinguishing into the MUDLET_VERSION_BUILD environment
+# variable to make identification of the used version simple
+# the qmake BUILD variable is NOT built-in
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
+# Leave the value of the following empty for a release build
+# i.e. the line should be "BUILD =" without quotes
+  BUILD = "-dev"
+}
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
@@ -72,7 +87,6 @@ macx {
 } else {
     TARGET = mudlet
 }
-msvc:DEFINES += LUA_CPP PCRE_STATIC HUNSPELL_STATIC
 
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
@@ -163,8 +177,6 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
-INCLUDEPATH += irc/include
-
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
@@ -196,15 +208,6 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
-    irc/src/irc.cpp \
-    irc/src/irccodecplugin.cpp \
-    irc/src/irccommand.cpp \
-    irc/src/ircdecoder.cpp \
-    irc/src/ircmessage.cpp \
-    irc/src/ircparser.cpp \
-    irc/src/ircsender.cpp \
-    irc/src/ircsession.cpp \
-    irc/src/ircutil.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -218,6 +221,7 @@ SOURCES += \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
+    TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
@@ -245,9 +249,6 @@ SOURCES += \
 ;
 
 qtHaveModule(gamepad): SOURCES += dlgButtonSelect.cpp
-
-!msvc:SOURCES += lua_yajl.c
-msvc:SOURCES += lua_yajl.cpp
 
 
 HEADERS += \
@@ -280,15 +281,6 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
-    irc/include/irc.h \
-    irc/include/irccodecplugin.h \
-    irc/include/irccommand.h \
-    irc/include/ircglobal.h \
-    irc/include/ircmessage.h \
-    irc/include/ircsession.h \
-    irc/include/ircutil.h \
-    irc/include/IrcGlobal \
-    irc/include/IrcSender \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -304,7 +296,9 @@ HEADERS += \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \
+    TDockWidget.h \
     TEasyButtonBar.h \
+    testdbg.h \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
@@ -333,8 +327,6 @@ HEADERS += \
     XMLimport.h
 
 qtHaveModule(gamepad): HEADERS += dlgButtonSelect.h
-
-macx:HEADERS += luazip.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -399,7 +391,8 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua \
+    $${PWD}/mudlet-lua/lua/KeyCodes.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
@@ -429,7 +422,16 @@ macx: {
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
     # Set the .app's icns file
-    ICON = osx-installer/osx.icns
+    ICON = icons/osx.icns
+}
+
+win32: {
+    # set the Windows binary icon
+    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+
+    # specify some windows information about the binary
+    QMAKE_TARGET_COMPANY = "Mudlet makers"
+    QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
@@ -461,13 +463,13 @@ DISTFILES += \
     ../.travis.yml \
     CMakeLists.txt \
     ../CMakeLists.txt \
-    irc/CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.before_install.sh \
     ../CI/travis.linux.install.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \

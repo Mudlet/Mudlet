@@ -222,40 +222,40 @@ end</script>
             <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
                 <name>Alertness (Achaea+Imperian)</name>
                 <script>mmp.alertness = mmp.alertness or {}
-
 local alertness = mmp.alertness
-
+ 
 local roomexists, getRoomName, anytolong, matches, deleteLine = mmp.roomexists, getRoomName, mmp.anytolong, matches, deleteLine
-
+ 
 if mmp.debug then
-  mmp.alertnessTime = mmp.alertnessTime or createStopWatch()
-  startStopWatch(mmp.alertnessTime)
+ mmp.alertnessTime = mmp.alertnessTime or createStopWatch()
+ startStopWatch(mmp.alertnessTime)
 end
-    
-
-for k, v in pairs (gmcp.Room.Info.exits) do
-  local longexitname = mmp.anytolong(k)
-  if roomexists(v) and matches[3]:lower() == getRoomName(v):lower() and longexitname then
-    alertness[longexitname] = alertness[longexitname] or {}
-    alertness[longexitname][#alertness[longexitname]+1] = matches[2]
-    deleteLine()
-
-   end
-end
-
-local currentroomname = mmp.cleanroomname(mmp.currentroomname)
-
-if matches[3] == currentroomname then
-  alertness.here = alertness.here or {}
-  alertness.here[#alertness.here+1] = matches[2]
+ 
+if matches[4] ~= &quot;location&quot; then
+  local longexitname = matches[4]
+  alertness[longexitname] = alertness[longexitname] or {}
+  alertness[longexitname][#alertness[longexitname]+1] = matches[2]
   deleteLine()
+elseif matches[4] == &quot;location&quot; then
+  local currentroomname = mmp.cleanroomname(mmp.currentroomname)
+  if matches[3] == currentroomname then
+    alertness.here = alertness.here or {}
+    alertness.here[#alertness.here+1] = matches[2]
+    deleteLine()
+  end
 end
 
+
+if not mmp.firstAlert then
+	mmp.firstAlert = true
+	mmp.pdb_lastupdate = {}
+end
+ 
 mmp.pdb[matches[2]] = matches[3]
 mmp.pdb_lastupdate[matches[2]] = true
-
+ 
 enableTrigger&quot;Mudlet Mapper prompt trigger&quot;
-
+ 
 if mmp.debug then mmp.echo(&quot;alertness trigger for &quot;..matches[2]..&quot; took &quot;..stopStopWatch(mmp.alertnessTime)..&quot;s.&quot;) end</script>
                 <triggerType>0</triggerType>
                 <conditonLineDelta>0</conditonLineDelta>
@@ -268,7 +268,7 @@ if mmp.debug then mmp.echo(&quot;alertness trigger for &quot;..matches[2]..&quot
                 <colorTriggerFgColor>#000000</colorTriggerFgColor>
                 <colorTriggerBgColor>#000000</colorTriggerBgColor>
                 <regexCodeList>
-                    <string>^Your enhanced senses inform you that (\w+) has entered (.+?)(?: nearby)?\.$</string>
+                    <string>^Your enhanced senses inform you that (\w+) has entered (.+?)(?:, to the| at your) (\w+)\.$</string>
                 </regexCodeList>
                 <regexCodePropertyList>
                     <integer>1</integer>
@@ -277,7 +277,7 @@ if mmp.debug then mmp.echo(&quot;alertness trigger for &quot;..matches[2]..&quot
             <Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
                 <name>Mudlet Mapper prompt trigger</name>
                 <script>-- to be enabled by functions that need it and disabled after it's done. Sort of like a cheap prompttrigger from Svo.
-
+mmp.firstAlert = false
 -- handle alertness
 if mmp.alertness and next(mmp.alertness) then
 
@@ -295,7 +295,7 @@ if mmp.alertness and next(mmp.alertness) then
   end
 
   cinsertText(&quot;&lt;red&gt;[&lt;cyan&gt;&quot; .. table.concat(dirs, ', ') .. &quot; &lt;red&gt;-&quot;..(#dirs &gt; 1 and (&quot;\n  &quot;) or '')..&quot; &lt;white&gt;&quot; .. ((svo and svo.concatand) and svo.concatand(people) or table.concat(people, ', ')) .. &quot;&lt;cyan&gt; (&quot;..#people..&quot;)&lt;red&gt;]\n&quot;)
-  
+
   moveCursorEnd()
 
   mmp.alertness = nil
@@ -349,6 +349,42 @@ disableTrigger&quot;Mudlet Mapper prompt trigger&quot;</script>
                     <integer>3</integer>
                 </regexCodePropertyList>
             </Trigger>
+            <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                <name>No wormhole</name>
+                <script>if mmp.speedWalkDir and mmp.speedWalkDir[speedWalkCounter] and mmp.speedWalkDir[speedWalkCounter]==&quot;worm warp&quot; then
+  mmp.echo(&quot;Missing wormhole detected, locking wormhole and trying new path...&quot;)
+
+  lockSpecialExit(mmp.currentroom, mmp.speedWalkPath[speedWalkCounter], &quot;worm warp&quot;, true)
+
+  local destination = mmp.speedWalkPath[#mmp.speedWalkPath]
+
+  mmp.stop()
+
+  mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
+
+  if not mmp.getPath(mmp.currentroom, destination) then
+    mmp.echo(string.format(&quot;Don't know how to get to %d (%s) anymore :( Move into a room we know of to continue&quot;, destination, getRoomName(destination)))
+  else
+    mmp.gotoRoom(destination)
+  end
+end</script>
+                <triggerType>0</triggerType>
+                <conditonLineDelta>0</conditonLineDelta>
+                <mStayOpen>0</mStayOpen>
+                <mCommand></mCommand>
+                <packageName></packageName>
+                <mFgColor>#ff0000</mFgColor>
+                <mBgColor>#ffff00</mBgColor>
+                <mSoundFile></mSoundFile>
+                <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                <regexCodeList>
+                    <string>There is no wormhole here.</string>
+                </regexCodeList>
+                <regexCodePropertyList>
+                    <integer>3</integer>
+                </regexCodePropertyList>
+            </Trigger>
             <TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
                 <name>Achaea</name>
                 <script></script>
@@ -383,7 +419,7 @@ mmp.echo(&quot;We're connected to Achaea.&quot;)</script>
                         <string>Password correct. Welcome to Achaea.</string>
                     </regexCodeList>
                     <regexCodePropertyList>
-                        <integer>3</integer>
+                        <integer>0</integer>
                     </regexCodePropertyList>
                 </Trigger>
                 <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -1293,6 +1329,115 @@ raiseEvent(&quot;mmapper updated pdb&quot;)</script>
                         <integer>1</integer>
                     </regexCodePropertyList>
                 </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>Downed shrine in Order logs</name>
+                    <script>local room = multimatches[2][2]
+
+mmp.locateAndEcho(room)</script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>- A shrine at</string>
+                        <string>- A shrine at '(.+)' was destroyed\.$</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>0</integer>
+                        <integer>1</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>chrono divine</name>
+                    <script>mmp.locateAndEcho(multimatches[3][2], multimatches[2][2])</script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>1</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>Tapping into the timelines, you trace them to locate</string>
+                        <string>^Tapping into the timelines, you trace them to locate (\w+)\.$</string>
+                        <string>^You determine that s?he is at (.+)\.$</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>2</integer>
+                        <integer>1</integer>
+                        <integer>1</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>Shadow preeminence</name>
+                    <script>mmp.pdb_lastupdate = {}</script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>0</conditonLineDelta>
+                    <mStayOpen>100</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>You cast your will out across the land, surveying all that stand within shadow's embrace.</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>3</integer>
+                    </regexCodePropertyList>
+                    <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                        <name>Each person</name>
+                        <script>mmp.locateAndEchoSide(matches[3], matches[2])</script>
+                        <triggerType>0</triggerType>
+                        <conditonLineDelta>0</conditonLineDelta>
+                        <mStayOpen>0</mStayOpen>
+                        <mCommand></mCommand>
+                        <packageName></packageName>
+                        <mFgColor>#ff0000</mFgColor>
+                        <mBgColor>#ffff00</mBgColor>
+                        <mSoundFile></mSoundFile>
+                        <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                        <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                        <regexCodeList>
+                            <string>^You sense (\w+) at (.+?)\.$</string>
+                        </regexCodeList>
+                        <regexCodePropertyList>
+                            <integer>1</integer>
+                        </regexCodePropertyList>
+                    </Trigger>
+                    <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                        <name>prompt</name>
+                        <script>setTriggerStayOpen(&quot;Shadow preeminence&quot;, 0)
+enableTrigger(&quot;Shadow preeminence&quot;)</script>
+                        <triggerType>0</triggerType>
+                        <conditonLineDelta>0</conditonLineDelta>
+                        <mStayOpen>0</mStayOpen>
+                        <mCommand></mCommand>
+                        <packageName></packageName>
+                        <mFgColor>#ff0000</mFgColor>
+                        <mBgColor>#ffff00</mBgColor>
+                        <mSoundFile></mSoundFile>
+                        <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                        <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                        <regexCodeList>
+                            <string>return isPrompt()</string>
+                        </regexCodeList>
+                        <regexCodePropertyList>
+                            <integer>4</integer>
+                        </regexCodePropertyList>
+                    </Trigger>
+                </Trigger>
             </TriggerGroup>
             <TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
                 <name>Aetolia</name>
@@ -1477,6 +1622,119 @@ raiseEvent(&quot;mmapper updated pdb&quot;)</script>
                     </Trigger>
                 </Trigger>
                 <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>mmp Lusternia kaleidoscope</name>
+                    <script>mmp.tempscent = {}
+mmp.pdb_lastupdate = {}
+
+</script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>1</conditonLineDelta>
+                    <mStayOpen>100</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>You hold a kaleidoscopic telescope to your eye, you twist the end and stare intently through its twinkling surfaces.</string>
+                        <string>Through the glittering faceted planes, you see:</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
+                        <integer>3</integer>
+                        <integer>3</integer>
+                    </regexCodePropertyList>
+                    <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                        <name>Got line</name>
+                        <script>local person, room = matches[2], matches[3]:trim()
+
+
+selectString(line, 1) replace&quot;&quot;
+
+-- get the name
+cecho(&quot;&lt;green&gt;&quot;..person..&quot;&lt;reset&gt;: &quot;)
+
+-- ids
+--mmp.echonums()
+
+-- pad spaces so we have aligned roomname
+echo(string.rep(&quot; &quot;, 13 - #getCurrentLine()))
+
+-- and finally, the roomname
+echo(room)
+
+mmp.locateAndEchoSide(room, person)
+
+
+if mmp.tempscent[room] then
+	mmp.tempscent[room][#mmp.tempscent[room]+1] = person
+else
+	mmp.tempscent[room] = {person}
+end
+
+-- save in our person tracking db
+mmp.pdb[person] = room
+mmp.pdb_lastupdate[person] = true</script>
+                        <triggerType>0</triggerType>
+                        <conditonLineDelta>0</conditonLineDelta>
+                        <mStayOpen>0</mStayOpen>
+                        <mCommand></mCommand>
+                        <packageName></packageName>
+                        <mFgColor>#ff0000</mFgColor>
+                        <mBgColor>#ffff00</mBgColor>
+                        <mSoundFile></mSoundFile>
+                        <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                        <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                        <regexCodeList>
+                            <string>^(\w+) - ([^\(]+)</string>
+                        </regexCodeList>
+                        <regexCodePropertyList>
+                            <integer>1</integer>
+                        </regexCodePropertyList>
+                    </Trigger>
+                    <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                        <name>Stop capturing</name>
+                        <script>setTriggerStayOpen(&quot;mmp Lusternia kaleidoscope&quot;, 0)
+
+--[[for area, names in pairs(mmp.tempscent) do
+	for _, name in ipairs(names) do
+
+-- get the name
+cecho(&quot;\n&lt;green&gt;&quot;..name..&quot;&lt;reset&gt;: &quot;)
+
+-- ids
+mmp.echonums(area)
+
+-- pad spaces so we have aligned roomname
+echo(string.rep(&quot; &quot;, 25))
+
+-- and finally, the roomname
+echo(area)
+end
+end]]
+
+
+raiseEvent(&quot;mmapper updated pdb&quot;)</script>
+                        <triggerType>0</triggerType>
+                        <conditonLineDelta>0</conditonLineDelta>
+                        <mStayOpen>0</mStayOpen>
+                        <mCommand></mCommand>
+                        <packageName></packageName>
+                        <mFgColor>#ff0000</mFgColor>
+                        <mBgColor>#ffff00</mBgColor>
+                        <mSoundFile></mSoundFile>
+                        <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                        <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                        <regexCodeList>
+                            <string>return isPrompt()</string>
+                        </regexCodeList>
+                        <regexCodePropertyList>
+                            <integer>4</integer>
+                        </regexCodePropertyList>
+                    </Trigger>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
                     <name>Deathsight</name>
                     <script>mmp.locateAndEcho(multimatches[2][2])</script>
                     <triggerType>0</triggerType>
@@ -1583,6 +1841,30 @@ raiseEvent(&quot;mmapper updated pdb&quot;)</script>
                     </regexCodeList>
                     <regexCodePropertyList>
                         <integer>2</integer>
+                        <integer>1</integer>
+                        <integer>3</integer>
+                        <integer>1</integer>
+                    </regexCodePropertyList>
+                </Trigger>
+                <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+                    <name>Masquerade ball snowglobe</name>
+                    <script>mmp.gotoRoom(multimatches[3][2])</script>
+                    <triggerType>0</triggerType>
+                    <conditonLineDelta>2</conditonLineDelta>
+                    <mStayOpen>0</mStayOpen>
+                    <mCommand></mCommand>
+                    <packageName></packageName>
+                    <mFgColor>#ff0000</mFgColor>
+                    <mBgColor>#ffff00</mBgColor>
+                    <mSoundFile></mSoundFile>
+                    <colorTriggerFgColor>#000000</colorTriggerFgColor>
+                    <colorTriggerBgColor>#000000</colorTriggerBgColor>
+                    <regexCodeList>
+                        <string>^You trace the name of \w+ on the surface of a splendid masquerade ball snowglobe, and then shake the globe vigorously\. As the swirling particles within clear, you see the vague outline of .+?\.$</string>
+                        <string>You see the following in detail:</string>
+                        <string>v(\d+)</string>
+                    </regexCodeList>
+                    <regexCodePropertyList>
                         <integer>1</integer>
                         <integer>3</integer>
                         <integer>1</integer>
@@ -1984,11 +2266,11 @@ end</script>
                     <colorTriggerFgColor>#000000</colorTriggerFgColor>
                     <colorTriggerBgColor>#000000</colorTriggerBgColor>
                     <regexCodeList>
-                        <string>************************[ Local shops selling healing ]************************</string>
+                        <string>[ Local shops selling</string>
                         <string>3</string>
                     </regexCodeList>
                     <regexCodePropertyList>
-                        <integer>3</integer>
+                        <integer>0</integer>
                         <integer>5</integer>
                     </regexCodePropertyList>
                     <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -2608,7 +2890,7 @@ mmp.echo(&quot;We're connected to Lithmeria.&quot;)</script>
                     </regexCodePropertyList>
                 </Trigger>
                 <Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-                    <name>Failed to open Door</name>
+                    <name>Failed to open door</name>
                     <script>mmp.failpath()</script>
                     <triggerType>0</triggerType>
                     <conditonLineDelta>0</conditonLineDelta>
@@ -2938,7 +3220,7 @@ mmp.settings:setOption(matches[3], val)</script>
                 <packageName></packageName>
                 <regex>^area list$</regex>
             </Alias>
-            <AliasGroup isActive="yes" isFolder="yes">
+            <AliasGroup isActive="no" isFolder="yes">
                 <name>mm Mapping</name>
                 <script></script>
                 <command></command>
@@ -3453,12 +3735,7 @@ mmp.echo(&quot;Stopped deleting rooms in the '&quot;..areaname..&quot;'. The are
                 </Alias>
                 <Alias isActive="yes" isFolder="no">
                     <name>List continents</name>
-                    <script>local tmp = getRoomUserData(1, &quot;areaContinents&quot;)
-local continents = {}
-
-if tmp ~= &quot;&quot; then
-  continents = yajl.to_value(tmp)
-end
+                    <script>local continents = mmp.getcontinents()
 
 if not next(continents) then mmp.echo(&quot;No continents known.&quot;)
 else
@@ -3492,58 +3769,43 @@ end
 
 if not area then mmp.echo(matches[3]..&quot; isn't a known area. Which one do you want to set?&quot;) return end
 
-local tmp = getRoomUserData(1, &quot;areaContinents&quot;)
-local continents = {}
-
-if tmp ~= &quot;&quot; then
-  continents = yajl.to_value(tmp)
-end
-
-
-if not continents[continent] and mmp.addingcontinent ~= continent then
-  mmp.addingcontinent = continent
-  mmp.echo(&quot;Continent &quot;..continent..&quot; isn't known so far - would you like to make a new one? Do this command again if so.&quot;)
-  return
-end
-
-mmp.addingcontinent = nil
-
-continents[continent] = continents[continent] or {}
-
--- have to use this instead of contains and index_of, because those count keys as well - and we don't want that
-local function index_of(data, areaID)
-  for i = 1, #data do
-    if data[i] == areaID then return i end
-  end
-
-  return -1
-end
-
-if index_of(continents[continent], area) ~= -1 then
-  mmp.echo(getRoomAreaName(area)..&quot; is already known as being on the &quot;..continent..&quot; continent.&quot;)
-  return
-else
-  continents[continent][#continents[continent]+1] = area -- not a key, because yajl will put a ton of null's.
+local res, error = mmp.addcontinent(area, continent)
+if res then
   mmp.echo(&quot;Recorded that &quot;..getRoomAreaName(area)..&quot; is on the &quot;..continent..&quot; continent.&quot;)
-
-  -- remove from other areas if moving
-  for kcontinent, data in pairs(continents) do
-    if kcontinent ~= continent then
-      local i = index_of(continents[kcontinent], area)
-      if i ~= -1 then
-        table.remove(continents[kcontinent], i)
-        if not next(continents[kcontinent]) then continents[kcontinent] = nil end
-        mmp.echo(&quot;De-listed &quot;..getRoomAreaName(area)..&quot; from the &quot;..kcontinent..&quot; continent.&quot;)
-      end
-    end
-  end
-end
-
-local toserialize = yajl.to_string(continents)
-setRoomUserData(1, &quot;areaContinents&quot;, toserialize)</script>
+else
+  mmp.echo(error)
+end</script>
                     <command></command>
                     <packageName></packageName>
                     <regex>^ac ([\w']+)(?: (.+))?$</regex>
+                </Alias>
+                <Alias isActive="yes" isFolder="no">
+                    <name>remove area from continent</name>
+                    <script>-- acr continent [optional area]
+
+local continent = matches[2]:title()
+local area
+if not matches[3] then area = getRoomArea(mmp.currentroom)
+elseif tonumber(matches[3]) then
+  area = tonumber(matches[3])
+  if getRoomAreaName(area) == -1 then area = nil end
+else
+  local areas = getAreaTable()
+
+  for karea, id in pairs(areas) do if karea:lower():find(matches[3]:lower(), 1, true) then area = id break end end
+end
+
+if not area then mmp.echo(matches[3]..&quot; isn't a known area. Which one do you want to set?&quot;) return end
+
+local res, error = mmp.removecontinent(area, continent)
+if res then
+  mmp.echo(&quot;Recorded that &quot;..getRoomAreaName(area)..&quot; is not on the &quot;..continent..&quot; continent.&quot;)
+else
+  mmp.echo(error)
+end</script>
+                    <command></command>
+                    <packageName></packageName>
+                    <regex>^acr ([\w']+)(?: (.+))?$</regex>
                 </Alias>
                 <Alias isActive="yes" isFolder="no">
                     <name>Add/remove a ferry room</name>
@@ -3848,7 +4110,7 @@ end</script>
                 <name>Load a map</name>
                 <script>local function s(loc)
     if not loadMap(loc) then
-      mmp.echo(&quot;Couldn't save the map :(&quot;)
+      mmp.echo(&quot;Couldn't load the map :(&quot;)
     else
       mmp.lockWormholes(); mmp.lockSewers(); mmp.lockPebble();
       if mmp.settings.waterwalk then mmp.enableWaterWalk() else mmp.disableWaterWalk() end
@@ -4225,7 +4487,8 @@ mmp = mmp or {
   currentroomname = &quot;(unknown)&quot;,
   firstRun = true,
   specials = {},
-  ferry_rooms = {}
+  ferry_rooms = {},
+  echo_colour = &quot;MediumBlue&quot;
 }
 
 speedWalkWatch = createStopWatch()
@@ -4240,7 +4503,7 @@ mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
 
 
-local newversion = &quot;14.6.1&quot;
+local newversion = &quot;17.5.1&quot;
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then mmp.echo(&quot;Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.&quot;)
   else mmp.echo(&quot;Mapper script updated - thanks! You don't need to restart.&quot;) end
@@ -4263,6 +4526,7 @@ function mmp.startup()
   private_settings[&quot;dash&quot;]          = createOption(false, mmp.changeBoolFunc, { &quot;boolean&quot; }, &quot;Use Dash?&quot;)
   private_settings[&quot;duanathar&quot;]     = createOption(false, mmp.setDuanathar, { &quot;boolean&quot; }, &quot;Use Eagle Wings in Achaea?&quot;)
   private_settings[&quot;duanatharan&quot;]   = createOption(false, mmp.setDuanatharan, { &quot;boolean&quot; }, &quot;Use Atavian Wings in Achaea?&quot;)
+  private_settings[&quot;duantahar&quot;]     = createOption(false, mmp.setDuantahar, { &quot;boolean&quot; }, &quot;Use Chenubian Wings in Achaea?&quot;)
   private_settings[&quot;facecurio&quot;]     = createOption(false, mmp.setFacecurio, { &quot;boolean&quot; }, &quot;Make use of your Face curios in Lusternia?&quot;)
   private_settings[&quot;feathercurio&quot;]  = createOption(false, mmp.setFeathercurio, { &quot;boolean&quot; }, &quot;Make use of your Feather curios in Lusternia?&quot;)
   private_settings[&quot;figurecurio&quot;]   = createOption(false, mmp.setFigurecurio, { &quot;boolean&quot; }, &quot;Make use of your Figure curios in Lusternia?&quot;)
@@ -4341,7 +4605,7 @@ end</script>
    return
   end
 
-  local madeduanathar, madeduanatharan, mademedallion, madefingerblade, madeblossom, madebelt, madecubix, madeprism, madescrewdriver, madewheel, mademud, madesnowglobe, madecookie, madehead, madeicicle, madetibia, madebonecurio, madeflowercurio, madetorus, madeutensilcurio, madefluttercurio, madetoolcurio, madefacecurio, madetoycurio, madefeathercurio, madefigurecurio, mademandala, madevernalcurio
+  local madeduanathar, madeduanatharan, madeduantahar, mademedallion, madefingerblade, madeblossom, madebelt, madecubix, madeprism, madescrewdriver, madewheel, mademud, madesnowglobe, madecookie, madehead, madeicicle, madetibia, madebonecurio, madeflowercurio, madetorus, madeutensilcurio, madefluttercurio, madetoolcurio, madefacecurio, madetoycurio, madefeathercurio, madefigurecurio, mademandala, madevernalcurio
 
   local function getcmd(word)
 		if mmp.game == &quot;achaea&quot; then
@@ -4381,18 +4645,23 @@ end</script>
   -- allow mapper 'addons' to link their own exits in
   raiseEvent(&quot;mmp link externals&quot;)
 
-  if mmp.game == &quot;achaea&quot; and (mmp.settings.duanathar or mmp.settings.duanatharan) and gmcp.Room and not table.contains(gmcp.Room.Info.details, &quot;indoors&quot;) and mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Prime&quot;) then
+  if mmp.game == &quot;achaea&quot; and (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) and gmcp.Room and not table.contains(gmcp.Room.Info.details, &quot;indoors&quot;) and mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Main&quot;) then
     if mmp.settings.duanatharan then
       addSpecialExit(mmp.currentroom, 4882, getcmd(&quot;duanatharan&quot;))
       addSpecialExit(mmp.currentroom, 3885, getcmd(&quot;duanathar&quot;))
       mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
       madeduanatharan = true
+    elseif mmp.settings.duantahar then
+      addSpecialExit(mmp.currentroom, 42319, getcmd(&quot;duanathar&quot;))
+      addSpecialExit(mmp.currentroom, 4882, getcmd(&quot;duanatharan&quot;))
+      mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
+      madeduantahar = true
     else
       addSpecialExit(mmp.currentroom, 3885, getcmd(&quot;duanathar&quot;))
       mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
       madeduanathar = true
     end
-	elseif mmp.game == &quot;lusternia&quot; and (mmp.settings.medallion or mmp.settings.fingerblade or mmp.settings.blossom or mmp.settings.mandala or mmp.settings.belt or mmp.settings.cubix or mmp.settings.screwdriver or mmp.settings.wheel or mmp.settings.mud or mmp.settings.snowglobe or mmp.settings.cookie or mmp.settings.head or mmp.settings.icicle or mmp.settings.tibia or mmp.settings.bonecurio or mmp.settings.flowercurio or mmp.settings.torus or mmp.settings.vernalcurio) and gmcp.Room and (not table.contains(gmcp.Room.Info.details,&quot;indoors&quot;) or table.contains(gmcp.Room.Info.details, &quot;an Aetherbubble&quot;)) then
+  elseif mmp.game == &quot;lusternia&quot; and (mmp.settings.medallion or mmp.settings.fingerblade or mmp.settings.blossom or mmp.settings.mandala or mmp.settings.belt or mmp.settings.cubix or mmp.settings.screwdriver or mmp.settings.wheel or mmp.settings.mud or mmp.settings.snowglobe or mmp.settings.cookie or mmp.settings.head or mmp.settings.icicle or mmp.settings.tibia or mmp.settings.bonecurio or mmp.settings.flowercurio or mmp.settings.torus or mmp.settings.vernalcurio) and gmcp.Room and (not table.contains(gmcp.Room.Info.details,&quot;indoors&quot;) or table.contains(gmcp.Room.Info.details, &quot;an Aetherbubble&quot;)) then
 	if mmp.settings.medallion and mmp.usebix() then
       addSpecialExit(mmp.currentroom, 13367, getcmd(&quot;medallion&quot;))
       mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
@@ -4565,7 +4834,10 @@ end</script>
     speedWalkCounter = 0
     raiseEvent(&quot;mmapper failed path&quot;)
     if mmp.settings.shackle then expandAlias(&quot;wear shackle&quot;) end
-    if madeduanatharan then mmp.clearspecials{4882, 3885} elseif madeduanathar then mmp.clearspecials{3885} end
+    if madeduanatharan then mmp.clearspecials{4882, 3885}
+    elseif madeduanathar then mmp.clearspecials{3885}
+    elseif madeduantahar then mmp.clearspecials{42319, 4882}
+    end
   	 if mademedallion then mmp.clearspecials{13367} end
   	 if madefingerblade then mmp.clearspecials{18777} end
      if madeblossom then mmp.clearspecials{18730} end
@@ -4591,7 +4863,7 @@ end</script>
  	 if madefeathercurio then mmp.clearspecials{28591} end
  	 if madefigurecurio then mmp.clearspecials{28312} end
      if madeprism then mmp.clearspecials{6182} end
- 	 if madevernalcurio then mmp.clearspecials{22908} end
+ 	 if madevernalcurio then mmp.clearspecials{29908} end
 
     -- allow mapper 'addons' to unlink their special exits
     raiseEvent(&quot;mmp clear externals&quot;)
@@ -4599,7 +4871,10 @@ end</script>
   end
 
   doSpeedWalk(dashtype)
-  if madeduanatharan then mmp.clearspecials{4882, 3885} elseif madeduanathar then mmp.clearspecials{3885} end
+    if madeduanatharan then mmp.clearspecials{4882, 3885}
+    elseif madeduanathar then mmp.clearspecials{3885}
+    elseif madeduantahar then mmp.clearspecials{42319, 4882}
+    end
   if mademedallion then mmp.clearspecials{13367} end
   if madefingerblade then mmp.clearspecials{18777} end
   if madeblossom then mmp.clearspecials{18730} end
@@ -4625,7 +4900,7 @@ end</script>
   if madefeathercurio then mmp.clearspecials{28591} end
   if madefigurecurio then mmp.clearspecials{28312} end
   if madeprism then mmp.clearspecials{6182} end
-  if madevernalcurio then mmp.clearspecials{22908} end
+  if madevernalcurio then mmp.clearspecials{29908} end
 
   -- allow mapper 'addons' to unlink their special exits
   raiseEvent(&quot;mmp clear externals&quot;)
@@ -4791,8 +5066,8 @@ function mmp.swim()
   -- not going anywhere? don't do anything
   if not mmp.speedWalkDir[speedWalkCounter] then return end
 
-  send(&quot;swim &quot; .. mmp.speedWalkDir[speedWalkCounter], false)
-  if mmp.settings.showcmds then cecho(string.format(&quot;&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;swim %s&lt;red&gt;)&quot;, #mmp.speedWalkDir - speedWalkCounter + 1, mmp.speedWalkDir[speedWalkCounter])) end
+  send(&quot;swim &quot; .. mmp.speedWalkDir[speedWalkCounter]:gsub(&quot;sprint &quot;, &quot;&quot;):gsub(&quot;dash &quot;, &quot;&quot;):gsub(&quot;gallop &quot;, &quot;&quot;):gsub(&quot;runaway &quot;, &quot;&quot;), false)
+  if mmp.settings.showcmds then cecho(string.format(&quot;&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;swim %s&lt;red&gt;)&quot;, #mmp.speedWalkDir - speedWalkCounter + 1, mmp.speedWalkDir[speedWalkCounter]:gsub(&quot;sprint &quot;, &quot;&quot;):gsub(&quot;dash &quot;, &quot;&quot;):gsub(&quot;gallop &quot;, &quot;&quot;):gsub(&quot;runaway &quot;, &quot;&quot;))) end
 
   mmp.setmovetimer(2.5)
 end
@@ -4811,8 +5086,8 @@ function mmp.openDoor()
   -- not going anywhere? don't do anything
   if not mmp.speedWalkDir[speedWalkCounter] then return end
 
-  send(&quot;open door &quot; .. mmp.speedWalkDir[speedWalkCounter], false)
-  if mmp.settings.showcmds then cecho(string.format(&quot;&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;open door %s&lt;red&gt;)&quot;, #mmp.speedWalkDir - speedWalkCounter + 1, mmp.speedWalkDir[speedWalkCounter])) end
+  send(&quot;open door &quot; .. mmp.speedWalkDir[speedWalkCounter]:gsub(&quot;sprint &quot;, &quot;&quot;):gsub(&quot;dash &quot;, &quot;&quot;):gsub(&quot;gallop &quot;, &quot;&quot;):gsub(&quot;runaway &quot;, &quot;&quot;), false)
+  if mmp.settings.showcmds then cecho(string.format(&quot;&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;open door %s&lt;red&gt;)&quot;, #mmp.speedWalkDir - speedWalkCounter + 1, mmp.speedWalkDir[speedWalkCounter]:gsub(&quot;sprint &quot;, &quot;&quot;):gsub(&quot;dash &quot;, &quot;&quot;):gsub(&quot;gallop &quot;, &quot;&quot;):gsub(&quot;runaway &quot;, &quot;&quot;))) end
 
   mmp.setmovetimer(getNetworkLatency())
 end
@@ -4821,8 +5096,8 @@ function mmp.unlockDoor()
   -- not going anywhere? don't do anything
   if not mmp.speedWalkDir[speedWalkCounter] then return end
 
-  send(&quot;unlock door &quot; .. mmp.speedWalkDir[speedWalkCounter], false)
-  if mmp.settings.showcmds then cecho(string.format(&quot;&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;unlock door %s&lt;red&gt;)&quot;, #mmp.speedWalkDir - speedWalkCounter, mmp.speedWalkDir[speedWalkCounter])) end
+  send(&quot;unlock door &quot; .. mmp.speedWalkDir[speedWalkCounter]:gsub(&quot;sprint &quot;, &quot;&quot;):gsub(&quot;dash &quot;, &quot;&quot;):gsub(&quot;gallop &quot;, &quot;&quot;):gsub(&quot;runaway &quot;, &quot;&quot;), false)
+  if mmp.settings.showcmds then cecho(string.format(&quot;&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;unlock door %s&lt;red&gt;)&quot;, #mmp.speedWalkDir - speedWalkCounter, mmp.speedWalkDir[speedWalkCounter]:gsub(&quot;sprint &quot;, &quot;&quot;):gsub(&quot;dash &quot;, &quot;&quot;):gsub(&quot;gallop &quot;, &quot;&quot;):gsub(&quot;runaway &quot;, &quot;&quot;))) end
 
   mmp.setmovetimer(getNetworkLatency())
 end
@@ -4911,6 +5186,9 @@ function speedwalking( event, num )
       mmp.inside = true
       raiseEvent(&quot;mmapper went inside&quot;)
     end
+    if #table.n_union(mmp.getareacontinents(getRoomArea(mmp.previousroom)), mmp.getareacontinents(getRoomArea(num))) ~= #mmp.getareacontinents(getRoomArea(num)) then
+      raiseEvent(&quot;mmapper changed continent&quot;)
+    end
     -- the event could cancel speedwalking - in this case quit
     if mmp.ignore_speedwalking then
       mmp.ignore_speedwalking = nil
@@ -4956,7 +5234,7 @@ function doSpeedWalk(dashtype)
 
   resetStopWatch(speedWalkWatch)
   startStopWatch(speedWalkWatch)
-  if mmp.settings[&quot;gallop&quot;] or mmp.settings[&quot;dash&quot;] or mmp.settings.sprint or dashtype then
+  if mmp.settings[&quot;gallop&quot;] or mmp.settings[&quot;dash&quot;] or mmp.settings.sprint or mmp.settings.runaway or dashtype then
     mmp.fixPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath],
       (mmp.settings[&quot;gallop&quot;] and &quot;gallop&quot;) or (mmp.settings[&quot;dash&quot;] and &quot;dash&quot;) or (mmp.settings.sprint and &quot;sprint&quot;) or (mmp.settings.runaway and &quot;runaway&quot;) or dashtype)
   end
@@ -4971,12 +5249,14 @@ function doSpeedWalk(dashtype)
     return
   end
 
-  mmp.autowalking = true
 
   -- this is a fix: convert nums to actual numbers
   for i = 1, #mmp.speedWalkPath do
     mmp.speedWalkPath[i] = tonumber(mmp.speedWalkPath[i])
   end
+
+  mmp.autowalking = true
+  raiseEvent(&quot;s&quot;)
 
   if mmp.settings.shackle then expandAlias(&quot;remove shackle&quot;) end
   if not mmp.paused then
@@ -4995,7 +5275,7 @@ function mmp.failpath()
   end
 
   mmp.autowalking = false
-  
+
   if mmp.settings.shackle then expandAlias(&quot;wear shackle&quot;) end
   mmp.speedWalkPath = {}
   mmp.speedWalkDir = {}
@@ -5043,10 +5323,15 @@ function mmp.fixPath(rFrom,rTo,dashtype)
         table.insert(currentPath,string.format(&quot;%s %s&quot;,dashtype,mmp.speedWalkDir[index]))
         currentIds[#currentIds+1] = mmp.speedWalkPath[index+repCount-1]
       else
-        -- Final room in this direction continues onwards, don't dash
-        for i = 1,repCount do
-          table.insert(currentPath,mmp.speedWalkDir[index])
-          currentIds[#currentIds+1] = mmp.speedWalkPath[index+i-1]
+        -- Final room in this direction continues onwards, don't dash unless on achaea
+        if mmp.game == &quot;achaea&quot; then
+          table.insert(currentPath,string.format(&quot;%s %s %s&quot;,dashtype,mmp.speedWalkDir[index],repCount))
+          currentIds[#currentIds+1] = mmp.speedWalkPath[index+repCount-1]
+        else
+          for i = 1,repCount do
+            table.insert(currentPath,mmp.speedWalkDir[index])
+            currentIds[#currentIds+1] = mmp.speedWalkPath[index+i-1]
+          end
         end
       end
       index = index + repCount
@@ -5183,15 +5468,15 @@ function mmp.echonums(roomname)
   if not dt[1] then echo &quot;?---&quot; return end
 
   -- display first three ids. Can't really nicely table.concat them.
-  echoLink(dt[1].id, 'mmp.gotoRoom('..dt[1].id..')', string.format(&quot;Go to %s (%s)&quot;, dt[1].id, dt[1].name))
+  cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..dt[1].id, 'mmp.gotoRoom('..dt[1].id..')', string.format(&quot;Go to %s (%s)&quot;, dt[1].id, dt[1].name), true)
   if not dt[2] then return end
 
   echo&quot;, &quot;
-  echoLink(dt[2].id, 'mmp.gotoRoom('..dt[2].id..')', string.format(&quot;Go to %s (%s)&quot;, dt[2].id, dt[2].name))
+  cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..dt[2].id, 'mmp.gotoRoom('..dt[2].id..')', string.format(&quot;Go to %s (%s)&quot;, dt[2].id, dt[2].name), true)
   if not dt[3] then return end
 
   echo&quot;, &quot;
-  echoLink(dt[3].id, 'mmp.gotoRoom('..dt[3].id..')', string.format(&quot;Go to %s (%s)&quot;, dt[3].id, dt[3].name))
+  cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..dt[3].id, 'mmp.gotoRoom('..dt[3].id..')', string.format(&quot;Go to %s (%s)&quot;, dt[3].id, dt[3].name), true)
   if not dt[4] then return end
 
   echo&quot;, ...&quot;
@@ -5365,7 +5650,7 @@ end</script>
     for roomid, roomname in pairs(result) do roomid = tonumber(roomid)
       cecho(string.format(&quot;  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (&lt;blue&gt;&quot;,
         tostring(roomname)))
-      echoLink(roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)))
+      cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)), true)
       cecho(string.format(&quot;&lt;DarkSlateGrey&gt;) &lt;white&gt;%s&lt;DarkSlateGrey&gt;.\n&quot;, tostring(mmp.areatabler[getRoomArea(roomid)])))
     end
 
@@ -5373,7 +5658,7 @@ end</script>
     for roomname, roomid in pairs(result) do roomid = tonumber(roomid)
       cecho(string.format(&quot;  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (&lt;blue&gt;&quot;,
         tostring(roomname)))
-      echoLink(roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)))
+      cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)), true)
       cecho(string.format(&quot;&lt;DarkSlateGrey&gt;) &lt;white&gt;%s&lt;DarkSlateGrey&gt;.\n&quot;, tostring(mmp.areatabler[getRoomArea(roomid)])))
     end
   end
@@ -5391,14 +5676,14 @@ function mmp.roomFind(query)
   local function showmeropis(roomid)
     if mmp.game ~= &quot;achaea&quot; then return '' end
 
-    return mmp.oncontinent(getRoomArea(roomid), &quot;Prime&quot;) and '' or ' (Meropis)'
+    return mmp.oncontinent(getRoomArea(roomid), &quot;Main&quot;) and '' or ' (Meropis)'
   end
 
   if not tonumber(select(2, next(result))) then -- old style
     for roomid, roomname in pairs(result) do roomid = tonumber(roomid)
       cecho(string.format(&quot;  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (&lt;blue&gt;&quot;,
         tostring(roomname)))
-      echoLink(roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)))
+      cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)), true)
       cecho(string.format(&quot;&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.&quot;, mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])), showmeropis(roomid)))
       fg(&quot;DarkSlateGrey&quot;) echoLink(&quot; &gt; Show path\n&quot;, [[mmp.echoPath(mmp.currentroom, ]]..roomid..[[)]], &quot;Display directions from here to &quot;..roomname, true) resetFormat()
     end
@@ -5407,7 +5692,7 @@ function mmp.roomFind(query)
     for roomname, roomid in pairs(result) do roomid = tonumber(roomid)
       cecho(string.format(&quot;  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (&lt;blue&gt;&quot;,
         tostring(roomname)))
-      echoLink(roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)))
+      cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..roomid, 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)), true)
       cecho(string.format(&quot;&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.&quot;, mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])), showmeropis(roomid)))
       fg(&quot;DarkSlateGrey&quot;) echoLink(&quot; &gt; Show path\n&quot;, [[mmp.echoPath(mmp.currentroom, ]]..roomid..[[)]], &quot;Display directions from here to &quot;..roomname, true) resetFormat()
     end
@@ -5437,7 +5722,7 @@ function mmp.echoRoomList(areaname, exact)
     -- use pairs, as we can have gaps between room IDs
     for _, roomid in pairs(roomlist) do
       local roomname = endresult[roomid]
-      fg(&quot;blue&quot;) echoLink(sformat(&quot;%6s&quot;, roomid), 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)), true)
+      fg(&quot;blue&quot;) cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..sformat(&quot;%6s&quot;, roomid), 'mmp.gotoRoom('..roomid..')', string.format(&quot;Go to %s (%s)&quot;, roomid, tostring(roomname)), true)
        cecho(string.format(&quot;&lt;DarkSlateGrey&gt;: &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt;.\n&quot;, roomname))
     end
 
@@ -5576,8 +5861,8 @@ function mmp.doareadelete(areaid)
       deleteRoom(currentbatch[i])
     end
 
-    mmp.echo(string.format(&quot;Deleted %d batch%s so far, %d left to go - %.2f%% done out of %d needed&quot;, 
-          t.currentbatchi, (t.currentbatchi == 1 and '' or 'es'), #t.roombatches - t.currentbatchi, 
+    mmp.echo(string.format(&quot;Deleted %d batch%s so far, %d left to go - %.2f%% done out of %d needed&quot;,
+          t.currentbatchi, (t.currentbatchi == 1 and '' or 'es'), #t.roombatches - t.currentbatchi,
           (100/#t.roombatches)*t.currentbatchi, #t.roombatches))
 
     t.currentbatchi = t.currentbatchi + 1
@@ -6040,6 +6325,13 @@ function mmp.setDuanatharan()
   else mmp.echo(&quot;Won't use Atavian wings anymore.&quot;) end
 end
 
+function mmp.setDuantahar()
+  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
+
+  if mmp.settings.duantahar then mmp.echo(&quot;Okay, will see about using Chenubian wings (duanathar, duanatharan, and duantahar) when you goto somewhere while outside!&quot;)
+  else mmp.echo(&quot;Won't use Chenubian wings anymore.&quot;) end
+end
+
 function mmp.chageMapSource()
   local use = mmp.settings.crowdmap and true or false
   if use and not mmp.game or mmp.game ~= &quot;achaea&quot; then
@@ -6433,18 +6725,40 @@ function mmp.roomexists(num)
   return (s and true or false)
 end
 
+function mmp.getcontinents()
+  local tmp = getRoomUserData(1, &quot;areaContinents&quot;)
+  if tmp == &quot;&quot; then return {} end
+
+  return yajl.to_value(tmp)
+end
+
 -- patches welcome to finish this function.
 function mmp.removecontinent(area, continent)
-  local tmp = getRoomUserData(1, &quot;areaContinents&quot;)
-  local continents = {}
-
-  if tmp ~= &quot;&quot; then
-    continents = yajl.to_value(tmp)
-  end
+  local continents = mmp.getcontinents()
 
   if not next(continents) then return nil, &quot;no continents are known&quot; end
   if not continents[continent] then return nil, &quot;no such continent is recorded&quot; end
 
+  local index = mmp.indexof_valueonly(continents[continent], area)
+  if not index then return nil, &quot;this area is not on that continent&quot; end
+  table.remove(continents[continent], index)
+  local tmp = yajl.to_string(continents)
+  setRoomUserData(1, &quot;areaContinents&quot;, tmp)
+  return true
+end
+
+function mmp.addcontinent(areaid, continent)
+  local continents = mmp.getcontinents()
+
+  if not next(continents) then return nil, &quot;no continents are known&quot; end
+  if not continents[continent] then continents[continent] = {} end
+
+  local index = mmp.indexof_valueonly(continents[continent], areaid)
+  if index then return nil, &quot;this area is already on that continent&quot; end
+  continents[continent][#continents[continent] + 1] = areaid
+  local tmp = yajl.to_string(continents)
+  setRoomUserData(1, &quot;areaContinents&quot;, tmp)
+  return true
 end
 
 function mmp.indexof_valueonly(data, value)
@@ -6457,13 +6771,20 @@ end
 
 -- checks if given area ID is on the given continent. Returns true only if certainly knows
 function mmp.oncontinent(areaid, continent)
-  local tmp = getRoomUserData(1, &quot;areaContinents&quot;)
-  if tmp == &quot;&quot; then return end
-
-  local continents = yajl.to_value(tmp)
-  if not continents[continent] then return end
+  local continents = mmp.getcontinents()
+  if not continents[continent] then return nil, &quot;no such continent is recorded&quot; end
 
   return mmp.indexof_valueonly(continents[continent], areaid)
+end
+
+function mmp.getareacontinents(areaid)
+  local areaContinents = {}
+  for continentName, areas in pairs(mmp.getcontinents()) do
+    if mmp.indexof_valueonly(areas, areaid) then
+      areaContinents[#areaContinents + 1] = continentName
+    end
+  end
+  return areaContinents
 end
 
 -- accepts areaname or ID
@@ -6521,14 +6842,14 @@ function mmp.cleanroomname(roomname)
   if starts(roomname, &quot;The ruins of &quot;) then
     roomname = string.sub(roomname, -(#roomname-13))
   end
+  if ends(roomname, &quot;.&quot;) then
+    roomname = string.sub(roomname, 1, (#roomname-1))
+  end
   if ends(roomname, &quot; (road)&quot;) then
     roomname = string.sub(roomname, 1, (#roomname-7))
   end
   if ends(roomname, &quot; (indoors)&quot;) then
     roomname = string.sub(roomname, 1, (#roomname-10))
-  end
-  if ends(roomname, &quot;.&quot;) then
-    roomname = string.sub(roomname, 1, (#roomname-1))
   end
   if ends(roomname, &quot; (indoor road)&quot;) then
     roomname = string.sub(roomname, 1, (#roomname-14))
@@ -6644,7 +6965,7 @@ end</script>
       for roomid, roomname in pairs(result) do roomid = tonumber(roomid)
         cecho(string.format(&quot;  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (&lt;blue&gt;&quot;,
           tostring(roomname)))
-        echoLink(roomid, 'mmp.roomLook('..roomid..')', string.format(&quot;View room details for %s (%s)&quot;, roomid, tostring(roomname)))
+        cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..roomid, 'mmp.roomLook('..roomid..')', string.format(&quot;View room details for %s (%s)&quot;, roomid, tostring(roomname)), true)
         cecho(string.format(&quot;&lt;DarkSlateGrey&gt;) in the &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt;.\n&quot;, tostring(mmp.areatabler[getRoomArea(roomid)])))
       end
 
@@ -6652,7 +6973,7 @@ end</script>
       for roomname, roomid in pairs(result) do roomid = tonumber(roomid)
         cecho(string.format(&quot;  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (&lt;blue&gt;&quot;,
           tostring(roomname)))
-        echoLink(roomid, 'mmp.roomLook('..roomid..')', string.format(&quot;View room details for %s (%s)&quot;, roomid, tostring(roomname)))
+        cechoLink(&quot;&lt;&quot;..mmp.echo_colour..&quot;&gt;&quot;..roomid, 'mmp.roomLook('..roomid..')', string.format(&quot;View room details for %s (%s)&quot;, roomid, tostring(roomname)), true)
         cecho(string.format(&quot;&lt;DarkSlateGrey&gt;) in the &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt;.\n&quot;, tostring(mmp.areatabler[getRoomArea(roomid)])))
       end
     end
@@ -6794,7 +7115,7 @@ end</script>
 	local rooms = getAreaRooms(0) or {}
 	for _, roomid in pairs(rooms) do
 		lockRoom(roomid, true)
-	end	
+	end
 end</script>
                     <eventHandlerList>
                         <string>mmapper map reloaded</string>
@@ -7301,6 +7622,7 @@ end</script>
 
   mmp.envids =
   {
+    Abstract                    = 37,
     Catacombs                   = 14,
     [&quot;Constructed underground&quot;] = 2,
     [&quot;Deep Ocean&quot;]              = 24,
@@ -7312,6 +7634,7 @@ end</script>
     [&quot;Tsol'aa city&quot;]            = 19,
     Beach                       = 5,
     Blighted                    = 29,
+    Chaos                       = 38,
     Desert                      = 6,
     Forest                      = 4,
     Freshwater                  = 22,
@@ -7319,6 +7642,7 @@ end</script>
     Grasslands                  = 7,
     Hills                       = 9,
     Jungle                      = 17,
+    [&quot;Lava Fields&quot;]   = 39,
     Mountains                   = 14,
     Nothing                     = 0,
     Ocean                       = 20,
@@ -7335,12 +7659,13 @@ end</script>
     Tundra                      = 16,
     Urban                       = 8,
     Valley                      = 13,
+    [&quot;Vast Ocean&quot;]    = 40,
     Vessel                      = 36,
     Water                       = 30,
   }
 
   mmp.waterenvs = {}
-  local waterids = { &quot;Freshwater&quot;, &quot;Ocean&quot;, &quot;River&quot;, &quot;Deep Ocean&quot;, &quot;Water&quot;, &quot;Reef&quot;, &quot;Ocean floor&quot; }
+  local waterids = { &quot;Freshwater&quot;, &quot;Ocean&quot;, &quot;River&quot;, &quot;Deep Ocean&quot;, &quot;Water&quot;, &quot;Reef&quot;, &quot;Ocean floor&quot;, &quot;Vast Ocean&quot; }
   for i = 1, #waterids do mmp.waterenvs[mmp.envids[waterids[i]]] = true end
 
   mmp.envidsr = {};
@@ -7355,12 +7680,13 @@ end</script>
                         <packageName></packageName>
                         <script>-- track whenever we need to use wings when we get outside!
 function mmapper_achaea_went_outside()
-  if not mmp.autowalking or not (mmp.settings.duanathar or mmp.settings.duanatharan) or mmp.game ~= &quot;achaea&quot; or
+  if not mmp.autowalking or not (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) or mmp.game ~= &quot;achaea&quot; or
     (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
-    not mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Prime&quot;) then return end
+    table.contains(gmcp.Room.Info.details, &quot;indoors&quot;) or
+    not mmp.oncontinent(getRoomArea(mmp.currentroom), &quot;Main&quot;) then return end
 
   -- repath, maybe that'll allow us to use wings now.
-  local madeduanatharan, madeduanathar
+  local madeduanatharan, madeduanathar, madeduantahar
 
   local function getcmd(word)
     return mmp.settings.removewings and
@@ -7374,6 +7700,11 @@ function mmapper_achaea_went_outside()
       addSpecialExit(mmp.currentroom, 3885, getcmd(&quot;duanathar&quot;))
       --mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
       madeduanatharan = true
+    elseif mmp.settings.duantahar then
+      addSpecialExit(mmp.currentroom, 42319, getcmd(&quot;duanathar&quot;))
+      addSpecialExit(mmp.currentroom, 4882, getcmd(&quot;duanatharan&quot;))
+      mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
+      madeduantahar = true
     else
       addSpecialExit(mmp.currentroom, 3885, getcmd(&quot;duanathar&quot;))
       --mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
@@ -7390,10 +7721,14 @@ function mmapper_achaea_went_outside()
     mmp.ignore_speedwalking = true
   end
 
-  if madeduanatharan then mmp.clearspecials{4882, 3885} elseif madeduanathar then mmp.clearspecials{3885} end
+  if madeduanatharan then mmp.clearspecials{4882, 3885}
+  elseif madeduanathar then mmp.clearspecials{3885}
+  elseif madeduantahar then mmp.clearspecials{42319, 4882}
+  end
 end</script>
                         <eventHandlerList>
                             <string>mmapper went outside</string>
+                            <string>mmapper changed continent</string>
                         </eventHandlerList>
                     </Script>
                 </Script>
@@ -8093,13 +8428,9 @@ end</script>
   elseif filename == tostring(mmp.changelogfile) then   -- changelog for the mapper script
 	mmp.checkingupdates = false
 
-    local f, s = io.open(filename)
-    if f then s = f:read(&quot;*a&quot;); io.close(f) end
+    local f, s, changelog = io.open(filename)
+    if f then changelog = f:read(&quot;*a&quot;); io.close(f) end
 
-    local changelog = string.match(s, [[&lt;div class=&quot;information&quot;&gt;(.-)&lt;/div]])
-    changelog = string.gsub(changelog, &quot;Â&quot;, '')
-    changelog = string.gsub(changelog, &quot;&lt;br/&gt;&quot;, '\n')
-    changelog = string.gsub(changelog, &quot;&amp;#39;&quot;, &quot;'&quot;)
     mmp.echon(&quot;&quot;)
     echoLink(&quot;The mapper script was updated! Would you like to download the update? Click here if so.&quot;, &quot;mmp.downloadmapperscript()&quot;, &quot;Changelog for the latest (&quot;..tostring(mmp.version)..&quot; -&gt; &quot;..tostring(mmp.newmapperversion)..&quot;) update:\n&quot;..changelog, true)
 
@@ -8284,12 +8615,12 @@ function mmp.checkforupdate()
     end
 
     if mmp.settings.crowdmap and mmp.game and mmp.game == &quot;achaea&quot; then
-      downloadFile(mmp.mapfile, &quot;http://vadisystems.com/achaea-mudlet-map/.latest_map_version&quot;)
+      downloadFile(mmp.mapfile, &quot;http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/version.txt&quot;)
     elseif mmp.settings.updatemap then
       downloadFile(mmp.mapfile, &quot;http://www.&quot;..game..&quot;.com/maps/MD5SUM&quot;)
     end
 
-    downloadFile(mmp.mapperfile, &quot;http://bazaar.launchpad.net/~mudlet-makers/mudlet/mapper-lua/download/head:/version-20110910005237-2917fpevgi4koxqk-1/version&quot;)
+    downloadFile(mmp.mapperfile, &quot;http://ire-mudlet-mapping.github.io/ire-mapping-script/downloads/version&quot;)
 	mmp.checkingupdates = true
   end
 end
@@ -8311,13 +8642,13 @@ end
 function mmp.retrievechangelog()
   mmp.changelogfile = downloadfolder..&quot;changelog&quot;
 
-  downloadFile(mmp.changelogfile, &quot;http://bazaar.launchpad.net/~mudlet-makers/mudlet/mapper-lua/files&quot;)
+  downloadFile(mmp.changelogfile, &quot;http://ire-mudlet-mapping.github.io/ire-mapping-script/downloads/changelog&quot;)
 end
 
 function mmp.retrievecrowdchangelog()
   mmp.crowdchangelogfile = downloadfolder..&quot;crowdchangelogfile&quot;
 
-  downloadFile(mmp.crowdchangelogfile, &quot;http://vadisystems.com/achaea-mudlet-map/changelog&quot;)
+  downloadFile(mmp.crowdchangelogfile, &quot;http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/changelog.txt&quot;)
 end
 
 -- downloads the public crowdsources map!
@@ -8345,7 +8676,7 @@ function mmp.downloadmapperscript()
 
 
   mmp.downloadedscript = downloadlocation..&quot;/mudlet-mapper.xml&quot;
-  downloadFile(mmp.downloadedscript, &quot;http://bazaar.launchpad.net/~mudlet-makers/mudlet/mapper-lua/download/head:/mudletmapper.xml-20100916000616-71kbxngi7b3nybta-1/mudlet-mapper.xml&quot;)
+  downloadFile(mmp.downloadedscript, &quot;http://ire-mudlet-mapping.github.io/ire-mapping-script/downloads/mudlet-mapper.xml&quot;)
 
   local f,err = io.open(downloadlocationfile, &quot;w&quot;)
   if not f then return mmp.echo(&quot;Couldn't write to the location file, because: &quot;..err) end
@@ -8363,7 +8694,7 @@ function mmp.downloadcrowdmap(newversion)
   f:close()
 
 
-  downloadFile(mmp.crowdmapfile, &quot;http://vadisystems.com/achaea-mudlet-map/map&quot;)
+  downloadFile(mmp.crowdmapfile, &quot;http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/map&quot;)
 
   mmp.echo(&quot;Downloading the latest crowdmap...&quot;)
 end
@@ -8437,6 +8768,7 @@ end</script>
                         <string>sys2DMapLoad</string>
                         <string>sys3DMapLoad</string>
                         <string>sysMapDownloadEvent</string>
+                        <string>mapOpenEvent</string>
                     </eventHandlerList>
                 </Script>
             </Script>

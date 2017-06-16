@@ -54,7 +54,12 @@ class QProgressDialog;
 class TMapLabel
 {
 public:
-    TMapLabel(){ hilite=false; showOnTop=false; noScaling=false; }
+    TMapLabel()
+    {
+        hilite = false;
+        showOnTop = false;
+        noScaling = false;
+    }
 
     QVector3D pos;
     QPointF pointer;
@@ -74,75 +79,77 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+    Q_DISABLE_COPY(TMap)
 
 public:
-    TMap( Host *);
+    TMap(Host*);
     ~TMap();
     void mapClear();
-    int createMapLabelID( int area );
-    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling );
-    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop=true, bool noScaling=true, qreal zoom=15.0, int fontSize=15 );
-    void deleteMapLabel( int area, int labelID );
-    bool addRoom( int id=0 );
-    bool setRoomArea( int id, int area, bool isToDeferAreaRelatedRecalculations = false );
-    // void deleteRoom( int id );
-    void deleteArea( int id );
-    int createNewRoomID( int minimumId = 1 );
-    void logError(QString &msg);
-    void tidyMap( int area );
-// Not used:    void getConnectedNodesGreaterThanX( int id, int x );
-// Not used:    void getConnectedNodesSmallerThanX( int id, int x );
-// Not used:    void getConnectedNodesGreaterThanY( int id, int x );
-// Not used:    void getConnectedNodesSmallerThanY( int id, int x );
-// Not used:    void astBreitenAnpassung( int id, int );
-// Not used:    void astHoehenAnpassung( int id, int );
-    bool setExit( int from, int to, int dir );
-    bool setRoomCoordinates( int id, int x, int y, int z );
-    void audit(); // Was init( Host * ) but host pointer was not used and it does not initialise a map!
-    QList<int> detectRoomCollisions( int id );
-    void solveRoomCollision( int id, int creationDirection, bool PCheck=true );
-    void setRoom( int );
-    bool findPath( int from, int to );
-    bool gotoRoom( int );
-    bool gotoRoom( int, int );
-    void setView( float, float, float, float );
-    bool serialize( QDataStream & );
-    bool restore( QString );
-    bool retrieveMapFileStats( QString, QString *, int *, int *, int *, int * );
-    void initGraph();
-// Not used:    void exportMapToDatabase();
-// Not used:    void importMapFromDatabase();
-    void connectExitStub(int roomId, int dirType);
-    void postMessage( const QString text );
-    void set3DViewCenter( const int, const int, const int, const int );
-    // Used by the 2D mapper to send view center coordinates to 3D one
+    int createMapLabelID(int area);
+    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling);
+    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 15.0, int fontSize = 15);
+    void deleteMapLabel(int area, int labelID);
+    bool addRoom(int id = 0);
+    bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);
+    void deleteArea(int id);
+    int createNewRoomID(int minimumId = 1);
+    void logError(QString& msg);
+    void tidyMap(int area);
+    bool setExit(int from, int to, int dir);
+    bool setRoomCoordinates(int id, int x, int y, int z);
 
-    void appendRoomErrorMsg( const int, const QString, const bool isToSetFileViewingRecommended = false );
-    void appendAreaErrorMsg( const int, const QString, const bool isToSetFileViewingRecommended = false );
-    void appendErrorMsg( const QString, const bool isToSetFileViewingRecommended = false );
-    void appendErrorMsgWithNoLf( const QString, const bool isToSetFileViewingRecommended = false );
-    void pushErrorMessagesToFile( const QString, const bool isACleanup = false );
+    // Was init( Host * ) but host pointer was not used and it does not initialise a map!
+    void audit();
+
+    QList<int> detectRoomCollisions(int id);
+    void solveRoomCollision(int id, int creationDirection, bool PCheck = true);
+    void setRoom(int);
+    bool findPath(int from, int to);
+    bool gotoRoom(int);
+    bool gotoRoom(int, int);
+    void setView(float, float, float, float);
+    bool serialize(QDataStream&);
+    bool restore(QString);
+    bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
+    void initGraph();
+    void connectExitStub(int roomId, int dirType);
+    void postMessage(const QString text);
+
+    // Used by the 2D mapper to send view center coordinates to 3D one
+    void set3DViewCenter(const int, const int, const int, const int);
+
+    void appendRoomErrorMsg(const int, const QString, const bool isToSetFileViewingRecommended = false);
+    void appendAreaErrorMsg(const int, const QString, const bool isToSetFileViewingRecommended = false);
+    void appendErrorMsg(const QString, const bool isToSetFileViewingRecommended = false);
+    void appendErrorMsgWithNoLf(const QString, const bool isToSetFileViewingRecommended = false);
+
     // If the argument is true does not write out any thing if there is no data
     // to dump, intended to be used before an operation like a map load so that
     // any messages previously recorded are not associated with a "fresh" batch
     // from the operation.
+    void pushErrorMessagesToFile(const QString, const bool isACleanup = false);
 
     // Moved and revised from dlgMapper:
-    void                            downloadMap( const QString * remoteUrl = Q_NULLPTR,  const QString * localFileName = Q_NULLPTR );
+    void downloadMap(const QString* remoteUrl = Q_NULLPTR, const QString* localFileName = Q_NULLPTR);
+
     // Also uses readXmlMapFile(...) but for local files:
-    bool                            importMap( QFile &, QString * errMsg = Q_NULLPTR );
+    bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
+
     // Used at end of downloadMap(...) OR as part of importMap(...) but not by
     // both at the same time thanks to mXmlImportMutex
-    bool                            readXmlMapFile( QFile &, QString * errMsg = Q_NULLPTR );
-    // Use progresss dialog for post-download operations:
-    void                            reportStringToProgressDialog( const QString );
-    void                            reportProgressToProgressDialog( const int, const int );
+    bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
+
+    // Use progress dialog for post-download operations.
+    void reportStringToProgressDialog(const QString);
+
+    // Use progress dialog for post-download operations.
+    void reportProgressToProgressDialog(const int, const int);
 
 
-    TRoomDB * mpRoomDB;
+    TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
-// Not used:    QVector3D span;
     QPointer<Host> mpHost;
+
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
     QHash<QString, int> mRoomIdHash;
@@ -151,23 +158,22 @@ public:
     bool mRightDown;
     float m2DPanXStart;
     float m2DPanYStart;
-// Not used:    int mViewArea;
     int mTargetID;
     QList<int> mPathList;
     QList<QString> mDirList;
     QList<int> mWeightList;
     QMap<int, QColor> customEnvColors;
     QMap<int, QVector3D> unitVectors;
-    QMap<int, int> reverseDirections; // contains complementary directions of dirs on TRoom.h
-    GLWidget * mpM;
-    dlgMapper * mpMapper;
-    QMap<int, int> roomidToIndex;
-    // QMap<int, int> indexToRoomid;
 
-// Not used:    QMap<QString, int> pixNameTable;
-// Not used:    QMap<int, QPixmap> pixTable;
-    typedef adjacency_list<listS, vecS, directedS, no_property, boost::property<edge_weight_t, cost> > mygraph_t;
-    typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
+    // contains complementary directions of dirs on TRoom.h
+    QMap<int, int> reverseDirections;
+
+    GLWidget* mpM;
+    dlgMapper* mpMapper;
+    QMap<int, int> roomidToIndex;
+
+    typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
+    typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
     mygraph_t g;
@@ -175,50 +181,68 @@ public:
     std::vector<location> locations;
     bool mMapGraphNeedsUpdate;
     bool mNewMove;
-    QMap<qint32, QMap<qint32, TMapLabel> > mapLabels;
+    QMap<qint32, QMap<qint32, TMapLabel>> mapLabels;
 
-    int mVersion; // loaded map file format version
-    const int mDefaultVersion; // replaces CURRENT_MAP_VERSION
-    const int mMaxVersion; // normally the same as mDefaultVersion but can be
-                           // higher for development builds and is the maximum
-                           // version the development build can parse.
-    const int mMinVersion; // normally the same as mDefaultVersion but can be
-                           // lower for release builds and is the minimum
-                           // version recommended for saving , which might
-                           // perhaps be one less than mDefault to permit sharing
-                           // of a map with users of an older version "in the field"!
-    int mSaveVersion; // what to use when saving the map, defaults to mDefaultVersion
-                      // but can be override by control in special options (last)
-                      // tab on profile preference dialog using the limits set
-                      // by mMinVersion and mMaxVersion.
+    // loaded map file format version
+    int mVersion;
+
+    // replaces CURRENT_MAP_VERSION
+    const int mDefaultVersion;
+
+    // normally the same as mDefaultVersion but can be
+    // higher for development builds and is the maximum
+    // version the development build can parse.
+    const int mMaxVersion;
+
+    // normally the same as mDefaultVersion but can be
+    // lower for release builds and is the minimum
+    // version recommended for saving , which might
+    // perhaps be one less than mDefault to permit sharing
+    // of a map with users of an older version "in the field"!
+    const int mMinVersion;
+
+    // what to use when saving the map, defaults to mDefaultVersion
+    // but can be override by control in special options (last)
+    // tab on profile preference dialog using the limits set
+    // by mMinVersion and mMaxVersion.
+    int mSaveVersion;
 
     QMap<QString, QString> mUserData;
 
+
 public slots:
     // Moved and revised from dlgMapper:
-    void                            slot_setDownloadProgress( qint64, qint64 );
-    void                            slot_downloadCancel();
-    void                            slot_downloadError( QNetworkReply::NetworkError );
-    void                            slot_replyFinished( QNetworkReply * );
+    void slot_setDownloadProgress(qint64, qint64);
+    void slot_downloadCancel();
+    void slot_downloadError(QNetworkReply::NetworkError);
+    void slot_replyFinished(QNetworkReply*);
 
 
 private:
-    const QString                   createFileHeaderLine( const QString, const QChar );
+    const QString createFileHeaderLine(const QString, const QChar);
 
-    QStringList                     mStoredMessages;
+    QStringList mStoredMessages;
 
-    QMap<int, QList<QString> >      mMapAuditRoomErrors; // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
-    QMap<int, QList<QString> >      mMapAuditAreaErrors; // As for the Room ones but with key as the area number
-    QList<QString>                  mMapAuditErrors;     // For the whole map
-    bool                            mIsFileViewingRecommended; // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
+    // Key is room number (where renumbered is the original one), Value is the errors, appended as they are found
+    QMap<int, QList<QString>> mMapAuditRoomErrors;
+
+    // As for the Room ones but with key as the area number
+    QMap<int, QList<QString>> mMapAuditAreaErrors;
+
+    // For the whole map
+    QList<QString> mMapAuditErrors;
+
+    // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
+    bool mIsFileViewingRecommended;
 
     // Moved and revised from dlgMapper:
-    QNetworkAccessManager *         mpNetworkAccessManager;
-    QProgressDialog *               mpProgressDialog;
-    QNetworkReply *                 mpNetworkReply;
-    QString                         mLocalMapFileName;
-    int                             mExpectedFileSize;
-    QMutex                          mXmlImportMutex;
+    QNetworkAccessManager* mpNetworkAccessManager;
+
+    QProgressDialog* mpProgressDialog;
+    QNetworkReply* mpNetworkReply;
+    QString mLocalMapFileName;
+    int mExpectedFileSize;
+    QMutex mXmlImportMutex;
 };
 
 #endif // MUDLET_TMAP_H
