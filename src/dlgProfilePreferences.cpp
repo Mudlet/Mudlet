@@ -1620,19 +1620,14 @@ void dlgProfilePreferences::populateThemesList()
     QList<std::pair<QString, QString>> sortedThemes;
     QJsonArray unsortedThemes;
 
-    // skip reading themes in if there's no file available
-    if (!themesFile.open(QIODevice::ReadOnly)) {
-        goto process;
+    if (themesFile.open(QIODevice::ReadOnly)) {
+        unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
+        for (auto theme : unsortedThemes) {
+            QString themeText = QString("%1").arg(theme.toObject()["Title"].toString());
+            QString themeFileName = theme.toObject()["FileName"].toString();
+            sortedThemes << make_pair(themeText, themeFileName);
+        }
     }
-
-    unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-    for (auto theme : unsortedThemes) {
-        QString themeText = QString("%1").arg(theme.toObject()["Title"].toString());
-        QString themeFileName = theme.toObject()["FileName"].toString();
-        sortedThemes << make_pair(themeText, themeFileName);
-    }
-
-process:
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
