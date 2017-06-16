@@ -210,9 +210,9 @@ public:
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
 
-    const bool getAuditErrorsToConsoleEnabled() { return mIsToDisplayMapAuditErrorsToConsole; }
-    void setAuditErrorsToConsoleEnabled(const bool state) { mIsToDisplayMapAuditErrorsToConsole = state; }
-    void createMapper(bool isToLoadDefaultMapFile = true);
+    bool showMapAuditErrors() const { return mshowMapAuditErrors; }
+    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void createMapper(bool loadDefaultMap = true);
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -233,7 +233,7 @@ public slots:
     void slot_multi_view();
     void slot_stopAllTriggers();
     void slot_userToolBar_hovered(QAction* pA);
-    void slot_connection_dlg_finnished(const QString& profile, int historyVersion);
+    void slot_connection_dlg_finished(const QString& profile, int historyVersion);
     void slot_timer_fires();
     void slot_send_login();
     void slot_send_pass();
@@ -277,7 +277,6 @@ private slots:
     void slot_statusBarMessageChanged(QString);
 
 private:
-
     void initEdbee();
 
     void goingDown() { mIsGoingDown = true; }
@@ -320,8 +319,7 @@ private:
     HostManager mHostManager;
     QStatusBar* mpMainStatusBar;
 
-    bool mIsToDisplayMapAuditErrorsToConsole;
-
+    bool mshowMapAuditErrors;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
@@ -334,7 +332,6 @@ class TConsoleMonitor : public QObject
 
 public:
     TConsoleMonitor(QObject* parent) : QObject(parent) {}
-
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
