@@ -211,7 +211,7 @@ public:
     void requestProfilesToReloadMaps(QList<QString>);
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void showMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
     void createMapper(bool loadDefaultMap = true);
 
 public slots:

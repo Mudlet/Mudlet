@@ -884,7 +884,7 @@ void dlgProfilePreferences::loadMap()
 
     // Ensure the setting is already made as the loadMap(...) uses the set value
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
         label_mapFileActionResult->setText(tr("Importing map - please wait..."));
@@ -909,7 +909,7 @@ void dlgProfilePreferences::loadMap()
     QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
 
     // Restore setting immediately before we used it
-    mudlet::self()->showMapAuditErrors(showAuditErrors);
+    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 }
 
 void dlgProfilePreferences::saveMap()
@@ -943,7 +943,7 @@ void dlgProfilePreferences::saveMap()
 
     // Ensure the setting is already made as the saveMap(...) uses the set value
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (pHost->mpConsole->saveMap(fileName)) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
@@ -952,7 +952,7 @@ void dlgProfilePreferences::saveMap()
     }
     // Then restore prior version
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
-    mudlet::self()->showMapAuditErrors(showAuditErrors);
+    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
     QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
 }
@@ -1020,7 +1020,7 @@ void dlgProfilePreferences::copyMap()
     // Ensure the setting is already made as the value could be used in the
     // code following after
     bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
     // stored their maps - if we do not already know where the player is in the
@@ -1163,7 +1163,7 @@ void dlgProfilePreferences::copyMap()
 
     // CHECK: Race condition? We might be changing this whilst other profile
     // are accessing it...
-    mudlet::self()->showMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
@@ -1283,7 +1283,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
-    mudlet::self()->showMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
     close();
 }
