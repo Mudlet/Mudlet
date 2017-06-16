@@ -1539,8 +1539,6 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
         return;
     }
 
-    theme_download_label->show();
-
     QDir dir;
     QString cacheDir = QStringLiteral("%1/.config/mudlet/edbee/cache").arg(QDir::homePath());
     if (!dir.mkpath(cacheDir)) {
@@ -1550,8 +1548,21 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     QSettings settings("mudlet", "Mudlet");
     QString themesURL = settings.value("colorSublimeThemesURL", QStringLiteral("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
-    // save the default value in settings so the field is visible for editing in config file if needed
+    // a default update period is 24h
+    int themesUpdatePeriod = settings.value("themesUpdatePeriod", 86'400'000).toInt();
+    // save the defaults in settings so the field is visible for editing in config file if needed
     settings.setValue("colorSublimeThemesURL", themesURL);
+    settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
+
+    auto themesAge = QFileInfo(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath())).lastModified().toUTC();
+
+    // if the cache file exists and is younger than the specified age (24h by default), don't refresh it
+    if (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1) {
+        populateThemesList();
+        return;
+    }
+
+    theme_download_label->show();
 
     auto manager = new QNetworkAccessManager(this);
     auto diskCache = new QNetworkDiskCache(this);
