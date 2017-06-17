@@ -152,8 +152,8 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         return QPair<bool, QString>(false, "command or message could not be parsed.");
     }
 
-    bool sendCommand = processCustomCommand(command);
-    if (!sendCommand) {
+    bool isCustomCommand = processCustomCommand(command);
+    if (isCustomCommand) {
         return QPair<bool, QString>(true, "command processed by client.");
     }
 
@@ -191,8 +191,9 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
 
     // issue a quit message to the network if we're connected.
-    if (connection->isConnected())
+    if (connection->isConnected()) {
         connection->quit(msg);
+    }
 
     // remove the old buffers.
     for (QString chName : mChannels) {
@@ -286,7 +287,7 @@ void dlgIRC::setupBuffers()
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 {
     if (cmd->type() != IrcCommand::Custom || cmd->parameters().count() < 1) {
-        return true;
+        return false;
     }
 
     const QString cmdName = QString(cmd->parameters().at(0)).toUpper();
@@ -302,7 +303,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         if (buffer) {
             bufferTexts.value(buffer)->clear();
         }
-        return false;
+        return true;
     }
     if (cmdName == "CLOSE") {
         IrcBuffer* buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
@@ -316,7 +317,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             bufferList->setCurrentIndex(bufferModel->index(bufferModel->find(connection->host())));
             buffer->close();
         }
-        return false;
+        return true;
     }
     if (cmdName == "HELP") {
         QString hName = "";
@@ -324,12 +325,12 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             hName = QString(cmd->parameters().at(1)).toUpper();
         }
         displayHelp(hName);
-        return false;
+        return true;
     }
     if (cmdName == "RECONNECT") {
         ircRestart();
 
-        return false;
+        return true;
     }
     if (cmdName == "MSG") {
         QString target;
@@ -347,7 +348,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         sendMsg(target, msgText);
     }
 
-    return false;
+    return true;
 }
 
 void dlgIRC::displayHelp(const QString& cmdName = "")
@@ -405,8 +406,8 @@ void dlgIRC::slot_onTextEntered()
     IrcCommand* command = commandParser->parse(input);
     if (command) {
         // handle custom commands
-        bool sendCommand = processCustomCommand(command);
-        if (!sendCommand) {
+        bool isCustomCommand = processCustomCommand(command);
+        if (isCustomCommand) {
             lineEdit->clear();
             return;
         }
@@ -503,8 +504,9 @@ void dlgIRC::slot_onBufferActivated(const QModelIndex& index)
     userList->setModel(userModels.value(buffer));
     completer->setBuffer(buffer);
     // keep the command parser aware of the context
-    if (buffer)
+    if (buffer) {
         commandParser->setTarget(buffer->title());
+    }
 }
 
 void dlgIRC::slot_onUserActivated(const QModelIndex& index)
@@ -518,8 +520,9 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
         IrcBuffer* buffer = bufferModel->add(user->name());
         // activate the new query
         int idx = bufferModel->buffers().indexOf(buffer);
-        if (idx != -1)
+        if (idx != -1) {
             bufferList->setCurrentIndex(bufferModel->index(idx));
+        }
     }
 }
 
@@ -528,8 +531,9 @@ void dlgIRC::appendHtml(QTextDocument* document, const QString& html)
     QTextCursor cursor(document);
     cursor.beginEditBlock();
     cursor.movePosition(QTextCursor::End);
-    if (!document->isEmpty())
+    if (!document->isEmpty()) {
         cursor.insertBlock();
+    }
     cursor.insertHtml(html);
     cursor.endEditBlock();
 }
@@ -543,8 +547,9 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
     }
 
     IrcBuffer* buffer = qobject_cast<IrcBuffer*>(sender());
-    if (!buffer)
+    if (!buffer) {
         buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+    }
     QTextDocument* document = bufferTexts.value(buffer);
     if (document) {
         QString html = IrcMessageFormatter::formatMessage(message);
@@ -560,10 +565,11 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
             }
 
             // add the HTML formatted copy to the buffer.
-            if (document == ircBrowser->document())
+            if (document == ircBrowser->document()) {
                 ircBrowser->append(html);
-            else
+            } else {
                 dlgIRC::appendHtml(document, html);
+            }
         }
     }
 }
