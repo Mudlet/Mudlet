@@ -428,8 +428,18 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar );
 
-    // FIXME: still needed?
-    mpSourceEditorEdbee->config()->setFont( mpHost->mDisplayFont);
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setThemeName(mpHost->mEditorTheme);
+    config->setFont(mpHost->mDisplayFont);
+    config->endChanges();
+    connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=](const QString& theme) {
+        auto config = mpSourceEditorEdbee->config();
+        config->beginChanges();
+        config->setThemeName(theme);
+        config->setFont(mpHost->mDisplayFont);
+        config->endChanges();
+    });
 
     connect( comboBox_searchTerms, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
     connect( treeWidget_triggers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
@@ -7318,31 +7328,14 @@ void dlgTriggerEditor::slot_changeEditorTextOptions( QTextOption::Flags state )
 // the editor needs to be "cleared", usually when a different alias/trigger/etc is
 // made or selected.
 
-void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText) {
-
+void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText)
+{
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(
-        edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
-    ew->controller()->giveTextDocument( mpSourceEditorEdbeeDocument);
+    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    ew->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
-    // FIXME: set this to be set once and only updated when the value in settings is changed
-    auto config = ew->config();
-    config->beginChanges();
-    config->setThemeName(mpHost->mEditorTheme);
-    config->setFont(mpHost->mDisplayFont);
-    config->endChanges();
-
-    // TODO: hook up to dynamic theme switching removing need to reload
-/*    connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=]() {
-        config->beginChanges();
-        qDebug() << "editor theme changed!";
-        config->setThemeName(mpHost->mEditorTheme);
-        config->endChanges();
-    });
-*/    
-    
     // If undo is not disabled when setting the initial text, the
     // setting of the text will be undoable.
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
