@@ -156,7 +156,7 @@ public:
     static int setIrcNick(lua_State*);
     static int setIrcServer(lua_State*);
     static int setIrcChannels(lua_State*);
-    static int ircRestart(lua_State*);
+    static int restartIrc(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State* L);

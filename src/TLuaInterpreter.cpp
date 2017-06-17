@@ -12081,7 +12081,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
 
     if (newchannels.count() == 0) {
         lua_pushnil(L);
-        lua_pushstring(L, "bad argument #1 value (channels must contain at least 1 valid channel name!)");
+        lua_pushstring(L, "channels must contain at least 1 valid channel name!");
         return 2;
     }
 
@@ -12101,7 +12101,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
  *  Restarts the IRC Client connection.
  *  This reloads the client config values from disk.
  */
-int TLuaInterpreter::ircRestart(lua_State* L)
+int TLuaInterpreter::restartIrc(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     bool rv = false;
