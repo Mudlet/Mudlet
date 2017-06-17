@@ -52,7 +52,7 @@ QStringList dlgIRC::DefaultChannels = QStringList() << QLatin1String("#mudlet");
 dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
 {
     setupUi(this);
-    setWindowIcon(QIcon(QLatin1String(":/icons/mudlet_irc.png")));
+    setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_irc.png")));
 
     setupCommandParser();
 
