@@ -102,6 +102,7 @@ private slots:
     void slot_receiveNumericMessage(IrcNumericMessage* msg);
 
 private:
+    void setClientWindowTitle();
     void startClient();
     void setupCommandParser();
     void setupBuffers();
