@@ -46,6 +46,7 @@
 #include <QNetworkDiskCache>
 #include <QPalette>
 #include <QRegExp>
+#include <QStandardPaths>
 #include <QTextOption>
 #include <QToolBar>
 #include <QVariant>
@@ -1540,9 +1541,9 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     }
 
     QDir dir;
-    QString cacheDir = QStringLiteral("%1/.config/mudlet/edbee/cache").arg(QDir::homePath());
+    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     if (!dir.mkpath(cacheDir)) {
-        qWarning() << "Couldn't create edbee themes cache directory: " << cacheDir;
+        qWarning() << "Couldn't create cache directory for edbee themes: " << cacheDir;
         return;
     }
 
@@ -1569,11 +1570,16 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     diskCache->setCacheDirectory(cacheDir);
     manager->setCache(diskCache);
 
-    QUrl url(themesURL);
-    QNetworkRequest req(url);
-    req.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
 
-    QNetworkReply* getReply = manager->get(req);
+    QUrl url(themesURL);
+    QNetworkRequest request(url);
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    // github uses redirects
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    // load from cache if possible
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
+
+    QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError code) {
         theme_download_label->setText(tr("Couldn't update themes: %1").arg(getReply->errorString()));
@@ -1593,6 +1599,10 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         if (reply->error() != QNetworkReply::NoError) {
                             return;
                         }
+
+                        QVariant fromCache = reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute);
+                        qDebug() << "page from cache?" << fromCache.toBool();
+
                         QByteArray downloadedArchive = reply->readAll();
 
                         tempThemesArchive = new QTemporaryFile();
