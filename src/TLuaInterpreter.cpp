@@ -11978,7 +11978,7 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
         nick = lua_tostring( L, 1 );
         if (nick.empty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #1 value (nick must not be empty!)");
+            lua_pushfstring(L, "nick must not be empty");
             return 2;
         }
     }
@@ -12011,7 +12011,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         addr = lua_tostring( L, 1 );
         if (addr.empty()) {
             lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #1 value (hostname must not be empty!)");
+            lua_pushfstring(L, "hostname must not be empty");
             return 2;
         }
     }
