@@ -11966,7 +11966,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 
 /** setIrcNick( nick )
  *  Updates IRC client nickname configuration value.
- *  Does not apply changes to active client until ircRestart() is called.
+ *  Does not apply changes to active client until restartIrc() is called.
  */
 int TLuaInterpreter::setIrcNick(lua_State* L)
 {
@@ -11998,7 +11998,7 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 /** setIrcServer( hostname, port )
  *  Updates IRC client connection configuration values with the given hostname and port values.
  *  Port argument is optional and defaults to 6667.
- *  Does not apply changes to active client until ircRestart() is called.
+ *  Does not apply changes to active client until restartIrc() is called.
  */
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
@@ -12052,14 +12052,14 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 /** setIrcChannels( channels )
  *  Updates IRC client auto-join channels configuration value.
  *  Channels must a table containing at least one valid channel name string.
- *  Does not apply changes to active client until ircRestart() is called.
+ *  Does not apply changes to active client until restartIrc() is called.
  */
 int TLuaInterpreter::setIrcChannels(lua_State* L)
 {
     QStringList newchannels;
     if (!lua_istable(L, 1) )
     {
-        lua_pushfstring(L, "setIrcChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        lua_pushfstring(L, "setIrcChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, 1));
         return lua_error(L);
     }
     else
@@ -12097,7 +12097,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
     return 1;
 }
 
-/** ircRestart()
+/** restartIrc()
  *  Restarts the IRC Client connection.
  *  This reloads the client config values from disk.
  */
@@ -13343,7 +13343,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register( pGlobalLua, "setIrcNick", TLuaInterpreter::setIrcNick );
     lua_register( pGlobalLua, "setIrcServer", TLuaInterpreter::setIrcServer );
     lua_register( pGlobalLua, "setIrcChannels", TLuaInterpreter::setIrcChannels );
-    lua_register( pGlobalLua, "ircRestart", TLuaInterpreter::ircRestart );
+    lua_register( pGlobalLua, "restartIrc", TLuaInterpreter::restartIrc );
     lua_register( pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer );
     lua_register( pGlobalLua, "getRooms", TLuaInterpreter::getRooms );
     lua_register( pGlobalLua, "createMapLabel", TLuaInterpreter::createMapLabel );
