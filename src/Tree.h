@@ -55,6 +55,9 @@ public:
     bool shouldBeActive();
     void setShouldBeActive(bool b);
 
+    bool isTemporary();
+    void setTemporary(bool state);
+
     // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive();
 
@@ -81,6 +84,8 @@ private:
     bool mActive;
     bool mUserActiveState;
     QString mErrorMessage;
+
+    bool m_isTemporary;
 };
 
 template <class T>
@@ -126,6 +131,16 @@ Tree<T>::~Tree()
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
     }
+}
+
+template <class T>
+void Tree<T>::setTemporary(bool state) {
+    m_isTemporary = state;
+}
+
+template <class T>
+bool Tree<T>::isTemporary() {
+    return m_isTemporary;
 }
 
 template <class T>

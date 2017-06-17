@@ -36,7 +36,6 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mModuleMasterFolder(false)
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
-, mIsTempTimer(false)
 , mpTimer(new QTimer)
 , mModuleMember(false)
 , mIsFolder()
@@ -53,7 +52,6 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost)
 , mTime(time)
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
-, mIsTempTimer(false)
 , mpTimer(new QTimer)
 , mModuleMember(false)
 , mIsFolder()
@@ -86,7 +84,7 @@ void TTimer::setName(const QString& name)
 {
     // temp timers do not need to check for names referring to multiple
     // timer objects as names=ID -> much faster tempTimer creation
-    if (!mIsTempTimer) {
+    if (!isTemporary()) {
         mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
@@ -132,11 +130,7 @@ bool TTimer::setIsActive(bool b)
 
 void TTimer::start()
 {
-    if (mIsTempTimer) {
-        mpTimer->setSingleShot(true);
-    } else {
-        mpTimer->setSingleShot(false);
-    }
+    mpTimer->setSingleShot(isTemporary());
 
     if (!mIsFolder)
         mpTimer->start();
@@ -209,7 +203,7 @@ bool TTimer::compileScript()
 
 bool TTimer::checkRestart()
 {
-    return (!mIsTempTimer && !isOffsetTimer() && isActive() && !mIsFolder);
+    return (!isTemporary() && !isOffsetTimer() && isActive() && !mIsFolder);
 }
 
 void TTimer::execute()
@@ -219,7 +213,7 @@ void TTimer::execute()
         return;
     }
 
-    if (mIsTempTimer) {
+    if (isTemporary()) {
         if (mScript.isEmpty()) {
             mpHost->mLuaInterpreter.call_luafunction(this);
         } else {

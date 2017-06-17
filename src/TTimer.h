@@ -61,8 +61,6 @@ public:
     bool setScript(const QString& script);
     bool canBeUnlocked(TTimer*);
     bool isFolder() { return mIsFolder; }
-    void setIsTempTimer(bool b) { mIsTempTimer = b; }
-    bool isTempTimer() { return mIsTempTimer; }
     void setIsFolder(bool b) { mIsFolder = b; }
     bool registerTimer();
     bool setIsActive(bool);
@@ -91,7 +89,6 @@ private:
     bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
-    bool mIsTempTimer;
     QMutex mLock;
     QTimer* mpTimer;
     bool mModuleMember;

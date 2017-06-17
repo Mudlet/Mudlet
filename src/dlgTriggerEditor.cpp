@@ -4966,7 +4966,7 @@ void dlgTriggerEditor::fillout_form()
     list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for(auto trigger : baseNodeList)
     {
-        if( trigger->isTempTrigger() ) continue;
+        if( trigger->isTemporary() ) continue;
         QString s = trigger->getName();
         QStringList sList;
         sList << s;
@@ -5091,7 +5091,7 @@ void dlgTriggerEditor::fillout_form()
     list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for(auto timer : baseNodeList_timers)
     {
-        if( timer->isTempTimer() ) continue;
+        if( timer->isTemporary() ) continue;
         QString s = timer->getName();
         QStringList sList;
         sList << s;

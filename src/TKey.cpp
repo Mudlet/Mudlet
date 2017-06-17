@@ -33,7 +33,6 @@ TKey::TKey( TKey * parent, Host * pHost )
 : Tree<TKey>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mIsTempKey( false )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
@@ -47,7 +46,6 @@ TKey::TKey( QString name, Host * pHost )
 : Tree<TKey>( 0 )
 , exportItem( true )
 , mModuleMasterFolder( false )
-, mIsTempKey( false )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
@@ -68,7 +66,7 @@ TKey::~TKey()
 
 void TKey::setName( const QString& name )
 {
-    if( ! mIsTempKey )
+    if( !isTemporary() )
     {
         mpHost->getKeyUnit()->mLookupTable.remove( mName, this );
     }

@@ -34,7 +34,6 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 : Tree<TAlias>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mIsTempAlias( false )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
@@ -47,7 +46,6 @@ TAlias::TAlias(const QString& name, Host * pHost )
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mIsTempAlias( false )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
@@ -65,7 +63,7 @@ TAlias::~TAlias()
 
 void TAlias::setName(const QString& name)
 {
-    if (!mIsTempAlias) {
+    if (!isTemporary()) {
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;

@@ -55,7 +55,6 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mColorTriggerBg( false )
 , mKeepFiring( 0 )
 , mpHost( pHost )
-, mIsTempTrigger( false )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled( true )
@@ -90,7 +89,6 @@ TTrigger::TTrigger( const QString& name, QStringList regexList, QList<int> regex
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , mName( name )
-, mIsTempTrigger( false )
 , mRegexCodeList( regexList )
 , exportItem(true)
 , mModuleMasterFolder(false)
@@ -125,7 +123,7 @@ TTrigger::~TTrigger()
 
 void TTrigger::setName(const QString& name )
 {
-    if( ! mIsTempTrigger )
+    if( ! isTemporary() )
     {
         mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }

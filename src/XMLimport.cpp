@@ -958,7 +958,7 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
 
     pT->setIsActive(attributes().value("isActive") == "yes");
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
-    pT->mIsTempTrigger = (attributes().value("isTempTrigger") == "yes");
+    pT->setTemporary((attributes().value("isTempTrigger") == "yes"));
     pT->mIsMultiline = (attributes().value("isMultiline") == "yes");
     pT->mPerlSlashGOption = (attributes().value("isPerlSlashGOption") == "yes");
     pT->mIsColorizerTrigger = (attributes().value("isColorizerTrigger") == "yes");
@@ -1053,7 +1053,7 @@ void XMLimport::readTimerGroup(TTimer* pParent)
     auto pT = new TTimer(pParent, mpHost);
 
     pT->mIsFolder = (attributes().value("isFolder") == "yes");
-    pT->mIsTempTimer = (attributes().value("isTempTimer") == "yes");
+    pT->setTemporary((attributes().value("isTempTimer") == "yes"));
 
     mpHost->getTimerUnit()->registerTimer(pT);
     pT->setShouldBeActive((attributes().value("isActive") == "yes"));

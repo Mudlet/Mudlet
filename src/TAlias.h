@@ -63,9 +63,6 @@ public:
     void setIsFolder(bool b) { mIsFolder = b; }
     bool match(const QString& toMatch);
     bool registerAlias();
-    bool isTempAlias() { return mIsTempAlias; }
-    void setIsTempAlias(bool b) { mIsTempAlias = b; }
-
 
     TAlias() {}
     QString mName;
@@ -76,7 +73,6 @@ public:
     bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
-    bool mIsTempAlias;
     bool mModuleMember;
     bool mModuleMasterFolder;
     QString mFuncName;

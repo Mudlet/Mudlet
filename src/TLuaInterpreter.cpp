@@ -6401,7 +6401,7 @@ int TLuaInterpreter::tempComplexRegexTrigger( lua_State *L )
     //pT->setRegexCodeList( regexList, propertyList );
     pT->setIsFolder( 0 );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->registerTrigger();
     pT->setScript( script );
     pT->setName( pattern );
@@ -13403,7 +13403,7 @@ int TLuaInterpreter::startPermTimer(const QString & name, const QString & parent
 
     pT->setTime( time2 );
     pT->setIsFolder( false );
-    pT->setIsTempTimer( false );
+    pT->setTemporary( false );
     pT->registerTimer();
     pT->setScript( function );
     int id = pT->getID();
@@ -13422,7 +13422,7 @@ int TLuaInterpreter::startTempTimer( double timeout, const QString & function )
     pT = new TTimer( "a", time2, mpHost );
     pT->setTime( time2 );
     pT->setIsFolder( false );
-    pT->setIsTempTimer( true );
+    pT->setTemporary( true );
     pT->registerTimer();
     pT->setScript( function );
     int id = pT->getID();
@@ -13452,7 +13452,7 @@ int TLuaInterpreter::startPermAlias(const QString & name, const QString & parent
     pT->setRegexCode( regex );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempAlias( false );
+    pT->setTemporary( false );
     pT->registerAlias();
     pT->setScript( function );
     int id = pT->getID();
@@ -13468,7 +13468,7 @@ int TLuaInterpreter::startTempAlias(const QString & regex, const QString & funct
     pT->setRegexCode( regex );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempAlias( true );
+    pT->setTemporary( true );
     pT->registerAlias();
     pT->setScript( function );
     int id = pT->getID();
@@ -13493,7 +13493,7 @@ int TLuaInterpreter::startPermKey( QString & name, QString & parent, int & keyco
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(false);
     pT->setIsActive(true);
-    pT->setIsTempKey(false);
+    pT->setTemporary(false);
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
@@ -13511,7 +13511,7 @@ int TLuaInterpreter::startTempKey( int & modifier, int & keycode, QString & func
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(false);
     pT->setIsActive(true);
-    pT->setIsTempKey(true);
+    pT->setTemporary(true);
     pT->registerKey();
     pT->setScript(function);
     int id = pT->getID();
@@ -13529,7 +13529,7 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString & regex, const QSt
     pT = new TTrigger("a", sList, propertyList, false, mpHost );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
@@ -13547,7 +13547,7 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString & regex, const QS
     pT = new TTrigger("a", sList, propertyList, false, mpHost );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
@@ -13566,7 +13566,7 @@ int TLuaInterpreter::startTempTrigger(const QString & regex, const QString & fun
     pT = new TTrigger("a", sList, propertyList, false, mpHost );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
@@ -13584,7 +13584,7 @@ int TLuaInterpreter::startTempLineTrigger( int from, int howmany, const QString 
     pT = new TTrigger( 0, mpHost );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->setIsLineTrigger( true );
     pT->setStartOfLineDelta( from );
     pT->setLineDelta( howmany );
@@ -13605,7 +13605,7 @@ int TLuaInterpreter::startTempColorTrigger( int fg, int bg, const QString & func
     pT = new TTrigger( 0, mpHost );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->setupTmpColorTrigger( fg, bg );
 
     pT->registerTrigger();
@@ -13626,7 +13626,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString & regex, const QString 
     pT = new TTrigger("a", sList, propertyList, false, mpHost );
     pT->setIsFolder( false );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( true );
+    pT->setTemporary( true );
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
@@ -13658,7 +13658,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString & name, const QString &
     }
     pT->setIsFolder( (regexList.size()==0) );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( false );
+    pT->setTemporary( false );
     pT->registerTrigger();
     pT->setScript( function );
     //pT->setName( name );
@@ -13694,7 +13694,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString & name, con
     }
     pT->setIsFolder( (regexList.size()==0) );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( false );
+    pT->setTemporary( false );
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
@@ -13729,7 +13729,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString & name, const QStri
     }
     pT->setIsFolder( (regexList.size()==0) );
     pT->setIsActive( true );
-    pT->setIsTempTrigger( false );
+    pT->setTemporary( false );
     pT->registerTrigger();
     pT->setScript( function );
     int id = pT->getID();
