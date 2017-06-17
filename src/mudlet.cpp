@@ -795,7 +795,7 @@ void mudlet::slot_close_profile_requested( int tab )
     }
 
     // close IRC client window if it is open.
-    if( mpIrcClientMap[pH] ) {
+    if( mpIrcClientMap.contains(pH) ) {
         mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
         mpIrcClientMap[pH]->deleteLater();
     }
@@ -861,7 +861,7 @@ void mudlet::slot_close_profile()
                 }
 
                 // close IRC client window if it is open.
-                if( mpIrcClientMap[pH] ) {
+                if( mpIrcClientMap.contains(pH) ) {
                     mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
                     mpIrcClientMap[pH]->deleteLater();
                 }
@@ -2355,12 +2355,12 @@ void mudlet::slot_irc()
     Host * pHost = getActiveHost();
     if( ! pHost ) return;
 
-    if( ! mpIrcClientMap[pHost] )
+    if( ! mpIrcClientMap.contains(pHost) )
     {
         mpIrcClientMap[pHost] = new dlgIRC(pHost);
     }
-    mpIrcClientMap[pHost]->raise();
-    mpIrcClientMap[pHost]->show();
+    mpIrcClientMap.value(pHost)->raise();
+    mpIrcClientMap.value(pHost)->show();
 }
 
 void mudlet::slot_reconnect()
