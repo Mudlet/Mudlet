@@ -11838,13 +11838,13 @@ int TLuaInterpreter::sendIrc( lua_State * L )
 {
     string who, text;
     if( ! lua_isstring( L, 1 ) ) {
-        lua_pushfstring(L, "sendIrc: bad argument #1 type (target as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "sendIrc: bad argument #1 type (target as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
     } else {
         who = lua_tostring( L, 1 );
     }
     if( ! lua_isstring( L, 2 ) ) {
-        lua_pushfstring(L, "sendIrc: bad argument #2 type (message as string expected, got %s!)", lua_typename(L, 2));
+        lua_pushfstring(L, "sendIrc: bad argument #2 type (message as string expected, got %s!)", lua_typename(L, lua_type(L, 2)));
         return lua_error(L);
     } else {
         text = lua_tostring( L, 2 );
@@ -11972,7 +11972,7 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 {
     string nick;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setIrcNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "setIrcNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
     } else {
         nick = lua_tostring( L, 1 );
@@ -12005,7 +12005,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     string addr;
     int port = 6667;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setIrcServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "setIrcServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
     } else {
         addr = lua_tostring( L, 1 );
@@ -12017,7 +12017,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     if (!lua_isnoneornil(L, 2)) {
         if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "setIrcServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, 2));
+            lua_pushfstring(L, "setIrcServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, lua_type(L, 2)));
             return lua_error(L);
         } else {
             port = lua_tointeger(L, 2);
@@ -12059,7 +12059,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
     QStringList newchannels;
     if (!lua_istable(L, 1) )
     {
-        lua_pushfstring(L, "setIrcChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, 1));
+        lua_pushfstring(L, "setIrcChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
     }
     else
