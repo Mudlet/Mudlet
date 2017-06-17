@@ -13,11 +13,21 @@ To help us find & fix the problem quickest, please include:
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
 
-## Use QLatin1String over QStringLiteral if possible
+## Use QLatin1String over QStringLiteral if the function takes it
 
 Some methods in the Qt API have overloads for either taking a QString, or a QLatin1String object.
 This is because Latin1 is simpler to parse than UTF-16, and therefore the QLatin1String version can
-be faster, and use less memory. This is worth remembering especially for some QString methods:
+be faster, and use less memory. For example, QString::startsWith() has the following declarations:
+
+```
+bool	startsWith(const QString &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
+bool	startsWith(const QStringRef &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
+bool	startsWith(QLatin1String s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
+bool	startsWith(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
+```
+
+Notice how the 3rd variant accepts a `QLatin1String`? That means you can use it. `==` and `+=` also
+accept it, so here are some examples:
 
 ```cpp
 bool same = (str == QLatin1String("Hello"));
@@ -25,13 +35,34 @@ str.startsWith(QLatin1String("Hello"));
 str += QLatin1String("World");
 ```
 
-are more efficient than
+Examples above are more efficient than:
 
 ```cpp
 bool same = (str == QStringLiteral("Hello"));
 str.startsWith(QStringLiteral("Hello"));
 str += QStringLiteral("World");
 ```
+
+And even more than:
+
+```cpp
+bool same = (str == "Hello");
+str.startsWith("Hello");
+str += "World";
+```
+
+Not all functions are going to accept `QLatin1String` - `QIcon` constructors for example are the following:
+
+```
+QIcon()
+QIcon(const QPixmap &pixmap)
+QIcon(const QIcon &other)
+QIcon(QIcon &&other)
+QIcon(const QString &fileName)
+QIcon(QIconEngine *engine)
+```
+
+No `QLatin1String` - mentioned - so use `QStringLiteral` instead, which creates us a `QString()` at compile-time so at least creating the object is faster.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/),
  [additional reading](https://woboq.com/blog/qstringliteral.html))
