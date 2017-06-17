@@ -108,6 +108,10 @@ dlgIRC::~dlgIRC()
         connection->quit(quitMsg);
         connection->close();
     }
+
+    if (mudlet::self()->mpIrcClientMap.value(mpHost)) {
+        mudlet::self()->mpIrcClientMap.remove(mpHost);
+    }
 }
 
 void dlgIRC::setClientWindowTitle() {
@@ -567,7 +571,9 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
                 if (!textToLua.isEmpty()) {
                     QString from = message->nick();
                     QString to = getMessageTarget(message, buffer->title());
-                    mpHost->postIrcMessage(from, to, textToLua);
+                    if (!isDefaultHostClient()) {
+                        mpHost->postIrcMessage(from, to, textToLua);
+                    }
                 }
             }
 
@@ -600,7 +606,9 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
     }
 
     // send a notice to Lua about the nick name change.
-    mpHost->postIrcMessage(mNickName, nick, tr("Your nick has changed."));
+    if (!isDefaultHostClient()) {
+        mpHost->postIrcMessage(mNickName, nick, tr("Your nick has changed."));
+    }
     mNickName = nick;
 
     setClientWindowTitle();
@@ -619,7 +627,9 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 
     if (message->isOwn()) {
         QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
-        mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
+        if (!isDefaultHostClient()) {
+            mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
+        }
     }
 }
 
@@ -630,7 +640,7 @@ void dlgIRC::slot_partedChannel(IrcPartMessage* message)
         mChannels.removeAll(chan);
     }
 
-    if (message->isOwn()) {
+    if (message->isOwn() && !isDefaultHostClient()) {
         QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
         mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
     }

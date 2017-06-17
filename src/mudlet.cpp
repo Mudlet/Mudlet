@@ -2353,11 +2353,17 @@ void mudlet::slot_notes()
 void mudlet::slot_irc()
 {
     Host * pHost = getActiveHost();
-    if( ! pHost ) return;
+    bool isDefaultHost = false;
+    if( ! pHost ) {
+        pHost = mpDefaultHost;
+        isDefaultHost = true;
+    }
 
     if( ! mpIrcClientMap.contains(pHost) )
     {
-        mpIrcClientMap[pHost] = new dlgIRC(pHost);
+        QPointer<dlgIRC> dlg = new dlgIRC(pHost);
+        dlg->setDefaultHostClient(isDefaultHost);
+        mpIrcClientMap[pHost] = dlg;
     }
     mpIrcClientMap.value(pHost)->raise();
     mpIrcClientMap.value(pHost)->show();
