@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2014, 2016-2017 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
     spDebugConsole = 0;
     unsigned int startupAction = 0;
 
-    Q_INIT_RESOURCE(mudlet_alpha);
+    Q_INIT_RESOURCE(mudlet);
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
 

@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2013-2015, 2017 by Stephen Lyons                        #
+#                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -23,12 +24,12 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 # Including IRC Library
-include(../3rdparty/communi/src/core/core.pri)
+include(../3rdparty/communi/src/core/communi.pri)
 
-include(../3rdparty/lua_yajl/src.pri)
+include(../3rdparty/lua_yajl/lua_yajl.pri)
 
 macx: {
-    include(../3rdparty/luazip/src.pri)
+    include(../3rdparty/luazip/luazip.pri)
 }
 
 include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
@@ -348,7 +349,8 @@ FORMS += \
     ui/vars_main_area.ui
 
 
-RESOURCES = mudlet_alpha.qrc
+RESOURCES = \
+    mudlet.qrc
 
 TEMPLATE = app
 
