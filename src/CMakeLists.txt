@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -18,7 +18,7 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-SET(mudlet_RCCS mudlet_alpha.qrc)
+SET(mudlet_RCCS mudlet.qrc)
 
 SET(mudlet_SRCS
     ActionUnit.cpp
