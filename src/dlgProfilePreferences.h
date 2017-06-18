@@ -110,6 +110,7 @@ public slots:
 
 private:
     void setColors();
+    void setColors2();
     void setColor(QPushButton* b, QColor& c);
 
     int mFontSize;
