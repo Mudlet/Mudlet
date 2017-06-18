@@ -100,6 +100,14 @@ TAction::~TAction() {
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
     }
+
+    if (mpToolBar) {
+        mpToolBar->hide();
+    }
+
+    if (mpEasyButtonBar) {
+        mpEasyButtonBar->hide();
+    }
 }
 
 bool TAction::registerAction()

@@ -2960,7 +2960,7 @@ void dlgTriggerEditor::addAction( bool isFolder )
 
     QTreeWidgetItem * pParent = treeWidget_actions->currentItem();
     QTreeWidgetItem * pNewItem = 0;
-    TAction * pT = 0;
+    QPointer<TAction> pT = 0;
 
     if( pParent )
     {
