@@ -957,7 +957,7 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     mpHost->getTriggerUnit()->registerTrigger(pT);
 
     pT->setIsActive(attributes().value("isActive") == "yes");
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder(attributes().value("isFolder") == "yes");
     pT->setTemporary((attributes().value("isTempTrigger") == "yes"));
     pT->mIsMultiline = (attributes().value("isMultiline") == "yes");
     pT->mPerlSlashGOption = (attributes().value("isPerlSlashGOption") == "yes");
@@ -1052,7 +1052,7 @@ void XMLimport::readTimerGroup(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     pT->setTemporary((attributes().value("isTempTimer") == "yes"));
 
     mpHost->getTimerUnit()->registerTimer(pT);
@@ -1119,7 +1119,7 @@ void XMLimport::readAliasGroup(TAlias* pParent)
 
     mpHost->getAliasUnit()->registerAlias(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     if (module) {
         pT->mModuleMember = true;
     }
@@ -1173,7 +1173,7 @@ void XMLimport::readActionGroup(TAction* pParent)
 {
     auto pT = new TAction(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     pT->mIsPushDownButton = (attributes().value("isPushButton") == "yes");
     pT->mButtonFlat = (attributes().value("isFlatButton") == "yes");
     pT->mUseCustomLayout = (attributes().value("useCustomLayout") == "yes");
@@ -1258,7 +1258,7 @@ void XMLimport::readScriptGroup(TScript* pParent)
 {
     auto pT = new TScript(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     mpHost->getScriptUnit()->registerScript(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
 
@@ -1315,7 +1315,7 @@ void XMLimport::readKeyGroup(TKey* pParent)
 
     mpHost->getKeyUnit()->registerKey(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     if (module) {
         pT->mModuleMember = true;
     }

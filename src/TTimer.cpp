@@ -38,7 +38,6 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mNeedsToBeCompiled(true)
 , mpTimer(new QTimer)
 , mModuleMember(false)
-, mIsFolder()
 {
     mpTimer->stop();
 }
@@ -54,7 +53,6 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost)
 , mNeedsToBeCompiled(true)
 , mpTimer(new QTimer)
 , mModuleMember(false)
-, mIsFolder()
 {
     mpTimer->stop();
 }
@@ -132,7 +130,7 @@ void TTimer::start()
 {
     mpTimer->setSingleShot(isTemporary());
 
-    if (!mIsFolder)
+    if (!isFolder())
         mpTimer->start();
     else
         stop();
@@ -203,12 +201,12 @@ bool TTimer::compileScript()
 
 bool TTimer::checkRestart()
 {
-    return (!isTemporary() && !isOffsetTimer() && isActive() && !mIsFolder);
+    return (!isTemporary() && !isOffsetTimer() && isActive() && !isFolder());
 }
 
 void TTimer::execute()
 {
-    if (!isActive() || mIsFolder) {
+    if (!isActive() || isFolder()) {
         mpTimer->stop();
         return;
     }
@@ -280,7 +278,7 @@ void TTimer::enableTimer(int id)
         }
     }
 
-    if (mIsFolder) {
+    if (isFolder()) {
         for (auto timer : *mpMyChildrenList) {
             if (!timer->isOffsetTimer()) {
                 timer->enableTimer(timer->getID());

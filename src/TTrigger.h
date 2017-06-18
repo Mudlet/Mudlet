@@ -97,7 +97,6 @@ public:
     bool compileScript();
     bool match(char*, const QString&, int line, int posOffset = 0);
 
-    bool isFolder() { return mIsFolder; }
     bool isMultiline() { return mIsMultiline; }
     int getTriggerType() { return mTriggerType; }
     bool isLineTrigger() { return mIsLineTrigger; }
@@ -106,7 +105,6 @@ public:
     void setLineDelta(int b) { mLineDelta = b; }
     void setTriggerType(int b) { mTriggerType = b; }
     void setIsMultiline(bool b) { mIsMultiline = b; }
-    void setIsFolder(bool b) { mIsFolder = b; }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
@@ -157,7 +155,6 @@ private:
 
     QString mScript;
 
-    bool mIsFolder;
     bool mNeedsToBeCompiled;
     int mTriggerType;
 

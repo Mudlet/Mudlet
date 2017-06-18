@@ -51,8 +51,6 @@ public:
     void execute();
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
-    bool isFolder() { return mIsFolder; }
-    void setIsFolder(bool b) { mIsFolder = b; }
     bool registerScript();
     void callEventHandler(const TEvent&);
     void setEventHandlerList(QStringList handlerList);
@@ -65,7 +63,6 @@ private:
     QString mName;
     QString mScript;
     QString mFuncName;
-    bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QStringList mEventHandlerList;

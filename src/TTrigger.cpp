@@ -72,7 +72,6 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
-, mIsFolder()
 {
 }
 
@@ -107,7 +106,6 @@ TTrigger::TTrigger( const QString& name, QStringList regexList, QList<int> regex
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
-, mIsFolder()
 {
     setRegexCodeList( regexList, regexProperyList );
 }

@@ -38,7 +38,6 @@ TKey::TKey( TKey * parent, Host * pHost )
 , mModuleMember(false)
 , mKeyCode()
 , mKeyModifier()
-, mIsFolder()
 {
 }
 
@@ -52,7 +51,6 @@ TKey::TKey( QString name, Host * pHost )
 , mModuleMember(false)
 , mKeyCode()
 , mKeyModifier()
-, mIsFolder()
 {
 }
 
@@ -77,7 +75,7 @@ void TKey::setName( const QString& name )
 bool TKey::match(int key, int modifier)
 {
     if (isActive()) {
-        if (!mIsFolder) {
+        if (!isFolder()) {
             if ((mKeyCode == key) && (mKeyModifier == modifier)) {
                 execute();
                 return true;

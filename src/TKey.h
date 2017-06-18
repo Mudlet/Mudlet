@@ -57,8 +57,7 @@ public:
     bool setScript(QString& script);
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
-    bool isFolder() { return mIsFolder; }
-    void setIsFolder(bool b) { mIsFolder = b; }
+
     bool match(int, int);
     bool registerKey();
 
@@ -86,7 +85,6 @@ private:
     QRegExp mRegex;
     QString mScript;
     QString mFuncName;
-    bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     bool mModuleMember;

@@ -748,10 +748,10 @@ bool XMLexport::writeTrigger(TTrigger* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "TriggerGroup" : "Trigger");
+        writeStartElement(pT->isFolder() ? "TriggerGroup" : "Trigger");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
         writeAttribute("isTempTrigger", pT->isTemporary() ? "yes" : "no");
         writeAttribute("isMultiline", pT->mIsMultiline ? "yes" : "no");
         writeAttribute("isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no");
@@ -845,10 +845,10 @@ bool XMLexport::writeAlias(TAlias* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "AliasGroup" : "Alias");
+        writeStartElement(pT->isFolder() ? "AliasGroup" : "Alias");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
@@ -902,10 +902,10 @@ bool XMLexport::writeAction(TAction* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "ActionGroup" : "Action");
+        writeStartElement(pT->isFolder() ? "ActionGroup" : "Action");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
         writeAttribute("isPushButton", pT->mIsPushDownButton ? "yes" : "no");
         writeAttribute("isFlatButton", pT->mButtonFlat ? "yes" : "no");
         writeAttribute("useCustomLayout", pT->mUseCustomLayout ? "yes" : "no");
@@ -976,10 +976,10 @@ bool XMLexport::writeTimer(TTimer* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "TimerGroup" : "Timer");
+        writeStartElement(pT->isFolder() ? "TimerGroup" : "Timer");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
         writeAttribute("isTempTimer", pT->isTemporary() ? "yes" : "no");
         writeAttribute("isOffsetTimer", pT->isOffsetTimer() ? "yes" : "no");
 
@@ -1036,10 +1036,10 @@ bool XMLexport::writeScript(TScript* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "ScriptGroup" : "Script");
+        writeStartElement(pT->isFolder() ? "ScriptGroup" : "Script");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
@@ -1098,10 +1098,10 @@ bool XMLexport::writeKey(TKey* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "KeyGroup" : "Key");
+        writeStartElement(pT->isFolder() ? "KeyGroup" : "Key");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);

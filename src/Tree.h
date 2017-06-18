@@ -74,6 +74,8 @@ public:
     QString mPackageName;
     QString mModuleName;
 
+    bool isFolder() { return m_isFolder; }
+    void setIsFolder(bool b) { m_isFolder = b; }
 
 protected:
     virtual bool canBeActivated();
@@ -86,6 +88,7 @@ private:
     QString mErrorMessage;
 
     bool m_isTemporary;
+    bool m_isFolder;
 };
 
 template <class T>

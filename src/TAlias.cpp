@@ -37,7 +37,6 @@ TAlias::TAlias( TAlias * parent, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
-, mIsFolder()
 {
 }
 
@@ -49,7 +48,6 @@ TAlias::TAlias(const QString& name, Host * pHost )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
-, mIsFolder()
 {
 }
 

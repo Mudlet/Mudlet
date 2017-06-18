@@ -60,8 +60,6 @@ public:
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     bool canBeUnlocked(TTimer*);
-    bool isFolder() { return mIsFolder; }
-    void setIsFolder(bool b) { mIsFolder = b; }
     bool registerTimer();
     bool setIsActive(bool);
     void stop();
@@ -86,7 +84,6 @@ private:
     QTime mTime;
     QString mCommand;
     QString mFuncName;
-    bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;

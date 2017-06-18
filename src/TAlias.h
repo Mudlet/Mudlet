@@ -59,8 +59,7 @@ public:
     void setRegexCode(const QString&);
     void setCommand(const QString& command) { mCommand = command; }
     QString getCommand() { return mCommand; }
-    bool isFolder() { return mIsFolder; }
-    void setIsFolder(bool b) { mIsFolder = b; }
+
     bool match(const QString& toMatch);
     bool registerAlias();
 
@@ -70,7 +69,6 @@ public:
     QString mRegexCode;
     QSharedPointer<pcre> mpRegex;
     QString mScript;
-    bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     bool mModuleMember;

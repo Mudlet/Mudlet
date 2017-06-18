@@ -36,7 +36,6 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mIsFolder()
 {
 }
 
@@ -48,7 +47,6 @@ TScript::TScript(const QString& name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mIsFolder()
 {
 }
 
