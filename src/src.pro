@@ -62,7 +62,8 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
-QT += network opengl uitools multimedia gui gamepad
+QT += network opengl uitools multimedia gui
+qtHaveModule(gamepad): QT += gamepadgamepad
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
