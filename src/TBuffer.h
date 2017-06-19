@@ -145,7 +145,9 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
+    static const QList<QString> getComputerEncodingNames();
     static const QList<QString> getFriendlyEncodingNames();
+    static const QString& getComputerEncoding(const QString& encoding);
 
 
     std::deque<TChar> bufferLine;
@@ -308,6 +310,7 @@ private:
     // Used to hold the incomplete bytes (1-3) that could be left at the end of
     // a packet:
     std::string mIncompleteUtf8SequenceBytes;
+
 };
 
 #endif // MUDLET_TBUFFER_H

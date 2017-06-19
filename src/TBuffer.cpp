@@ -4183,11 +4183,41 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int
     return s;
 }
 
+const QList<QString> TBuffer::getComputerEncodingNames() {
+    QList<QString> encodings;
+    for (auto encoding: csmEncodingTable.keys()) {
+        encodings << encoding;
+    }
+
+    return encodings;
+}
+
 const QList<QString> TBuffer::getFriendlyEncodingNames() {
     QList<QString> encodings;
-    for (auto pair: csmEncodingTable.values()) {
+    for (auto pair: csmEncodingTable) {
         encodings << pair.first;
     }
 
     return encodings;
+}
+
+// returns the computer encoding name given a human-friendly one
+const QString& TBuffer::getComputerEncoding(const QString& encoding) {
+    QMapIterator<QString, QPair<QString, QVector<QChar>>> iterator(csmEncodingTable);
+    while (iterator.hasNext()) {
+        iterator.next();
+        // check the friendly name (stored as the map value pair's first item)
+        // against the input - if found, return the map key which is the computer
+        // encoding name
+        if (iterator.value().first == encoding) {
+            return iterator.key();
+        }
+    }
+
+    // return some encoding of none is found - this is incorrect,
+    // but introducing a QPair for this is too heavy-handed. Maybe
+    // we could use Boost.Optional here until C++17 is ready?
+    auto& smallestkey = csmEncodingTable.firstKey();
+    qWarning() << "TBuffer::getComputerEncoding:" << encoding << "not found, returning" << smallestkey;
+    return smallestkey;
 }
