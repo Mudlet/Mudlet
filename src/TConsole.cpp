@@ -750,6 +750,7 @@ void TConsole::closeEvent( QCloseEvent *event )
 
         if( mpHost->mFORCE_SAVE_ON_EXIT )
         {
+            mudlet::self()->saveWindowLayout();
             mpHost->modulesToWrite.clear();
             mpHost->saveProfile();
 
@@ -2726,16 +2727,22 @@ void TConsole::showStatistics()
 
     script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
-
     QString r1 = mpHost->getTriggerUnit()->assembleReport();
     msg = r1;
     print( msg, QColor(150, 120, 0), Qt::black );
     script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );
     QString r2 = mpHost->getTimerUnit()->assembleReport();
-    QString footer = QString("\n+--------------------------------------------------------------+\n" );
     msg = r2;
     print( msg, QColor(150, 120, 0), Qt::black );
+    
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nKeybinding Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
+    QString r3 = mpHost->getKeyUnit()->assembleReport();
+    msg = r3;
+    print( msg, QColor(150, 120, 0), Qt::black );
+    
+    QString footer = QString("\n+--------------------------------------------------------------+\n" );
     mpHost->mpConsole->print( footer, QColor(150, 120, 0), Qt::black );
     script = "resetFormat();";
     mpHost->mLuaInterpreter.compileAndExecuteScript( script );

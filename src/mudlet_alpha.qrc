@@ -45,6 +45,7 @@
         <file>icons/dialog-error.png</file>
         <file>icons/dialog-information.png</file>
         <file>icons/dialog-ok-apply.png</file>
+        <file>icons/dialog-ok-apply_small.png</file>
         <file>icons/dialog-warning.png</file>
         <file>icons/document-decrypt.png</file>
         <file>icons/document-encrypt.png</file>
@@ -67,8 +68,8 @@
         <file>icons/folder-brown.png</file>
         <file>icons/folder-cyan-locked.png</file>
         <file>icons/folder-cyan.png</file>
-        <file>icons/folder-downloads.png</file>
         <file>icons/folder-downloads-red-cross.png</file>
+        <file>icons/folder-downloads.png</file>
         <file>icons/folder-green-locked.png</file>
         <file>icons/folder-green.png</file>
         <file>icons/folder-grey-locked.png</file>
@@ -153,5 +154,7 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>edbee_defaults/Lua.tmLanguage</file>
+        <file>edbee_defaults/Mudlet.tmTheme</file>
     </qresource>
 </RCC>

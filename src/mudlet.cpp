@@ -4,6 +4,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -63,6 +64,12 @@
 #include <QToolBar>
 #include "post_guard.h"
 
+#include "edbee/edbee.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/texttheme.h"
+#include "edbee/models/textgrammar.h"
+
+#include <QDir>
 
 using namespace std;
 
@@ -149,7 +156,7 @@ mudlet::mudlet()
 , replayToolBar( 0 )
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
-, mIsToDisplayMapAuditErrorsToConsole( false )
+, mshowMapAuditErrors( false )
 , mpAboutDlg( 0 )
 , mpModuleDlg( 0 )
 , mpPackageManagerDlg( 0 )
@@ -336,7 +343,7 @@ mudlet::mudlet()
     mpTabBar->setFont( mdiFont );
 
     mainPane->show();
-    connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(actionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(actionTimers, SIGNAL(triggered()), this, SLOT(show_timer_dialog()));
@@ -370,8 +377,8 @@ mudlet::mudlet()
     QAction * mactionAbout = new QAction(tr("About"), this);
     QAction * mactionCloseProfile = new QAction(tr("Close"), this);
 
-    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
-    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(connectToServer()));
+    connect(mactionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
+    connect(dactionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
     connect(dactionReconnect, SIGNAL(triggered()), this, SLOT(slot_reconnect()));
     connect(dactionDisconnect, SIGNAL(triggered()), this, SLOT(slot_disconnect()));
     connect(dactionNotepad, SIGNAL(triggered()), this, SLOT(slot_notes()));
@@ -416,15 +423,26 @@ mudlet::mudlet()
     timerAutologin->start( 50 );
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
-    // Do something with the QStatusBar just so we "use" it (for 15 seconds)...
-    if(  mStatusBarState & statusBarAlwaysShown
-      || mStatusBarState & statusBarAutoShown ) {
 
-        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar can be disabled via options once a profile is loaded!))" ), 15000 );
-    }
-    else {
-        mpMainStatusBar->showMessage( tr( R"(Click on the "Connect" button to choose a profile to start... (status bar disabled via options, will not show again this session!))" ), 5000 );
-    }
+    // Edbee has a singleton that needs some initialisation
+    initEdbee();
+}
+
+void mudlet::initEdbee() {
+
+    // We only need the single Lua lexer, problably ever
+    // Optional additional themes will be added in future
+
+    edbee::Edbee* edbee = edbee::Edbee::instance();
+
+    edbee->autoInit();
+    edbee->autoShutDownOnAppExit();
+
+    edbee::TextGrammarManager* grammarManager = edbee->grammarManager();
+    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+
+    edbee::TextThemeManager* themeManager = edbee->themeManager();
+    themeManager->readThemeFile(QLatin1Literal(":/edbee_defaults/Mudlet.tmTheme"));
 }
 
 bool mudlet::moduleTableVisible()
@@ -2006,7 +2024,7 @@ void mudlet::readSettings()
     // themselves, but that only has to be done once! - Slysven
     mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarHidden ).toInt() );
 
-    mIsToDisplayMapAuditErrorsToConsole = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
+    mshowMapAuditErrors = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
@@ -2061,16 +2079,16 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions) );
     settings.setValue("statusBarOptions", static_cast<int>(mStatusBarState) );
-    settings.setValue("reportMapIssuesToConsole", mIsToDisplayMapAuditErrorsToConsole );
+    settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors );
 }
 
-void mudlet::connectToServer()
+void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
-    connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
+    connect(pDlg, SIGNAL(signal_establish_connection(QString, int)), this, SLOT(slot_connection_dlg_finished(QString, int)));
     pDlg->fillout_form();
     if (pDlg->exec() == QDialog::Accepted) {
-         enableToolbarButtons();
+        enableToolbarButtons();
     }
 }
 
@@ -2199,7 +2217,7 @@ void mudlet::slot_mapper()
 // use it WITHOUT loading a file - at least for the TConsole::importMap(...)
 // case that may need to create a map widget before it loads/imports a
 // non-default (last saved map in profile's map directory.
-void mudlet::createMapper( bool isToLoadDefaultMapFile )
+void mudlet::createMapper( bool loadDefaultMap )
 {
     Host * pHost = getActiveHost();
     if( ! pHost )
@@ -2223,7 +2241,7 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget( pHost->mpMap->mpMapper );
 
-    if( isToLoadDefaultMapFile && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
+    if( loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
         qDebug() << "mudlet::slot_mapper() - restore map case 3.";
         pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(3) report" ), true );
@@ -2401,19 +2419,20 @@ QString mudlet::readProfileData( const QString& profile, const QString& item )
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(QDir::homePath()+"/.config/mudlet/profiles").entryList(QDir::Dirs, QDir::Name);
-    hostList.removeAll(".");
-    hostList.removeAll("..");
-    for( int i = 0; i< hostList.size(); i++ )
-    {
-        QString item = "autologin";
-        QString val = readProfileData( hostList[i], item );
-        if( val.toInt() == Qt::Checked )
-        {
-            doAutoLogin( hostList[i] );
+    QStringList hostList = QDir(QDir::homePath() + "/.config/mudlet/profiles").entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    bool openedProfile = false;
+
+    for (auto host : hostList) {
+        QString val = readProfileData(host, QStringLiteral("autologin"));
+        if (val.toInt() == Qt::Checked) {
+            doAutoLogin(host);
+            openedProfile = true;
         }
     }
 
+    if (!openedProfile) {
+        slot_show_connection_dialog();
+    }
 }
 
 void mudlet::doAutoLogin( const QString & profile_name )
@@ -2455,7 +2474,7 @@ void mudlet::doAutoLogin( const QString & profile_name )
     QString pass = "password";
     QString val2 = readProfileData( profile_name, pass );
     pHost->setPass( val2 );
-    slot_connection_dlg_finnished( profile_name, 0 );
+    slot_connection_dlg_finished(profile_name, 0);
     enableToolbarButtons();
 }
 
@@ -2494,7 +2513,7 @@ void mudlet::processEventLoopHack_timerRun()
     pH->mpConsole->refresh();
 }
 
-void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyVersion )
+void mudlet::slot_connection_dlg_finished(const QString &profile, int historyVersion)
 {
     Host* pHost = getHostManager().getHost(profile);
     if( ! pHost ) return;

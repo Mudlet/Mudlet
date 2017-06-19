@@ -8,6 +8,7 @@ addons:
   apt:
     sources:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
     - qt56base
     - qt56multimedia
@@ -20,6 +21,7 @@ addons:
     - libzip-dev
     - libpulse-dev
     - libyajl-dev
+    - gcc-5 g++-5
 compiler:
   - gcc
   - clang

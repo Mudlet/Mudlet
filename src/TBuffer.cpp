@@ -680,10 +680,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             {
                 QChar ch2 = localBuffer[localBufferPosition];
 
-                if( ch2 == 'z' )
-                {
+                if (ch2 == 'z' && !mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                     gotHeader = false;
                     gotESC = false;
+
                     // MXP line modes
 
                     // locked mode
@@ -2613,21 +2613,14 @@ inline int TBuffer::wrap( int startLine )
             if( length-i2 > mWrapAt-indent )
             {
                 wrapPos = calcWrapPos( i, i2, i2+mWrapAt-indent );
-                if( wrapPos > 0 )
-                {
-                    lastSpace = wrapPos;
-                }
-                else
-                {
-                    lastSpace = 0;
-                }
+                lastSpace = qMax(0, wrapPos);
             }
             else
             {
                 lastSpace = 0;
             }
-            int __wrapPos = lastSpace == 0 ? mWrapAt-indent : lastSpace;
-            for( int i3=0; i3<=__wrapPos; i3++ )
+            int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
+            for( int i3=0; i3<wrapPosition; i3++ )
             {
                 if( lastSpace > 0 )
                 {
@@ -2791,14 +2784,7 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
             if( length-i2 > screenWidth-indent )
             {
                 wrapPos = calcWrapPos( i, i2, i2+screenWidth-indent );
-                if( wrapPos > -1 )
-                {
-                    lastSpace = wrapPos;
-                }
-                else
-                {
-                    lastSpace = -1;
-                }
+                lastSpace = qMax(-1, wrapPos);
             }
             else
             {
