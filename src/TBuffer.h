@@ -95,7 +95,9 @@ struct TMxpElement
 
 class TBuffer
 {
-    static const QMap<QPair<QString, QString>, QVector<QChar>> csmEncodingTable; // private!
+    // private - a map of computer-friendly encoding names as keys,
+    // values are a pair of human-friendly name + encoding data
+    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
 
 
 public:
