@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -196,8 +197,10 @@ public slots:
     void setTBIconSize(int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-
-    void slot_updateStatusBar( const QString statusText); // For the source code editor
+#ifdef QT_GAMEPAD_LIB
+    void slot_grab_button();
+#endif
+    void slot_updateStatusBar(const QString statusText); // For the source code editor
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);

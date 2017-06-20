@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,6 +24,17 @@
 
 
 #include "dlgTriggerEditor.h"
+
+#include "dlgActionMainArea.h"
+#include "dlgAliasMainArea.h"
+#ifdef QT_GAMEPAD_LIB
+  #include "dlgButtonSelect.h"
+#endif
+#include "dlgColorTrigger.h"
+#include "dlgKeysMainArea.h"
+#include "dlgScriptsMainArea.h"
+#include "dlgTriggerPatternEdit.h"
+#include "dlgTriggersMainArea.h"
 
 #include "Host.h"
 #include "HostManager.h"
@@ -60,6 +71,7 @@
 #include <QTextDocument>
 #include <QTextOption>
 #include <QToolBar>
+#include <QDebug>
 #include "post_guard.h"
 
 
@@ -163,6 +175,12 @@ dlgTriggerEditor::dlgTriggerEditor( Host * pH )
     mpKeysMainArea->setSizePolicy( sizePolicy8 );
     pVB1->addWidget( mpKeysMainArea );
     connect(mpKeysMainArea->pushButton_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
+
+#ifdef QT_GAMEPAD_LIB
+    connect(mpKeysMainArea->pushButton_grabButton, SIGNAL(pressed()), this, SLOT(slot_grab_button()));
+#else
+    mpKeysMainArea->pushButton_grabButton->hide();
+#endif
 
     mpVarsMainArea = new dlgVarsMainArea( mainArea );
     mpVarsMainArea->setSizePolicy( sizePolicy8 );
@@ -7099,6 +7117,21 @@ void dlgTriggerEditor::slot_grab_key()
         }
     }
 }
+
+#ifdef QT_GAMEPAD_LIB
+
+void dlgTriggerEditor::slot_grab_button()
+{
+    if( ! mpHost ) return;
+
+    dlgButtonSelect * pDlg = new dlgButtonSelect( this );
+    if( ! pDlg ) return;
+    pDlg->setModal( true );
+    pDlg->setWindowModality( Qt::ApplicationModal );
+    pDlg->exec();
+}
+
+#endif
 
 void dlgTriggerEditor::grab_key_callback( int key, int modifier )
 {

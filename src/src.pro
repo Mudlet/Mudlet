@@ -62,6 +62,7 @@ msvc:QMAKE_CXXFLAGS += -MP
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui
+qtHaveModule(gamepad): QT += gamepad
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -245,6 +246,9 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
+;
+
+qtHaveModule(gamepad): SOURCES += dlgButtonSelect.cpp
 
 
 HEADERS += \
@@ -322,6 +326,8 @@ HEADERS += \
     XMLexport.h \
     XMLimport.h
 
+qtHaveModule(gamepad): HEADERS += dlgButtonSelect.h
+
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
     ui/about_dialog.ui \
@@ -346,6 +352,8 @@ FORMS += \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
+
+qtHaveModule(gamepad): FORMS += ui/button_select.ui
 
 
 RESOURCES = mudlet_alpha.qrc
