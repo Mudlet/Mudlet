@@ -24,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QMap>
@@ -95,6 +96,9 @@ struct TMxpElement
 
 class TBuffer
 {
+    // need to use tr() on encoding names in csmEncodingTable
+    Q_DECLARE_TR_FUNCTIONS(TBuffer)
+
     // private - a map of computer-friendly encoding names as keys,
     // values are a pair of human-friendly name + encoding data
     static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;

@@ -56,7 +56,7 @@
 // PLACEMARKER: Extended ASCII decoder Unicode codepoint lookup tables
 const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = {
     {QStringLiteral("ISO 8859-2"),
-    qMakePair(QStringLiteral("ISO 8859-2 (Central European)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-2 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -75,7 +75,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0111), QChar(0x0144), QChar(0x0148), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x0159), QChar(0x016F), QChar(0x00FA), QChar(0x0171), QChar(0x00FC), QChar(0x00FD), QChar(0x0163), QChar(0x02D9)}))}, // F8-FF
     {QStringLiteral("ISO 8859-3"),
-    qMakePair(QStringLiteral("ISO 8859-3 (South European)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-3 (South European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -94,7 +94,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0xFFFD), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x0121), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x011D), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x016D), QChar(0x015D), QChar(0x02D9)}))},// F8-FF
     {QStringLiteral("ISO 8859-4"),
-    qMakePair(QStringLiteral("ISO 8859-4 (Baltic)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-4 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -113,7 +113,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0111), QChar(0x0146), QChar(0x014D), QChar(0x0137), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x00F8), QChar(0x0173), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0169), QChar(0x016B), QChar(0x02D9)}))},// F8-FF
     {QStringLiteral("ISO 8859-5"),
-    qMakePair(QStringLiteral("ISO 8859-5 (Cyrillic)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-5 (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -132,7 +132,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x2116), QChar(0x0451), QChar(0x0452), QChar(0x0453), QChar(0x0454), QChar(0x0455), QChar(0x0456), QChar(0x0457),  // F0=F7
         QChar(0x0458), QChar(0x0459), QChar(0x045A), QChar(0x045B), QChar(0x045C), QChar(0x00A7), QChar(0x045E), QChar(0x045F)}))},// F8-FF
     {QStringLiteral("ISO 8859-6"),
-    qMakePair(QStringLiteral("ISO 8859-6 (Arabic)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-6 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -151,7 +151,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0650), QChar(0x0651), QChar(0x0652), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // F0=F7
         QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("ISO 8859-7"),
-    qMakePair(QStringLiteral("ISO 8859-7 (Greek)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-7 (Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -170,7 +170,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x03C0), QChar(0x03C1), QChar(0x03C2), QChar(0x03C3), QChar(0x03C4), QChar(0x03C5), QChar(0x03C6), QChar(0x03C7),  // F0=F7
         QChar(0x03C8), QChar(0x03C9), QChar(0x03CA), QChar(0x03CB), QChar(0x03CC), QChar(0x03CD), QChar(0x03CE), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("ISO 8859-8"),
-    qMakePair(QStringLiteral("ISO 8859-8 (Hebrew Visual)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-8 (Hebrew Visual)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -189,7 +189,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x05E0), QChar(0x05E1), QChar(0x05E2), QChar(0x05E3), QChar(0x05E4), QChar(0x05E5), QChar(0x05E6), QChar(0x05E7),  // F0=F7
         QChar(0x05E8), QChar(0x05E9), QChar(0x05EA), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("ISO 8859-9"),
-    qMakePair(QStringLiteral("ISO 8859-9 (Turkish)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-9 (Turkish)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -208,7 +208,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x011F), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0131), QChar(0x015F), QChar(0x00FF)}))},// F8-FF
     {QStringLiteral("ISO 8859-10"),
-    qMakePair(QStringLiteral("ISO 8859-10 (Nordic)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-10 (Nordic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -227,7 +227,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x00F0), QChar(0x0146), QChar(0x014D), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x0169),  // F0=F7
         QChar(0x00F8), QChar(0x0173), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x00FE), QChar(0x0138)}))},// F8-FF
     {QStringLiteral("ISO 8859-11"),
-    qMakePair(QStringLiteral("ISO 8859-11"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-11", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x2026), QChar(0xFFFD), QChar(0xFFFD),  // 80-87
         QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
@@ -246,7 +246,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0E50), QChar(0x0E51), QChar(0x0E52), QChar(0x0E53), QChar(0x0E54), QChar(0x0E55), QChar(0x0E56), QChar(0x0E57),  // F0=F7
         QChar(0x0E58), QChar(0x0E59), QChar(0x0E5A), QChar(0x0E5B), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("ISO 8859-13"),
-    qMakePair(QStringLiteral("ISO 8859-13 (Baltic)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-13 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -265,7 +265,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0161), QChar(0x0144), QChar(0x0146), QChar(0x00F3), QChar(0x014D), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x0173), QChar(0x0142), QChar(0x015B), QChar(0x016B), QChar(0x00FC), QChar(0x017C), QChar(0x017E), QChar(0x2019)}))},// F8-FF
     {QStringLiteral("ISO 8859-14"),
-    qMakePair(QStringLiteral("ISO 8859-14 (Celtic)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-14 (Celtic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -284,7 +284,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0175), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x1E6B),  // F0=F7
         QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x0177), QChar(0x00FF)}))},// F8-FF
     {QStringLiteral("ISO 8859-15"),
-    qMakePair(QStringLiteral("ISO 8859-15 (Western)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-15 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -303,7 +303,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x00F0), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x00FE), QChar(0x00FF)}))},// F8-FF
     {QStringLiteral("ISO 8859-16"),
-    qMakePair(QStringLiteral("ISO 8859-16 (Romanian)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-16 (Romanian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0080), QChar(0x0081), QChar(0x0082), QChar(0x0083), QChar(0x0084), QChar(0x0085), QChar(0x0086), QChar(0x0087),  // 80-87
         QChar(0x0088), QChar(0x0089), QChar(0x008A), QChar(0x008B), QChar(0x008C), QChar(0x008D), QChar(0x008E), QChar(0x008F),  // 88-8F
@@ -322,7 +322,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0111), QChar(0x0144), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x015B),  // F0=F7
         QChar(0x0171), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0119), QChar(0x021B), QChar(0x00FF)}))},// F8-FF
     {QStringLiteral("CP850"),
-    qMakePair(QStringLiteral("CP850"), QVector<QChar>(
+    qMakePair(tr("CP850", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x00C7), QChar(0x00FC), QChar(0x00E9), QChar(0x00E2), QChar(0x00E4), QChar(0x00E0), QChar(0x00E5), QChar(0x00E7),  // 80-87
         QChar(0x00EA), QChar(0x00EB), QChar(0x00E8), QChar(0x00EF), QChar(0x00EE), QChar(0x00EC), QChar(0x00C4), QChar(0x00C5),  // 88-8F
@@ -341,7 +341,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x00AD), QChar(0x00B1), QChar(0x2017), QChar(0x00BE), QChar(0x00B6), QChar(0x00A7), QChar(0x00F7), QChar(0x00B8),  // F0=F7
         QChar(0x00B0), QChar(0x00A8), QChar(0x00B7), QChar(0x00B9), QChar(0x00B3), QChar(0x00B2), QChar(0x25A0), QChar(0x00A0)}))},// F8-FF
     {QStringLiteral("CP866"),
-    qMakePair(QStringLiteral("CP866 (Cyrillic/Russian)"), QVector<QChar>(
+    qMakePair(tr("CP866 (Cyrillic/Russian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0410), QChar(0x0411), QChar(0x0412), QChar(0x0413), QChar(0x0414), QChar(0x0415), QChar(0x0416), QChar(0x0417),  // 80-87
         QChar(0x0418), QChar(0x0419), QChar(0x041A), QChar(0x041B), QChar(0x041C), QChar(0x041D), QChar(0x041E), QChar(0x041F),  // 88-8F
@@ -360,7 +360,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0401), QChar(0x0451), QChar(0x0404), QChar(0x0454), QChar(0x0407), QChar(0x0457), QChar(0x040E), QChar(0x045E),  // F0=F7
         QChar(0x00B0), QChar(0x2219), QChar(0x00B7), QChar(0x221A), QChar(0x2116), QChar(0x00A4), QChar(0x25A0), QChar(0x00A0)}))},// F8-FF
     {QStringLiteral("CP874"),
-    qMakePair(QStringLiteral("ISO 8859-3 (South European)"), QVector<QChar>(
+    qMakePair(tr("ISO 8859-3 (South European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x2026), QChar(0xFFFD), QChar(0xFFFD),  // 80-87
         QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
@@ -379,7 +379,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0E50), QChar(0x0E51), QChar(0x0E52), QChar(0x0E53), QChar(0x0E54), QChar(0x0E55), QChar(0x0E56), QChar(0x0E57),  // F0=F7
         QChar(0x0E58), QChar(0x0E59), QChar(0x0E5A), QChar(0x0E5B), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("KOI8-R"),
-    qMakePair(QStringLiteral("KOI8-R (Cyrillic)"), QVector<QChar>(
+    qMakePair(tr("KOI8-R (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x2500), QChar(0x2502), QChar(0x250C), QChar(0x2510), QChar(0x2514), QChar(0x2518), QChar(0x251C), QChar(0x2524),  // 80-87
         QChar(0x252C), QChar(0x2534), QChar(0x253C), QChar(0x2580), QChar(0x2584), QChar(0x2588), QChar(0x258C), QChar(0x2590),  // 88-8F
@@ -398,7 +398,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x041F), QChar(0x042F), QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0416), QChar(0x0412),  // F0=F7
         QChar(0x042C), QChar(0x042B), QChar(0x0417), QChar(0x0428), QChar(0x042D), QChar(0x0429), QChar(0x0427), QChar(0x042A)}))},// F8-FF
     {QStringLiteral("KOI8-U"),
-    qMakePair(QStringLiteral("KOI8-U (Cyrillic/Ukrainian)"), QVector<QChar>(
+    qMakePair(tr("KOI8-U (Cyrillic/Ukrainian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x2500), QChar(0x2502), QChar(0x250C), QChar(0x2510), QChar(0x2514), QChar(0x2518), QChar(0x251C), QChar(0x2524),  // 80-87
         QChar(0x252C), QChar(0x2534), QChar(0x253C), QChar(0x2580), QChar(0x2584), QChar(0x2588), QChar(0x258C), QChar(0x2590),  // 88-8F
@@ -417,7 +417,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x041F), QChar(0x042F), QChar(0x0420), QChar(0x0421), QChar(0x0422), QChar(0x0423), QChar(0x0416), QChar(0x0412),  // F0=F7
         QChar(0x042C), QChar(0x042B), QChar(0x0417), QChar(0x0428), QChar(0x042D), QChar(0x0429), QChar(0x0427), QChar(0x042A)}))},// F8-FF
     {QStringLiteral("MACINTOSH"),
-    qMakePair(QStringLiteral("MACINTOSH"), QVector<QChar>(
+    qMakePair(tr("MACINTOSH", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x00C4), QChar(0x00C5), QChar(0x00C7), QChar(0x00C9), QChar(0x00D1), QChar(0x00D6), QChar(0x00DC), QChar(0x00E1),  // 80-87
         QChar(0x00E0), QChar(0x00E2), QChar(0x00E4), QChar(0x00E3), QChar(0x00E5), QChar(0x00E7), QChar(0x00E9), QChar(0x00E8),  // 88-8F
@@ -436,7 +436,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0xF8FF), QChar(0x00D2), QChar(0x00DA), QChar(0x00DB), QChar(0x00D9), QChar(0x0131), QChar(0x02C6), QChar(0x02DC),  // F0=F7
         QChar(0x00AF), QChar(0x02D8), QChar(0x02D9), QChar(0x02DA), QChar(0x00B8), QChar(0x02DD), QChar(0x02DB), QChar(0x02C7)}))},// F8-FF
     {QStringLiteral("WINDOWS-1250"),
-    qMakePair(QStringLiteral("WINDOWS-1250 (Central European)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1250 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0xFFFD), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0xFFFD), QChar(0x2030), QChar(0x0160), QChar(0x2039), QChar(0x015A), QChar(0x0164), QChar(0x017D), QChar(0x0179),  // 88-8F
@@ -455,7 +455,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0111), QChar(0x0144), QChar(0x0148), QChar(0x00F3), QChar(0x00F4), QChar(0x0151), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x0159), QChar(0x016F), QChar(0x00FA), QChar(0x0171), QChar(0x00FC), QChar(0x00FD), QChar(0x0163), QChar(0x02D9)}))},// F8-FF
     {QStringLiteral("WINDOWS-1251"),
-    qMakePair(QStringLiteral("WINDOWS-1251 (Cyrillic)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1251 (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x0402), QChar(0x0403), QChar(0x201A), QChar(0x0453), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0x20AC), QChar(0x2030), QChar(0x0409), QChar(0x2039), QChar(0x040A), QChar(0x040C), QChar(0x040B), QChar(0x040F),  // 88-8F
@@ -474,7 +474,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0440), QChar(0x0441), QChar(0x0442), QChar(0x0443), QChar(0x0444), QChar(0x0445), QChar(0x0446), QChar(0x0447),  // F0=F7
         QChar(0x0448), QChar(0x0449), QChar(0x044A), QChar(0x044B), QChar(0x044C), QChar(0x044D), QChar(0x044E), QChar(0x044F)}))},// F8-FF
     {QStringLiteral("WINDOWS-1252"),
-    qMakePair(QStringLiteral("WINDOWS-1252 (Western)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1252 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0x02C6), QChar(0x2030), QChar(0x0160), QChar(0x2039), QChar(0x0152), QChar(0xFFFD), QChar(0x017D), QChar(0xFFFD),  // 88-8F
@@ -493,7 +493,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x00F0), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x00FD), QChar(0x00FE), QChar(0x00FF)}))},// F8-FF
     {QStringLiteral("WINDOWS-1253"),
-    qMakePair(QStringLiteral("WINDOWS-1253 (Greek)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1253 (Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0xFFFD), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
@@ -512,7 +512,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x03C0), QChar(0x03C1), QChar(0x03C2), QChar(0x03C3), QChar(0x03C4), QChar(0x03C5), QChar(0x03C6), QChar(0x03C7),  // F0=F7
         QChar(0x03C8), QChar(0x03C9), QChar(0x03CA), QChar(0x03CB), QChar(0x03CC), QChar(0x03CD), QChar(0x03CE), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("WINDOWS-1254"),
-    qMakePair(QStringLiteral("WINDOWS-1254 (Turkish)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1254 (Turkish)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0x02C6), QChar(0x2030), QChar(0x0160), QChar(0x2039), QChar(0x0152), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
@@ -531,7 +531,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x011F), QChar(0x00F1), QChar(0x00F2), QChar(0x00F3), QChar(0x00F4), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x00F8), QChar(0x00F9), QChar(0x00FA), QChar(0x00FB), QChar(0x00FC), QChar(0x0131), QChar(0x015F), QChar(0x00FF)}))},// F8-FF
     {QStringLiteral("WINDOWS-1255"),
-    qMakePair(QStringLiteral("WINDOWS-1255 (Hebrew)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1255 (Hebrew)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0x02C6), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
@@ -550,7 +550,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x05E0), QChar(0x05E1), QChar(0x05E2), QChar(0x05E3), QChar(0x05E4), QChar(0x05E5), QChar(0x05E6), QChar(0x05E7),  // F0=F7
         QChar(0x05E8), QChar(0x05E9), QChar(0x05EA), QChar(0xFFFD), QChar(0xFFFD), QChar(0x200E), QChar(0x200F), QChar(0xFFFD)}))},// F8-FF
     {QStringLiteral("WINDOWS-1256"),
-    qMakePair(QStringLiteral("WINDOWS-1256 (Arabic)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1256 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0x067E), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0x02C6), QChar(0x2030), QChar(0x0679), QChar(0x2039), QChar(0x0152), QChar(0x0686), QChar(0x0698), QChar(0x0688),  // 88-8F
@@ -569,7 +569,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x064B), QChar(0x064C), QChar(0x064D), QChar(0x064E), QChar(0x00F4), QChar(0x064F), QChar(0x0650), QChar(0x00F7),  // F0=F7
         QChar(0x0651), QChar(0x00F9), QChar(0x0652), QChar(0x00FB), QChar(0x00FC), QChar(0x200E), QChar(0x200F), QChar(0x06D2)}))},// F8-FF
     {QStringLiteral("WINDOWS-1257"),
-    qMakePair(QStringLiteral("WINDOWS-1257 (Baltic)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1257 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0xFFFD), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0xFFFD), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0xFFFD), QChar(0x00A8), QChar(0x02C7), QChar(0x00B8),  // 88-8F
@@ -588,7 +588,7 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
         QChar(0x0161), QChar(0x0144), QChar(0x0146), QChar(0x00F3), QChar(0x014D), QChar(0x00F5), QChar(0x00F6), QChar(0x00F7),  // F0=F7
         QChar(0x0173), QChar(0x0142), QChar(0x015B), QChar(0x016B), QChar(0x00FC), QChar(0x017C), QChar(0x017E), QChar(0x02D9)}))},// F8-FF
     {QStringLiteral("WINDOWS-1258"),
-    qMakePair(QStringLiteral("WINDOWS-1258 (Vietnamese)"), QVector<QChar>(
+    qMakePair(tr("WINDOWS-1258 (Vietnamese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)"), QVector<QChar>(
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0x201A), QChar(0x0192), QChar(0x201E), QChar(0x2026), QChar(0x2020), QChar(0x2021),  // 80-87
         QChar(0x02C6), QChar(0x2030), QChar(0xFFFD), QChar(0x2039), QChar(0x0152), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD),  // 88-8F
@@ -1955,7 +1955,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                             }
                             pRef += 5;
 
-               QChar _quote_type = _t2[pRef];
+                            QChar _quote_type = _t2[pRef];
                             int pRef2;
                             if( _quote_type != '&' )
                             {
