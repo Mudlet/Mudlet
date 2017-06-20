@@ -81,7 +81,6 @@ public:
     void ircRestart(bool reloadConfigs = true);
     void setDefaultHostClient(bool isDefaultClient) { mIsDefaultIrcClient = isDefaultClient; }
     bool isDefaultHostClient() { return mIsDefaultIrcClient; }
-
 private slots:
     void slot_onConnected();
     void slot_onConnecting();
@@ -112,7 +111,8 @@ private:
     void displayHelp(const QString&);
     void appendHtml(QTextDocument*, const QString&);
     QString getMessageTarget(IrcMessage*, const QString&);
-    static QString readOldIrcNick();
+    static QString readAppDefaultIrcNick();
+    static void writeAppDefaultIrcNick(const QString&);
 
     void showEvent(QShowEvent* event) override;
 

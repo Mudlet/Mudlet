@@ -114,7 +114,8 @@ dlgIRC::~dlgIRC()
     }
 }
 
-void dlgIRC::setClientWindowTitle() {
+void dlgIRC::setClientWindowTitle()
+{
     setWindowTitle(tr("Mudlet IRC Client - %1 - %2 on %3").arg(mpHost->getName(), mNickName, mHostName));
 }
 
@@ -188,7 +189,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         delete msg;
     }
 
-    if(rv) {
+    if (rv) {
         return QPair<bool, QString>(true, QStringLiteral("sent to server."));
     } else {
         return QPair<bool, QString>(false, QStringLiteral("filtered by client."));
@@ -706,7 +707,7 @@ QString dlgIRC::readIrcNickName(Host* pH)
     QString nick = pH->readProfileData(dlgIRC::NickNameCfgItem);
     if (nick.isEmpty()) {
         // if the new config doesn't exist, try loading the old one.
-        nick = readOldIrcNick();
+        nick = readAppDefaultIrcNick();
 
         if (nick.isEmpty()) {
             nick = QStringLiteral("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
@@ -715,7 +716,7 @@ QString dlgIRC::readIrcNickName(Host* pH)
     return nick;
 }
 
-QString dlgIRC::readOldIrcNick()
+QString dlgIRC::readAppDefaultIrcNick()
 {
     QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
     bool opened = file.open(QIODevice::ReadOnly);
@@ -726,6 +727,17 @@ QString dlgIRC::readOldIrcNick()
         file.close();
     }
     return rstr;
+}
+
+void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
+{
+    QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
+    bool opened = file.open(QIODevice::WriteOnly);
+    if (opened) {
+        QDataStream ifs(&file);
+        ifs << nick;
+        file.close();
+    }
 }
 
 QStringList dlgIRC::readIrcChannels(Host* pH)
@@ -752,6 +764,9 @@ QPair<bool, QString> dlgIRC::writeIrcHostPort(Host* pH, int port)
 
 QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 {
+    // update app-wide file to set a default nick as whatever the last-used nick was.
+    writeAppDefaultIrcNick(nickname);
+
     return pH->writeProfileData(dlgIRC::NickNameCfgItem, nickname);
 }
 
