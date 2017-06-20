@@ -155,7 +155,7 @@ mudlet::mudlet()
 , replayToolBar( 0 )
 , moduleTable( 0 )
 , mStatusBarState( statusBarAlwaysShown )
-, mIsToDisplayMapAuditErrorsToConsole( false )
+, mshowMapAuditErrors( false )
 , mpAboutDlg( 0 )
 , mpModuleDlg( 0 )
 , mpPackageManagerDlg( 0 )
@@ -2035,7 +2035,7 @@ void mudlet::readSettings()
     // themselves, but that only has to be done once! - Slysven
     mStatusBarState = StatusBarOptions( settings.value( "statusBarOptions", statusBarHidden ).toInt() );
 
-    mIsToDisplayMapAuditErrorsToConsole = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
+    mshowMapAuditErrors = settings.value( "reportMapIssuesToConsole", QVariant(false)).toBool();
     resize( size );
     move( pos );
     setIcoSize( mMainIconSize );
@@ -2090,16 +2090,16 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions) );
     settings.setValue("statusBarOptions", static_cast<int>(mStatusBarState) );
-    settings.setValue("reportMapIssuesToConsole", mIsToDisplayMapAuditErrorsToConsole );
+    settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors );
 }
 
 void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
-    connect (pDlg, SIGNAL (signal_establish_connection( QString, int )), this, SLOT (slot_connection_dlg_finnished(QString, int)));
+    connect(pDlg, SIGNAL(signal_establish_connection(QString, int)), this, SLOT(slot_connection_dlg_finished(QString, int)));
     pDlg->fillout_form();
     if (pDlg->exec() == QDialog::Accepted) {
-         enableToolbarButtons();
+        enableToolbarButtons();
     }
 }
 
@@ -2228,7 +2228,7 @@ void mudlet::slot_mapper()
 // use it WITHOUT loading a file - at least for the TConsole::importMap(...)
 // case that may need to create a map widget before it loads/imports a
 // non-default (last saved map in profile's map directory.
-void mudlet::createMapper( bool isToLoadDefaultMapFile )
+void mudlet::createMapper( bool loadDefaultMap )
 {
     Host * pHost = getActiveHost();
     if( ! pHost )
@@ -2252,7 +2252,7 @@ void mudlet::createMapper( bool isToLoadDefaultMapFile )
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget( pHost->mpMap->mpMapper );
 
-    if( isToLoadDefaultMapFile && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
+    if( loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty() )
     {
         qDebug() << "mudlet::slot_mapper() - restore map case 3.";
         pHost->mpMap->pushErrorMessagesToFile( tr( "Pre-Map loading(3) report" ), true );
@@ -2490,7 +2490,7 @@ void mudlet::doAutoLogin( const QString & profile_name )
     QString pass = "password";
     QString val2 = readProfileData( profile_name, pass );
     pHost->setPass( val2 );
-    slot_connection_dlg_finnished( profile_name, 0 );
+    slot_connection_dlg_finished(profile_name, 0);
     enableToolbarButtons();
 }
 
@@ -2529,7 +2529,7 @@ void mudlet::processEventLoopHack_timerRun()
     pH->mpConsole->refresh();
 }
 
-void mudlet::slot_connection_dlg_finnished( const QString& profile, int historyVersion )
+void mudlet::slot_connection_dlg_finished(const QString &profile, int historyVersion)
 {
     Host* pHost = getHostManager().getHost(profile);
     if( ! pHost ) return;

@@ -163,7 +163,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     connect(pushButton_command_foreground_color, SIGNAL(clicked()), this, SLOT(setCommandFgColor()));
     connect(pushButton_command_background_color, SIGNAL(clicked()), this, SLOT(setCommandBgColor()));
 
-    connect(reset_colors_button, SIGNAL(clicked()), this, SLOT(resetColors()));
+    connect(reset_colors_button, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
+    connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
 
     connect(fontComboBox, SIGNAL(currentFontChanged(const QFont&)), this, SLOT(setDisplayFont()));
     QStringList sizeList;
@@ -173,25 +174,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     fontSize->insertItems(1, sizeList);
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
 
-    pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlack_2.name()));
-    pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlack_2.name()));
-    pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mGreen_2.name()));
-    pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightGreen_2.name()));
-    pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mRed_2.name()));
-    pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightRed_2.name()));
-    pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlue_2.name()));
-    pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlue_2.name()));
-    pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mYellow_2.name()));
-    pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightYellow_2.name()));
-    pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCyan_2.name()));
-    pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightCyan_2.name()));
-    pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mMagenta_2.name()));
-    pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightMagenta_2.name()));
-    pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mWhite_2.name()));
-    pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightWhite_2.name()));
-
-    pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mFgColor_2.name()));
-    pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBgColor_2.name()));
+    setColors2();
 
     connect(pushButton_black_2, SIGNAL(clicked()), this, SLOT(setColorBlack2()));
     connect(pushButton_Lblack_2, SIGNAL(clicked()), this, SLOT(setColorLightBlack2()));
@@ -234,7 +217,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         comboBox_statusBarSetting->setCurrentIndex(_indexForStatusBarSetting);
     }
 
-    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->getAuditErrorsToConsoleEnabled());
+    checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
     Host* pHost = mpHost;
     if (pHost) {
         mFontSize = pHost->mDisplayFont.pointSize();
@@ -404,6 +387,39 @@ void dlgProfilePreferences::setColors()
     pushButton_Lmagenta->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta.name()));
     pushButton_white->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite.name()));
     pushButton_Lwhite->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite.name()));
+
+    pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
+    pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
+    pushButton_command_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandFgColor.name()));
+    pushButton_command_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandBgColor.name()));
+}
+
+void dlgProfilePreferences::setColors2()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlack_2.name()));
+    pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlack_2.name()));
+    pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mGreen_2.name()));
+    pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightGreen_2.name()));
+    pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mRed_2.name()));
+    pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightRed_2.name()));
+    pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBlue_2.name()));
+    pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightBlue_2.name()));
+    pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mYellow_2.name()));
+    pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightYellow_2.name()));
+    pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCyan_2.name()));
+    pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightCyan_2.name()));
+    pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mMagenta_2.name()));
+    pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightMagenta_2.name()));
+    pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mWhite_2.name()));
+    pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mLightWhite_2.name()));
+
+    pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mFgColor_2.name()));
+    pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mBgColor_2.name()));
 }
 
 void dlgProfilePreferences::resetColors()
@@ -469,10 +485,7 @@ void dlgProfilePreferences::resetColors2()
     pHost->mWhite_2 = Qt::lightGray;
     pHost->mLightWhite_2 = Qt::white;
 
-    setColors();
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
-    }
+    setColors2();
 }
 
 void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
@@ -878,8 +891,8 @@ void dlgProfilePreferences::loadMap()
     label_mapFileActionResult->show();
 
     // Ensure the setting is already made as the loadMap(...) uses the set value
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
         label_mapFileActionResult->setText(tr("Importing map - please wait..."));
@@ -904,7 +917,7 @@ void dlgProfilePreferences::loadMap()
     QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
 
     // Restore setting immediately before we used it
-    mudlet::self()->setAuditErrorsToConsoleEnabled(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 }
 
 void dlgProfilePreferences::saveMap()
@@ -917,7 +930,7 @@ void dlgProfilePreferences::saveMap()
     QString fileName = QFileDialog::getSaveFileName( this,
                                                      tr( "Save Mudlet map" ),
                                                      QDir::homePath(),
-                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programatically!" ) );
+                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!" ) );
     if (fileName.isEmpty()) {
         return;
     }
@@ -937,8 +950,8 @@ void dlgProfilePreferences::saveMap()
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
     // Ensure the setting is already made as the saveMap(...) uses the set value
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     if (pHost->mpConsole->saveMap(fileName)) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
@@ -947,7 +960,7 @@ void dlgProfilePreferences::saveMap()
     }
     // Then restore prior version
     pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
-    mudlet::self()->setAuditErrorsToConsoleEnabled(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
     QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
 }
@@ -1014,8 +1027,8 @@ void dlgProfilePreferences::copyMap()
 
     // Ensure the setting is already made as the value could be used in the
     // code following after
-    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->getAuditErrorsToConsoleEnabled();
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
     // stored their maps - if we do not already know where the player is in the
@@ -1158,7 +1171,7 @@ void dlgProfilePreferences::copyMap()
 
     // CHECK: Race condition? We might be changing this whilst other profile
     // are accessing it...
-    mudlet::self()->setAuditErrorsToConsoleEnabled(savedOldAuditErrorsToConsoleEnabledSetting);
+    mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
 
 void dlgProfilePreferences::slot_save_and_exit()
@@ -1337,7 +1350,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
-    mudlet::self()->setAuditErrorsToConsoleEnabled(checkBox_reportMapIssuesOnScreen->isChecked());
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
     close();
 }

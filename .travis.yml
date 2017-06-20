@@ -8,6 +8,7 @@ addons:
   apt:
     sources:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
     - qt56base
     - qt56multimedia
@@ -20,6 +21,7 @@ addons:
     - libzip-dev
     - libpulse-dev
     - libyajl-dev
+    - gcc-5 g++-5
 compiler:
   - gcc
   - clang
@@ -33,11 +35,14 @@ matrix:
   exclude:
   - os: osx
     compiler: gcc
-before_install: ./CI/travis.before_install.sh
+before_install:
+  # add to the path here to pick up things as soon as its installed
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt56/bin/qt56-env.sh; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
+  - ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
 before_script:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt56/bin/qt56-env.sh; fi
   # source the set-build-info as it exports some variables for us!
   - source CI/travis.set-build-info.sh
   - mkdir build
