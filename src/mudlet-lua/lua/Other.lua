@@ -524,10 +524,10 @@ function getColorWildcard(color)
         for i = 0, string.len(line) do
                 selectSection(i, 1)
                 if isAnsiFgColor(color) then
-                        if not startc then 
+                        if not startc then
                                 startc = i + 1
                                 endc = i + 1
-                        else 
+                        else
                                 endc = i + 1
                                 if i == line:len() then
                                         results[#results + 1] = line:sub(startc, endc)
@@ -658,4 +658,41 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
   if inputpatch and (mudletpatch < inputpatch) then return true end
 
   return false
+end
+
+-- condendenses the output from map loading if no map load errors
+-- were encountered
+-- returns: the amount of time map loading took or nil+msg
+-- if it failed
+function condenseMapLoad()
+  local linestodelete
+  local startswith = string.starts
+
+  -- first, figure out how many lines back do we need to delete
+  -- this isn't a static amount due to line wrapping
+  for i = 1,30 do
+    moveCursor(0,getLineCount()-i)
+    local line = getCurrentLine()
+    if line:find("WARN") or line:find("ERROR") or line:find("ALERT") then
+      return nil, "an alert, warning, or error that the user must see is present"
+    elseif startswith(line, "[ INFO ]  - Reading map") then
+      linestodelete = i
+      moveCursorEnd()
+      break
+    end
+  end
+
+  if not linestodelete then
+    return nil, "couldn't find the starting line for map load output"
+  end
+
+  local loadtime = 0
+  for i = linestodelete, 1, -1 do
+    moveCursor(0,getLineCount()-i)
+    local time = getCurrentLine():match("([%.%d]+)s")
+    if time then loadtime = loadtime + tonumber(time) end
+    deleteLine()
+  end
+
+  return loadtime
 end

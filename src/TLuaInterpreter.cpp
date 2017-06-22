@@ -12675,7 +12675,6 @@ bool TLuaInterpreter::callMulti(const QString & function, const QString & mName 
     else return false;
 }
 
-
 bool TLuaInterpreter::callEventHandler( const QString & function, const TEvent & pE )
 {
     if( function.isEmpty() ) {
@@ -12732,6 +12731,46 @@ bool TLuaInterpreter::callEventHandler( const QString & function, const TEvent &
 
     lua_pop( L, lua_gettop( L ) );
     return ! error;
+}
+
+double TLuaInterpreter::condenseMapLoad()
+{
+    QString luaFunction = QStringLiteral("condenseMapLoad");
+    double loadTime = -1.0;
+
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qWarning() << "condenseMapLoad: no suitable Lua execution unit found.";
+        return false;
+    }
+
+    lua_getfield(L, LUA_GLOBALSINDEX, "condenseMapLoad");
+    int error = lua_pcall(L, 0, 1, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                QString _f = luaFunction.toLatin1();
+                logError(e, luaFunction, _f);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK " << luaFunction << " ran without errors\n" >> 0;
+        }
+    }
+
+    int returnValues = lua_gettop(L);
+    if (returnValues > 0 && !lua_isnoneornil(L, 1)) {
+        loadTime = lua_tonumber(L, 1);
+    }
+    lua_pop(L, returnValues);
+    return loadTime;
 }
 
 void TLuaInterpreter::set_lua_table(const QString & tableName, QStringList & variableList )
