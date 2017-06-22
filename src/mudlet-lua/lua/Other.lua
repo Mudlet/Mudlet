@@ -7,6 +7,10 @@ mudlet.supports = {
   coroutines = true
 }
 
+-- enforce uniform locale so scripts don't get
+-- tripped up on number representation differences (. vs ,)
+os.setlocale("C")
+
 -- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {
 	["__call"] = function(func, ...)
@@ -524,10 +528,10 @@ function getColorWildcard(color)
         for i = 0, string.len(line) do
                 selectSection(i, 1)
                 if isAnsiFgColor(color) then
-                        if not startc then 
+                        if not startc then
                                 startc = i + 1
                                 endc = i + 1
-                        else 
+                        else
                                 endc = i + 1
                                 if i == line:len() then
                                         results[#results + 1] = line:sub(startc, endc)
