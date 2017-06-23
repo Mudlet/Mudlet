@@ -1109,23 +1109,23 @@ int TLuaInterpreter::addMapEvent(lua_State * L){
     QStringList actionInfo;
     if( ! lua_isstring( L, 1 ) )
     {
-        lua_pushstring( L, "addMapEvent: wrong first argument type" );
-        lua_error( L );
+        lua_pushfstring(L, "addMapEvent: bad argument #1 type (uniquename as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
         return 1;
     }
     else
     {
-        uniqueName = lua_tostring( L, 1 );
+        uniqueName = QString::fromUtf8( lua_tostring( L, 1 ) );
     }
     if( ! lua_isstring( L, 2 ) )
     {
-        lua_pushstring( L, "addMapEvent: wrong second argument type" );
-        lua_error( L );
+        lua_pushfstring(L, "addMapEvent: bad argument #2 type (event name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
         return 1;
     }
     else
     {
-        actionInfo << lua_tostring( L, 2 );
+        actionInfo << QString::fromUtf8( lua_tostring( L, 2 ) );
     }
     if( ! lua_isstring( L, 3 ) )
     {
@@ -1133,7 +1133,7 @@ int TLuaInterpreter::addMapEvent(lua_State * L){
     }
     else
     {
-        actionInfo << lua_tostring( L, 3 );
+        actionInfo << QString::fromUtf8( lua_tostring( L, 3 ) );
     }
     if( ! lua_isstring( L, 4 ) )
     {
@@ -1141,11 +1141,11 @@ int TLuaInterpreter::addMapEvent(lua_State * L){
     }
     else
     {
-        actionInfo << lua_tostring( L, 4 );
+        actionInfo << QString::fromUtf8( lua_tostring( L, 4 ) );
     }
     //variable number of arguments
     for (int i=5;i<=lua_gettop(L);i++)
-        actionInfo << lua_tostring(L,i);
+        actionInfo << QString::fromUtf8( lua_tostring( L, i ) );
     qDebug()<<actionInfo;
     Host& host = getHostFromLua(L);
     if( host.mpMap)
