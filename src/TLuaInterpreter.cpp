@@ -11852,21 +11852,21 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     QString target = who.c_str();
     QString msg = text.c_str();
     Host* pHost = &getHostFromLua(L);
-    if ( !mudlet::self()->mpIrcClientMap[pHost] ) {
+    if ( !mudlet::self()->mpIrcClientMap.contains(pHost) ) {
         // create a new irc client if one isn't ready.
         mudlet::self()->mpIrcClientMap[pHost] = new dlgIRC(pHost);
-        mudlet::self()->mpIrcClientMap[pHost]->raise();
-        mudlet::self()->mpIrcClientMap[pHost]->show();
+        mudlet::self()->mpIrcClientMap.value(pHost)->raise();
+        mudlet::self()->mpIrcClientMap.value(pHost)->show();
     }
 
     // wait for our client to be ready before sending messages.
-    if (!mudlet::self()->mpIrcClientMap[pHost]->mReadyForSending) {
+    if (!mudlet::self()->mpIrcClientMap.value(pHost)->mReadyForSending) {
         lua_pushnil(L);
         lua_pushstring(L, "not ready to send.");
         return 2;
     }
 
-    QPair<bool, QString> rval = mudlet::self()->mpIrcClientMap[pHost]->sendMsg(target, msg);
+    QPair<bool, QString> rval = mudlet::self()->mpIrcClientMap.value(pHost)->sendMsg(target, msg);
 
     lua_pushboolean(L, rval.first);
     lua_pushstring(L, rval.second.toUtf8().constData());
@@ -11880,8 +11880,8 @@ int TLuaInterpreter::getIrcNick(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString nick;
-    if (mudlet::self()->mpIrcClientMap[pHost]) {
-        nick = mudlet::self()->mpIrcClientMap[pHost]->getNickName();
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        nick = mudlet::self()->mpIrcClientMap.value(pHost)->getNickName();
     } else {
         nick = dlgIRC::readIrcNickName(pHost);
     }
@@ -11898,9 +11898,9 @@ int TLuaInterpreter::getIrcServer(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     QString hname;
     int hport;
-    if (mudlet::self()->mpIrcClientMap[pHost]) {
-        hname = mudlet::self()->mpIrcClientMap[pHost]->getHostName();
-        hport = mudlet::self()->mpIrcClientMap[pHost]->getHostPort();
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        hname = mudlet::self()->mpIrcClientMap.value(pHost)->getHostName();
+        hport = mudlet::self()->mpIrcClientMap.value(pHost)->getHostPort();
     } else {
         hname = dlgIRC::readIrcHostName(pHost);
         hport = dlgIRC::readIrcHostPort(pHost);
@@ -11920,8 +11920,8 @@ int TLuaInterpreter::getIrcChannels(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QStringList channels;
-    if (mudlet::self()->mpIrcClientMap[pHost]) {
-        channels = mudlet::self()->mpIrcClientMap[pHost]->getChannels();
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        channels = mudlet::self()->mpIrcClientMap.value(pHost)->getChannels();
     } else {
         channels = dlgIRC::readIrcChannels(pHost);
     }
@@ -11946,8 +11946,8 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     QString cHostName = "";
     QString error = "no client active.";
-    if (mudlet::self()->mpIrcClientMap[pHost]) {
-        cHostName = mudlet::self()->mpIrcClientMap[pHost]->getConnectedHost();
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        cHostName = mudlet::self()->mpIrcClientMap.value(pHost)->getConnectedHost();
 
         if (cHostName.isEmpty()) {
             error = "not yet connected.";
@@ -12105,8 +12105,8 @@ int TLuaInterpreter::restartIrc(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     bool rv = false;
-    if (mudlet::self()->mpIrcClientMap[pHost]) {
-        mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        mudlet::self()->mpIrcClientMap.value(pHost)->ircRestart();
         rv = true;
     }
 
