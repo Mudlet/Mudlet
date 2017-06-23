@@ -1189,19 +1189,35 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
     {
         if (host.mpMap->mpMapper){
             if (host.mpMap->mpMapper->mp2dMap){
+                // create the result table
                 lua_newtable(L);
                 QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserActions);
                 while (it.hasNext()){
                     it.next();
-                    lua_newtable(L);
                     QStringList eventInfo = it.value();
+
+                    lua_pushstring( L, it.key().toLatin1().data() );
+                    lua_createtable( L, 0, 4 );
+
                     lua_pushstring( L, eventInfo[0].toLatin1().data() );
+                    lua_setfield( L, -2, "event name" );
+
                     lua_pushstring( L, eventInfo[1].toLatin1().data() );
+                    lua_setfield( L, -2, "parent" );
+
                     lua_pushstring( L, eventInfo[2].toLatin1().data() );
-                    lua_settable(L, -3);
-                    lua_pushstring(L, it.key().toLatin1().data());
-                    lua_insert(L,-2);
-                    lua_settable(L, -3);
+                    lua_setfield( L, -2, "display name" );
+
+                    lua_createtable( L, eventInfo.length() - 3, 0 );
+                    for(int i = 3; i < eventInfo.length(); i++){
+                        lua_pushinteger( L, i - 2 ); //lua indexes are 1 based!
+                        lua_pushstring( L, eventInfo[i].toUtf8().constData() );
+                        lua_settable( L, -3 );
+                    }
+                    lua_setfield( L, -2, "arguments" );
+
+                    // Add the mapEvent object to the result table
+                    lua_setfield( L, -2, it.key().toUtf8().constData() );
                 }
             }
             return 1;
