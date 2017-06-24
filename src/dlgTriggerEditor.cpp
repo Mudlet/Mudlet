@@ -4655,7 +4655,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem *pItem)
     if (varType == LUA_TTABLE || varType == LUA_TFUNCTION)
     {
         // Edbee doesn't have a readonly option, so I'm using setEnabled
-        // mpSourceEditorEdbee->setEnabled(false);
+        mpSourceEditorEdbee->setEnabled(false);
 
         if ( varType == LUA_TTABLE )
         {
