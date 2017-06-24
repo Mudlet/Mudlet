@@ -148,21 +148,22 @@ void dlgIRC::onMessageReceived(IrcMessage* msg)
         break;
     }
     /*
-    Nick 	IrcNickMessage
-    Quit 	IrcQuitMessage
-    Topic 	IrcTopicMessage
-    Invite 	IrcInviteMessage
-    Kick 	IrcKickMessage
-    Mode 	IrcModeMessage
-    Ping 	IrcPingMessage
-    Pong 	IrcPongMessage
-    Error 	IrcErrorMessage
-    */
+	   Nick         IrcNickMessage
+	   Quit         IrcQuitMessage
+	   Topic        IrcTopicMessage
+	   Invite       IrcInviteMessage
+	   Kick         IrcKickMessage
+	   Mode         IrcModeMessage
+	   Ping         IrcPingMessage
+	   Pong         IrcPongMessage
+	   Error        IrcErrorMessage
+	 */
 }
 
 void dlgIRC::irc_gotMsg(QString a, QString b, QString c)
 {
-    qDebug()<<"a<"<<a<<"> b<"<<b<<">"<<" c<"<<c<<">";
+    qDebug() << "a<" << a << "> b<" << b << ">"
+             << " c<" << c << ">";
     mudlet::self()->getHostManager().postIrcMessage(a, b, c);
     c.replace("<", "&#60;");
     c.replace(">", "&#62;");
@@ -185,12 +186,13 @@ void dlgIRC::irc_gotMsg(QString a, QString b, QString c)
     const QString msg = c;
     const QString n = a;
     QString t;
-    if (b == mNick)
+    if (b == mNick) {
         t = tr("<font color=#a5a5a5>[%1] </font>msg from <font color=#ff0000>%2</font><font color=#ff0000>: %3</font>").arg(_t, n, msg);
-    else if (a == mNick)
+    } else if (a == mNick) {
         t = tr("<font color=#a5a5a5>[%1] </font><font color=#00aaaa>%2</font><font color=#004400>: %3</font>").arg(_t, n, msg);
-    else
+    } else {
         t = tr("<font color=#a5a5a5>[%1] </font><font color=#0000ff>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
+    }
 
 
     QString hi = QString("<font color=#aa00aa>%1</font>").arg(mNick);
@@ -227,10 +229,11 @@ void dlgIRC::irc_gotMsg2(QString a, QStringList c)
     const QString msg = m;
     const QString n = a;
     QString t;
-    if (msg.contains(mNick))
+    if (msg.contains(mNick)) {
         t = tr("<font color=#a5a5a5>[%1] </font><font color=#ff0000>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
-    else
+    } else {
         t = tr("<font color=#a5a5a5>[%1] </font><font color=#0000ff>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
+    }
 
     //QString t = tr("<font color=#aaaaaa>[%1] </font><font color=#ff0000>%2</font><font color=#000000>: %3</font>").arg(_t, n, msg);
     QTextCursor cur = irc->textCursor();
