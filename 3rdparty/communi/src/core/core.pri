@@ -9,7 +9,7 @@ INCDIR = $$PWD/../../include/IrcCore
 DEPENDPATH += $$PWD $$INCDIR
 INCLUDEPATH += $$PWD $$INCDIR
 
-CONV_HEADERS  = $$INCDIR/Irc
+CONV_HEADERS += $$INCDIR/Irc
 CONV_HEADERS += $$INCDIR/IrcCommand
 CONV_HEADERS += $$INCDIR/IrcCommandFilter
 CONV_HEADERS += $$INCDIR/IrcConnection
@@ -20,7 +20,7 @@ CONV_HEADERS += $$INCDIR/IrcMessageFilter
 CONV_HEADERS += $$INCDIR/IrcNetwork
 CONV_HEADERS += $$INCDIR/IrcProtocol
 
-PUB_HEADERS  = $$INCDIR/irc.h
+PUB_HEADERS += $$INCDIR/irc.h
 PUB_HEADERS += $$INCDIR/irccommand.h
 PUB_HEADERS += $$INCDIR/ircconnection.h
 PUB_HEADERS += $$INCDIR/irccore.h
@@ -30,9 +30,9 @@ PUB_HEADERS += $$INCDIR/ircmessage.h
 PUB_HEADERS += $$INCDIR/ircnetwork.h
 PUB_HEADERS += $$INCDIR/ircprotocol.h
 
-PRIV_HEADERS  = $$INCDIR/irccommand_p.h
-PRIV_HEADERS  = $$INCDIR/ircconnection_p.h
-PRIV_HEADERS  = $$INCDIR/ircdebug_p.h
+PRIV_HEADERS += $$INCDIR/irccommand_p.h
+PRIV_HEADERS += $$INCDIR/ircconnection_p.h
+PRIV_HEADERS += $$INCDIR/ircdebug_p.h
 PRIV_HEADERS += $$INCDIR/ircmessage_p.h
 PRIV_HEADERS += $$INCDIR/ircmessagecomposer_p.h
 PRIV_HEADERS += $$INCDIR/ircmessagedecoder_p.h

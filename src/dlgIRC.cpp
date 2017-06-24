@@ -69,8 +69,6 @@ dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(fa
     QShortcut* shortcut2 = new QShortcut(Qt::Key_Up, this);
     connect(shortcut, &QShortcut::activated, this, &dlgIRC::slot_nameCompletion);
     connect(shortcut2, &QShortcut::activated, this, &dlgIRC::slot_onHistoryCompletion);
-
-
     connect(lineEdit, &QLineEdit::returnPressed, this, &dlgIRC::slot_onTextEntered);
     connect(lineEdit, &QLineEdit::textEdited, this, &dlgIRC::slot_onTextEdited);
     connect(ircBrowser, &QTextBrowser::anchorClicked, this, &dlgIRC::slot_onAnchorClicked);
