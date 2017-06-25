@@ -1285,3 +1285,19 @@ QPair<bool, QString> Host::writeProfileData(const QString & item, const QString 
         return qMakePair(false, file.errorString());
     }
 }
+
+// Similar to the above, a convenience for reading profile data for this host.
+QString Host::readProfileData(const QString & item) {
+    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
+                .arg(QDir::homePath(), getName(), item) );
+    bool success = file.open( QIODevice::ReadOnly );
+    QString ret;
+    if ( success ) {
+        QDataStream ifs( & file );
+        ifs >> ret;
+        file.close();
+    }
+
+    return ret;
+}
+
