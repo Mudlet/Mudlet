@@ -1198,13 +1198,13 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
 
                     lua_createtable( L, 0, 4 );
 
-                    lua_pushstring( L, eventInfo[0].toLatin1().data() );
+                    lua_pushstring( L, eventInfo[0].toUtf8().constData() );
                     lua_setfield( L, -2, "event name" );
 
-                    lua_pushstring( L, eventInfo[1].toLatin1().data() );
+                    lua_pushstring( L, eventInfo[1].toUtf8().constData() );
                     lua_setfield( L, -2, "parent" );
 
-                    lua_pushstring( L, eventInfo[2].toLatin1().data() );
+                    lua_pushstring( L, eventInfo[2].toUtf8().constData() );
                     lua_setfield( L, -2, "display name" );
 
                     lua_createtable( L, eventInfo.length() - 3, 0 );
