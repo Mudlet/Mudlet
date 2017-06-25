@@ -81,6 +81,7 @@ public:
     void ircRestart(bool reloadConfigs = true);
     void setDefaultHostClient(bool isDefaultClient) { mIsDefaultIrcClient = isDefaultClient; }
     bool isDefaultHostClient() { return mIsDefaultIrcClient; }
+
 private slots:
     void slot_onConnected();
     void slot_onConnecting();

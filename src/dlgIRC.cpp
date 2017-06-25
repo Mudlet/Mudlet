@@ -51,6 +51,8 @@ QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet")
 
 dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
 {
+    mInputHistoryMax = 8;
+
     setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_irc.png")));
 
@@ -771,4 +773,38 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)
 {
     return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(QStringLiteral(" ")));
+}
+
+void dlgIRC::slot_nickNameRequired(const QString &reserved, QString *alt)
+{
+    QString newNick = QString("%1_%2").arg(reserved, QString::number(rand() % 10000) );
+    ircBrowser->append(IrcMessageFormatter::formatMessage("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick));
+    connection->setNickName( newNick );
+}
+
+void dlgIRC::slot_nickNameChanged(const QString& nick)
+{
+    if( nick == mNickName ) {
+        return;
+    }
+
+    // send a notice to Lua about the nick name change.
+    mudlet::self()->getHostManager().postIrcMessage(mNickName, nick, tr("Your nick has changed."));
+    mNickName = nick;
+}
+
+void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
+{
+    QString chan = message->channel();
+    if (!mChannels.contains(chan)) {
+        mChannels << chan;
+    }
+}
+
+void dlgIRC::slot_partedChannel(IrcPartMessage *message)
+{
+    QString chan = message->channel();
+    if (mChannels.contains(chan)) {
+        mChannels.removeAll(chan);
+    }
 }

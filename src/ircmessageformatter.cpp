@@ -21,8 +21,8 @@
 #include "ircmessageformatter.h"
 
 #include "pre_guard.h"
-#include "post_guard.h"
 #include <IrcTextFormat>
+#include "post_guard.h"
 
 QString IrcMessageFormatter::formatMessage(IrcMessage* message, bool isForLua)
 {

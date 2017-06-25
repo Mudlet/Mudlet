@@ -22,9 +22,9 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
+#include <IrcMessage>
 #include <QString>
 #include "post_guard.h"
-#include <IrcMessage>
 
 class IrcMessageFormatter
 {
