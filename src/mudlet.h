@@ -171,7 +171,7 @@ public:
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
     QMap<QTimer*, TTimer*> mTimerMap;
-    dlgIRC* mpIRC;
+    QPointer<dlgIRC> mpIRC;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;

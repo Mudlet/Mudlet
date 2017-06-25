@@ -11857,8 +11857,10 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     QString chan = who.c_str();
     QString txt = text.c_str();
     if( ! mudlet::self()->mpIRC ) return 0;
-    mudlet::self()->mpIRC->connection->sendCommand( IrcCommand::createMessage( chan, txt ) );
-    return 0;
+
+    lua_pushboolean(L, mudlet::self()->mpIRC->sendMsg(chan, txt));
+
+    return 1;
 }
 
 int TLuaInterpreter::setServerEncoding(lua_State * L)
