@@ -10343,31 +10343,288 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::sendIrc(lua_State* L)
+/** sendIrc( target, message )
+ *  Sends a message to given target.
+ *  Returns true or false if the message was able to be sent and a message about what happened.
+ */
+int TLuaInterpreter::sendIrc( lua_State * L )
 {
-    string who;
+    string who, text;
+    if( ! lua_isstring( L, 1 ) ) {
+        lua_pushfstring(L, "sendIrc: bad argument #1 type (target as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        return lua_error(L);
+    } else {
+        who = lua_tostring( L, 1 );
+    }
+    if( ! lua_isstring( L, 2 ) ) {
+        lua_pushfstring(L, "sendIrc: bad argument #2 type (message as string expected, got %s!)", lua_typename(L, lua_type(L, 2)));
+        return lua_error(L);
+    } else {
+        text = lua_tostring( L, 2 );
+    }
+    QString target = who.c_str();
+    QString msg = text.c_str();
+    Host* pHost = &getHostFromLua(L);
+    if ( !mudlet::self()->mpIrcClientMap.contains(pHost) ) {
+        // create a new irc client if one isn't ready.
+        mudlet::self()->mpIrcClientMap[pHost] = new dlgIRC(pHost);
+        mudlet::self()->mpIrcClientMap.value(pHost)->raise();
+        mudlet::self()->mpIrcClientMap.value(pHost)->show();
+    }
+
+    // wait for our client to be ready before sending messages.
+    if (!mudlet::self()->mpIrcClientMap.value(pHost)->mReadyForSending) {
+        lua_pushnil(L);
+        lua_pushstring(L, "not ready to send.");
+        return 2;
+    }
+
+    QPair<bool, QString> rval = mudlet::self()->mpIrcClientMap.value(pHost)->sendMsg(target, msg);
+
+    lua_pushboolean(L, rval.first);
+    lua_pushstring(L, rval.second.toUtf8().constData());
+    return 2;
+}
+
+/** getIrcNick();
+ *  Returns a string containing the IRC client nickname.
+ */
+int TLuaInterpreter::getIrcNick(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    QString nick;
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        nick = mudlet::self()->mpIrcClientMap.value(pHost)->getNickName();
+    } else {
+        nick = dlgIRC::readIrcNickName(pHost);
+    }
+
+    lua_pushstring(L, nick.toUtf8().constData());
+    return 1;
+}
+
+/** getIrcServer();
+ *  Returns a pair containing the IRC server and port.
+ */
+int TLuaInterpreter::getIrcServer(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    QString hname;
+    int hport;
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        hname = mudlet::self()->mpIrcClientMap.value(pHost)->getHostName();
+        hport = mudlet::self()->mpIrcClientMap.value(pHost)->getHostPort();
+    } else {
+        hname = dlgIRC::readIrcHostName(pHost);
+        hport = dlgIRC::readIrcHostPort(pHost);
+    }
+
+    lua_pushstring(L, hname.toUtf8().constData());
+    lua_pushinteger(L, hport);
+    return 2;
+}
+
+/** getIrcChannels();
+ *  Returns a table containing channel names.
+ *  If a client is active the list contains channels currently joined.
+ *  Otherwise the list is read from IRC client settings.
+ */
+int TLuaInterpreter::getIrcChannels(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    QStringList channels;
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        channels = mudlet::self()->mpIrcClientMap.value(pHost)->getChannels();
+    } else {
+        channels = dlgIRC::readIrcChannels(pHost);
+    }
+
+    lua_newtable(L);
+    int total = channels.count();
+    for (int i = 0; i < total; ++i) {
+        lua_pushnumber(L, i+1);
+        lua_pushstring(L, channels[i].toUtf8().data());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
+/** getIrcConnectedHost()
+ *  Returns the Hostname of the connected IRC Server, as provided by the server itself.
+ *  This will return false + error message until the IRC Client has connected and received
+ *  a hostname message from the server.
+ */
+int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    QString cHostName = "";
+    QString error = "no client active.";
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        cHostName = mudlet::self()->mpIrcClientMap.value(pHost)->getConnectedHost();
+
+        if (cHostName.isEmpty()) {
+            error = "not yet connected.";
+        }
+    }
+
+    if (cHostName.isEmpty()) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, error.toUtf8().constData());
+    } else {
+        lua_pushboolean(L, true);
+        lua_pushstring(L, cHostName.toUtf8().constData());
+    }
+    return 1;
+}
+
+/** setIrcNick( nick )
+ *  Updates IRC client nickname configuration value.
+ *  Does not apply changes to active client until restartIrc() is called.
+ */
+int TLuaInterpreter::setIrcNick(lua_State* L)
+{
+    string nick;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "sendIrc: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setIrcNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        return lua_error(L);
     } else {
-        who = lua_tostring(L, 1);
+        nick = lua_tostring( L, 1 );
+        if (nick.empty()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "nick must not be empty");
+            return 2;
+        }
     }
-    string text;
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "sendIrc: wrong argument type");
-        lua_error(L);
-        return 1;
+
+    Host* pHost = &getHostFromLua(L);
+    QPair<bool, QString> result = dlgIRC::writeIrcNickName(pHost, QString::fromStdString(nick));
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to save nick name, reason: %s", result.second.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+/** setIrcServer( hostname, port )
+ *  Updates IRC client connection configuration values with the given hostname and port values.
+ *  Port argument is optional and defaults to 6667.
+ *  Does not apply changes to active client until restartIrc() is called.
+ */
+int TLuaInterpreter::setIrcServer(lua_State* L)
+{
+    string addr;
+    int port = 6667;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setIrcServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        return lua_error(L);
     } else {
-        text = lua_tostring(L, 2);
+        addr = lua_tostring( L, 1 );
+        if (addr.empty()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "hostname must not be empty");
+            return 2;
+        }
     }
-    QString chan = who.c_str();
-    QString txt = text.c_str();
-    if (!mudlet::self()->mpIRC) {
-        return 0;
+    if (!lua_isnoneornil(L, 2)) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "setIrcServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, lua_type(L, 2)));
+            return lua_error(L);
+        } else {
+            port = lua_tointeger(L, 2);
+            if (port > 65535 || port < 1) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 6667 if not provided}", port);
+                return 2;
+            }
+        }
     }
-    mudlet::self()->mpIRC->connection->sendCommand(IrcCommand::createMessage(chan, txt));
-    return 0;
+
+    Host* pHost = &getHostFromLua(L);
+    QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromStdString(addr));
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to save hostname, reason: %s", result.second.toUtf8().constData());
+        return 2;
+    }
+
+    result = dlgIRC::writeIrcHostPort(pHost, port);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to save port, reason: %s", result.second.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushnil(L);
+    return 2;
+}
+
+/** setIrcChannels( channels )
+ *  Updates IRC client auto-join channels configuration value.
+ *  Channels must a table containing at least one valid channel name string.
+ *  Does not apply changes to active client until restartIrc() is called.
+ */
+int TLuaInterpreter::setIrcChannels(lua_State* L)
+{
+    QStringList newchannels;
+    if (!lua_istable(L, 1) )
+    {
+        lua_pushfstring(L, "setIrcChannels: bad argument #1 type (channels as table expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        return lua_error(L);
+    }
+    else
+    {
+        lua_pushnil( L );
+        while( lua_next( L, 1 ) != 0 )
+        {
+            // key at index -2 and value at index -1
+            if( lua_type(L, -1) == LUA_TSTRING )
+            {
+                QString c = lua_tostring( L, -1 );
+                if (!c.isEmpty() && (c.startsWith("#") || c.startsWith("&") || c.startsWith("+")) ) {
+                    newchannels << c;
+                }
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    if (newchannels.count() == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, "channels must contain at least 1 valid channel name!");
+        return 2;
+    }
+
+    Host* pHost = &getHostFromLua(L);
+    QPair<bool, QString> result = dlgIRC::writeIrcChannels(pHost, newchannels);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "unable to save channels, reason: %s", result.second.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+/** restartIrc()
+ *  Restarts the IRC Client connection.
+ *  This reloads the client config values from disk.
+ */
+int TLuaInterpreter::restartIrc(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    bool rv = false;
+    if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
+        mudlet::self()->mpIrcClientMap.value(pHost)->ircRestart();
+        rv = true;
+    }
+
+    lua_pushboolean(L, rv);
+    return 1;
 }
 
 int TLuaInterpreter::setServerEncoding(lua_State* L)
@@ -11331,7 +11588,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_pushstring(pGlobalLua, "SCRIPT_ID");
     lua_pushnumber(pGlobalLua, -1); // ID 1 is used to indicate that this is the global Lua interpreter
     lua_settable(pGlobalLua, LUA_GLOBALSINDEX);
-    lua_register(pGlobalLua, "showUnzipProgress", TLuaInterpreter::showUnzipProgress); //internal function used by the package system NOT FOR USERS
+    lua_register(pGlobalLua, "showUnzipProgress", TLuaInterpreter::showUnzipProgress);//internal function used by the package system NOT FOR USERS
     lua_register(pGlobalLua, "wait", TLuaInterpreter::Wait);
     lua_register(pGlobalLua, "expandAlias", TLuaInterpreter::Send);
     lua_register(pGlobalLua, "echo", TLuaInterpreter::Echo);
@@ -11543,6 +11800,14 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
+    lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
+    lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
+    lua_register(pGlobalLua, "getIrcChannels", TLuaInterpreter::getIrcChannels);
+    lua_register(pGlobalLua, "getIrcConnectedHost", TLuaInterpreter::getIrcConnectedHost);
+    lua_register(pGlobalLua, "setIrcNick", TLuaInterpreter::setIrcNick);
+    lua_register(pGlobalLua, "setIrcServer", TLuaInterpreter::setIrcServer);
+    lua_register(pGlobalLua, "setIrcChannels", TLuaInterpreter::setIrcChannels);
+    lua_register(pGlobalLua, "restartIrc", TLuaInterpreter::restartIrc);
     lua_register(pGlobalLua, "connectToServer", TLuaInterpreter::connectToServer);
     lua_register(pGlobalLua, "getRooms", TLuaInterpreter::getRooms);
     lua_register(pGlobalLua, "createMapLabel", TLuaInterpreter::createMapLabel);
@@ -11600,7 +11865,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapUserData", TLuaInterpreter::setMapUserData);
     lua_register(pGlobalLua, "setAreaUserData", TLuaInterpreter::setAreaUserData);
     lua_register(pGlobalLua, "getAllAreaUserData", TLuaInterpreter::getAllAreaUserData);
-    lua_register(pGlobalLua, "getAllMapUserData", TLuaInterpreter::getAllMapUserData);
+    lua_register(pGlobalLua, "getAllMapUserData", TLuaInterpreter::getAllMapUserDat);
     lua_register(pGlobalLua, "clearAreaUserData", TLuaInterpreter::clearAreaUserData);
     lua_register(pGlobalLua, "clearAreaUserDataItem", TLuaInterpreter::clearAreaUserDataItem);
     lua_register(pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData);
@@ -11614,7 +11879,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
     lua_register(pGlobalLua, "alert", TLuaInterpreter::alert);
 
-    // PLACEMARKER: End of Lua functions registration
+// PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
     lua_setglobal(pGlobalLua, "yajl");
 
