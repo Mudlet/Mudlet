@@ -1196,7 +1196,6 @@ int TLuaInterpreter::getMapEvents(lua_State * L){
                     it.next();
                     QStringList eventInfo = it.value();
 
-                    lua_pushstring( L, it.key().toLatin1().data() );
                     lua_createtable( L, 0, 4 );
 
                     lua_pushstring( L, eventInfo[0].toLatin1().data() );
