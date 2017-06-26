@@ -223,12 +223,12 @@ bool TAlias::match(const QString& toMatch)
     }
 
 END : {
-    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-    // call lua trigger function with number of matches and matches itselves as arguments
-    execute();
-    pL->clearCaptureGroups();
-}
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+    }
 
 MUD_ERROR:
     for (auto childAlias : *mpMyChildrenList) {
