@@ -128,12 +128,15 @@ QStyleOptionButton TFlipButton::getStyleOption() const
         opt.rect.setSize(size);
     }
     opt.features = QStyleOptionButton::None;
-    if (menu())
+    if (menu()) {
         opt.features |= QStyleOptionButton::HasMenu;
-    if (isDown() || (menu() && menu()->isVisible()))
+    }
+    if (isDown() || (menu() && menu()->isVisible())) {
         opt.state |= QStyle::State_Sunken;
-    if (isChecked())
+    }
+    if (isChecked()) {
         opt.state |= QStyle::State_On;
+    }
     opt.text = text();
     opt.icon = icon();
     opt.iconSize = iconSize();

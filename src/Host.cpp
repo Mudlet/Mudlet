@@ -69,10 +69,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
 , mCodeCompletion(true)
-, mCommandLineFont   ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//( QFont("Monospace", 10, QFont::Courier) )
+, mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mCommandSeparator(QString(";"))
 , mDisableAutoCompletion(false)
-, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont::Normal ) )//, mDisplayFont       ( QFont("Bitstream Vera Sans Mono", 10, QFont:://( QFont("Monospace", 10, QFont::Courier) ), mPort              ( port )
+, mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
 , mFORCE_GA_OFF(false)
@@ -162,7 +162,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDockableMapWidget()
 , mHaveMapperScript(false)
 {
-   // mLogStatus = mudlet::self()->mAutolog;
+    // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
     QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/";
     directoryLogFile.append(mHostName);
@@ -211,8 +211,9 @@ void Host::saveModules(int sync)
     QStringList modulesToSync;
     QString dirName = QDir::homePath() + "/.config/mudlet/moduleBackups/";
     QDir savePath = QDir(dirName);
-    if (!savePath.exists())
+    if (!savePath.exists()) {
         savePath.mkpath(dirName);
+    }
     while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
@@ -223,9 +224,7 @@ void Host::saveModules(int sync)
         QString zipName;
         zip* zipFile = 0;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
-        if(  filename_xml.endsWith( QStringLiteral( "mpackage" ), Qt::CaseInsensitive )
-          || filename_xml.endsWith( QStringLiteral( "zip" ), Qt::CaseInsensitive ) )
-        {
+        if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
             tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mHostName + "/" + moduleName;
             filename_xml = tempDir + "/" + moduleName + ".xml";
             int err;
@@ -244,8 +243,9 @@ void Host::saveModules(int sync)
             writer.writeModuleXML(&file_xml, it.key());
             file_xml.close();
 
-            if (entry[1].toInt())
+            if (entry[1].toInt()) {
                 modulesToSync << it.key();
+            }
         } else {
             file_xml.close();
             //FIXME: Should have an error reported to user
@@ -257,7 +257,7 @@ void Host::saveModules(int sync)
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;
             t.start();
-//            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
+            //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
             int err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
             //FIXME: error checking
             if (zipFile) {
@@ -274,8 +274,9 @@ void Host::saveModules(int sync)
         while (it2.hasNext()) {
             it2.next();
             Host* host = it2.key();
-            if (host->mHostName == mHostName)
+            if (host->mHostName == mHostName) {
                 continue;
+            }
             QMap<QString, QStringList> installedModules = host->mInstalledModules;
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
@@ -284,7 +285,7 @@ void Host::saveModules(int sync)
                 it3.next();
                 //QStringList moduleEntry = moduleOrder[it3.value()];
                 //moduleEntry.append(it3.key());
-                moduleOrder[it3.value()].append(it3.key());// = moduleEntry;
+                moduleOrder[it3.value()].append(it3.key()); // = moduleEntry;
             }
             QMapIterator<int, QStringList> it4(moduleOrder);
             while (it4.hasNext()) {
@@ -523,8 +524,9 @@ bool Host::startStopWatch(int watchID)
     if (mStopWatchMap.contains(watchID)) {
         mStopWatchMap[watchID].start();
         return true;
-    } else
+    } else {
         return false;
+    }
 }
 
 double Host::stopStopWatch(int watchID)
@@ -541,8 +543,9 @@ bool Host::resetStopWatch(int watchID)
     if (mStopWatchMap.contains(watchID)) {
         mStopWatchMap[watchID].setHMS(0, 0, 0, 0);
         return true;
-    } else
+    } else {
         return false;
+    }
 }
 
 void Host::callEventHandlers()
@@ -727,15 +730,11 @@ bool Host::installPackage(const QString& fileName, int module)
         mpEditorDialog->doCleanReset();
     }
     QFile file2;
-    if(  fileName.endsWith( QStringLiteral( ".zip" ), Qt::CaseInsensitive )
-      || fileName.endsWith( QStringLiteral( ".mpackage"), Qt::CaseInsensitive ) )
-    {
-        QString _home = QStringLiteral( "%1/.config/mudlet/profiles/%2" )
-                        .arg( QDir::homePath(), getName() );
-        QString _dest = QStringLiteral( "%1/%2/" )
-                        .arg( _home, packageName );
-        QDir _tmpDir( _home ); // home directory for the PROFILE
-        _tmpDir.mkpath( _dest );
+    if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
+        QString _home = QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), getName());
+        QString _dest = QStringLiteral("%1/%2/").arg(_home, packageName);
+        QDir _tmpDir(_home); // home directory for the PROFILE
+        _tmpDir.mkpath(_dest);
 
         // TODO: report failure to create destination folder for package/module in profile
 
@@ -877,14 +876,8 @@ bool Host::installPackage(const QString& fileName, int module)
 
                 if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                     //FIXME: report error to user
-                    qDebug() << "Host::installPackage("
-                             << fileName
-                             << ","
-                             << module
-                             << ")\n    ERROR opening:"
-                             << QStringLiteral( "%1%2" ).arg(_dest, entryInArchive)
-                             << "!\n    Reported error was:"
-                             << fd.errorString();
+                    qDebug() << "Host::installPackage(" << fileName << "," << module << ")\n    ERROR opening:" << QStringLiteral("%1%2").arg(_dest, entryInArchive)
+                             << "!\n    Reported error was:" << fd.errorString();
                     zip_fclose(zf);
                     zip_close(archive);
                     if (pUnzipDialog) {
@@ -1269,12 +1262,11 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 
 // Derived from the one in dlgConnectionProfile class - but it does not need a
 // host name argument...
-QPair<bool, QString> Host::writeProfileData(const QString & item, const QString & what)
+QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
-                .arg(QDir::homePath(), getName(), item) );
-    if (file.open( QIODevice::WriteOnly | QIODevice::Unbuffered )) {
-        QDataStream ofs( & file );
+    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), getName(), item));
+    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&file);
         ofs << what;
         file.close();
     }
