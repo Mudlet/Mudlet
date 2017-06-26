@@ -11865,7 +11865,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapUserData", TLuaInterpreter::setMapUserData);
     lua_register(pGlobalLua, "setAreaUserData", TLuaInterpreter::setAreaUserData);
     lua_register(pGlobalLua, "getAllAreaUserData", TLuaInterpreter::getAllAreaUserData);
-    lua_register(pGlobalLua, "getAllMapUserData", TLuaInterpreter::getAllMapUserDat);
+    lua_register(pGlobalLua, "getAllMapUserData", TLuaInterpreter::getAllMapUserData);
     lua_register(pGlobalLua, "clearAreaUserData", TLuaInterpreter::clearAreaUserData);
     lua_register(pGlobalLua, "clearAreaUserDataItem", TLuaInterpreter::clearAreaUserDataItem);
     lua_register(pGlobalLua, "clearMapUserData", TLuaInterpreter::clearMapUserData);
