@@ -9,29 +9,29 @@ INCDIR = $$PWD/../../include/IrcUtil
 DEPENDPATH += $$PWD $$INCDIR
 INCLUDEPATH += $$PWD $$INCDIR
 
-CONV_HEADERS += $$INCDIR/IrcCommandParser
-CONV_HEADERS += $$INCDIR/IrcCommandQueue
-CONV_HEADERS += $$INCDIR/IrcCompleter
-CONV_HEADERS += $$INCDIR/IrcLagTimer
-CONV_HEADERS += $$INCDIR/IrcPalette
-CONV_HEADERS += $$INCDIR/IrcTextFormat
-CONV_HEADERS += $$INCDIR/IrcUtil
+CONV_HEADERS2 += $$INCDIR/IrcCommandParser
+CONV_HEADERS2 += $$INCDIR/IrcCommandQueue
+CONV_HEADERS2 += $$INCDIR/IrcCompleter
+CONV_HEADERS2 += $$INCDIR/IrcLagTimer
+CONV_HEADERS2 += $$INCDIR/IrcPalette
+CONV_HEADERS2 += $$INCDIR/IrcTextFormat
+CONV_HEADERS2 += $$INCDIR/IrcUtil
 
-PUB_HEADERS += $$INCDIR/irccommandparser.h
-PUB_HEADERS += $$INCDIR/irccommandqueue.h
-PUB_HEADERS += $$INCDIR/irccompleter.h
-PUB_HEADERS += $$INCDIR/irclagtimer.h
-PUB_HEADERS += $$INCDIR/ircpalette.h
-PUB_HEADERS += $$INCDIR/irctextformat.h
-PUB_HEADERS += $$INCDIR/ircutil.h
+PUB_HEADERS2 += $$INCDIR/irccommandparser.h
+PUB_HEADERS2 += $$INCDIR/irccommandqueue.h
+PUB_HEADERS2 += $$INCDIR/irccompleter.h
+PUB_HEADERS2 += $$INCDIR/irclagtimer.h
+PUB_HEADERS2 += $$INCDIR/ircpalette.h
+PUB_HEADERS2 += $$INCDIR/irctextformat.h
+PUB_HEADERS2 += $$INCDIR/ircutil.h
 
-PRIV_HEADERS += $$INCDIR/irccommandparser_p.h
-PRIV_HEADERS += $$INCDIR/irccommandqueue_p.h
-PRIV_HEADERS += $$INCDIR/irclagtimer_p.h
-PRIV_HEADERS += $$INCDIR/irctoken_p.h
+PRIV_HEADERS2 += $$INCDIR/irccommandparser_p.h
+PRIV_HEADERS2 += $$INCDIR/irccommandqueue_p.h
+PRIV_HEADERS2 += $$INCDIR/irclagtimer_p.h
+PRIV_HEADERS2 += $$INCDIR/irctoken_p.h
 
-HEADERS += $$PUB_HEADERS
-HEADERS += $$PRIV_HEADERS
+HEADERS += $$PUB_HEADERS2
+HEADERS += $$PRIV_HEADERS2
 
 SOURCES += $$PWD/irccommandparser.cpp
 SOURCES += $$PWD/irccommandqueue.cpp
