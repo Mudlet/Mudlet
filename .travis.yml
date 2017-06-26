@@ -22,6 +22,10 @@ addons:
     - libpulse-dev
     - libyajl-dev
     - gcc-5 g++-5
+    - luarocks
+    - lua-rex-pcre
+    - lua-filesystem
+    - lua-zip
 compiler:
   - gcc
   - clang
@@ -39,6 +43,7 @@ before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt56/bin/qt56-env.sh; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then `luarocks path` fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
