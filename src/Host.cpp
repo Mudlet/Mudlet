@@ -179,7 +179,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setDevice(&mErrorLogFile);
 
     QTimer::singleShot(0, [this]() {
-        if (mpMap->restore(QString())) {
+        if (mpMap->restore(QString(), false)) {
             mpMap->audit();
         }
     });
