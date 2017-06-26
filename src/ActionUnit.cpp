@@ -447,12 +447,6 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
         pA->expandToolbar(pTB);
         pTB->setTitleBarWidget(0);
     }
-    /*else
-	   {
-	    pA->expandToolbar( pMainWindow, pTB, 0 );
-	    QWidget * test = new QWidget;
-	    pTB->setTitleBarWidget( test );
-	   }*/
 
     pTB->finalize();
 
