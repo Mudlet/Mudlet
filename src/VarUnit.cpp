@@ -154,8 +154,9 @@ QStringList VarUnit::varName(TVar* var)
     TVar* p = var->getParent();
     while (p && p != base) {
         names.insert(1, p->getName());
-        if (p == base)
+        if (p == base) {
             break;
+        }
         p = p->getParent();
     }
     return names;
@@ -194,7 +195,7 @@ void VarUnit::addHidden(TVar* var, int user)
         hiddenByUser.insert(shortVarName(var).join("."));
     } else {
         hidden.insert(shortVarName(var).join("."));
-}
+    }
 }
 
 void VarUnit::addHidden(QString var)

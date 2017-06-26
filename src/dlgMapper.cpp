@@ -1,23 +1,23 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
- ***************************************************************************/
+*   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+*   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+*   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 2 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+*   This program is distributed in the hope that it will be useful,       *
+*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+*   GNU General Public License for more details.                          *
+*                                                                         *
+*   You should have received a copy of the GNU General Public License     *
+*   along with this program; if not, write to the                         *
+*   Free Software Foundation, Inc.,                                       *
+*   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+***************************************************************************/
 
 
 #include "dlgMapper.h"
@@ -140,9 +140,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
-// Not needed as already explicitly called, IMHO - Slysven
-//    qDebug()<<"dlgMapper constructor -> call T2DMap::init()";
-//    mp2dMap->init();
+    // Not needed as already explicitly called, IMHO - Slysven
+    //    qDebug()<<"dlgMapper constructor -> call T2DMap::init()";
+    //    mp2dMap->init();
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -178,10 +178,11 @@ void dlgMapper::updateAreaComboBox()
 
 void dlgMapper::slot_toggleShowRoomIDs(int s)
 {
-    if (s == Qt::Checked)
+    if (s == Qt::Checked) {
         mp2dMap->mShowRoomID = true;
-    else
+    } else {
         mp2dMap->mShowRoomID = false;
+    }
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
     mp2dMap->update();
 }
@@ -238,39 +239,39 @@ void dlgMapper::choseRoom(QListWidgetItem* pT)
 
 void dlgMapper::goRoom()
 {
-//    QString txt = roomID->text();
-//    searchList->clear();
-//    int id = txt.toInt();
+    //    QString txt = roomID->text();
+    //    searchList->clear();
+    //    int id = txt.toInt();
 
-//    if( id != 0 && mpMap->rooms.contains( id ) )
-//    {
-//        mpMap->mTargetID = id;
-//        if( mpMap->findPath(0,0) )
-//        {
-//            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
-//            mpMap->mpHost->startSpeedWalk();
-//        }
-//        else
-//        {
-//            QString msg = "Cannot find a path to this room.\n";
-//            mpHost->mpConsole->printSystemMessage(msg);
-//        }
-//    }
-//    else
-//    {
-//        QMapIterator<int, TRoom *> it( mpMap->rooms );
-//        while( it.hasNext() )
-//        {
-//            it.next();
-//            int i = it.key();
-//            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
-//            {
-//                qDebug()<<"inserting match:"<<i;
-//                searchList->addItem( mpMap->rooms[i]->name );
-//            }
-//        }
-//    }
-//    mpHost->mpConsole->setFocus();
+    //    if( id != 0 && mpMap->rooms.contains( id ) )
+    //    {
+    //        mpMap->mTargetID = id;
+    //        if( mpMap->findPath(0,0) )
+    //        {
+    //            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
+    //            mpMap->mpHost->startSpeedWalk();
+    //        }
+    //        else
+    //        {
+    //            QString msg = "Cannot find a path to this room.\n";
+    //            mpHost->mpConsole->printSystemMessage(msg);
+    //        }
+    //    }
+    //    else
+    //    {
+    //        QMapIterator<int, TRoom *> it( mpMap->rooms );
+    //        while( it.hasNext() )
+    //        {
+    //            it.next();
+    //            int i = it.key();
+    //            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
+    //            {
+    //                qDebug()<<"inserting match:"<<i;
+    //                searchList->addItem( mpMap->rooms[i]->name );
+    //            }
+    //        }
+    //    }
+    //    mpHost->mpConsole->setFocus();
 }
 
 
