@@ -96,7 +96,8 @@ TAction::TAction(const QString& name, Host* pHost)
 {
 }
 
-TAction::~TAction() {
+TAction::~TAction()
+{
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
     }
@@ -150,7 +151,7 @@ void TAction::compile()
 
 bool TAction::setScript(const QString& script)
 {
-    if(script != mScript) {
+    if (script != mScript) {
         setDataChanged();
     }
     mScript = script;
@@ -241,15 +242,15 @@ void TAction::expandToolbar(TToolBar* pT)
         button->setStyleSheet(css);
 
         /*
- * CHECK: The other expandToolbar(...) has the following in this position:
- *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
- *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
- *       {
- *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
- *          action->execute();
- *       }
- * Why does it have this and we do not? - Slysven
- */
+		 * CHECK: The other expandToolbar(...) has the following in this position:
+		 *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
+		 *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
+		 *       {
+		 *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
+		 *          action->execute();
+		 *       }
+		 * Why does it have this and we do not? - Slysven
+		 */
 
         if (action->mIsFolder) {
             auto newMenu = new QMenu(pT);
