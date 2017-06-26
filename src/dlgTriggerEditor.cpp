@@ -191,21 +191,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
-    connect( mpSourceEditorEdbee->controller(),
-             SIGNAL(updateStatusTextSignal(QString)),
-             this,
-             SLOT(slot_updateStatusBar(QString))
-         );
+    connect(mpSourceEditorEdbee->controller(), SIGNAL(updateStatusTextSignal(QString)), this, SLOT(slot_updateStatusBar(QString)));
     simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
 
     // Update the editor preferences
-    connect( mudlet::self(),
-             SIGNAL(signal_editorTextOptionsChanged(QTextOption::Flags)),
-             this,
-             SLOT(slot_changeEditorTextOptions(QTextOption::Flags))
-         );
+    connect(mudlet::self(), SIGNAL(signal_editorTextOptionsChanged(QTextOption::Flags)), this, SLOT(slot_changeEditorTextOptions(QTextOption::Flags)));
 
-    mpSourceEditorEdbeeDocument->setText( QString("# Enter your lua code here\n"));
+    mpSourceEditorEdbeeDocument->setText(QString("# Enter your lua code here\n"));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
@@ -428,8 +420,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     toolBar2->setOrientation(Qt::Vertical);
 
-    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2 );
-    QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar );
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+    QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
@@ -444,23 +436,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         config->endChanges();
     });
 
-    connect( comboBox_searchTerms, SIGNAL( activated( const QString )), this, SLOT(slot_search_triggers( const QString ) ) );
-    connect( treeWidget_triggers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_trigger_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_triggers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_keys, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_key_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_keys, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_timers, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_timer_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_timers, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_scripts, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_scripts_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_scripts, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_aliases, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_alias_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_aliases, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_actions, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_action_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_actions, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_variables, SIGNAL( itemClicked( QTreeWidgetItem *, int ) ), this, SLOT( slot_var_selected( QTreeWidgetItem *) ) );
-    connect( treeWidget_variables, SIGNAL( itemChanged(QTreeWidgetItem*,int) ), this, SLOT( slot_var_changed( QTreeWidgetItem *) ) );
-    connect( treeWidget_variables, SIGNAL( itemSelectionChanged()), this, SLOT( slot_tree_selection_changed()) );
-    connect( treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT( slot_item_selected_search_list(QTreeWidgetItem*, int)));
+    connect(comboBox_searchTerms, SIGNAL(activated(const QString)), this, SLOT(slot_search_triggers(const QString)));
+    connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_trigger_selected(QTreeWidgetItem*)));
+    connect(treeWidget_triggers, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_key_selected(QTreeWidgetItem*)));
+    connect(treeWidget_keys, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_timer_selected(QTreeWidgetItem*)));
+    connect(treeWidget_timers, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_scripts, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_scripts_selected(QTreeWidgetItem*)));
+    connect(treeWidget_scripts, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_aliases, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_alias_selected(QTreeWidgetItem*)));
+    connect(treeWidget_aliases, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_actions, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_action_selected(QTreeWidgetItem*)));
+    connect(treeWidget_actions, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_var_selected(QTreeWidgetItem*)));
+    connect(treeWidget_variables, SIGNAL(itemChanged(QTreeWidgetItem*, int)), this, SLOT(slot_var_changed(QTreeWidgetItem*)));
+    connect(treeWidget_variables, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_search_list(QTreeWidgetItem*, int)));
 
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search

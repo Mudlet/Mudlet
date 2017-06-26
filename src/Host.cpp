@@ -694,13 +694,13 @@ bool Host::installPackage(const QString& fileName, int module)
     // pointer just in case we accidently reenter this method in the future.
     QDialog* pUnzipDialog = Q_NULLPTR;
 
-//     Module notes:
-//     For the module install, a module flag of 0 is a package, a flag
-//     of 1 means the module is being installed for the first time via
-//     the UI, a flag of 2 means the module is being synced (so it's "installed"
-//     already), a flag of 3 means the module is being installed from
-//     a script.  This separation is necessary to be able to reuse code
-//     while avoiding infinite loops from script installations.
+    //     Module notes:
+    //     For the module install, a module flag of 0 is a package, a flag
+    //     of 1 means the module is being installed for the first time via
+    //     the UI, a flag of 2 means the module is being synced (so it's "installed"
+    //     already), a flag of 3 means the module is being installed from
+    //     a script.  This separation is necessary to be able to reuse code
+    //     while avoiding infinite loops from script installations.
 
     if (fileName.isEmpty()) {
         return false;
@@ -927,9 +927,9 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
 // again - Slysven
 bool Host::uninstallPackage(const QString& packageName, int module)
 {
-//     As with the installPackage, the module codes are:
-//     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
-//     3=uninstall from a script
+    //     As with the installPackage, the module codes are:
+    //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
+    //     3=uninstall from a script
 
     if (module) {
         if (!mInstalledModules.contains(packageName)) {
@@ -1117,17 +1117,16 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 }
 
 // Similar to the above, a convenience for reading profile data for this host.
-QString Host::readProfileData(const QString & item) {
-    QFile file( QStringLiteral( "%1/.config/mudlet/profiles/%2/%3" )
-                .arg(QDir::homePath(), getName(), item) );
-    bool success = file.open( QIODevice::ReadOnly );
+QString Host::readProfileData(const QString& item)
+{
+    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), getName(), item));
+    bool success = file.open(QIODevice::ReadOnly);
     QString ret;
-    if ( success ) {
-        QDataStream ifs( & file );
+    if (success) {
+        QDataStream ifs(&file);
         ifs >> ret;
         file.close();
     }
 
     return ret;
 }
-

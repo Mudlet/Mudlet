@@ -815,7 +815,7 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     // close IRC client window if it is open.
-    if( mpIrcClientMap.contains(pH) ) {
+    if (mpIrcClientMap.contains(pH)) {
         mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
         mpIrcClientMap[pH]->deleteLater();
     }
@@ -2810,7 +2810,7 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
     emit signal_profileMapReloadRequested(affectedProfiles);
 }
 
-bool mudlet::unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir)
+bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
 {
     int err = 0;
     //from: https://gist.github.com/mobius/1759816
@@ -2919,7 +2919,7 @@ bool mudlet::unzip(const QString &archivePath, const QString &destination, const
 }
 
 // loads the needed edbee theme from disk for use
-bool mudlet::loadEdbeeTheme(const QString &themeName, const QString &themeFile)
+bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 {
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();

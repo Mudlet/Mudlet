@@ -1342,8 +1342,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     if (!newIrcChannels.isEmpty()) {
         QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
-        for( QString s : tL ) {
-            if( s.startsWith("#") || s.startsWith("&") || s.startsWith("+") ) {
+        for (QString s : tL) {
+            if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                 newChanList << s;
             }
         }
@@ -1361,16 +1361,16 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
     }
 
-    if( oldIrcChannels != newIrcChannels ) {
+    if (oldIrcChannels != newIrcChannels) {
         dlgIRC::writeIrcChannels(pHost, newChanList);
     }
 
-    if( oldIrcHost != newIrcHost ) {
+    if (oldIrcHost != newIrcHost) {
         dlgIRC::writeIrcHostName(pHost, newIrcHost);
         restartIrcClient = true;
     }
 
-    if( oldIrcPort != newIrcPort ) {
+    if (oldIrcPort != newIrcPort) {
         dlgIRC::writeIrcHostPort(pHost, nIrcPort);
         restartIrcClient = true;
     }
