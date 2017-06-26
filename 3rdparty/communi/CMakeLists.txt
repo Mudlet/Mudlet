@@ -28,6 +28,12 @@ PROJECT(communi)
 FIND_PACKAGE(Qt5Core REQUIRED)
 FIND_PACKAGE(Qt5Network REQUIRED)
 
+INCLUDE_DIRECTORIES(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcCore
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcModel
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcUtil
+)
+
 SET(SRCS
   src/core/irc.cpp
   src/core/irccommand.cpp
@@ -42,6 +48,20 @@ SET(SRCS
   src/core/ircnetwork.cpp
   src/core/ircprotocol.cpp
   src/3rdparty/mozilla/rdf_utils.c
+  src/model/ircbuffer.cpp
+  src/model/ircbuffermodel.cpp
+  src/model/ircchannel.cpp
+  src/model/ircmodel.cpp
+  src/model/ircuser.cpp
+  src/model/ircusermodel.cpp
+  src/util/irccommandparser.cpp
+  src/util/irccommandqueue.cpp
+  src/util/irccompleter.cpp
+  src/util/irclagtimer.cpp
+  src/util/ircpalette.cpp
+  src/util/irctextformat.cpp
+  src/util/irctoken.cpp
+  src/util/ircutil.cpp
 )
 SET(HDRS
   include/IrcCore/irccommand_p.h
@@ -51,6 +71,15 @@ SET(HDRS
   include/IrcCore/ircmessagecomposer_p.h
   include/IrcCore/ircmessagedecoder_p.h
   include/IrcCore/ircnetwork_p.h
+  include/IrcModel/ircuser_p.h
+  include/IrcModel/ircbuffer_p.h
+  include/IrcModel/ircchannel_p.h
+  include/IrcModel/ircusermodel_p.h
+  include/IrcModel/ircbuffermodel_p.h
+  include/IrcUtil/irctoken_p.h
+  include/IrcUtil/irclagtimer_p.h
+  include/IrcUtil/irccommandqueue_p.h
+  include/IrcUtil/irccommandparser_p.h
 )
 SET(MOC_HDRS
   include/IrcCore/irc.h
@@ -59,6 +88,19 @@ SET(MOC_HDRS
   include/IrcCore/ircmessage.h
   include/IrcCore/ircnetwork.h
   include/IrcCore/ircprotocol.h
+  include/IrcModel/ircbuffer.h
+  include/IrcModel/ircbuffermodel.h
+  include/IrcModel/ircchannel.h
+  include/IrcModel/ircmodel.h
+  include/IrcModel/ircuser.h
+  include/IrcModel/ircusermodel.h
+  include/IrcUtil/irccommandparser.h
+  include/IrcUtil/irccommandqueue.h
+  include/IrcUtil/irccompleter.h
+  include/IrcUtil/irclagtimer.h
+  include/IrcUtil/ircpalette.h
+  include/IrcUtil/irctextformat.h
+  include/IrcUtil/ircutil.h
 )
 SET(PUB_HDRS
   ${MOC_HDRS}
@@ -75,6 +117,19 @@ SET(PUB_HDRS
   include/IrcCore/IrcMessageFilter
   include/IrcCore/IrcNetwork
   include/IrcCore/IrcProtocol
+  include/IrcModel/IrcBuffer
+  include/IrcModel/IrcBufferModel
+  include/IrcModel/IrcChannel
+  include/IrcModel/IrcModel
+  include/IrcModel/IrcUser
+  include/IrcModel/IrcUserModel
+  include/IrcUtil/IrcCommandParser
+  include/IrcUtil/IrcCommandQueue
+  include/IrcUtil/IrcCompleter
+  include/IrcUtil/IrcLagTimer
+  include/IrcUtil/IrcPalette
+  include/IrcUtil/IrcTextFormat
+  include/IrcUtil/IrcUtil
 )
 
 QT5_GENERATE_MOC(include/IrcCore/irc.h ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_irc.cpp)
@@ -84,6 +139,21 @@ QT5_GENERATE_MOC(include/IrcCore/ircmessage.h ${CMAKE_CURRENT_BINARY_DIR}/IrcCor
 QT5_GENERATE_MOC(include/IrcCore/ircmessagecomposer_p.h ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircmessagecomposer_p.cpp)
 QT5_GENERATE_MOC(include/IrcCore/ircnetwork.h ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircnetwork.cpp)
 QT5_GENERATE_MOC(include/IrcCore/ircprotocol.h ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircprotocol.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircusermodel.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircchannel.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircchannel.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircbuffer.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffer.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircbuffermodel_p.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel_p.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircbuffermodel.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircuser.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircuser.cpp)
+QT5_GENERATE_MOC(include/IrcModel/ircusermodel.h ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irccompleter.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccompleter.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irccommandparser.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandparser.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irccommandqueue.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irccommandqueue_p.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue_p.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irclagtimer.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irclagtimer_p.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer_p.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/irctextformat.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irctextformat.cpp)
+QT5_GENERATE_MOC(include/IrcUtil/ircpalette.h ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_ircpalette.cpp)
 
 SET_PROPERTY(SOURCE src/core/irc.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_irc.cpp)
@@ -99,6 +169,36 @@ SET_PROPERTY(SOURCE src/core/ircnetwork.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircnetwork.cpp)
 SET_PROPERTY(SOURCE src/core/ircprotocol.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcCore/moc_ircprotocol.cpp)
+SET_PROPERTY(SOURCE src/model/ircusermodel.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
+SET_PROPERTY(SOURCE src/model/ircchannel.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircchannel.cpp)
+SET_PROPERTY(SOURCE src/model/ircbuffer.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffer.cpp)
+SET_PROPERTY(SOURCE src/model/ircbuffermodel.cpp 
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel.cpp)
+SET_PROPERTY(SOURCE src/model/ircbuffermodel.cpp 
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel_p.cpp)
+SET_PROPERTY(SOURCE src/model/ircuser.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircuser.cpp)
+SET_PROPERTY(SOURCE src/model/ircusermodel.cpp 
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
+SET_PROPERTY(SOURCE src/util/irccompleter.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccompleter.cpp)
+SET_PROPERTY(SOURCE src/util/irccommandparser.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandparser.cpp)
+SET_PROPERTY(SOURCE src/util/irccommandqueue.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue.cpp)
+SET_PROPERTY(SOURCE src/util/irccommandqueue.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccommandqueue_p.cpp)
+SET_PROPERTY(SOURCE src/util/irclagtimer.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer.cpp)
+SET_PROPERTY(SOURCE src/util/irclagtimer.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irclagtimer_p.cpp)
+SET_PROPERTY(SOURCE src/util/irctextformat.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irctextformat.cpp)
+SET_PROPERTY(SOURCE src/util/ircpalette.cpp
+  APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_ircpalette.cpp)
 
 ADD_LIBRARY(communi STATIC ${SRCS} ${HDRS} ${PUB_HDRS})
 
@@ -106,9 +206,13 @@ TARGET_LINK_LIBRARIES(communi ${Qt5Core_LIBRARIES} ${Qt5Network_LIBRARIES})
 
 TARGET_INCLUDE_DIRECTORIES(communi PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/IrcCore
+  ${CMAKE_CURRENT_BINARY_DIR}/IrcModel
+  ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil
 )
 TARGET_INCLUDE_DIRECTORIES(communi PUBLIC
   ${Qt5Core_INCLUDE_DIRS}
   ${Qt5Network_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcCore
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcModel
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/IrcUtil
 )

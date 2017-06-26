@@ -34,7 +34,7 @@
 #include "post_guard.h"
 
 
-TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
+TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget( pW )
 , mpTAction( pA )
 , mVerticalOrientation( false )
@@ -65,15 +65,16 @@ TToolBar::TToolBar( TAction * pA, const QString& name, QWidget * pW )
     mpWidget->setStyleSheet(mpTAction->css);
 }
 
-void TToolBar::resizeEvent(QResizeEvent *e) {
-    if( ! mudlet::self()->mIsLoadingLayout ) {
+void TToolBar::resizeEvent(QResizeEvent* e)
+{
+    if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
     }
 }
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if( ! mudlet::self()->mIsLoadingLayout ) {
+    if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
     }
 
@@ -87,13 +88,15 @@ void TToolBar::moveEvent(QMoveEvent* e)
     e->ignore();
 }
 
-void TToolBar::slot_dockLocationChanged(Qt::DockWidgetArea dwArea) {
+void TToolBar::slot_dockLocationChanged(Qt::DockWidgetArea dwArea)
+{
     if (mpTAction) {
         mpTAction->mToolbarLastDockArea = dwArea;
     }
 }
 
-void TToolBar::slot_topLevelChanged(bool topLevel) {
+void TToolBar::slot_topLevelChanged(bool topLevel)
+{
     if (mpTAction) {
         mpTAction->mToolbarLastFloatingState = topLevel;
     }
@@ -173,9 +176,9 @@ void TToolBar::finalize()
     int row = (++mItemCount) / columns;
     int column = (mItemCount - 1) % columns;
     mpLayout->addWidget(fillerWidget, row, column);
-// 3 lines above are to avoid order of operations problem of orginal line
-// (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
-//    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
+    // 3 lines above are to avoid order of operations problem of orginal line
+    // (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
+    //    mpLayout->addWidget( fillerWidget, ++mItemCount/columns, mItemCount%columns );
 }
 
 // Used by buttons directly on a TToolBar instance but NOT on sub-menu item - we
@@ -221,8 +224,9 @@ void TToolBar::clear()
         mpLayout->setSpacing(0);
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
-    } else
+    } else {
         mpLayout = 0;
+    }
     auto test = new QWidget;
     setStyleSheet(mpTAction->css);
     mpWidget->setStyleSheet(mpTAction->css);

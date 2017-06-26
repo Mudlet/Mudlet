@@ -172,11 +172,10 @@ public:
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
     QMap<QTimer*, TTimer*> mTimerMap;
-    dlgIRC* mpIRC;
+    QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
-    QString mIrcNick;
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;

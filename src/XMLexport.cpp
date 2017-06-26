@@ -542,8 +542,8 @@ bool XMLexport::writeHost(Host* pHost)
 
     if (isOk) {
         writeStartElement("KeyPackage");
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTempKey() || (*it)->mModuleMember) {
+        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+            if (!(*it) || (*it)->isTempKey() || (*it)->mModuleMember) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -707,10 +707,10 @@ bool XMLexport::writeGenericPackage(Host* pHost)
         writeEndElement(); // </ScriptPackage>
     }
 
-    if( isOk ) {
-        writeStartElement( "KeyPackage" );
-        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
-            if( ! (*it) || (*it)->isTempKey() ) {
+    if (isOk) {
+        writeStartElement("KeyPackage");
+        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
+            if (!(*it) || (*it)->isTempKey()) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -1132,7 +1132,7 @@ bool XMLexport::writeKey(TKey* pT)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeScriptElement(const QString & script)
+bool XMLexport::writeScriptElement(const QString& script)
 {
     QString localScript = script;
     localScript.replace(QChar('\x01'), QStringLiteral("\xFFFC\x2401")); // SOH
@@ -1165,6 +1165,6 @@ bool XMLexport::writeScriptElement(const QString & script)
     localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
     localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
     writeTextElement(QLatin1String("script"), localScript);
-    
+
     return (!hasError());
 }
