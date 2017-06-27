@@ -1116,35 +1116,33 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
 {
     QString uniqueName, eventName, parent, displayName;
     QStringList actionInfo;
-    if( ! lua_isstring( L, 1 ) )
-    {
+    if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "addMapEvent: bad argument #1 type (uniquename as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
-        uniqueName = QString::fromUtf8( lua_tostring(L, 1) );
+        uniqueName = QString::fromUtf8(lua_tostring(L, 1));
     }
-    if( ! lua_isstring( L, 2 ) )
-    {
+    if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "addMapEvent: bad argument #2 type (event name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
-        actionInfo << QString::fromUtf8( lua_tostring(L, 2) );
+        actionInfo << QString::fromUtf8(lua_tostring(L, 2));
     }
     if (!lua_isstring(L, 3)) {
         actionInfo << "";
     } else {
-        actionInfo << QString::fromUtf8( lua_tostring(L, 3) );
+        actionInfo << QString::fromUtf8(lua_tostring(L, 3));
     }
     if (!lua_isstring(L, 4)) {
         actionInfo << uniqueName;
     } else {
-        actionInfo << QString::fromUtf8( lua_tostring(L, 4) );
+        actionInfo << QString::fromUtf8(lua_tostring(L, 4));
     }
     //variable number of arguments
     for (int i = 5; i <= lua_gettop(L); i++) {
-        actionInfo << QString::fromUtf8( lua_tostring( L, i ) );
+        actionInfo << QString::fromUtf8(lua_tostring(L, i));
     }
     qDebug() << actionInfo;
     Host& host = getHostFromLua(L);
@@ -1191,21 +1189,23 @@ int TLuaInterpreter::getMapEvents(lua_State* L)
                 while (it.hasNext()) {
                     it.next();
                     QStringList eventInfo = it.value();
-lua_createtable( L, 0, 4 );                    lua_pushstring( L, eventInfo[0].toUtf8().constData() );
-                    lua_setfield( L, -2, "event name" );
-                    lua_pushstring( L, eventInfo[1].toUtf8().constData() );
-                    lua_setfield( L, -2, "parent" );
-                    lua_pushstring( L, eventInfo[2].toUtf8().constData() );
+                    lua_createtable(L, 0, 4);
+                    lua_pushstring(L, eventInfo[0].toUtf8().constData());
+                    lua_setfield(L, -2, "event name");
+                    lua_pushstring(L, eventInfo[1].toUtf8().constData());
+                    lua_setfield(L, -2, "parent");
+                    lua_pushstring(L, eventInfo[2].toUtf8().constData());
                     lua_setfield(L, -2, "display name");
                     lua_createtable(L, eventInfo.length() - 3, 0);
-                    for(int i = 3; i < eventInfo.length(); i++){
-                        lua_pushinteger(L,i-2);//lua indexes are 1 based!
-                        lua_pushstring( L, eventInfo[i].toUtf8().constData() );
-                    lua_settable(L, -3);}
-                    lua_setfield( L, -2, "arguments" );
+                    for (int i = 3; i < eventInfo.length(); i++) {
+                        lua_pushinteger(L, i - 2); //lua indexes are 1 based!
+                        lua_pushstring(L, eventInfo[i].toUtf8().constData());
+                        lua_settable(L, -3);
+                    }
+                    lua_setfield(L, -2, "arguments");
 
                     // Add the mapEvent object to the result table
-                    lua_setfield( L, -2, it.key().toUtf8().constData() );
+                    lua_setfield(L, -2, it.key().toUtf8().constData());
                 }
             }
             return 1;
