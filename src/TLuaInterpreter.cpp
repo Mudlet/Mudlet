@@ -1190,16 +1190,16 @@ int TLuaInterpreter::getMapEvents(lua_State* L)
                     it.next();
                     QStringList eventInfo = it.value();
                     lua_createtable(L, 0, 4);
-                    lua_pushstring(L, eventInfo[0].toUtf8().constData());
+                    lua_pushstring(L, eventInfo.at(0).toUtf8().constData());
                     lua_setfield(L, -2, "event name");
-                    lua_pushstring(L, eventInfo[1].toUtf8().constData());
+                    lua_pushstring(L, eventInfo.at(1).toUtf8().constData());
                     lua_setfield(L, -2, "parent");
-                    lua_pushstring(L, eventInfo[2].toUtf8().constData());
+                    lua_pushstring(L, eventInfo.at(2).toUtf8().constData());
                     lua_setfield(L, -2, "display name");
                     lua_createtable(L, eventInfo.length() - 3, 0);
                     for (int i = 3; i < eventInfo.length(); i++) {
                         lua_pushinteger(L, i - 2); //lua indexes are 1 based!
-                        lua_pushstring(L, eventInfo[i].toUtf8().constData());
+                        lua_pushstring(L, eventInfo.at(i).toUtf8().constData());
                         lua_settable(L, -3);
                     }
                     lua_setfield(L, -2, "arguments");
