@@ -26,6 +26,7 @@ addons:
     - lua-rex-pcre
     - lua-filesystem
     - lua-zip
+    - lua-sql-sqlite3
 compiler:
   - gcc
   - clang
