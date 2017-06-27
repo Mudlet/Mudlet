@@ -673,7 +673,7 @@ function condenseMapLoad()
   for i = 1,30 do
     moveCursor(0,getLineCount()-i)
     local line = getCurrentLine()
-    if line:find("WARN") or line:find("ERROR") or line:find("ALERT") then
+    if line:find("ALERT") or line:find("WARN") or line:find("ERROR") then
       return nil, "an alert, warning, or error that the user must see is present"
     elseif startswith(line, "[ INFO ]  - Reading map") then
       linestodelete = i
