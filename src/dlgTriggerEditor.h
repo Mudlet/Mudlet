@@ -266,7 +266,6 @@ private:
     void importFromClipboard();
 
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
-    edbee::CharTextDocument* newTextDocument();
 
     QToolBar* toolBar;
     QToolBar* toolBar2;

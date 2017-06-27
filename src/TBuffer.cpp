@@ -588,40 +588,33 @@ TChar::TChar()
     link = 0;
 }
 
-TChar::TChar( int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u, bool s, int _link )
-: fgR(fR)
-, fgG(fG)
-, fgB(fB)
-, bgR(bR)
-, bgG(bG)
-, bgB(bB)
-, link(_link )
+TChar::TChar(int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u, bool s, int _link) : fgR(fR), fgG(fG), fgB(fB), bgR(bR), bgG(bG), bgB(bB), link(_link)
 {
     flags = 0;
-    if (i)
+    if (i) {
         flags |= TCHAR_ITALICS;
-    if (b)
+    }
+    if (b) {
         flags |= TCHAR_BOLD;
-    if (u)
+    }
+    if (u) {
         flags |= TCHAR_UNDERLINE;
-    if (s)
+    }
+    if (s) {
         flags |= TCHAR_STRIKEOUT;
+    }
 }
 
-TChar::TChar( Host * pH )
+TChar::TChar(Host* pH)
 {
-    if( pH )
-    {
+    if (pH) {
         fgR = pH->mFgColor.red();
         fgG = pH->mFgColor.green();
         fgB = pH->mFgColor.blue();
         bgR = pH->mBgColor.red();
         bgG = pH->mBgColor.green();
         bgB = pH->mBgColor.blue();
-    }
-    else
-    {
-
+    } else {
         fgR = 255;
         fgG = 255;
         fgB = 255;
@@ -633,20 +626,36 @@ TChar::TChar( Host * pH )
     link = 0;
 }
 
-bool TChar::operator==( const TChar & c )
+bool TChar::operator==(const TChar& c)
 {
-    if( fgR != c.fgR ) return false;
-    if( fgG != c.fgG ) return false;
-    if( fgB != c.fgB ) return false;
-    if( bgR != c.bgR ) return false;
-    if( bgG != c.bgG ) return false;
-    if( bgB != c.bgB ) return false;
-    if( flags != c.flags ) return false;
-    if( link != c.link ) return false;
+    if (fgR != c.fgR) {
+        return false;
+    }
+    if (fgG != c.fgG) {
+        return false;
+    }
+    if (fgB != c.fgB) {
+        return false;
+    }
+    if (bgR != c.bgR) {
+        return false;
+    }
+    if (bgG != c.bgG) {
+        return false;
+    }
+    if (bgB != c.bgB) {
+        return false;
+    }
+    if (flags != c.flags) {
+        return false;
+    }
+    if (link != c.link) {
+        return false;
+    }
     return true;
 }
 
-TChar::TChar( const TChar & copy )
+TChar::TChar(const TChar& copy)
 {
     fgR = copy.fgR;
     fgG = copy.fgG;
@@ -656,58 +665,58 @@ TChar::TChar( const TChar & copy )
     bgB = copy.bgB;
     flags = copy.flags;
     link = copy.link;
-    flags &= ~(TCHAR_INVERSE);//for some reason we always clear the inverse, is this a bug?
+    flags &= ~(TCHAR_INVERSE); //for some reason we always clear the inverse, is this a bug?
 }
 
 
-TBuffer::TBuffer( Host * pH )
-: mLinkID            ( 0 )
-, mLinesLimit        ( 10000 )
-, mBatchDeleteSize   ( 1000 )
-, mUntriggered       ( 0 )
-, mWrapAt            ( 99999999 )
-, mWrapIndent        ( 0 )
-, mCursorY           ( 0 )
-, mMXP               ( false )
-, mAssemblingToken   ( false )
-, currentToken       ( "" )
-, openT              ( 0 )
-, closeT             ( 0 )
-, mMXP_LINK_MODE     ( false )
-, mIgnoreTag         ( false )
-, mSkip              ( "" )
-, mParsingVar        ( false )
-, mMXP_SEND_NO_REF_MODE ( false )
-, gotESC             ( false )
-, gotHeader          ( false )
-, codeRet            ( 0 )
-, mBlack             ( pH->mBlack )
-, mLightBlack        ( pH->mLightBlack )
-, mRed               ( pH->mRed )
-, mLightRed          ( pH->mLightRed )
-, mLightGreen        ( pH->mLightGreen )
-, mGreen             ( pH->mGreen )
-, mLightBlue         ( pH->mLightBlue )
-, mBlue              ( pH->mBlue )
-, mLightYellow       ( pH->mLightYellow )
-, mYellow            ( pH->mYellow )
-, mLightCyan         ( pH->mLightCyan )
-, mCyan              ( pH->mCyan )
-, mLightMagenta      ( pH->mLightMagenta )
-, mMagenta           ( pH->mMagenta )
-, mLightWhite        ( pH->mLightWhite )
-, mWhite             ( pH->mWhite )
-, mFgColor           ( pH->mFgColor )
-, mBgColor           ( pH->mBgColor )
-, mpHost             ( pH )
-, mCursorMoved       ( false )
-, mBold              ( false )
-, mItalics           ( false )
-, mUnderline         ( false )
-, mStrikeOut         ( false )
-, mFgColorCode       ( false )
-, mBgColorCode       ( false )
-, mIsHighColorMode   ( false )
+TBuffer::TBuffer(Host* pH)
+: mLinkID(0)
+, mLinesLimit(10000)
+, mBatchDeleteSize(1000)
+, mUntriggered(0)
+, mWrapAt(99999999)
+, mWrapIndent(0)
+, mCursorY(0)
+, mMXP(false)
+, mAssemblingToken(false)
+, currentToken("")
+, openT(0)
+, closeT(0)
+, mMXP_LINK_MODE(false)
+, mIgnoreTag(false)
+, mSkip("")
+, mParsingVar(false)
+, mMXP_SEND_NO_REF_MODE(false)
+, gotESC(false)
+, gotHeader(false)
+, codeRet(0)
+, mBlack(pH->mBlack)
+, mLightBlack(pH->mLightBlack)
+, mRed(pH->mRed)
+, mLightRed(pH->mLightRed)
+, mLightGreen(pH->mLightGreen)
+, mGreen(pH->mGreen)
+, mLightBlue(pH->mLightBlue)
+, mBlue(pH->mBlue)
+, mLightYellow(pH->mLightYellow)
+, mYellow(pH->mYellow)
+, mLightCyan(pH->mLightCyan)
+, mCyan(pH->mCyan)
+, mLightMagenta(pH->mLightMagenta)
+, mMagenta(pH->mMagenta)
+, mLightWhite(pH->mLightWhite)
+, mWhite(pH->mWhite)
+, mFgColor(pH->mFgColor)
+, mBgColor(pH->mBgColor)
+, mpHost(pH)
+, mCursorMoved(false)
+, mBold(false)
+, mItalics(false)
+, mUnderline(false)
+, mStrikeOut(false)
+, mFgColorCode(false)
+, mBgColorCode(false)
+, mIsHighColorMode(false)
 , speedTP()
 , speedSequencer()
 , speedAppend()
@@ -737,15 +746,19 @@ TBuffer::TBuffer( Host * pH )
 
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
-    for ( auto table : csmEncodingTable ) {
+    for (auto table : csmEncodingTable) {
         Q_ASSERT_X(table.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
 }
 
-void TBuffer::setBufferSize( int s, int batch )
+void TBuffer::setBufferSize(int s, int batch)
 {
-    if( s < 100 ) s = 100;
-    if( batch >= s ) batch = s/10;
+    if (s < 100) {
+        s = 100;
+    }
+    if (batch >= s) {
+        batch = s / 10;
+    }
     mLinesLimit = s;
     mBatchDeleteSize = batch;
 }
@@ -766,71 +779,71 @@ void TBuffer::resetFontSpecs()
 
 void TBuffer::updateColors()
 {
-    Host * pH = mpHost;
+    Host* pH = mpHost;
     mBlack = pH->mBlack;
-    mBlackR=mBlack.red();
-    mBlackG=mBlack.green();
-    mBlackB=mBlack.blue();
+    mBlackR = mBlack.red();
+    mBlackG = mBlack.green();
+    mBlackB = mBlack.blue();
     mLightBlack = pH->mLightBlack;
     mLightBlackR = mLightBlack.red();
-    mLightBlackG=mLightBlack.green();
-    mLightBlackB=mLightBlack.blue();
+    mLightBlackG = mLightBlack.green();
+    mLightBlackB = mLightBlack.blue();
     mRed = pH->mRed;
-    mRedR=mRed.red();
-    mRedG=mRed.green();
-    mRedB=mRed.blue();
+    mRedR = mRed.red();
+    mRedG = mRed.green();
+    mRedB = mRed.blue();
     mLightRed = pH->mLightRed;
-    mLightRedR=mLightRed.red();
-    mLightRedG=mLightRed.green();
-    mLightRedB=mLightRed.blue();
+    mLightRedR = mLightRed.red();
+    mLightRedG = mLightRed.green();
+    mLightRedB = mLightRed.blue();
     mLightGreen = pH->mLightGreen;
-    mLightGreenR=mLightGreen.red();
-    mLightGreenG=mLightGreen.green();
-    mLightGreenB=mLightGreen.blue();
+    mLightGreenR = mLightGreen.red();
+    mLightGreenG = mLightGreen.green();
+    mLightGreenB = mLightGreen.blue();
     mGreen = pH->mGreen;
-    mGreenR=mGreen.red();
-    mGreenG=mGreen.green();
-    mGreenB=mGreen.blue();
+    mGreenR = mGreen.red();
+    mGreenG = mGreen.green();
+    mGreenB = mGreen.blue();
     mLightBlue = pH->mLightBlue;
-    mLightBlueR=mLightBlue.red();
-    mLightBlueG=mLightBlue.green();
-    mLightBlueB=mLightBlue.blue();
+    mLightBlueR = mLightBlue.red();
+    mLightBlueG = mLightBlue.green();
+    mLightBlueB = mLightBlue.blue();
     mBlue = pH->mBlue;
-    mBlueR=mBlue.red();
-    mBlueG=mBlue.green();
-    mBlueB=mBlue.blue();
-    mLightYellow  = pH->mLightYellow;
-    mLightYellowR=mLightYellow.red();
-    mLightYellowG=mLightYellow.green();
-    mLightYellowB=mLightYellow.blue();
+    mBlueR = mBlue.red();
+    mBlueG = mBlue.green();
+    mBlueB = mBlue.blue();
+    mLightYellow = pH->mLightYellow;
+    mLightYellowR = mLightYellow.red();
+    mLightYellowG = mLightYellow.green();
+    mLightYellowB = mLightYellow.blue();
     mYellow = pH->mYellow;
-    mYellowR=mYellow.red();
-    mYellowG=mYellow.green();
-    mYellowB=mYellow.blue();
+    mYellowR = mYellow.red();
+    mYellowG = mYellow.green();
+    mYellowB = mYellow.blue();
     mLightCyan = pH->mLightCyan;
-    mLightCyanR=mLightCyan.red();
-    mLightCyanG=mLightCyan.green();
-    mLightCyanB=mLightCyan.blue();
+    mLightCyanR = mLightCyan.red();
+    mLightCyanG = mLightCyan.green();
+    mLightCyanB = mLightCyan.blue();
     mCyan = pH->mCyan;
-    mCyanR=mCyan.red();
-    mCyanG=mCyan.green();
-    mCyanB=mCyan.blue();
+    mCyanR = mCyan.red();
+    mCyanG = mCyan.green();
+    mCyanB = mCyan.blue();
     mLightMagenta = pH->mLightMagenta;
-    mLightMagentaR=mLightMagenta.red();
-    mLightMagentaG=mLightMagenta.green();
-    mLightMagentaB=mLightMagenta.blue();
+    mLightMagentaR = mLightMagenta.red();
+    mLightMagentaG = mLightMagenta.green();
+    mLightMagentaB = mLightMagenta.blue();
     mMagenta = pH->mMagenta;
-    mMagentaR=mMagenta.red();
-    mMagentaG=mMagenta.green();
-    mMagentaB=mMagenta.blue();
+    mMagentaR = mMagenta.red();
+    mMagentaG = mMagenta.green();
+    mMagentaB = mMagenta.blue();
     mLightWhite = pH->mLightWhite;
-    mLightWhiteR=mLightWhite.red();
-    mLightWhiteG=mLightWhite.green();
-    mLightWhiteB=mLightWhite.blue();
+    mLightWhiteR = mLightWhite.red();
+    mLightWhiteG = mLightWhite.green();
+    mLightWhiteB = mLightWhite.blue();
     mWhite = pH->mWhite;
-    mWhiteR=mWhite.red();
-    mWhiteG=mWhite.green();
-    mWhiteB=mWhite.blue();
+    mWhiteR = mWhite.red();
+    mWhiteG = mWhite.green();
+    mWhiteB = mWhite.blue();
     mFgColor = pH->mFgColor;
     mBgColor = pH->mBgColor;
     mFgColorR = mFgColor.red();
@@ -848,7 +861,6 @@ void TBuffer::updateColors()
     bgColorG = mBgColorG;
     mBgColorB = mBgColor.blue();
     bgColorB = mBgColorB;
-
 }
 
 QPoint TBuffer::getEndPos()
@@ -856,7 +868,7 @@ QPoint TBuffer::getEndPos()
     int x = 0;
     int y = 0;
     if (!buffer.empty()) {
-        y = buffer.size()-1;
+        y = buffer.size() - 1;
         if (!buffer.at(y).empty()) {
             x = buffer.at(y).size() - 1;
         }
@@ -867,58 +879,51 @@ QPoint TBuffer::getEndPos()
 
 int TBuffer::getLastLineNumber()
 {
-    if( static_cast<int>(buffer.size()) > 0 )
-    {
-        return static_cast<int>(buffer.size())-1;
-    }
-    else
-    {
-        return 0;//-1;
+    if (static_cast<int>(buffer.size()) > 0) {
+        return static_cast<int>(buffer.size()) - 1;
+    } else {
+        return 0; //-1;
     }
 }
 
-void TBuffer::addLink( bool trigMode, const QString & text, QStringList & command, QStringList & hint, TChar format )
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
     mLinkID++;
-    if( mLinkID > 1000 )
-    {
+    if (mLinkID > 1000) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = command;
     mHintStore[mLinkID] = hint;
-    if( ! trigMode )
-    {
-        append( text,
-                0,
-                text.length(),
-                format.fgR,
-                format.fgG,
-                format.fgB,
-                format.bgR,
-                format.bgG,
-                format.bgB,
-                format.flags & TCHAR_BOLD,
-                format.flags & TCHAR_ITALICS,
-                format.flags & TCHAR_UNDERLINE,
-                format.flags & TCHAR_STRIKEOUT,
-                mLinkID );
-    }
-    else
-    {
-        appendLine( text,
-                    0,
-                    text.length(),
-                    format.fgR,
-                    format.fgG,
-                    format.fgB,
-                    format.bgR,
-                    format.bgG,
-                    format.bgB,
-                    format.flags & TCHAR_BOLD,
-                    format.flags & TCHAR_ITALICS,
-                    format.flags & TCHAR_UNDERLINE,
-                    format.flags & TCHAR_STRIKEOUT,
-                    mLinkID );
+    if (!trigMode) {
+        append(text,
+               0,
+               text.length(),
+               format.fgR,
+               format.fgG,
+               format.fgB,
+               format.bgR,
+               format.bgG,
+               format.bgB,
+               format.flags & TCHAR_BOLD,
+               format.flags & TCHAR_ITALICS,
+               format.flags & TCHAR_UNDERLINE,
+               format.flags & TCHAR_STRIKEOUT,
+               mLinkID);
+    } else {
+        appendLine(text,
+                   0,
+                   text.length(),
+                   format.fgR,
+                   format.fgG,
+                   format.fgB,
+                   format.bgR,
+                   format.bgG,
+                   format.bgB,
+                   format.flags & TCHAR_BOLD,
+                   format.flags & TCHAR_ITALICS,
+                   format.flags & TCHAR_UNDERLINE,
+                   format.flags & TCHAR_STRIKEOUT,
+                   mLinkID);
     }
 }
 
@@ -1100,9 +1105,9 @@ void TBuffer::addLink( bool trigMode, const QString & text, QStringList & comman
       separated by ':' but some interpretations erronously use ';'.  Also
       "empty" parameter elements represent a default value and that empty
       elements at the end can be omitted.
-      */
+ */
 
-void TBuffer::translateToPlainText( std::string & incoming, const bool isFromServer )
+void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
     const QString cDigit = "0123456789";
 
@@ -1112,16 +1117,13 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
     // asynchronously by the QNetwork code that runs in another thread:
     std::string localBuffer;
 
-    Host * pHost = mpHost;
-    if (! pHost) {
+    Host* pHost = mpHost;
+    if (!pHost) {
         qWarning() << "TBuffer::translateToPlainText(...) ERROR: Cannot access Host instance at this time - data has been lost.";
         return; // We really have a problem
     }
 
-    if (isFromServer
-        && ! mIncompleteUtf8SequenceBytes.empty()
-        && pHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
-
+    if (isFromServer && !mIncompleteUtf8SequenceBytes.empty() && pHost->mTelnet.getEncoding() == QLatin1String("UTF-8")) {
 #if defined(DEBUG_UTF8_PROCESSING)
         qDebug() << "TBuffer::translateToPlainText(...) Prepending residual UTF-8 bytes onto incoming data!";
 #endif
@@ -1142,35 +1144,30 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
     speedAppend = 0;
     speedTP = 0;
-    int numCodes=0;
+    int numCodes = 0;
     speedSequencer = 0;
-    mUntriggered = lineBuffer.size()-1;
+    mUntriggered = lineBuffer.size() - 1;
     size_t localBufferLength = localBuffer.length();
     size_t localBufferPosition = 0;
-    if (! localBufferLength) {
+    if (!localBufferLength) {
         return;
     }
 
     QString encoding = mpHost->mTelnet.getEncoding();
 
-    while( true )
-    {
-        DECODE:
-        if( localBufferPosition >= localBufferLength )
-        {
+    while (true) {
+    DECODE:
+        if (localBufferPosition >= localBufferLength) {
             return;
         }
-        char & ch = localBuffer[localBufferPosition];
-        if( ch == '\033' )
-        {
+        char& ch = localBuffer[localBufferPosition];
+        if (ch == '\033') {
             gotESC = true;
             ++localBufferPosition;
             continue;
         }
-        if( gotESC )
-        {
-            if( ch == '[' )
-            {
+        if (gotESC) {
+            if (ch == '[') {
                 gotHeader = true;
                 gotESC = false;
                 ++localBufferPosition;
@@ -1178,31 +1175,26 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             }
         }
 
-        if( gotHeader )
-        {
-            while( localBufferPosition < localBufferLength )
-            {
+        if (gotHeader) {
+            while (localBufferPosition < localBufferLength) {
                 QChar ch2 = localBuffer[localBufferPosition];
 
-                if( ch2 == 'z' )
-                {
+                if (ch2 == 'z' && !mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                     gotHeader = false;
                     gotESC = false;
+
                     // MXP line modes
 
                     // locked mode
-                    if( code == "7" || code == "2" )
-                    {
+                    if (code == "7" || code == "2") {
                         mMXP = false;
                     }
                     // secure mode
-                    if( code == "1" || code == "6" || code == "4" )
-                    {
+                    if (code == "1" || code == "6" || code == "4") {
                         mMXP = true;
                     }
                     // reset
-                    if( code == "3" )
-                    {
+                    if (code == "3") {
                         closeT = 0;
                         openT = 0;
                         mAssemblingToken = false;
@@ -1214,23 +1206,18 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     ++localBufferPosition;
                     goto DECODE;
                 }
-                int digit = cDigit.indexOf( ch2 );
-                if( digit > -1 )
-                {
-                    code.append( ch2 );
+                int digit = cDigit.indexOf(ch2);
+                if (digit > -1) {
+                    code.append(ch2);
                     ++localBufferPosition;
                     continue;
-                }
-                else if( ch2 == ';' )
-                {
+                } else if (ch2 == ';') {
                     codeRet++;
                     mCode[codeRet] = code.toInt();
                     code.clear();
                     ++localBufferPosition;
                     continue;
-                }
-                else if( ch2 == 'm' )
-                {
+                } else if (ch2 == 'm') {
                     codeRet++;
                     mCode[codeRet] = code.toInt();
                     code.clear();
@@ -1238,30 +1225,22 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     ++localBufferPosition;
 
                     numCodes += codeRet;
-                    for( int i=1; i<codeRet+1; i++ )
-                    {
+                    for (int i = 1; i < codeRet + 1; i++) {
                         int tag = mCode[i];
-                        if( mWaitingForHighColorCode )
-                        {
-                            if( mHighColorModeForeground )
-                            {
-                                if( tag < 16 )
-                                {
+                        if (mWaitingForHighColorCode) {
+                            if (mHighColorModeForeground) {
+                                if (tag < 16) {
                                     mHighColorModeForeground = false;
                                     mWaitingForHighColorCode = false;
                                     mIsHighColorMode = false;
 
-                                    if( tag >= 8 )
-                                    {
+                                    if (tag >= 8) {
                                         tag -= 8;
                                         mBold = true;
-                                    }
-                                    else
-                                    {
+                                    } else {
                                         mBold = false;
                                     }
-                                    switch(tag)
-                                    {
+                                    switch (tag) {
                                     case 0:
                                         fgColorR = mBlackR;
                                         fgColorG = mBlackG;
@@ -1334,31 +1313,27 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                         fgColorLightB = mLightWhiteB;
                                         mIsDefaultColor = false;
                                         break;
-                                     }
+                                    }
                                     continue;
-                                }
-                                else if( tag < 232 )
-                                {
-                                    tag-=16; // because color 1-15 behave like normal ANSI colors
+                                } else if (tag < 232) {
+                                    tag -= 16; // because color 1-15 behave like normal ANSI colors
                                     // 6x6x6 RGB color space
                                     int r = tag / 36;
-                                    int g = (tag-(r*36)) / 6;
-                                    int b = (tag-(r*36))-(g*6);
+                                    int g = (tag - (r * 36)) / 6;
+                                    int b = (tag - (r * 36)) - (g * 6);
                                     // Did use 42 as a factor but that isn't
                                     // right as it yields:
                                     // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
                                     // 6 x 42 DOES equal 252 BUT IT IS OUT OF
                                     // RANGE... Instead we should use 51:
                                     // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-                                    fgColorR = r*51;
-                                    fgColorLightR = r*51;
-                                    fgColorG = g*51;
-                                    fgColorLightG = g*51;
-                                    fgColorB = b*51;
-                                    fgColorLightB = b*51;
-                                }
-                                else
-                                {
+                                    fgColorR = r * 51;
+                                    fgColorLightR = r * 51;
+                                    fgColorG = g * 51;
+                                    fgColorLightG = g * 51;
+                                    fgColorB = b * 51;
+                                    fgColorLightB = b * 51;
+                                } else {
                                     // black + 23 tone grayscale from dark to light gray
                                     // Similiar to RGB case the multipler is a bit off
                                     // we have been using 10 but 23 x 10 = 230
@@ -1368,33 +1343,33 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                     int value;
                                     switch( tag )
                                     {
-                                    case 232:   value =   0; break; //   0.000
-                                    case 233:   value =  11; break; //  11.087
-                                    case 234:   value =  22; break; //  22.174
-                                    case 235:   value =  33; break; //  33.261
-                                    case 236:   value =  44; break; //  44.348
-                                    case 237:   value =  55; break; //  55.435
-                                    case 238:   value =  67; break; //  66.522
-                                    case 239:   value =  78; break; //  77.609
-                                    case 240:   value =  89; break; //  88.696
-                                    case 241:   value = 100; break; //  99.783
-                                    case 242:   value = 111; break; // 110.870
-                                    case 243:   value = 122; break; // 121.957
-                                    case 244:   value = 133; break; // 133.043
-                                    case 245:   value = 144; break; // 144.130
-                                    case 246:   value = 155; break; // 155.217
-                                    case 247:   value = 166; break; // 166.304
-                                    case 248:   value = 177; break; // 177.391
-                                    case 249:   value = 188; break; // 188.478
-                                    case 250:   value = 200; break; // 199.565
-                                    case 251:   value = 211; break; // 210.652
-                                    case 252:   value = 222; break; // 221.739
-                                    case 253:   value = 233; break; // 232.826
-                                    case 254:   value = 244; break; // 243.913
-                                    case 255:   value = 255; break; // 255.000
-                                    default:
-                                        value = 192;
-                                        qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for foreground failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to light-grey!";
+                                        case 232:   value =   0; break; //   0.000
+                                        case 233:   value =  11; break; //  11.087
+                                        case 234:   value =  22; break; //  22.174
+                                        case 235:   value =  33; break; //  33.261
+                                        case 236:   value =  44; break; //  44.348
+                                        case 237:   value =  55; break; //  55.435
+                                        case 238:   value =  67; break; //  66.522
+                                        case 239:   value =  78; break; //  77.609
+                                        case 240:   value =  89; break; //  88.696
+                                        case 241:   value = 100; break; //  99.783
+                                        case 242:   value = 111; break; // 110.870
+                                        case 243:   value = 122; break; // 121.957
+                                        case 244:   value = 133; break; // 133.043
+                                        case 245:   value = 144; break; // 144.130
+                                        case 246:   value = 155; break; // 155.217
+                                        case 247:   value = 166; break; // 166.304
+                                        case 248:   value = 177; break; // 177.391
+                                        case 249:   value = 188; break; // 188.478
+                                        case 250:   value = 200; break; // 199.565
+                                        case 251:   value = 211; break; // 210.652
+                                        case 252:   value = 222; break; // 221.739
+                                        case 253:   value = 233; break; // 232.826
+                                        case 254:   value = 244; break; // 243.913
+                                        case 255:   value = 255; break; // 255.000
+                                        default:
+                                            value = 192;
+                                            qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for foreground failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to light-grey!";
                                     }
 
                                     fgColorR = value;
@@ -1410,29 +1385,23 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                 continue;
                             }
 
-                            if( mHighColorModeBackground )
-                            {
-                                if( tag < 16 )
-                                {
+                            if (mHighColorModeBackground) {
+                                if (tag < 16) {
                                     mHighColorModeBackground = false;
                                     mWaitingForHighColorCode = false;
                                     mIsHighColorMode = false;
 
                                     bool _bold;
-                                    if( tag >= 8 )
-                                    {
+                                    if (tag >= 8) {
                                         tag -= 8;
                                         _bold = true;
-                                    }
-                                    else
-                                    {
+                                    } else {
                                         _bold = false;
                                     }
                                     int bgColorLightR = 0;
                                     int bgColorLightG = 0;
                                     int bgColorLightB = 0;
-                                    switch( tag )
-                                    {
+                                    switch (tag) {
                                     case 0:
                                         bgColorR = mBlackR;
                                         bgColorG = mBlackG;
@@ -1506,57 +1475,53 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                                         mIsDefaultColor = false;
                                         break;
                                     }
-                                    if( _bold )
-                                    {
+                                    if (_bold) {
                                         bgColorR = bgColorLightR;
                                         bgColorG = bgColorLightG;
                                         bgColorB = bgColorLightB;
                                     }
                                     continue;
                                 }
-                                if( tag < 232 )
-                                {
-                                    tag-=16;
+                                if (tag < 232) {
+                                    tag -= 16;
                                     int r = tag / 36;
-                                    int g = (tag-(r*36)) / 6;
-                                    int b = (tag-(r*36))-(g*6);
-                                    bgColorR = r*51;
-                                    bgColorG = g*51;
-                                    bgColorB = b*51;
-                                }
-                                else
-                                {
+                                    int g = (tag - (r * 36)) / 6;
+                                    int b = (tag - (r * 36)) - (g * 6);
+                                    bgColorR = r * 51;
+                                    bgColorG = g * 51;
+                                    bgColorB = b * 51;
+                                } else {
                                     // black + 23 tone grayscale from dark to (NOT light gray, but) white
                                     int value;
                                     switch( tag )
                                     {
-                                    case 232:   value =   0; break; //   0.000
-                                    case 233:   value =  11; break; //  11.087
-                                    case 234:   value =  22; break; //  22.174
-                                    case 235:   value =  33; break; //  33.261
-                                    case 236:   value =  44; break; //  44.348
-                                    case 237:   value =  55; break; //  55.435
-                                    case 238:   value =  67; break; //  66.522
-                                    case 239:   value =  78; break; //  77.609
-                                    case 240:   value =  89; break; //  88.696
-                                    case 241:   value = 100; break; //  99.783
-                                    case 242:   value = 111; break; // 110.870
-                                    case 243:   value = 122; break; // 121.957
-                                    case 244:   value = 133; break; // 133.043
-                                    case 245:   value = 144; break; // 144.130
-                                    case 246:   value = 155; break; // 155.217
-                                    case 247:   value = 166; break; // 166.304
-                                    case 248:   value = 177; break; // 177.391
-                                    case 249:   value = 188; break; // 188.478
-                                    case 250:   value = 200; break; // 199.565
-                                    case 251:   value = 211; break; // 210.652
-                                    case 252:   value = 222; break; // 221.739
-                                    case 253:   value = 233; break; // 232.826
-                                    case 254:   value = 244; break; // 243.913
-                                    case 255:   value = 255; break; // 255.000
-                                    default:
-                                        value = 64;
-                                        qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for background failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to dark-grey!";
+                                        case 232:   value =   0; break; //   0.000
+                                        case 233:   value =  11; break; //  11.087
+                                        case 234:   value =  22; break; //  22.174
+                                        case 235:   value =  33; break; //  33.261
+                                        case 236:   value =  44; break; //  44.348
+                                        case 237:   value =  55; break; //  55.435
+                                        case 238:   value =  67; break; //  66.522
+                                        case 239:   value =  78; break; //  77.609
+                                        case 240:   value =  89; break; //  88.696
+                                        case 241:   value = 100; break; //  99.783
+                                        case 242:   value = 111; break; // 110.870
+                                        case 243:   value = 122; break; // 121.957
+                                        case 244:   value = 133; break; // 133.043
+                                        case 245:   value = 144; break; // 144.130
+                                        case 246:   value = 155; break; // 155.217
+                                        case 247:   value = 166; break; // 166.304
+                                        case 248:   value = 177; break; // 177.391
+                                        case 249:   value = 188; break; // 188.478
+                                        case 250:   value = 200; break; // 199.565
+                                        case 251:   value = 211; break; // 210.652
+                                        case 252:   value = 222; break; // 221.739
+                                        case 253:   value = 233; break; // 232.826
+                                        case 254:   value = 244; break; // 243.913
+                                        case 255:   value = 255; break; // 255.000
+                                        default:
+                                            value = 64;
+                                            qWarning() << "TBuffer::translateToPlainText() 256 Color mode parsing Grey-scale code for background failed, unexpected value encountered (outside of 232-255):" << tag << "mapping to dark-grey!";
                                     }
 
                                     bgColorR = value;
@@ -1570,30 +1535,26 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                             }
                         }
 
-                        if( tag == 38 )
-                        {
+                        if (tag == 38) {
                             mIsHighColorMode = true;
                             mHighColorModeForeground = true;
                             continue;
                         }
-                        if( tag == 48 )
-                        {
+                        if (tag == 48) {
                             mIsHighColorMode = true;
                             mHighColorModeBackground = true;
                             continue;
                         }
 
-                        if( mIsHighColorMode )
-                        {
-                            switch( tag )
-                            {
+                        if (mIsHighColorMode) {
+                            switch (tag) {
                             case 5: // Indexed 256 color mode
                                 mWaitingForHighColorCode = true;
                                 break;
                             case 2: // 24Bit RGB color mode
-// TODO:
-//                                mWaitingFor24BitColor = true;
-//                                break;
+                            // TODO:
+                            //                                mWaitingFor24BitColor = true;
+                            //                                break;
                             case 4: // 24Bit CYMB color mode
                             case 3: // 24Bit CYM color mode
                             case 1: // "Transparent" mode
@@ -1609,8 +1570,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         }
 
                         // we are dealing with standard ANSI colors
-                        switch( tag )
-                        {
+                        switch (tag) {
                         case 0:
                             mHighColorModeForeground = false;
                             mHighColorModeBackground = false;
@@ -1804,9 +1764,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                     codeRet = 0;
                     goto DECODE;
-                }
-                else
-                {
+                } else {
                     ++localBufferPosition;
                     gotHeader = false;
                     goto DECODE;
@@ -1816,35 +1774,25 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             return;
         }
 
-        if( mMXP )
-        {
+        if (mMXP) {
             // ignore < and > inside of parameter strings
-            if( openT == 1 )
-            {
-                if( ch == '\'' || ch == '\"' )
-                {
-                    if( ! mParsingVar )
-                    {
+            if (openT == 1) {
+                if (ch == '\'' || ch == '\"') {
+                    if (!mParsingVar) {
                         mOpenMainQuote = ch;
                         mParsingVar = true;
-                    }
-                    else
-                    {
-                        if( ch == mOpenMainQuote )
-                        {
+                    } else {
+                        if (ch == mOpenMainQuote) {
                             mParsingVar = false;
                         }
                     }
                 }
             }
 
-            if( ch == '<' )
-            {
-                if( ! mParsingVar )
-                {
+            if (ch == '<') {
+                if (!mParsingVar) {
                     openT++;
-                    if( currentToken.size() > 0 )
-                    {
+                    if (currentToken.size() > 0) {
                         currentToken += ch;
                     }
                     mAssemblingToken = true;
@@ -1853,16 +1801,13 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 }
             }
 
-            if( ch == '>' )
-            {
-                if( ! mParsingVar )
-                {
+            if (ch == '>') {
+                if (!mParsingVar) {
                     closeT++;
                 }
 
                 // sanity check
-                if( closeT > openT )
-                {
+                if (closeT > openT) {
                     closeT = 0;
                     openT = 0;
                     mAssemblingToken = false;
@@ -1870,128 +1815,100 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     mParsingVar = false;
                 }
 
-                if( ( openT > 0 ) && ( closeT == openT ) )
-                {
+                if ((openT > 0) && (closeT == openT)) {
                     mAssemblingToken = false;
                     std::string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
-                    if( _pfs == std::string::npos )
-                    {
+                    if (_pfs == std::string::npos) {
                         _tn = currentToken.c_str();
-                    }
-                    else
-                    {
-                        _tn = currentToken.substr( 0, _pfs ).c_str();
+                    } else {
+                        _tn = currentToken.substr(0, _pfs).c_str();
                     }
                     _tn = _tn.toUpper();
-                    if( _tn == "VERSION" )
-                    {
-                        mpHost->sendRaw( QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n") );
+                    if (_tn == "VERSION") {
+                        mpHost->sendRaw(QString("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=2.0 REGISTERED=no>\n"));
                     }
-                    if( _tn == "BR" )
-                    {
+                    if (_tn == "BR") {
                         ch = '\n';
                         openT = 0;
                         closeT = 0;
                         currentToken.clear();
                         goto COMMIT_LINE;
                     }
-                    if( _tn.startsWith( "!EL" ) )
-                    {
-                        QString _tp = currentToken.substr( currentToken.find_first_of(' ') ).c_str();
-                        _tn = _tp.section( ' ', 1, 1 ).toUpper();
-                        _tp = _tp.section( ' ', 2 ).toUpper();
-                        if( ( _tp.indexOf( "SEND" ) != -1 ) )
-                        {
+                    if (_tn.startsWith("!EL")) {
+                        QString _tp = currentToken.substr(currentToken.find_first_of(' ')).c_str();
+                        _tn = _tp.section(' ', 1, 1).toUpper();
+                        _tp = _tp.section(' ', 2).toUpper();
+                        if ((_tp.indexOf("SEND") != -1)) {
                             QString _t2 = _tp;
-                            int pRef = _t2.indexOf( "HREF=" );
+                            int pRef = _t2.indexOf("HREF=");
                             bool _got_ref = false;
                             // wenn kein href angegeben ist, dann gilt das 1. parameter als href
-                            if( pRef == -1 )
-                            {
+                            if (pRef == -1) {
                                 pRef = _t2.indexOf("SEND ");
-                            }
-                            else
-                            {
+                            } else {
                                 _got_ref = true;
                             }
 
-                            if( pRef == -1 )
-                            {
+                            if (pRef == -1) {
                                 return;
                             }
                             pRef += 5;
 
                             QChar _quote_type = _t2[pRef];
                             int pRef2;
-                            if( _quote_type != '&' )
-                            {
-                                pRef2 = _t2.indexOf( _quote_type, pRef+1 ); //' ', pRef );
+                            if (_quote_type != '&') {
+                                pRef2 = _t2.indexOf(_quote_type, pRef + 1); //' ', pRef );
+                            } else {
+                                pRef2 = _t2.indexOf(' ', pRef + 1);
                             }
-                            else
-                            {
-                                pRef2 = _t2.indexOf( ' ', pRef+1 );
-                            }
-                            QString _ref = _t2.mid( pRef, pRef2-pRef );
+                            QString _ref = _t2.mid(pRef, pRef2 - pRef);
 
                             // gegencheck, ob es keine andere variable ist
 
-                            if( _ref.startsWith('\'') )
-                            {
-                                int pRef3 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
-                                int pRef4 = _t2.indexOf( '=' );
-                                if( ( ( pRef4 == -1 ) || ( pRef4 != 0 && pRef4 > pRef3 ) ) || ( _got_ref ) )
-                                {
-                                    _ref = _t2.mid( pRef, pRef2-pRef );
+                            if (_ref.startsWith('\'')) {
+                                int pRef3 = _t2.indexOf('\'', _t2.indexOf('\'', pRef) + 1);
+                                int pRef4 = _t2.indexOf('=');
+                                if (((pRef4 == -1) || (pRef4 != 0 && pRef4 > pRef3)) || (_got_ref)) {
+                                    _ref = _t2.mid(pRef, pRef2 - pRef);
                                 }
-                            }
-                            else if( _ref.startsWith('\"') )
-                            {
-                                int pRef3 = _t2.indexOf( '\"', _t2.indexOf( '\"', pRef )+1 );
-                                int pRef4 = _t2.indexOf( '=' );
-                                if( ( ( pRef4 == -1 ) || ( pRef4 != 0 && pRef4 > pRef3 ) ) || ( _got_ref ) )
-                                {
-                                    _ref = _t2.mid( pRef, pRef2-pRef );
+                            } else if (_ref.startsWith('\"')) {
+                                int pRef3 = _t2.indexOf('\"', _t2.indexOf('\"', pRef) + 1);
+                                int pRef4 = _t2.indexOf('=');
+                                if (((pRef4 == -1) || (pRef4 != 0 && pRef4 > pRef3)) || (_got_ref)) {
+                                    _ref = _t2.mid(pRef, pRef2 - pRef);
                                 }
-                            }
-                            else if( _ref.startsWith( '&' ) )
-                            {
-                                _ref = _t2.mid( pRef, _t2.indexOf( ' ', pRef+1 )-pRef );
-                            }
-                            else
-                            {
+                            } else if (_ref.startsWith('&')) {
+                                _ref = _t2.mid(pRef, _t2.indexOf(' ', pRef + 1) - pRef);
+                            } else {
                                 _ref = "";
                             }
-                            _ref = _ref.replace( ';' , "" );
-                            _ref = _ref.replace( "&quot", "" );
-                            _ref = _ref.replace( "&amp", "&" );
-                            _ref = _ref.replace('\'', "" );//NEU
-                            _ref = _ref.replace( '\"', "" );//NEU
-                            _ref = _ref.replace( "&#34", R"(")" );
+                            _ref = _ref.replace(';', "");
+                            _ref = _ref.replace("&quot", "");
+                            _ref = _ref.replace("&amp", "&");
+                            _ref = _ref.replace('\'', ""); //NEU
+                            _ref = _ref.replace('\"', ""); //NEU
+                            _ref = _ref.replace("&#34", R"(")");
 
-                            pRef = _t2.indexOf( "HINT=" );
+                            pRef = _t2.indexOf("HINT=");
                             QString _hint;
-                            if( pRef != -1 )
-                            {
+                            if (pRef != -1) {
                                 pRef += 5;
-                                int pRef2 = _t2.indexOf( ' ', pRef );
-                                _hint = _t2.mid( pRef, pRef2-pRef );
-                                if( _hint.startsWith('\'') || pRef2 < 0 )
-                                {
-                                    pRef2 = _t2.indexOf( '\'', _t2.indexOf( '\'', pRef )+1 );
-                                    _hint = _t2.mid( pRef, pRef2-pRef );
+                                int pRef2 = _t2.indexOf(' ', pRef);
+                                _hint = _t2.mid(pRef, pRef2 - pRef);
+                                if (_hint.startsWith('\'') || pRef2 < 0) {
+                                    pRef2 = _t2.indexOf('\'', _t2.indexOf('\'', pRef) + 1);
+                                    _hint = _t2.mid(pRef, pRef2 - pRef);
+                                } else if (_hint.startsWith('\"') || pRef2 < 0) {
+                                    pRef2 = _t2.indexOf('\"', _t2.indexOf('\"', pRef) + 1);
+                                    _hint = _t2.mid(pRef, pRef2 - pRef);
                                 }
-                                else if( _hint.startsWith('\"') || pRef2 < 0 )
-                                {
-                                    pRef2 = _t2.indexOf( '\"', _t2.indexOf( '\"', pRef )+1 );
-                                    _hint = _t2.mid( pRef, pRef2-pRef );
-                                }
-                                _hint = _hint.replace( ';' , "" );
-                                _hint = _hint.replace( "&quot", "" );
-                                _hint = _hint.replace( "&amp", "&" );
-                                _hint = _hint.replace('\'', "" );//NEU
-                                _hint = _hint.replace( '\"', "" );//NEU
-                                _hint = _hint.replace( "&#34", R"(")" );
+                                _hint = _hint.replace(';', "");
+                                _hint = _hint.replace("&quot", "");
+                                _hint = _hint.replace("&amp", "&");
+                                _hint = _hint.replace('\'', ""); //NEU
+                                _hint = _hint.replace('\"', ""); //NEU
+                                _hint = _hint.replace("&#34", R"(")");
                             }
                             TMxpElement _element;
                             _element.name = _tn;
@@ -2007,51 +1924,39 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     }
 
 
-
-                    if( mMXP_LINK_MODE )
-                    {
-                        if( _tn.indexOf('/') != -1 )
-                        {
+                    if (mMXP_LINK_MODE) {
+                        if (_tn.indexOf('/') != -1) {
                             mMXP_LINK_MODE = false;
                         }
                     }
 
-                    if( mMXP_SEND_NO_REF_MODE )
-                    {
-                        if( _tn.indexOf('/') != -1 )
-                        {
+                    if (mMXP_SEND_NO_REF_MODE) {
+                        if (_tn.indexOf('/') != -1) {
                             mMXP_SEND_NO_REF_MODE = false;
-                            if( mLinkStore[mLinkID].front() == "send([[]])" )
-                            {
+                            if (mLinkStore[mLinkID].front() == "send([[]])") {
                                 QString _t_ref = "send([[";
-                                _t_ref.append( mAssembleRef.c_str() );
-                                _t_ref.append( "]])" );
+                                _t_ref.append(mAssembleRef.c_str());
+                                _t_ref.append("]])");
                                 QStringList _t_ref_list;
                                 _t_ref_list << _t_ref;
                                 mLinkStore[mLinkID] = _t_ref_list;
-                            }
-                            else
-                            {
-                                mLinkStore[mLinkID].replaceInStrings( "&text;", mAssembleRef.c_str() );
+                            } else {
+                                mLinkStore[mLinkID].replaceInStrings("&text;", mAssembleRef.c_str());
                             }
                             mAssembleRef.clear();
                         }
-                    }
-                    else if( mMXP_Elements.contains( _tn ) )
-                    {
+                    } else if (mMXP_Elements.contains(_tn)) {
                         QString _tp;
                         std::string::size_type _fs = currentToken.find_first_of(' ');
-                        if( _fs != std::string::npos )
-                        {
-                            _tp = currentToken.substr( _fs ).c_str();
+                        if (_fs != std::string::npos) {
+                            _tp = currentToken.substr(_fs).c_str();
                         }
                         QString _t1 = _tp.toUpper();
-                        const TMxpElement & _element = mMXP_Elements[_tn];
+                        const TMxpElement& _element = mMXP_Elements[_tn];
                         QString _t2 = _element.href;
                         QString _t3 = _element.hint;
                         bool _userTag = true;
-                        if( _t2.size() < 1 )
-                        {
+                        if (_t2.size() < 1) {
                             _userTag = false;
                         }
                         QRegExp _rex;
@@ -2063,105 +1968,93 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         // send "what" hint="bla" or send href="what" hint="bla"
 
                         // handle the first case without a variable assignment
-                        if( ( _ki3 == -1 ) // no = whatsoever
-                         || ( ( _ki3 != -1 ) && ( ( _ki2 < _ki3 ) || ( _ki1 < _ki3 ) ) ) ) // first parameter is given without =
+                        if ((_ki3 == -1)                                           // no = whatsoever
+                            || ((_ki3 != -1) && ((_ki2 < _ki3) || (_ki1 < _ki3)))) // first parameter is given without =
                         {
-                            if( ( _ki1 < _ki2  && _ki1 != -1 ) || ( _ki2 == -1 && _ki1 != -1 ) )
-                            {
-                                if( _ki1 < _ki3 || _ki3 == -1 )
-                                {
+                            if ((_ki1 < _ki2 && _ki1 != -1) || (_ki2 == -1 && _ki1 != -1)) {
+                                if (_ki1 < _ki3 || _ki3 == -1) {
                                     _rl1 << "HREF";
-                                    int _cki1 = _tp.indexOf('\'', _ki1+1);
-                                    if( _cki1 > -1 )
-                                        _rl2 << _tp.mid(_ki1+1, _cki1-(_ki1+1));
+                                    int _cki1 = _tp.indexOf('\'', _ki1 + 1);
+                                    if (_cki1 > -1) {
+                                        _rl2 << _tp.mid(_ki1 + 1, _cki1 - (_ki1 + 1));
+                                    }
                                 }
-                            }
-                            else if( ( _ki2 < _ki1 && _ki2 != -1 ) || ( _ki1 == -1 && _ki2 != -1 ) )
-                            {
-                                if( _ki2 < _ki3 || _ki3 == -1 )
-                                {
+                            } else if ((_ki2 < _ki1 && _ki2 != -1) || (_ki1 == -1 && _ki2 != -1)) {
+                                if (_ki2 < _ki3 || _ki3 == -1) {
                                     _rl1 << "HREF";
-                                    int _cki2 = _tp.indexOf('\"', _ki2+1);
-                                    if( _cki2 > -1 )
-                                        _rl2 << _tp.mid(_ki2+1, _cki2-(_ki2+1));
+                                    int _cki2 = _tp.indexOf('\"', _ki2 + 1);
+                                    if (_cki2 > -1) {
+                                        _rl2 << _tp.mid(_ki2 + 1, _cki2 - (_ki2 + 1));
+                                    }
                                 }
                             }
                         }
                         // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
-                        if( _tp.contains(R"(=')") )
+                        if (_tp.contains(R"(=')")) {
                             _rex = QRegExp(R"(\b(\w+)=\'([^\']*) ?)");
-                        else
+                        } else {
                             _rex = QRegExp(R"(\b(\w+)=\"([^\"]*) ?)");
+                        }
 
                         int _rpos = 0;
-                        while( ( _rpos = _rex.indexIn( _tp, _rpos ) ) != -1 )
-                        {
+                        while ((_rpos = _rex.indexIn(_tp, _rpos)) != -1) {
                             _rl1 << _rex.cap(1).toUpper();
                             _rl2 << _rex.cap(2);
                             _rpos += _rex.matchedLength();
                         }
-                        if( ( _rl1.size() == _rl2.size() ) && ( _rl1.size() > 0 ) )
-                        {
-                            for( int i=0; i<_rl1.size(); i++ )
-                            {
+                        if ((_rl1.size() == _rl2.size()) && (_rl1.size() > 0)) {
+                            for (int i = 0; i < _rl1.size(); i++) {
                                 QString _var = _rl1[i];
                                 _var.prepend('&');
-                                if( _userTag || _t2.indexOf( _var ) != -1 )
-                                {
-                                    _t2 = _t2.replace( _var, _rl2[i] );
-                                    _t3 = _t3.replace( _var, _rl2[i] );
-                                }
-                                else
-                                {
-                                    if( _rl1[i] == "HREF" )
+                                if (_userTag || _t2.indexOf(_var) != -1) {
+                                    _t2 = _t2.replace(_var, _rl2[i]);
+                                    _t3 = _t3.replace(_var, _rl2[i]);
+                                } else {
+                                    if (_rl1[i] == "HREF") {
                                         _t2 = _rl2[i];
-                                    if( _rl1[i] == "HINT" )
+                                    }
+                                    if (_rl1[i] == "HINT") {
                                         _t3 = _rl2[i];
+                                    }
                                 }
                             }
                         }
 
                         // handle print to prompt feature PROMPT
                         bool _send_to_command_line = false;
-                        if( _t1.endsWith("PROMPT") )
-                        {
+                        if (_t1.endsWith("PROMPT")) {
                             _send_to_command_line = true;
                         }
 
 
                         mMXP_LINK_MODE = true;
-                        if( _t2.size() < 1 || _t2.contains( "&text;" ) ) mMXP_SEND_NO_REF_MODE = true;
+                        if (_t2.size() < 1 || _t2.contains("&text;")) {
+                            mMXP_SEND_NO_REF_MODE = true;
+                        }
                         mLinkID++;
-                        if( mLinkID > 1000 )
-                        {
+                        if (mLinkID > 1000) {
                             mLinkID = 1;
                         }
                         QStringList _tl = _t2.split('|');
-                        for( int i=0; i<_tl.size(); i++ )
-                        {
-                            _tl[i].replace( "|", "" );
-                            if (! _send_to_command_line )
-                            {
+                        for (int i = 0; i < _tl.size(); i++) {
+                            _tl[i].replace("|", "");
+                            if (!_send_to_command_line) {
                                 _tl[i] = "send([[" + _tl[i] + "]])";
-                            }
-                            else
-                            {
+                            } else {
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
                             }
-
                         }
 
                         mLinkStore[mLinkID] = _tl;
 
-                        _t3 = _t3.replace( "&quot;", R"(")" );
-                        _t3 = _t3.replace( "&amp;", "&" );
-                        _t3 = _t3.replace( "&apos;", "'" );
-                        _t3 = _t3.replace( "&#34;", R"(")" );
+                        _t3 = _t3.replace("&quot;", R"(")");
+                        _t3 = _t3.replace("&amp;", "&");
+                        _t3 = _t3.replace("&apos;", "'");
+                        _t3 = _t3.replace("&#34;", R"(")");
 
                         QStringList _tl2 = _t3.split('|');
                         _tl2.replaceInStrings("|", "");
-                        if( _tl2.size() >= _tl.size()+1 )
-                        {
+                        if (_tl2.size() >= _tl.size() + 1) {
                             _tl2.pop_front();
                         }
                         mHintStore[mLinkID] = _tl2;
@@ -2174,48 +2067,35 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 continue;
             }
 
-            if( mAssemblingToken )
-            {
-                if( ch == '\n' )
-                {
+            if (mAssemblingToken) {
+                if (ch == '\n') {
                     closeT = 0;
                     openT = 0;
                     mAssemblingToken = false;
                     currentToken.clear();
                     mParsingVar = false;
-                }
-                else
-                {
+                } else {
                     currentToken += ch;
                     ++localBufferPosition;
                     continue;
                 }
             }
 
-            if( ch == '&' || mIgnoreTag )
-            {
-                if( ( localBufferPosition+4 < localBufferLength ) && ( mSkip.size() == 0 ) )
-                {
-                    if( localBuffer.substr( localBufferPosition, 4 ) == "&gt;" )
-                    {
+            if (ch == '&' || mIgnoreTag) {
+                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.size() == 0)) {
+                    if (localBuffer.substr(localBufferPosition, 4) == "&gt;") {
                         localBufferPosition += 3;
                         ch = '>';
                         mIgnoreTag = false;
-                    }
-                    else if( localBuffer.substr( localBufferPosition, 4 ) == "&lt;" )
-                    {
+                    } else if (localBuffer.substr(localBufferPosition, 4) == "&lt;") {
                         localBufferPosition += 3;
                         ch = '<';
                         mIgnoreTag = false;
-                    }
-                    else if( localBuffer.substr( localBufferPosition, 5 ) == "&amp;" )
-                    {
+                    } else if (localBuffer.substr(localBufferPosition, 5) == "&amp;") {
                         mIgnoreTag = false;
                         localBufferPosition += 4;
                         ch = '&';
-                    }
-                    else if( localBuffer.substr( localBufferPosition, 6 ) == "&quot;" )
-                    {
+                    } else if (localBuffer.substr(localBufferPosition, 6) == "&quot;") {
                         localBufferPosition += 5;
                         mIgnoreTag = false;
                         mSkip.clear();
@@ -2223,37 +2103,27 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     }
                 }
                 // if the content is split across package borders
-                else if( mSkip == "&gt"  && ch == ';' )
-                {
+                else if (mSkip == "&gt" && ch == ';') {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '>';
-                }
-                else if( mSkip == "&lt"  && ch == ';' )
-                {
+                } else if (mSkip == "&lt" && ch == ';') {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '<';
-                }
-                else if( mSkip == "&amp" && ch == ';' )
-                {
+                } else if (mSkip == "&amp" && ch == ';') {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '&';
-                }
-                else if( mSkip == "&quot;" && ch == ';' )
-                {
+                } else if (mSkip == "&quot;" && ch == ';') {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '"';
-                }
-                else
-                {
+                } else {
                     mIgnoreTag = true;
                     mSkip += ch;
                     // sanity check
-                    if( mSkip.size() > 7 )
-                    {
+                    if (mSkip.size() > 7) {
                         mIgnoreTag = false;
                         mSkip.clear();
                     }
@@ -2264,51 +2134,36 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
         }
 
 
-        if( mMXP_SEND_NO_REF_MODE )
-        {
+        if (mMXP_SEND_NO_REF_MODE) {
             mAssembleRef += ch;
         }
 
-        COMMIT_LINE: if( ( ch == '\n' ) || ( ch == '\xff') || ( ch == '\r' ) )
-        {
+    COMMIT_LINE:
+        if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
             // MUD Zeilen werden immer am Zeilenanfang geschrieben
-            if( lineBuffer.back().size() > 0 )
-            {
-                if( mMudLine.size() > 0 )
-                {
+            if (lineBuffer.back().size() > 0) {
+                if (mMudLine.size() > 0) {
                     lineBuffer << mMudLine;
-                }
-                else
-                {
-                    if( ch == '\r' )
-                    {
+                } else {
+                    if (ch == '\r') {
                         ++localBufferPosition;
                         continue; //empty timer posting
                     }
                     lineBuffer << QString();
                 }
-                buffer.push_back( mMudBuffer );
+                buffer.push_back(mMudBuffer);
                 dirty << true;
                 timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-                if( ch == '\xff' )
-                {
-                    promptBuffer.append( true );
+                if (ch == '\xff') {
+                    promptBuffer.append(true);
+                } else {
+                    promptBuffer.append(false);
                 }
-                else
-                {
-                    promptBuffer.append( false );
-                }
-            }
-            else
-            {
-                if( mMudLine.size() > 0 )
-                {
-                    lineBuffer.back().append( mMudLine );
-                }
-                else
-                {
-                    if( ch == '\r' )
-                    {
+            } else {
+                if (mMudLine.size() > 0) {
+                    lineBuffer.back().append(mMudLine);
+                } else {
+                    if (ch == '\r') {
                         ++localBufferPosition;
                         continue; //empty timer posting
                     }
@@ -2317,30 +2172,26 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 buffer.back() = mMudBuffer;
                 dirty.back() = true;
                 timeBuffer.back() = QTime::currentTime().toString("hh:mm:ss.zzz") + "   ";
-                if( ch == '\xff' )
-                {
-                    promptBuffer.back() = true ;
-                }
-                else
-                {
+                if (ch == '\xff') {
+                    promptBuffer.back() = true;
+                } else {
                     promptBuffer.back() = false;
                 }
             }
 
             mMudLine.clear();
             mMudBuffer.clear();
-            int line = lineBuffer.size()-1;
-            mpHost->mpConsole->runTriggers( line );
-            wrap( lineBuffer.size()-1 );
+            int line = lineBuffer.size() - 1;
+            mpHost->mpConsole->runTriggers(line);
+            wrap(lineBuffer.size() - 1);
             ++localBufferPosition;
             std::deque<TChar> newLine;
-            buffer.push_back( newLine );
+            buffer.push_back(newLine);
             lineBuffer.push_back(QString());
             timeBuffer.push_back("   ");
             promptBuffer << false;
             dirty << true;
-            if( static_cast<int>(buffer.size()) > mLinesLimit )
-            {
+            if (static_cast<int>(buffer.size()) > mLinesLimit) {
                 shrinkBuffer();
             }
             continue;
@@ -2353,10 +2204,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
         if (!encodingLookupTable.isEmpty()) {
             quint8 index = static_cast<quint8>(ch);
-            if (index <128) {
+            if (index < 128) {
                 mMudLine.append(QChar::fromLatin1(ch));
             } else {
-                mMudLine.append(encodingLookupTable.at(index-128));
+                mMudLine.append(encodingLookupTable.at(index - 128));
             }
         } else if (encoding == QLatin1String("ISO 8859-1")) {
             mMudLine.append(QString(QChar::fromLatin1(ch)));
@@ -2368,7 +2219,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             if (localBuffer[localBufferPosition] & 0x80) {
                 // MSB is set, so if this is Utf-8 then assume this is the first byte
                 size_t utf8SequenceLength = 1;
-                if        ((localBuffer[localBufferPosition] & 0xE0) == 0xC0) {
+                if ((localBuffer[localBufferPosition] & 0xE0) == 0xC0) {
                     // 2 byte sequence - Unicode code-points: U+00000080 to U+000007FF
                     utf8SequenceLength = 2;
                 } else if ((localBuffer[localBufferPosition] & 0xF0) == 0xE0) {
@@ -2392,13 +2243,10 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                     // The absence of a second argument takes all the available
                     // bytes - this is only for data from the Server NOT from
                     // locally generated material from Lua feedTriggers(...)
-                    if( isFromServer ) {
+                    if (isFromServer) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug() << "TBuffer::translateToPlainText(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:"
-                                 << utf8SequenceLength
-                                 << " but we currently only have: "
-                                 << localBuffer.substr(localBufferPosition).length()
-                                 << " bytes (which we will store for next call to this method)...";
+                        qDebug() << "TBuffer::translateToPlainText(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:" << utf8SequenceLength
+                                 << " but we currently only have: " << localBuffer.substr(localBufferPosition).length() << " bytes (which we will store for next call to this method)...";
 #endif
                         mIncompleteUtf8SequenceBytes = localBuffer.substr(localBufferPosition);
                     }
@@ -2411,30 +2259,26 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                 bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
                 switch (utf8SequenceLength) {
                 case 4:
-                    if ((localBuffer[localBufferPosition+3] & 0xC0) != 0x80) {
+                    if ((localBuffer[localBufferPosition + 3] & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 4th byte in UTF-8 sequence is invalid!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    }
-                    else if(( (localBuffer[localBufferPosition]   & 0x07) >  0x04)
-                            ||((  (localBuffer[localBufferPosition]   & 0x07) == 0x04)
-                               &&((localBuffer[localBufferPosition+1] & 0x3F) >  0x0F))) {
-
-                        // For 4 byte values the bits are distributed:
-                        //  Byte 1    Byte 2    Byte 3    Byte 4
-                        // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
-                        // U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
-                        // So this (the maximum valid character) is:
-                        //      ABC    DEFGHI    JKLMNO    PQRSTU
-                        //      100    001111    111111    111111
-                        // So if the first byte localBuffer[localBufferPosition] & 0x07 is:
-                        //  < 0x04 then must be in range
-                        //  > 0x04 then must be out of range
-                        // == 0x04 then consider localBuffer[localBufferPosition+1] & 0x3F:
-                        //     <= 001111 0x0F then must be in range
-                        //      > 001111 0x0F then must be out of range
+                    } else if (((localBuffer[localBufferPosition] & 0x07) > 0x04) || (((localBuffer[localBufferPosition] & 0x07) == 0x04) && ((localBuffer[localBufferPosition + 1] & 0x3F) > 0x0F))) {
+// For 4 byte values the bits are distributed:
+//  Byte 1    Byte 2    Byte 3    Byte 4
+// 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
+// U+10FFFF in binary is: 1 0000 1111 1111 1111 1111
+// So this (the maximum valid character) is:
+//      ABC    DEFGHI    JKLMNO    PQRSTU
+//      100    001111    111111    111111
+// So if the first byte localBuffer[localBufferPosition] & 0x07 is:
+//  < 0x04 then must be in range
+//  > 0x04 then must be out of range
+// == 0x04 then consider localBuffer[localBufferPosition+1] & 0x3F:
+//     <= 001111 0x0F then must be in range
+//      > 001111 0x0F then must be out of range
 
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 4 byte UTF-8 sequence is valid but is beyond range of legal codepoints!";
@@ -2443,25 +2287,24 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         isToUseReplacementMark = true;
                     }
 
-                    // Fall-through
+                // Fall-through
                 case 3:
-                    if ((localBuffer[localBufferPosition+2] & 0xC0) != 0x80) {
+                    if ((localBuffer[localBufferPosition + 2] & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
                     } else if ((localBuffer[localBufferPosition] & 0x0F) == 0x0D) {
-
-                        // For 3 byte values the bits are distributed:
-                        //  Byte 1    Byte 2    Byte 3
-                        // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
-                        // First High surrogate 0xed 0xa0 0x80 (U+D800)
-                        // 1101 1000 0000 0000
-                        // ----1101  --100000  --000000
-                        // Last Low surrogate 0xed 0xbf 0xbf (U+DFFF)
-                        // 1101 1111 1111 1111
-                        // ----1101  --111111  --111111
+// For 3 byte values the bits are distributed:
+//  Byte 1    Byte 2    Byte 3
+// 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
+// First High surrogate 0xed 0xa0 0x80 (U+D800)
+// 1101 1000 0000 0000
+// ----1101  --100000  --000000
+// Last Low surrogate 0xed 0xbf 0xbf (U+DFFF)
+// 1101 1111 1111 1111
+// ----1101  --111111  --111111
 /*
  * As per Wikipedia {https://en.wikipedia.org/wiki/UTF-16#U.2BD800_to_U.2BDFFF}
  * "The Unicode standard permanently reserves these code point values for UTF-16
@@ -2480,18 +2323,16 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
  * implementations translate between encodings as though this were the case
  * and Windows allows such sequences in filenames."
  */
-                        // So test for and reject if LSN of first byte is 0xD!
+// So test for and reject if LSN of first byte is 0xD!
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 3 byte UTF-8 sequence is a High or Low UTF-16 Surrogate and is not valid in UTF-8!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    } else if (  (static_cast<quint8>(localBuffer[localBufferPosition+2]) == 0xbf)
-                              && (static_cast<quint8>(localBuffer[localBufferPosition+1]) == 0xbb)
-                              && (static_cast<quint8>(localBuffer[localBufferPosition]  ) == 0xef)) {
-
-                        // Got caught out by this one - it is the Utf-8 BOM and
-                        // needs to be ignored as it transcodes to NO codepoints!
+                    } else if ((static_cast<quint8>(localBuffer[localBufferPosition + 2]) == 0xbf) && (static_cast<quint8>(localBuffer[localBufferPosition + 1]) == 0xbb)
+                               && (static_cast<quint8>(localBuffer[localBufferPosition]) == 0xef)) {
+// Got caught out by this one - it is the Utf-8 BOM and
+// needs to be ignored as it transcodes to NO codepoints!
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) UTF-8 BOM sequence seen and handled!";
 #endif
@@ -2499,9 +2340,9 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
                         isToUseByteOrderMark = true;
                     }
 
-                    // Fall-through
+                // Fall-through
                 case 2:
-                    if ((localBuffer[localBufferPosition+1] & 0xC0) != 0x80) {
+                    if ((localBuffer[localBufferPosition + 1] & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 2nd byte in UTF-8 sequence is invalid!";
 #endif
@@ -2511,14 +2352,11 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                     // Also test for (and reject) overlong sequences - don't
                     // need to check 5 or 6 ones as those are already rejected:
-                    if (((( localBuffer[localBufferPosition] & 0xFE) == 0xC0) && ((localBuffer[localBufferPosition+1] & 0xC0) == 0x80))
-                       ||(( localBuffer[localBufferPosition]         == 0xE0) && ((localBuffer[localBufferPosition+1] & 0xE0) == 0x80))
-                       ||(( localBuffer[localBufferPosition]         == 0xF0) && ((localBuffer[localBufferPosition+1] & 0xF0) == 0x80))) {
-
+                    if ((((localBuffer[localBufferPosition] & 0xFE) == 0xC0) && ((localBuffer[localBufferPosition + 1] & 0xC0) == 0x80))
+                        || ((localBuffer[localBufferPosition] == 0xE0) && ((localBuffer[localBufferPosition + 1] & 0xE0) == 0x80))
+                        || ((localBuffer[localBufferPosition] == 0xF0) && ((localBuffer[localBufferPosition + 1] & 0xF0) == 0x80))) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong "
-                                           << utf8SequenceLength
-                                           << "-byte sequence as UTF-8 rejected!";
+                        qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
@@ -2527,9 +2365,7 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                 default:
 #if defined(DEBUG_UTF8_PROCESSING)
-                    qDebug().nospace() << "TBuffer::translateToPlainText(...) "
-                                       << utf8SequenceLength
-                                       << "-byte sequence as UTF-8 rejected!";
+                    qDebug().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
 #endif
                     isValid = false;
                     isToUseReplacementMark = true;
@@ -2537,50 +2373,39 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
 
                 // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
                 if (isValid) {
-                    QString codePoint = QString(localBuffer.substr(localBufferPosition,utf8SequenceLength).c_str());
-                    switch(codePoint.size()) {
+                    QString codePoint = QString(localBuffer.substr(localBufferPosition, utf8SequenceLength).c_str());
+                    switch (codePoint.size()) {
                     default:
                         Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()
-                        qWarning().nospace() << "TBuffer::translateToPlainText(...) "
-                                              << utf8SequenceLength
-                                              << "-byte UTF-8 sequence accepted, and it encoded to "
-                                              << codePoint.size()
-                                              << " QChars which does not make sense!!!";
+                        qWarning().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, and it encoded to " << codePoint.size()
+                                             << " QChars which does not make sense!!!";
                         isValid = false;
                         isToUseReplacementMark = true;
                         break;
                     case 2:
                         isTwoTCharsNeeded = true;
-                        // Fall-through
+                    // Fall-through
                     case 1:
 #if defined(DEBUG_UTF8_PROCESSING)
-                        qDebug().nospace() << "TBuffer::translateToPlainText(...) "
-                                           << utf8SequenceLength
-                                           << "-byte UTF-8 sequence accepted, it was "
-                                           << codePoint.size()
-                                           << " QChar(s) long ["
-                                           << codePoint
-                                           << "]";
+                        qDebug().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long ["
+                                           << codePoint << "]";
 #endif
                         mMudLine.append(codePoint);
                         break;
                     case 0:
-                        qWarning().nospace() << "TBuffer::translateToPlainText(...) "
-                                             << utf8SequenceLength
-                                             << "-byte UTF-8 sequence accepted, but it did not encode to ANY QChar(s)!!!";
+                        qWarning().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, but it did not encode to ANY QChar(s)!!!";
                         isValid = false;
                         isToUseReplacementMark = true;
                     }
                 }
 
-                if (! isValid) {
+                if (!isValid) {
 #if defined(DEBUG_UTF8_PROCESSING)
                     QString debugMsg;
                     for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                        debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[localBufferPosition+i]),2,16));
+                        debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(localBuffer[localBufferPosition + i]), 2, 16));
                     }
-                    qDebug().nospace() << "    Sequence bytes are: "
-                                       << debugMsg.toLatin1().constData();
+                    qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
 #endif
                     if (isToUseReplacementMark) {
                         mMudLine.append(QChar::ReplacementCharacter);
@@ -2612,16 +2437,16 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
             }
         }
 
-        TChar c( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
-                 ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
-                 ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
-                 bgColorR,
-                 bgColorG,
-                 bgColorB,
-                 mIsDefaultColor ? mBold : false,
-                 mItalics,
-                 mUnderline,
-                 mStrikeOut );
+        TChar c(!mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                !mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                !mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                bgColorR,
+                bgColorG,
+                bgColorB,
+                mIsDefaultColor ? mBold : false,
+                mItalics,
+                mUnderline,
+                mStrikeOut);
 
         if (mMXP_LINK_MODE) {
             c.link = mLinkID;
@@ -2631,16 +2456,16 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
         mMudBuffer.push_back(c);
 
         if (isTwoTCharsNeeded) {
-            TChar c2( ! mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
-                      ! mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
-                      ! mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
-                      bgColorR,
-                      bgColorG,
-                      bgColorB,
-                      mIsDefaultColor ? mBold : false,
-                      mItalics,
-                      mUnderline,
-                      mStrikeOut );
+            TChar c2(!mIsDefaultColor && mBold ? fgColorLightR : fgColorR,
+                     !mIsDefaultColor && mBold ? fgColorLightG : fgColorG,
+                     !mIsDefaultColor && mBold ? fgColorLightB : fgColorB,
+                     bgColorR,
+                     bgColorG,
+                     bgColorB,
+                     mIsDefaultColor ? mBold : false,
+                     mItalics,
+                     mUnderline,
+                     mStrikeOut);
 
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE?
             mMudBuffer.push_back(c2);
@@ -2650,36 +2475,36 @@ void TBuffer::translateToPlainText( std::string & incoming, const bool isFromSer
     }
 }
 
-void TBuffer::append(const QString & text,
-                      int sub_start,
-                      int sub_end,
-                      int fgColorR,
-                      int fgColorG,
-                      int fgColorB,
-                      int bgColorR,
-                      int bgColorG,
-                      int bgColorB,
-                      bool bold,
-                      bool italics,
-                      bool underline,
-                      bool strikeout,
-                      int linkID )
+void TBuffer::append(const QString& text,
+                     int sub_start,
+                     int sub_end,
+                     int fgColorR,
+                     int fgColorG,
+                     int fgColorB,
+                     int bgColorR,
+                     int bgColorG,
+                     int bgColorB,
+                     bool bold,
+                     bool italics,
+                     bool underline,
+                     bool strikeout,
+                     int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = QStringLiteral( ",.- " );
+    const QString lineBreaks = QStringLiteral(",.- ");
 
-    if( static_cast<int>(buffer.size()) > mLinesLimit ) {
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
-    int last = buffer.size()-1;
-    if( last < 0 ) {
+    int last = buffer.size() - 1;
+    if (last < 0) {
         std::deque<TChar> newLine;
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
-        if( mEchoText ) {
+        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
+        if (mEchoText) {
             c.flags |= TCHAR_ECHO;
         }
-        newLine.push_back( c );
-        buffer.push_back( newLine );
+        newLine.push_back(c);
+        buffer.push_back(newLine);
         lineBuffer.push_back(QString());
         timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
         promptBuffer << false;
@@ -2688,20 +2513,20 @@ void TBuffer::append(const QString & text,
     }
     bool firstChar = (lineBuffer.back().size() == 0);
     int length = text.size();
-    if( length < 1 ) {
+    if (length < 1) {
         return;
     }
-    if( sub_end >= length ) {
-        sub_end = text.size()-1;
+    if (sub_end >= length) {
+        sub_end = text.size() - 1;
     }
 
-    for( int i=sub_start; i<length; i++ ) {//FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
-        if( text.at(i) == '\n' ) {
-            log(size()-1, size()-1);
+    for (int i = sub_start; i < length; i++) { //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        if (text.at(i) == '\n') {
+            log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
-            buffer.push_back( newLine );
-            lineBuffer.push_back( QString() );
-            timeBuffer << QStringLiteral( "-------------" );
+            buffer.push_back(newLine);
+            lineBuffer.push_back(QString());
+            timeBuffer << QStringLiteral("-------------");
             promptBuffer << false;
             dirty << true;
             mLastLine++;
@@ -2714,35 +2539,34 @@ void TBuffer::append(const QString & text,
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
-            for( int i=lineBuffer.back().size()-1; i>=0; i-- ) {
-                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 ) {
-                    QString tmp = lineBuffer.back().mid(0,i+1);
-                    QString lineRest = lineBuffer.back().mid(i+1);
+            for (int i = lineBuffer.back().size() - 1; i >= 0; i--) {
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
+                    QString tmp = lineBuffer.back().mid(0, i + 1);
+                    QString lineRest = lineBuffer.back().mid(i + 1);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
                     int k = lineRest.size();
-                    if( k > 0 ) {
-                        while( k > 0 ) {
+                    if (k > 0) {
+                        while (k > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
                             k--;
                         }
                     }
 
-                    buffer.push_back( newLine );
-                    if( lineRest.size() > 0 ) {
-                        lineBuffer.append( lineRest );
+                    buffer.push_back(newLine);
+                    if (lineRest.size() > 0) {
+                        lineBuffer.append(lineRest);
+                    } else {
+                        lineBuffer.append(QString());
                     }
-                    else {
-                        lineBuffer.append( QString() );
-                    }
-                    timeBuffer << QStringLiteral( "-------------" );
+                    timeBuffer << QStringLiteral("-------------");
                     promptBuffer << false;
                     dirty << true;
                     mLastLine++;
                     newLines++;
-                    log(size()-2, size()-2);
+                    log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
                     // text from log file.
@@ -2750,48 +2574,49 @@ void TBuffer::append(const QString & text,
                 }
             }
         }
-        lineBuffer.back().append( text.at( i ) );
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout,linkID);
-        if( mEchoText ) {
+        lineBuffer.back().append(text.at(i));
+        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout, linkID);
+        if (mEchoText) {
             c.flags |= TCHAR_ECHO;
         }
-        buffer.back().push_back( c );
-        if( firstChar ) {
-            timeBuffer.back() = QTime::currentTime().toString( QStringLiteral( "hh:mm:ss.zzz   " ) );
+        buffer.back().push_back(c);
+        if (firstChar) {
+            timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
             firstChar = false;
         }
     }
 }
 
-void TBuffer::appendLine( const QString & text,
-                          int sub_start,
-                          int sub_end,
-                          int fgColorR,
-                          int fgColorG,
-                          int fgColorB,
-                          int bgColorR,
-                          int bgColorG,
-                          int bgColorB,
-                          bool bold,
-                          bool italics,
-                          bool underline,
-                          bool strikeout,
-                          int linkID )
+void TBuffer::appendLine(const QString& text,
+                         int sub_start,
+                         int sub_end,
+                         int fgColorR,
+                         int fgColorG,
+                         int fgColorB,
+                         int bgColorR,
+                         int bgColorG,
+                         int bgColorB,
+                         bool bold,
+                         bool italics,
+                         bool underline,
+                         bool strikeout,
+                         int linkID)
 {
-    if( sub_end < 0 ) return;
-    if( static_cast<int>(buffer.size()) > mLinesLimit )
-    {
+    if (sub_end < 0) {
+        return;
+    }
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
-    int last = buffer.size()-1;
-    if( last < 0 )
-    {
+    int last = buffer.size() - 1;
+    if (last < 0) {
         std::deque<TChar> newLine;
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
-        if( mEchoText )
+        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
+        if (mEchoText) {
             c.flags |= TCHAR_ECHO;
-        newLine.push_back( c );
-        buffer.push_back( newLine );
+        }
+        newLine.push_back(c);
+        buffer.push_back(newLine);
         lineBuffer.push_back(QString());
         timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         promptBuffer << false;
@@ -2800,114 +2625,123 @@ void TBuffer::appendLine( const QString & text,
     }
     bool firstChar = (lineBuffer.back().size() == 0);
     int length = text.size();
-    if( length < 1 ) return;
-    if( sub_end >= length ) sub_end = text.size()-1;
+    if (length < 1) {
+        return;
+    }
+    if (sub_end >= length) {
+        sub_end = text.size() - 1;
+    }
 
-    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
-    {
-        lineBuffer.back().append( text.at( i ) );
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout,linkID);
-        if( mEchoText )
+    for (int i = sub_start; i <= (sub_start + sub_end); i++) {
+        lineBuffer.back().append(text.at(i));
+        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout, linkID);
+        if (mEchoText) {
             c.flags |= TCHAR_ECHO;
-        buffer.back().push_back( c );
-        if( firstChar )
-        {
+        }
+        buffer.back().push_back(c);
+        if (firstChar) {
             timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
         }
     }
 }
 
-QPoint TBuffer::insert( QPoint & where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout )
+QPoint TBuffer::insert(QPoint& where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout)
 {
     QPoint P(-1, -1);
 
     int x = where.x();
     int y = where.y();
 
-    if( y < 0 ) return P;
-    if( y >= static_cast<int>(buffer.size()) ) return P;
+    if (y < 0) {
+        return P;
+    }
+    if (y >= static_cast<int>(buffer.size())) {
+        return P;
+    }
 
 
-    for(auto character : text)
-    {
-        if( character == QChar('\n') )
-        {
+    for (auto character : text) {
+        if (character == QChar('\n')) {
             std::deque<TChar> newLine;
-            TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
-            newLine.push_back( c );
-            buffer.push_back( newLine );
-            promptBuffer.insert( y, false );
+            TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
+            newLine.push_back(c);
+            buffer.push_back(newLine);
+            promptBuffer.insert(y, false);
             const QString nothing = "";
-            lineBuffer.insert( y, nothing );
-            timeBuffer << "-->";//this is intentional -> faster
-            dirty.insert( y, true );
+            lineBuffer.insert(y, nothing);
+            timeBuffer << "-->"; //this is intentional -> faster
+            dirty.insert(y, true);
             mLastLine++;
             newLines++;
             x = 0;
             y++;
             continue;
         }
-        lineBuffer[y].insert( x, character );
-        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline,strikeout);
+        lineBuffer[y].insert(x, character);
+        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
         auto it = buffer[y].begin();
-        buffer[y].insert( it+x, c );
+        buffer[y].insert(it + x, c);
     }
     dirty[y] = true;
-    P.setX( x );
-    P.setY( y );
+    P.setX(x);
+    P.setY(y);
     return P;
 }
 
 
-bool TBuffer::insertInLine( QPoint & P, const QString & text, TChar & format )
+bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
 {
-    if( text.size() < 1 ) return false;
+    if (text.size() < 1) {
+        return false;
+    }
     int x = P.x();
     int y = P.y();
-    if( ( y >= 0 ) && ( y < static_cast<int>(buffer.size()) ) )
-    {
-        if( x < 0 )
-        {
+    if ((y >= 0) && (y < static_cast<int>(buffer.size()))) {
+        if (x < 0) {
             return false;
         }
-        if( x >= static_cast<int>(buffer[y].size()) )
-        {
+        if (x >= static_cast<int>(buffer[y].size())) {
             TChar c;
-            expandLine( y, x-buffer[y].size(), c );
+            expandLine(y, x - buffer[y].size(), c);
         }
-        for( int i=0; i<text.size(); i++ )
-        {
-            lineBuffer[y].insert( x+i, text.at( i ) );
+        for (int i = 0; i < text.size(); i++) {
+            lineBuffer[y].insert(x + i, text.at(i));
             TChar c = format;
             auto it = buffer[y].begin();
-            buffer[y].insert( it+x+i, c );
+            buffer[y].insert(it + x + i, c);
         }
-    }
-    else
-    {
-        appendLine( text, 0, text.size(), format.fgR, format.fgG, format.fgB, format.bgR, format.bgG, format.bgB, format.flags & TCHAR_BOLD, format.flags & TCHAR_ITALICS, format.flags & TCHAR_UNDERLINE, format.flags & TCHAR_STRIKEOUT );
+    } else {
+        appendLine(text,
+                   0,
+                   text.size(),
+                   format.fgR,
+                   format.fgG,
+                   format.fgB,
+                   format.bgR,
+                   format.bgG,
+                   format.bgB,
+                   format.flags & TCHAR_BOLD,
+                   format.flags & TCHAR_ITALICS,
+                   format.flags & TCHAR_UNDERLINE,
+                   format.flags & TCHAR_STRIKEOUT);
     }
     return true;
 }
 
-TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
+TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
-    TBuffer slice( mpHost );
+    TBuffer slice(mpHost);
     slice.clear();
     int y = P1.y();
     int x = P1.x();
-    if( y < 0 || y >= static_cast<int>(buffer.size()) )
+    if (y < 0 || y >= static_cast<int>(buffer.size())) {
         return slice;
-
-    if( ( x < 0 )
-        || ( x >= static_cast<int>(buffer[y].size()) )
-        || ( P2.x() < 0 )
-        || ( P2.x() > static_cast<int>(buffer[y].size()) ) )
-    {
-        x=0;
     }
-    for( ; x<P2.x(); x++ )
-    {
+
+    if ((x < 0) || (x >= static_cast<int>(buffer[y].size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer[y].size()))) {
+        x = 0;
+    }
+    for (; x < P2.x(); x++) {
         QString s(lineBuffer[y][x]);
         slice.append(s,
                      0,
@@ -2921,56 +2755,46 @@ TBuffer TBuffer::copy( QPoint & P1, QPoint & P2 )
                      (buffer[y][x].flags & TCHAR_BOLD),
                      (buffer[y][x].flags & TCHAR_ITALICS),
                      (buffer[y][x].flags & TCHAR_UNDERLINE),
-                     (buffer[y][x].flags & TCHAR_STRIKEOUT) );
+                     (buffer[y][x].flags & TCHAR_STRIKEOUT));
     }
     return slice;
 }
 
-TBuffer TBuffer::cut( QPoint & P1, QPoint & P2 )
+TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 {
-    TBuffer slice = copy( P1, P2 );
+    TBuffer slice = copy(P1, P2);
     QString nothing = "";
     TChar format;
-    replaceInLine( P1, P2, nothing, format );
+    replaceInLine(P1, P2, nothing, format);
     return slice;
 }
 
-void TBuffer::paste( QPoint & P, TBuffer chunk )
+void TBuffer::paste(QPoint& P, TBuffer chunk)
 {
     bool needAppend = false;
     bool hasAppended = false;
     int y = P.y();
     int x = P.x();
-    if( chunk.buffer.size() < 1 )
-    {
+    if (chunk.buffer.size() < 1) {
         return;
     }
-    if( y < 0 || y > getLastLineNumber() )
-    {
+    if (y < 0 || y > getLastLineNumber()) {
         y = getLastLineNumber();
     }
-    if( y == -1 )
-    {
+    if (y == -1) {
         needAppend = true;
-    }
-    else
-    {
-        if( x < 0 || x >= static_cast<int>(buffer[y].size()) )
-        {
+    } else {
+        if (x < 0 || x >= static_cast<int>(buffer[y].size())) {
             return;
         }
     }
-    for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
-    {
+    for (int cx = 0; cx < static_cast<int>(chunk.buffer[0].size()); cx++) {
         QPoint P_current(cx, y);
-        if( ( y < getLastLineNumber() ) && ( ! needAppend ) )
-        {
-            TChar & format = chunk.buffer[0][cx];
+        if ((y < getLastLineNumber()) && (!needAppend)) {
+            TChar& format = chunk.buffer[0][cx];
             QString s = QString(chunk.lineBuffer[0][cx]);
-            insertInLine( P_current, s, format );
-        }
-        else
-        {
+            insertInLine(P_current, s, format);
+        } else {
             hasAppended = true;
             QString s(chunk.lineBuffer[0][cx]);
             append(s,
@@ -2985,30 +2809,24 @@ void TBuffer::paste( QPoint & P, TBuffer chunk )
                    (chunk.buffer[0][cx].flags & TCHAR_BOLD),
                    (chunk.buffer[0][cx].flags & TCHAR_ITALICS),
                    (chunk.buffer[0][cx].flags & TCHAR_UNDERLINE),
-                   (chunk.buffer[0][cx].flags & TCHAR_STRIKEOUT) );
+                   (chunk.buffer[0][cx].flags & TCHAR_STRIKEOUT));
         }
     }
-    if( hasAppended )
-    {
+    if (hasAppended) {
         TChar format;
-        if( y == -1 )
-        {
-        }
-        else
-        {
-            wrapLine( y, mWrapAt, mWrapIndent, format );
+        if (y == -1) {
+        } else {
+            wrapLine(y, mWrapAt, mWrapIndent, format);
         }
     }
 }
 
-void TBuffer::appendBuffer( const TBuffer& chunk )
+void TBuffer::appendBuffer(const TBuffer& chunk)
 {
-    if( chunk.buffer.size() < 1 )
-    {
+    if (chunk.buffer.size() < 1) {
         return;
     }
-    for( int cx=0; cx<static_cast<int>(chunk.buffer[0].size()); cx++ )
-    {
+    for (int cx = 0; cx < static_cast<int>(chunk.buffer[0].size()); cx++) {
         QString s(chunk.lineBuffer[0][cx]);
         append(s,
                0,
@@ -3022,161 +2840,127 @@ void TBuffer::appendBuffer( const TBuffer& chunk )
                (chunk.buffer[0][cx].flags & TCHAR_BOLD),
                (chunk.buffer[0][cx].flags & TCHAR_ITALICS),
                (chunk.buffer[0][cx].flags & TCHAR_UNDERLINE),
-               (chunk.buffer[0][cx].flags & TCHAR_STRIKEOUT) );
+               (chunk.buffer[0][cx].flags & TCHAR_STRIKEOUT));
     }
     QString lf = "\n";
-    append( lf,
-               0,
-               1,
-               0,
-               0,
-               0,
-               0,
-               0,
-               0,
-               false,
-               false,
-               false,
-               false );
+    append(lf, 0, 1, 0, 0, 0, 0, 0, 0, false, false, false, false);
 }
 
-int TBuffer::calcWrapPos( int line, int begin, int end )
+int TBuffer::calcWrapPos(int line, int begin, int end)
 {
     const QString lineBreaks = ",.- \n";
-    if( lineBuffer.size() < line ) return 0;
-    int lineSize = static_cast<int>(lineBuffer[line].size())-1;
-    if( lineSize < end )
-    {
+    if (lineBuffer.size() < line) {
+        return 0;
+    }
+    int lineSize = static_cast<int>(lineBuffer[line].size()) - 1;
+    if (lineSize < end) {
         end = lineSize;
     }
-    for( int i=end; i>=begin; i-- )
-    {
-        if( lineBreaks.indexOf( lineBuffer[line].at(i) ) > -1 )
-        {
+    for (int i = end; i >= begin; i--) {
+        if (lineBreaks.indexOf(lineBuffer[line].at(i)) > -1) {
             return i;
         }
     }
     return 0;
 }
 
-inline int TBuffer::skipSpacesAtBeginOfLine( int i, int i2 )
+inline int TBuffer::skipSpacesAtBeginOfLine(int i, int i2)
 {
     int offset = 0;
     int i_end = lineBuffer[i].size();
     QChar space = ' ';
-    while( i2 < i_end )
-    {
-        if( buffer[i][i2].flags & TCHAR_ECHO )
+    while (i2 < i_end) {
+        if (buffer[i][i2].flags & TCHAR_ECHO) {
             break;
-        if( lineBuffer[i][i2] == space )
+        }
+        if (lineBuffer[i][i2] == space) {
             offset++;
-        else
+        } else {
             break;
+        }
         i2++;
     }
     return offset;
 }
 
-inline int TBuffer::wrap( int startLine )
+inline int TBuffer::wrap(int startLine)
 {
-    if( static_cast<int>(buffer.size()) < startLine || startLine < 0 ) return 0;
-    std::queue<std::deque<TChar> > queue;
+    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
+        return 0;
+    }
+    std::queue<std::deque<TChar>> queue;
     QStringList tempList;
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
-    {
+    for (int i = startLine; i < static_cast<int>(buffer.size()); i++) {
         bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = "";
         QString time = timeBuffer[i];
         int indent = 0;
-        if( static_cast<int>(buffer[i].size()) >= mWrapAt )
-        {
-            for( int i3=0; i3<mWrapIndent; i3++ )
-            {
+        if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
+            for (int i3 = 0; i3 < mWrapIndent; i3++) {
                 TChar pSpace;
-                newLine.push_back( pSpace );
-                lineText.append( " " );
+                newLine.push_back(pSpace);
+                lineText.append(" ");
             }
             indent = mWrapIndent;
         }
         int lastSpace = 0;
         int wrapPos = 0;
         int length = buffer[i].size();
-        if( length == 0 )
-        {
+        if (length == 0) {
             tempList.append(QString());
             std::deque<TChar> emptyLine;
-            queue.push( emptyLine );
-            timeList.append( time );
+            queue.push(emptyLine);
+            timeList.append(time);
         }
-        for( int i2=0; i2<static_cast<int>(buffer[i].size());  )
-        {
-            if( length-i2 > mWrapAt-indent )
-            {
-                wrapPos = calcWrapPos( i, i2, i2+mWrapAt-indent );
-                if( wrapPos > 0 )
-                {
-                    lastSpace = wrapPos;
-                }
-                else
-                {
-                    lastSpace = 0;
-                }
-            }
-            else
-            {
+        for (int i2 = 0; i2 < static_cast<int>(buffer[i].size());) {
+            if (length - i2 > mWrapAt - indent) {
+                wrapPos = calcWrapPos(i, i2, i2 + mWrapAt - indent);
+                lastSpace = qMax(0, wrapPos);
+            } else {
                 lastSpace = 0;
             }
-            int __wrapPos = lastSpace == 0 ? mWrapAt-indent : lastSpace;
-            for( int i3=0; i3<=__wrapPos; i3++ )
-            {
-                if( lastSpace > 0 )
-                {
-                    if( i2 > lastSpace )
-                    {
+            int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
+            for (int i3 = 0; i3 < wrapPosition; i3++) {
+                if (lastSpace > 0) {
+                    if (i2 > lastSpace) {
                         break;
                     }
                 }
-                if( i2 >= static_cast<int>(buffer[i].size()) )
-                {
+                if (i2 >= static_cast<int>(buffer[i].size())) {
                     break;
                 }
-                if( lineBuffer[i].at(i2) == '\n' )
-                {
+                if (lineBuffer[i].at(i2) == '\n') {
                     i2++;
                     break;
                 }
-                newLine.push_back( buffer[i][i2] );
-                lineText.append( lineBuffer[i].at(i2) );
+                newLine.push_back(buffer[i][i2]);
+                lineText.append(lineBuffer[i].at(i2));
                 i2++;
             }
-            if( newLine.size() == 0 )
-            {
+            if (newLine.size() == 0) {
                 tempList.append(QString());
                 std::deque<TChar> emptyLine;
-                queue.push( emptyLine );
-                timeList.append( QString() );
-                promptList.append( false );
-            }
-            else
-            {
-                queue.push( newLine );
-                tempList.append( lineText );
-                timeList.append( time );
-                promptList.append( isPrompt );
+                queue.push(emptyLine);
+                timeList.append(QString());
+                promptList.append(false);
+            } else {
+                queue.push(newLine);
+                tempList.append(lineText);
+                timeList.append(time);
+                promptList.append(isPrompt);
             }
             newLine.clear();
             lineText = "";
             indent = 0;
-            i2 += skipSpacesAtBeginOfLine( i, i2 );
+            i2 += skipSpacesAtBeginOfLine(i, i2);
         }
         lineCount++;
     }
-    for( int i=0; i<lineCount; i++ )
-    {
+    for (int i = 0; i < lineCount; i++) {
         buffer.pop_back();
         lineBuffer.pop_back();
         timeBuffer.pop_back();
@@ -3186,67 +2970,50 @@ inline int TBuffer::wrap( int startLine )
 
     newLines -= lineCount;
     newLines += queue.size();
-    int insertedLines = queue.size()-1;
-    while( ! queue.empty() )
-    {
-        buffer.push_back( queue.front() );
+    int insertedLines = queue.size() - 1;
+    while (!queue.empty()) {
+        buffer.push_back(queue.front());
         queue.pop();
     }
-    for( int i=0; i<tempList.size(); i++ )
-    {
-        if( tempList[i].size() < 1 )
-        {
-            lineBuffer.append( QString() );
-            timeBuffer.append( QString() );
-            promptBuffer.push_back( false );
+    for (int i = 0; i < tempList.size(); i++) {
+        if (tempList[i].size() < 1) {
+            lineBuffer.append(QString());
+            timeBuffer.append(QString());
+            promptBuffer.push_back(false);
+        } else {
+            lineBuffer.append(tempList[i]);
+            timeBuffer.append(timeList[i]);
+            promptBuffer.push_back(promptList[i]);
         }
-        else
-        {
-            lineBuffer.append( tempList[i] );
-            timeBuffer.append( timeList[i] );
-            promptBuffer.push_back( promptList[i] );
-        }
-        dirty.push_back( true );
+        dirty.push_back(true);
     }
 
-    log(startLine, startLine+tempList.size());
+    log(startLine, startLine + tempList.size());
     return insertedLines > 0 ? insertedLines : 0;
 }
 
-void TBuffer::log( int from, int to )
+void TBuffer::log(int from, int to)
 {
-
-    TBuffer * pB = &mpHost->mpConsole->buffer;
-    if( pB == this )
-    {
-        if( mpHost->mpConsole->mLogToLogFile )
-        {
-            if( from >= size() || from < 0 )
-            {
+    TBuffer* pB = &mpHost->mpConsole->buffer;
+    if (pB == this) {
+        if (mpHost->mpConsole->mLogToLogFile) {
+            if (from >= size() || from < 0) {
                 return;
             }
-            if( to >= size() )
-            {
-                to = size()-1;
+            if (to >= size()) {
+                to = size() - 1;
             }
-            if( to < 0 )
-            {
+            if (to < 0) {
                 return;
             }
-            for( int i=from; i<=to; i++ )
-            {
-
+            for (int i = from; i <= to; i++) {
                 QString toLog;
-                if( mpHost->mIsCurrentLogFileInHtmlFormat )
-                {
-                    QPoint P1 = QPoint(0,i);
-                    QPoint P2 = QPoint( buffer[i].size(), i);
+                if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+                    QPoint P1 = QPoint(0, i);
+                    QPoint P2 = QPoint(buffer[i].size(), i);
                     toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
-                }
-                else
-                {
-                    if( mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty() )
-                    {
+                } else {
+                    if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
                         toLog = timeBuffer[i].left(13);
                     }
                     toLog.append(lineBuffer[i]);
@@ -3260,29 +3027,31 @@ void TBuffer::log( int from, int to )
 }
 
 // returns how many new lines have been inserted by the wrapping action
-int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & format )
+int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format)
 {
-    if( startLine < 0 ) return 0;
-    if( static_cast<int>(buffer.size()) <= startLine ) return 0;
-    std::queue<std::deque<TChar> > queue;
+    if (startLine < 0) {
+        return 0;
+    }
+    if (static_cast<int>(buffer.size()) <= startLine) {
+        return 0;
+    }
+    std::queue<std::deque<TChar>> queue;
     QStringList tempList;
     int lineCount = 0;
 
-    for( int i=startLine; i<static_cast<int>(buffer.size()); i++ )
-    {
-        if( i > startLine ) break; //only wrap one line of text
-
+    for (int i = startLine; i < static_cast<int>(buffer.size()); i++) {
+        if (i > startLine) {
+            break; //only wrap one line of text
+        }
         std::deque<TChar> newLine;
         QString lineText;
 
         int indent = 0;
-        if( static_cast<int>(buffer[i].size()) >= screenWidth )
-        {
-            for( int i3=0; i3<indentSize; i3++ )
-            {
+        if (static_cast<int>(buffer[i].size()) >= screenWidth) {
+            for (int i3 = 0; i3 < indentSize; i3++) {
                 TChar pSpace = format;
-                newLine.push_back( pSpace );
-                lineText.append( " " );
+                newLine.push_back(pSpace);
+                lineText.append(" ");
             }
             indent = indentSize;
         }
@@ -3290,115 +3059,97 @@ int TBuffer::wrapLine( int startLine, int screenWidth, int indentSize, TChar & f
         int wrapPos = -1;
         int length = static_cast<int>(buffer[i].size());
 
-        for( int i2=0; i2<static_cast<int>(buffer[i].size());  )
-        {
-            if( length-i2 > screenWidth-indent )
-            {
-                wrapPos = calcWrapPos( i, i2, i2+screenWidth-indent );
-                if( wrapPos > -1 )
-                {
-                    lastSpace = wrapPos;
-                }
-                else
-                {
-                    lastSpace = -1;
-                }
-            }
-            else
-            {
+        for (int i2 = 0; i2 < static_cast<int>(buffer[i].size());) {
+            if (length - i2 > screenWidth - indent) {
+                wrapPos = calcWrapPos(i, i2, i2 + screenWidth - indent);
+                lastSpace = qMax(-1, wrapPos);
+            } else {
                 lastSpace = -1;
             }
-            for( int i3=0; i3<screenWidth-indent; i3++ )
-            {
-                if( lastSpace > 0 )
-                {
-                    if( i2 >= lastSpace )
-                    {
+            for (int i3 = 0; i3 < screenWidth - indent; i3++) {
+                if (lastSpace > 0) {
+                    if (i2 >= lastSpace) {
                         i2++;
                         break;
                     }
                 }
-                if( i2 >= static_cast<int>(buffer[i].size()) )
-                {
+                if (i2 >= static_cast<int>(buffer[i].size())) {
                     break;
                 }
-                if( lineBuffer[i][i2] == QChar('\n') )
-                {
+                if (lineBuffer[i][i2] == QChar('\n')) {
                     i2++;
 
-                    if( newLine.size() == 0 )
-                    {
+                    if (newLine.size() == 0) {
                         tempList.append(QString());
                         std::deque<TChar> emptyLine;
-                        queue.push( emptyLine );
-                    }
-                    else
-                    {
-                        queue.push( newLine );
-                        tempList.append( lineText );
+                        queue.push(emptyLine);
+                    } else {
+                        queue.push(newLine);
+                        tempList.append(lineText);
                     }
                     goto OPT_OUT_CLEAN;
                 }
-                newLine.push_back( buffer[i][i2] );
-                lineText.append( lineBuffer[i].at(i2) );
+                newLine.push_back(buffer[i][i2]);
+                lineText.append(lineBuffer[i].at(i2));
                 i2++;
             }
-            queue.push( newLine );
-            tempList.append( lineText );
+            queue.push(newLine);
+            tempList.append(lineText);
 
-            OPT_OUT_CLEAN: newLine.clear();
+        OPT_OUT_CLEAN:
+            newLine.clear();
             lineText.clear();
             indent = 0;
         }
         lineCount++;
     }
 
-    if( lineCount < 1 )
-    {
-        log( startLine, startLine );
+    if (lineCount < 1) {
+        log(startLine, startLine);
         return 0;
     }
 
-    buffer.erase( buffer.begin()+startLine );
-    lineBuffer.removeAt( startLine );
-    QString time = timeBuffer.at( startLine );
-    timeBuffer.removeAt( startLine );
-    bool isPrompt = promptBuffer.at( startLine );
-    promptBuffer.removeAt( startLine );
-    dirty.removeAt( startLine );
+    buffer.erase(buffer.begin() + startLine);
+    lineBuffer.removeAt(startLine);
+    QString time = timeBuffer.at(startLine);
+    timeBuffer.removeAt(startLine);
+    bool isPrompt = promptBuffer.at(startLine);
+    promptBuffer.removeAt(startLine);
+    dirty.removeAt(startLine);
 
-    int insertedLines = queue.size()-1;
-    int i=0;
-    while( ! queue.empty() )
-    {
-        buffer.insert(buffer.begin()+startLine+i, queue.front());
+    int insertedLines = queue.size() - 1;
+    int i = 0;
+    while (!queue.empty()) {
+        buffer.insert(buffer.begin() + startLine + i, queue.front());
         queue.pop();
         i++;
     }
 
-    for( int i=0; i<tempList.size(); i++ )
-    {
-        lineBuffer.insert( startLine+i, tempList[i] );
-        timeBuffer.insert( startLine+i, time );
-        promptBuffer.insert( startLine+i, isPrompt );
-        dirty.insert( startLine+i, true );
+    for (int i = 0; i < tempList.size(); i++) {
+        lineBuffer.insert(startLine + i, tempList[i]);
+        timeBuffer.insert(startLine + i, time);
+        promptBuffer.insert(startLine + i, isPrompt);
+        dirty.insert(startLine + i, true);
     }
-    log( startLine, startLine+tempList.size()-1 );
+    log(startLine, startLine + tempList.size() - 1);
     return insertedLines > 0 ? insertedLines : 0;
 }
 
 
-bool TBuffer::moveCursor( QPoint & where )
+bool TBuffer::moveCursor(QPoint& where)
 {
     int x = where.x();
     int y = where.y();
-    if( y < 0 ) return false;
-    if( y >= static_cast<int>(buffer.size()) ) return false;
+    if (y < 0) {
+        return false;
+    }
+    if (y >= static_cast<int>(buffer.size())) {
+        return false;
+    }
 
-    if( static_cast<int>(buffer[y].size())-1 >  x )
-    {
+    if (static_cast<int>(buffer[y].size()) - 1 > x) {
         TChar c;
-        expandLine( y, x-buffer[y].size()-1, c );
+        expandLine(y, x - buffer[y].size() - 1, c);
     }
     return true;
 }
@@ -3406,134 +3157,129 @@ bool TBuffer::moveCursor( QPoint & where )
 QString badLineError = QString("ERROR: invalid line number");
 
 
-QString & TBuffer::line( int n )
+QString& TBuffer::line(int n)
 {
-    if( (n >= lineBuffer.size()) || (n<0) ) return badLineError;
+    if ((n >= lineBuffer.size()) || (n < 0)) {
+        return badLineError;
+    }
     return lineBuffer[n];
 }
 
 
-int TBuffer::find( int line, const QString& what, int pos=0 )
+int TBuffer::find(int line, const QString& what, int pos = 0)
 {
-    if( lineBuffer[line].size() >= pos ) return -1;
-    if( pos < 0 ) return -1;
-    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return -1;
-    return lineBuffer[line].indexOf( what, pos );
+    if (lineBuffer[line].size() >= pos) {
+        return -1;
+    }
+    if (pos < 0) {
+        return -1;
+    }
+    if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
+        return -1;
+    }
+    return lineBuffer[line].indexOf(what, pos);
 }
 
 
-QStringList TBuffer::split( int line, const QString& splitter )
+QStringList TBuffer::split(int line, const QString& splitter)
 {
-    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
-    return lineBuffer[line].split( splitter );
+    if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
+        return QStringList();
+    }
+    return lineBuffer[line].split(splitter);
 }
 
 
-QStringList TBuffer::split( int line, QRegExp splitter )
+QStringList TBuffer::split(int line, QRegExp splitter)
 {
-    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) ) return QStringList();
-    return lineBuffer[line].split( splitter );
+    if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
+        return QStringList();
+    }
+    return lineBuffer[line].split(splitter);
 }
 
 
-void TBuffer::expandLine( int y, int count, TChar & pC )
+void TBuffer::expandLine(int y, int count, TChar& pC)
 {
-    int size = buffer[y].size()-1;
-    for( int i=size; i<size+count; i++ )
-    {
-        buffer[y].push_back( pC );
-        lineBuffer[y].append( " " );
+    int size = buffer[y].size() - 1;
+    for (int i = size; i < size + count; i++) {
+        buffer[y].push_back(pC);
+        lineBuffer[y].append(" ");
     }
 }
 
-bool TBuffer::replaceInLine( QPoint & P_begin,
-                             QPoint & P_end,
-                             const QString & with,
-                             TChar & format )
+bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with, TChar& format)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
-    if( ( y1 >= static_cast<int>(buffer.size()) ) || ( y2 >= static_cast<int>(buffer.size()) ) )
-    {
+    if ((y1 >= static_cast<int>(buffer.size())) || (y2 >= static_cast<int>(buffer.size()))) {
         return false;
     }
-    if( ( x2 > static_cast<int>(buffer[y2].size()) ) || ( x1 > static_cast<int>(buffer[y1].size()) ) )
-    {
+    if ((x2 > static_cast<int>(buffer[y2].size())) || (x1 > static_cast<int>(buffer[y1].size()))) {
         return false;
     }
-    if( x1 < 0 || x2 < 0 )
-    {
+    if (x1 < 0 || x2 < 0) {
         return false;
     }
 
-    int xb,xe, yb, ye;
-    if( y1 <= y2 )
-    {
+    int xb, xe, yb, ye;
+    if (y1 <= y2) {
         yb = y1;
         ye = y2;
         xb = x1;
         xe = x2;
-    }
-    else
-    {
+    } else {
         yb = y2;
         ye = y1;
         xb = x2;
         xe = x1;
     }
 
-    for( int y=yb; y<=ye; y++ )
-    {
+    for (int y = yb; y <= ye; y++) {
         int x = 0;
-        if( y == yb )
-        {
+        if (y == yb) {
             x = xb;
         }
-        int x_end = buffer[y].size()-1;
-        if( y == ye )
-        {
+        int x_end = buffer[y].size() - 1;
+        if (y == ye) {
             x_end = xe;
         }
-        lineBuffer[y].remove( x, x_end-x );
-        auto it1 = buffer[y].begin()+x;
-        auto it2 = buffer[y].begin()+x_end;
-        buffer[y].erase( it1, it2 );
+        lineBuffer[y].remove(x, x_end - x);
+        auto it1 = buffer[y].begin() + x;
+        auto it2 = buffer[y].begin() + x_end;
+        buffer[y].erase(it1, it2);
     }
 
     // insert replacement
-    insertInLine( P_begin, with, format );
+    insertInLine(P_begin, with, format);
     return true;
 }
 
 
-bool TBuffer::replace( int line, const QString& what, const QString& with )
+bool TBuffer::replace(int line, const QString& what, const QString& with)
 {
-    if( ( line >= static_cast<int>(buffer.size()) ) || ( line < 0 ) )
+    if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
         return false;
-    lineBuffer[line].replace( what, with );
+    }
+    lineBuffer[line].replace(what, with);
 
     // fix size of the corresponding format buffer
 
     int delta = lineBuffer[line].size() - static_cast<int>(buffer[line].size());
 
-    if( delta > 0 )
-    {
-        for( int i=0; i<delta; i++ )
-        {
-            TChar c( mpHost ); // cloning default char format according to profile
-                               // because a lookup would be too expensive as
-                               // this is a very often used function and this standard
-                               // behaviour is acceptable. If the user wants special colors
-                               // he can apply format changes
-            buffer[line].push_back( c );
+    if (delta > 0) {
+        for (int i = 0; i < delta; i++) {
+            TChar c(mpHost); // cloning default char format according to profile
+            // because a lookup would be too expensive as
+            // this is a very often used function and this standard
+            // behaviour is acceptable. If the user wants special colors
+            // he can apply format changes
+            buffer[line].push_back(c);
         }
-    }
-    else if( delta < 0 )
-    {
-        for( int i=0; i<delta; i++ )
-        {
+    } else if (delta < 0) {
+        for (int i = 0; i < delta; i++) {
             buffer[line].pop_back();
         }
     }
@@ -3542,30 +3288,27 @@ bool TBuffer::replace( int line, const QString& what, const QString& with )
 
 void TBuffer::clear()
 {
-    while( buffer.size() > 0 )
-    {
-        if( ! deleteLines( 0, 0 ) )
-        {
+    while (buffer.size() > 0) {
+        if (!deleteLines(0, 0)) {
             break;
         }
     }
     std::deque<TChar> newLine;
-    buffer.push_back( newLine );
+    buffer.push_back(newLine);
     lineBuffer << QString();
     timeBuffer << QString();
-    promptBuffer.push_back( false );
-    dirty.push_back( true );
+    promptBuffer.push_back(false);
+    dirty.push_back(true);
 }
 
-bool TBuffer::deleteLine( int y )
+bool TBuffer::deleteLine(int y)
 {
-    return deleteLines( y, y );
+    return deleteLines(y, y);
 }
 
 void TBuffer::shrinkBuffer()
 {
-    for( int i=0; i < mBatchDeleteSize; i++ )
-    {
+    for (int i = 0; i < mBatchDeleteSize; i++) {
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
@@ -3575,63 +3318,46 @@ void TBuffer::shrinkBuffer()
     }
 }
 
-bool TBuffer::deleteLines( int from, int to )
+bool TBuffer::deleteLines(int from, int to)
 {
-    if( ( from >= 0 )
-     && ( from < static_cast<int>(buffer.size()) )
-     && ( from <= to )
-     && ( to >=0 )
-     && ( to < static_cast<int>(buffer.size()) ) )
-    {
+    if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
         int delta = to - from + 1;
 
-        for( int i=from; i<from+delta; i++ )
-        {
-            lineBuffer.removeAt( i );
-            timeBuffer.removeAt( i );
-            promptBuffer.removeAt( i );
-            dirty.removeAt( i );
+        for (int i = from; i < from + delta; i++) {
+            lineBuffer.removeAt(i);
+            timeBuffer.removeAt(i);
+            promptBuffer.removeAt(i);
+            dirty.removeAt(i);
         }
 
-        buffer.erase( buffer.begin() + from, buffer.begin() + to + 1 );
+        buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
 
 
-bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
+bool TBuffer::applyFormat(QPoint& P_begin, QPoint& P_end, TChar& format)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
@@ -3641,12 +3367,12 @@ bool TBuffer::applyFormat( QPoint & P_begin, QPoint & P_end, TChar & format )
             }
         }
         return true;
-    }
-    else
+    } else {
         return false;
+    }
 }
 
-bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkText, QStringList & linkFunction, QStringList & linkHint )
+bool TBuffer::applyLink(QPoint& P_begin, QPoint& P_end, const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -3654,264 +3380,212 @@ bool TBuffer::applyLink( QPoint & P_begin, QPoint & P_end, const QString & linkT
     int y2 = P_end.y();
     bool incLinkID = false;
     int linkID = 0;
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
-        {
-            for( int y=y1; y<=y2; y++ )
-            {
-                int x = 0;
-                if( y == y1 )
-                {
-                    x = x1;
-                }
-                while( x < static_cast<int>(buffer[y].size()) )
-                {
-                    if( y >= y2 )
-                    {
-                        if( x >= x2 )
-                        {
-                            return true;
-                        }
-                    }
-                    if( ! incLinkID )
-                    {
-                        incLinkID = true;
-                        mLinkID++;
-                        linkID = mLinkID;
-                        if( mLinkID > 1000 )
-                        {
-                            mLinkID = 1;
-                        }
-                        mLinkStore[mLinkID] = linkFunction;
-                        mHintStore[mLinkID] = linkHint;
-                    }
-                    buffer[y][x].link = linkID;
-                    x++;
-                }
+    {
+        for (int y = y1; y <= y2; y++) {
+            int x = 0;
+            if (y == y1) {
+                x = x1;
             }
-            return true;
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
+                        return true;
+                    }
+                }
+                if (!incLinkID) {
+                    incLinkID = true;
+                    mLinkID++;
+                    linkID = mLinkID;
+                    if (mLinkID > 1000) {
+                        mLinkID = 1;
+                    }
+                    mLinkStore[mLinkID] = linkFunction;
+                    mHintStore[mLinkID] = linkHint;
+                }
+                buffer[y][x].link = linkID;
+                x++;
+            }
         }
-        else
-            return false;
+        return true;
+    } else {
+        return false;
+    }
 }
 
-bool TBuffer::applyBold( QPoint & P_begin, QPoint & P_end, bool bold )
+bool TBuffer::applyBold(QPoint& P_begin, QPoint& P_end, bool bold)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
-                if ( bold )
+                if (bold) {
                     buffer[y][x].flags |= TCHAR_BOLD;
-                else
+                } else {
                     buffer[y][x].flags &= ~(TCHAR_BOLD);
+                }
                 x++;
             }
         }
         return true;
-    }
-    else
+    } else {
         return false;
+    }
 }
 
-bool TBuffer::applyItalics( QPoint & P_begin, QPoint & P_end, bool bold )
+bool TBuffer::applyItalics(QPoint& P_begin, QPoint& P_end, bool bold)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
-                if ( bold )
+                if (bold) {
                     buffer[y][x].flags |= TCHAR_ITALICS;
-                else
+                } else {
                     buffer[y][x].flags &= ~(TCHAR_ITALICS);
+                }
                 x++;
             }
         }
         return true;
-    }
-    else
+    } else {
         return false;
+    }
 }
 
-bool TBuffer::applyUnderline( QPoint & P_begin, QPoint & P_end, bool bold )
+bool TBuffer::applyUnderline(QPoint& P_begin, QPoint& P_end, bool bold)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
 
-                if ( bold )
+                if (bold) {
                     buffer[y][x].flags |= TCHAR_UNDERLINE;
-                else
+                } else {
                     buffer[y][x].flags &= ~(TCHAR_UNDERLINE);
+                }
                 x++;
             }
         }
         return true;
-    }
-    else
+    } else {
         return false;
+    }
 }
 
-bool TBuffer::applyStrikeOut( QPoint & P_begin, QPoint & P_end, bool strikeout )
+bool TBuffer::applyStrikeOut(QPoint& P_begin, QPoint& P_end, bool strikeout)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
 
-                if ( strikeout )
+                if (strikeout) {
                     buffer[y][x].flags |= TCHAR_STRIKEOUT;
-                else
+                } else {
                     buffer[y][x].flags &= ~(TCHAR_STRIKEOUT);
+                }
                 x++;
             }
         }
         return true;
-    }
-    else
+    } else {
         return false;
+    }
 }
 
-bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int fgColorG, int fgColorB )
+bool TBuffer::applyFgColor(QPoint& P_begin, QPoint& P_end, int fgColorR, int fgColorG, int fgColorB)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
@@ -3923,38 +3597,29 @@ bool TBuffer::applyFgColor( QPoint & P_begin, QPoint & P_end, int fgColorR, int 
             }
         }
         return true;
-    }
-    else
+    } else {
         return false;
+    }
 }
 
-bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int bgColorG, int bgColorB )
+bool TBuffer::applyBgColor(QPoint& P_begin, QPoint& P_end, int bgColorR, int bgColorG, int bgColorB)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
-    if( ( x1 >= 0 )
-        && ( ( y2 < static_cast<int>(buffer.size()) )
-        && ( y2 >= 0 ) )
-        && ( ( x2 > x1 ) || ( y2 > y1 ) )
-        && ( x1 < static_cast<int>(buffer[y1].size()) ) )
-        // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-        // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
+    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
+    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
     {
-        for( int y=y1; y<=y2; y++ )
-        {
+        for (int y = y1; y <= y2; y++) {
             int x = 0;
-            if( y == y1 )
-            {
+            if (y == y1) {
                 x = x1;
             }
-            while( x < static_cast<int>(buffer[y].size()) )
-            {
-                if( y >= y2 )
-                {
-                    if( x >= x2 )
-                    {
+            while (x < static_cast<int>(buffer[y].size())) {
+                if (y >= y2) {
+                    if (x >= x2) {
                         return true;
                     }
                 }
@@ -3966,105 +3631,88 @@ bool TBuffer::applyBgColor( QPoint & P_begin, QPoint & P_end, int bgColorR, int 
             }
         }
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
 
-QStringList TBuffer::getEndLines( int n )
+QStringList TBuffer::getEndLines(int n)
 {
     QStringList linesList;
-    for( int i=getLastLineNumber()-n; i<getLastLineNumber(); i++ )
-    {
-        linesList << line( i );
+    for (int i = getLastLineNumber() - n; i < getLastLineNumber(); i++) {
+        linesList << line(i);
     }
     return linesList;
 }
 
 
-QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding )
+QString TBuffer::bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding)
 {
     int y = P1.y();
     int x = P1.x();
     QString s;
-    if( y < 0 || y >= static_cast<int>(buffer.size()) ) {
+    if (y < 0 || y >= static_cast<int>(buffer.size())) {
         return s;
     }
 
-    if( ( x < 0 )
-        || ( x >= static_cast<int>(buffer[y].size()) )
-        || ( P2.x() >= static_cast<int>(buffer[y].size()) ) ) {
-        x=0;
+    if ((x < 0) || (x >= static_cast<int>(buffer[y].size())) || (P2.x() >= static_cast<int>(buffer[y].size()))) {
+        x = 0;
     }
-    if( P2.x() < 0 ) {
+    if (P2.x() < 0) {
         P2.setX(buffer[y].size());
     }
 
     bool bold = false;
     bool italics = false;
     bool underline = false;
-//    bool overline = false;
+    //    bool overline = false;
     bool strikeout = false;
-//    bool inverse = false;
-    int fgR=0;
-    int fgG=0;
-    int fgB=0;
-    int bgR=0;
-    int bgG=0;
-    int bgB=0;
+    //    bool inverse = false;
+    int fgR = 0;
+    int fgG = 0;
+    int fgB = 0;
+    int bgR = 0;
+    int bgG = 0;
+    int bgB = 0;
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
     QString fontWeight;
     QString fontStyle;
     QString textDecoration;
     bool firstSpan = true;
-    if( allowedTimestamps && !timeBuffer[y].isEmpty() )
-    {
+    if (allowedTimestamps && !timeBuffer[y].isEmpty()) {
         firstSpan = false;
         // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
         s.append(R"(<span style="color: rgb(200,150,0); background: rgb(22,22,22); )");
         s.append(R"(font-weight: normal; font-style: normal; text-decoration: normal">)");
         s.append(timeBuffer[y].left(13));
     }
-    if( spacePadding > 0 )
-    {
+    if (spacePadding > 0) {
         // used for "copy HTML", first line of selection
-        if( firstSpan )
-        {
+        if (firstSpan) {
             firstSpan = false;
+        } else {
+            s.append("</span>");
         }
-        else
-        {
-            s.append( "</span>" );
-        }
-        s.append( "<span>" );
-        s.append( QString( spacePadding, QLatin1Char(' ') ) );
+        s.append("<span>");
+        s.append(QString(spacePadding, QLatin1Char(' ')));
         // Pad out with spaces to the right so a partial first line lines up
     }
-    for( ; x<P2.x(); x++ ) {
-        if( x >= static_cast<int>(buffer[y].size()) ) {
+    for (; x < P2.x(); x++) {
+        if (x >= static_cast<int>(buffer[y].size())) {
             break;
         }
-        if( firstSpan
-            || buffer[y][x].fgR != fgR
-            || buffer[y][x].fgG != fgG
-            || buffer[y][x].fgB != fgB
-            || buffer[y][x].bgR != bgR
-            || buffer[y][x].bgG != bgG
-            || buffer[y][x].bgB != bgB
-            || bool( buffer[y][x].flags & TCHAR_BOLD ) != bold
-            || bool( buffer[y][x].flags & TCHAR_UNDERLINE ) != underline
-            || bool( buffer[y][x].flags & TCHAR_ITALICS ) != italics
-            || bool( buffer[y][x].flags & TCHAR_STRIKEOUT ) != strikeout
-//            || bool( buffer[y][x].flags & TCHAR_OVERLINE ) != overline
-//            || bool( buffer[y][x].flags & TCHAR_INVERSE ) != inverse
+        if (firstSpan || buffer[y][x].fgR != fgR || buffer[y][x].fgG != fgG || buffer[y][x].fgB != fgB || buffer[y][x].bgR != bgR || buffer[y][x].bgG != bgG || buffer[y][x].bgB != bgB
+            || bool(buffer[y][x].flags & TCHAR_BOLD) != bold
+            || bool(buffer[y][x].flags & TCHAR_UNDERLINE) != underline
+            || bool(buffer[y][x].flags & TCHAR_ITALICS) != italics
+            || bool(buffer[y][x].flags & TCHAR_STRIKEOUT) != strikeout
+            //            || bool( buffer[y][x].flags & TCHAR_OVERLINE ) != overline
+            //            || bool( buffer[y][x].flags & TCHAR_INVERSE ) != inverse
             ) { // Can leave this on a separate line until line above uncommented.
-            if( firstSpan ) {
+            if (firstSpan) {
                 firstSpan = false; // The first span won't need to close the previous one
-            }
-            else {
+            } else {
                 s += "</span>";
             }
             fgR = buffer[y][x].fgR;
@@ -4077,77 +3725,66 @@ QString TBuffer::bufferToHtml( QPoint P1, QPoint P2, bool allowedTimestamps, int
             italics = buffer[y][x].flags & TCHAR_ITALICS;
             underline = buffer[y][x].flags & TCHAR_UNDERLINE;
             strikeout = buffer[y][x].flags & TCHAR_STRIKEOUT;
-//            overline = buffer[y][x].flags & TCHAR_OVERLINE;
-//            inverse = buffer[y][x].flags & TCHAR_INVERSE;
-            if( bold ) {
+            //            overline = buffer[y][x].flags & TCHAR_OVERLINE;
+            //            inverse = buffer[y][x].flags & TCHAR_INVERSE;
+            if (bold) {
                 fontWeight = "bold";
-            }
-            else {
+            } else {
                 fontWeight = "normal";
             }
-            if( italics ) {
+            if (italics) {
                 fontStyle = "italic";
-            }
-            else {
+            } else {
                 fontStyle = "normal";
             }
-            if( ! (underline || strikeout /* || overline */ ) ) {
+            if (!(underline || strikeout /* || overline */)) {
                 textDecoration = "normal";
-            }
-            else {
+            } else {
                 textDecoration = "";
-                if( underline ) {
+                if (underline) {
                     textDecoration += "underline ";
                 }
-                if( strikeout ) {
+                if (strikeout) {
                     textDecoration += "line-through ";
                 }
-//                if( overline ) {
-//                    textDecoration += "overline ";
-//                }
+                //                if( overline ) {
+                //                    textDecoration += "overline ";
+                //                }
                 textDecoration = textDecoration.trimmed();
             }
             s += R"(<span style=")";
-//            if( inverse )
-//            {
-//                s += "color: rgb(" + QString::number(bgR) + ","
-//                                   + QString::number(bgG) + ","
-//                                   + QString::number(bgB) + ");";
-//                s += " background: rgb(" + QString::number(fgR) + ","
-//                                         + QString::number(fgG) + ","
-//                                         + QString::number(fgB) + ");";
-//            }
-//            else
-//            {
-            s += "color: rgb(" + QString::number(fgR) + ","
-                               + QString::number(fgG) + ","
-                               + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR) + ","
-                                     + QString::number(bgG) + ","
-                                     + QString::number(bgB) + ");";
-//            }
-            s += " font-weight: " + fontWeight +
-                 "; font-style: " + fontStyle +
-                 "; text-decoration: " + textDecoration + R"(">)";
+            //            if( inverse )
+            //            {
+            //                s += "color: rgb(" + QString::number(bgR) + ","
+            //                                   + QString::number(bgG) + ","
+            //                                   + QString::number(bgB) + ");";
+            //                s += " background: rgb(" + QString::number(fgR) + ","
+            //                                         + QString::number(fgG) + ","
+            //                                         + QString::number(fgB) + ");";
+            //            }
+            //            else
+            //            {
+            s += "color: rgb(" + QString::number(fgR) + "," + QString::number(fgG) + "," + QString::number(fgB) + ");";
+            s += " background: rgb(" + QString::number(bgR) + "," + QString::number(bgG) + "," + QString::number(bgB) + ");";
+            //            }
+            s += " font-weight: " + fontWeight + "; font-style: " + fontStyle + "; text-decoration: " + textDecoration + R"(">)";
         }
-        if( lineBuffer[y][x] == '<' ) {
+        if (lineBuffer[y][x] == '<') {
             s.append("&lt;");
-        }
-        else if( lineBuffer[y][x] == '>' ) {
+        } else if (lineBuffer[y][x] == '>') {
             s.append("&gt;");
-        }
-        else {
+        } else {
             s.append(lineBuffer[y][x]);
         }
     }
-    if( s.size() > 0 ) {
+    if (s.size() > 0) {
         s.append("</span>");
         // Needed to balance the very first open <span>, but only if we have
         // included anything. the previously appearing <br /> is an XML tag, NOT
         // a (strict) HTML 4 one
     }
 
-    s.append( QStringLiteral( "<br>\n" ) );
+    s.append(QStringLiteral("<br>\n"));
     // Needed to reproduce empty lines in capture, as this method is called for
     // EACH line, even the empty ones, the spans are styled as "pre" so literal
     // linefeeds would be treated as such THERE but we deleberately place the

@@ -123,10 +123,10 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         pOldParent->setDataChanged();
 
         // clear references to old parent toolbars and buttonbars.
-        if( pOldParent->mpToolBar == pChild->mpToolBar ) {
+        if (pOldParent->mpToolBar == pChild->mpToolBar) {
             pChild->mpToolBar = 0;
         }
-        if( pOldParent->mpEasyButtonBar == pChild->mpEasyButtonBar ) {
+        if (pOldParent->mpEasyButtonBar == pChild->mpEasyButtonBar) {
             pChild->mpEasyButtonBar = 0;
         }
     }
@@ -282,8 +282,8 @@ int ActionUnit::getNewID()
 std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 {
     for (auto& action : mActionRootNodeList) {
-        if( action->mLocation != 4 ) {
-            continue;  // skip over any root action node that is NOT going to be a TToolBar.
+        if (action->mLocation != 4) {
+            continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
         if (action->mPackageName.size() > 0) {
             for (auto& childAction : *action->mpMyChildrenList) {
@@ -338,7 +338,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
 {
     for (auto& rootAction : mActionRootNodeList) {
-        if( rootAction->mLocation == 4 ) {
+        if (rootAction->mLocation == 4) {
             continue; // skip over any root action node that IS going to be a TToolBar.
         }
         if (rootAction->mPackageName.size() > 0) {
@@ -432,7 +432,7 @@ void ActionUnit::hideToolBar(const QString& name)
 
 void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
 {
-    if( ! pA->isDataChanged() ) {
+    if (!pA->isDataChanged()) {
         return;
     }
 
@@ -447,19 +447,14 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
         pA->expandToolbar(pTB);
         pTB->setTitleBarWidget(0);
     }
-    /*else
-    {
-        pA->expandToolbar( pMainWindow, pTB, 0 );
-        QWidget * test = new QWidget;
-        pTB->setTitleBarWidget( test );
-    }*/
 
     pTB->finalize();
 
-    if (pA->mOrientation == 0)
+    if (pA->mOrientation == 0) {
         pTB->setHorizontalOrientation();
-    else
+    } else {
         pTB->setVerticalOrientation();
+    }
 
     pTB->setTitleBarWidget(0);
     pTB->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
@@ -476,8 +471,9 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
         }
         pTB->mpTAction = pA;
         pTB->recordMove();
-    } else
+    } else {
         pTB->show();
+    }
 
     pTB->setStyleSheet(pTB->mpTAction->css);
     pA->setDataSaved();
@@ -509,17 +505,18 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
     pA->expandToolbar(pTB);
     pTB->finalize();
-    if (pA->mOrientation == 0)
+    if (pA->mOrientation == 0) {
         pTB->setHorizontalOrientation();
-    else
+    } else {
         pTB->setVerticalOrientation();
+    }
     switch (pA->mLocation) {
     case 0:
         mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
         break;
     //case 1:
-        //mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
-        //break;
+    //mpHost->mpConsole->mpTopToolBar->layout()->addWidget( pTB );
+    //break;
     case 2:
         mpHost->mpConsole->mpLeftToolBar->layout()->addWidget(pTB);
         break;
