@@ -195,8 +195,9 @@ void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int
 {
     if (parent.isValid()) {
         mOldParentID = parent.data(Qt::UserRole).toInt();
-    } else
+    } else {
         mOldParentID = 0;
+    }
 
     if (mOldParentID == 0) {
         mOldParentID = parent.sibling(start, 0).data(Qt::UserRole).toInt();

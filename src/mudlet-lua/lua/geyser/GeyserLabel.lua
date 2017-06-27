@@ -527,7 +527,7 @@ function Geyser.Label:addChild(cons, container)
         --used in instances where an element only meant to serve as
         --a nest container is released over.  Without this, we get
         --seg faults
-        me:setreleaseCallback("fakeFunction")
+        me:setReleaseCallback("fakeFunction")
     end
     me.flyDir = flyDir
     me.layoutDir =layoutDir
