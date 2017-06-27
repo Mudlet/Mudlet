@@ -173,7 +173,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                                          "\"%1\"\n"
                                          "reports it has a version (%2) it must have come from a later Mudlet version,\n"
                                          "and this one cannot read it, you need a newer Mudlet!")
-                                          .arg(pfile->fileName(), versionString);
+                                              .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
                     return false;
                 }
@@ -1435,14 +1435,12 @@ void XMLimport::getVersionString(QString& versionString)
 
 QString XMLimport::readScriptElement()
 {
-
     QString localScript = readElementText();
     if (Error() != NoError) {
-        qDebug() << "XMLimport::readScriptElement() ERROR:"
-                 << errorString();
+        qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
     }
 
-    if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0) ) {
+    if (mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) {
         // This is NOT the original version, so it will have control characters
         // encoded up using Object Replacement and Control Symbol (for relevant ASCII control code) code-points
         localScript.replace(QStringLiteral("\xFFFC\x2401"), QChar('\x01')); // SOH
