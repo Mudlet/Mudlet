@@ -62,16 +62,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
-    QString nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
-    QFile file(QDir::homePath() + "/.config/mudlet/irc_nick");
-    file.open(QIODevice::ReadOnly);
-    QDataStream ifs(&file);
-    ifs >> nick;
-    file.close();
-    if (nick.isEmpty()) {
-        nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
-    }
-    ircNick->setText(nick);
+
+    ircHostName->setText(dlgIRC::readIrcHostName(mpHost));
+    ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(mpHost)));
+    ircChannels->setText(dlgIRC::readIrcChannels(mpHost).join(" "));
+    ircNick->setText(dlgIRC::readIrcNickName(mpHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pH->mEnableSpellCheck);
@@ -81,10 +76,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
     QString path;
 #ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + mpHost->mSpellDic + ".aff"))
+    if (QFile::exists("/usr/share/hunspell/" + mpHost->mSpellDic + ".aff")) {
         path = "/usr/share/hunspell/";
-    else
+    } else {
         path = "./";
+    }
 #elif defined(Q_OS_MAC)
     path = QCoreApplication::applicationDirPath() + "/../Resources/";
 #else
@@ -105,8 +101,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
     }
 
-    if (pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-        || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+    if (pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
         || pH->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
         || pH->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
         downloadMapOptions->setVisible(true);
@@ -230,8 +225,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         if (mFontSize < 0) {
             mFontSize = 10;
         }
-        if (mFontSize <= 40)
+        if (mFontSize <= 40) {
             fontSize->setCurrentIndex(mFontSize);
+        }
 
         setColors();
 
@@ -249,10 +245,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
         USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
         QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
-        if (file_use_smallscreen.exists())
+        if (file_use_smallscreen.exists()) {
             checkBox_USE_SMALL_SCREEN->setChecked(true);
-        else
+        } else {
             checkBox_USE_SMALL_SCREEN->setChecked(false);
+        }
         topBorderHeight->setValue(pHost->mBorderTopHeight);
         bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
@@ -261,10 +258,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         MainIconSize->setValue(mudlet::self()->mMainIconSize);
         TEFolderIconSize->setValue(mudlet::self()->mTEFolderIconSize);
         showMenuBar->setChecked(mudlet::self()->mShowMenuBar);
-        if (!showMenuBar->isChecked())
+        if (!showMenuBar->isChecked()) {
             showToolbar->setChecked(true);
-        else
+        } else {
             showToolbar->setChecked(mudlet::self()->mShowToolbar);
+        }
         mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
         mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
         commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
@@ -326,8 +324,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
         comboBox_mapFileSaveFormatVersion->setEnabled(false);
         label_mapFileSaveFormatVersion->setEnabled(false);
-        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion
-            || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
+        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
             for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
                 if (i == pHost->mpMap->mDefaultVersion) {
                     continue;
@@ -355,7 +352,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         comboBox_encoding->addItem(QLatin1String("ASCII"));
         comboBox_encoding->addItems(pHost->mTelnet.getEncodingsList());
-        if(pHost->mTelnet.getEncoding().isEmpty()) {
+        if (pHost->mTelnet.getEncoding().isEmpty()) {
             // cTelnet::mEncoding is (or should be) empty for the default 7-bit
             // ASCII case, so need to set the control specially to its (the
             // first) value
@@ -363,7 +360,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         } else {
             comboBox_encoding->setCurrentText(pHost->mTelnet.getEncoding());
         }
-        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString &)), this, SLOT(slot_setEncoding(const QString &)));
+        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
     }
 }
 
@@ -885,10 +882,8 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(this,
-                                                    tr( "Load Mudlet map" ),
-                                                    QDir::homePath(),
-                                                    tr( "Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!" ) );
+    QString fileName = QFileDialog::getOpenFileName(
+            this, tr("Load Mudlet map"), QDir::homePath(), tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -932,10 +927,8 @@ void dlgProfilePreferences::saveMap()
         return;
     }
 
-    QString fileName = QFileDialog::getSaveFileName( this,
-                                                     tr( "Save Mudlet map" ),
-                                                     QDir::homePath(),
-                                                     tr( "Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!" ) );
+    QString fileName =
+            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), QDir::homePath(), tr("Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -1046,10 +1039,7 @@ void dlgProfilePreferences::copyMap()
         if (itOtherProfile.value() > 0) {
             // Skip the ones where we have already got the player room from the
             // active profile
-            qDebug() << "dlgProfilePreference::copyMap() in other ACTIVE profile:"
-                     << itOtherProfile.key()
-                     << "\n    the player was located in:"
-                     << itOtherProfile.value();
+            qDebug() << "dlgProfilePreference::copyMap() in other ACTIVE profile:" << itOtherProfile.key() << "\n    the player was located in:" << itOtherProfile.value();
             if (pHost->mpMap->mpRoomDB->getRoom(itOtherProfile.value())) {
                 // That room IS in the map we are copying across, so update the
                 // local record of it for the map for that profile:
@@ -1083,7 +1073,7 @@ void dlgProfilePreferences::copyMap()
                      << otherProfileRoomCount
                      << "\n    the player was located in:"
                      << otherProfileCurrentRoomId;
-            itOtherProfile.setValue( otherProfileCurrentRoomId );
+            itOtherProfile.setValue(otherProfileCurrentRoomId);
             // Using a mutable iterator we must modify (mutate) the data through
             // the iterator!
             if (pHost->mpMap->mpRoomDB->getRoom(otherProfileCurrentRoomId)) {
@@ -1118,18 +1108,15 @@ void dlgProfilePreferences::copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString sourceMapFolder( QStringLiteral( "%1/.config/mudlet/profiles/%2/map" )
-                                 .arg( QDir::homePath(), pHost->getName() ) );
-    QStringList mProfileList = QDir( sourceMapFolder )
-                                   .entryList( QDir::Files | QDir::NoDotAndDotDot, QDir::Time );
+    QString sourceMapFolder(QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), pHost->getName()));
+    QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
         if (thisProfileLatestMapPathFileName.isEmpty()) {
             continue;
         }
 
-        thisProfileLatestMapFile.setFileName( QStringLiteral( "%1/%2" )
-                                                  .arg( sourceMapFolder, thisProfileLatestMapPathFileName ) );
+        thisProfileLatestMapFile.setFileName(QStringLiteral("%1/%2").arg(sourceMapFolder, thisProfileLatestMapPathFileName));
         break;
     }
 
@@ -1151,15 +1138,12 @@ void dlgProfilePreferences::copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if( ! thisProfileLatestMapFile.copy( QStringLiteral( "%1/.config/mudlet/profiles/%2/map/%3" )
-                                                 .arg( QDir::homePath(), otherHostName, thisProfileLatestMapPathFileName ) ) ) {
-            label_mapFileActionResult->setText( tr( "Could not copy the map to %1 - unable to copy the new map file over." )
-                                                        .arg( otherHostName ));
+        if (!thisProfileLatestMapFile.copy(QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3").arg(QDir::homePath(), otherHostName, thisProfileLatestMapPathFileName))) {
+            label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
             continue; // Try again with next profile
         } else {
-            label_mapFileActionResult->setText( tr( "Map copied successfully to other profile %1." )
-                                                    .arg( otherHostName ) );
+            label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
             qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                    // Just in case is needed to make the above message
                                    // show up when saving big maps
@@ -1185,8 +1169,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     if (!pHost) {
         return;
     }
-    if (dictList->currentItem())
+    if (dictList->currentItem()) {
         pHost->mSpellDic = dictList->currentItem()->text();
+    }
     pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
@@ -1209,9 +1194,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         bool isAreaWidgetInNeedOfResetting = false;
-        if(  ( ! pHost->mpMap->mpMapper->getDefaultAreaShown() )
-          && ( checkBox_showDefaultArea->isChecked() )
-          && ( pHost->mpMap->mpMapper->mp2dMap->mAID == -1 ) ) {
+        if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAID == -1)) {
             isAreaWidgetInNeedOfResetting = true;
         }
 
@@ -1227,7 +1210,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mBorderBottomHeight = bottomBorderHeight->value();
     pHost->mBorderLeftWidth = leftBorderWidth->value();
     pHost->mBorderRightWidth = rightBorderWidth->value();
-//qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+    //qDebug()<<"Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
     //pHost->mMXPMode = mMXPMode->currentIndex();
     pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
@@ -1236,15 +1219,17 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet::self()->setIcoSize(MainIconSize->value());
     pHost->mpEditorDialog->setTBIconSize(0);
     mudlet::self()->mShowMenuBar = showMenuBar->isChecked();
-    if (showMenuBar->isChecked())
+    if (showMenuBar->isChecked()) {
         mudlet::self()->menuBar()->show();
-    else
+    } else {
         mudlet::self()->menuBar()->hide();
+    }
     mudlet::self()->mShowToolbar = showToolbar->isChecked();
-    if (showToolbar->isChecked())
+    if (showToolbar->isChecked()) {
         mudlet::self()->mpMainToolBar->show();
-    else
+    } else {
         mudlet::self()->mpMainToolBar->hide();
+    }
     pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
     pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
     pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
@@ -1260,19 +1245,78 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     mudlet::self()->mStatusBarState = mudlet::StatusBarOptions(comboBox_statusBarSetting->currentData().toInt());
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-    //pHost->mIRCNick = ircNick->text();
-    QString old_nick = mudlet::self()->mIrcNick;
-    QString new_nick = ircNick->text();
-    if (new_nick.isEmpty()) {
-        new_nick = tr("Mudlet%1").arg(QString::number(rand() % 10000));
+
+    QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+    QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
+    QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+    QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
+
+    QString newIrcNick = ircNick->text();
+    QString newIrcHost = ircHostName->text();
+    QString newIrcPort = ircHostPort->text();
+    QString newIrcChannels = ircChannels->text();
+    QStringList newChanList;
+    int nIrcPort;
+    bool restartIrcClient = false;
+
+    if (newIrcHost.isEmpty()) {
+        newIrcHost = dlgIRC::DefaultHostName;
     }
-    QFile file(QDir::homePath() + "/.config/mudlet/irc_nick");
-    file.open(QIODevice::WriteOnly | QIODevice::Unbuffered);
-    QDataStream ofs(&file);
-    ofs << new_nick;
-    file.close();
-    if (mudlet::self()->mpIRC) {
-        mudlet::self()->mpIRC->connection->setNickName(new_nick);
+
+    if (!newIrcPort.isEmpty()) {
+        bool ok;
+        nIrcPort = newIrcPort.toInt(&ok);
+        if (!ok) {
+            nIrcPort = dlgIRC::DefaultHostPort;
+        } else if (nIrcPort > 65535 || nIrcPort < 1) {
+            nIrcPort = dlgIRC::DefaultHostPort;
+        }
+        newIrcPort = QString::number(nIrcPort);
+    }
+
+    if (newIrcNick.isEmpty()) {
+        qsrand(QTime::currentTime().msec());
+        newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+    }
+
+    if (!newIrcChannels.isEmpty()) {
+        QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
+        for( QString s : tL ) {
+            if( s.startsWith("#") || s.startsWith("&") || s.startsWith("+") ) {
+                newChanList << s;
+            }
+        }
+    } else {
+        newChanList = dlgIRC::DefaultChannels;
+    }
+    newIrcChannels = newChanList.join(" ");
+
+    if (oldIrcNick != newIrcNick) {
+        dlgIRC::writeIrcNickName(pHost, newIrcNick);
+
+        // if the client is active, update our client nickname.
+        if (mudlet::self()->mpIrcClientMap[pHost]) {
+            mudlet::self()->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
+        }
+    }
+
+    if( oldIrcChannels != newIrcChannels ) {
+        dlgIRC::writeIrcChannels(pHost, newChanList);
+    }
+
+    if( oldIrcHost != newIrcHost ) {
+        dlgIRC::writeIrcHostName(pHost, newIrcHost);
+        restartIrcClient = true;
+    }
+
+    if( oldIrcPort != newIrcPort ) {
+        dlgIRC::writeIrcHostPort(pHost, nIrcPort);
+        restartIrcClient = true;
+    }
+
+    // restart the irc client if it is active and we have changed host/port.
+    if (restartIrcClient && mudlet::self()->mpIrcClientMap[pHost]) {
+        mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
     }
 
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {
@@ -1293,7 +1337,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         QSize s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
-//qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
+        //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
@@ -1323,7 +1367,7 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
     }
 }
 
-void dlgProfilePreferences::slot_setEncoding( const QString & newEncoding )
+void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 {
     mpHost->mTelnet.setEncoding(newEncoding);
 }

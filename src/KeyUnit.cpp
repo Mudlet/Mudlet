@@ -187,8 +187,9 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
 
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
-    if (!pT)
+    if (!pT) {
         return;
+    }
     if (!pT->isTempKey()) {
         mLookupTable.remove(pT->getName(), pT);
     } else {
@@ -261,8 +262,9 @@ void KeyUnit::addKey(TKey* pT)
 
 void KeyUnit::removeKey(TKey* pT)
 {
-    if (!pT)
+    if (!pT) {
         return;
+    }
     if (!pT->isTempKey()) {
         mLookupTable.remove(pT->getName(), pT);
     } else {
@@ -336,10 +338,12 @@ void KeyUnit::_assembleReport(TKey* pChild)
     for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
         TKey* pT = *it2;
         _assembleReport(pT);
-        if (pT->isActive())
+        if (pT->isActive()) {
             statsActiveKeys++;
-        if (pT->isTempKey())
+        }
+        if (pT->isTempKey()) {
             statsTempKeys++;
+        }
         statsKeyTotal++;
     }
 }
@@ -351,19 +355,23 @@ QString KeyUnit::assembleReport()
     statsTempKeys = 0;
     for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
         TKey* pChild = *it;
-        if (pChild->isActive())
+        if (pChild->isActive()) {
             statsActiveKeys++;
-        if (pChild->isTempKey())
+        }
+        if (pChild->isTempKey()) {
             statsTempKeys++;
+        }
         statsKeyTotal++;
         list<TKey*>* childrenList = pChild->mpMyChildrenList;
         for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
             TKey* pT = *it2;
             _assembleReport(pT);
-            if (pT->isActive())
+            if (pT->isActive()) {
                 statsActiveKeys++;
-            if (pT->isTempKey())
+            }
+            if (pT->isTempKey()) {
                 statsTempKeys++;
+            }
             statsKeyTotal++;
         }
     }
