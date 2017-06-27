@@ -149,7 +149,7 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getComputerEncodingNames();
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
 
