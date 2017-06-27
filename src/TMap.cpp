@@ -1229,7 +1229,7 @@ bool TMap::serialize(QDataStream& ofs)
     return true;
 }
 
-bool TMap::restore(QString location)
+bool TMap::restore(QString location, bool downloadIfNotFound)
 {
     qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mpHost->getName() << " URL:" << mpHost->getUrl();
 
@@ -1462,7 +1462,7 @@ bool TMap::restore(QString location)
         }
     }
 
-    if (!canRestore || entries.size() == 0) {
+    if ((!canRestore || entries.size() == 0) && downloadIfNotFound) {
         QMessageBox msgBox;
 
         if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
