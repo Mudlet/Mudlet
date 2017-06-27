@@ -1131,7 +1131,7 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
         actionInfo << QString::fromUtf8(lua_tostring(L, 2));
     }
     if (!lua_isstring(L, 3)) {
-        actionInfo << "";
+        actionInfo << QString();
     } else {
         actionInfo << QString::fromUtf8(lua_tostring(L, 3));
     }
