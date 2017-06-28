@@ -69,7 +69,7 @@
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/texttheme.h"
 
-#include <QDir>
+#include <zip.h>
 
 using namespace std;
 
@@ -434,15 +434,13 @@ void mudlet::initEdbee()
     // Optional additional themes will be added in future
 
     edbee::Edbee* edbee = edbee::Edbee::instance();
-
     edbee->autoInit();
     edbee->autoShutDownOnAppExit();
 
-    edbee::TextGrammarManager* grammarManager = edbee->grammarManager();
+    auto grammarManager = edbee->grammarManager();
     grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
 
-    edbee::TextThemeManager* themeManager = edbee->themeManager();
-    themeManager->readThemeFile(QLatin1Literal(":/edbee_defaults/Mudlet.tmTheme"));
+    loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 }
 
 bool mudlet::moduleTableVisible()
@@ -828,7 +826,7 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     // close IRC client window if it is open.
-    if( mpIrcClientMap.contains(pH) ) {
+    if (mpIrcClientMap.contains(pH)) {
         mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
         mpIrcClientMap[pH]->deleteLater();
     }
@@ -2815,6 +2813,135 @@ void mudlet::slot_statusBarMessageChanged(QString text)
 void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
 {
     emit signal_profileMapReloadRequested(affectedProfiles);
+}
+
+bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
+{
+    int err = 0;
+    //from: https://gist.github.com/mobius/1759816
+    struct zip_stat zs;
+    struct zip_file* zf;
+    zip_uint64_t bytesRead = 0;
+    char buf[4096]; // Was 100 but that seems unduly stingy...!
+    zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
+    if (err != 0) {
+        zip_error_to_str(buf, sizeof(buf), err, errno);
+        return false;
+    }
+
+    // We now scan for directories first, and gather needed ones first, not
+    // just relying on (zero length) archive entries ending in '/' as some
+    // (possibly broken) archive building libraries seem to forget to
+    // include them.
+    QMap<QString, QString> directoriesNeededMap;
+    //   Key is: relative path stored in archive
+    // Value is: absolute path needed when extracting files
+    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
+        if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
+            QString entryInArchive(QString::fromUtf8(zs.name));
+            QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
+            // TODO: We are supposed to validate the fields (except the
+            // "valid" one itself) in zs before using them:
+            // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
+            if (entryInArchive.endsWith(QLatin1Char('/'))) {
+                if (!directoriesNeededMap.contains(pathInArchive)) {
+                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
+                }
+            } else {
+                if (!pathInArchive.isEmpty() && !directoriesNeededMap.contains(pathInArchive)) {
+                    directoriesNeededMap.insert(pathInArchive, pathInArchive);
+                }
+            }
+        }
+    }
+
+    // Now create the needed directories:
+    QMapIterator<QString, QString> itPath(directoriesNeededMap);
+    while (itPath.hasNext()) {
+        itPath.next();
+        QString folderToCreate = QStringLiteral("%1/%2").arg(destination, itPath.value());
+        if (!tmpDir.exists(folderToCreate)) {
+            if (!tmpDir.mkpath(folderToCreate)) {
+                zip_close(archive);
+                return false; // Abort reading rest of archive
+            }
+            tmpDir.refresh();
+        }
+    }
+
+    // Now extract the files
+    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
+        // No need to check return value as we've already done it first time
+        zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
+        QString entryInArchive(QString::fromUtf8(zs.name));
+        if (!entryInArchive.endsWith(QLatin1Char('/'))) {
+            // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
+            zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
+            if (!zf) {
+                zip_close(archive);
+                return false;
+            }
+
+            QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
+
+            if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+                zip_fclose(zf);
+                zip_close(archive);
+                return false;
+            }
+
+            bytesRead = 0;
+            zip_uint64_t bytesExpected = zs.size;
+            while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
+                zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
+                if (len < 0) {
+                    fd.close();
+                    zip_fclose(zf);
+                    zip_close(archive);
+                    return false;
+                }
+
+                if (fd.write(buf, len) == -1) {
+                    fd.close();
+                    zip_fclose(zf);
+                    zip_close(archive);
+                    return false;
+                }
+                bytesRead += static_cast<zip_uint64_t>(len);
+            }
+            fd.close();
+            zip_fclose(zf);
+        }
+    }
+
+    err = zip_close(archive);
+    if (err) {
+        zip_error_to_str(buf, sizeof(buf), err, errno);
+        return false;
+    }
+
+    return true;
+}
+
+// loads the needed edbee theme from disk for use
+bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
+{
+    auto edbee = edbee::Edbee::instance();
+    auto themeManager = edbee->themeManager();
+
+    QString themeLocation;
+    if (themeFile == QStringLiteral("Mudlet.tmTheme")) {
+        themeLocation = QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
+    } else {
+        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFile);
+    }
+    auto result = themeManager->readThemeFile(themeLocation, themeName);
+    if (result == nullptr) {
+        qWarning() << themeManager->lastErrorMessage();
+        return false;
+    }
+
+    return true;
 }
 
 #ifdef QT_GAMEPAD_LIB

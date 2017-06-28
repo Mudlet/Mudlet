@@ -29,6 +29,7 @@
 
 #include "pre_guard.h"
 #include "ui_main_window.h"
+#include "edbee/views/texttheme.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
@@ -195,8 +196,8 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-
-    void setEditorTextoptions(const bool, const bool);
+    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
 
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display
@@ -215,6 +216,8 @@ public:
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
     void createMapper(bool loadDefaultMap = true);
+
+    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
 
 public slots:
     void processEventLoopHack_timerRun();

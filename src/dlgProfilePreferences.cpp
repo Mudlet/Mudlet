@@ -34,15 +34,19 @@
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/views/texteditorscrollarea.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtConcurrent>
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QMainWindow>
+#include <QNetworkDiskCache>
 #include <QPalette>
 #include <QRegExp>
+#include <QStandardPaths>
 #include <QTextOption>
 #include <QToolBar>
 #include <QVariant>
@@ -59,6 +63,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // /testing controls can be placed if needed...
     groupBox_Debug->hide();
 
+    loadEditorTab();
+
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(mpHost->mAcceptServerGUI);
@@ -73,6 +79,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     checkBox_echoLuaErrors->setChecked(pH->mEchoLuaErrors);
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    // As we reflect the state of the above two checkboxes in the preview widget
+    // on another tab we have to track their changes in state and update that
+    // edbee widget straight away - however we do not need to update any open
+    // widgets of the same sort in use in ANY profile's editor until we hit
+    // the save button...
+    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
+    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
 
     QString path;
 #ifdef Q_OS_LINUX
@@ -110,8 +123,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         downloadMapOptions->setVisible(false);
     }
 
-
-    connect(closeButton, SIGNAL(pressed()), this, SLOT(slot_save_and_exit()));
+    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
 
     pushButton_command_line_foreground_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineFgColor.name()));
     pushButton_command_line_background_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(mpHost->mCommandLineBgColor.name()));
@@ -304,7 +316,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         connect(pushButton_copyMap, SIGNAL(clicked()), this, SLOT(copyMap()));
 
-        // label to show on sucessful map file action
+        // label to show on successful map file action
         label_mapFileActionResult->hide();
 
         connect(pushButton_loadMap, SIGNAL(clicked()), this, SLOT(loadMap()));
@@ -361,6 +373,62 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
             comboBox_encoding->setCurrentText(pHost->mTelnet.getEncoding());
         }
         connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+    }
+}
+
+void dlgProfilePreferences::loadEditorTab()
+{
+    connect(tabWidgeta, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setSmartTab(true);
+    config->setCaretBlinkRate(200);
+    config->setIndentSize(2);
+    config->setThemeName(mpHost->mEditorTheme);
+    config->setCaretWidth(1);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setFont(mpHost->mDisplayFont);
+    config->endChanges();
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
+    edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
+
+    populateThemesList();
+    mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
+    populateScriptsList();
+
+    // pre-select the current theme
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
+    auto themeIndex = code_editor_theme_selection_combobox->findText(mpHost->mEditorTheme);
+    code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
+    slot_theme_selected(themeIndex);
+
+    code_editor_theme_selection_combobox->setInsertPolicy(QComboBox::NoInsert);
+    code_editor_theme_selection_combobox->setMaxVisibleItems(20);
+
+    // pre-select the last shown script to preview
+    script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
+    auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(mpHost->mThemePreviewType, mpHost->mThemePreviewItemID)));
+    script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
+    slot_script_selected(scriptIndex == -1 ? 1 : scriptIndex);
+
+    script_preview_combobox->setInsertPolicy(QComboBox::NoInsert);
+    script_preview_combobox->setMaxVisibleItems(20);
+    script_preview_combobox->setDuplicatesEnabled(true);
+
+    theme_download_label->hide();
+
+    // changes the theme being previewed
+    connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
+
+    // allows people to select a script of theirs to preview
+    connect(script_preview_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_script_selected);
+
+    // fire tab selection event manually should the dialog open on it by default
+    if (tabWidgeta->currentIndex() == 3) {
+        slot_editor_tab_selected(3);
     }
 }
 
@@ -570,11 +638,19 @@ void dlgProfilePreferences::setDisplayFont()
     }
     QFont font = fontComboBox->currentFont();
     font.setPointSize(mFontSize);
-    pHost->mDisplayFont = font;
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if (pHost->mDisplayFont != font) {
+        pHost->mDisplayFont = font;
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            mudlet::self()->mConsoleMap[pHost]->changeColors();
+        }
+        auto config = edbeePreviewWidget->config();
+        config->beginChanges();
+        config->setFont(font);
+        config->endChanges();
     }
 }
+
+// Currently UNUSED!
 void dlgProfilePreferences::setCommandLineFont()
 {
     Host* pHost = mpHost;
@@ -1281,8 +1357,8 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     if (!newIrcChannels.isEmpty()) {
         QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
-        for( QString s : tL ) {
-            if( s.startsWith("#") || s.startsWith("&") || s.startsWith("+") ) {
+        for (QString s : tL) {
+            if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                 newChanList << s;
             }
         }
@@ -1300,16 +1376,16 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
     }
 
-    if( oldIrcChannels != newIrcChannels ) {
+    if (oldIrcChannels != newIrcChannels) {
         dlgIRC::writeIrcChannels(pHost, newChanList);
     }
 
-    if( oldIrcHost != newIrcHost ) {
+    if (oldIrcHost != newIrcHost) {
         dlgIRC::writeIrcHostName(pHost, newIrcHost);
         restartIrcClient = true;
     }
 
-    if( oldIrcPort != newIrcPort ) {
+    if (oldIrcPort != newIrcPort) {
         dlgIRC::writeIrcHostPort(pHost, nIrcPort);
         restartIrcClient = true;
     }
@@ -1339,9 +1415,25 @@ void dlgProfilePreferences::slot_save_and_exit()
         QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
         //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
+
+    // These are only sent on saving because they are application wide and
+    // will affect all editors even the ones of other profiles so, if two
+    // profile both had their preferences open they would fight each other if
+    // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
+
+    pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
+    pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+    if (pHost->mpEditorDialog) {
+        pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+    }
+
+    auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
+    pHost->mThemePreviewItemID = data.second;
+    pHost->mThemePreviewType = data.first;
+
     close();
 }
 
@@ -1370,4 +1462,379 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
 void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 {
     mpHost->mTelnet.setEncoding(newEncoding);
+}
+
+// loads available Lua scripts from triggers, aliases, scripts, etc into the
+// editor tab combobox
+void dlgProfilePreferences::populateScriptsList()
+{
+    // a items of item name ("My first alias"), item type ("alias"), and item ID
+    std::vector<std::tuple<QString, QString, int>> items;
+
+    std::list<TTrigger*> triggers = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    for (auto trigger : triggers) {
+        if (!trigger->getScript().isEmpty() && !trigger->isTempTrigger()) {
+            items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
+        }
+        addTriggersToPreview(trigger, items);
+    }
+
+    std::list<TAlias*> aliases = mpHost->getAliasUnit()->getAliasRootNodeList();
+    for (auto alias : aliases) {
+        if (!alias->getScript().isEmpty() && !alias->isTempAlias()) {
+            items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
+        }
+        addAliasesToPreview(alias, items);
+    }
+
+    std::list<TScript*> scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
+    for (auto script : scripts) {
+        if (!script->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
+        }
+        addScriptsToPreview(script, items);
+    }
+
+    std::list<TTimer*> timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    for (auto timer : timers) {
+        if (!timer->getScript().isEmpty() && !timer->isTempTimer()) {
+            items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+        }
+        addTimersToPreview(timer, items);
+    }
+
+    std::list<TKey*> keys = mpHost->getKeyUnit()->getKeyRootNodeList();
+    for (auto key : keys) {
+        if (!key->getScript().isEmpty() && !key->isTempKey()) {
+            items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
+        }
+        addKeysToPreview(key, items);
+    }
+
+    std::list<TAction*> actions = mpHost->getActionUnit()->getActionRootNodeList();
+    for (auto action : actions) {
+        if (!action->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+        }
+        addActionsToPreview(action, items);
+    }
+
+    auto combobox = script_preview_combobox;
+    combobox->setUpdatesEnabled(false);
+    combobox->clear();
+
+    for (auto item : items) {
+        combobox->addItem(QStringLiteral("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)),
+                          // store the item type and ID in data so we can pull up the script for it later
+                          QVariant::fromValue(QPair<QString, int>(std::get<1>(item), std::get<2>(item))));
+    }
+    combobox->setUpdatesEnabled(true);
+}
+
+// adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
+    for (auto trigger : *childTriggers) {
+        if (!trigger->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
+        }
+
+        if (trigger->hasChildren()) {
+            addTriggersToPreview(trigger, items);
+        }
+    }
+}
+
+// adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TAlias*>* childrenList = pAliasParent->getChildrenList();
+    for (auto alias : *childrenList) {
+        if (!alias->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
+        }
+
+        if (alias->hasChildren()) {
+            addAliasesToPreview(alias, items);
+        }
+    }
+}
+
+// adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TTimer*>* childrenList = pTimerParent->getChildrenList();
+    for (auto timer : *childrenList) {
+        if (!timer->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+        }
+
+        if (timer->hasChildren()) {
+            addTimersToPreview(timer, items);
+        }
+    }
+}
+
+// adds key name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TKey*>* childrenList = pKeyParent->getChildrenList();
+    for (auto key : *childrenList) {
+        if (!key->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
+        }
+
+        if (key->hasChildren()) {
+            addKeysToPreview(key, items);
+        }
+    }
+}
+
+// adds script name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TScript*>* childrenList = pScriptParent->getChildrenList();
+    for (auto script : *childrenList) {
+        if (!script->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
+        }
+
+        if (script->hasChildren()) {
+            addScriptsToPreview(script, items);
+        }
+    }
+}
+
+// adds action name ID to the list of them for the theme preview combobox, recursing down all of them
+void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
+{
+    list<TAction*>* childrenList = pActionParent->getChildrenList();
+    for (auto action : *childrenList) {
+        if (!action->getScript().isEmpty()) {
+            items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+        }
+
+        if (action->hasChildren()) {
+            addActionsToPreview(action, items);
+        }
+    }
+}
+
+// updates latest edbee themes when the user opens up the editor tab
+void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
+{
+    // bail out if this is not an editor tab
+    if (tabIndex != 3) {
+        return;
+    }
+
+    QDir dir;
+    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!dir.mkpath(cacheDir)) {
+        qWarning() << "Couldn't create cache directory for edbee themes: " << cacheDir;
+        return;
+    }
+
+    QSettings settings("mudlet", "Mudlet");
+    QString themesURL = settings.value("colorSublimeThemesURL", QStringLiteral("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
+    // a default update period is 24h
+    // it would be nice to use C++14's numeric separator but Qt Creator still
+    // does not like them for its Clang code model analyser (and the built in
+    // one is even less receptive to): 86'400'000
+    int themesUpdatePeriod = settings.value("themesUpdatePeriod", 86400000).toInt();
+    // save the defaults in settings so the field is visible for editing in config file if needed
+    settings.setValue("colorSublimeThemesURL", themesURL);
+    settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
+
+    auto themesAge = QFileInfo(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath())).lastModified().toUTC();
+
+    // if the cache file exists and is younger than the specified age (24h by default), don't refresh it
+    if (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1) {
+        populateThemesList();
+        return;
+    }
+
+    theme_download_label->show();
+
+    auto manager = new QNetworkAccessManager(this);
+    auto diskCache = new QNetworkDiskCache(this);
+    diskCache->setCacheDirectory(cacheDir);
+    manager->setCache(diskCache);
+
+
+    QUrl url(themesURL);
+    QNetworkRequest request(url);
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    // github uses redirects
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    // load from cache if possible
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
+
+    QNetworkReply* getReply = manager->get(request);
+
+    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
+        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
+        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+            label->hide();
+            label->setText(tr("Updating themes from colorsublime.com..."));
+        });
+        getReply->deleteLater();
+    });
+
+    connect(getReply,
+            &QNetworkReply::finished,
+            this,
+            std::bind(
+                    [=](QNetworkReply* reply) {
+                        // don't do anything if there was an error
+                        if (reply->error() != QNetworkReply::NoError) {
+                            return;
+                        }
+
+                        QVariant fromCache = reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute);
+                        qDebug() << "page from cache?" << fromCache.toBool();
+
+                        QByteArray downloadedArchive = reply->readAll();
+
+                        tempThemesArchive = new QTemporaryFile();
+                        if (!tempThemesArchive->open()) {
+                            return;
+                        }
+                        tempThemesArchive->write(downloadedArchive);
+                        tempThemesArchive->close();
+
+                        QTemporaryDir temporaryDir;
+                        if (!temporaryDir.isValid()) {
+                            return;
+                        }
+
+                        // perform unzipping in a worker thread so as not to freeze the UI
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                        auto watcher = new QFutureWatcher<bool>;
+                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+                            if (future.result() == true) {
+                                populateThemesList();
+                            }
+
+                            theme_download_label->hide();
+                            tempThemesArchive->deleteLater();
+                        });
+                        watcher->setFuture(future);
+                        reply->deleteLater();
+                    },
+                    getReply));
+}
+
+// reloads the latest edbee themes from disk and fills up the
+// selection combobox with them
+void dlgProfilePreferences::populateThemesList()
+{
+    QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
+    QList<std::pair<QString, QString>> sortedThemes;
+    QJsonArray unsortedThemes;
+
+    if (themesFile.open(QIODevice::ReadOnly)) {
+        unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
+        for (auto theme : unsortedThemes) {
+            QString themeText = theme.toObject()["Title"].toString();
+            QString themeFileName = theme.toObject()["FileName"].toString();
+
+            if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
+                sortedThemes << make_pair(themeText, themeFileName);
+            }
+        }
+    }
+    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+
+    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
+
+    // temporary disable painting and event updates while we refill the list
+    code_editor_theme_selection_combobox->setUpdatesEnabled(false);
+    code_editor_theme_selection_combobox->blockSignals(true);
+
+    auto currentSelection = code_editor_theme_selection_combobox->currentText();
+    code_editor_theme_selection_combobox->clear();
+    for (auto key : sortedThemes) {
+        // store the actual theme file as data because edbee needs that,
+        // not the name, for choosing the theme even after the theme file was loaded
+        code_editor_theme_selection_combobox->addItem(key.first, key.second);
+    }
+
+    code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
+    code_editor_theme_selection_combobox->setUpdatesEnabled(true);
+    code_editor_theme_selection_combobox->blockSignals(false);
+}
+
+// user has picked a different theme to preview, so apply it
+void dlgProfilePreferences::slot_theme_selected(int index)
+{
+    auto themeFileName = code_editor_theme_selection_combobox->itemData(index).toString();
+    auto themeName = code_editor_theme_selection_combobox->itemText(index);
+
+    if (!mudlet::loadEdbeeTheme(themeName, themeFileName)) {
+        return;
+    }
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setThemeName(themeName);
+    config->endChanges();
+}
+
+// user has picked a different script to preview, so show it
+void dlgProfilePreferences::slot_script_selected(int index)
+{
+    auto data = script_preview_combobox->itemData(index).value<QPair<QString, int>>();
+    auto itemType = data.first;
+    auto itemId = data.second;
+
+    auto preview = edbeePreviewWidget->textDocument();
+    if (itemType == QStringLiteral("trigger")) {
+        preview->setText(mpHost->getTriggerUnit()->getTrigger(itemId)->getScript());
+    } else if (itemType == QStringLiteral("alias")) {
+        preview->setText(mpHost->getAliasUnit()->getAlias(itemId)->getScript());
+    } else if (itemType == QStringLiteral("script")) {
+        preview->setText(mpHost->getScriptUnit()->getScript(itemId)->getScript());
+    } else if (itemType == QStringLiteral("timer")) {
+        preview->setText(mpHost->getTimerUnit()->getTimer(itemId)->getScript());
+    } else if (itemType == QStringLiteral("key")) {
+        preview->setText(mpHost->getKeyUnit()->getKey(itemId)->getScript());
+    } else if (itemType == QStringLiteral("button")) {
+        preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
+    }
+}
+
+/*!
+ * \brief dlgProfilePreferences::slot_changeShowSpacesAndTabs
+ * \param state \c true to show whitespace (dots for spaces, right arrows for tabs)
+ * \c false to hide them and show just normal space
+ *
+ * A private slot function that adjusts the display of spaces and tab in the
+ * editor preview in the "Editor" tab
+ */
+void dlgProfilePreferences::slot_changeShowSpacesAndTabs(const bool state)
+{
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setShowWhitespaceMode(state ? 1 : 0);
+    config->endChanges();
+}
+
+/*!
+ * \brief dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs
+ * \param state \c true to show (currently) a graphic line under each line of text in editor
+ * \c false to hide them.
+ *
+ * A private slot function that (currently) adjusts the display of a horizontal
+ * "underline" acros the width of each line of text in the editor preview in the
+ * "Editor" tab although it was originally intended to show line-feeds and paragraph
+ * markers in the previous QTextEdit (and may in the future in the edbee) widget.
+ */
+void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool state)
+{
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setUseLineSeparator(state);
+    config->endChanges();
 }
