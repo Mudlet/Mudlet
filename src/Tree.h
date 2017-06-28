@@ -56,7 +56,7 @@ public:
     void setShouldBeActive(bool b);
 
     bool isTemporary();
-    void setTemporary(bool state);
+    void setTemporary(const bool state);
 
     // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive();
@@ -74,8 +74,8 @@ public:
     QString mPackageName;
     QString mModuleName;
 
-    bool isFolder() { return m_isFolder; }
-    void setIsFolder(bool b) { m_isFolder = b; }
+    bool isFolder() { return mFolder; }
+    void setIsFolder(bool b) { mFolder = b; }
 
 protected:
     virtual bool canBeActivated();
@@ -87,8 +87,8 @@ private:
     bool mUserActiveState;
     QString mErrorMessage;
 
-    bool m_isTemporary;
-    bool m_isFolder;
+    bool mTemporary;
+    bool mFolder;
 };
 
 template <class T>
@@ -137,13 +137,13 @@ Tree<T>::~Tree()
 }
 
 template <class T>
-void Tree<T>::setTemporary(bool state) {
-    m_isTemporary = state;
+void Tree<T>::setTemporary(const bool state) {
+    mTemporary = state;
 }
 
 template <class T>
 bool Tree<T>::isTemporary() {
-    return m_isTemporary;
+    return mTemporary;
 }
 
 template <class T>
