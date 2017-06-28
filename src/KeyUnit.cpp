@@ -341,7 +341,7 @@ void KeyUnit::_assembleReport(TKey* pChild)
         if (pT->isActive()) {
             statsActiveKeys++;
         }
-        if (pT->isTemporary())
+        if (pT->isTemporary()) {
             statsTempKeys++;
         }
         statsKeyTotal++;
@@ -358,7 +358,7 @@ QString KeyUnit::assembleReport()
         if (pChild->isActive()) {
             statsActiveKeys++;
         }
-        if (pChild->isTemporary())
+        if (pChild->isTemporary()) {
             statsTempKeys++;
         }
         statsKeyTotal++;
@@ -369,7 +369,7 @@ QString KeyUnit::assembleReport()
             if (pT->isActive()) {
                 statsActiveKeys++;
             }
-            if (pT->isTemporary())
+            if (pT->isTemporary()) {
                 statsTempKeys++;
             }
             statsKeyTotal++;
