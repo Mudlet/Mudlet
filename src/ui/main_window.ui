@@ -281,7 +281,7 @@
     <string>Download</string>
    </property>
    <property name="statusTip">
-    <string>opens the GitHub Mudlet repository in your system web-browser, which is the source for the latest version</string>
+    <string>opens the Mudlet website in your system web-browser, where you can download the latest version</string>
    </property>
   </action>
   <action name="dactionIRC_2">
