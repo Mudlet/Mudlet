@@ -159,8 +159,8 @@ function createButton() end
 ---   </pre>
 --- @usage see forum for more examples
 ---  <pre>
----  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=95
----  http://mudlet.sourceforge.net/phpBB3/viewtopic.php?f=6&t=865
+---  http://forums.mudlet.org/viewtopic.php?f=6&t=95
+---  http://forums.mudlet.org/viewtopic.php?f=6&t=865
 ---  </pre>
 ---
 --- @see createMiniConsole
