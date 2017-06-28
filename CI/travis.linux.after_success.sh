@@ -10,6 +10,9 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
 
   ln -s "${TRAVIS_BUILD_DIR}" source
 
+  # unset LD_LIBRARY_PATH as it upsets linuxdeployqt
+  export LD_LIBRARY_PATH=
+
   if [ -z "${TRAVIS_TAG}" ]; then
     bash make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
 
@@ -28,9 +31,6 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
     eval "$(ssh-agent -s)"
     chmod 600 /tmp/mudlet-deploy-key
     ssh-add /tmp/mudlet-deploy-key
-
-    # unset LD_LIBRARY_PATH as it upsets linuxdeployqt
-    export LD_LIBRARY_PATH=
 
     bash make-installer.sh -r "${VERSION}"
 
