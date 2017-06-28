@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -54,8 +55,8 @@ VERSION = 3.2.0
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
-# enable C++11 for builds.
-CONFIG += c++11
+# enable C++14 for builds.
+CONFIG += c++14
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -63,7 +64,8 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
-QT += network opengl uitools multimedia gui
+QT += network opengl uitools multimedia gui concurrent
+qtHaveModule(gamepad): QT += gamepad
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
