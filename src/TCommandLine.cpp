@@ -50,10 +50,11 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 {
     QString path;
 #ifdef Q_OS_LINUX
-    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff"))
+    if (QFile::exists("/usr/share/hunspell/" + pHost->mSpellDic + ".aff")) {
         path = "/usr/share/hunspell/";
-    else
+    } else {
         path = "./";
+    }
 #elif defined(Q_OS_MAC)
     path = QCoreApplication::applicationDirPath() + "/../Resources/";
 #else

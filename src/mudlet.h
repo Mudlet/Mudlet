@@ -6,7 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,6 +29,7 @@
 
 #include "pre_guard.h"
 #include "ui_main_window.h"
+#include "edbee/views/texttheme.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
@@ -37,6 +38,9 @@
 #include <QQueue>
 #include <QTextOption>
 #include <QTime>
+#ifdef QT_GAMEPAD_LIB
+  #include <QGamepad>
+#endif
 #include "post_guard.h"
 
 #include <assert.h>
@@ -171,11 +175,10 @@ public:
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
     QMap<QTimer*, TTimer*> mTimerMap;
-    dlgIRC* mpIRC;
+    QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
-    QString mIrcNick;
     QList<QMediaPlayer*> mMusicBoxList;
     QTabBar* mpTabBar;
     QStringList packagesToInstallList;
@@ -193,8 +196,8 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-
-    void setEditorTextoptions(const bool, const bool);
+    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
 
     enum StatusBarOption {
         statusBarHidden = 0x0,    // Currently not on display
@@ -213,6 +216,8 @@ public:
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
     void createMapper(bool loadDefaultMap = true);
+
+    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -275,6 +280,13 @@ private slots:
     void show_variable_dialog();
     void show_options_dialog();
     void slot_statusBarMessageChanged(QString);
+#ifdef QT_GAMEPAD_LIB
+    void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
+    void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
+    void slot_gamepadConnected(int deviceId);
+    void slot_gamepadDisconnected(int deviceId);
+    void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
+#endif
 
 private:
     void initEdbee();

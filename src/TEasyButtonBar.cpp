@@ -33,7 +33,7 @@
 #include "post_guard.h"
 
 
-TEasyButtonBar::TEasyButtonBar( TAction * pA, QString name, QWidget * pW )
+TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
 : QWidget( pW )
 , mpTAction( pA )
 , mVerticalOrientation( false )
@@ -143,8 +143,9 @@ void TEasyButtonBar::finalize()
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     fillerWidget->setSizePolicy(sizePolicy);
     int columns = mpTAction->getButtonColumns();
-    if( columns <= 0 )
+    if (columns <= 0) {
         columns = 1;
+    }
     int row = (++mItemCount) / columns;
     int column = mItemCount % columns;
     if (mpLayout) {

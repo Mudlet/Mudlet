@@ -112,6 +112,7 @@ public:
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void recurseVariablesDown(TVar*, QList<TVar*>&, bool);
     void show_vars();
+    void setThemeAndOtherSettings(const QString&);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -293,6 +294,7 @@ private:
     edbee::TextSearcher *       mpSourceEditorSearcher;
 
     QRegularExpression* simplifyEdbeeStatusBarRegex;
+
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

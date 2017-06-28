@@ -41,7 +41,7 @@ class TToolBar;
 class QMenu;
 
 
-class TAction : public Tree<TAction>, QObject
+class TAction : public Tree<TAction>, public QObject
 {
     friend class XMLexport;
     friend class XMLimport;
