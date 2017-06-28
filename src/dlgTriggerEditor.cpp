@@ -30,6 +30,7 @@
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TConsole.h"
+#include "TEasyButtonBar.h"
 #include "THighlighter.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
@@ -2618,7 +2619,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
 
     QTreeWidgetItem* pParent = treeWidget_actions->currentItem();
     QTreeWidgetItem* pNewItem = 0;
-    TAction* pT = 0;
+    QPointer<TAction> pT = 0;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -3141,13 +3142,14 @@ void dlgTriggerEditor::saveAction()
     int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
+        // Check if data has been changed before it gets updated.
+        bool actionDataChanged = false;
+        if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->css->toPlainText()) {
+            actionDataChanged = true;
+        }
+
         // Do not change anything for a module master folder - it won't "take"
         if (pA->mPackageName.isEmpty()) {
-            // Check if data has been changed before it gets updated.
-            if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->css->toPlainText()) {
-                pA->setDataChanged();
-            }
-
             pA->setName(name);
             pA->setIcon(icon);
             pA->setScript(script);
@@ -3212,8 +3214,20 @@ void dlgTriggerEditor::saveAction()
             pA->setDataSaved();
         }
 
-        // if the action has a toolbar with a script error, hide the toolbar.
+        if (actionDataChanged) {
+            pA->setDataChanged();
+        }
+
+        // if the action has a TToolBar instance with a script error, hide that toolbar.
         if (pA->mpToolBar && !pA->state()) {
+            pA->mpToolBar->hide();
+        }
+
+        // if the action location is changed, make sure the old toolbar instance is hidden.
+        if (pA->mLocation == 4 && pA->mpEasyButtonBar) {
+            pA->mpEasyButtonBar->hide();
+        }
+        if (pA->mLocation != 4 && pA->mpToolBar) {
             pA->mpToolBar->hide();
         }
     }
