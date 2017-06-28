@@ -365,7 +365,7 @@ Log files have a similar naming convention to the autosaved profiles: date#time.
 
 [[export]]
 == Exporting and Importing Profiles or Packages
-Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum at http://mudlet.sourceforge.net where you can download demo packages or ready made packages for your MUD or upload your own packages to share your work with other players. A package can contain anything ranging from a single trigger to hundreds of button groups, trigger groups aliases - in other words, entire "systems".
+Mudlet supports XML packages that can be imported and exported while playing. You can find a package section on the forum at http://www.mudlet.org/ where you can download demo packages or ready made packages for your MUD or upload your own packages to share your work with other players. A package can contain anything ranging from a single trigger to hundreds of button groups, trigger groups aliases - in other words, entire "systems".
 
 === Importing Packages
 To import a package, open the script editor and click the import icon, select your xml package file and import it. Package files might be compressed to save space. If the file is compressed, you'll need to uncompress it before importing it.
