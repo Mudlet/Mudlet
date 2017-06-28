@@ -3215,6 +3215,7 @@ void dlgTriggerEditor::saveAction()
         if (actionDataChanged) {
             pA->setDataChanged();
         }
+    }
 
         // if the action has a TToolBar instance with a script error, hide that toolbar.
         if (pA->mpToolBar && !pA->state()) {
