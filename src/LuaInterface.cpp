@@ -83,22 +83,25 @@ QStringList LuaInterface::varName(TVar* var)
 bool LuaInterface::validMove(QTreeWidgetItem* p)
 {
     TVar* newParent = varUnit->getWVar(p);
-    if (newParent && newParent->getValueType() != LUA_TTABLE)
+    if (newParent && newParent->getValueType() != LUA_TTABLE) {
         return false;
+    }
     return true;
 }
 
 void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)
 {
     QListIterator<TVar*> it(var->getChildren(true));
-    if (varUnit->isSaved(var) || var->saved)
+    if (varUnit->isSaved(var) || var->saved) {
         list->append(var);
+    }
     while (it.hasNext()) {
         TVar* child = it.next();
-        if (child->getValueType() == LUA_TTABLE)
+        if (child->getValueType() == LUA_TTABLE) {
             getAllChildren(child, list);
-        else if (varUnit->isSaved(child) || var->saved)
+        } else if (varUnit->isSaved(child) || var->saved) {
             list->append(child);
+        }
     }
 }
 
@@ -130,9 +133,9 @@ bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
         if (loadKey(L, var)) {
             //everything is tabled in lua, we need to just find what table
             //we're using, if index == 0, we iterate to the closest table
-            if (index)
+            if (index) {
                 lua_gettable(L, index);
-            else {
+            } else {
                 for (int j = 1; j <= lua_gettop(L); j++) {
                     if (lua_type(L, j * -1) == LUA_TTABLE) {
                         lua_gettable(L, j * -1);
@@ -347,8 +350,9 @@ bool LuaInterface::setValue(TVar* var)
     QList<TVar*> vars = varOrder(var);
     QString newName = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
-        if (vars[i]->isReference())
+        if (vars[i]->isReference()) {
             return setCValue(vars);
+        }
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
             newName.append("[" + vars[i]->getName() + "]");
         } else {
@@ -563,21 +567,24 @@ void LuaInterface::renameVar(TVar* var)
     QList<TVar*> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     QString newName;
-    if (vars.size() > 1)
+    if (vars.size() > 1) {
         newName = vars[0]->getName();
+    }
     for (int i = 1; i < vars.size(); i++) {
         int kType = vars[i]->getKeyType();
         if (kType == LUA_TNUMBER) {
             oldName.append("[" + vars[i]->getName() + "]");
-            if (i < vars.size() - 1)
+            if (i < vars.size() - 1) {
                 newName.append("[" + vars[i]->getName() + "]");
+            }
         } else if (kType == LUA_TTABLE) {
             renameCVar(vars);
             return;
         } else {
             oldName.append(R"([")" + vars[i]->getName() + R"("])");
-            if (i < vars.size() - 1)
+            if (i < vars.size() - 1) {
                 newName.append(R"([")" + vars[i]->getName() + R"("])");
+            }
         }
     }
     if (var->getNewKeyType() == LUA_TNUMBER) {
@@ -609,21 +616,24 @@ QString LuaInterface::getValue(TVar* var)
     if (setjmp(buf) == 0) {
         L = interpreter->pGlobalLua;
         QList<TVar*> vars = varOrder(var);
-        if (vars.empty())
+        if (vars.empty()) {
             return "";
+        }
         int pCount = vars.size(); //how many things we need to pop at the end
         //load from _G first
         lua_getglobal(L, (vars[0]->getName()).toLatin1().data());
         for (int i = 1; i < vars.size(); i++) {
-            if (!loadValue(L, vars[i], -2))
+            if (!loadValue(L, vars[i], -2)) {
                 return "";
+            }
         }
         int vType = lua_type(L, -1);
         QString value = "";
-        if (vType == LUA_TBOOLEAN)
+        if (vType == LUA_TBOOLEAN) {
             value = lua_toboolean(L, -1) == 0 ? "false" : "true";
-        else if (vType == LUA_TNUMBER || vType == LUA_TSTRING)
+        } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
             value = lua_tostring(L, -1);
+        }
         lua_pop(L, pCount);
         return value;
     }

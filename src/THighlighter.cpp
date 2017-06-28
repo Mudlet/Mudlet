@@ -123,8 +123,9 @@ void THighlighter::setSearchPattern(QString p)
 
 void THighlighter::highlightBlock(const QString& text)
 {
-    if (text.size() < 1)
+    if (text.size() < 1) {
         return;
+    }
     foreach (HighlightingRule rule, highlightingRules) {
         QRegExp expression(rule.pattern);
         int index = text.indexOf(expression);
