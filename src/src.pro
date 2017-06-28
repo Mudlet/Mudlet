@@ -442,7 +442,6 @@ OTHER_FILES += \
     ../COPYING \
     ../Doxyfile \
     ../INSTALL \
-    mudlet_documentation.txt \
     mac-deploy.sh
 
 # Unix Makefile installer:
