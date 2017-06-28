@@ -194,7 +194,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
-    void setEditorTheme(const QString &theme);
     static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
 
     enum StatusBarOption {
@@ -262,7 +261,6 @@ protected:
 
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
-    void signal_editorThemeChanged(QString);
     void signal_profileMapReloadRequested(QList<QString>);
 
 private slots:

@@ -427,14 +427,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
-    connect(mudlet::self(), &mudlet::signal_editorThemeChanged, this, [=](const QString& theme) {
-        auto config = mpSourceEditorEdbee->config();
-        config->beginChanges();
-        config->setThemeName(theme);
-        config->setFont(mpHost->mDisplayFont);
-        config->endChanges();
-    });
 
     connect(comboBox_searchTerms, SIGNAL(activated(const QString)), this, SLOT(slot_search_triggers(const QString)));
     connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_trigger_selected(QTreeWidgetItem*)));
@@ -6406,8 +6401,13 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 {
     edbee::TextEditorConfig* config = mpSourceEditorEdbee->config();
 
-    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces);
+    // Although this option seems to be a binary choice the Edbee editor widget
+    // needs a integer 1 to show whitespace characters and an integer 0 to hide
+    // them:
+    config->beginChanges();
+    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces ? 1 : 0);
     config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
 }
 
 //
@@ -6426,9 +6426,32 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     ew->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setThemeName(mpHost->mEditorTheme);
+    config->setFont(mpHost->mDisplayFont);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
+
     // If undo is not disabled when setting the initial text, the
     // setting of the text will be undoable.
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
     mpSourceEditorEdbeeDocument->setText(initialText);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
+
+// We do NOT want to change every profile's editor theme when the setting is
+// changed in the settings dialog so this has been moved out of a lambda wired
+// up as a slot to respond to a
+// mudlet::signal_editorThemeChanged(const QString& theme) signal
+void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
+{
+        auto localConfig = mpSourceEditorEdbee->config();
+        localConfig->beginChanges();
+        localConfig->setThemeName(theme);
+        localConfig->setFont(mpHost->mDisplayFont);
+        localConfig->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+        localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+        localConfig->endChanges();
+};

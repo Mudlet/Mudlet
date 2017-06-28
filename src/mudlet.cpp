@@ -2778,12 +2778,6 @@ void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const boo
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
 }
 
-
-void mudlet::setEditorTheme(const QString& theme)
-{
-    emit signal_editorThemeChanged(theme);
-}
-
 void mudlet::slot_statusBarMessageChanged(QString text)
 {
     if (mStatusBarState & statusBarAutoShown) {

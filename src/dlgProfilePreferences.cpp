@@ -79,6 +79,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     checkBox_echoLuaErrors->setChecked(pH->mEchoLuaErrors);
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    // As we reflect the state of the above two checkboxes in the preview widget
+    // on another tab we have to track their changes in state and update that
+    // edbee widget straight away - however we do not need to update any open
+    // widgets of the same sort in use in ANY profile's editor until we hit
+    // the save button...
+    connect(checkBox_showSpacesAndTabs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowSpacesAndTabs(const bool)));
+    connect(checkBox_showLineFeedsAndParagraphs, SIGNAL(clicked(bool)), this, SLOT(slot_changeShowLineFeedsAndParagraphs(const bool)));
 
     QString path;
 #ifdef Q_OS_LINUX
@@ -380,13 +387,13 @@ void dlgProfilePreferences::loadEditorTab()
     config->setIndentSize(2);
     config->setThemeName(mpHost->mEditorTheme);
     config->setCaretWidth(1);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setFont(mpHost->mDisplayFont);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
-    edbeePreviewWidget->config()->setFont(mpHost->mDisplayFont);
 
     populateThemesList();
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
@@ -631,11 +638,19 @@ void dlgProfilePreferences::setDisplayFont()
     }
     QFont font = fontComboBox->currentFont();
     font.setPointSize(mFontSize);
-    pHost->mDisplayFont = font;
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if (pHost->mDisplayFont != font) {
+        pHost->mDisplayFont = font;
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            mudlet::self()->mConsoleMap[pHost]->changeColors();
+        }
+        auto config = edbeePreviewWidget->config();
+        config->beginChanges();
+        config->setFont(font);
+        config->endChanges();
     }
 }
+
+// Currently UNUSED!
 void dlgProfilePreferences::setCommandLineFont()
 {
     Host* pHost = mpHost;
@@ -1400,13 +1415,20 @@ void dlgProfilePreferences::slot_save_and_exit()
         QApplication::sendEvent(mudlet::self()->mConsoleMap[pHost], &event);
         //qDebug()<<"after console refresh: Left border width:"<<pHost->mBorderLeftWidth<<" right:"<<pHost->mBorderRightWidth;
     }
+
+    // These are only sent on saving because they are application wide and
+    // will affect all editors even the ones of other profiles so, if two
+    // profile both had their preferences open they would fight each other if
+    // they changed things at the same time:
     mudlet::self()->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
 
     pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
     pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
-    mudlet::self()->setEditorTheme(pHost->mEditorTheme);
+    if (pHost->mpEditorDialog) {
+        pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
+    }
 
     auto data = script_preview_combobox->currentData().value<QPair<QString, int>>();
     pHost->mThemePreviewItemID = data.second;
@@ -1617,7 +1639,10 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     QSettings settings("mudlet", "Mudlet");
     QString themesURL = settings.value("colorSublimeThemesURL", QStringLiteral("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
-    int themesUpdatePeriod = settings.value("themesUpdatePeriod", 86'400'000).toInt();
+    // it would be nice to use C++14's numeric separator but Qt Creator still
+    // does not like them for its Clang code model analyser (and the built in
+    // one is even less receptive to): 86'400'000
+    int themesUpdatePeriod = settings.value("themesUpdatePeriod", 86400000).toInt();
     // save the defaults in settings so the field is visible for editing in config file if needed
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
@@ -1648,9 +1673,9 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     QNetworkReply* getReply = manager->get(request);
 
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError code) {
-        theme_download_label->setText(tr("Couldn't update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5'000, theme_download_label, [label = theme_download_label] {
+    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
+        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
+        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
             label->hide();
             label->setText(tr("Updating themes from colorsublime.com..."));
         });
@@ -1778,4 +1803,38 @@ void dlgProfilePreferences::slot_script_selected(int index)
     } else if (itemType == QStringLiteral("button")) {
         preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
     }
+}
+
+/*!
+ * \brief dlgProfilePreferences::slot_changeShowSpacesAndTabs
+ * \param state \c true to show whitespace (dots for spaces, right arrows for tabs)
+ * \c false to hide them and show just normal space
+ *
+ * A private slot function that adjusts the display of spaces and tab in the
+ * editor preview in the "Editor" tab
+ */
+void dlgProfilePreferences::slot_changeShowSpacesAndTabs(const bool state)
+{
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setShowWhitespaceMode(state ? 1 : 0);
+    config->endChanges();
+}
+
+/*!
+ * \brief dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs
+ * \param state \c true to show (currently) a graphic line under each line of text in editor
+ * \c false to hide them.
+ *
+ * A private slot function that (currently) adjusts the display of a horizontal
+ * "underline" acros the width of each line of text in the editor preview in the
+ * "Editor" tab although it was originally intended to show line-feeds and paragraph
+ * markers in the previous QTextEdit (and may in the future in the edbee) widget.
+ */
+void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool state)
+{
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setUseLineSeparator(state);
+    config->endChanges();
 }

@@ -114,6 +114,9 @@ public slots:
     void hideActionLabel();
     void slot_setEncoding(const QString&);
 
+private slots:
+    void slot_changeShowSpacesAndTabs(const bool);
+    void slot_changeShowLineFeedsAndParagraphs(const bool);
 
 private:
     void setColors();
