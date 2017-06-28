@@ -2,7 +2,7 @@
 
 set -e
 
-# we deploy only qmake and clang combination for macOS
+# we deploy only qmake and gcc combination for linux
 if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
@@ -28,6 +28,9 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
     eval "$(ssh-agent -s)"
     chmod 600 /tmp/mudlet-deploy-key
     ssh-add /tmp/mudlet-deploy-key
+
+    # unset LD_LIBRARY_PATH as it upsets linuxdeployqt
+    export LD_LIBRARY_PATH=
 
     bash make-installer.sh -r "${VERSION}"
 
