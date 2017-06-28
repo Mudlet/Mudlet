@@ -347,6 +347,9 @@
             <property name="enabled">
              <bool>true</bool>
             </property>
+            <property name="placeholderText">
+             <string>Enter text to separate commands with or leave blank to disable</string>
+            </property>
            </widget>
           </item>
           <item row="4" column="0">
