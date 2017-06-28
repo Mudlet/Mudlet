@@ -130,10 +130,11 @@ void TTimer::start()
 {
     mpTimer->setSingleShot(isTemporary());
 
-    if (!isFolder())
+    if (!isFolder()) {
         mpTimer->start();
-    else
+    } else {
         stop();
+    }
 }
 
 void TTimer::stop()
@@ -256,8 +257,9 @@ bool TTimer::canBeUnlocked(TTimer* pChild)
     if (shouldBeActive()) {
         if (!mpParent) {
             return true;
-        } else
+        } else {
             return mpParent->canBeUnlocked(0);
+        }
     } else {
         return false;
     }
@@ -315,8 +317,9 @@ void TTimer::enableTimer()
     }
     if (!isOffsetTimer()) {
         for (auto timer : *mpMyChildrenList) {
-            if (!timer->isOffsetTimer())
+            if (!timer->isOffsetTimer()) {
                 timer->enableTimer();
+            }
         }
     }
 }

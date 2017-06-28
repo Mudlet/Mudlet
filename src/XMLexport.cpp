@@ -351,6 +351,10 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mShowRoomIDs", pHost->mShowRoomID ? "yes" : "no");
     writeAttribute("mShowPanel", pHost->mShowPanel ? "yes" : "no");
     writeAttribute("mHaveMapperScript", pHost->mHaveMapperScript ? "yes" : "no");
+    writeAttribute("mEditorTheme", pHost->mEditorTheme);
+    writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
+    writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
+    writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -1128,7 +1132,7 @@ bool XMLexport::writeKey(TKey* pT)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeScriptElement(const QString & script)
+bool XMLexport::writeScriptElement(const QString& script)
 {
     QString localScript = script;
     localScript.replace(QChar('\x01'), QStringLiteral("\xFFFC\x2401")); // SOH
@@ -1161,6 +1165,6 @@ bool XMLexport::writeScriptElement(const QString & script)
     localScript.replace(QChar('\x1F'), QStringLiteral("\xFFFC\x241F")); // US
     localScript.replace(QChar('\x7F'), QStringLiteral("\xFFFC\x2421")); // DEL
     writeTextElement(QLatin1String("script"), localScript);
-    
+
     return (!hasError());
 }

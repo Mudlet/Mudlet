@@ -19,15 +19,15 @@
 
 #include "TDockWidget.h"
 
-TDockWidget::TDockWidget( Host * pH, const QString & consoleName ) : QDockWidget()
+TDockWidget::TDockWidget(Host* pH, const QString& consoleName) : QDockWidget()
 {
     mpHost = pH;
     widgetConsoleName = consoleName;
 }
 
-void TDockWidget::closeEvent(QCloseEvent * event)
+void TDockWidget::closeEvent(QCloseEvent* event)
 {
-    if( ! mpHost->isClosingDown() ) {
+    if (!mpHost->isClosingDown()) {
         mudlet::self()->hideWindow(mpHost, widgetConsoleName);
         event->ignore();
         return;
@@ -37,14 +37,16 @@ void TDockWidget::closeEvent(QCloseEvent * event)
     }
 }
 
-void TDockWidget::resizeEvent(QResizeEvent *event) {
-    if( ! mudlet::self()->mIsLoadingLayout ) {
+void TDockWidget::resizeEvent(QResizeEvent* event)
+{
+    if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
     }
 }
 
-void TDockWidget::moveEvent(QMoveEvent *event) {
-    if( ! mudlet::self()->mIsLoadingLayout ) {
+void TDockWidget::moveEvent(QMoveEvent* event)
+{
+    if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
     }
 }

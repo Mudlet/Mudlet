@@ -38,8 +38,9 @@ void FontManager::addFonts()
 
     QDir dir = QDir::homePath() + "/.config/mudlet/";
 
-    if (!dir.exists())
+    if (!dir.exists()) {
         return;
+    }
 
     // load all fonts in the 'fonts' folder
     loadFonts(dir.absolutePath());
@@ -55,13 +56,14 @@ void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
     QStringList filters;
-    filters << "*.ttf" << "*.otf";
+    filters << "*.ttf"
+            << "*.otf";
     QDir dir = folder;
     dir.setNameFilters(filters);
 
     foreach (QString fontfile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
-        if (QFontDatabase::addApplicationFont(dir.absolutePath() + "/" + fontfile) == -1)
-            std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().
-                data() << "/" << fontfile.toUtf8().data() << std::endl;
+        if (QFontDatabase::addApplicationFont(dir.absolutePath() + "/" + fontfile) == -1) {
+            std::cout << "Couldn't load the font in the file " << dir.absolutePath().toUtf8().data() << "/" << fontfile.toUtf8().data() << std::endl;
+        }
     }
 }

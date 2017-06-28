@@ -29,7 +29,7 @@
 
 using namespace std;
 
-TKey::TKey( TKey * parent, Host * pHost )
+TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
@@ -41,7 +41,7 @@ TKey::TKey( TKey * parent, Host * pHost )
 {
 }
 
-TKey::TKey( QString name, Host * pHost )
+TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( 0 )
 , exportItem( true )
 , mModuleMasterFolder( false )
