@@ -3230,10 +3230,9 @@ void dlgTriggerEditor::saveAction()
             pA->mpToolBar->hide();
         }
     }
-}
 
-mpHost->getActionUnit()->updateToolbar();
-mudlet::self()->processEventLoopHack();
+    mpHost->getActionUnit()->updateToolbar();
+    mudlet::self()->processEventLoopHack();
 }
 
 void dlgTriggerEditor::saveScript()
