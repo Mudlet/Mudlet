@@ -475,10 +475,18 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         mpConsole->update();
     }
-    QStringList commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    QStringList commandList;
+    if (!mCommandSeparator.isEmpty()) {
+        commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    } else {
+        // don't split command if the command separator is blank
+        commandList << cmd;
+    }
+
     if (!dontExpandAliases) {
+        // allow sending blank commands
         if (commandList.size() == 0) {
-            sendRaw("\n"); //NOTE: damit leerprompt moeglich sind
+            sendRaw("\n");
             return;
         }
     }
