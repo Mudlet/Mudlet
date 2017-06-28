@@ -3,7 +3,7 @@
  *   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -412,7 +412,18 @@ mudlet::mudlet()
     timerAutologin->start(50);
 
     connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
-
+#ifdef QT_GAMEPAD_LIB
+    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
+    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, slot_gamepadButtonRelease);
+    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, slot_gamepadConnected);
+    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, slot_gamepadDisconnected);
+    //connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, slot_gamepadAxisEvent);
+    connect(QGamepadManager::instance(), SIGNAL(gamepadButtonPressEvent(int, QGamepadManager::GamepadButton, double)), this, SLOT(slot_gamepadButtonPress(int, QGamepadManager::GamepadButton, double)));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadButtonReleaseEvent(int, QGamepadManager::GamepadButton)), this, SLOT(slot_gamepadButtonRelease(int, QGamepadManager::GamepadButton)));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double)), this, SLOT(slot_gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double)));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadConnected(int)), this, SLOT(slot_gamepadConnected(int)));
+    connect(QGamepadManager::instance(), SIGNAL(gamepadDisconnected(int)), this, SLOT(slot_gamepadDisconnected(int)));
+#endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
 }
@@ -2932,3 +2943,80 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 
     return true;
 }
+
+#ifdef QT_GAMEPAD_LIB
+void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value)
+{
+    Host* pH = getActiveHost();
+    if (!pH)
+        return;
+    TEvent event;
+    event.mArgumentList.append("sysGamepadButtonPress");
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(deviceId));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(button));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(value));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    pH->raiseEvent(event);
+}
+
+void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button)
+{
+    Host* pH = getActiveHost();
+    if (!pH)
+        return;
+    TEvent event;
+    event.mArgumentList.append("sysGamepadButtonRelease");
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(deviceId));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(button));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    pH->raiseEvent(event);
+}
+
+void mudlet::slot_gamepadConnected(int deviceId)
+{
+    Host* pH = getActiveHost();
+    if (!pH)
+        return;
+    TEvent event;
+    event.mArgumentList.append("sysGamepadConnected");
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(deviceId));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    pH->raiseEvent(event);
+}
+
+void mudlet::slot_gamepadDisconnected(int deviceId)
+{
+    Host* pH = getActiveHost();
+    if (!pH)
+        return;
+    TEvent event;
+    event.mArgumentList.append("sysGamepadDisconnected");
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(deviceId));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    pH->raiseEvent(event);
+}
+
+void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value)
+{
+    Host* pH = getActiveHost();
+    if (!pH)
+        return;
+    TEvent event;
+    event.mArgumentList.append("sysGamepadAxisMove");
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(deviceId));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(axis));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(value));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    pH->raiseEvent(event);
+}
+#endif

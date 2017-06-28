@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -64,6 +65,7 @@ msvc:QMAKE_CXXFLAGS += -MP
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
 QT += network opengl uitools multimedia gui concurrent
+qtHaveModule(gamepad): QT += gamepad
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment

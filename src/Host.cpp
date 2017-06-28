@@ -182,10 +182,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // file auditing and other issues)
     mErrorLogStream.setDevice(&mErrorLogFile);
 
-    // There was a map load attempt made here but it did not seem to be needed
-    // and it caused issues being doing in the constructor (some other classes
-    // were not fully initialised at this point) so it seemed sensible to remove
-    // it - Slysven
+    QTimer::singleShot(0, [this]() {
+        if (mpMap->restore(QString(), false)) {
+            mpMap->audit();
+        }
+    });
 
     mMapStrongHighlight = false;
     mGMCP_merge_table_keys.append("Char.Status");
