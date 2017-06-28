@@ -2285,7 +2285,7 @@ void mudlet::slot_open_mappingscripts_page()
 
 void mudlet::slot_show_help_dialog_download()
 {
-    QDesktopServices::openUrl(QUrl("https://github.com/Mudlet/Mudlet"));
+    QDesktopServices::openUrl(QUrl("http://www.mudlet.org/download/"));
 }
 
 void mudlet::slot_show_about_dialog()
