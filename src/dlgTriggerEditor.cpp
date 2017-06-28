@@ -2615,8 +2615,8 @@ void dlgTriggerEditor::addAction(bool isFolder)
     QStringList nameL;
     nameL << name;
 
-    QTreeWidgetItem * pParent = treeWidget_actions->currentItem();
-    QTreeWidgetItem * pNewItem = 0;
+    QTreeWidgetItem* pParent = treeWidget_actions->currentItem();
+    QTreeWidgetItem* pNewItem = 0;
     QPointer<TAction> pT = 0;
 
     if (pParent) {
@@ -3137,36 +3137,31 @@ void dlgTriggerEditor::saveAction()
     // This is an unnecessary level of indentation but has been retained to
     // reduce the noise in a git commit/diff caused by the removal of a
     // redundent "if( pITem )" - can be removed next time the file is modified
-        int actionID = pItem->data(0, Qt::UserRole).toInt();
-        TAction * pA = mpHost->getActionUnit()->getAction( actionID );
-        if( pA )
-        {
-            // Check if data has been changed before it gets updated.
-            bool actionDataChanged = false;
-            if( pA->mLocation != location ||
-                pA->mOrientation != orientation ||
-                pA->css != mpActionsMainArea->css->toPlainText() )
-            {
-               actionDataChanged = true;
-            }
+    int actionID = pItem->data(0, Qt::UserRole).toInt();
+    TAction* pA = mpHost->getActionUnit()->getAction(actionID);
+    if (pA) {
+        // Check if data has been changed before it gets updated.
+        bool actionDataChanged = false;
+        if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->css->toPlainText()) {
+            actionDataChanged = true;
+        }
 
-            // Do not change anything for a module master folder - it won't "take"
-            if( pA->mPackageName.isEmpty() )
-            {
-                pA->setName( name );
-                pA->setIcon( icon );
-                pA->setScript( script );
-                pA->setCommandButtonDown( commandDown );
-                pA->setCommandButtonUp( commandUp );
-                pA->setIsPushDownButton( isChecked );
-                pA->mLocation = location;
-                pA->mOrientation = orientation;
-                pA->setIsActive( pA->shouldBeActive() );
-                pA->setButtonRotation( rotation );
-                pA->setButtonColumns( columns );
-                pA->mUseCustomLayout = false;
-                pA->css = mpActionsMainArea->css->toPlainText();
-            }
+        // Do not change anything for a module master folder - it won't "take"
+        if (pA->mPackageName.isEmpty()) {
+            pA->setName(name);
+            pA->setIcon(icon);
+            pA->setScript(script);
+            pA->setCommandButtonDown(commandDown);
+            pA->setCommandButtonUp(commandUp);
+            pA->setIsPushDownButton(isChecked);
+            pA->mLocation = location;
+            pA->mOrientation = orientation;
+            pA->setIsActive(pA->shouldBeActive());
+            pA->setButtonRotation(rotation);
+            pA->setButtonColumns(columns);
+            pA->mUseCustomLayout = false;
+            pA->css = mpActionsMainArea->css->toPlainText();
+        }
 
         QIcon icon;
         if (pA->isFolder()) {
@@ -3212,32 +3207,32 @@ void dlgTriggerEditor::saveAction()
             pItem->setText(0, name);
         }
 
-            // If not active, don't bother raising the TToolBar for this save.
-            if (!pA->shouldBeActive()) {
-                pA->setDataSaved();
-            }
+        // If not active, don't bother raising the TToolBar for this save.
+        if (!pA->shouldBeActive()) {
+            pA->setDataSaved();
+        }
 
-            if (actionDataChanged) {
-                pA->setDataChanged();
-            }
+        if (actionDataChanged) {
+            pA->setDataChanged();
+        }
 
-            // if the action has a TToolBar instance with a script error, hide that toolbar.
-            if (pA->mpToolBar && !pA->state()) {
-                pA->mpToolBar->hide();
-            }
+        // if the action has a TToolBar instance with a script error, hide that toolbar.
+        if (pA->mpToolBar && !pA->state()) {
+            pA->mpToolBar->hide();
+        }
 
-            // if the action location is changed, make sure the old toolbar instance is hidden.
-            if (pA->mLocation == 4 && pA->mpEasyButtonBar) {
-                pA->mpEasyButtonBar->hide();
-            }
-            if (pA->mLocation != 4 && pA->mpToolBar) {
-                pA->mpToolBar->hide();
-            }
+        // if the action location is changed, make sure the old toolbar instance is hidden.
+        if (pA->mLocation == 4 && pA->mpEasyButtonBar) {
+            pA->mpEasyButtonBar->hide();
+        }
+        if (pA->mLocation != 4 && pA->mpToolBar) {
+            pA->mpToolBar->hide();
         }
     }
+}
 
-    mpHost->getActionUnit()->updateToolbar();
-    mudlet::self()->processEventLoopHack();
+mpHost->getActionUnit()->updateToolbar();
+mudlet::self()->processEventLoopHack();
 }
 
 void dlgTriggerEditor::saveScript()
