@@ -1256,7 +1256,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     QString newIrcPort = ircHostPort->text();
     QString newIrcChannels = ircChannels->text();
     QStringList newChanList;
-    int nIrcPort;
+    int nIrcPort = dlgIRC::DefaultHostPort;
     bool restartIrcClient = false;
 
     if (newIrcHost.isEmpty()) {
