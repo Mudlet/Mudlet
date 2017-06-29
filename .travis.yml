@@ -34,9 +34,9 @@ env:
   matrix:
   - Q_OR_C_MAKE=cmake
   - Q_OR_C_MAKE=qmake
+  - QT_VERSION="59" # actually 5.9
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
-  - QT_VERSION="59" # actually 5.9
 matrix:
   exclude:
   - os: osx
