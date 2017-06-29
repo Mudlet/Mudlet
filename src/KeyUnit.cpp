@@ -116,7 +116,7 @@ bool KeyUnit::killKey(QString& name)
         TKey* pChild = *it;
         if (pChild->getName() == name) {
             // only temporary Keys can be killed
-            if (!pChild->isTempKey()) {
+            if (!pChild->isTemporary()) {
                 return false;
             } else {
                 pChild->setIsActive(false);
@@ -190,7 +190,7 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTempKey()) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->getName(), pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -265,7 +265,7 @@ void KeyUnit::removeKey(TKey* pT)
     if (!pT) {
         return;
     }
-    if (!pT->isTempKey()) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->getName(), pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -341,7 +341,7 @@ void KeyUnit::_assembleReport(TKey* pChild)
         if (pT->isActive()) {
             statsActiveKeys++;
         }
-        if (pT->isTempKey()) {
+        if (pT->isTemporary()) {
             statsTempKeys++;
         }
         statsKeyTotal++;
@@ -358,7 +358,7 @@ QString KeyUnit::assembleReport()
         if (pChild->isActive()) {
             statsActiveKeys++;
         }
-        if (pChild->isTempKey()) {
+        if (pChild->isTemporary()) {
             statsTempKeys++;
         }
         statsKeyTotal++;
@@ -369,7 +369,7 @@ QString KeyUnit::assembleReport()
             if (pT->isActive()) {
                 statsActiveKeys++;
             }
-            if (pT->isTempKey()) {
+            if (pT->isTemporary()) {
                 statsTempKeys++;
             }
             statsKeyTotal++;
