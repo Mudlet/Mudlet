@@ -324,7 +324,7 @@ FIND_PACKAGE(Qt5Core REQUIRED)
 IF (Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
 ELSE()
-  message(STATUS "Qt version: ${QTCore_VERSION")
+  message(STATUS "Qt version: ${QTCore_VERSION}")
 ENDIF()
 
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
