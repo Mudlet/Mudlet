@@ -1692,9 +1692,6 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                             return;
                         }
 
-                        QVariant fromCache = reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute);
-                        qDebug() << "page from cache?" << fromCache.toBool();
-
                         QByteArray downloadedArchive = reply->readAll();
 
                         tempThemesArchive = new QTemporaryFile();
