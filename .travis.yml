@@ -7,9 +7,13 @@ sudo: false
 addons:
   apt:
     sources:
+    - sourceline: 'ppa:beineri/opt-qt562-trusty'
     - sourceline: 'ppa:beineri/opt-qt59-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
+    - qt56base
+    - qt56multimedia
+    - qt56tools
     - qt59base
     - qt59multimedia
     - qt59tools
@@ -32,14 +36,20 @@ env:
   - Q_OR_C_MAKE=qmake
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
+  - QT_VERSION="59" # actually 5.9
 matrix:
   exclude:
   - os: osx
     compiler: gcc
+  include:
+  - os: linux
+    compiler: gcc
+    Q_OR_C_MAKE=cmake
+    QT_VERSION="56" # actually 5.6
 before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt59/bin/qt59-env.sh; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
 install: ./CI/travis.install.sh
