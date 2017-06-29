@@ -2158,7 +2158,7 @@
          <property name="title">
           <string>IRC client options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_28">
+         <layout class="QGridLayout" name="gridLayout_28" rowstretch="0,0,0,0" columnstretch="1,1,1,2">
           <item row="0" column="0">
            <widget class="QWidget" name="ircHostNameWidget" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_13">
