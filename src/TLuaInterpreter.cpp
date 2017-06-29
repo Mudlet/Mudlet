@@ -2537,7 +2537,7 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
     return 0;
 }
 
-// Documentation: ?
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow -- not hideUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::hideUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -2643,7 +2643,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     return 0;
 }
 
-// Documentation: ?
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resizeWindow -- not resizeUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::resizeUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -3368,7 +3368,7 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
     return 1;
 }
 
-// Documentation: ?
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow -- not showUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::showUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -10325,7 +10325,7 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
     return 0;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#expandAlias -- not #send - compare initLuaGlobals()
 int TLuaInterpreter::Send(lua_State* L)
 {
     string luaSendText;
@@ -10377,6 +10377,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#send -- not #sendRaw - compare initLuaGlobals()
 int TLuaInterpreter::sendRaw(lua_State* L)
 {
     string luaSendText;
@@ -11574,6 +11575,7 @@ QString TLuaInterpreter::get_lua_string(const QString& stringName)
     return QString(lua_tostring(L, 1));
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#handleWindowResizeEvent -- not #noop - compare initLuaGlobals()
 int TLuaInterpreter::noop(lua_State* L)
 {
     return 0;
