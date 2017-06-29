@@ -44,8 +44,8 @@ matrix:
   include:
   - os: linux
     compiler: gcc
-    Q_OR_C_MAKE=cmake
-    QT_VERSION="56" # actually 5.6
+    Q_OR_C_MAKE: cmake
+    QT_VERSION: "56" # actually 5.6
 before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
