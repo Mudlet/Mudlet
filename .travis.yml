@@ -33,9 +33,9 @@ compiler:
 env:
   matrix:
   - Q_OR_C_MAKE=cmake
-    QT_VERSION="59" # actually 5.9
+    QT_VERSION=59 # actually 5.9
   - Q_OR_C_MAKE=qmake
-    QT_VERSION="59" # actually 5.9
+    QT_VERSION=59 # actually 5.9
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
 matrix:
@@ -46,8 +46,8 @@ matrix:
   - os: linux
     compiler: gcc
     env: 
-    - Q_OR_C_MAKE="cmake"
-    - QT_VERSION="56" # actually 5.6
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=56 # actually 5.6
 before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
