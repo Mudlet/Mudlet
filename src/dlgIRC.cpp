@@ -173,7 +173,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         mPingStarted = QDateTime::currentMSecsSinceEpoch();
     }
 
-    bool rv = connection->sendCommand(command);
+    connection->sendCommand(command);
 
     // if the command was a quit command we should close the IRC window.
     if (command->type() == IrcCommand::Quit) {
@@ -189,11 +189,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         delete msg;
     }
 
-    if (rv) {
-        return QPair<bool, QString>(true, QStringLiteral("sent to server."));
-    } else {
-        return QPair<bool, QString>(false, QStringLiteral("filtered by client."));
-    }
+    return QPair<bool, QString>(true, QStringLiteral("sent to server."));
 }
 
 void dlgIRC::ircRestart(bool reloadConfigs)

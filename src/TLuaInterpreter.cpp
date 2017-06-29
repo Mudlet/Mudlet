@@ -10381,7 +10381,11 @@ int TLuaInterpreter::sendIrc( lua_State * L )
 
     QPair<bool, QString> rval = mudlet::self()->mpIrcClientMap.value(pHost)->sendMsg(target, msg);
 
-    lua_pushboolean(L, rval.first);
+    if (rval.first) {
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushnil(L);
+    }
     lua_pushstring(L, rval.second.toUtf8().constData());
     return 2;
 }
