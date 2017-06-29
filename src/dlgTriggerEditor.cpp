@@ -4433,14 +4433,13 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL);
     mpTriggerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     QIcon mainIcon;
-    mainIcon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-wizard.png")), QIcon::Normal, QIcon::Off);
-    mpTriggerBaseItem->setIcon(0, mainIcon);
-    treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
-    list<TTrigger*> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-    for (auto trigger : baseNodeList) {
-        if (trigger->isTempTrigger()) {
-            continue;
-        }
+    mainIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-wizard.png" ) ), QIcon::Normal, QIcon::Off );
+    mpTriggerBaseItem->setIcon( 0, mainIcon );
+    treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
+    list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    for(auto trigger : baseNodeList)
+    {
+        if( trigger->isTemporary() ) { continue; }
         QString s = trigger->getName();
         QStringList sList;
         sList << s;
@@ -4517,15 +4516,14 @@ void dlgTriggerEditor::fillout_form()
     mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL2);
     mpTimerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     QIcon mainIcon2;
-    mainIcon2.addPixmap(QPixmap(QStringLiteral(":/icons/chronometer.png")), QIcon::Normal, QIcon::Off);
-    mpTimerBaseItem->setIcon(0, mainIcon2);
-    treeWidget_timers->insertTopLevelItem(0, mpTimerBaseItem);
-    mpTriggerBaseItem->setExpanded(true);
-    list<TTimer*> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
-    for (auto timer : baseNodeList_timers) {
-        if (timer->isTempTimer()) {
-            continue;
-        }
+    mainIcon2.addPixmap( QPixmap( QStringLiteral( ":/icons/chronometer.png" ) ), QIcon::Normal, QIcon::Off );
+    mpTimerBaseItem->setIcon( 0, mainIcon2 );
+    treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
+    mpTriggerBaseItem->setExpanded( true );
+    list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    for(auto timer : baseNodeList_timers)
+    {
+        if( timer->isTemporary() ) { continue; }
         QString s = timer->getName();
         QStringList sList;
         sList << s;
