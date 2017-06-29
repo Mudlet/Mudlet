@@ -363,14 +363,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
 
         comboBox_encoding->addItem(QLatin1String("ASCII"));
-        comboBox_encoding->addItems(pHost->mTelnet.getEncodingsList());
+        comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
         if (pHost->mTelnet.getEncoding().isEmpty()) {
             // cTelnet::mEncoding is (or should be) empty for the default 7-bit
             // ASCII case, so need to set the control specially to its (the
             // first) value
             comboBox_encoding->setCurrentIndex(0);
         } else {
-            comboBox_encoding->setCurrentText(pHost->mTelnet.getEncoding());
+            comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
         }
         connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
     }
@@ -1461,7 +1461,7 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
 
 void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 {
-    mpHost->mTelnet.setEncoding(newEncoding);
+    mpHost->mTelnet.setEncoding(mpHost->mTelnet.getComputerEncoding(newEncoding));
 }
 
 // loads available Lua scripts from triggers, aliases, scripts, etc into the
