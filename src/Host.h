@@ -169,12 +169,14 @@ public:
     {
     };
 
+
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
+    QString readProfileData(const QString &);
 
 public:
     cTelnet mTelnet;
@@ -240,6 +242,20 @@ public:
     bool mUSE_UNIX_EOL;
     int mWrapAt;
     int mWrapIndentCount;
+
+    // code editor theme (human-friendly name)
+    QString mEditorTheme;
+    // code editor theme file on disk for edbee to load
+    QString mEditorThemeFile;
+
+    // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
+    // remembering this value to show what the user has selected does have its
+    // flaws in case of items getting created/deleted, but this is just a
+    // convenience feature and if it gets the item wrong, it's no worse
+    // than the feature not being there.
+    int mThemePreviewItemID;
+    // the type of item (a trigger, an alias, etc) that's previewed
+    QString mThemePreviewType;
 
     QColor mBlack;
     QColor mLightBlack;
@@ -360,8 +376,6 @@ private:
     QMap<int, QTime> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
-
-    QString mIRCNick;
 
     QStringList mActiveModules;
     bool mModuleSaveBlock;

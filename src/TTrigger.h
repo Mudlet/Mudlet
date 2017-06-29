@@ -97,18 +97,14 @@ public:
     bool compileScript();
     bool match(char*, const QString&, int line, int posOffset = 0);
 
-    bool isFolder() { return mIsFolder; }
     bool isMultiline() { return mIsMultiline; }
     int getTriggerType() { return mTriggerType; }
-    bool isTempTrigger() { return mIsTempTrigger; }
     bool isLineTrigger() { return mIsLineTrigger; }
     void setIsLineTrigger(bool b) { mIsLineTrigger = b; }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
     void setTriggerType(int b) { mTriggerType = b; }
-    void setIsTempTrigger(bool b) { mIsTempTrigger = b; }
     void setIsMultiline(bool b) { mIsMultiline = b; }
-    void setIsFolder(bool b) { mIsFolder = b; }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
@@ -144,7 +140,6 @@ public:
     int mKeepFiring;
     QPointer<Host> mpHost;
     QString mName;
-    bool mIsTempTrigger;
     QStringList mRegexCodeList;
     bool exportItem;
     bool mModuleMasterFolder;
@@ -160,7 +155,6 @@ private:
 
     QString mScript;
 
-    bool mIsFolder;
     bool mNeedsToBeCompiled;
     int mTriggerType;
 

@@ -116,7 +116,7 @@ bool KeyUnit::killKey(QString& name)
         TKey* pChild = *it;
         if (pChild->getName() == name) {
             // only temporary Keys can be killed
-            if (!pChild->isTempKey()) {
+            if (!pChild->isTemporary()) {
                 return false;
             } else {
                 pChild->setIsActive(false);
@@ -187,9 +187,10 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
 
 void KeyUnit::removeKeyRootNode(TKey* pT)
 {
-    if (!pT)
+    if (!pT) {
         return;
-    if (!pT->isTempKey()) {
+    }
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->getName(), pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -261,9 +262,10 @@ void KeyUnit::addKey(TKey* pT)
 
 void KeyUnit::removeKey(TKey* pT)
 {
-    if (!pT)
+    if (!pT) {
         return;
-    if (!pT->isTempKey()) {
+    }
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->getName(), pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -336,10 +338,12 @@ void KeyUnit::_assembleReport(TKey* pChild)
     for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
         TKey* pT = *it2;
         _assembleReport(pT);
-        if (pT->isActive())
+        if (pT->isActive()) {
             statsActiveKeys++;
-        if (pT->isTempKey())
+        }
+        if (pT->isTemporary()) {
             statsTempKeys++;
+        }
         statsKeyTotal++;
     }
 }
@@ -351,19 +355,23 @@ QString KeyUnit::assembleReport()
     statsTempKeys = 0;
     for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
         TKey* pChild = *it;
-        if (pChild->isActive())
+        if (pChild->isActive()) {
             statsActiveKeys++;
-        if (pChild->isTempKey())
+        }
+        if (pChild->isTemporary()) {
             statsTempKeys++;
+        }
         statsKeyTotal++;
         list<TKey*>* childrenList = pChild->mpMyChildrenList;
         for (auto it2 = childrenList->begin(); it2 != childrenList->end(); it2++) {
             TKey* pT = *it2;
             _assembleReport(pT);
-            if (pT->isActive())
+            if (pT->isActive()) {
                 statsActiveKeys++;
-            if (pT->isTempKey())
+            }
+            if (pT->isTemporary()) {
                 statsTempKeys++;
+            }
             statsKeyTotal++;
         }
     }

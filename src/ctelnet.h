@@ -118,6 +118,9 @@ public:
     QPair<bool, QString> setEncoding(const QString &, const bool isToStore = true);
     void postMessage(QString);
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
+    const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
+    const QString& getComputerEncoding(const QString& encoding);
+    const QString& getFriendlyEncoding();
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -208,6 +211,7 @@ private:
     QStringList messageStack;
     bool loadingReplay;
     QStringList mAcceptableEncodings;
+    QStringList mFriendlyEncodings;
 };
 
 #endif // MUDLET_CTELNET_H

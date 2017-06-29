@@ -321,7 +321,7 @@ void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
     list<TTrigger*>::iterator it;
     for (it = childList->begin(); it != childList->end(); it++) {
         TTrigger* pChild = *it;
-        if (pChild->isTempTrigger())
+        if (pChild->isTemporary())
             continue;
         QStringList sl;
         sl << pChild->getName();
@@ -343,7 +343,7 @@ void dlgPackageExporter::listTriggers()
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TTrigger* pChild = *it;
-        if (pChild->isTempTrigger()) {
+        if (pChild->isTemporary()) {
             continue;
         }
         QStringList sl;
@@ -366,7 +366,7 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
     list<TAlias*>::iterator it;
     for (it = childList->begin(); it != childList->end(); it++) {
         TAlias* pChild = *it;
-        if (pChild->isTempAlias()) {
+        if (pChild->isTemporary()) {
             continue;
         }
         QStringList sl;
@@ -389,7 +389,7 @@ void dlgPackageExporter::listAliases()
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TAlias* pChild = *it;
-        if (pChild->isTempAlias()) {
+        if (pChild->isTemporary()) {
             continue;
         }
         QStringList sl;
@@ -452,7 +452,7 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
     list<TKey*>::iterator it;
     for (it = childList->begin(); it != childList->end(); it++) {
         TKey* pChild = *it;
-        if (pChild->isTempKey())
+        if (pChild->isTemporary())
             continue;
         QStringList sl;
         sl << pChild->getName();
@@ -474,7 +474,7 @@ void dlgPackageExporter::listKeys()
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TKey* pChild = *it;
-        if (pChild->isTempKey())
+        if (pChild->isTemporary())
             continue;
         QStringList sl;
         sl << pChild->getName();
@@ -536,7 +536,7 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
     list<TTimer*>::iterator it;
     for (it = childList->begin(); it != childList->end(); it++) {
         TTimer* pChild = *it;
-        if (pChild->isTempTimer()) {
+        if (pChild->isTemporary()) {
             continue;
         }
         QStringList sl;
@@ -559,7 +559,7 @@ void dlgPackageExporter::listTimers()
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TTimer* pChild = *it;
-        if (pChild->isTempTimer()) {
+        if (pChild->isTemporary()) {
             continue;
         }
         QStringList sl;

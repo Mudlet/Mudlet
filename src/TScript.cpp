@@ -36,7 +36,6 @@ TScript::TScript( TScript * parent, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mIsFolder()
 {
 }
 
@@ -48,7 +47,6 @@ TScript::TScript(const QString& name, Host * pHost )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mIsFolder()
 {
 }
 
@@ -79,8 +77,9 @@ void TScript::setEventHandlerList(QStringList handlerList)
     }
     mEventHandlerList.clear();
     for (int i = 0; i < handlerList.size(); i++) {
-        if (handlerList[i].size() < 1)
+        if (handlerList[i].size() < 1) {
             continue;
+        }
         mEventHandlerList.append(handlerList[i]);
         mpHost->registerEventHandler(handlerList[i], this);
     }

@@ -89,6 +89,7 @@ SET(mudlet_SRCS
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp
+    ircmessageformatter.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -196,6 +197,7 @@ SET(mudlet_HDRS
     VarUnit.h
     XMLexport.h
     XMLimport.h
+    ircmessageformatter.h
 )
 
 IF(MSVC)
@@ -214,7 +216,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -328,6 +330,8 @@ FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
+FIND_PACKAGE(Qt5 COMPONENTS Concurrent)
+FIND_PACKAGE(Qt5Concurrent REQUIRED)
 
 IF(WIN32)
   SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -418,6 +422,7 @@ TARGET_LINK_LIBRARIES(mudlet
     ${Qt5Multimedia_LIBRARIES}
     ${Qt5OpenGL_LIBRARIES}
     ${Qt5UiTools_LIBRARIES}
+    ${Qt5Concurrent_LIBRARIES}
     ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
