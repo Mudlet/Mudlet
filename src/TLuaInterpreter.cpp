@@ -2500,6 +2500,7 @@ int TLuaInterpreter::createBuffer(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearUserWindow
 int TLuaInterpreter::clearUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -2518,6 +2519,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::closeUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -2535,6 +2537,7 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::hideUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -2552,6 +2555,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderTop
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
     int x1;
@@ -2573,6 +2577,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
     int x1;
@@ -2594,6 +2599,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
     int x1;
@@ -2615,6 +2621,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
     int x1;
@@ -2636,6 +2643,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::resizeUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -2670,6 +2678,7 @@ int TLuaInterpreter::resizeUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveWindow
 int TLuaInterpreter::moveWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -2704,6 +2713,7 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     int x1;
@@ -2728,6 +2738,7 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBackgroundColor
 int TLuaInterpreter::setBackgroundColor(lua_State* L)
 {
     string luaSendText = "";
@@ -2777,12 +2788,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::calcFontWidth(int size)
 {
     QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
     return QFontMetrics(font).width(QChar('W'));
 }
 
+// Documentation: ?
 int TLuaInterpreter::calcFontHeight(int size)
 {
     QFont font = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
@@ -2791,6 +2804,7 @@ int TLuaInterpreter::calcFontHeight(int size)
     return fontAscent + fontDescent;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#calcFontSize
 int TLuaInterpreter::calcFontSize(lua_State* L)
 {
     int x = 0;
@@ -2807,16 +2821,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     return 2;
 }
 
-// Badly named, because it will STOP logging if the supplied argument is false
-// Now returns 4 values:
-// * true on sucessfully changing logging state; nil otherwise
-// * an internationalizable/translated message
-// * the log pathAndFile name involved (or nil if there wasn't one)
-// * a numeric code indicating what happend:
-//    0 = logging was just stopped
-//    1 = logging has just started
-//   -1 = logging was already in progress so no change in logging state
-//   -2 = logging was already not in progress so no change in logging state
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startLogging
 int TLuaInterpreter::startLogging(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2871,6 +2876,7 @@ int TLuaInterpreter::startLogging(lua_State* L)
     return 4;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBackgroundImage
 int TLuaInterpreter::setBackgroundImage(lua_State* L)
 {
     string luaSendText = "";
@@ -2898,6 +2904,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelClickCallback
 int TLuaInterpreter::setLabelClickCallback(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2958,6 +2965,7 @@ int TLuaInterpreter::setLabelClickCallback(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelReleaseCallback
 int TLuaInterpreter::setLabelReleaseCallback(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3018,6 +3026,7 @@ int TLuaInterpreter::setLabelReleaseCallback(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelOnEnter
 int TLuaInterpreter::setLabelOnEnter(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3078,6 +3087,7 @@ int TLuaInterpreter::setLabelOnEnter(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelOnLeave
 int TLuaInterpreter::setLabelOnLeave(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3138,6 +3148,7 @@ int TLuaInterpreter::setLabelOnLeave(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
 int TLuaInterpreter::setTextFormat(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3325,6 +3336,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseWindow
 int TLuaInterpreter::raiseWindow(lua_State* L)
 {
     QString windowName;
@@ -3340,6 +3352,7 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lowerWindow
 int TLuaInterpreter::lowerWindow(lua_State* L)
 {
     QString windowName;
@@ -3355,6 +3368,7 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
     return 1;
 }
 
+// Documentation: ?
 int TLuaInterpreter::showUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -3372,6 +3386,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
 }
 
 // xRot, yRot, zRot, zoom
+// Documentation: ?
 int TLuaInterpreter::setMapperView(lua_State* L)
 {
     float x, y, z, zoom;
@@ -3411,6 +3426,7 @@ int TLuaInterpreter::setMapperView(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomEnv
 int TLuaInterpreter::setRoomEnv(lua_State* L)
 {
     int id, env;
@@ -3437,6 +3453,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomName
 int TLuaInterpreter::setRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3476,6 +3493,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#
 int TLuaInterpreter::getRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3505,6 +3523,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#
 int TLuaInterpreter::setRoomWeight(lua_State* L)
 {
     int id;
@@ -3533,6 +3552,7 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#connectToServer
 int TLuaInterpreter::connectToServer(lua_State* L)
 {
     // The lua_tointeger(...) call can return a 64-bit integer number, on
@@ -3597,6 +3617,7 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomIDbyHash
 int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
 {
     int id;
@@ -3620,6 +3641,7 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomIDbyHash
 int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
 {
     string hash;
@@ -3651,6 +3673,7 @@ int TLuaInterpreter::solveRoomCollisions(lua_State* L)
 // At one stage there was an isRoomLocked() function as well but it was
 // functionally identical - however as it was not registered by a call to
 // lua_register() in initLuaGlobals() it was not available to the user!
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomLocked
 int TLuaInterpreter::roomLocked(lua_State* L)
 {
     int id;
@@ -3673,6 +3696,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockRoom
 int TLuaInterpreter::lockRoom(lua_State* L)
 {
     bool b = true;
@@ -3704,6 +3728,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockExit
 int TLuaInterpreter::lockExit(lua_State* L)
 {
     bool b = true;
@@ -3740,6 +3765,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockSpecialExit
 int TLuaInterpreter::lockSpecialExit(lua_State* L)
 {
     bool b = true;
@@ -3786,6 +3812,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasSpecialExitLock
 int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
 {
     int id, to;
@@ -3823,6 +3850,7 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasExitLock
 int TLuaInterpreter::hasExitLock(lua_State* L)
 {
     int id;
@@ -3851,6 +3879,7 @@ int TLuaInterpreter::hasExitLock(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomExits
 int TLuaInterpreter::getRoomExits(lua_State* L)
 {
     int id;
@@ -3932,10 +3961,7 @@ int TLuaInterpreter::getRoomExits(lua_State* L)
     }
 }
 
-// Given a room id number, returns a lua list (monotonically increasing keys
-// starting at 1) with (sorted) values being room id numbers that have exit(s)
-// that enter the given room (even one way routes).
-// TODO: Provide exit details:
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllRoomEntrances
 int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
 {
     int roomId = 0;
@@ -3973,16 +3999,7 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
     }
 }
 
-// EITHER searchRoom( roomId ):
-// Returns the room name for the given roomId number, or errors out if no such
-// room exists.
-// OR searchRoom( roomName ):
-// Original implimentation did a case insensitive and matched on only part
-// of the room name if a string is supplied as the argument.  Returns a table
-// of room ids with the matching room name for each room id.
-// NOW Enhanced in a compatible matter with two further optional boolean arguments:
-// searchRoom( roomName, < caseSensitive < , exact match > > )
-// which both default to false if omitted to reproduce the original action.
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#searchRoom
 int TLuaInterpreter::searchRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4067,16 +4084,7 @@ int TLuaInterpreter::searchRoom(lua_State* L)
     }
 }
 
-// Derived from searchRoom, if we have:
-// searchRoomUserData(key, value)
-//     look through all room ids for a given user data "key" for the "value" and
-//     return a lua "array" of roomids matching those
-//     - linear search time, plus (q)sort(?) of roomIds found
-// searchRoomUserData(key)
-//     return a sorted lua "array" of the unique "values" found against that "key"
-//     - linear search time, plus (q)sort(?) of values found
-// searchRoomUserData() - LATER ADDED FEATURE
-//     return a sorted lua "array" of the unique "keys" found in all rooms
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#searchRoomUserData
 int TLuaInterpreter::searchRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4182,7 +4190,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
     return 1;
 }
 
-// Derived from searchRoomUserData(...)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#searchAreaUserData
 int TLuaInterpreter::searchAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4288,6 +4296,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaTable
 int TLuaInterpreter::getAreaTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4310,6 +4319,7 @@ int TLuaInterpreter::getAreaTable(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaTableSwap
 int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4332,6 +4342,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaRooms
 int TLuaInterpreter::getAreaRooms(lua_State* L)
 {
     int area;
@@ -4362,6 +4373,7 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRooms
 int TLuaInterpreter::getRooms(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4376,14 +4388,7 @@ int TLuaInterpreter::getRooms(lua_State* L)
     return 1;
 }
 
-// Revised to take an optional second argument of a boolean to indicate whether
-// to return just the list of rooms in the area which have exits out of the area
-// (false) or nested tables of details (true). The latter case uses the "from"
-// room numbers as keys for the outer table, the value is an inner table with
-// the exit direction as key in the form of a text entry of either the text of
-// the special exit or (translatable) standard names for normal exits, the value
-// is the "to" room number.  In the event of an isolated area an empty table is
-// returned.
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaExits
 int TLuaInterpreter::getAreaExits(lua_State* L)
 {
     int area = 0;
@@ -4452,6 +4457,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#gotoRoom
 int TLuaInterpreter::getRoomWeight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4477,6 +4483,7 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#gotoRoom
 int TLuaInterpreter::gotoRoom(lua_State* L)
 {
     int targetRoomId;
@@ -4512,6 +4519,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPath
 int TLuaInterpreter::getPath(lua_State* L)
 {
     int originRoomId;
@@ -4561,6 +4569,7 @@ int TLuaInterpreter::getPath(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deselect
 int TLuaInterpreter::deselect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4592,6 +4601,7 @@ int TLuaInterpreter::deselect(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetFormat
 int TLuaInterpreter::resetFormat(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4623,6 +4633,7 @@ int TLuaInterpreter::resetFormat(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasFocus
 int TLuaInterpreter::hasFocus(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4630,6 +4641,7 @@ int TLuaInterpreter::hasFocus(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoUserWindow
 int TLuaInterpreter::echoUserWindow(lua_State* L)
 {
     string luaWindowName = "";
@@ -4656,6 +4668,7 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
 int TLuaInterpreter::setAppStyleSheet(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
@@ -4675,6 +4688,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
 int TLuaInterpreter::playSoundFile(lua_State* L)
 {
     string luaSendText = "";
@@ -4697,6 +4711,7 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopSounds
 int TLuaInterpreter::stopSounds(lua_State* L)
 {
     //doesn't take an argument
@@ -4704,6 +4719,7 @@ int TLuaInterpreter::stopSounds(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursorEnd
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
     string luaWindowName = "";
@@ -4723,6 +4739,7 @@ int TLuaInterpreter::moveCursorEnd(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLastLineNumber
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
     string luaWindowName;
@@ -4746,7 +4763,7 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletHomeDir
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     QString home = QDir::homePath();
@@ -4787,6 +4804,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disconnect
 int TLuaInterpreter::disconnect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4794,6 +4812,7 @@ int TLuaInterpreter::disconnect(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#reconnect
 int TLuaInterpreter::reconnect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -4801,6 +4820,7 @@ int TLuaInterpreter::reconnect(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTriggerStayOpen
 int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 {
     string luaWindowName;
@@ -4830,6 +4850,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLink
 int TLuaInterpreter::setLink(lua_State* L)
 {
     string luaWindowName;
@@ -4881,6 +4902,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPopup
 int TLuaInterpreter::setPopup(lua_State* L)
 {
     string a1 = "";
@@ -4967,6 +4989,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBold
 int TLuaInterpreter::setBold(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5004,6 +5027,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setItalics
 int TLuaInterpreter::setItalics(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5041,6 +5065,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUnderline
 int TLuaInterpreter::setUnderline(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5078,6 +5103,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setStrikeOut
 int TLuaInterpreter::setStrikeOut(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5115,6 +5141,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::debug(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5135,6 +5162,7 @@ int TLuaInterpreter::debug(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
     string luaWindowName;
@@ -5152,6 +5180,7 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showToolBar
 int TLuaInterpreter::showToolBar(lua_State* L)
 {
     string luaWindowName;
@@ -5169,6 +5198,7 @@ int TLuaInterpreter::showToolBar(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::sendATCP(lua_State* L)
 {
     string msg;
@@ -5205,6 +5235,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendGMCP
 int TLuaInterpreter::sendGMCP(lua_State* L)
 {
     string msg;
@@ -5246,6 +5277,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 #define IAC 255
 #define SB 250
 #define SE 240
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendMSDP
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {
     string variable;
@@ -5278,6 +5310,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendTelnetChannel102
 int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 {
     string msg;
@@ -5301,6 +5334,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getButtonState
 int TLuaInterpreter::getButtonState(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5310,6 +5344,7 @@ int TLuaInterpreter::getButtonState(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNetworkLatency
 int TLuaInterpreter::getNetworkLatency(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5319,6 +5354,7 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainConsoleWidth
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5328,6 +5364,7 @@ int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainWindowSize
 int TLuaInterpreter::getMainWindowSize(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5339,6 +5376,7 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMousePosition
 int TLuaInterpreter::getMousePosition(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5351,7 +5389,7 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
     return 2;
 }
 
-// tempTimer(int session, float seconds, string function to call, string name) // one shot timer.
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempTimer
 int TLuaInterpreter::tempTimer(lua_State* L)
 {
     double luaTimeout;
@@ -5393,6 +5431,7 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempExactMatchTrigger
 int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
 {
     string luaRegex;
@@ -5422,6 +5461,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempBeginOfLineTrigger
 int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 {
     string luaRegex;
@@ -5451,8 +5491,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
     return 1;
 }
 
-
-// tempTrigger( string regex, string function to call ) // one shot timer.
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempTrigger
 int TLuaInterpreter::tempTrigger(lua_State* L)
 {
     string luaRegex;
@@ -5483,8 +5522,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     return 1;
 }
 
-
-// temporary color trigger. args: ansiFGColorCode, ansiBgColorCode, luaCode
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempColorTrigger
 int TLuaInterpreter::tempColorTrigger(lua_State* L)
 {
     int luaFrom;
@@ -5521,8 +5559,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     return 1;
 }
 
-
-// triggerID = tempLineTrigger( from, howmany, func )
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempLineTrigger
 int TLuaInterpreter::tempLineTrigger(lua_State* L)
 {
     int luaFrom;
@@ -5559,8 +5596,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     return 1;
 }
 
-// tempTrigger( string name, string regex, string function to call, multiline, fg, bg, filter, match all(perlSlashG), highlight,
-// play sound, fire length(mStayOpen), lineDelta).
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempComplexRegexTrigger
 int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 {
     bool multiLine, matchAll, highlight, playSound, filter, colorTrigger;
@@ -5703,6 +5739,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempButton
 int TLuaInterpreter::tempButton(lua_State* L)
 {
     //args: parent, name, orientation
@@ -5778,6 +5815,7 @@ int TLuaInterpreter::tempButton(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempButtonToolbar
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 { //args: name, location(0-4), orientation(0/1)
     QString name;
@@ -5844,7 +5882,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     return 1;
 }
 
-// tempTrigger( string regex, string function to call ) // one shot timer.
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempRegexTrigger
 int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 {
     string luaRegex;
@@ -5874,6 +5912,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempAlias
 int TLuaInterpreter::tempAlias(lua_State* L)
 {
     string luaRegex;
@@ -5903,6 +5942,7 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
     string _name;
@@ -5939,6 +5979,7 @@ int TLuaInterpreter::exists(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
 int TLuaInterpreter::isActive(lua_State* L)
 {
     string _name;
@@ -5999,7 +6040,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permAlias
 int TLuaInterpreter::permAlias(lua_State* L)
 {
     string luaName;
@@ -6049,6 +6090,7 @@ int TLuaInterpreter::permAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permTimer
 int TLuaInterpreter::permTimer(lua_State* L)
 {
     string luaName;
@@ -6096,6 +6138,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permSubstringTrigger
 int TLuaInterpreter::permSubstringTrigger(lua_State* L)
 {
     string name;
@@ -6152,6 +6195,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permKey
 int TLuaInterpreter::permKey(lua_State* L)
 {
     uint_fast8_t argIndex = 0;
@@ -6205,6 +6249,7 @@ int TLuaInterpreter::permKey(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempKey
 int TLuaInterpreter::tempKey(lua_State* L)
 {
     uint_fast8_t argIndex = 0;
@@ -6241,6 +6286,7 @@ int TLuaInterpreter::tempKey(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permBeginOfLineStringTrigger
 int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 {
     string name;
@@ -6297,6 +6343,7 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permRegexTrigger
 int TLuaInterpreter::permRegexTrigger(lua_State* L)
 {
     string name;
@@ -6353,7 +6400,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
     bool luaDir = false; //default is to choose a directory
@@ -6383,6 +6430,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTimestamp
 int TLuaInterpreter::getTimestamp(lua_State* L)
 {
     int luaLine;
@@ -6429,6 +6477,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderColor
 int TLuaInterpreter::setBorderColor(lua_State* L)
 {
     int luaRed;
@@ -6467,7 +6516,7 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     return 0;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCoordinates
 int TLuaInterpreter::setRoomCoordinates(lua_State* L)
 {
     int id;
@@ -6511,6 +6560,7 @@ int TLuaInterpreter::setRoomCoordinates(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCustomEnvColor
 int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 {
     int id;
@@ -6563,6 +6613,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaName
 int TLuaInterpreter::setAreaName(lua_State* L)
 {
     int id = -1;
@@ -6682,6 +6733,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
 // Despite the name this actually returns either the area Id or name
 // respectively if given the other...
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomAreaName
 int TLuaInterpreter::getRoomAreaName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -6733,6 +6785,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
 }
 
 // Note that adding an area name implicitly creates an underlying TArea instance
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addAreaName
 int TLuaInterpreter::addAreaName(lua_State* L)
 {
     QString name;
@@ -6778,6 +6831,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteArea
 int TLuaInterpreter::deleteArea(lua_State* L)
 {
     int id = 0;
@@ -6845,6 +6899,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteRoom
 int TLuaInterpreter::deleteRoom(lua_State* L)
 {
     int id;
@@ -6865,7 +6920,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExit
 int TLuaInterpreter::setExit(lua_State* L)
 {
     int from, to;
@@ -6898,6 +6953,7 @@ int TLuaInterpreter::setExit(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomCoordinates
 int TLuaInterpreter::getRoomCoordinates(lua_State* L)
 {
     int id;
@@ -6924,6 +6980,7 @@ int TLuaInterpreter::getRoomCoordinates(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomArea
 int TLuaInterpreter::getRoomArea(lua_State* L)
 {
     int id;
@@ -6945,7 +7002,7 @@ int TLuaInterpreter::getRoomArea(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomExists
 int TLuaInterpreter::roomExists(lua_State* L)
 {
     int id;
@@ -6967,6 +7024,7 @@ int TLuaInterpreter::roomExists(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addRoom
 int TLuaInterpreter::addRoom(lua_State* L)
 {
     int id;
@@ -6989,6 +7047,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createRoomID
 int TLuaInterpreter::createRoomID(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -7023,6 +7082,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unHighlightRoom
 int TLuaInterpreter::unHighlightRoom(lua_State* L)
 {
     int id;
@@ -7050,7 +7110,7 @@ int TLuaInterpreter::unHighlightRoom(lua_State* L)
 }
 
 // highlightRoom( roomID, colorRed, colorGreen, colorBlue, col2Red, col2Green, col2Blue, (float)highlightRadius, alphaColor1, alphaColor2 )
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#highlightRoom
 int TLuaInterpreter::highlightRoom(lua_State* L)
 {
     int id, fgr, fgg, fgb, bgr, bgg, bgb;
@@ -7156,6 +7216,7 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
 
 
 //SYNTAX: int labelID = createMapLabel( int area, string text, float posx, float posy, int fgRed, int fgGreen, int fgBlue, bgRed, int bgGreen, int bgBlue, bool showOnTop=true, bool noScaling=true )
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapLabel
 int TLuaInterpreter::createMapLabel(lua_State* L)
 {
     int area, fgr, fgg, fgb, bgr, bgg, bgb;
@@ -7298,6 +7359,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
     int zoom = 3;
@@ -7320,6 +7382,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 }
 
 //SYNTAX: int labelID = createMapImageLabel( int area, string filePath, float posx, float posy, float posz, float width, float height, float zoom, bool showOnTop=true )
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
     int area;
@@ -7429,6 +7492,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 // * nil + (string) message on run-time (value type errors)
 // * true if a change was made
 // * false if valid but ineffective (door status unchanged)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDoor
 int TLuaInterpreter::setDoor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -7543,6 +7607,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 }
 
 //SYNTAX: doors table = getDoors( roomId )
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDoors
 int TLuaInterpreter::getDoors(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -7580,6 +7645,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
 
 
 //SYNTAX: setExitWeight( roomID, exitCommand, exitWeight )
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeight
 int TLuaInterpreter::setExitWeight(lua_State* L)
 {
     int roomID;
@@ -7616,6 +7682,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCustomLine
 int TLuaInterpreter::addCustomLine(lua_State* L)
 {
     //args: from id, id_to, direction, style, line color, arrow (bool)
@@ -7747,6 +7814,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
 int TLuaInterpreter::getCustomLines(lua_State* L)
 {
     int roomID;
@@ -7812,6 +7880,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
 
 
 //SYNTAX: exit weight table = getExitWeights( roomID )
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
     int roomID;
@@ -7837,6 +7906,7 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMapLabel
 int TLuaInterpreter::deleteMapLabel(lua_State* L)
 {
     int area, labelID;
@@ -7859,6 +7929,7 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabels
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
     int area;
@@ -7883,6 +7954,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabel
 int TLuaInterpreter::getMapLabel(lua_State* L)
 {
     int area, labelId = -1;
@@ -7982,7 +8054,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addSpecialExit
 int TLuaInterpreter::addSpecialExit(lua_State* L)
 {
     int id_from, id_to;
@@ -8019,6 +8091,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     return 0;
 }
 
+// Documentation: ?
 int TLuaInterpreter::removeSpecialExit(lua_State* L)
 {
     int id;
@@ -10031,6 +10104,7 @@ int TLuaInterpreter::getTime(lua_State* L)
 }
 
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
     string a1;
