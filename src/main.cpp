@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016 by Stephen Lyons                        *
+ *   Copyright (C) 2013-2014, 2016-2017 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -81,8 +81,9 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 
     for (int i = 1; i < argc; ++i) {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
-        if (qstrcmp(argv[i], "--") == 0)
+        if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
+        }
 #endif
 
         char argument = 0;
@@ -120,10 +121,10 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
         }
     }
 
-    if ((action) & (1 | 2))
+    if ((action) & (1 | 2)) {
         // Ah, we're gonna bail out early, just need a command-line application
         return new QCoreApplication(argc, argv);
-    else {
+    } else {
 #if defined(Q_OS_MACOS)
         // Workaround for horrible mac rendering issues once the mapper widget is open
         // see https://bugreports.qt.io/browse/QTBUG-41257
@@ -145,19 +146,19 @@ int main(int argc, char* argv[])
         // Check for a debugger and prompt if one is not attached.
         while (!IsDebuggerPresent()
                && IDYES == MessageBox(0,
-                                      "You are starting debug mudlet without a debugger attached. If you wish to attach one and verify that it worked, click yes. To continue without a debugger, click no.",
+                                      "You are starting debug mudlet without a debugger attached. If you wish to attach one and verify that it worked, click yes. To continue without a debugger, "
+                                      "click no.",
                                       "Mudlet Debug",
-                                      MB_ICONINFORMATION | MB_YESNO | MB_DEFBUTTON2))
+                                      MB_ICONINFORMATION | MB_YESNO | MB_DEFBUTTON2)) {
             ;
+        }
 
         // _CRTDBG_ALLOC_MEM_DF: Enable heap debugging.
         // _CRTDBG_LEAK_CHECK_DF: Check for leaks at program exit.
         _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
         // Create a log file for writing leaks.
-        HANDLE hLogFile = CreateFile("stderr.txt", GENERIC_WRITE,
-            FILE_SHARE_WRITE, NULL, CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL, NULL);
+        HANDLE hLogFile = CreateFile("stderr.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
         _CrtSetReportFile(_CRT_WARN, hLogFile);
 
@@ -173,7 +174,7 @@ int main(int argc, char* argv[])
     spDebugConsole = 0;
     unsigned int startupAction = 0;
 
-    Q_INIT_RESOURCE(mudlet_alpha);
+    Q_INIT_RESOURCE(mudlet);
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
 

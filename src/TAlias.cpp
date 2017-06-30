@@ -30,28 +30,24 @@
 
 using namespace std;
 
-TAlias::TAlias( TAlias * parent, Host * pHost )
+TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mIsTempAlias( false )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
-, mIsFolder()
 {
 }
 
-TAlias::TAlias(const QString& name, Host * pHost )
+TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(0)
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
-, mIsTempAlias( false )
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
-, mIsFolder()
 {
 }
 
@@ -65,7 +61,7 @@ TAlias::~TAlias()
 
 void TAlias::setName(const QString& name)
 {
-    if (!mIsTempAlias) {
+    if (!isTemporary()) {
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
@@ -115,8 +111,9 @@ bool TAlias::match(const QString& toMatch)
     //cout <<" LINE="<<subject<<endl;
     if (mRegexCode.size() > 0) {
         rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
-    } else
+    } else {
         goto MUD_ERROR;
+    }
 
     if (rc < 0) {
         switch (rc) {
@@ -221,10 +218,9 @@ bool TAlias::match(const QString& toMatch)
         }
     }
 
-END:
-    {
-        TLuaInterpreter * pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups( captureList, posList );
+END : {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
         // call lua trigger function with number of matches and matches itselves as arguments
         execute();
         pL->clearCaptureGroups();
@@ -232,8 +228,9 @@ END:
 
 MUD_ERROR:
     for (auto childAlias : *mpMyChildrenList) {
-        if (childAlias->match(toMatch))
+        if (childAlias->match(toMatch)) {
             matchCondition = true;
+        }
     }
 
     free(subject);

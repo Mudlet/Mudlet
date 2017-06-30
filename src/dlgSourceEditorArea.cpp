@@ -47,14 +47,11 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
     config->setCaretBlinkRate(200);
 
     config->setIndentSize(2); // 2 spaces is the Lua default
-
-    config->setThemeName(QLatin1Literal("Mudlet"));
     config->setCaretWidth(1);
 
     config->endChanges();
 
-    edbeeEditorWidget->textDocument()->setLanguageGrammar(
-                edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    edbeeEditorWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
 
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeeEditorWidget->textScrollArea()->enableShadowWidget(false);

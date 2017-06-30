@@ -31,27 +31,27 @@ PUB_HEADERS += $$INCDIR/ircnetwork.h
 PUB_HEADERS += $$INCDIR/ircprotocol.h
 
 PRIV_HEADERS  = $$INCDIR/irccommand_p.h
-PRIV_HEADERS  = $$INCDIR/ircconnection_p.h
-PRIV_HEADERS  = $$INCDIR/ircdebug_p.h
+PRIV_HEADERS += $$INCDIR/ircconnection_p.h
+PRIV_HEADERS += $$INCDIR/ircdebug_p.h
 PRIV_HEADERS += $$INCDIR/ircmessage_p.h
 PRIV_HEADERS += $$INCDIR/ircmessagecomposer_p.h
 PRIV_HEADERS += $$INCDIR/ircmessagedecoder_p.h
 PRIV_HEADERS += $$INCDIR/ircnetwork_p.h
 
-HEADERS += $$PUB_HEADERS
-HEADERS += $$PRIV_HEADERS
+HEADERS *= $$PUB_HEADERS
+HEADERS *= $$PRIV_HEADERS
 
-SOURCES += $$PWD/irc.cpp
-SOURCES += $$PWD/irccommand.cpp
-SOURCES += $$PWD/ircconnection.cpp
-SOURCES += $$PWD/irccore.cpp
-SOURCES += $$PWD/ircfilter.cpp
-SOURCES += $$PWD/ircmessage.cpp
-SOURCES += $$PWD/ircmessage_p.cpp
-SOURCES += $$PWD/ircmessagecomposer.cpp
-SOURCES += $$PWD/ircmessagedecoder.cpp
-SOURCES += $$PWD/ircnetwork.cpp
-SOURCES += $$PWD/ircprotocol.cpp
+SOURCES *= $$PWD/irc.cpp
+SOURCES *= $$PWD/irccommand.cpp
+SOURCES *= $$PWD/ircconnection.cpp
+SOURCES *= $$PWD/irccore.cpp
+SOURCES *= $$PWD/ircfilter.cpp
+SOURCES *= $$PWD/ircmessage.cpp
+SOURCES *= $$PWD/ircmessage_p.cpp
+SOURCES *= $$PWD/ircmessagecomposer.cpp
+SOURCES *= $$PWD/ircmessagedecoder.cpp
+SOURCES *= $$PWD/ircnetwork.cpp
+SOURCES *= $$PWD/ircprotocol.cpp
 
 include(../3rdparty/mozilla/mozilla.pri)
 
