@@ -144,7 +144,7 @@ void dlgIRC::startClient()
 QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
     if (message.isEmpty()) {
-        return QPair<bool, QString>(true, QStringLiteral("message processed by client."));
+        return QPair<bool, QString>(true, QStringLiteral("message processed by client"));
     }
 
     QString msgTarget = target;
@@ -160,12 +160,12 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     commandParser->setTarget(lastParserTarget);
 
     if (!command) {
-        return QPair<bool, QString>(false, QStringLiteral("command or message could not be parsed."));
+        return QPair<bool, QString>(false, QStringLiteral("message could not be parsed"));
     }
 
     bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
-        return QPair<bool, QString>(true, QStringLiteral("command processed by client."));
+        return QPair<bool, QString>(true, QStringLiteral("command processed by client"));
     }
 
     // update ping-started time if this command was a ping
@@ -179,7 +179,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     if (command->type() == IrcCommand::Quit) {
         setAttribute(Qt::WA_DeleteOnClose);
         close();
-        return QPair<bool, QString>(true, QStringLiteral("closing client."));
+        return QPair<bool, QString>(true, QStringLiteral("closing client"));
     }
 
     // echo own messages (servers do not send our own messages back)
@@ -189,7 +189,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         delete msg;
     }
 
-    return QPair<bool, QString>(true, QStringLiteral("sent to server."));
+    return QPair<bool, QString>(true, QStringLiteral("sent to server"));
 }
 
 void dlgIRC::ircRestart(bool reloadConfigs)
