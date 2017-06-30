@@ -4140,6 +4140,8 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
             icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
         }
     } else {
+        mpSourceEditorEdbee->setEnabled(true);
+
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
         if (varType == LUA_TSTRING) {
             mpVarsMainArea->var_type->setCurrentIndex(1);
@@ -5295,7 +5297,7 @@ void dlgTriggerEditor::changeView(int view)
     }
 
     // Edbee doesn't have a readonly option, so I'm using setEnabled
-    // mpSourceEditorEdbee->setEnabled(true);
+     mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
         clearDocument(mpSourceEditorEdbee); // Change View
