@@ -665,12 +665,12 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 treeWidget_triggers->setCurrentItem( treeWidgetItem, 0 );
                 treeWidget_triggers->scrollToItem( treeWidgetItem );
 
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -689,12 +689,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_alias_selected( treeWidgetItem );
                 treeWidget_aliases->setCurrentItem( treeWidgetItem, 0 );
                 treeWidget_aliases->scrollToItem( treeWidgetItem );
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -713,12 +714,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_scripts_selected( treeWidgetItem );
                 treeWidget_scripts->setCurrentItem( treeWidgetItem, 0 );
                 treeWidget_scripts->scrollToItem( treeWidgetItem );
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -739,12 +741,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_action_selected( treeWidgetitem );
                 treeWidget_actions->setCurrentItem( treeWidgetitem, 0 );
                 treeWidget_actions->scrollToItem( treeWidgetitem );
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -765,12 +768,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_timer_selected( treeWidgetItem );
                 treeWidget_timers->setCurrentItem( treeWidgetItem, 0 );
                 treeWidget_timers->scrollToItem( treeWidgetItem );
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -791,12 +795,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_key_selected( treeWidgetItem );
                 treeWidget_keys->setCurrentItem( treeWidgetItem, 0 );
                 treeWidget_keys->scrollToItem( treeWidgetItem );
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -820,12 +825,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 show_vars();
                 treeWidget_variables->setCurrentItem( pI, 0 );
                 treeWidget_variables->scrollToItem( pI );
-                // The next line is on Vadi's direct and adamant orders. I suspect substance will
-                // hit ventilators. This code will select all found instances of the search term,
-                // and create a caret for each so all instance will be edited by the user at the
-                // same time.
-                mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-                mpSourceEditorEdbee->setFocus();
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
