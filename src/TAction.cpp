@@ -54,7 +54,6 @@ TAction::TAction(TAction* parent, Host* pHost)
 , mOrientation()
 , mLocation()
 , mIsPushDownButton()
-, mIsFolder()
 , mButtonRotation()
 , mButtonFlat()
 , mSizeX()
@@ -85,7 +84,6 @@ TAction::TAction(const QString& name, Host* pHost)
 , mOrientation()
 , mLocation()
 , mIsPushDownButton()
-, mIsFolder()
 , mButtonRotation()
 , mButtonFlat()
 , mSizeX()
@@ -252,7 +250,7 @@ void TAction::expandToolbar(TToolBar* pT)
 		 * Why does it have this and we do not? - Slysven
 		 */
 
-        if (action->mIsFolder) {
+        if (action->isFolder()) {
             auto newMenu = new QMenu(pT);
             // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
             newMenu->setStyleSheet(css);
@@ -287,7 +285,7 @@ void TAction::insertActions(TToolBar* pT, QMenu* menu)
     action->setStatusTip(mName);
     menu->addAction(action);
 
-    if (mIsFolder) {
+    if (isFolder()) {
         // The use of mudlet::self() here meant that the QMenu was not destroyed
         // until the mudlet instance is at the end of the application!
         // Changed to use pT, the toolbar
@@ -334,7 +332,7 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         }
 
 
-        if (action->mIsFolder) {
+        if (action->isFolder()) {
             // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
             auto newMenu = new QMenu(button);
 
@@ -386,7 +384,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             action->execute();
         }
 
-        if (action->mIsFolder) {
+        if (action->isFolder()) {
             // Adding a QWidget derived pointer to new QMenu() means the menu
             // will be destroyed when the pointed to item is, we just need to
             // find the item that it is attached to - ah ha, try the toolbar...

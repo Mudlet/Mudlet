@@ -363,14 +363,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
 
         comboBox_encoding->addItem(QLatin1String("ASCII"));
-        comboBox_encoding->addItems(pHost->mTelnet.getEncodingsList());
+        comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
         if (pHost->mTelnet.getEncoding().isEmpty()) {
             // cTelnet::mEncoding is (or should be) empty for the default 7-bit
             // ASCII case, so need to set the control specially to its (the
             // first) value
             comboBox_encoding->setCurrentIndex(0);
         } else {
-            comboBox_encoding->setCurrentText(pHost->mTelnet.getEncoding());
+            comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
         }
         connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
     }
@@ -1461,7 +1461,7 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
 
 void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
 {
-    mpHost->mTelnet.setEncoding(newEncoding);
+    mpHost->mTelnet.setEncoding(mpHost->mTelnet.getComputerEncoding(newEncoding));
 }
 
 // loads available Lua scripts from triggers, aliases, scripts, etc into the
@@ -1473,7 +1473,7 @@ void dlgProfilePreferences::populateScriptsList()
 
     std::list<TTrigger*> triggers = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
-        if (!trigger->getScript().isEmpty() && !trigger->isTempTrigger()) {
+        if (!trigger->getScript().isEmpty() && !trigger->isTemporary()) {
             items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
         }
         addTriggersToPreview(trigger, items);
@@ -1481,7 +1481,7 @@ void dlgProfilePreferences::populateScriptsList()
 
     std::list<TAlias*> aliases = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
-        if (!alias->getScript().isEmpty() && !alias->isTempAlias()) {
+        if (!alias->getScript().isEmpty() && !alias->isTemporary()) {
             items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
         }
         addAliasesToPreview(alias, items);
@@ -1497,7 +1497,7 @@ void dlgProfilePreferences::populateScriptsList()
 
     std::list<TTimer*> timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
-        if (!timer->getScript().isEmpty() && !timer->isTempTimer()) {
+        if (!timer->getScript().isEmpty() && !timer->isTemporary()) {
             items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
         }
         addTimersToPreview(timer, items);
@@ -1505,7 +1505,7 @@ void dlgProfilePreferences::populateScriptsList()
 
     std::list<TKey*> keys = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
-        if (!key->getScript().isEmpty() && !key->isTempKey()) {
+        if (!key->getScript().isEmpty() && !key->isTemporary()) {
             items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
         }
         addKeysToPreview(key, items);

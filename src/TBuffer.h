@@ -24,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QMap>
@@ -95,7 +96,12 @@ struct TMxpElement
 
 class TBuffer
 {
-    static const QMap<QString, QVector<QChar>> csmEncodingTable; // private!
+    // need to use tr() on encoding names in csmEncodingTable
+    Q_DECLARE_TR_FUNCTIONS(TBuffer)
+
+    // private - a map of computer-friendly encoding names as keys,
+    // values are a pair of human-friendly name + encoding data
+    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
 
 
 public:
@@ -143,7 +149,9 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getHardCodedEncodingTableKeys() {return csmEncodingTable.keys();}
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
+    static const QList<QString> getFriendlyEncodingNames();
+    static const QString& getComputerEncoding(const QString& encoding);
 
 
     std::deque<TChar> bufferLine;
@@ -306,6 +314,7 @@ private:
     // Used to hold the incomplete bytes (1-3) that could be left at the end of
     // a packet:
     std::string mIncompleteUtf8SequenceBytes;
+
 };
 
 #endif // MUDLET_TBUFFER_H
