@@ -110,7 +110,13 @@ cTelnet::cTelnet(Host* pH)
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << QLatin1String("UTF-8");
         mAcceptableEncodings << QLatin1String("ISO 8859-1");
-        mAcceptableEncodings << TBuffer::getHardCodedEncodingTableKeys();
+        mAcceptableEncodings << TBuffer::getComputerEncodingNames();
+    }
+
+    if (mFriendlyEncodings.isEmpty()) {
+        mFriendlyEncodings << QLatin1String("UTF-8");
+        mFriendlyEncodings << QLatin1String("ISO 8859-1");
+        mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
     }
 
     // initialize the socket
@@ -182,6 +188,19 @@ void cTelnet::encodingChanged(const QString& encoding)
     outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
     outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
     // Do NOT create BOMs!
+}
+
+// returns the computer encoding name ("ISO 8859-5") given a human-friendly one ("ISO 8859-5 (Cyrillic)")
+const QString& cTelnet::getComputerEncoding(const QString& encoding)
+{
+    return TBuffer::getComputerEncoding(encoding);
+}
+
+// returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
+const QString& cTelnet::getFriendlyEncoding()
+{
+    int index = mAcceptableEncodings.indexOf(mEncoding);
+    return mFriendlyEncodings.at(index);
 }
 
 // Need to set the encoding at the start but it does not need to be written out

@@ -43,19 +43,18 @@ using namespace std;
 
 const QString nothing = "";
 
-TTrigger::TTrigger(TTrigger* parent, Host* pHost)
-: Tree<TTrigger>(parent)
-, mTriggerContainsPerlRegex(false)
-, mPerlSlashGOption(false)
-, mFilterTrigger(false)
-, mSoundTrigger(false)
-, mStayOpen(0)
-, mColorTrigger(false)
-, mColorTriggerFg(false)
-, mColorTriggerBg(false)
-, mKeepFiring(0)
-, mpHost(pHost)
-, mIsTempTrigger(false)
+TTrigger::TTrigger( TTrigger * parent, Host * pHost )
+: Tree<TTrigger>( parent )
+, mTriggerContainsPerlRegex( false )
+, mPerlSlashGOption( false )
+, mFilterTrigger( false )
+, mSoundTrigger( false )
+, mStayOpen( 0 )
+, mColorTrigger( false )
+, mColorTriggerFg( false )
+, mColorTriggerBg( false )
+, mKeepFiring( 0 )
+, mpHost( pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled(true)
@@ -73,25 +72,23 @@ TTrigger::TTrigger(TTrigger* parent, Host* pHost)
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
-, mIsFolder()
 {
 }
 
 TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(0)
-, mTriggerContainsPerlRegex(false)
-, mPerlSlashGOption(false)
-, mFilterTrigger(false)
-, mSoundTrigger(false)
-, mStayOpen(0)
-, mColorTrigger(false)
-, mColorTriggerFg(false)
-, mColorTriggerBg(false)
-, mKeepFiring(0)
-, mpHost(pHost)
-, mName(name)
-, mIsTempTrigger(false)
-, mRegexCodeList(regexList)
+, mTriggerContainsPerlRegex( false )
+, mPerlSlashGOption( false )
+, mFilterTrigger( false )
+, mSoundTrigger( false )
+, mStayOpen( 0 )
+, mColorTrigger( false )
+, mColorTriggerFg( false )
+, mColorTriggerBg( false )
+, mKeepFiring( 0 )
+, mpHost( pHost )
+, mName( name )
+, mRegexCodeList( regexList )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mRegexCodePropertyList(regexProperyList)
@@ -109,7 +106,6 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
-, mIsFolder()
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -124,8 +120,9 @@ TTrigger::~TTrigger()
 
 void TTrigger::setName(const QString& name)
 {
-    if (!mIsTempTrigger) {
-        mpHost->getTriggerUnit()->mLookupTable.remove(mName, this);
+    if( ! isTemporary() )
+    {
+        mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
     mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);

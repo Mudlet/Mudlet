@@ -30,6 +30,7 @@
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TConsole.h"
+#include "TEasyButtonBar.h"
 #include "THighlighter.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
@@ -76,27 +77,27 @@ const int dlgTriggerEditor::cmVarsView = 7;
 const QString msgInfoAddAlias = "Alias are input triggers. To make a new alias: <b>1.</b> Define an input trigger pattern with a Perl regular expression. "
                                 "<b>2.</b> Define a command to send to the MUD in clear text <b><u>instead of the alias pattern</u></b> or write a script for more complicated needs. "
                                 "<b>3. <u>Activate</u></b> the alias. "
-                                "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>.";
+                                "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
 
 const QString msgInfoAddTrigger = "To add a new trigger: <b>1.</b> Define a <b><u>pattern</u></b> that you want to trigger on. <b>2.</b> select the appropriate pattern <b><u>type</u></b>."
                                   "<b>3.</b> Define a clear text command that you want to send to the MUD if the trigger finds the pattern in the text from the MUD or write a script."
                                   "<b>4. <u>Activate</u></b> the trigger."
-                                  "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>.";
+                                  "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
 
-const QString msgInfoAddScript = "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>.";
+const QString msgInfoAddScript = "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
 
 
-const QString msgInfoAddTimer = "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>.";
+const QString msgInfoAddTimer = "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
 
 
 const QString msgInfoAddButton = "To add a new button: <b>1.</b> Add a new group to define a new Button bar in case you don't have any."
                                  "<b>2.</b> Add new buttons to a button bar."
-                                 "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>.";
+                                 "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
 
 const QString msgInfoAddKey = "To add a new key binding <b>1.</b> add a new key <b>2.</b> click on <u><b>grab key</b></u> and then press your key combination. <b><u>NOTE:</u></b> If you want to bind "
                               "a key combination you must hold down the modifier keys (e.g. control, shift etc.) down before clicking on grab key. "
                               "<b>3.</b> Define a command that is executed when the key is hit. <b>4. <u>Activate</u></b> the new key binding."
-                              "Check the manual for <a href='http://mudlet.sourceforge.net/mudlet_documentation.html'>more information</a>.";
+                              "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
 
 const QString msgInfoAddVar = "Add a new variable (can be a string, integer, boolean -- delete a variable to set it to nil).";
 
@@ -187,23 +188,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pVB1->addWidget(mpSourceEditorArea);
 
     // And the new edbee widget - Go Buck!
-
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
-    // Updating the status bar on changes
-
+    // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), SIGNAL(updateStatusTextSignal(QString)), this, SLOT(slot_updateStatusBar(QString)));
     simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
 
-    // Updating the editor preferences
-
+    // Update the editor preferences
     connect(mudlet::self(), SIGNAL(signal_editorTextOptionsChanged(QTextOption::Flags)), this, SLOT(slot_changeEditorTextOptions(QTextOption::Flags)));
 
-    mpSourceEditorEdbee->config()->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
-    mpSourceEditorEdbee->config()->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-
     mpSourceEditorEdbeeDocument->setText(QString("# Enter your lua code here\n"));
+
+    mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
     // option areas
 
@@ -427,7 +424,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
 
-    mpSourceEditorEdbee->config()->setFont(mpHost->mDisplayFont);
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setThemeName(mpHost->mEditorTheme);
+    config->setFont(mpHost->mDisplayFont);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
 
     connect(comboBox_searchTerms, SIGNAL(activated(const QString)), this, SLOT(slot_search_triggers(const QString)));
     connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_trigger_selected(QTreeWidgetItem*)));
@@ -2616,7 +2619,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
 
     QTreeWidgetItem* pParent = treeWidget_actions->currentItem();
     QTreeWidgetItem* pNewItem = 0;
-    TAction* pT = 0;
+    QPointer<TAction> pT = 0;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -3139,13 +3142,14 @@ void dlgTriggerEditor::saveAction()
     int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
+        // Check if data has been changed before it gets updated.
+        bool actionDataChanged = false;
+        if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->css->toPlainText()) {
+            actionDataChanged = true;
+        }
+
         // Do not change anything for a module master folder - it won't "take"
         if (pA->mPackageName.isEmpty()) {
-            // Check if data has been changed before it gets updated.
-            if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->css->toPlainText()) {
-                pA->setDataChanged();
-            }
-
             pA->setName(name);
             pA->setIcon(icon);
             pA->setScript(script);
@@ -3210,8 +3214,20 @@ void dlgTriggerEditor::saveAction()
             pA->setDataSaved();
         }
 
-        // if the action has a toolbar with a script error, hide the toolbar.
+        if (actionDataChanged) {
+            pA->setDataChanged();
+        }
+
+        // if the action has a TToolBar instance with a script error, hide that toolbar.
         if (pA->mpToolBar && !pA->state()) {
+            pA->mpToolBar->hide();
+        }
+
+        // if the action location is changed, make sure the old toolbar instance is hidden.
+        if (pA->mLocation == 4 && pA->mpEasyButtonBar) {
+            pA->mpEasyButtonBar->hide();
+        }
+        if (pA->mLocation != 4 && pA->mpToolBar) {
             pA->mpToolBar->hide();
         }
     }
@@ -4417,14 +4433,13 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL);
     mpTriggerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     QIcon mainIcon;
-    mainIcon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-wizard.png")), QIcon::Normal, QIcon::Off);
-    mpTriggerBaseItem->setIcon(0, mainIcon);
-    treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
-    list<TTrigger*> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-    for (auto trigger : baseNodeList) {
-        if (trigger->isTempTrigger()) {
-            continue;
-        }
+    mainIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-wizard.png" ) ), QIcon::Normal, QIcon::Off );
+    mpTriggerBaseItem->setIcon( 0, mainIcon );
+    treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
+    list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    for(auto trigger : baseNodeList)
+    {
+        if( trigger->isTemporary() ) { continue; }
         QString s = trigger->getName();
         QStringList sList;
         sList << s;
@@ -4501,15 +4516,14 @@ void dlgTriggerEditor::fillout_form()
     mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL2);
     mpTimerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     QIcon mainIcon2;
-    mainIcon2.addPixmap(QPixmap(QStringLiteral(":/icons/chronometer.png")), QIcon::Normal, QIcon::Off);
-    mpTimerBaseItem->setIcon(0, mainIcon2);
-    treeWidget_timers->insertTopLevelItem(0, mpTimerBaseItem);
-    mpTriggerBaseItem->setExpanded(true);
-    list<TTimer*> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
-    for (auto timer : baseNodeList_timers) {
-        if (timer->isTempTimer()) {
-            continue;
-        }
+    mainIcon2.addPixmap( QPixmap( QStringLiteral( ":/icons/chronometer.png" ) ), QIcon::Normal, QIcon::Off );
+    mpTimerBaseItem->setIcon( 0, mainIcon2 );
+    treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
+    mpTriggerBaseItem->setExpanded( true );
+    list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    for(auto timer : baseNodeList_timers)
+    {
+        if( timer->isTemporary() ) { continue; }
         QString s = timer->getName();
         QStringList sList;
         sList << s;
@@ -6399,8 +6413,13 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 {
     edbee::TextEditorConfig* config = mpSourceEditorEdbee->config();
 
-    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces);
+    // Although this option seems to be a binary choice the Edbee editor widget
+    // needs a integer 1 to show whitespace characters and an integer 0 to hide
+    // them:
+    config->beginChanges();
+    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces ? 1 : 0);
     config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
 }
 
 //
@@ -6419,10 +6438,32 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     ew->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setThemeName(mpHost->mEditorTheme);
+    config->setFont(mpHost->mDisplayFont);
+    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->endChanges();
+
     // If undo is not disabled when setting the initial text, the
     // setting of the text will be undoable.
-
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(false);
     mpSourceEditorEdbeeDocument->setText(initialText);
     mpSourceEditorEdbeeDocument->setUndoCollectionEnabled(true);
 }
+
+// We do NOT want to change every profile's editor theme when the setting is
+// changed in the settings dialog so this has been moved out of a lambda wired
+// up as a slot to respond to a
+// mudlet::signal_editorThemeChanged(const QString& theme) signal
+void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
+{
+        auto localConfig = mpSourceEditorEdbee->config();
+        localConfig->beginChanges();
+        localConfig->setThemeName(theme);
+        localConfig->setFont(mpHost->mDisplayFont);
+        localConfig->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+        localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+        localConfig->endChanges();
+};

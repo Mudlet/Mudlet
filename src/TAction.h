@@ -41,7 +41,7 @@ class TToolBar;
 class QMenu;
 
 
-class TAction : public Tree<TAction>, QObject
+class TAction : public Tree<TAction>, public QObject
 {
     friend class XMLexport;
     friend class XMLimport;
@@ -79,10 +79,11 @@ public:
     void setCommandButtonUp(const QString& cmd) { if(cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
     void setCommandButtonDown(const QString& cmd) { if(cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
     QString getCommandButtonDown() { return mCommandButtonDown; }
-    bool isFolder() { return mIsFolder; }
     bool isPushDownButton() { return mIsPushDownButton; }
     void setIsPushDownButton(bool b) { if(b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
-    void setIsFolder(bool b) { if(b != mIsFolder) { setDataChanged(); mIsFolder = b;} }
+
+    void setIsFolder(bool b) { if(b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
+
     bool registerAction();
     void insertActions(TToolBar* pT, QMenu* menu);
     void expandToolbar(TToolBar* pT);
@@ -112,7 +113,6 @@ public:
     QRegExp mRegex;
     QString mScript;
     bool mIsPushDownButton;
-    bool mIsFolder;
 
     bool mNeedsToBeCompiled;
     QString mIcon;

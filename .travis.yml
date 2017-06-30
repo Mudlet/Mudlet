@@ -8,11 +8,16 @@ addons:
   apt:
     sources:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
+    - sourceline: 'ppa:beineri/opt-qt59-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     packages:
     - qt56base
     - qt56multimedia
     - qt56tools
+    - qt59base
+    - qt59multimedia
+    - qt59tools
+    - qt59gamepad
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
@@ -33,17 +38,25 @@ compiler:
 env:
   matrix:
   - Q_OR_C_MAKE=cmake
+    QT_VERSION=59 # actually 5.9
   - Q_OR_C_MAKE=qmake
+    QT_VERSION=59 # actually 5.9
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
 matrix:
   exclude:
   - os: osx
     compiler: gcc
+  include:
+  - os: linux
+    compiler: gcc
+    env: 
+    - Q_OR_C_MAKE=cmake
+    - QT_VERSION=56 # actually 5.6
 before_install:
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/latest-gcc-symlinks:$PATH"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source /opt/qt56/bin/qt56-env.sh; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then `luarocks path`; fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="/usr/local/opt/qt5/bin:$PATH"; fi
   - ./CI/travis.before_install.sh
@@ -57,7 +70,7 @@ script:
   - cd ../build
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export LDFLAGS=" -L/usr/local/opt/qt5/lib ${LDFLAGS}"; export CPPFLAGS=" -I/usr/local/opt/qt5/include ${CPPFLAGS}"; fi
   - if [ "${CC}" = "clang" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${Q_OR_C_MAKE}" = "qmake" ] ; then SPEC="-spec linux-clang"; fi
-  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/src.pro && make -j2; else cmake --version; cmake .. && make -j2 && make check; fi
+  - if [ "${Q_OR_C_MAKE}" = "qmake" ]; then qmake -v; qmake ${SPEC} ../src/mudlet.pro && make -j2; else cmake --version; cmake .. && make -j2 && make check; fi
 after_success:
   - cd ${TRAVIS_BUILD_DIR}
   - bash CI/travis.after_success.sh

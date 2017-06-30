@@ -76,7 +76,7 @@ void TriggerUnit::uninstall(const QString& packageName)
 void TriggerUnit::removeAllTempTriggers()
 {
     for (auto trigger : mTriggerRootNodeList) {
-        if (trigger->isTempTrigger()) {
+        if (trigger->isTemporary()) {
             trigger->setIsActive(false);
             markCleanup(trigger);
         }
@@ -139,7 +139,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     if (!pT) {
         return;
     }
-    if (!pT->mIsTempTrigger) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->mName, pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -215,7 +215,7 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     if (!pT) {
         return;
     }
-    if (!pT->mIsTempTrigger) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->mName, pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -230,7 +230,7 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
 {
     QList<TTrigger*> tempList;
     for (auto trigger : mTriggerRootNodeList) {
-        if (trigger->isTempTrigger()) {
+        if (trigger->isTemporary()) {
             tempList.push_back(trigger);
         }
     }
@@ -340,7 +340,7 @@ bool TriggerUnit::killTrigger(const QString& name)
     QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
     while (it != mLookupTable.end() && it.key() == name) {
         TTrigger* pT = it.value();
-        if (pT->isTempTrigger()) //this function is only defined for tempTriggers, permanent objects cannot be removed
+        if (pT->isTemporary()) //this function is only defined for tempTriggers, permanent objects cannot be removed
         {
             // there can only be a single tempTrigger by this name and this function ignores non-tempTriggers by definition
             markCleanup(pT);
@@ -359,7 +359,7 @@ void TriggerUnit::_assembleReport(TTrigger* pChild)
         if (trigger->isActive()) {
             statsActiveTriggers++;
         }
-        if (trigger->isTempTrigger()) {
+        if (trigger->isTemporary()) {
             statsTempTriggers++;
         }
         statsPatterns += trigger->mRegexCodeList.size();
@@ -377,7 +377,7 @@ QString TriggerUnit::assembleReport()
         if (rootTrigger->isActive()) {
             statsActiveTriggers++;
         }
-        if (rootTrigger->isTempTrigger()) {
+        if (rootTrigger->isTemporary()) {
             statsTempTriggers++;
         }
         statsPatterns += rootTrigger->mRegexCodeList.size();
@@ -388,7 +388,7 @@ QString TriggerUnit::assembleReport()
             if (childTrigger->isActive()) {
                 statsActiveTriggers++;
             }
-            if (childTrigger->isTempTrigger()) {
+            if (childTrigger->isTemporary()) {
                 statsTempTriggers++;
             }
             statsPatterns += childTrigger->mRegexCodeList.size();

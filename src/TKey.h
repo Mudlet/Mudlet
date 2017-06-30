@@ -57,12 +57,10 @@ public:
     bool setScript(QString& script);
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
-    bool isFolder() { return mIsFolder; }
-    void setIsFolder(bool b) { mIsFolder = b; }
+
     bool match(int, int);
     bool registerKey();
-    bool isTempKey() { return mIsTempKey; }
-    void setIsTempKey(bool b) { mIsTempKey = b; }
+
     //bool             serialize( QDataStream & );
     //bool             restore( QDataStream & fs, bool );
     bool exportItem;
@@ -87,10 +85,8 @@ private:
     QRegExp mRegex;
     QString mScript;
     QString mFuncName;
-    bool mIsFolder;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
-    bool mIsTempKey;
     bool mModuleMember;
 };
 

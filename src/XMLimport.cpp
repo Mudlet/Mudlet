@@ -747,6 +747,18 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mEditorTheme"))) {
+        pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
+    }
+    if (attributes().hasAttribute(QLatin1String("mEditorThemeFile"))) {
+        pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    }
+    if (attributes().hasAttribute(QLatin1String("mThemePreviewItemID"))) {
+        pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
+    }
+    if (attributes().hasAttribute(QLatin1String("mThemePreviewType"))) {
+        pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
+    }
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
@@ -957,8 +969,8 @@ void XMLimport::readTriggerGroup(TTrigger* pParent)
     mpHost->getTriggerUnit()->registerTrigger(pT);
 
     pT->setIsActive(attributes().value("isActive") == "yes");
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
-    pT->mIsTempTrigger = (attributes().value("isTempTrigger") == "yes");
+    pT->setIsFolder(attributes().value("isFolder") == "yes");
+    pT->setTemporary((attributes().value("isTempTrigger") == "yes"));
     pT->mIsMultiline = (attributes().value("isMultiline") == "yes");
     pT->mPerlSlashGOption = (attributes().value("isPerlSlashGOption") == "yes");
     pT->mIsColorizerTrigger = (attributes().value("isColorizerTrigger") == "yes");
@@ -1052,8 +1064,8 @@ void XMLimport::readTimerGroup(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
-    pT->mIsTempTimer = (attributes().value("isTempTimer") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
+    pT->setTemporary((attributes().value("isTempTimer") == "yes"));
 
     mpHost->getTimerUnit()->registerTimer(pT);
     pT->setShouldBeActive((attributes().value("isActive") == "yes"));
@@ -1119,7 +1131,7 @@ void XMLimport::readAliasGroup(TAlias* pParent)
 
     mpHost->getAliasUnit()->registerAlias(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     if (module) {
         pT->mModuleMember = true;
     }
@@ -1173,7 +1185,7 @@ void XMLimport::readActionGroup(TAction* pParent)
 {
     auto pT = new TAction(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     pT->mIsPushDownButton = (attributes().value("isPushButton") == "yes");
     pT->mButtonFlat = (attributes().value("isFlatButton") == "yes");
     pT->mUseCustomLayout = (attributes().value("useCustomLayout") == "yes");
@@ -1258,7 +1270,7 @@ void XMLimport::readScriptGroup(TScript* pParent)
 {
     auto pT = new TScript(pParent, mpHost);
 
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     mpHost->getScriptUnit()->registerScript(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
 
@@ -1315,7 +1327,7 @@ void XMLimport::readKeyGroup(TKey* pParent)
 
     mpHost->getKeyUnit()->registerKey(pT);
     pT->setIsActive(attributes().value("isActive") == "yes");
-    pT->mIsFolder = (attributes().value("isFolder") == "yes");
+    pT->setIsFolder((attributes().value("isFolder") == "yes"));
     if (module) {
         pT->mModuleMember = true;
     }

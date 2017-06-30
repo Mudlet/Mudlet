@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -18,7 +18,7 @@
 #    59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ############################################################################
 
-SET(mudlet_RCCS mudlet_alpha.qrc)
+SET(mudlet_RCCS mudlet.qrc)
 
 SET(mudlet_SRCS
     ActionUnit.cpp
@@ -216,7 +216,7 @@ ELSE()
   ENDIF()
 ENDIF()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -323,6 +323,8 @@ ENDIF()
 FIND_PACKAGE(Qt5Core REQUIRED)
 IF (Qt5Core_VERSION VERSION_LESS 5.6)
   message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+ELSE()
+  message(STATUS "Qt version: ${Qt5Core_VERSION}")
 ENDIF()
 
 FIND_PACKAGE(Qt5Multimedia REQUIRED)
@@ -330,6 +332,8 @@ FIND_PACKAGE(Qt5Network REQUIRED)
 FIND_PACKAGE(Qt5OpenGL REQUIRED)
 FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
+FIND_PACKAGE(Qt5 COMPONENTS Concurrent)
+FIND_PACKAGE(Qt5Concurrent REQUIRED)
 
 IF(WIN32)
   SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -420,6 +424,7 @@ TARGET_LINK_LIBRARIES(mudlet
     ${Qt5Multimedia_LIBRARIES}
     ${Qt5OpenGL_LIBRARIES}
     ${Qt5UiTools_LIBRARIES}
+    ${Qt5Concurrent_LIBRARIES}
     ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
