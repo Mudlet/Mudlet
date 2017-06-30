@@ -10375,7 +10375,7 @@ int TLuaInterpreter::sendIrc( lua_State * L )
     // wait for our client to be ready before sending messages.
     if (!mudlet::self()->mpIrcClientMap.value(pHost)->mReadyForSending) {
         lua_pushnil(L);
-        lua_pushstring(L, "not ready to send.");
+        lua_pushstring(L, "not ready to send");
         return 2;
     }
 
@@ -10462,12 +10462,12 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString cHostName = "";
-    QString error = "no client active.";
+    QString error = "no client active";
     if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
         cHostName = mudlet::self()->mpIrcClientMap.value(pHost)->getConnectedHost();
 
         if (cHostName.isEmpty()) {
-            error = "not yet connected.";
+            error = "not yet connected";
         }
     }
 
@@ -10598,7 +10598,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
 
     if (newchannels.count() == 0) {
         lua_pushnil(L);
-        lua_pushstring(L, "channels must contain at least 1 valid channel name!");
+        lua_pushstring(L, "channels must contain at least 1 valid channel name");
         return 2;
     }
 
