@@ -514,7 +514,7 @@ void TMap::audit()
 
     auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
     if (loadTime != -1.0) {
-        QString msg = tr("[ INFO ]  - Map loaded successfully (%1s).").arg(loadTime);
+        QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
         postMessage(msg);
     }
 }
