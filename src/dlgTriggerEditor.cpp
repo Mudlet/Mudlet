@@ -661,9 +661,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             if( idTree == idSearch )
             {
                 slot_show_triggers();
-                slot_trigger_selected( treeWidgetItem );
-                treeWidget_triggers->setCurrentItem( treeWidgetItem, 0 );
-                treeWidget_triggers->scrollToItem( treeWidgetItem );
+                slot_trigger_selected(treeWidgetItem);
+                treeWidget_triggers->setCurrentItem(treeWidgetItem, 0);
+                treeWidget_triggers->scrollToItem(treeWidgetItem);
 
                 // highlight all instances of the item that we're searching for.
                 // edbee already remembers this from a setSearchTerm() call elsewhere
@@ -686,9 +686,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             if( idTree == idSearch )
             {
                 slot_show_aliases();
-                slot_alias_selected( treeWidgetItem );
-                treeWidget_aliases->setCurrentItem( treeWidgetItem, 0 );
-                treeWidget_aliases->scrollToItem( treeWidgetItem );
+                slot_alias_selected(treeWidgetItem);
+                treeWidget_aliases->setCurrentItem(treeWidgetItem, 0);
+                treeWidget_aliases->scrollToItem(treeWidgetItem);
 
                 // highlight all instances of the item that we're searching for.
                 // edbee already remembers this from a setSearchTerm() call elsewhere
@@ -711,9 +711,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             if( idTree == idSearch )
             {
                 slot_show_scripts();
-                slot_scripts_selected( treeWidgetItem );
-                treeWidget_scripts->setCurrentItem( treeWidgetItem, 0 );
-                treeWidget_scripts->scrollToItem( treeWidgetItem );
+                slot_scripts_selected(treeWidgetItem);
+                treeWidget_scripts->setCurrentItem(treeWidgetItem, 0);
+                treeWidget_scripts->scrollToItem(treeWidgetItem);
 
                 // highlight all instances of the item that we're searching for.
                 // edbee already remembers this from a setSearchTerm() call elsewhere
@@ -765,9 +765,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             if( idTree == idSearch )
             {
                 slot_show_timers();
-                slot_timer_selected( treeWidgetItem );
-                treeWidget_timers->setCurrentItem( treeWidgetItem, 0 );
-                treeWidget_timers->scrollToItem( treeWidgetItem );
+                slot_timer_selected(treeWidgetItem);
+                treeWidget_timers->setCurrentItem(treeWidgetItem, 0);
+                treeWidget_timers->scrollToItem(treeWidgetItem);
 
                 // highlight all instances of the item that we're searching for.
                 // edbee already remembers this from a setSearchTerm() call elsewhere
@@ -792,9 +792,9 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             if( idTree == idSearch )
             {
                 slot_show_keys();
-                slot_key_selected( treeWidgetItem );
-                treeWidget_keys->setCurrentItem( treeWidgetItem, 0 );
-                treeWidget_keys->scrollToItem( treeWidgetItem );
+                slot_key_selected(treeWidgetItem);
+                treeWidget_keys->setCurrentItem(treeWidgetItem, 0);
+                treeWidget_keys->scrollToItem(treeWidgetItem);
 
                 // highlight all instances of the item that we're searching for.
                 // edbee already remembers this from a setSearchTerm() call elsewhere
@@ -823,8 +823,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
             if ( vu->shortVarName( var ) == varShort )
             {
                 show_vars();
-                treeWidget_variables->setCurrentItem( pI, 0 );
-                treeWidget_variables->scrollToItem( pI );
+                treeWidget_variables->setCurrentItem(pI, 0);
+                treeWidget_variables->scrollToItem(pI);
 
                 // highlight all instances of the item that we're searching for.
                 // edbee already remembers this from a setSearchTerm() call elsewhere
