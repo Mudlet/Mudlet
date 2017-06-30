@@ -5297,7 +5297,7 @@ void dlgTriggerEditor::changeView(int view)
     }
 
     // Edbee doesn't have a readonly option, so I'm using setEnabled
-    // mpSourceEditorEdbee->setEnabled(true);
+     mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
         clearDocument(mpSourceEditorEdbee); // Change View
