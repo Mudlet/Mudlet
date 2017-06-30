@@ -20,7 +20,7 @@
    <string>Profile preferences</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -2180,7 +2180,7 @@
              <item>
               <widget class="QLabel" name="lblIrcHostName">
                <property name="text">
-                <string>Host name: </string>
+                <string>Server address:</string>
                </property>
               </widget>
              </item>
@@ -2200,7 +2200,7 @@
           <item row="0" column="2">
            <widget class="QLabel" name="lblIrcHostPort">
             <property name="text">
-             <string>Host port: </string>
+             <string>Port:</string>
             </property>
            </widget>
           </item>
@@ -2394,7 +2394,7 @@
   <tabstop>command_separator_lineedit</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>
