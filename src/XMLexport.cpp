@@ -149,7 +149,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
-            if (!(*it)->isTempTrigger() && (*it)->mModuleMember) {
+            if (!(*it)->isTemporary() && (*it)->mModuleMember) {
                 if (!writeTrigger(*it)) {
                     isOk = false;
                 } else {
@@ -170,7 +170,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
-            if (!(*it)->isTempTimer() && (*it)->mModuleMember) {
+            if (!(*it)->isTemporary() && (*it)->mModuleMember) {
                 if (!writeTimer(*it)) {
                     isOk = false;
                 } else {
@@ -191,7 +191,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
-            if (!(*it)->isTempAlias() && (*it)->mModuleMember) {
+            if (!(*it)->isTemporary() && (*it)->mModuleMember) {
                 if (!writeAlias(*it)) {
                     isOk = false;
                 } else {
@@ -254,7 +254,7 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
             if (!(*it) || (*it)->mPackageName != moduleName) {
                 continue;
             }
-            if (!(*it)->isTempKey() && (*it)->mModuleMember) {
+            if (!(*it)->isTemporary() && (*it)->mModuleMember) {
                 if (!writeKey(*it)) {
                     isOk = false;
                 } else {
@@ -350,6 +350,10 @@ bool XMLexport::writeHost(Host* pHost)
     writeAttribute("mShowRoomIDs", pHost->mShowRoomID ? "yes" : "no");
     writeAttribute("mShowPanel", pHost->mShowPanel ? "yes" : "no");
     writeAttribute("mHaveMapperScript", pHost->mHaveMapperScript ? "yes" : "no");
+    writeAttribute("mEditorTheme", pHost->mEditorTheme);
+    writeAttribute("mEditorThemeFile", pHost->mEditorThemeFile);
+    writeAttribute("mThemePreviewItemID", QString::number(pHost->mThemePreviewItemID));
+    writeAttribute("mThemePreviewType", pHost->mThemePreviewType);
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -470,7 +474,7 @@ bool XMLexport::writeHost(Host* pHost)
             if (!(*it) || (*it)->mModuleMember) {
                 continue;
             }
-            if (!(*it)->isTempTrigger()) {
+            if (!(*it)->isTemporary()) {
                 if (!writeTrigger(*it)) {
                     isOk = false;
                 }
@@ -485,7 +489,7 @@ bool XMLexport::writeHost(Host* pHost)
             if (!(*it) || (*it)->mModuleMember) {
                 continue;
             }
-            if (!(*it)->isTempTimer()) {
+            if (!(*it)->isTemporary()) {
                 if (!writeTimer(*it)) {
                     isOk = false;
                 }
@@ -500,7 +504,7 @@ bool XMLexport::writeHost(Host* pHost)
             if (!(*it) || (*it)->mModuleMember) {
                 continue;
             }
-            if (!(*it)->isTempAlias()) {
+            if (!(*it)->isTemporary()) {
                 if (!writeAlias(*it)) {
                     isOk = false;
                 }
@@ -537,8 +541,8 @@ bool XMLexport::writeHost(Host* pHost)
 
     if (isOk) {
         writeStartElement("KeyPackage");
-        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTempKey() || (*it)->mModuleMember) {
+        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
+            if( ! (*it) || (*it)->isTemporary() || (*it)->mModuleMember) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -640,7 +644,7 @@ bool XMLexport::writeGenericPackage(Host* pHost)
     if (isOk) {
         writeStartElement("TriggerPackage");
         for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); isOk && it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTempTrigger()) {
+            if (!(*it) || (*it)->isTemporary()) {
                 continue;
             }
             if (!writeTrigger(*it)) {
@@ -653,7 +657,7 @@ bool XMLexport::writeGenericPackage(Host* pHost)
     if (isOk) {
         writeStartElement("TimerPackage");
         for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); isOk && it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTempTimer()) {
+            if (!(*it) || (*it)->isTemporary()) {
                 continue;
             }
             if (!writeTimer(*it)) {
@@ -666,7 +670,7 @@ bool XMLexport::writeGenericPackage(Host* pHost)
     if (isOk) {
         writeStartElement("AliasPackage");
         for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); isOk && it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTempAlias()) {
+            if (!(*it) || (*it)->isTemporary()) {
                 continue;
             }
             if (!writeAlias(*it)) {
@@ -702,10 +706,10 @@ bool XMLexport::writeGenericPackage(Host* pHost)
         writeEndElement(); // </ScriptPackage>
     }
 
-    if (isOk) {
-        writeStartElement("KeyPackage");
-        for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
-            if (!(*it) || (*it)->isTempKey()) {
+    if( isOk ) {
+        writeStartElement( "KeyPackage" );
+        for( auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); isOk && it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it ) {
+            if( ! (*it) || (*it)->isTemporary() ) {
                 continue;
             }
             if (!writeKey(*it)) {
@@ -797,11 +801,11 @@ bool XMLexport::writeTrigger(TTrigger* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "TriggerGroup" : "Trigger");
+        writeStartElement(pT->isFolder() ? "TriggerGroup" : "Trigger");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
-        writeAttribute("isTempTrigger", pT->mIsTempTrigger ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
+        writeAttribute("isTempTrigger", pT->isTemporary() ? "yes" : "no");
         writeAttribute("isMultiline", pT->mIsMultiline ? "yes" : "no");
         writeAttribute("isPerlSlashGOption", pT->mPerlSlashGOption ? "yes" : "no");
         writeAttribute("isColorizerTrigger", pT->mIsColorizerTrigger ? "yes" : "no");
@@ -929,10 +933,10 @@ bool XMLexport::writeAlias( TAlias * pT )
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "AliasGroup" : "Alias");
+        writeStartElement(pT->isFolder() ? "AliasGroup" : "Alias");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
@@ -1021,10 +1025,10 @@ bool XMLexport::writeAction( TAction * pT )
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "ActionGroup" : "Action");
+        writeStartElement(pT->isFolder() ? "ActionGroup" : "Action");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
         writeAttribute("isPushButton", pT->mIsPushDownButton ? "yes" : "no");
         writeAttribute("isFlatButton", pT->mButtonFlat ? "yes" : "no");
         writeAttribute("useCustomLayout", pT->mUseCustomLayout ? "yes" : "no");
@@ -1130,11 +1134,11 @@ bool XMLexport::writeTimer( TTimer * pT )
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "TimerGroup" : "Timer");
+        writeStartElement(pT->isFolder() ? "TimerGroup" : "Timer");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
-        writeAttribute("isTempTimer", pT->mIsTempTimer ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
+        writeAttribute("isTempTimer", pT->isTemporary() ? "yes" : "no");
         writeAttribute("isOffsetTimer", pT->isOffsetTimer() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
@@ -1225,10 +1229,10 @@ bool XMLexport::writeScript( TScript * pT )
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "ScriptGroup" : "Script");
+        writeStartElement(pT->isFolder() ? "ScriptGroup" : "Script");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);
@@ -1322,10 +1326,10 @@ bool XMLexport::writeKey( TKey * pT )
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
-        writeStartElement(pT->mIsFolder ? "KeyGroup" : "Key");
+        writeStartElement(pT->isFolder() ? "KeyGroup" : "Key");
 
         writeAttribute("isActive", pT->shouldBeActive() ? "yes" : "no");
-        writeAttribute("isFolder", pT->mIsFolder ? "yes" : "no");
+        writeAttribute("isFolder", pT->isFolder() ? "yes" : "no");
 
         { // Blocked so that indentation reflects that of the XML file
             writeTextElement("name", pT->mName);

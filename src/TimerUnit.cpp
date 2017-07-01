@@ -138,7 +138,7 @@ void TimerUnit::removeAllTempTimers()
 {
     mCleanupList.clear();
     for (auto timer : mTimerRootNodeList) {
-        if (timer->isTempTimer()) {
+        if (timer->isTemporary()) {
             timer->killTimer();
             timer->mOK_code = false; //important to not crash on stale Lua function args
             markCleanup(timer);
@@ -153,7 +153,7 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
     }
     // temp timers do not need to check for names referring to multiple different
     // objects as names=ID -> much faster tempTimer creation
-    if (!pT->mIsTempTimer) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->mName, pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -237,7 +237,7 @@ void TimerUnit::_removeTimer(TTimer* pT)
 
     // temp timers do not need to check for names referring to multiple different
     // objects as names=ID -> much faster tempTimer creation
-    if (!pT->mIsTempTimer) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->mName, pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -320,7 +320,7 @@ bool TimerUnit::killTimer(const QString& name)
     for (auto timer : mTimerRootNodeList) {
         if (timer->getName() == name) {
             // only temporary timers can be killed
-            if (!timer->isTempTimer()) {
+            if (!timer->isTemporary()) {
                 return false;
             }
             timer->killTimer();
@@ -363,7 +363,7 @@ void TimerUnit::_assembleReport(TTimer* pChild)
         if (timer->isActive()) {
             statsActiveTriggers++;
         }
-        if (timer->isTempTimer()) {
+        if (timer->isTemporary()) {
             statsTempTriggers++;
         }
         statsTriggerTotal++;
@@ -379,7 +379,7 @@ QString TimerUnit::assembleReport()
         if (rootTimer->isActive()) {
             statsActiveTriggers++;
         }
-        if (rootTimer->isTempTimer()) {
+        if (rootTimer->isTemporary()) {
             statsTempTriggers++;
         }
         statsTriggerTotal++;
@@ -389,7 +389,7 @@ QString TimerUnit::assembleReport()
             if (childTimer->isActive()) {
                 statsActiveTriggers++;
             }
-            if (childTimer->isTempTimer()) {
+            if (childTimer->isTemporary()) {
                 statsTempTriggers++;
             }
             statsTriggerTotal++;

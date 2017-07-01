@@ -1,6 +1,8 @@
 ############################################################################
+#    Copyright (C) 2013-2015, 2017 by Stephen Lyons                        #
+#                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2013-2015 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -23,16 +25,18 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 }
 
 # Including IRC Library
-include(../3rdparty/communi/src/core/core.pri)
-include(../3rdparty/communi/src/util/util.pri)
-include(../3rdparty/communi/src/model/model.pri)
+include(../3rdparty/communi/communi.pri)
 
-include(../3rdparty/lua_yajl/src.pri)
+# Include lua_yajl (run time lua module needed)
+include(../3rdparty/lua_yajl/lua_yajl.pri)
 
+# Include luazip module (run time lua module - but not needed on Linux/Windows as
+# is available prebuilt for THOSE platforms!
 macx: {
-    include(../3rdparty/luazip/src.pri)
+    include(../3rdparty/luazip/luazip.pri)
 }
 
+# Include shiny, new (and quite substantial) editor widget
 include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -54,8 +58,8 @@ VERSION = 3.2.0
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
-# enable C++11 for builds.
-CONFIG += c++11
+# enable C++14 for builds.
+CONFIG += c++14
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -63,7 +67,8 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 
-QT += network opengl uitools multimedia gui
+QT += network opengl uitools multimedia gui concurrent
+qtHaveModule(gamepad): QT += gamepad
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -352,7 +357,8 @@ FORMS += \
     ui/vars_main_area.ui
 
 
-RESOURCES = mudlet_alpha.qrc
+RESOURCES = \
+    mudlet.qrc
 
 TEMPLATE = app
 
@@ -440,7 +446,6 @@ OTHER_FILES += \
     ../COPYING \
     ../Doxyfile \
     ../INSTALL \
-    mudlet_documentation.txt \
     mac-deploy.sh
 
 # Unix Makefile installer:

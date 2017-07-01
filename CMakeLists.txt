@@ -57,8 +57,8 @@ ENDIF()
 # Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
 # IMPORTANT:
 # To insure consistency please ensure the SAME of the first two values are also
-# assigned to the "VERSION" and "BUILD" variables in the native qmake project file,
-# i.e. ./src/src.pro
+# assigned to the "VERSION" and "BUILD" variables in the native qmake project
+# file, which is NOW called: ./src/mudlet.pro
 SET(APP_VERSION 3.2.0)
 IF(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})

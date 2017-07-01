@@ -20,7 +20,7 @@
    <string>Profile preferences</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -927,6 +927,107 @@
           </item>
          </layout>
         </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="code_editor_tab">
+      <attribute name="title">
+       <string>Editor</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_26">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="code_editor_theme_selection_groupbox">
+         <property name="title">
+          <string>Theme</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_25">
+          <item row="0" column="0">
+           <widget class="QFrame" name="frame_3">
+            <property name="minimumSize">
+             <size>
+              <width>500</width>
+              <height>100</height>
+             </size>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_27">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="edbee::TextEditorWidget" name="edbeePreviewWidget" native="true">
+               <property name="font">
+                <font>
+                 <family>Bitstream Vera Sans Mono</family>
+                </font>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="2,1">
+            <item>
+             <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+              <property name="editable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="script_preview_combobox">
+              <property name="editable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="theme_download_label">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Updating themes from colorsublime.com...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <spacer name="verticalSpacer_5">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
@@ -2055,22 +2156,10 @@
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupIrcConfig">
          <property name="title">
-          <string>IRC Client Options</string>
+          <string>IRC client options</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <property name="leftMargin">
-           <number>2</number>
-          </property>
-          <property name="topMargin">
-           <number>2</number>
-          </property>
-          <property name="rightMargin">
-           <number>2</number>
-          </property>
-          <property name="bottomMargin">
-           <number>2</number>
-          </property>
-          <item>
+         <layout class="QGridLayout" name="gridLayout_28" rowstretch="0,0,0,0" columnstretch="1,1,1,2">
+          <item row="0" column="0">
            <widget class="QWidget" name="ircHostNameWidget" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_13">
              <property name="spacing">
@@ -2091,24 +2180,41 @@
              <item>
               <widget class="QLabel" name="lblIrcHostName">
                <property name="text">
-                <string>Host Name: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircHostName">
-               <property name="inputMethodHints">
-                <set>Qt::ImhUrlCharactersOnly</set>
-               </property>
-               <property name="placeholderText">
-                <string>irc.example.net</string>
+                <string>Server address:</string>
                </property>
               </widget>
              </item>
             </layout>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="ircHostName">
+            <property name="inputMethodHints">
+             <set>Qt::ImhUrlCharactersOnly</set>
+            </property>
+            <property name="placeholderText">
+             <string>irc.example.net</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="lblIrcHostPort">
+            <property name="text">
+             <string>Port:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLineEdit" name="ircHostPort">
+            <property name="inputMethodHints">
+             <set>Qt::ImhDigitsOnly</set>
+            </property>
+            <property name="placeholderText">
+             <string>6667</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
            <widget class="QWidget" name="ircHostPortWidget" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_14">
              <property name="spacing">
@@ -2127,26 +2233,37 @@
               <number>1</number>
              </property>
              <item>
-              <widget class="QLabel" name="lblIrcHostPort">
+              <widget class="QLabel" name="lblIrcNick">
                <property name="text">
-                <string>Host Port: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircHostPort">
-               <property name="inputMethodHints">
-                <set>Qt::ImhDigitsOnly</set>
-               </property>
-               <property name="placeholderText">
-                <string>6667</string>
+                <string>Nickname:</string>
                </property>
               </widget>
              </item>
             </layout>
            </widget>
           </item>
-          <item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="ircNick">
+            <property name="placeholderText">
+             <string>MudletUser123</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="lblIrcChannels">
+            <property name="text">
+             <string>Auto-join channels: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QLineEdit" name="ircChannels">
+            <property name="placeholderText">
+             <string>#channel1 #channel2 #etc...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QWidget" name="ircNickWidget" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_15">
              <property name="spacing">
@@ -2164,24 +2281,10 @@
              <property name="bottomMargin">
               <number>1</number>
              </property>
-             <item>
-              <widget class="QLabel" name="lblIrcNick">
-               <property name="text">
-                <string>Nick Name:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircNick">
-               <property name="placeholderText">
-                <string>Mudlet</string>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
           </item>
-          <item>
+          <item row="3" column="0" colspan="2">
            <widget class="QWidget" name="ircChannelsWidget" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_16">
              <property name="spacing">
@@ -2199,20 +2302,6 @@
              <property name="bottomMargin">
               <number>1</number>
              </property>
-             <item>
-              <widget class="QLabel" name="lblIrcChannels">
-               <property name="text">
-                <string>Auto-Join Channels: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="ircChannels">
-               <property name="placeholderText">
-                <string>#ex1 #ex2 #etc ...</string>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
           </item>
@@ -2292,12 +2381,20 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>edbee::TextEditorWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">edbee/texteditorwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -113,6 +113,7 @@ public:
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void recurseVariablesDown(TVar*, QList<TVar*>&, bool);
     void show_vars();
+    void setThemeAndOtherSettings(const QString&);
 
     static const int cmTriggerView;
     static const int cmTimerView;
@@ -314,6 +315,7 @@ private:
     edbee::TextSearcher *       mpSourceEditorSearcher;
 
     QRegularExpression* simplifyEdbeeStatusBarRegex;
+
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

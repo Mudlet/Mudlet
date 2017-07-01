@@ -140,7 +140,7 @@ void AliasUnit::removeAliasRootNode(TAlias* pT)
     if (!pT) {
         return;
     }
-    if (!pT->mIsTempAlias) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->mName, pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -216,7 +216,7 @@ void AliasUnit::removeAlias(TAlias* pT)
     if (!pT) {
         return;
     }
-    if (!pT->mIsTempAlias) {
+    if (!pT->isTemporary()) {
         mLookupTable.remove(pT->mName, pT);
     } else {
         mLookupTable.remove(pT->getName());
@@ -310,7 +310,7 @@ bool AliasUnit::killAlias(const QString& name)
     for (auto alias : mAliasRootNodeList) {
         if (alias->getName() == name) {
             // only temporary Aliases can be killed
-            if (!alias->isTempAlias()) {
+            if (!alias->isTemporary()) {
                 return false;
             } else {
                 alias->setIsActive(false);
@@ -330,7 +330,7 @@ void AliasUnit::_assembleReport(TAlias* pChild)
         if (alias->isActive()) {
             statsActiveAliases++;
         }
-        if (alias->isTempAlias()) {
+        if (alias->isTemporary()) {
             statsTempAliases++;
         }
         statsAliasTotal++;
@@ -346,7 +346,7 @@ QString AliasUnit::assembleReport()
         if (alias->isActive()) {
             statsActiveAliases++;
         }
-        if (alias->isTempAlias()) {
+        if (alias->isTemporary()) {
             statsTempAliases++;
         }
         statsAliasTotal++;
@@ -356,7 +356,7 @@ QString AliasUnit::assembleReport()
             if (childAlias->isActive()) {
                 statsActiveAliases++;
             }
-            if (childAlias->isTempAlias()) {
+            if (childAlias->isTemporary()) {
                 statsTempAliases++;
             }
             statsAliasTotal++;
