@@ -3856,10 +3856,6 @@ const QString& TBuffer::getComputerEncoding(const QString& encoding) {
         }
     }
 
-    // return some encoding of none is found - this is incorrect,
-    // but introducing a QPair for this is too heavy-handed. Maybe
-    // we could use Boost.Optional here until C++17 is ready?
-    auto& smallestkey = csmEncodingTable.firstKey();
-    qWarning() << "TBuffer::getComputerEncoding:" << encoding << "not found, returning" << smallestkey;
-    return smallestkey;
+    // return the original encoding if none is found
+    return encoding;
 }
