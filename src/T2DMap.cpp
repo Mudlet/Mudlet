@@ -2401,6 +2401,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     if (event->buttons() & Qt::RightButton) {
         auto popup = new QMenu(this);
+        popup->setToolTipsVisible(true);
 
         if (mCustomLinesRoomFrom > 0) {
             if (mDialogLock) {
@@ -2410,7 +2411,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (pR) {
                 QAction* action = new QAction("undo", this);
-                action->setStatusTip(tr("undo last point"));
+                action->setToolTip(tr("Undo last point"));
                 if (pR->customLines.value(mCustomLinesRoomExit).count() > 1) {
                     connect(action, SIGNAL(triggered()), this, SLOT(slot_undoCustomLineLastPoint()));
                 } else {
@@ -2419,11 +2420,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
                 QAction* action2 = new QAction("properties", this);
                 action2->setText("properties...");
-                action2->setStatusTip(tr("change the properties of this line"));
+                action2->setToolTip(tr("Change the properties of this line"));
                 connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
                 QAction* action3 = new QAction("finish", this);
-                action3->setStatusTip(tr("finish drawing this line"));
+                action3->setToolTip(tr("Finish drawing this line"));
                 connect(action3, SIGNAL(triggered()), this, SLOT(slot_doneCustomLine()));
 
                 mPopupMenu = true;
@@ -2441,49 +2442,49 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
         if (!mLabelHilite && mCustomLineSelectedRoom == 0) {
             QAction* action = new QAction("move", this);
-            action->setStatusTip(tr("move room"));
+            action->setToolTip(tr("Move room"));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveRoom()));
             QAction* action2 = new QAction("delete", this);
-            action2->setStatusTip(tr("delete room"));
+            action2->setToolTip(tr("Delete room"));
             connect(action2, SIGNAL(triggered()), this, SLOT(slot_deleteRoom()));
             QAction* action3 = new QAction("color", this);
-            action3->setStatusTip(tr("change room color"));
+            action3->setToolTip(tr("Change room color"));
             connect(action3, SIGNAL(triggered()), this, SLOT(slot_changeColor()));
             QAction* action4 = new QAction("spread", this);
-            action4->setStatusTip(tr("increase map X-Y spacing for the selected group of rooms"));
+            action4->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms"));
             connect(action4, SIGNAL(triggered()), this, SLOT(slot_spread()));
             QAction* action9 = new QAction("shrink", this);
-            action9->setStatusTip(tr("decrease map X-Y spacing for the selected group of rooms"));
+            action9->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms"));
             connect(action9, SIGNAL(triggered()), this, SLOT(slot_shrink()));
 
             //QAction * action5 = new QAction("user data", this );
-            //action5->setStatusTip(tr("set user data"));
+            //action5->setToolTip(tr("Set user data"));
             //connect( action5, SIGNAL(triggered()), this, SLOT(slot_setUserData()));
             QAction* action6 = new QAction("lock", this);
-            action6->setStatusTip(tr("lock room for speed walks"));
+            action6->setToolTip(tr("Lock room for speed walks"));
             connect(action6, SIGNAL(triggered()), this, SLOT(slot_lockRoom()));
             QAction* action17 = new QAction("unlock", this);
-            action17->setStatusTip(tr("unlock room for speed walks"));
+            action17->setToolTip(tr("Unlock room for speed walks"));
             connect(action17, SIGNAL(triggered()), this, SLOT(slot_unlockRoom()));
             QAction* action7 = new QAction("weight", this);
-            action7->setStatusTip(tr("set room weight"));
+            action7->setToolTip(tr("Set room weight"));
             connect(action7, SIGNAL(triggered()), this, SLOT(slot_setRoomWeight()));
             QAction* action8 = new QAction("exits", this);
-            action8->setStatusTip(tr("set room exits"));
+            action8->setToolTip(tr("Set room exits"));
             connect(action8, SIGNAL(triggered()), this, SLOT(slot_setExits()));
             QAction* action10 = new QAction("letter", this);
-            action10->setStatusTip(tr("set a letter to mark special rooms"));
+            action10->setToolTip(tr("Set a letter to mark special rooms"));
             connect(action10, SIGNAL(triggered()), this, SLOT(slot_setCharacter()));
             //        QAction * action11 = new QAction("image", this );
-            //        action11->setStatusTip(tr("set an image to mark special rooms"));
+            //        action11->setToolTip(tr("Set an image to mark special rooms"));
             //        connect( action11, SIGNAL(triggered()), this, SLOT(slot_setImage()));
 
             QAction* action12 = new QAction("move to", this);
-            action12->setStatusTip(tr("move selected group to a given position"));
+            action12->setToolTip(tr("Move selected group to a given position"));
             connect(action12, SIGNAL(triggered()), this, SLOT(slot_movePosition()));
 
             QAction* action13 = new QAction("area", this);
-            action13->setStatusTip(tr("set room area ID"));
+            action13->setToolTip(tr("Set room area ID"));
             connect(action13, SIGNAL(triggered()), this, SLOT(slot_setArea()));
 
             QAction* action14 = new QAction("custom exit lines", this);
@@ -2492,28 +2493,27 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 return;
             }
             if (pArea->gridMode) { // Disable custom exit lines in grid mode as they aren't visible anyway
-                action14->setStatusTip(tr("custom exit lines are not shown and are not editable in grid mode"));
+                action14->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode"));
                 action14->setEnabled(false);
             } else {
-                action14->setStatusTip(tr("replace an exit line with a custom line"));
+                action14->setToolTip(tr("Replace an exit line with a custom line"));
                 connect(action14, SIGNAL(triggered()), this, SLOT(slot_setCustomLine()));
             }
 
             QAction* action15 = new QAction("create Label", this);
-            action15->setStatusTip(tr("Create labels to show text or images."));
+            action15->setToolTip(tr("Create labels to show text or images."));
             connect(action15, SIGNAL(triggered()), this, SLOT(slot_createLabel()));
 
             QAction* action16 = new QAction("set location", this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
-                action16->setStatusTip(tr("set player current location to here"));
+                action16->setToolTip(tr("Set player current location to here"));
                 connect(action16, SIGNAL(triggered()), this, SLOT(slot_setPlayerLocation()));
             } else {
                 action16->setEnabled(false);
-                action16->setStatusTip(tr("cannot set location when not exactly one room selected"));
+                action16->setToolTip(tr("Cannot set location when not exactly one room selected"));
             }
 
             mPopupMenu = true;
-            //            QMenu * popup = new QMenu( this );
 
             popup->addAction(action);
             popup->addAction(action8);
@@ -2538,10 +2538,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             popup->popup(mapToGlobal(event->pos()));
         } else if (mLabelHilite) {
             QAction* action = new QAction("move", this);
-            action->setStatusTip(tr("move label"));
+            action->setToolTip(tr("Move label"));
             connect(action, SIGNAL(triggered()), this, SLOT(slot_moveLabel()));
             QAction* action2 = new QAction("delete", this);
-            action2->setStatusTip(tr("delete label"));
+            action2->setToolTip(tr("Delete label"));
             connect(action2, SIGNAL(triggered()), this, SLOT(slot_deleteLabel()));
             mPopupMenu = true;
             popup->addAction(action);
@@ -2563,10 +2563,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     // on the exit direction - and we can now add even to it
                     {
                         connect(action, SIGNAL(triggered()), this, SLOT(slot_customLineAddPoint()));
-                        action->setStatusTip(tr("divide segment by adding a new point mid-way along"));
+                        action->setToolTip(tr("Divide segment by adding a new point mid-way along"));
                     } else {
                         action->setEnabled(false);
-                        action->setStatusTip(tr("select a point first, then add a new point mid-way along the segment towards room"));
+                        action->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room"));
                     }
 
                     QAction* action2 = new QAction("remove point", this);
@@ -2575,26 +2575,26 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         if (pR->customLines.value(mCustomLineSelectedExit).count() > 1) {
                             connect(action2, SIGNAL(triggered()), this, SLOT(slot_customLineRemovePoint()));
                             if ((mCustomLineSelectedPoint + 1) < pR->customLines.value(mCustomLineSelectedExit).count()) {
-                                action2->setStatusTip(tr("merge pair of segments by removing this point"));
+                                action2->setToolTip(tr("Merge pair of segments by removing this point"));
                             } else {
-                                action2->setStatusTip(tr("remove last segment by removing this point"));
+                                action2->setToolTip(tr("Remove last segment by removing this point"));
                             }
                         } else {
                             action2->setEnabled(false);
-                            action2->setStatusTip(tr(R"(use "delete line" to remove the only segment ending in an editable point)"));
+                            action2->setToolTip(tr(R"(use "delete line" to remove the only segment ending in an editable point)"));
                         }
                     } else {
                         action2->setEnabled(false);
-                        action2->setStatusTip(tr("select a point first, then remove it"));
+                        action2->setToolTip(tr("Select a point first, then remove it"));
                     }
 
                     QAction* action3 = new QAction("properties", this);
                     action3->setText("properties...");
-                    action3->setStatusTip(tr("change the properties of this custom line"));
+                    action3->setToolTip(tr("Change the properties of this custom line"));
                     connect(action3, SIGNAL(triggered()), this, SLOT(slot_customLineProperties()));
 
                     QAction* action4 = new QAction("delete line", this);
-                    action4->setStatusTip(tr("delete all of this custom line"));
+                    action4->setToolTip(tr("Delete all of this custom line"));
                     connect(action4, SIGNAL(triggered()), this, SLOT(slot_deleteCustomExitLine()));
 
                     mPopupMenu = true;

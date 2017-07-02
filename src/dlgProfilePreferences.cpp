@@ -218,17 +218,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
 
-    comboBox_statusBarSetting->addItem(tr("Off"), QVariant(mudlet::self()->statusBarHidden));
-    comboBox_statusBarSetting->addItem(tr("Auto"), QVariant(mudlet::self()->statusBarAutoShown));
-    comboBox_statusBarSetting->addItem(tr("On"), QVariant(mudlet::self()->statusBarAlwaysShown));
-    comboBox_statusBarSetting->setMaxCount(3);
-    comboBox_statusBarSetting->setInsertPolicy(QComboBox::NoInsert);
-    comboBox_statusBarSetting->setMaxVisibleItems(3);
-    int _indexForStatusBarSetting = comboBox_statusBarSetting->findData(QVariant(mudlet::self()->mStatusBarState), Qt::UserRole);
-    if (_indexForStatusBarSetting >= 0) {
-        comboBox_statusBarSetting->setCurrentIndex(_indexForStatusBarSetting);
-    }
-
     checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
     Host* pHost = mpHost;
     if (pHost) {
@@ -1319,7 +1308,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mDoubleClickIgnore.insert(character);
     }
 
-    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions(comboBox_statusBarSetting->currentData().toInt());
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
     QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
