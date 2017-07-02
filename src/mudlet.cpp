@@ -151,7 +151,6 @@ mudlet::mudlet()
 , replayTimer(0)
 , replayToolBar(0)
 , moduleTable(0)
-, mStatusBarState(statusBarAlwaysShown)
 , mshowMapAuditErrors(false)
 , mpAboutDlg(0)
 , mpModuleDlg(0)
@@ -166,9 +165,6 @@ mudlet::mudlet()
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
-    mpMainStatusBar = QMainWindow::statusBar();
-    // On at least my platform (Linux) the status bar does not seem to exist
-    // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName("mpMainToolBar");
     addToolBar(mpMainToolBar);
@@ -411,7 +407,6 @@ mudlet::mudlet()
     connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
     timerAutologin->start(50);
 
-    connect(mpMainStatusBar, SIGNAL(messageChanged(QString)), this, SLOT(slot_statusBarMessageChanged(QString)));
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, slot_gamepadButtonRelease);
@@ -1987,12 +1982,6 @@ void mudlet::readSettings()
     mShowToolbar = settings.value("showToolbar", QVariant(0)).toBool();
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
 
-    // By default the status bar will not be shown for new/upgraded
-    // installations - if the user wants the status bar shown either all the
-    // time or when it has something to show, they will have to enable that
-    // themselves, but that only has to be done once! - Slysven
-    mStatusBarState = StatusBarOptions(settings.value("statusBarOptions", statusBarHidden).toInt());
-
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     resize(size);
     move(pos);
@@ -2045,7 +2034,6 @@ void mudlet::writeSettings()
     settings.setValue("showToolbar", mShowToolbar);
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    settings.setValue("statusBarOptions", static_cast<int>(mStatusBarState));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
 }
 
@@ -2787,26 +2775,6 @@ void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const boo
 {
     mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0) | (isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0));
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
-}
-
-void mudlet::slot_statusBarMessageChanged(QString text)
-{
-    if (mStatusBarState & statusBarAutoShown) {
-        if (text.isEmpty()) {
-            mpMainStatusBar->hide();
-        } else {
-            mpMainStatusBar->show();
-        }
-    } else if (mStatusBarState & statusBarAlwaysShown) {
-        if (!mpMainStatusBar->isVisible()) {
-            mpMainStatusBar->show();
-        }
-    } else {
-        // Should be hidden
-        if (mpMainStatusBar->isVisible()) {
-            mpMainStatusBar->hide();
-        }
-    }
 }
 
 // Originally a slot_ but it does not actually need to be - Slysven

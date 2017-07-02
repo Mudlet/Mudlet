@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>742</width>
-    <height>685</height>
+    <height>616</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -747,13 +747,6 @@
           <string>Display options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_10">
-          <item row="1" column="2">
-           <widget class="QComboBox" name="comboBox_statusBarSetting">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;For some actions - particularly those involving a &lt;i&gt;context menu&lt;/i&gt; (mouse &amp;quot;right-click&amp;quot; action) Mudlet can put up hints about the currently selected action before it is activated on a status bar at the bottom of the screen. By default this is &lt;i&gt;off&lt;/i&gt; (never shown), even when there is soemthing to display. For use on &amp;quot;full-size&amp;quot; Computers you may wish to change this setting to (always) &lt;i&gt;on&lt;/i&gt; but for those with limited space on their screen they will probably want to keep it turned off perminently or only have it set to &lt;i&gt;auto&lt;/i&gt; so it only pop-ups when there is something to show.&lt;/p&gt;&lt;p&gt;This setting controls that feature, the choice made will be remembered between sessions, and it applies to all profiles.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
@@ -771,16 +764,6 @@
             </property>
             <property name="text">
              <string>Show Spaces/Tabs</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_statusBarSetting">
-            <property name="text">
-             <string>Status Bar:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_statusBarSetting</cstring>
             </property>
            </widget>
           </item>
