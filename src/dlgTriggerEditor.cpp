@@ -657,6 +657,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_trigger_selected(treeWidgetItem);
                 treeWidget_triggers->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_triggers->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -672,6 +679,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_alias_selected(treeWidgetItem);
                 treeWidget_aliases->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_aliases->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -687,6 +701,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_scripts_selected(treeWidgetItem);
                 treeWidget_scripts->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_scripts->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -704,6 +725,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_action_selected(treeWidgetitem);
                 treeWidget_actions->setCurrentItem(treeWidgetitem, 0);
                 treeWidget_actions->scrollToItem(treeWidgetitem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -721,6 +749,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_timer_selected(treeWidgetItem);
                 treeWidget_timers->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_timers->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -738,6 +773,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 slot_key_selected(treeWidgetItem);
                 treeWidget_keys->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_keys->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -758,6 +800,13 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
                 show_vars();
                 treeWidget_variables->setCurrentItem(pI, 0);
                 treeWidget_variables->scrollToItem(pI);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
                 return;
             }
         }
@@ -1126,11 +1175,6 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
     // functionality isn't implemented.
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
-    //mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-    //mpSourceEditorEdbee->controller()->textRenderer()->theme()->setFindHighlightBackgroundColor( QColor(0,0,0)); // This does nothing
-    mpSourceEditorEdbee->controller()->textSearcher()->findNext(mpSourceEditorEdbee);
-
-    //==
 
     treeWidget_searchResults->setUpdatesEnabled(true);
 }
