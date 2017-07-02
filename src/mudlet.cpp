@@ -165,8 +165,6 @@ mudlet::mudlet()
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
-    // On at least my platform (Linux) the status bar does not seem to exist
-    // but getting the pointer to it causes it to be created automagically...
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName("mpMainToolBar");
     addToolBar(mpMainToolBar);
