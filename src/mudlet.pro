@@ -214,6 +214,7 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
+    ircmessageformatter.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -251,8 +252,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    ircmessageformatter.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
@@ -285,6 +285,7 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
+    ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -328,8 +329,7 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h \
-    ircmessageformatter.h
+    XMLimport.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -390,11 +390,11 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/KeyCodes.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua \
-    $${PWD}/mudlet-lua/lua/KeyCodes.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
@@ -462,7 +462,6 @@ unix:!macx: {
 
 DISTFILES += \
     ../.travis.yml \
-    CMakeLists.txt \
     ../CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
@@ -475,4 +474,5 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    .clang-format
+    .clang-format \
+    CMakeLists.txt

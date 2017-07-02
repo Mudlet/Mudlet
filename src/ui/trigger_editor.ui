@@ -439,7 +439,7 @@
            <string>Display All Variables</string>
           </property>
           <property name="icon">
-           <iconset resource="../mudlet_alpha.qrc">
+           <iconset resource="../mudlet.qrc">
             <normaloff>:/icons/tag_checkbox.png</normaloff>
             <normalon>:/icons/tag_checkbox_checked.png</normalon>:/icons/tag_checkbox.png</iconset>
           </property>
@@ -571,7 +571,7 @@
               </property>
               <item>
                <widget class="QWidget" name="widget_searchTerm" native="true">
-                <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
+                <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0,0,0">
                  <property name="leftMargin">
                   <number>3</number>
                  </property>
@@ -626,6 +626,86 @@
                   </widget>
                  </item>
                  <item row="0" column="2" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+                  <widget class="QToolButton" name="button_clearSearchAreaResults">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>32</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Clears the display of the search results area and removes the highlighting in the editor.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
+                   </property>
+                   <property name="checkable">
+                    <bool>false</bool>
+                   </property>
+                   <property name="arrowType">
+                    <enum>Qt::NoArrow</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+                  <widget class="QToolButton" name="button_toggleSearchCaseSensitive">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>32</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the case sensitivity of the search (&lt;i&gt;on&lt;/i&gt; is case sensitive).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
+                   </property>
+                   <property name="arrowType">
+                    <enum>Qt::NoArrow</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="4" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
                   <widget class="QToolButton" name="button_toggleSearchAreaResults">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
@@ -646,7 +726,7 @@
                     </size>
                    </property>
                    <property name="toolTip">
-                    <string>Toggles the display of the search results area.</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -1086,7 +1166,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>

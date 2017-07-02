@@ -113,6 +113,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mpSourceEditorDocument(0)
 , mpSourceEditorEdbee(0)
 , mpSourceEditorEdbeeDocument(0)
+, mIsSearchCaseSensitive(false)
 {
     // init generated dialog
     setupUi(this);
@@ -217,10 +218,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->show();
 
     button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey.png);} "
-                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey.png);}"
+                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey.png);} "
                                                                  "QToolButton::on:hover{border-image:url(:/icons/arrow-down.png);} "
                                                                  "QToolButton:hover{border-image:url(:/icons/arrow-right.png);}"));
     connect(button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT(slot_showSearchAreaResults(const bool)));
+
+    button_toggleSearchCaseSensitive->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/case_sensitive_text_grey-black.png);} "
+                                                                   "QToolButton{border-image:url(:/icons/case_insensitive_text_grey.png);} "
+                                                                   "QToolButton::on:hover{border-image:url(:/icons/case_sensitive_text_green-blue.png);} "
+                                                                   "QToolButton:hover{border-image:url(:/icons/case_insensitive_text_green.png);}"));
+    connect(button_toggleSearchCaseSensitive, SIGNAL(clicked(const bool)), this, SLOT(slot_toggleSearchCaseSensitivity(const bool)));
+
+    button_clearSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton{border-image:url(:/icons/edit-clear-locationbar-rtl.png);} "
+                                                                "QToolButton:hover{border-image:url(:/icons/edit-clear-locationbar-rtl-green.png);}"));
+    connect(button_clearSearchAreaResults, SIGNAL(clicked()), this, SLOT(slot_clearSearchResults()));
 
     // additional settings
     treeWidget_triggers->setColumnCount(1);
@@ -448,7 +459,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_var_selected(QTreeWidgetItem*)));
     connect(treeWidget_variables, SIGNAL(itemChanged(QTreeWidgetItem*, int)), this, SLOT(slot_var_changed(QTreeWidgetItem*)));
     connect(treeWidget_variables, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_search_list(QTreeWidgetItem*, int)));
+    connect(treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_search_list(QTreeWidgetItem*)));
 
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search
@@ -636,7 +647,7 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("script_editor_size", size());
 }
 
-void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, int mode)
+void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -647,7 +658,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     // the current item when it is left, if we change the TreeWidgetItem and then swap
     // views the contents of the previous item will be overwritten.
     if (pItem->text(0) == QString("Trigger")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_triggers->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+        QList<QTreeWidgetItem*> foundItemsList = treeWidget_triggers->findItems(pItem->text(1), (mIsSearchCaseSensitive ? (Qt::MatchCaseSensitive | Qt::MatchFixedString) : Qt::MatchFixedString) | Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : foundItemsList) {
             int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
@@ -669,7 +680,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
         }
     }
     if (pItem->text(0) == QString("Alias")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_aliases->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+        QList<QTreeWidgetItem*> foundItemsList = treeWidget_aliases->findItems(pItem->text(1), (mIsSearchCaseSensitive ? (Qt::MatchCaseSensitive | Qt::MatchFixedString) : Qt::MatchFixedString) | Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : foundItemsList) {
             int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
@@ -691,7 +702,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
         }
     }
     if (pItem->text(0) == QString("Script")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_scripts->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+        QList<QTreeWidgetItem*> foundItemsList = treeWidget_scripts->findItems(pItem->text(1), (mIsSearchCaseSensitive ? (Qt::MatchCaseSensitive | Qt::MatchFixedString) : Qt::MatchFixedString) | Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : foundItemsList) {
             int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
@@ -715,7 +726,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     }
 
     if (pItem->text(0) == QString("Button")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_actions->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+        QList<QTreeWidgetItem*> foundItemsList = treeWidget_actions->findItems(pItem->text(1), (mIsSearchCaseSensitive ? (Qt::MatchCaseSensitive | Qt::MatchFixedString) : Qt::MatchFixedString) | Qt::MatchRecursive, 0);
 
         for (auto treeWidgetitem : foundItemsList) {
             int idTree = treeWidgetitem->data(0, Qt::UserRole).toInt();
@@ -739,7 +750,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     }
 
     if (pItem->text(0) == QString("Timer")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_timers->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+        QList<QTreeWidgetItem*> foundItemsList = treeWidget_timers->findItems(pItem->text(1), (mIsSearchCaseSensitive ? (Qt::MatchCaseSensitive | Qt::MatchFixedString) : Qt::MatchFixedString) | Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : foundItemsList) {
             int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
@@ -763,7 +774,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     }
 
     if (pItem->text(0) == QString("Key")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_keys->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+        QList<QTreeWidgetItem*> foundItemsList = treeWidget_keys->findItems(pItem->text(1), (mIsSearchCaseSensitive ? (Qt::MatchCaseSensitive | Qt::MatchFixedString) : Qt::MatchFixedString) | Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : foundItemsList) {
             int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
@@ -816,8 +827,6 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
 
 void dlgTriggerEditor::slot_search_triggers(const QString s)
 {
-    QRegExp pattern = QRegExp(s);
-
     treeWidget_searchResults->clear();
     slot_showSearchAreaResults(true);
     treeWidget_searchResults->setUpdatesEnabled(false);
@@ -833,7 +842,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = 0;
             QString n = trigger->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
                 QStringList sl;
                 sl << "Trigger" << trigger->getName() << "name";
                 if (!parent) {
@@ -850,10 +859,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
             QStringList scriptList = trigger->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+            QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Trigger" << trigger->getName() << "script" << resultList[i];
+                sl << "Trigger" << trigger->getName() << "script" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -868,10 +877,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
             QStringList regexList = trigger->getRegexCodeList();
-            resultList = regexList.filter(s, Qt::CaseInsensitive);
+            resultList = regexList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Trigger" << trigger->getName() << "pattern" << resultList[i];
+                sl << "Trigger" << trigger->getName() << "pattern" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -895,7 +904,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = 0;
             QString n = alias->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
                 QStringList sl;
                 sl << "Alias" << alias->getName() << "name";
                 if (!parent) {
@@ -912,10 +921,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
             QStringList scriptList = alias->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+            QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Alias" << alias->getName() << "script" << resultList[i];
+                sl << "Alias" << alias->getName() << "script" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -930,7 +939,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
 
-            if (alias->getRegexCode().indexOf(s, 0, Qt::CaseInsensitive) > -1) {
+            if (alias->getRegexCode().indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) > -1) {
                 QStringList sl;
                 sl << "Alias" << alias->getName() << "pattern" << alias->getRegexCode();
                 if (!parent) {
@@ -956,7 +965,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = 0;
             QString n = script->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
                 QStringList sl;
                 sl << "Script" << script->getName() << "name";
                 if (!parent) {
@@ -973,10 +982,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
             QStringList scriptList = script->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+            QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Script" << script->getName() << "script" << resultList[i];
+                sl << "Script" << script->getName() << "script" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -1001,7 +1010,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = 0;
             QString n = action->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
                 QStringList sl;
                 sl << "Button" << action->getName() << "name";
                 if (!parent) {
@@ -1018,10 +1027,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
             QStringList scriptList = action->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+            QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Button" << action->getName() << "script" << resultList[i];
+                sl << "Button" << action->getName() << "script" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -1046,7 +1055,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = 0;
             QString n = timer->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
                 QStringList sl;
                 sl << "Timer" << timer->getName() << "name";
                 if (!parent) {
@@ -1063,10 +1072,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 }
             }
             QStringList scriptList = timer->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+            QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Timer" << timer->getName() << "script" << resultList[i];
+                sl << "Timer" << timer->getName() << "script" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -1091,7 +1100,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = 0;
             QString n = key->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
                 QStringList sl;
                 sl << "Key" << key->getName() << "name";
                 parent = new QTreeWidgetItem(sl);
@@ -1100,10 +1109,10 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                 treeWidget_searchResults->addTopLevelItem(parent);
             }
             QStringList scriptList = key->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+            QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
             for (int i = 0; i < resultList.size(); i++) {
                 QStringList sl;
-                sl << "Key" << key->getName() << "script" << resultList[i];
+                sl << "Key" << key->getName() << "script" << resultList.at(i);
                 if (!parent) {
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
@@ -1145,7 +1154,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                     continue;
                 }
                 QTreeWidgetItem* pItem2;
-                if (!var2->getName().isEmpty() && (var2->getName().indexOf(s, 0, Qt::CaseInsensitive) != -1)) {
+                if (!var2->getName().isEmpty() && (var2->getName().indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1)) {
                     QStringList sl;
                     sl << "Variable" << var2->getName() << "name";
                     pItem2 = new QTreeWidgetItem(sl);
@@ -1153,7 +1162,7 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
                     pItem2->setData(0, Qt::UserRole, vu->shortVarName(var2));
                     treeWidget_searchResults->addTopLevelItem(pItem2);
                 }
-                if (!var2->getValue().isEmpty() && (var2->getValue().indexOf(s, 0, Qt::CaseInsensitive) != -1)) {
+                if (!var2->getValue().isEmpty() && (var2->getValue().indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1)) {
                     QStringList sl;
                     sl << "Variable" << var2->getName() << "value";
                     pItem2 = new QTreeWidgetItem(sl);
@@ -1175,8 +1184,12 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
     // functionality isn't implemented.
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
+    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(mIsSearchCaseSensitive);
 
     treeWidget_searchResults->setUpdatesEnabled(true);
+
+    // Need to highlight the contents if something is already showing in the editor:
+    mpSourceEditorEdbee->controller()->update();
 }
 
 void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const QString& s)
@@ -1186,7 +1199,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = 0;
         QString n = trigger->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
             QStringList sl;
             sl << "Trigger" << trigger->getName() << "name";
             parent = new QTreeWidgetItem(sl);
@@ -1195,10 +1208,10 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
             treeWidget_searchResults->addTopLevelItem(parent);
         }
         QStringList scriptList = trigger->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+        QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Trigger" << trigger->getName() << "script" << resultList[i];
+            sl << "Trigger" << trigger->getName() << "script" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -1213,10 +1226,10 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
             }
         }
         QStringList regexList = trigger->getRegexCodeList();
-        resultList = regexList.filter(s, Qt::CaseInsensitive);
+        resultList = regexList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Trigger" << trigger->getName() << "pattern" << resultList[i];
+            sl << "Trigger" << trigger->getName() << "pattern" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -1243,7 +1256,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = 0;
         QString n = alias->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
             QStringList sl;
             sl << "Alias" << alias->getName() << "name";
             parent = new QTreeWidgetItem(sl);
@@ -1252,10 +1265,10 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
             treeWidget_searchResults->addTopLevelItem(parent);
         }
         QStringList scriptList = alias->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+        QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Alias" << alias->getName() << "script" << resultList[i];
+            sl << "Alias" << alias->getName() << "script" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -1271,7 +1284,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         }
 
 
-        if (alias->getRegexCode().indexOf(s, 0, Qt::CaseInsensitive) > -1) {
+        if (alias->getRegexCode().indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) > -1) {
             QStringList sl;
             sl << "Alias" << alias->getName() << "pattern" << alias->getRegexCode();
             if (!parent) {
@@ -1300,7 +1313,7 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = 0;
         QString n = script->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
             QStringList sl;
             sl << "Script" << script->getName() << "name";
             parent = new QTreeWidgetItem(sl);
@@ -1309,10 +1322,10 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
             treeWidget_searchResults->addTopLevelItem(parent);
         }
         QStringList scriptList = script->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+        QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Script" << script->getName() << "script" << resultList[i];
+            sl << "Script" << script->getName() << "script" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -1340,7 +1353,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = 0;
         QString n = action->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
             QStringList sl;
             sl << "Button" << action->getName() << "name";
             parent = new QTreeWidgetItem(sl);
@@ -1349,10 +1362,10 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
             treeWidget_searchResults->addTopLevelItem(parent);
         }
         QStringList scriptList = action->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+        QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Button" << action->getName() << "script" << resultList[i];
+            sl << "Button" << action->getName() << "script" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -1380,7 +1393,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = 0;
         QString n = timer->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
             QStringList sl;
             sl << "Timer" << timer->getName() << "name";
             parent = new QTreeWidgetItem(sl);
@@ -1389,10 +1402,10 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
             treeWidget_searchResults->addTopLevelItem(parent);
         }
         QStringList scriptList = timer->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+        QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Timer" << timer->getName() << "script" << resultList[i];
+            sl << "Timer" << timer->getName() << "script" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -1420,7 +1433,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = 0;
         QString n = key->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        if (n.indexOf(s, 0, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) != -1) {
             QStringList sl;
             sl << "Key" << key->getName() << "name";
             parent = new QTreeWidgetItem(sl);
@@ -1429,10 +1442,10 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
             treeWidget_searchResults->addTopLevelItem(parent);
         }
         QStringList scriptList = key->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
+        QStringList resultList = scriptList.filter(s, (mIsSearchCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive));
         for (int i = 0; i < resultList.size(); i++) {
             QStringList sl;
-            sl << "Key" << key->getName() << "script" << resultList[i];
+            sl << "Key" << key->getName() << "script" << resultList.at(i);
             if (!parent) {
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
@@ -6517,3 +6530,24 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
         localConfig->endChanges();
 };
+
+void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
+{
+    if (mIsSearchCaseSensitive != state) {
+        mIsSearchCaseSensitive = state;
+    }
+}
+
+void dlgTriggerEditor::slot_clearSearchResults()
+{
+    // Want the clearing of the search results to show:
+    treeWidget_searchResults->clear();
+    treeWidget_searchResults->update();
+
+    // unhighlight all instances of the item that we've searched for.
+    // edbee already remembers this from a setSearchTerm() call elsewhere
+    auto controller = mpSourceEditorEdbee->controller();
+    auto textRanges = controller->borderedTextRanges();
+    textRanges->clear();
+    controller->update();
+}

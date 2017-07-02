@@ -175,7 +175,7 @@ public slots:
     void slot_script_toggle_active();
     void slot_key_toggle_active();
     void slot_search_triggers(const QString s);
-    void slot_item_selected_search_list(QTreeWidgetItem*, int);
+    void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
     void slot_deleteTrigger();
     void slot_deleteTimer();
@@ -203,6 +203,8 @@ public slots:
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(const int);
+    void slot_toggleSearchCaseSensitivity(const bool);
+    void slot_clearSearchResults();
 
 public:
     TConsole* mpErrorConsole;
@@ -260,7 +262,7 @@ private:
     QTreeWidgetItem* mpCurrentTriggerItem;
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
-    QLineEdit* mpCursorPositionIndicator;
+// Not used:    QLineEdit* mpCursorPositionIndicator;
     int mCurrentView;
     static const int cmTriggerView;
     static const int cmTimerView;
@@ -295,6 +297,7 @@ private:
 
     QRegularExpression* simplifyEdbeeStatusBarRegex;
 
+    bool mIsSearchCaseSensitive;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
