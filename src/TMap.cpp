@@ -511,6 +511,12 @@ void TMap::audit()
         postMessage(infoMsg);
         appendErrorMsg(infoMsg);
     }
+
+    auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
+    if (loadTime != -1.0) {
+        QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
+        postMessage(msg);
+    }
 }
 
 
@@ -1451,9 +1457,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr("[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
-                           "consistency details...")
-                                .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+        QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
+                                        "consistency details..." )
+                            .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
 
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);

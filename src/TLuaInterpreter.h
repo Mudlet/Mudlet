@@ -78,6 +78,7 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
     bool call_luafunction(void*);
+    double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
