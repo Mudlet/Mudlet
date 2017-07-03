@@ -13,10 +13,8 @@ matrix:
 install:
 - git submodule update --init --recursive
 - cd C:\src
-- SET PATH=C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
+- SET PATH=C:\Qt\Tools\mingw530_32\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
 
-- IF NOT EXIST x32-4.8.1-release-posix-dwarf-rev5.7z wget --no-check-certificate -nv --output-document x32-4.8.1-release-posix-dwarf-rev5.7z https://sourceforge.net/projects/mingwbuilds/files/host-windows/releases/4.8.1/32-bit/threads-posix/dwarf/x32-4.8.1-release-posix-dwarf-rev5.7z/download
-- IF NOT EXIST msys+7za+wget+svn+git+mercurial+cvs-rev13.7z wget --no-check-certificate -nv --output-document msys+7za+wget+svn+git+mercurial+cvs-rev13.7z https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys+7za+wget+svn+git+mercurial+cvs-rev13.7z/download
 - IF NOT EXIST hunspell-1.4.1.tar.gz wget --no-check-certificate -nv --output-document hunspell-1.4.1.tar.gz https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz
 - IF NOT EXIST lua-5.1.5.tar.gz wget -nv http://www.lua.org/ftp/lua-5.1.5.tar.gz
 - IF NOT EXIST pcre-8.38.tar.gz wget --no-check-certificate -nv https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download
@@ -33,13 +31,12 @@ install:
 
 - bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf $a || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj $a || true; done)"
 - 7z -oopenssl-1.0.2k e openssl-1.0.2k-i386-win32.zip
-- 7z -oC:\ x x32-4.8.1-release-posix-dwarf-rev5.7z
-- 7z -oC:\mingw32 x msys+7za+wget+svn+git+mercurial+cvs-rev13.7z
 - 7z x luarocks-2.4.0-win32.zip
 - 7z x luazip.zip
 - 7z x luawinmake.zip
+
 - cd hunspell-1.4.1
-- bash -c "./configure --prefix=C:/mingw32"
+- bash -c "./configure --prefix=C:/Qt/Tools/mingw530_32"
 - make -j 2
 - make install
 - cd ..
@@ -50,48 +47,48 @@ install:
 - cd build
 - cmake -G "MSYS Makefiles" ..
 - make
-- COPY yajl-2.0.1\lib\* C:\mingw32\lib
-- XCOPY /S /I /Q yajl-2.0.1\include C:\mingw32\include
+- COPY yajl-2.0.1\lib\* C:\Qt\Tools\mingw530_32\lib
+- XCOPY /S /I /Q yajl-2.0.1\include C:\Qt\Tools\mingw530_32\include
 - cd ..\..
 
 - XCOPY /S /I /Q C:\src\luawinmake-master\etc C:\src\lua-5.1.5\etc
 - cd lua-5.1.5
 - etc\winmake
-- etc\winmake install C:\mingw32\
+- etc\winmake install C:\Qt\Tools\mingw530_32
 - cd ..
 
 - cd pcre-8.38
-- bash -c "./configure --prefix=/c/mingw32"
+- bash -c "./configure --prefix=/c/Qt/Tools/mingw530_32"
 - make -j 2
 - make install
 - cd ..
 
 - cd sqlite-autoconf-3071700
-- bash -c "./configure --prefix=/c/mingw32"
+- bash -c "./configure --prefix=/c/Qt/Tools/mingw530_32"
 - make -j 2
 - make install
 - cd ..
 
 - cd zlib-1.2.11
 - make -f win32/Makefile.gcc
-- SET INCLUDE_PATH=C:\mingw32\include
-- SET LIBRARY_PATH=C:\mingw32\lib
-- SET BINARY_PATH=C:\mingw32\bin
+- SET INCLUDE_PATH=C:\Qt\Tools\mingw530_32\include
+- SET LIBRARY_PATH=C:\Qt\Tools\mingw530_32\lib
+- SET BINARY_PATH=C:\Qt\Tools\mingw530_32\bin
 - make -f win32/Makefile.gcc install
-- COPY zlib1.dll C:\mingw32\bin
-- COPY libz.dll.a C:\mingw32\lib
+- COPY zlib1.dll C:\Qt\Tools\mingw530_32\bin
+- COPY libz.dll.a C:\Qt\Tools\mingw530_32\lib
 - cd ..
 
 - cd libzip-0.11.2
-- bash -c "./configure --prefix=/c/mingw32"
+- bash -c "./configure --prefix=/c/Qt/Tools/mingw530_32"
 - make -j 2
 - make install
-- COPY lib\zipconf.h C:\mingw32\include
+- COPY lib\zipconf.h C:\Qt\Tools\mingw530_32\include
 - cd ..
 
 - cd zziplib-0.13.62
 - powershell -Command "(Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure"
-- bash -c "./configure --disable-mmap --prefix=/c/mingw32"
+- bash -c "./configure --disable-mmap --prefix=/c/Qt/Tools/mingw530_32"
 - make -j 2
 - make install
 - cd ..
@@ -102,11 +99,12 @@ install:
 - powershell -Command "(gc cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua"
 - cd \LuaRocks
 - luarocks install LuaFileSystem
-- luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="C:\mingw32\include" SQLITE_LIBDIR="C:\mingw32\lib"
-- luarocks install lrexlib-pcre PCRE_LIBDIR="C:\mingw32\lib" PCRE_INCDIR="C:\mingw32\include"
+- luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="C:\Qt\Tools\mingw530_32\include" SQLITE_LIBDIR="C:\Qt\Tools\mingw530_32\lib"
+- luarocks install lrexlib-pcre PCRE_LIBDIR="C:\Qt\Tools\mingw530_32\lib" PCRE_INCDIR="C:\Qt\Tools\mingw530_32\include"
+- luarocks install luautf8
 - cd C:\src\luazip-master
-- gcc -O2 -c -o src/luazip.o -IC:/mingw32/include src/luazip.c
-- gcc -shared -o zip.dll src/luazip.o -LC:/mingw32/lib -lzzip -lz C:/mingw32/bin/lua51.dll -lm
+- gcc -O2 -c -o src/luazip.o -IC:/Qt/Tools/mingw530_32/include src/luazip.c
+- gcc -shared -o zip.dll src/luazip.o -LC:/Qt/Tools/mingw530_32/lib -lzzip -lz C:/Qt/Tools/mingw530_32/bin/lua51.dll -lm
 cache:
 - C:\src\hunspell-1.4.1.tar.gz -> .appveyor.yml
 - C:\src\lua-5.1.5.tar.gz -> .appveyor.yml
@@ -125,8 +123,9 @@ cache:
 - C:\src\installbuilder-qt-enterprise-17.3.0-windows-installer.exe -> .appveyor.yml
 build_script:
 - cd C:\projects\mudlet-1\src
-- SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\mingw32\bin;C:\mingw32\msys\bin;C:\MinGW\msys\1.0\bin;%PATH%
-- qmake CONFIG+=release LIBPATH+=/c/mingw32/bin INCLUDEPATH+=/c/Libraries/boost_1_63_0
+- SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\Qt\Tools\mingw530_32\bin;C:\MinGW\msys\1.0\bin;%PATH%
+- qmake CONFIG+=release LIBPATH+=/c/Qt/Tools/mingw530_32/bin INCLUDEPATH+=/c/Libraries/boost_1_63_0 INCLUDEPATH+=/c/Qt/Tools/mingw530_32/include INCLUDEPATH+=/c/Qt/Tools/mingw530_32/lib/include
+
 - make -j 2
 
 - cd release
@@ -144,15 +143,15 @@ build_script:
 - COPY %QT_BASE_DIR%\bin\libgcc_s_dw2-1.dll .
 - COPY "%QT_BASE_DIR%\bin\libstdc++-6.dll" .
 - COPY %QT_BASE_DIR%\bin\libwinpthread-1.dll .
-- COPY C:\mingw32\lib\libyajl.dll .
+- COPY C:\Qt\Tools\mingw530_32\lib\libyajl.dll .
 - COPY C:\src\lua-5.1.5\src\lua51.dll .
 - COPY C:\src\openssl-1.0.2k\libeay32.dll .
 - COPY C:\src\openssl-1.0.2k\ssleay32.dll .
-- COPY C:\mingw32\bin\libzip-2.dll .
-- COPY C:\mingw32\bin\libhunspell-1.4-0.dll .
-- COPY C:\mingw32\bin\libpcre-1.dll .
-- COPY C:\mingw32\bin\libsqlite3-0.dll .
-- COPY C:\mingw32\bin\zlib1.dll .
+- COPY C:\Qt\Tools\mingw530_32\bin\libzip-2.dll .
+- COPY C:\Qt\Tools\mingw530_32\bin\libhunspell-1.4-0.dll .
+- COPY C:\Qt\Tools\mingw530_32\bin\libpcre-1.dll .
+- COPY C:\Qt\Tools\mingw530_32\bin\libsqlite3-0.dll .
+- COPY C:\Qt\Tools\mingw530_32\bin\zlib1.dll .
 - XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
 - COPY ..\*.dic .
 - XCOPY /S /I /Q %QT_BASE_DIR%\plugins\audio audio
@@ -161,7 +160,7 @@ build_script:
 - XCOPY /S /I /Q %QT_BASE_DIR%\plugins\imageformats imageformats
 
 - COPY C:\src\luazip-master\zip.dll .
-- XCOPY /S /I /Q C:\mingw32\lib\lua\5.1 .
+- XCOPY /S /I /Q C:\Qt\Tools\mingw530_32\lib\lua\5.1 .
 
 - DEL /Q *.cpp
 - DEL /Q *.o
