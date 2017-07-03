@@ -10,22 +10,22 @@ install:
 - cd C:\src
 - SET PATH=C:\Qt\Tools\mingw530_32\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
 
-- IF NOT EXIST hunspell-1.4.1.tar.gz wget --no-check-certificate -nv --output-document hunspell-1.4.1.tar.gz https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz
-- IF NOT EXIST lua-5.1.5.tar.gz wget -nv http://www.lua.org/ftp/lua-5.1.5.tar.gz
-- IF NOT EXIST pcre-8.38.tar.gz wget --no-check-certificate -nv https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download
-- IF NOT EXIST zlib-1.2.11.tar.gz wget -nv http://zlib.net/zlib-1.2.11.tar.gz
-- IF NOT EXIST sqlite-autoconf-3071700.tar.gz wget -nv http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz
-- IF NOT EXIST libzip_0.11.2.orig.tar.gz wget -nv --no-check-certificate https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz
-- IF NOT EXIST yajl-2.0.1.tar.gz wget -nv --no-check-certificate --output-document yajl-2.0.1.tar.gz https://github.com/lloyd/yajl/tarball/2.0.1
-- IF NOT EXIST zziplib-0.13.62.tar.bz2 wget -nv --no-check-certificate https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download
-- IF NOT EXIST openssl-1.0.2k-i386-win32.zip wget -nv --no-check-certificate https://indy.fulgan.com/SSL/openssl-1.0.2k-i386-win32.zip
-- IF NOT EXIST luarocks-2.4.0-win32.zip wget -nv --no-check-certificate http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip
-- IF NOT EXIST luazip.zip wget -nv --no-check-certificate --output-document luazip.zip https://github.com/rjpcomputing/luazip/archive/master.zip
-- IF NOT EXIST luawinmake.zip wget -nv --no-check-certificate --output-document luawinmake.zip https://github.com/Tieske/luawinmake/archive/master.zip
-- IF NOT EXIST installbuilder-qt-installer.exe wget --no-check-certificate -nv --output-document installbuilder-qt-installer.exe https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe
+- wget --no-check-certificate -nv --output-document hunspell-1.4.1.tar.gz https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz
+- wget -nv http://www.lua.org/ftp/lua-5.1.5.tar.gz
+- wget --no-check-certificate -nv https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download
+- wget -nv http://zlib.net/zlib-1.2.11.tar.gz
+- wget -nv http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz
+- wget -nv --no-check-certificate https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz
+- wget -nv --no-check-certificate --output-document yajl-2.0.1.tar.gz https://github.com/lloyd/yajl/tarball/2.0.1
+- wget -nv --no-check-certificate https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download
+- wget -nv --no-check-certificate https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip
+- wget -nv --no-check-certificate http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip
+- wget -nv --no-check-certificate --output-document luazip.zip https://github.com/rjpcomputing/luazip/archive/master.zip
+- wget -nv --no-check-certificate --output-document luawinmake.zip https://github.com/Tieske/luawinmake/archive/master.zip
+- wget --no-check-certificate -nv --output-document installbuilder-qt-installer.exe https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe
 
 - bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf $a || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj $a || true; done)"
-- 7z -oopenssl-1.0.2k e openssl-1.0.2k-i386-win32.zip
+- 7z -oopenssl-1.0.2l e openssl-1.0.2l-i386-win32.zip
 - 7z x luarocks-2.4.0-win32.zip
 - 7z x luazip.zip
 - 7z x luawinmake.zip
@@ -100,22 +100,7 @@ install:
 - cd C:\src\luazip-master
 - gcc -O2 -c -o src/luazip.o -IC:/Qt/Tools/mingw530_32/include src/luazip.c
 - gcc -shared -o zip.dll src/luazip.o -LC:/Qt/Tools/mingw530_32/lib -lzzip -lz C:/Qt/Tools/mingw530_32/bin/lua51.dll -lm
-cache:
-- C:\src\hunspell-1.4.1.tar.gz -> .appveyor.yml
-- C:\src\lua-5.1.5.tar.gz -> .appveyor.yml
-- C:\src\pcre-8.38.tar.gz -> .appveyor.yml
-- C:\src\zlib-1.2.11.tar.gz -> .appveyor.yml
-- C:\src\sqlite-autoconf-3071700.tar.gz -> .appveyor.yml
-- C:\src\libzip_0.11.2.orig.tar.gz -> .appveyor.yml
-- C:\src\yajl-2.0.1.tar.gz -> .appveyor.yml
-- C:\src\zziplib-0.13.62.tar.bz2 -> .appveyor.yml
-- C:\src\openssl-1.0.2k-i386-win32.zip -> .appveyor.yml
-- C:\src\luarocks-2.4.0-win32.zip -> .appveyor.yml
-- C:\src\luazip.zip -> .appveyor.yml
-- C:\src\x32-4.8.1-release-posix-dwarf-rev5.7z -> .appveyor.yml
-- C:\src\msys+7za+wget+svn+git+mercurial+cvs-rev13.7z -> .appveyor.yml
-- C:\src\luawinmake.zip -> .appveyor.yml
-- C:\src\installbuilder-qt-enterprise-17.3.0-windows-installer.exe -> .appveyor.yml
+
 build_script:
 - cd C:\projects\mudlet-1\src
 - SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\Qt\Tools\mingw530_32\bin;C:\MinGW\msys\1.0\bin;%PATH%
@@ -127,8 +112,8 @@ build_script:
 - windeployqt.exe --release mudlet.exe
 - COPY C:\Qt\Tools\mingw530_32\lib\libyajl.dll .
 - COPY C:\src\lua-5.1.5\src\lua51.dll .
-- COPY C:\src\openssl-1.0.2k\libeay32.dll .
-- COPY C:\src\openssl-1.0.2k\ssleay32.dll .
+- COPY C:\src\openssl-1.0.2l\libeay32.dll .
+- COPY C:\src\openssl-1.0.2l\ssleay32.dll .
 - COPY C:\Qt\Tools\mingw530_32\bin\libzip-2.dll .
 - COPY C:\Qt\Tools\mingw530_32\bin\libhunspell-1.4-0.dll .
 - COPY C:\Qt\Tools\mingw530_32\bin\libpcre-1.dll .
