@@ -129,20 +129,7 @@ build_script:
 - make -j 2
 
 - cd release
-- COPY %QT_BASE_DIR%\bin\icudt54.dll .
-- COPY %QT_BASE_DIR%\bin\icuin54.dll .
-- COPY %QT_BASE_DIR%\bin\icuuc54.dll .
-- COPY %QT_BASE_DIR%\bin\Qt5Core.dll .
-- COPY %QT_BASE_DIR%\bin\Qt5Gui.dll .
-- COPY %QT_BASE_DIR%\bin\libEGL.dll .
-- COPY %QT_BASE_DIR%\bin\libGLESv2.dll .
-- COPY %QT_BASE_DIR%\bin\Qt5Network.dll .
-- COPY %QT_BASE_DIR%\bin\Qt5OpenGL.dll .
-- COPY %QT_BASE_DIR%\bin\Qt5Widgets.dll .
-- COPY %QT_BASE_DIR%\bin\Qt5Multimedia.dll .
-- COPY %QT_BASE_DIR%\bin\libgcc_s_dw2-1.dll .
-- COPY "%QT_BASE_DIR%\bin\libstdc++-6.dll" .
-- COPY %QT_BASE_DIR%\bin\libwinpthread-1.dll .
+- windeployqt.exe --release mudlet.exe
 - COPY C:\Qt\Tools\mingw530_32\lib\libyajl.dll .
 - COPY C:\src\lua-5.1.5\src\lua51.dll .
 - COPY C:\src\openssl-1.0.2k\libeay32.dll .
@@ -154,11 +141,6 @@ build_script:
 - COPY C:\Qt\Tools\mingw530_32\bin\zlib1.dll .
 - XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
 - COPY ..\*.dic .
-- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\audio audio
-- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\mediaservice mediaservice
-- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\platforms platforms
-- XCOPY /S /I /Q %QT_BASE_DIR%\plugins\imageformats imageformats
-
 - COPY C:\src\luazip-master\zip.dll .
 - XCOPY /S /I /Q C:\Qt\Tools\mingw530_32\lib\lua\5.1 .
 
