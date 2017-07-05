@@ -30,6 +30,7 @@
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
+#include <QTextToSpeech>
 #include "post_guard.h"
 
 extern "C" {
@@ -403,6 +404,16 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+	static int ttsSpeak(lua_State* L);
+	static int ttsBuild(lua_State* L);
+	static int ttsStopSpeech(lua_State* L);
+	static int ttsSetSpeechRate(lua_State* L);
+	static int ttsSetSpeechPitch(lua_State* L);
+	static int ttsSetSpeechVolume(lua_State* L);
+	static int ttsSetVoiceByName(lua_State* L);
+	static int ttsSetVoiceByIndex(lua_State* L);
+	static int ttsGetCurrentVoice(lua_State* L);
+	static int ttsGetVoices(lua_State* L);	
     static int setServerEncoding(lua_State *);
     static int getServerEncoding(lua_State *);
     static int getServerEncodingsList(lua_State *);

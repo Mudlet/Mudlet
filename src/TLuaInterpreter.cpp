@@ -58,6 +58,8 @@
 #include <QSslConfiguration>
 #include <QString>
 #include <QStringBuilder>
+#include <QVector>
+#include <QTextToSpeech>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -79,6 +81,9 @@ int luaopen_yajl(lua_State*);
 }
 
 using namespace std;
+
+QTextToSpeech* speechUnit;
+bool bSpeechBuilt;
 
 TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
         : mpHost( pH )
@@ -10641,6 +10646,240 @@ int TLuaInterpreter::restartIrc(lua_State* L)
     return 1;
 }
 
+
+/** ttsSpeak( text )
+ *  Synthesizes text for reading.
+ */
+int TLuaInterpreter::ttsSpeak(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild(0);
+    
+    string luaSpeechText = "";
+    if (!lua_isstring(L, 1)) {
+        lua_pushstring(L, "ttsSpeak: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        luaSpeechText = lua_tostring(L, 1);
+    }
+    
+    QString text(luaSpeechText.c_str());
+    
+    speechUnit->say(text);
+    
+    return 1;
+}
+
+/** ttsBuild()
+ *  Builds the speechUnit required for TTS operations.
+ *  Forces default variables, only runs on first TTS call.
+ */
+int TLuaInterpreter::ttsBuild(lua_State* L)
+{
+    if (bSpeechBuilt)
+        return 0;
+    
+    speechUnit = new QTextToSpeech();
+    
+    bSpeechBuilt = true;
+    
+    speechUnit->setVolume(1.0);
+    speechUnit->setRate(0.0);
+    speechUnit->setPitch(0.0);
+    return 1;
+}
+
+/** ttsStopSpeech()
+ *  Stops all text synthesizing or playback.
+ */
+int TLuaInterpreter::ttsStopSpeech(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild(0);
+    
+    speechUnit->stop();
+    
+    return 1;
+}
+
+
+/** ttsSetSpeechRate( rate )
+ *  Sets the rate of speech playback.
+ */
+int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild(0);
+    
+    float fRate;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "ttsSetSpeechRate: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        fRate = lua_tonumber(L, 1);
+    }
+    
+    if (fRate > 1.0)
+        fRate = 1.0;
+    
+    if (fRate < -1.0)
+        fRate = -1.0;
+    
+    speechUnit->setRate(fRate);
+}
+
+
+/** ttsSetSpeechPitch( pitch )
+ *  Sets the pitch of speech playback.
+ */
+int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild(0);
+    
+    float fPitch;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "ttsSetSpeechPitch: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        fPitch = lua_tonumber(L, 1);
+    }
+    
+    if (fPitch > 1.0)
+        fPitch = 1.0;
+    
+    if (fPitch < -1.0)
+        fPitch = -1.0;
+    
+    speechUnit->setPitch(fPitch);
+}
+
+
+/** ttsSetSpeechVolume( volume )
+ *  Sets the volume of speech playback.
+ */
+int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild(0);
+    
+    float fVol;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "ttsSetSpeechVolume: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        fVol = lua_tonumber(L, 1);
+    }
+    
+    if (fVol > 1.0)
+        fVol = 1.0;
+    
+    if (fVol < 0.0)
+        fVol = 0.0;
+    
+    speechUnit->setVolume(fVol);
+}
+
+
+/** ttsGetVoices()
+ *  Lists all voices available to the current OS locale.
+ *  Currently uses the default system locale.
+ */
+int TLuaInterpreter::ttsGetVoices(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild(0);
+    
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+    int i=0;
+	lua_newtable(L);
+    foreach (const QVoice &voice, speechVoices) {
+        lua_pushnumber(L, ++i);
+        lua_pushstring(L, voice.name().toLatin1().constData());
+        lua_settable(L, -3);
+    }
+    
+    return 1;
+}
+
+
+/** ttsGetCurrentVoice()
+ *  Returns the current voice used by the speechUnit.
+ */
+int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
+{
+	TLuaInterpreter::ttsBuild(0);
+	
+	QString currentVoice = speechUnit->voice().name();
+	lua_pushstring(L, currentVoice.toLatin1().constData());
+	return 1;
+}
+
+
+/** ttsSetVoiceByName( name )
+ *  Sets the current speechUnit voice if given a name.
+ *  Returns true if set, false otherwise.
+ */
+int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
+{
+	TLuaInterpreter::ttsBuild(0);
+	
+	QString nextVoice;
+	
+	if (!lua_isstring(L, 1)) {
+		lua_pushstring(L, "ttsSetVoiceByName: wrong argument type");
+		lua_error(L);
+		return 1;
+	} else {
+		nextVoice = QString(lua_tostring(L, 1));
+	}
+	
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+	foreach (const QVoice &voice, speechVoices) {
+        if(voice.name() == nextVoice)
+		{
+			speechUnit->setVoice(voice);
+			lua_pushboolean(L, true);
+			return 1;
+		}
+    }
+	
+	lua_pushboolean(L, false);
+	return 1;
+}
+
+
+/** ttsSetVoiceByIndex( index )
+ *  Sets the current speechUnit voice if given a proper index.
+ *  Returns true if set, errors otherwise.
+ *  Should only be used in conjunction with ttsGetVoices.
+ */
+int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
+{
+	TLuaInterpreter::ttsBuild(0);
+	
+	int index;
+	if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "ttsSetVoiceByIndex: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        index = lua_tonumber(L, 1);
+    }
+	
+	index--;
+	
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+	if (index < 0 || index > speechVoices.size())
+	{
+        lua_pushstring(L, "ttsSetVoiceByIndex: voice index out of bounds");
+        lua_error(L);
+        return 1;
+	}
+	
+	speechUnit->setVoice(speechVoices.at(index));
+	
+	return 1;
+}
+
 int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -11927,6 +12166,15 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
+    lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
+    lua_register(pGlobalLua, "ttsStopSpeech", TLuaInterpreter::ttsStopSpeech);
+    lua_register(pGlobalLua, "ttsSetSpeechRate", TLuaInterpreter::ttsSetSpeechRate);
+    lua_register(pGlobalLua, "ttsSetSpeechPitch", TLuaInterpreter::ttsSetSpeechPitch);
+    lua_register(pGlobalLua, "ttsSetSpeechVolume", TLuaInterpreter::ttsSetSpeechVolume);
+	lua_register(pGlobalLua, "ttsSetVoiceByName", TLuaInterpreter::ttsSetVoiceByName);
+	lua_register(pGlobalLua, "ttsSetVoiceByIndex", TLuaInterpreter::ttsSetVoiceByIndex);
+	lua_register(pGlobalLua, "ttsGetCurrentVoice", TLuaInterpreter::ttsGetCurrentVoice);
+	lua_register(pGlobalLua, "ttsGetVoices", TLuaInterpreter::ttsGetVoices);
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
