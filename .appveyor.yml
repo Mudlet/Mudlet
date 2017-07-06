@@ -4,11 +4,18 @@ init:
 environment:
   matrix:
   - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
+    MINGW_BASE_DIR: C:\Qt\Tools\mingw492_32
+    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw492_32
+  - QT_BASE_DIR: C:\Qt\5.6\mingw49_32
+    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
+    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
   - QT_BASE_DIR: C:\Qt\5.9\mingw53_32
+    MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
+    MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
 install:
 - git submodule update --init --recursive
 - cd C:\src
-- SET PATH=C:\Qt\Tools\mingw530_32\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
+- SET PATH=%MINGW_BASE_DIR%\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
 
 - ECHO ==== downloading dependencies ==== >> verbose_output.log 2>&1
 - wget --no-check-certificate -nv --output-document hunspell-1.4.1.tar.gz https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz >> verbose_output.log 2>&1
@@ -37,7 +44,7 @@ install:
 - cd hunspell-1.4.1
 - ECHO ==== compiling and installing hunspell ==== >> ..\verbose_output.log 2>&1
 - ECHO ---- running configure ---- >> ..\verbose_output.log 2>&1
-- bash -c "./configure --prefix=C:/Qt/Tools/mingw530_32" >> ..\verbose_output.log 2>&1
+- bash -c "./configure --prefix=%MINGW_BASE_DIR_BASH%" >> ..\verbose_output.log 2>&1
 - ECHO ---- running make ----  >> ..\verbose_output.log 2>&1
 - make -j 2 >> ..\verbose_output.log 2>&1
 - ECHO ---- running make install ---- >> ..\verbose_output.log 2>&1
@@ -56,8 +63,8 @@ install:
 - ECHO ---- running make ---- >> ..\..\verbose_output.log 2>&1
 - make -j 2  >> ..\..\verbose_output.log 2>&1
 - ECHO ---- installing yajl ---- >> ..\..\verbose_output.log 2>&1
-- COPY yajl-2.0.1\lib\* C:\Qt\Tools\mingw530_32\lib >> ..\..\verbose_output.log 2>&1
-- XCOPY /S /I /Q yajl-2.0.1\include C:\Qt\Tools\mingw530_32\include >> ..\..\verbose_output.log 2>&1
+- COPY yajl-2.0.1\lib\* %MINGW_BASE_DIR%\lib >> ..\..\verbose_output.log 2>&1
+- XCOPY /S /I /Q yajl-2.0.1\include %MINGW_BASE_DIR%\include >> ..\..\verbose_output.log 2>&1
 - ECHO ==== finished handling yajl ==== >> ..\..\verbose_output.log 2>&1
 - cd ..\..
 
@@ -68,14 +75,14 @@ install:
 - ECHO ---- compiling lua ---- >> ..\verbose_output.log 2>&1
 - etc\winmake >> ..\verbose_output.log 2>&1
 - ECHO ---- installing lua ---- >> ..\verbose_output.log 2>&1
-- etc\winmake install C:\Qt\Tools\mingw530_32 >> ..\verbose_output.log 2>&1
+- etc\winmake install %MINGW_BASE_DIR% >> ..\verbose_output.log 2>&1
 - ECHO ==== finished handling lua ==== >> ..\verbose_output.log 2>&1
 - cd ..
 
 - cd pcre-8.38
 - ECHO ==== compiling and installing pcre ==== >> ..\verbose_output.log 2>&1
 - ECHO ---- running configure ---- >> ..\verbose_output.log 2>&1
-- bash -c "./configure --prefix=/c/Qt/Tools/mingw530_32" >> ..\verbose_output.log 2>&1
+- bash -c "./configure --prefix=%MINGW_BASE_DIR_BASH%" >> ..\verbose_output.log 2>&1
 - ECHO ---- running make ----  >> ..\verbose_output.log 2>&1
 - make -j 2 >> ..\verbose_output.log 2>&1
 - ECHO ---- running make install ---- >> ..\verbose_output.log 2>&1
@@ -86,7 +93,7 @@ install:
 - cd sqlite-autoconf-3071700
 - ECHO ==== compiling and installing sqlite ==== >> ..\verbose_output.log 2>&1
 - ECHO ---- running configure ---- >> ..\verbose_output.log 2>&1
-- bash -c "./configure --prefix=/c/Qt/Tools/mingw530_32" >> ..\verbose_output.log 2>&1
+- bash -c "./configure --prefix=%MINGW_BASE_DIR_BASH%" >> ..\verbose_output.log 2>&1
 - ECHO ---- running make ----  >> ..\verbose_output.log 2>&1
 - make -j 2 >> ..\verbose_output.log 2>&1
 - ECHO ---- running make install ---- >> ..\verbose_output.log 2>&1
@@ -99,24 +106,24 @@ install:
 - ECHO ---- running make ----  >> ..\verbose_output.log 2>&1
 - make -f win32/Makefile.gcc -j 2 >> ..\verbose_output.log 2>&1
 - ECHO ---- running make install ---- >> ..\verbose_output.log 2>&1
-- SET INCLUDE_PATH=C:\Qt\Tools\mingw530_32\include
-- SET LIBRARY_PATH=C:\Qt\Tools\mingw530_32\lib
-- SET BINARY_PATH=C:\Qt\Tools\mingw530_32\bin
+- SET INCLUDE_PATH=%MINGW_BASE_DIR%\include
+- SET LIBRARY_PATH=%MINGW_BASE_DIR%\lib
+- SET BINARY_PATH=%MINGW_BASE_DIR%\bin
 - make -f win32/Makefile.gcc install >> ..\verbose_output.log 2>&1
-- COPY zlib1.dll C:\Qt\Tools\mingw530_32\bin >> ..\verbose_output.log 2>&1
-- COPY libz.dll.a C:\Qt\Tools\mingw530_32\lib >> ..\verbose_output.log 2>&1
+- COPY zlib1.dll %MINGW_BASE_DIR%\bin >> ..\verbose_output.log 2>&1
+- COPY libz.dll.a %MINGW_BASE_DIR%\lib >> ..\verbose_output.log 2>&1
 - ECHO ==== finished handling zlib ==== >> ..\verbose_output.log 2>&1
 - cd ..
 
 - cd libzip-0.11.2
 - ECHO ==== compiling and installing libzip ==== >> ..\verbose_output.log 2>&1
 - ECHO ---- running configure ---- >> ..\verbose_output.log 2>&1
-- bash -c "./configure --prefix=/c/Qt/Tools/mingw530_32" >> ..\verbose_output.log 2>&1
+- bash -c "./configure --prefix=%MINGW_BASE_DIR_BASH%" >> ..\verbose_output.log 2>&1
 - ECHO ---- running make ----  >> ..\verbose_output.log 2>&1
 - make -j 2 >> ..\verbose_output.log 2>&1
 - ECHO ---- running make install ---- >> ..\verbose_output.log 2>&1
 - make install >> ..\verbose_output.log 2>&1
-- COPY lib\zipconf.h C:\Qt\Tools\mingw530_32\include >> ..\verbose_output.log 2>&1
+- COPY lib\zipconf.h %MINGW_BASE_DIR%\include >> ..\verbose_output.log 2>&1
 - ECHO ==== finished handling libzip ==== >> ..\verbose_output.log 2>&1
 - cd ..
 
@@ -125,7 +132,7 @@ install:
 - ECHO ---- changing configure script ---- >> ..\verbose_output.log 2>&1
 - powershell -Command "(Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure" >> ..\verbose_output.log 2>&1
 - ECHO ---- running configure ---- >> ..\verbose_output.log 2>&1
-- bash -c "./configure --disable-mmap --prefix=/c/Qt/Tools/mingw530_32" >> ..\verbose_output.log 2>&1
+- bash -c "./configure --disable-mmap --prefix=%MINGW_BASE_DIR_BASH%" >> ..\verbose_output.log 2>&1
 - ECHO ---- running make ----  >> ..\verbose_output.log 2>&1
 - make -j 2 >> ..\verbose_output.log 2>&1
 - ECHO ---- running make install ---- >> ..\verbose_output.log 2>&1
@@ -144,39 +151,39 @@ install:
 - ECHO ---- installing lfs ---- >> C:\src\verbose_output.log 2>&1
 - luarocks install LuaFileSystem >> C:\src\verbose_output.log 2>&1
 - ECHO ---- installing luasql.sqlite3 ---- >> C:\src\verbose_output.log 2>&1
-- luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="C:\Qt\Tools\mingw530_32\include" SQLITE_LIBDIR="C:\Qt\Tools\mingw530_32\lib" >> C:\src\verbose_output.log 2>&1
+- luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="%MINGW_BASE_DIR%\include" SQLITE_LIBDIR="%MINGW_BASE_DIR%\lib" >> C:\src\verbose_output.log 2>&1
 - ECHO ---- installing rex.pcre ---- >> C:\src\verbose_output.log 2>&1
-- luarocks install lrexlib-pcre PCRE_LIBDIR="C:\Qt\Tools\mingw530_32\lib" PCRE_INCDIR="C:\Qt\Tools\mingw530_32\include" >> C:\src\verbose_output.log 2>&1
+- luarocks install lrexlib-pcre PCRE_LIBDIR="%MINGW_BASE_DIR%\lib" PCRE_INCDIR="%MINGW_BASE_DIR%\include" >> C:\src\verbose_output.log 2>&1
 - ECHO ---- installing lua-utf8 ---- >> C:\src\verbose_output.log 2>&1
 - luarocks install luautf8 >> C:\src\verbose_output.log 2>&1
 - cd C:\src\luazip-master
 - ECHO ---- installing luazip ---- >> ..\verbose_output.log 2>&1
-- gcc -O2 -c -o src/luazip.o -IC:/Qt/Tools/mingw530_32/include src/luazip.c >> ..\verbose_output.log 2>&1
-- gcc -shared -o zip.dll src/luazip.o -LC:/Qt/Tools/mingw530_32/lib -lzzip -lz C:/Qt/Tools/mingw530_32/bin/lua51.dll -lm >> ..\verbose_output.log 2>&1
+- gcc -O2 -c -o src/luazip.o -I%MINGW_BASE_DIR%\include src/luazip.c >> ..\verbose_output.log 2>&1
+- gcc -shared -o zip.dll src/luazip.o -L%MINGW_BASE_DIR%\lib -lzzip -lz %MINGW_BASE_DIR%\bin\lua51.dll -lm >> ..\verbose_output.log 2>&1
 - ECHO ==== finished installing luarocks and lua libraries ==== >> ..\verbose_output.log 2>&1
 
 build_script:
 - cd C:\projects\mudlet-1\src
-- SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;C:\Qt\Tools\mingw530_32\bin;C:\MinGW\msys\1.0\bin;%PATH%
-- qmake CONFIG+=release LIBPATH+=/c/Qt/Tools/mingw530_32/bin INCLUDEPATH+=/c/Libraries/boost_1_63_0 INCLUDEPATH+=/c/Qt/Tools/mingw530_32/include INCLUDEPATH+=/c/Qt/Tools/mingw530_32/lib/include
+- SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;%MINGW_BASE_DIR%\bin;C:\MinGW\msys\1.0\bin;%PATH%
+- qmake CONFIG+=release LIBPATH+=%MINGW_BASE_DIR_BASH%/bin INCLUDEPATH+=/c/Libraries/boost_1_63_0 INCLUDEPATH+=%MINGW_BASE_DIR_BASH%/include INCLUDEPATH+=%MINGW_BASE_DIR_BASH%/lib/include
 
 - make -j 2
 
 - cd release
 - windeployqt.exe --release mudlet.exe
-- COPY C:\Qt\Tools\mingw530_32\lib\libyajl.dll .
+- COPY %MINGW_BASE_DIR%\lib\libyajl.dll .
 - COPY C:\src\lua-5.1.5\src\lua51.dll .
 - COPY C:\src\openssl-1.0.2l\libeay32.dll .
 - COPY C:\src\openssl-1.0.2l\ssleay32.dll .
-- COPY C:\Qt\Tools\mingw530_32\bin\libzip-2.dll .
-- COPY C:\Qt\Tools\mingw530_32\bin\libhunspell-1.4-0.dll .
-- COPY C:\Qt\Tools\mingw530_32\bin\libpcre-1.dll .
-- COPY C:\Qt\Tools\mingw530_32\bin\libsqlite3-0.dll .
-- COPY C:\Qt\Tools\mingw530_32\bin\zlib1.dll .
+- COPY %MINGW_BASE_DIR%\bin\libzip-2.dll .
+- COPY %MINGW_BASE_DIR%\bin\libhunspell-1.4-0.dll .
+- COPY %MINGW_BASE_DIR%\bin\libpcre-1.dll .
+- COPY %MINGW_BASE_DIR%\bin\libsqlite3-0.dll .
+- COPY %MINGW_BASE_DIR%\bin\zlib1.dll .
 - XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
 - COPY ..\*.dic .
 - COPY C:\src\luazip-master\zip.dll .
-- XCOPY /S /I /Q C:\Qt\Tools\mingw530_32\lib\lua\5.1 .
+- XCOPY /S /I /Q %MINGW_BASE_DIR%\lib\lua\5.1 .
 
 - DEL /Q *.cpp
 - DEL /Q *.o
@@ -194,5 +201,3 @@ on_failure:
 artifacts:
 - path: src\release
   name: mudlet
-- path: ..\..\src\verbose_output.log
-  name: dependencyInstallationLog
