@@ -14,6 +14,7 @@ environment:
     MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
 install:
 - git submodule update --init --recursive
+- SET
 - cd C:\src
 - SET PATH=%MINGW_BASE_DIR%\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%PATH%
 
@@ -161,6 +162,27 @@ install:
 - gcc -O2 -c -o src/luazip.o -I%MINGW_BASE_DIR%\include src/luazip.c >> ..\verbose_output.log 2>&1
 - gcc -shared -o zip.dll src/luazip.o -L%MINGW_BASE_DIR%\lib -lzzip -lz %MINGW_BASE_DIR%\bin\lua51.dll -lm >> ..\verbose_output.log 2>&1
 - ECHO ==== finished installing luarocks and lua libraries ==== >> ..\verbose_output.log 2>&1
+
+- |
+  IF %APPVEYOR_REPO_TAG%==false (
+    SET MUDLET_VERSION_BUILD=-testing
+    IF DEFINED %APPVEYOR_PULL_REQUEST_NUMBER% (
+      FOR /F USEBACKQ %%SHA1 IN (`git rev-parse --short %APPVEYOR_REPO_COMMIT%`) (
+        SET COMMIT=%%SHA1
+      )
+      SET MUDLET_VERSION_BUILD=%MUDLET_VERSION_BUILD%-PR%APPVEYOR_PULL_REQUEST_NUMBER%-%COMMIT%
+    ) ELSE (
+      FOR /F USEBACKQ %%SHA1 IN (`git rev-parse --short HEAD`) (
+        SET COMMIT=%%SHA1
+      )
+      SET MUDLET_VERSION_BUILD=%MUDLET_VERSION_BUILD%-%COMMIT%
+    )
+  )
+
+  FOR /F USEBACKQ %%VER IN (`print $1 if /^VERSION = (.+)/' < %APPVEYOR_BUILD_FOLDER%/src/src.pro`) (
+    SET VERSION=%%VER
+  )
+  ECHO BUILDING MUDLET %VERSION%%MUDLET_VERSION_BUILD%
 
 build_script:
 - cd C:\projects\mudlet-1\src
