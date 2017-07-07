@@ -163,7 +163,7 @@ install:
 - gcc -shared -o zip.dll src/luazip.o -L%MINGW_BASE_DIR%\lib -lzzip -lz %MINGW_BASE_DIR%\bin\lua51.dll -lm >> ..\verbose_output.log 2>&1
 - ECHO ==== finished installing luarocks and lua libraries ==== >> ..\verbose_output.log 2>&1
 
-- |
+- cmd: >-
   IF %APPVEYOR_REPO_TAG%==false (
     SET MUDLET_VERSION_BUILD=-testing
     IF DEFINED %APPVEYOR_PULL_REQUEST_NUMBER% (
@@ -178,7 +178,6 @@ install:
       SET MUDLET_VERSION_BUILD=%MUDLET_VERSION_BUILD%-%COMMIT%
     )
   )
-
   FOR /F USEBACKQ %%VER IN (`print $1 if /^VERSION = (.+)/' < %APPVEYOR_BUILD_FOLDER%/src/src.pro`) (
     SET VERSION=%%VER
   )
