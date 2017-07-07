@@ -58,8 +58,8 @@ VERSION = 3.3.0
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
-# enable C++14 for builds.
-CONFIG += c++14
+# enable C++11 for builds.
+CONFIG += c++11
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
