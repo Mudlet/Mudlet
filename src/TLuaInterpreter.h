@@ -406,6 +406,10 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+    static int setServerEncoding(lua_State *);
+    static int getServerEncoding(lua_State *);
+    static int getServerEncodingsList(lua_State *);
+    static int alert(lua_State* L);
 #ifdef QT_TTS_LIB
 	static int ttsSpeak(lua_State* L);
 	static int ttsStopSpeech(lua_State* L);
@@ -416,11 +420,6 @@ public:
 	static int ttsSetVoiceByIndex(lua_State* L);
 	static int ttsGetCurrentVoice(lua_State* L);
 	static int ttsGetVoices(lua_State* L);	
-#endif // QT_TTS_LIB
-    static int setServerEncoding(lua_State *);
-    static int getServerEncoding(lua_State *);
-    static int getServerEncodingsList(lua_State *);
-    static int alert(lua_State* L);
 	static int ttsQueueSpeech(lua_State* L);
 	static int ttsGetSpeechQueue(lua_State* L);
 	static int ttsSpeechPaused(lua_State* L);
@@ -428,6 +427,7 @@ public:
 	static int ttsGetCurrentLine(lua_State* L);
 	static void ttsBuild();
 	static void ttsStateChanged(QTextToSpeech::State state);
+#endif // QT_TTS_LIB
 // PLACEMARKER: End of Lua functions declarations
 
 public slots:
