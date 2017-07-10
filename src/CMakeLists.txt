@@ -334,6 +334,8 @@ FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5 COMPONENTS Concurrent)
 FIND_PACKAGE(Qt5Concurrent REQUIRED)
+FIND_PACKAGE(QtTextToSpeech)
+
 
 IF(WIN32)
   SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -395,6 +397,11 @@ INCLUDE_DIRECTORIES(
     ${YAJL_INCLUDE_DIR}
 )
 
+if (QtTextToSpeech_FOUND)
+  ADD_DEFINITIONS(-DQT_TTS_LIB=1)
+  INCLUDE_DIRECTORIES(${QtTextToSpeech_INCLUDE_DIRS})
+endif (QtTextToSpeech_FOUND)
+
 # Need to use the plural variables as there can be more than ONE directory to specify:
 IF(PC_ZIP_FOUND)
     INCLUDE_DIRECTORIES( ${PC_ZIP_INCLUDE_DIRS} )
@@ -435,6 +442,11 @@ TARGET_LINK_LIBRARIES(mudlet
     lua_yajl
     edbee-lib
 )
+
+
+if (QtTextToSpeech_FOUND)
+  TARGET_LINK_LIBRARIES(mudlet ${QtTextToSpeech_LIBRARIES})
+endif (QtTextToSpeech_FOUND)
 
 IF(PC_ZIP_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${PC_ZIP_LIBRARIES})
