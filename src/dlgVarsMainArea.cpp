@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,14 +27,15 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    key_type->setItemData(0, -1, Qt::UserRole);
-    key_type->setItemData(1, 4, Qt::UserRole);
-    key_type->setItemData(2, 3, Qt::UserRole);
-    var_type->setItemData(0, -1, Qt::UserRole);
-    var_type->setItemData(1, 4, Qt::UserRole);
-    var_type->setItemData(2, 3, Qt::UserRole);
-    var_type->setItemData(3, 1, Qt::UserRole);
-    var_type->setItemData(4, 5, Qt::UserRole);
+    comboBox_variable_key_type->setItemData(0, -1, Qt::UserRole);
+    comboBox_variable_key_type->setItemData(1, 4, Qt::UserRole);
+    comboBox_variable_key_type->setItemData(2, 3, Qt::UserRole);
+
+    comboBox_variable_value_type->setItemData(0, -1, Qt::UserRole);
+    comboBox_variable_value_type->setItemData(1, 4, Qt::UserRole);
+    comboBox_variable_value_type->setItemData(2, 3, Qt::UserRole);
+    comboBox_variable_value_type->setItemData(3, 1, Qt::UserRole);
+    comboBox_variable_value_type->setItemData(4, 5, Qt::UserRole);
     /*var_type->setText("Variable Name Type");
     var_type->setPopupMode(QToolButton::InstantPopup);
     QMenu * varTypeMenu = new QMenu(var_type);

@@ -434,30 +434,34 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="button_displayAllVariables">
-          <property name="text">
-           <string>Display All Variables</string>
-          </property>
-          <property name="icon">
-           <iconset resource="../mudlet.qrc">
-            <normaloff>:/icons/tag_checkbox.png</normaloff>
-            <normalon>:/icons/tag_checkbox_checked.png</normalon>:/icons/tag_checkbox.png</iconset>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-          <property name="autoDefault">
-           <bool>false</bool>
-          </property>
-          <property name="default">
-           <bool>false</bool>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
-          </property>
+         <widget class="QFrame" name="frame_">
+          <layout class="QGridLayout" name="gridLayout_display_hidden_variables">
+           <property name="leftMargin">
+            <number>8</number>
+           </property>
+           <property name="topMargin">
+            <number>3</number>
+           </property>
+           <property name="rightMargin">
+            <number>8</number>
+           </property>
+           <property name="bottomMargin">
+            <number>3</number>
+           </property>
+           <item row="0" column="0" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
+            <widget class="QCheckBox" name="button_displayAllVariables">
+             <property name="text">
+              <string>Show normally hidden variables</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
         <item>
@@ -686,7 +690,7 @@
                     </size>
                    </property>
                    <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the case sensitivity of the search (&lt;i&gt;on&lt;/i&gt; is case sensitive).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Toggles the case sensitivity of the search (middle line of icon stands out if case sensitive search is &lt;i&gt;on&lt;/i&gt;!)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="text">
                     <string/>
@@ -825,9 +829,9 @@
        <zorder>treeWidget_actions</zorder>
        <zorder>treeWidget_scripts</zorder>
        <zorder>treeWidget_triggers</zorder>
-       <zorder>button_displayAllVariables</zorder>
        <zorder>widget_searchArea</zorder>
        <zorder>treeWidget_variables</zorder>
+       <zorder>frame_</zorder>
       </widget>
       <widget class="QFrame" name="frame_right">
        <property name="sizePolicy">
@@ -1165,8 +1169,6 @@
    <header>TTreeWidget.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="../mudlet.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
