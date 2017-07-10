@@ -5013,49 +5013,81 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
     int varType = var->getValueType();
     int keyType = var->getKeyType();
     QIcon icon;
-    mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
-    // Edbee doesn't have a readonly option, so I'm using setEnabled
-    mpSourceEditorEdbee->setEnabled(true);
-    mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
-    if (keyType == 4) {
-        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(1);
-    } else if (keyType == 3) {
+
+    switch (keyType) {
+//    case LUA_TNONE: // -1
+//    case LUA_TNIL: // 0
+//    case LUA_TBOOLEAN: // 1
+//    case LUA_TLIGHTUSERDATA: // 2
+    case LUA_TNUMBER: // 3
         mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(2);
-    } else if (keyType == 5) {
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
+        break;
+    case LUA_TSTRING: // 4
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(1);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
+        break;
+    case LUA_TTABLE: // 5
         mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(3);
-        mpVarsMainArea->comboBox_variable_key_type->setDisabled(true);
-    } else if (keyType == 6) {
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(false);
+        break;
+    case LUA_TFUNCTION: // 6
         mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(4);
-        mpVarsMainArea->comboBox_variable_key_type->setDisabled(true);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(false);
+        break;
+//    case LUA_TUSERDATA: // 7
+//    case LUA_TTHREAD: // 8
     }
 
-    if (varType == LUA_TTABLE || varType == LUA_TFUNCTION) {
-        // Edbee doesn't have a readonly option, so I'm using setEnabled
-        mpSourceEditorEdbee->setEnabled(false);
+    switch (varType) {
+//    case LUA_TNONE:
+//    case LUA_TNIL:
 
-        if (varType == LUA_TTABLE) {
-            if (pItem->childCount()) {
-                mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
-            }
-            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
-            icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
-        } else {
-            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(5);
-            mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
-            icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
-        }
-    } else {
+// TODO: I would like to hide the editor where it is not required but currently
+// this messes up the editor layout - hopefully when I can finished/update:
+// https://github.com/Mudlet/Mudlet/pull/436 "(release 30)bug fix get splitter
+// working properly on editor right side" this will be do-able - Slysven
+//        mpSourceEditorArea->show();
+    case LUA_TBOOLEAN:
+//        mpSourceEditorArea->show();
         mpSourceEditorEdbee->setEnabled(true);
-
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
-        if (varType == LUA_TSTRING) {
-            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(1);
-        } else if (varType == LUA_TNUMBER) {
-            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(2);
-        } else if (varType == LUA_TBOOLEAN) {
-            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(3);
-        }
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(3);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
+        break;
+//    case LUA_TLIGHTUSERDATA:
+    case LUA_TNUMBER:
+//        mpSourceEditorArea->show();
+        mpSourceEditorEdbee->setEnabled(true);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(2);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
+        break;
+    case LUA_TSTRING:
+        mpSourceEditorEdbee->setEnabled(true);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(1);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
+        break;
+    case LUA_TTABLE:
+//        mpSourceEditorArea->hide();
+        mpSourceEditorEdbee->setEnabled(false);
+        // Only allow the type to be changed away from a table if it is empty:
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(!(pItem->childCount() > 0));
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+        break;
+    case LUA_TFUNCTION:
+//        mpSourceEditorArea->hide();
+        mpSourceEditorEdbee->setEnabled(false);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(5);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(false);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+        break;
+//    case LUA_TUSERDATA:
+//    case LUA_TTHREAD:
     }
+
     mpVarsMainArea->checkBox_variable_hidden->setChecked(vu->isHidden(var));
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     clearDocument(mpSourceEditorEdbee, lI->getValue(var));
