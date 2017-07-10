@@ -87,7 +87,7 @@ using namespace std;
 #ifdef QT_TTS_LIB
 QTextToSpeech* speechUnit;
 QVector<QString> speechQueue;
-bool bSpeechBuilt, bSpeechPaused;
+bool bSpeechBuilt;
 QString speechCurrent;
 #endif
 
@@ -10661,16 +10661,14 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     
-    string luaSpeechText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "ttsSpeak: wrong argument type");
         lua_error(L);
         return 1;
-    } else {
-        luaSpeechText = lua_tostring(L, 1);
     }
     
-    speechCurrent = QString(luaSpeechText.c_str());
+	QString speechCurrent;
+    speechCurrent = QString::fromUtf8(lua_tostring(L, 1));
 	
     speechUnit->say(speechCurrent);
     
@@ -10685,6 +10683,11 @@ void TLuaInterpreter::ttsBuild()
 {
     if (bSpeechBuilt)
         return;
+	
+	TEvent event;
+	event.mArgumentList.append(QLatin1String("ttsSpeechBuilt"))
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	mpHost->raiseEvent(event);
     
     speechUnit = new QTextToSpeech();
     
@@ -10737,6 +10740,15 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
     
     speechUnit->setRate(fRate);
 	
+	TEvent event;
+	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(QLatin1String("rate"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(fRate);
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+	mpHost->raiseEvent(event);
+	
 	return 0;
 }
 
@@ -10765,6 +10777,15 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
     
     speechUnit->setPitch(fPitch);
 	
+	TEvent event;
+	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(QLatin1String("pitch"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(fPitch);
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+	mpHost->raiseEvent(event);
+	
 	return 0;
 }
 
@@ -10792,6 +10813,15 @@ int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
         fVol = 0.0;
     
     speechUnit->setVolume(fVol);
+	
+	TEvent event;
+	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(QLatin1String("volume"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(fVol);
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+	mpHost->raiseEvent(event);
 	
 	return 0;
 }
@@ -10902,11 +10932,28 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
  */
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
-    if(state != QTextToSpeech::Ready)
-		return;
+	TEvent event;
 	
-	if(speechQueue.empty())
+    if(state != QTextToSpeech::Ready || speechQueue.empty())
+	{
+		switch(state)
+		{
+			case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsPauseSpeechd"));
+			case QTextToSpeech::Speaking : event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+			case QTextToSpeech::BackendError : event.mArgumentList.append(QLatin1String("ttsSpeechError"));
+			case QTextToSpeech::Ready : event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
+		}
+		event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+		
+		if (state == QTextToSpeech::Speaking)
+		{
+			event.mArgumentList.append(QLatin1String(speechCurrent));
+			event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+		}
+		
+		mpHost->raiseEvent(event);
 		return;
+	}
 	
 	speechCurrent = speechQueue.takeFirst();
 	
@@ -10955,6 +11002,15 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
 
 	speechQueue.insert(index, inputText);
 	
+	TEvent event;
+	event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(QLatin1String(inputText));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	event.mArgumentList.append(QLatin1String(index));
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+	mpHost->raiseEvent(event);
+	
 	TLuaInterpreter::ttsStateChanged(speechUnit->state());
 	
 	return 0;
@@ -10999,21 +11055,16 @@ int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
 	return 1;
 }
 
-/** ttsSpeechPaused( opt. pause )
+/** ttsPauseSpeech( opt. pause )
  *  Pauses speech if passed true, resumes if passed false.
  *  If no input, returns whether or not the queue is paused.
  */
-int TLuaInterpreter::ttsSpeechPaused(lua_State* L)
+int TLuaInterpreter::ttsPauseSpeech(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 	
-	if(lua_gettop(L) == 0) {
-		lua_pushboolean(L, (speechUnit->state() == QTextToSpeech::Paused));
-		return 1;
-	}
-	
 	if(!lua_isboolean(L, 1)) {
-		lua_pushfstring(L, "ttsSpeechPaused: bad argument #1 type (optional pause expected bool, instead got %s!)", luaL_typename(L, 1));
+		lua_pushfstring(L, "ttsPauseSpeech: bad argument #1 type (pause expected bool, instead got %s!)", luaL_typename(L, 1));
 		lua_error(L);
 		return 1;
 	}
@@ -11071,6 +11122,26 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 	}
 	
 	lua_pushstring(L, speechCurrent.toLatin1().constData());
+	return 1;
+}
+
+/** ttsGetState()
+ *  Returns the current state of the speechUnit.
+ *  Possible returns: speaking, ready, paused, error, unknown.
+ */
+int TLuaInterpreter::ttsGetState(lua_State* L)
+{
+	TLuaInterpreter::ttsBuild();
+	
+	switch(speechUnit.state())
+	{
+		case QTextToSpeech::Ready : lua_pushstring(L, "ready");
+		case QTextToSpeech::Paused : lua_pushstring(L, "paused");
+		case QTextToSpeech::Speaking : lua_pushstring(L, "speaking");
+		case QTextToSpeech::BackendError : lua_pushstring(L, "error");
+		default : lua_pushstring(L, "unknown");
+	}
+	
 	return 1;
 }
 
@@ -12374,7 +12445,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "ttsGetVoices", TLuaInterpreter::ttsGetVoices);
     lua_register(pGlobalLua, "ttsQueueSpeech", TLuaInterpreter::ttsQueueSpeech);
     lua_register(pGlobalLua, "ttsGetSpeechQueue", TLuaInterpreter::ttsGetSpeechQueue);
-    lua_register(pGlobalLua, "ttsSpeechPaused", TLuaInterpreter::ttsSpeechPaused);
+    lua_register(pGlobalLua, "ttsPauseSpeech", TLuaInterpreter::ttsPauseSpeech);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
 #endif // QT_TTS_LIB
