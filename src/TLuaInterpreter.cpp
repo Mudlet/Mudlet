@@ -84,10 +84,12 @@ int luaopen_yajl(lua_State*);
 
 using namespace std;
 
+#ifdef QT_TTS_LIB
 QTextToSpeech* speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt, bSpeechPaused;
 QString speechCurrent;
+#endif
 
 TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
         : mpHost( pH )
