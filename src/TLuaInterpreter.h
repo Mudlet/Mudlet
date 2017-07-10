@@ -422,9 +422,10 @@ public:
 	static int ttsGetVoices(lua_State* L);	
 	static int ttsQueueSpeech(lua_State* L);
 	static int ttsGetSpeechQueue(lua_State* L);
-	static int ttsSpeechPaused(lua_State* L);
+	static int ttsPauseSpeech(lua_State* L);
 	static int ttsClearQueue(lua_State* L);
 	static int ttsGetCurrentLine(lua_State* L);
+	static int ttsGetState(lua_State* L);
 	static void ttsBuild();
 	static void ttsStateChanged(QTextToSpeech::State state);
 #endif // QT_TTS_LIB
