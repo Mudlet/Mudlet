@@ -30,7 +30,9 @@
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
+#ifdef QT_TTS_LIB
 #include <QTextToSpeech>
+#endif
 #include "post_guard.h"
 
 extern "C" {

@@ -59,7 +59,9 @@
 #include <QString>
 #include <QStringBuilder>
 #include <QVector>
+#ifdef QT_TTS_LIB
 #include <QTextToSpeech>
+#endif
 #include "post_guard.h"
 
 #include <assert.h>
