@@ -404,6 +404,7 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
+#ifdef QT_TTS_LIB
 	static int ttsSpeak(lua_State* L);
 	static int ttsStopSpeech(lua_State* L);
 	static int ttsSetSpeechRate(lua_State* L);
@@ -413,6 +414,7 @@ public:
 	static int ttsSetVoiceByIndex(lua_State* L);
 	static int ttsGetCurrentVoice(lua_State* L);
 	static int ttsGetVoices(lua_State* L);	
+#endif // QT_TTS_LIB
     static int setServerEncoding(lua_State *);
     static int getServerEncoding(lua_State *);
     static int getServerEncodingsList(lua_State *);

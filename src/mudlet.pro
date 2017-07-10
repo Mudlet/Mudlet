@@ -70,6 +70,7 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad): QT += gamepad
 qtHaveModule(texttospeech): QT += texttospeech
+qtHaveModule(texttospeech): DEFINES += QT_TTS_LIB=1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment

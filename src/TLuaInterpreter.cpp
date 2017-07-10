@@ -10648,6 +10648,7 @@ int TLuaInterpreter::restartIrc(lua_State* L)
     return 1;
 }
 
+#ifdef QT_TTS_LIB
 
 /** ttsSpeak( text )
  *  Synthesizes text for reading.
@@ -11069,7 +11070,7 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 	return 1;
 }
 
-
+#endif // QT_TTS_LIB
 
 int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
@@ -12357,6 +12358,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
+#ifdef QT_TTS_LIB
     lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
     lua_register(pGlobalLua, "ttsStopSpeech", TLuaInterpreter::ttsStopSpeech);
     lua_register(pGlobalLua, "ttsSetSpeechRate", TLuaInterpreter::ttsSetSpeechRate);
@@ -12371,6 +12373,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "ttsSpeechPaused", TLuaInterpreter::ttsSpeechPaused);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
+#endif // QT_TTS_LIB
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
