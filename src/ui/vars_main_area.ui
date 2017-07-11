@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>80</height>
+    <height>76</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,8 +19,17 @@
   <property name="windowTitle">
    <string>variable_main_area</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" columnstretch="1,0">
-   <property name="margin">
+  <layout class="QGridLayout" name="gridLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <property name="spacing">
@@ -124,8 +133,8 @@
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout_key_type">
-      <item row="0" column="0">
+     <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,1">
+      <item row="0" column="0" alignment="Qt::AlignLeft">
        <widget class="QLabel" name="label_variable_key">
         <property name="text">
          <string>⏴ Key type:</string>
@@ -263,7 +272,7 @@ from GUI)</string>
       <item row="0" column="0">
        <widget class="QCheckBox" name="checkBox_variable_hidden">
         <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Does not show in area to the left unless &lt;b&gt;Display All Variables&lt;/b&gt; is on.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked this item (and it's children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
          <string>hidden variable</string>
@@ -348,7 +357,17 @@ from GUI)</string>
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout_value_type">
+     <layout class="QGridLayout" name="gridLayout_5" columnstretch="0,1">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_variable_value">
+        <property name="text">
+         <string>⏷ Value type:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="1">
        <widget class="QComboBox" name="comboBox_variable_value_type">
         <item>
@@ -381,16 +400,6 @@ from GUI)</string>
           <string>function</string>
          </property>
         </item>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_variable_value">
-        <property name="text">
-         <string>⏷ Value type:</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
        </widget>
       </item>
      </layout>

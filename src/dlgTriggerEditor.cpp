@@ -476,7 +476,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     button_toggleSearchAreaResults->setMinimumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
 
     connect(mpScriptsMainArea->toolButton_script_add_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->toolButton_script_remove_even_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
+    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
