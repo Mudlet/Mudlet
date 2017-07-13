@@ -10685,7 +10685,7 @@ void TLuaInterpreter::ttsBuild()
         return;
 	
 	TEvent event;
-	event.mArgumentList.append(QLatin1String("ttsSpeechBuilt"))
+	event.mArgumentList.append(QLatin1String("ttsSpeechBuilt"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 	mpHost->raiseEvent(event);
     
@@ -10938,7 +10938,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 	{
 		switch(state)
 		{
-			case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsPauseSpeechd"));
+			case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
 			case QTextToSpeech::Speaking : event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
 			case QTextToSpeech::BackendError : event.mArgumentList.append(QLatin1String("ttsSpeechError"));
 			case QTextToSpeech::Ready : event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
@@ -11098,6 +11098,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
 		
 		if(index < 0 || index > speechQueue.size()) {
 			lua_pushfstring(L, "ttsClearQueue: index (%d) out of bounds for queue size %d", index+1, speechQueue.size());
+			lua_error(L);
 			return 1;
 		}
 		
@@ -11133,7 +11134,7 @@ int TLuaInterpreter::ttsGetState(lua_State* L)
 {
 	TLuaInterpreter::ttsBuild();
 	
-	switch(speechUnit.state())
+	switch(speechUnit->state())
 	{
 		case QTextToSpeech::Ready : lua_pushstring(L, "ready");
 		case QTextToSpeech::Paused : lua_pushstring(L, "paused");
