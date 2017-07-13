@@ -86,9 +86,9 @@ end
 function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
         self.front:setStyleSheet(css)
         self.back:setStyleSheet(cssback or css)
-	if cssText ~= nil then
-	  self.text:setStyleSheet(cssText)
-	end
+  if cssText ~= nil then
+    self.text:setStyleSheet(cssText)
+  end
 end
 
 -- Save a reference to our parent constructor
@@ -122,15 +122,15 @@ function Geyser.Gauge:new (cons, container)
    back.name = me.name .. "_back"
    local br, bg, bb = Geyser.Color.parse(me.color)
    back.color = Geyser.Color.hexa(br,bg,bb,100)
-	 
+   
    -- Set up the constraints for the text label, which is also always the size of the gauge.
    -- We also set this label's color to 0,0,0,0 so it's black and full transparent. 
    local text = Geyser.copyTable(front)
    text.name = me.name .. "_text"
    text.fillBg = 0
    text.color = Geyser.Color.hexa(0,0,0,0)
-	 
-	 
+   
+   
 
    -- Create back first so that the labels are stacked correctly.
    me.back = Geyser.Label:new(back, me)
