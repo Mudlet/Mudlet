@@ -11127,7 +11127,10 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
                 }
                 if (last == MSDP_VAL) {
                     no_array_marker_bug = true;
-                    script.append(R"(",)");
+                    script.append(R"(")");
+                }
+                if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
+                    script.append(",");
                 }
                 if (src[i + 1] != MSDP_TABLE_OPEN && src[i + 1] != MSDP_ARRAY_OPEN) {
                     script.append(R"(")");
@@ -11166,7 +11169,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
                 script.append(']');
             }
         }
-        //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
+        qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
         setMSDPTable(token, script);
     }
 }
