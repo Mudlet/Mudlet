@@ -10683,11 +10683,6 @@ void TLuaInterpreter::ttsBuild()
 {
     if (bSpeechBuilt)
         return;
-	
-	TEvent event;
-	event.mArgumentList.append(QLatin1String("ttsSpeechBuilt"));
-	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	mpHost->raiseEvent(event);
     
     speechUnit = new QTextToSpeech();
     
@@ -10740,14 +10735,15 @@ int TLuaInterpreter::ttsSetSpeechRate(lua_State* L)
     
     speechUnit->setRate(fRate);
 	
+	Host& host = getHostFromLua(L);
 	TEvent event;
 	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 	event.mArgumentList.append(QLatin1String("rate"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(fRate);
+	event.mArgumentList.append(QString::number(fRate));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	mpHost->raiseEvent(event);
+	host.raiseEvent(event);
 	
 	return 0;
 }
@@ -10778,13 +10774,14 @@ int TLuaInterpreter::ttsSetSpeechPitch(lua_State* L)
     speechUnit->setPitch(fPitch);
 	
 	TEvent event;
+	Host& host = getHostFromLua(L);
 	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 	event.mArgumentList.append(QLatin1String("pitch"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(fPitch);
+	event.mArgumentList.append(QString::number(fPitch));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	mpHost->raiseEvent(event);
+	host.raiseEvent(event);
 	
 	return 0;
 }
@@ -10814,14 +10811,15 @@ int TLuaInterpreter::ttsSetSpeechVolume(lua_State* L)
     
     speechUnit->setVolume(fVol);
 	
+	Host& host = getHostFromLua(L);
 	TEvent event;
 	event.mArgumentList.append(QLatin1String("ttsConfigChanged"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 	event.mArgumentList.append(QLatin1String("volume"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(fVol);
+	event.mArgumentList.append(QString::number(fVol));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	mpHost->raiseEvent(event);
+	host.raiseEvent(event);
 	
 	return 0;
 }
@@ -10932,26 +10930,28 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
  */
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
+	/*
 	TEvent event;
+	Host* pHost = mpHost;
+	switch(state)
+	{
+		case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
+		case QTextToSpeech::Speaking : event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+		case QTextToSpeech::BackendError : event.mArgumentList.append(QLatin1String("ttsSpeechError"));
+		case QTextToSpeech::Ready : event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
+	}
+	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 	
+	if (state == QTextToSpeech::Speaking)
+	{
+		event.mArgumentList.append(QLatin1String(speechCurrent));
+		event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+	}
+	
+	pHost->raiseEvent(event);
+	*/
     if(state != QTextToSpeech::Ready || speechQueue.empty())
 	{
-		switch(state)
-		{
-			case QTextToSpeech::Paused : event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
-			case QTextToSpeech::Speaking : event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
-			case QTextToSpeech::BackendError : event.mArgumentList.append(QLatin1String("ttsSpeechError"));
-			case QTextToSpeech::Ready : event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
-		}
-		event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-		
-		if (state == QTextToSpeech::Speaking)
-		{
-			event.mArgumentList.append(QLatin1String(speechCurrent));
-			event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-		}
-		
-		mpHost->raiseEvent(event);
 		return;
 	}
 	
@@ -11003,13 +11003,14 @@ int TLuaInterpreter::ttsQueueSpeech(lua_State* L)
 	speechQueue.insert(index, inputText);
 	
 	TEvent event;
+	Host& host = getHostFromLua(L);
 	event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QLatin1String(inputText));
+	event.mArgumentList.append(inputText);
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-	event.mArgumentList.append(QLatin1String(index));
+	event.mArgumentList.append(QString::number(index));
 	event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-	mpHost->raiseEvent(event);
+	host.raiseEvent(event);
 	
 	TLuaInterpreter::ttsStateChanged(speechUnit->state());
 	
