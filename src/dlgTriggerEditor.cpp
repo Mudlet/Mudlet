@@ -236,10 +236,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                                                    "QToolButton:hover{border-image:url(:/icons/case_insensitive_text_green.png);}"));
     connect(button_toggleSearchCaseSensitive, SIGNAL(clicked(const bool)), this, SLOT(slot_toggleSearchCaseSensitivity(const bool)));
 
-    button_clearSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton{border-image:url(:/icons/edit-clear-locationbar-rtl.png);} "
-                                                                "QToolButton:hover{border-image:url(:/icons/edit-clear-locationbar-rtl-green.png);}"));
-    connect(button_clearSearchAreaResults, SIGNAL(clicked()), this, SLOT(slot_clearSearchResults()));
-
     // additional settings
     treeWidget_triggers->setColumnCount(1);
     treeWidget_triggers->setIsTriggerTree();
@@ -474,6 +470,17 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // was found to be an issue!
     button_toggleSearchAreaResults->setMaximumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
     button_toggleSearchAreaResults->setMinimumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
+
+    comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
+    auto lineEdit = comboBox_searchTerms->lineEdit();
+    for (int i(0); i < lineEdit->children().size(); ++i) {
+        QAction *clearAction(qobject_cast<QAction *>(lineEdit->children().at(i)));
+        if (clearAction) {
+            connect(clearAction, &QAction::triggered,
+                    this, &dlgTriggerEditor::slot_clearSearchResults,
+                    Qt::QueuedConnection);
+        }
+    }
 
     connect(mpScriptsMainArea->toolButton_script_add_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect(mpScriptsMainArea->toolButton_script_remove_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
