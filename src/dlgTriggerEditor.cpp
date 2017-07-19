@@ -224,10 +224,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pHB2->addWidget(mpErrorConsole);
     mpErrorConsole->show();
 
-    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey.png);} "
-                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey.png);} "
-                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down.png);} "
-                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right.png);}"));
+    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey-16x.png);} "
+                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
+                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
+                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
     connect(button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT(slot_showSearchAreaResults(const bool)));
 
     button_toggleSearchCaseSensitive->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/case_sensitive_text_grey-black.png);} "

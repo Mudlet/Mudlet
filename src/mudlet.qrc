@@ -162,5 +162,9 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>icons/arrow-down_grey-16x.png</file>
+        <file>icons/arrow-right_grey-16x.png</file>
+        <file>icons/arrow-right-16x.png</file>
+        <file>icons/arrow-down-16x.png</file>
     </qresource>
 </RCC>
