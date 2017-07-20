@@ -59,9 +59,6 @@ public slots:
 
     void slot_save_and_exit();
 
-private slots:
-//    void slot_clear_results();
-
 private:
     TTrigger* mpTrigger;
     int mMode;
