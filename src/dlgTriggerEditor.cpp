@@ -479,6 +479,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             connect(clearAction, &QAction::triggered,
                     this, &dlgTriggerEditor::slot_clearSearchResults,
                     Qt::QueuedConnection);
+            break;
         }
     }
 
