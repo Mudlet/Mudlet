@@ -11169,7 +11169,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
                 script.append(QLatin1Char(']'));
             }
         }
-        qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
+        //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
         setMSDPTable(token, script);
     }
 }
