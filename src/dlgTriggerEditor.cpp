@@ -473,6 +473,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
     auto lineEdit = comboBox_searchTerms->lineEdit();
+
+    // QLineEdit does not provide a signal to hook on for the clear action
+    // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
+    // credit to Albert for the workaround
     for (int i(0); i < lineEdit->children().size(); ++i) {
         QAction *clearAction(qobject_cast<QAction *>(lineEdit->children().at(i)));
         if (clearAction) {
