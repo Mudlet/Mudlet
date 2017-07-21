@@ -117,6 +117,7 @@ public slots:
 private slots:
     void slot_changeShowSpacesAndTabs(const bool);
     void slot_changeShowLineFeedsAndParagraphs(const bool);
+    void slot_resetThemeUpdateLabel();
 
 private:
     void setColors();

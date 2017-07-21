@@ -3304,7 +3304,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         }
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
         TConsole* pC = host.mpConsole;
         pC->mFormatCurrent.bgR = colorComponents.at(0);
         pC->mFormatCurrent.bgG = colorComponents.at(1);
