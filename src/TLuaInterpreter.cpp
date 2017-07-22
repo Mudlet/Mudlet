@@ -11065,51 +11065,51 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
     while (i < srclen) {
         switch (src[i]) {
             case MSDP_TABLE_OPEN:
-                script.append("{");
+                script.append(QLatin1Char('{'));
                 nest++;
                 last = MSDP_TABLE_OPEN;
                 break;
             case MSDP_TABLE_CLOSE:
                 if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 }
                 if (nest) {
                     nest--;
                 }
-                script.append("}");
+                script.append(QLatin1Char('}'));
                 last = MSDP_TABLE_CLOSE;
                 break;
             case MSDP_ARRAY_OPEN:
-                script.append("[");
+                script.append(QLatin1Char('['));
                 nest++;
                 last = MSDP_ARRAY_OPEN;
                 break;
             case MSDP_ARRAY_CLOSE:
                 if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 }
                 if (nest) {
                     nest--;
                 }
-                script.append("]");
+                script.append(QLatin1Char(']'));
                 last = MSDP_ARRAY_CLOSE;
                 break;
             case MSDP_VAR:
                 if (nest) {
                     if (last == MSDP_VAL || last == MSDP_VAR) {
-                        script.append(R"(")");
+                        script.append(QLatin1Char('"'));
                     }
                     if (last == MSDP_VAL || last == MSDP_VAR || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
-                        script.append(",");
+                        script.append(QLatin1Char(','));
                     }
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 } else {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
 
                     if (varList.size()) {
-                        script = script.replace(0, varList.front().size() + 3, "");
+                        script = script.replace(0, varList.front().size() + 3, QString());
                         QString token = varList.front();
-                        token = token.replace(R"(")", "");
+                        token = token.replace(QLatin1Char('"'), QString());
                         //qDebug()<<"[SET]<Token><"<<token<<"><JSON><"<<script<<">";
                         setMSDPTable(token, script);
                         varList.clear();
@@ -11123,23 +11123,26 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
 
             case MSDP_VAL:
                 if (last == MSDP_VAR) {
-                    script.append(R"(":)");
+                    script.append(QLatin1String(R"(":)"));
                 }
                 if (last == MSDP_VAL) {
                     no_array_marker_bug = true;
-                    script.append(R"(",)");
+                    script.append(QLatin1Char('"'));
+                }
+                if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
+                    script.append(QLatin1Char(','));
                 }
                 if (src[i + 1] != MSDP_TABLE_OPEN && src[i + 1] != MSDP_ARRAY_OPEN) {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 }
                 varList.append(lastVar);
                 last = MSDP_VAL;
                 break;
             case '\\':
-                script.append(R"(\\)");
+                script.append(QLatin1String(R"(\\)"));
                 break;
             case '"':
-                script.append(R"(\")");
+                script.append(QLatin1String(R"(\")"));
                 break;
             default:
                 script.append(src[i]);
@@ -11149,21 +11152,21 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
         i++;
     }
     if (last != MSDP_ARRAY_CLOSE && last != MSDP_TABLE_CLOSE) {
-        script.append(R"(")");
-        if (!script.startsWith('"')) {
-            script.prepend('"');
+        script.append(QLatin1Char('"'));
+        if (!script.startsWith(QLatin1Char('"'))) {
+            script.prepend(QLatin1Char('"'));
         }
     }
     if (varList.size()) {
         //qDebug()<<"<script>"<<script;
         // N/U:         int startVal = script.indexOf(":")+1;
         QString token = varList.front();
-        token = token.replace(R"(")", "");
+        token = token.replace(QLatin1Char('"'), QString());
         script = script.replace(0, token.size() + 3, "");
         if (no_array_marker_bug) {
-            if (!script.startsWith('[')) {
-                script.prepend('[');
-                script.append(']');
+            if (!script.startsWith(QLatin1Char('['))) {
+                script.prepend(QLatin1Char('['));
+                script.append(QLatin1Char(']'));
             }
         }
         //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
