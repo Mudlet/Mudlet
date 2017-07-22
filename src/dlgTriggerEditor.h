@@ -44,6 +44,7 @@
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QFlag>
 #include <QFile>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -141,8 +142,20 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
                  SearchResultIsValue = 0x8
     };
 
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1 /*,
+        SearchOptionRegExp = 0x2,
+        SearchOptionWholeWord = 0x4 */
+    };
+
+
 public:
     dlgTriggerEditor(Host*);
+
+    Q_DECLARE_FLAGS(SearchOptions,SearchOption)
+
     void fillout_form();
     void closeEvent(QCloseEvent* event) override;
     void showError(const QString&);
@@ -340,6 +353,8 @@ private:
     void recursiveSearchKeys(TKey*, const QString& s);
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
 
+    void createSearchOptionIcon();
+
     QToolBar* toolBar;
     QToolBar* toolBar2;
     bool showHiddenVars;
@@ -394,11 +409,18 @@ private:
 
     QRegularExpression* simplifyEdbeeStatusBarRegex;
 
-    bool mIsSearchCaseSensitive;
+    SearchOptions mSearchOptions;
 
-    QIcon mcaseSensitiveIconOn;
-    QIcon mcaseSensitiveIconOff;
-    QAction* mcaseSensitiveAction = nullptr;
+    // This has a menu which the following QActions are inserted into:
+    QAction* mpAction_searchOptions;
+    QIcon mIcon_searchOptions;
+
+    QAction* mpAction_searchCaseSensitive;
+    // TODO: Add other searchOptions
+    // QAction* mpAction_searchWholeWords;
+    // QAction* mpAction_searchRegExp;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
