@@ -1194,6 +1194,31 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
+bool mudlet::setUserWindowFontSize(Host* pHost, const QString& name, int size)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
+
+    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+        qDebug() << "Setting UserWindow FontSize to" << size << " for: " << name;
+        TConsole* pC = dockWindowConsoleMap[name];
+        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+        pC->console->updateScreenView();
+        pC->console->forceUpdate();
+        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+        pC->console2->updateScreenView();
+        pC->console2->forceUpdate();
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
 {
     if (!pHost) {
@@ -1217,8 +1242,12 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
+        pC->console->setIsMiniConsole();
+        pC->console2->setIsMiniConsole();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
+
+        setUserWindowFontSize(pHost, name, 10);
 
         if (loadLayout) {
             loadWindowLayout();

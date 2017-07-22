@@ -2281,7 +2281,30 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     }
 }
 
-// openUserWindow( session, string window_name )
+int TLuaInterpreter::setUserWindowFontSize(lua_State* L)
+{
+    QString windowName = "";
+    int size = 10; // is there a better default value for this?
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setUserWindowFontSize: bad argument #1 type (name as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
+        return lua_error(L);
+    } else {
+        windowName = QString( lua_tostring(L, 1) );
+    }
+
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setUserWindowFontSize: bad argument #2 type (size as number expected, got %s!)", lua_typename(L, lua_type(L, 2)));
+        return lua_error(L);
+    } else {
+        size = lua_tointeger(L, 2);
+    }
+
+    Host* pHost = &getHostFromLua(L);
+
+    lua_pushboolean(L, mudlet::self()->setUserWindowFontSize(pHost, windowName, size) );
+    return 1;
+}
+
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -11656,6 +11679,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
     lua_register(pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout);
     lua_register(pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout);
+    lua_register(pGlobalLua, "setUserWindowFontSize", TLuaInterpreter::setUserWindowFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
     lua_register(pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow);
     lua_register(pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer);

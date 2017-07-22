@@ -98,6 +98,7 @@ public:
     void setDockLayoutUpdated(Host*, const QString&);
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
+    bool setUserWindowFontSize(Host*, const QString&, int);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
