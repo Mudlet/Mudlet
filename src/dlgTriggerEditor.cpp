@@ -230,12 +230,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                                                  "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
     connect(button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT(slot_showSearchAreaResults(const bool)));
 
-    button_toggleSearchCaseSensitive->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/case_sensitive_text_grey-black.png);} "
-                                                                   "QToolButton{border-image:url(:/icons/case_insensitive_text_grey.png);} "
-                                                                   "QToolButton::on:hover{border-image:url(:/icons/case_sensitive_text_green-blue.png);} "
-                                                                   "QToolButton:hover{border-image:url(:/icons/case_insensitive_text_green.png);}"));
-    connect(button_toggleSearchCaseSensitive, SIGNAL(clicked(const bool)), this, SLOT(slot_toggleSearchCaseSensitivity(const bool)));
-
     // additional settings
     treeWidget_triggers->setColumnCount(1);
     treeWidget_triggers->setIsTriggerTree();
@@ -486,6 +480,17 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
             break;
         }
     }
+
+    // ideally this is one icon with an on and off state, but I couldn't get that to work
+    mcaseSensitiveIconOn = QIcon(QStringLiteral(":/icons/casesensitively-insensitive.png"));
+    mcaseSensitiveIconOff = QIcon(QStringLiteral(":/icons/casesensitively-sensitive.png"));
+
+    mcaseSensitiveAction = new QAction(mcaseSensitiveIconOn, tr("Whole Words Only"), this);
+    mcaseSensitiveAction->setCheckable(true);
+    mcaseSensitiveAction->setChecked(false);
+    connect(mcaseSensitiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchCaseSensitivity);
+
+    lineEdit->addAction(mcaseSensitiveAction, QLineEdit::LeadingPosition);
 
     connect(mpScriptsMainArea->toolButton_script_add_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
     connect(mpScriptsMainArea->toolButton_script_remove_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
@@ -7405,6 +7410,8 @@ void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
     if (mIsSearchCaseSensitive != state) {
         mIsSearchCaseSensitive = state;
     }
+
+    mcaseSensitiveAction->setIcon(state ? mcaseSensitiveIconOff : mcaseSensitiveIconOn);
 }
 
 void dlgTriggerEditor::slot_clearSearchResults()

@@ -395,6 +395,10 @@ private:
     QRegularExpression* simplifyEdbeeStatusBarRegex;
 
     bool mIsSearchCaseSensitive;
+
+    QIcon mcaseSensitiveIconOn;
+    QIcon mcaseSensitiveIconOff;
+    QAction* mcaseSensitiveAction = nullptr;
 };
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H
