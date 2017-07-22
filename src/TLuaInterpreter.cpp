@@ -10838,7 +10838,7 @@ int TLuaInterpreter::ttsGetVoices(lua_State* L)
     lua_newtable(L);
     foreach (const QVoice &voice, speechVoices) {
         lua_pushnumber(L, ++i);
-        lua_pushstring(L, voice.name().toLatin1().constData());
+        lua_pushstring(L, voice.name().toUtf8().constData());
         lua_settable(L, -3);
     }
     
@@ -10854,7 +10854,7 @@ int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
     TLuaInterpreter::ttsBuild();
     
     QString currentVoice = speechUnit->voice().name();
-    lua_pushstring(L, currentVoice.toLatin1().constData());
+    lua_pushstring(L, currentVoice.toUtf8().constData());
     return 1;
 }
 
@@ -11049,7 +11049,7 @@ int TLuaInterpreter::ttsGetSpeechQueue(lua_State* L)
 	
 	for(int i=0;i<speechQueue.size();i++) {
         lua_pushnumber(L, i + 1);
-        lua_pushstring(L, speechQueue.at(i).toLatin1().constData());
+        lua_pushstring(L, speechQueue.at(i).toUtf8().constData());
         lua_settable(L, -3);
 	}
 	
@@ -11123,7 +11123,7 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 		return 1;
 	}
 	
-	lua_pushstring(L, speechCurrent.toLatin1().constData());
+	lua_pushstring(L, speechCurrent.toUtf8().constData());
 	return 1;
 }
 
