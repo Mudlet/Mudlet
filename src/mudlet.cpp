@@ -1204,7 +1204,6 @@ bool mudlet::setUserWindowFontSize(Host* pHost, const QString& name, int size)
     QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
 
     if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
-        qDebug() << "Setting UserWindow FontSize to" << size << " for: " << name;
         TConsole* pC = dockWindowConsoleMap[name];
         pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
         pC->console->updateScreenView();
