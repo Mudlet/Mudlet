@@ -491,14 +491,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
 
     mpAction_searchOptions = new QAction(tr("Search Options"), this);
-    mpAction_searchOptions->setObjectName(QLatin1String("mpAction_searchOptions"));
+    mpAction_searchOptions->setObjectName(QStringLiteral("mpAction_searchOptions"));
 
     QMenu* pMenu_searchOptions = new QMenu(tr("Search Options"), this);
-    pMenu_searchOptions->setObjectName(QLatin1String("pMenu_searchOptions"));
+    pMenu_searchOptions->setObjectName(QStringLiteral("pMenu_searchOptions"));
     pMenu_searchOptions->setToolTipsVisible(true);
 
     mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
-    mpAction_searchCaseSensitive->setObjectName(QLatin1String("mpAction_searchCaseSensitive"));
+    mpAction_searchCaseSensitive->setObjectName(QStringLiteral("mpAction_searchCaseSensitive"));
     mpAction_searchCaseSensitive->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
         .arg(tr("If checked then what is searched for must match the case precisely otherwise case is ignored.")));
     mpAction_searchCaseSensitive->setCheckable(true);
