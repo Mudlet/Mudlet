@@ -60,6 +60,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
 #include "post_guard.h"
