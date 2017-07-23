@@ -2000,7 +2000,7 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if ((startPos = textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
