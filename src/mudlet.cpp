@@ -60,6 +60,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
 #include "post_guard.h"
@@ -3016,3 +3017,4 @@ void mudlet::slot_module_manager_destroyed()
     // another profile can use it...
     mpModuleTableHost = nullptr;
 }
+
