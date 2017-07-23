@@ -26,3 +26,7 @@ We believe in making Mudlet available to people on all major platforms, and we w
 ## And many other things…
 
 Such as package creation / sharing, 3D mapper are in our plans. You’re welcome to suggest ideas, too!
+
+## Compiling
+
+Please see the [compiling page](https://wiki.mudlet.org/w/Compiling_Mudlet) on how to compile Mudlet on all platforms: Windows, macOS, and Linux OS's.
