@@ -2283,8 +2283,10 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 
 int TLuaInterpreter::setUserWindowFontSize(lua_State* L)
 {
+    Host* pHost = &getHostFromLua(L);
+
     QString windowName = "";
-    int size = 10; // is there a better default value for this?
+    int size = pHost->mDisplayFont.pointSize();
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setUserWindowFontSize: bad argument #1 type (name as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
@@ -2298,8 +2300,6 @@ int TLuaInterpreter::setUserWindowFontSize(lua_State* L)
     } else {
         size = lua_tointeger(L, 2);
     }
-
-    Host* pHost = &getHostFromLua(L);
 
     lua_pushboolean(L, mudlet::self()->setUserWindowFontSize(pHost, windowName, size) );
     return 1;
