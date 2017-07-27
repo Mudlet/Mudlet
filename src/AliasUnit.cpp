@@ -270,8 +270,8 @@ void AliasUnit::reenableAllTriggers()
 TAlias* AliasUnit::findAlias(const QString& name)
 {
     //TAlias * pT = 0;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         return pT;
     }
@@ -281,8 +281,8 @@ TAlias* AliasUnit::findAlias(const QString& name)
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         pT->setIsActive(true);
         ++it;
@@ -294,8 +294,8 @@ bool AliasUnit::enableAlias(const QString& name)
 bool AliasUnit::disableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         pT->setIsActive(false);
         ++it;
