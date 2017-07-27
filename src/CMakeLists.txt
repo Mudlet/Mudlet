@@ -118,7 +118,7 @@ SET(mudlet_UIS
     ui/vars_main_area.ui
 )
 
-SET(mudlet_MOC_HDRS 
+SET(mudlet_MOC_HDRS
     ctelnet.h
     dlgAboutDialog.h
     dlgActionMainArea.h
@@ -327,14 +327,14 @@ ELSE()
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
 ENDIF()
 
-FIND_PACKAGE(Qt5Multimedia REQUIRED)
-FIND_PACKAGE(Qt5Network REQUIRED)
-FIND_PACKAGE(Qt5OpenGL REQUIRED)
-FIND_PACKAGE(Qt5UiTools REQUIRED)
-FIND_PACKAGE(Qt5Widgets REQUIRED)
-FIND_PACKAGE(Qt5 COMPONENTS Concurrent)
-FIND_PACKAGE(Qt5Concurrent REQUIRED)
-FIND_PACKAGE(QtTextToSpeech)
+FIND_PACKAGE(Qt5 REQUIRED COMPONENTS
+  Multimedia
+  Network
+  OpenGL
+  UiTools
+  Widgets
+  Concurrent)
+FIND_PACKAGE(Qt5 COMPONENTS TextToSpeech QUIET)
 
 
 IF(WIN32)
@@ -397,10 +397,11 @@ INCLUDE_DIRECTORIES(
     ${YAJL_INCLUDE_DIR}
 )
 
-if (QtTextToSpeech_FOUND)
+if (Qt5TextToSpeech_FOUND)
   ADD_DEFINITIONS(-DQT_TTS_LIB=1)
-  INCLUDE_DIRECTORIES(${QtTextToSpeech_INCLUDE_DIRS})
-endif (QtTextToSpeech_FOUND)
+  INCLUDE_DIRECTORIES(${Qt5TextToSpeech_INCLUDE_DIRS})
+  MESSAGE(STATUS "Using TextToSpeech Module")
+endif (Qt5TextToSpeech_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
 IF(PC_ZIP_FOUND)
@@ -444,9 +445,9 @@ TARGET_LINK_LIBRARIES(mudlet
 )
 
 
-if (QtTextToSpeech_FOUND)
-  TARGET_LINK_LIBRARIES(mudlet ${QtTextToSpeech_LIBRARIES})
-endif (QtTextToSpeech_FOUND)
+if (Qt5TextToSpeech_FOUND)
+  TARGET_LINK_LIBRARIES(mudlet ${Qt5TextToSpeech_LIBRARIES})
+endif (Qt5TextToSpeech_FOUND)
 
 IF(PC_ZIP_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${PC_ZIP_LIBRARIES})
