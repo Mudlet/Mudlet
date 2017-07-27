@@ -291,8 +291,8 @@ void TriggerUnit::reenableAllTriggers()
 
 TTrigger* TriggerUnit::findTrigger(const QString& name)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         return pT;
     }
@@ -302,8 +302,8 @@ TTrigger* TriggerUnit::findTrigger(const QString& name)
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->setIsActive(true);
         ++it;
@@ -315,8 +315,8 @@ bool TriggerUnit::enableTrigger(const QString& name)
 bool TriggerUnit::disableTrigger(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->setIsActive(false);
         ++it;
@@ -327,8 +327,8 @@ bool TriggerUnit::disableTrigger(const QString& name)
 
 void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         pT->mKeepFiring = lines;
         ++it;
@@ -337,8 +337,8 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
 
 bool TriggerUnit::killTrigger(const QString& name)
 {
-    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TTrigger*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TTrigger* pT = it.value();
         if (pT->isTemporary()) //this function is only defined for tempTriggers, permanent objects cannot be removed
         {

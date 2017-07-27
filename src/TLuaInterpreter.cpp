@@ -5973,32 +5973,32 @@ int TLuaInterpreter::isActive(lua_State* L)
     type = type.toLower();
     QString name = _name.c_str();
     if (type == "timer") {
-        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.find(name);
-        while (it1 != host.getTimerUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
     } else if (type == "trigger") {
-        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.find(name);
-        while (it1 != host.getTriggerUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
     } else if (type == "alias") {
-        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.find(name);
-        while (it1 != host.getAliasUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
     } else if (type == "keybind") {
-        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.find(name);
-        while (it1 != host.getKeyUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
