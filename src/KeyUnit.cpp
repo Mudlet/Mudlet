@@ -80,8 +80,8 @@ void KeyUnit::compileAll()
 
 TKey* KeyUnit::findKey(QString& name)
 {
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.find(name);
-    while (it != mLookupTable.end() && it.key() == name) {
+    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         return pT;
     }
