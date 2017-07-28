@@ -70,7 +70,7 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 QT += network opengl uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
-    message("Using gamepad module")
+    message("Using Gamepad module")
 }
 qtHaveModule(texttospeech) {
     QT += texttospeech
