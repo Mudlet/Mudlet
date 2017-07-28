@@ -396,11 +396,11 @@ INCLUDE_DIRECTORIES(
     ${YAJL_INCLUDE_DIR}
 )
 
-if (Qt5Gamepad_FOUND)
-  ADD_DEFINITIONS(${Qt5Gamepad_DEFINITIONS})
-  INCLUDE_DIRECTORIES(${Qt5Gamepad_INCLUDE_DIRS})
-  MESSAGE(STATUS "Using gamepad module")
-endif (Qt5Gamepad_FOUND)
+IF(Qt5Gamepad_FOUND)
+    ADD_DEFINITIONS(${Qt5Gamepad_DEFINITIONS})
+    INCLUDE_DIRECTORIES(${Qt5Gamepad_INCLUDE_DIRS})
+    MESSAGE(STATUS "Using gamepad module")
+ENDIF(Qt5Gamepad_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
 IF(PC_ZIP_FOUND)
@@ -442,6 +442,10 @@ TARGET_LINK_LIBRARIES(mudlet
     lua_yajl
     edbee-lib
 )
+
+IF(Qt5Gamepad_FOUND)
+    TARGET_LINK_LIBRARIES(mudlet ${Qt5Gamepad_LIBRARIES})
+ENDIF(Qt5Gamepad_FOUND)
 
 IF(PC_ZIP_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${PC_ZIP_LIBRARIES})
