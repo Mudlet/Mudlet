@@ -30,9 +30,9 @@
 #include <QPointer>
 #include <QThread>
 #include <QTimer>
-#ifdef QT_TTS_LIB
+#ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
-#endif
+#endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
 extern "C" {
@@ -410,7 +410,7 @@ public:
     static int getServerEncoding(lua_State *);
     static int getServerEncodingsList(lua_State *);
     static int alert(lua_State* L);
-#ifdef QT_TTS_LIB
+#ifdef QT_TEXTTOSPEECH_LIB
 	static int ttsSpeak(lua_State* L);
 	static int ttsStopSpeech(lua_State* L);
 	static int ttsSetSpeechRate(lua_State* L);
@@ -428,7 +428,7 @@ public:
 	static int ttsGetState(lua_State* L);
 	static void ttsBuild();
 	static void ttsStateChanged(QTextToSpeech::State state);
-#endif // QT_TTS_LIB
+#endif // QT_TEXTTOSPEECH_LIB
 // PLACEMARKER: End of Lua functions declarations
 
 public slots:

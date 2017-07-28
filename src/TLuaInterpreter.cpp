@@ -59,9 +59,9 @@
 #include <QString>
 #include <QStringBuilder>
 #include <QVector>
-#ifdef QT_TTS_LIB
+#ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
-#endif
+#endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
 #include <assert.h>
@@ -84,12 +84,12 @@ int luaopen_yajl(lua_State*);
 
 using namespace std;
 
-#ifdef QT_TTS_LIB
+#ifdef QT_TEXTTOSPEECH_LIB
 QTextToSpeech* speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt;
 QString speechCurrent;
-#endif
+#endif // QT_TEXTTOSPEECH_LIB
 
 TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
         : mpHost( pH )
@@ -10652,7 +10652,7 @@ int TLuaInterpreter::restartIrc(lua_State* L)
     return 1;
 }
 
-#ifdef QT_TTS_LIB
+#ifdef QT_TEXTTOSPEECH_LIB
 
 /** ttsSpeak( text )
  *  Synthesizes text for reading.
@@ -11147,7 +11147,7 @@ int TLuaInterpreter::ttsGetState(lua_State* L)
 	return 1;
 }
 
-#endif // QT_TTS_LIB
+#endif // QT_TEXTTOSPEECH_LIB
 
 int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
@@ -12435,7 +12435,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
-#ifdef QT_TTS_LIB
+#ifdef QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
     lua_register(pGlobalLua, "ttsStopSpeech", TLuaInterpreter::ttsStopSpeech);
     lua_register(pGlobalLua, "ttsSetSpeechRate", TLuaInterpreter::ttsSetSpeechRate);
@@ -12450,7 +12450,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "ttsPauseSpeech", TLuaInterpreter::ttsPauseSpeech);
     lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
     lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
-#endif // QT_TTS_LIB
+#endif // QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
