@@ -60,6 +60,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
 #include "post_guard.h"
@@ -448,15 +449,16 @@ bool mudlet::moduleTableVisible()
 
 void mudlet::layoutModules()
 {
-    Host* pH = getActiveHost();
-    QMapIterator<QString, QStringList> it(pH->mInstalledModules);
+    if (!mpModuleTableHost) {
+        return;
+    }
+
+    QMapIterator<QString, QStringList> it(mpModuleTableHost->mInstalledModules);
     QStringList sl;
-    // The following seems like a non-intuitive operator
-    // overload but that is how they do it...
-    sl << "Module Name"
-       << "Priority"
-       << "Save & Sync?"
-       << "Module Location";
+    sl << tr("Module Name")
+       << tr("Priority")
+       << tr("Sync")
+       << tr("Module Location");
     moduleTable->setHorizontalHeaderLabels(sl);
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
@@ -469,7 +471,7 @@ void mudlet::layoutModules()
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
         it.next();
-        int priority = pH->mModulePriorities[it.key()];
+        int priority = mpModuleTableHost->mModulePriorities[it.key()];
         if (mOrder.contains(priority)) {
             mOrder[priority].append(it.key());
         } else {
@@ -489,14 +491,18 @@ void mudlet::layoutModules()
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
             masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-            QStringList moduleInfo = pH->mInstalledModules[pModules[i]];
-            masterModule->setText("sync?");
-            if (moduleInfo[1].toInt()) {
-                masterModule->setCheckState(Qt::Checked); //Qt::Checked);
+            QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
+
+            if (moduleInfo.at(1).toInt()) {
+                masterModule->setCheckState(Qt::Checked);
             } else {
-                masterModule->setCheckState(Qt::Unchecked); //Qt::Checked);
+                masterModule->setCheckState(Qt::Unchecked);
             }
-            masterModule->setToolTip(QString("Checking this box will cause the module to be saved & resync'd across all open sessions."));
+            masterModule->setText(QString());
+            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it is saved at the end of the session.")));
+            // Although there is now no text used here this may help to make the
+            // checkbox more central in the column
+            masterModule->setTextAlignment(Qt::AlignCenter);
 
             QString moduleName = pModules[i];
             itemEntry->setText(moduleName);
@@ -504,7 +510,7 @@ void mudlet::layoutModules()
             itemLocation->setText(moduleInfo[0]);
             itemLocation->setToolTip(moduleInfo[0]);                          // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
-            itemPriority->setData(Qt::EditRole, pH->mModulePriorities[moduleName]);
+            itemPriority->setData(Qt::EditRole, mpModuleTableHost->mModulePriorities[moduleName]);
             moduleTable->setItem(row, 0, itemEntry);
             moduleTable->setItem(row, 1, itemPriority);
             moduleTable->setItem(row, 2, masterModule);
@@ -522,6 +528,9 @@ void mudlet::slot_module_manager()
     }
 
     if (!mpModuleDlg) {
+        // No dialog open, note the profile concerned
+        mpModuleTableHost = pH;
+
         QUiLoader loader;
         QFile file(":/ui/module_manager.ui");
         file.open(QFile::ReadOnly);
@@ -547,7 +556,8 @@ void mudlet::slot_module_manager()
         connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
         connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
         connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-        mpModuleDlg->setWindowTitle(tr("Module Manager"));
+        connect(mpModuleDlg, SIGNAL(destroyed()), this, SLOT(slot_module_manager_destroyed()));
+        mpModuleDlg->setWindowTitle(tr("Module Manager - %1").arg(mpModuleTableHost->getName()));
         mpModuleDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -569,8 +579,7 @@ bool mudlet::openWebPage(const QString& path)
 
 void mudlet::slot_help_module()
 {
-    Host* pH = getActiveHost();
-    if (!pH) {
+    if (!mpModuleTableHost) {
         return;
     }
     int cRow = moduleTable->currentRow();
@@ -578,16 +587,16 @@ void mudlet::slot_help_module()
     if (!pI) {
         return;
     }
-    if (pH->moduleHelp[pI->text()].contains("helpURL") && !pH->moduleHelp[pI->text()]["helpURL"].isEmpty()) {
-        if (!openWebPage(pH->moduleHelp[pI->text()]["helpURL"])) {
+    if (mpModuleTableHost->moduleHelp.value(pI->text()).contains(QLatin1String("helpURL")) && !mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")).isEmpty()) {
+        if (!openWebPage(mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
             //failed first open, try for a module related path
             QTableWidgetItem* item = moduleTable->item(cRow, 3);
             QString itemPath = item->text();
             QStringList path = itemPath.split(QDir::separator());
             path.pop_back();
             path.append(QDir::separator());
-            path.append(pH->moduleHelp[pI->text()]["helpURL"]);
-            QString path2 = path.join("");
+            path.append(mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
+            QString path2 = path.join(QString());
             if (!openWebPage(path2)) {
                 moduleHelpButton->setDisabled(true);
             }
@@ -598,14 +607,18 @@ void mudlet::slot_help_module()
 
 void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
 {
+    if (!mpModuleTableHost) {
+        return;
+    }
+
     int i = pItem->row();
-    Host* pH = getActiveHost();
+
     QTableWidgetItem* entry = moduleTable->item(i, 0);
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
     qDebug() << itemPath->text();
-    if (!entry || !checkStatus || !itemPriority || !pH->mInstalledModules.contains(entry->text())) {
+    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         moduleHelpButton->setDisabled(true);
         if (checkStatus) {
             checkStatus->setCheckState(Qt::Unchecked);
@@ -613,8 +626,9 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
         }
         return;
     }
-    if (pH->moduleHelp.contains(entry->text())) {
-        moduleHelpButton->setDisabled((!pH->moduleHelp[entry->text()].contains("helpURL") || pH->moduleHelp[entry->text()]["helpURL"].isEmpty()));
+
+    if (mpModuleTableHost->moduleHelp.contains(entry->text())) {
+        moduleHelpButton->setDisabled((!mpModuleTableHost->moduleHelp.value(entry->text()).contains(QLatin1String("helpURL")) || mpModuleTableHost->moduleHelp.value(entry->text()).value("helpURL").isEmpty()));
     } else {
         moduleHelpButton->setDisabled(true);
     }
@@ -622,30 +636,35 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
 
 void mudlet::slot_module_changed(QTableWidgetItem* pItem)
 {
+    if (!mpModuleTableHost) {
+        return;
+    }
+
     int i = pItem->row();
-    Host* pH = getActiveHost();
+
     QStringList moduleStringList;
     QTableWidgetItem* entry = moduleTable->item(i, 0);
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
-    if (!entry || !checkStatus || !itemPriority || !pH->mInstalledModules.contains(entry->text())) {
+    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         return;
     }
-    moduleStringList = pH->mInstalledModules[entry->text()];
-    if (checkStatus->checkState() == Qt::Unchecked) {
-        moduleStringList[1] = "0";
-        checkStatus->setText("don't sync");
-    }
+    moduleStringList = mpModuleTableHost->mInstalledModules.value(entry->text());
     if (checkStatus->checkState() == Qt::Checked) {
-        moduleStringList[1] = "1";
-        checkStatus->setText("sync");
+        moduleStringList[1] = QLatin1String("1");
+    } else  {
+        moduleStringList[1] = QLatin1String("0");
     }
-    pH->mInstalledModules[entry->text()] = moduleStringList;
-    pH->mModulePriorities[entry->text()] = itemPriority->text().toInt();
+    mpModuleTableHost->mInstalledModules[entry->text()] = moduleStringList;
+    mpModuleTableHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
 }
 
 void mudlet::slot_install_module()
 {
+    if (!mpModuleTableHost) {
+        return;
+    }
+
     QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
@@ -657,27 +676,24 @@ void mudlet::slot_install_module()
         return;
     }
 
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    pH->installPackage(fileName, 1);
+    mpModuleTableHost->installPackage(fileName, 1);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
+
     layoutModules();
 }
 
 void mudlet::slot_uninstall_module()
 {
-    Host* pH = getActiveHost();
-    if (!pH) {
+    if (!mpModuleTableHost) {
         return;
     }
+
     int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
-        pH->uninstallPackage(pI->text(), 1);
+        mpModuleTableHost->uninstallPackage(pI->text(), 1);
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
@@ -2960,10 +2976,11 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadButtonPress");
+    event.mArgumentList.append(QLatin1String("sysGamepadButtonPress"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2977,10 +2994,11 @@ void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButto
 void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadButtonRelease");
+    event.mArgumentList.append(QLatin1String("sysGamepadButtonRelease"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2992,10 +3010,11 @@ void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadBut
 void mudlet::slot_gamepadConnected(int deviceId)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadConnected");
+    event.mArgumentList.append(QLatin1String("sysGamepadConnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -3005,10 +3024,11 @@ void mudlet::slot_gamepadConnected(int deviceId)
 void mudlet::slot_gamepadDisconnected(int deviceId)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadDisconnected");
+    event.mArgumentList.append(QLatin1String("sysGamepadDisconnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -3018,10 +3038,11 @@ void mudlet::slot_gamepadDisconnected(int deviceId)
 void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadAxisMove");
+    event.mArgumentList.append(QLatin1String("sysGamepadAxisMove"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -3031,4 +3052,13 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     pH->raiseEvent(event);
 }
-#endif
+
+#endif // #ifdef QT_GAMEPAD_LIB
+
+void mudlet::slot_module_manager_destroyed()
+{
+    // Clear the record of the profile that had the module manager open so
+    // another profile can use it...
+    mpModuleTableHost = nullptr;
+}
+

@@ -279,6 +279,7 @@ private slots:
     void slot_gamepadDisconnected(int deviceId);
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
+    void slot_module_manager_destroyed();
 
 private:
     void initEdbee();
@@ -311,14 +312,15 @@ private:
 
     void check_for_mappingscript();
 
-    QListWidget* packageList;
-    QPushButton* uninstallButton;
-    QPushButton* installButton;
+    QPointer<QListWidget> packageList;
+    QPointer<QPushButton> uninstallButton;
+    QPointer<QPushButton> installButton;
 
-    QTableWidget* moduleTable;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
-    QPushButton* moduleHelpButton;
+    QPointer<Host> mpModuleTableHost;
+    QPointer<QTableWidget> moduleTable;
+    QPointer<QPushButton> moduleUninstallButton;
+    QPointer<QPushButton> moduleInstallButton;
+    QPointer<QPushButton> moduleHelpButton;
 
     HostManager mHostManager;
 

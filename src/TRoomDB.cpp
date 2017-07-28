@@ -208,13 +208,13 @@ bool TRoomDB::__removeRoom(int id)
 
         // FIXME: make a proper exit controller so we don't need to do all these if statements
         // Remove the links from the rooms entering this room
-        QMultiHash<int, int>::const_iterator i = _entranceMap.find(id);
+        QMultiHash<int, int>::const_iterator i = _entranceMap.constFind(id);
         // The removeAllSpecialExitsToRoom below modifies the entranceMap - and
         // it is unsafe to modify (use copy operations on) something that an STL
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
         // copy and iterating through that instead whilst modifying the original
-        while (i != entranceMap.end() && i.key() == id) {
+        while (i != entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
                 continue; // Bypass rooms we know are also to be deleted

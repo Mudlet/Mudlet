@@ -334,6 +334,7 @@ FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5 COMPONENTS Concurrent)
 FIND_PACKAGE(Qt5Concurrent REQUIRED)
+FIND_PACKAGE(Qt5 COMPONENTS Gamepad QUIET)
 
 IF(WIN32)
   SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -395,6 +396,12 @@ INCLUDE_DIRECTORIES(
     ${YAJL_INCLUDE_DIR}
 )
 
+IF(Qt5Gamepad_FOUND)
+    ADD_DEFINITIONS(${Qt5Gamepad_DEFINITIONS})
+    INCLUDE_DIRECTORIES(${Qt5Gamepad_INCLUDE_DIRS})
+    MESSAGE(STATUS "Using Gamepad module")
+ENDIF(Qt5Gamepad_FOUND)
+
 # Need to use the plural variables as there can be more than ONE directory to specify:
 IF(PC_ZIP_FOUND)
     INCLUDE_DIRECTORIES( ${PC_ZIP_INCLUDE_DIRS} )
@@ -435,6 +442,10 @@ TARGET_LINK_LIBRARIES(mudlet
     lua_yajl
     edbee-lib
 )
+
+IF(Qt5Gamepad_FOUND)
+    TARGET_LINK_LIBRARIES(mudlet ${Qt5Gamepad_LIBRARIES})
+ENDIF(Qt5Gamepad_FOUND)
 
 IF(PC_ZIP_FOUND)
     TARGET_LINK_LIBRARIES(mudlet ${PC_ZIP_LIBRARIES})
