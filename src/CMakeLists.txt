@@ -400,7 +400,7 @@ INCLUDE_DIRECTORIES(
 if (Qt5TextToSpeech_FOUND)
   ADD_DEFINITIONS(${Qt5TextToSpeech_DEFINITIONS})
   INCLUDE_DIRECTORIES(${Qt5TextToSpeech_INCLUDE_DIRS})
-  MESSAGE(STATUS "Using TextToSpeech Module")
+  MESSAGE(STATUS "Using TextToSpeech module")
 endif (Qt5TextToSpeech_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
