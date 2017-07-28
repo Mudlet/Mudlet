@@ -334,6 +334,9 @@ FIND_PACKAGE(Qt5UiTools REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5 COMPONENTS Concurrent)
 FIND_PACKAGE(Qt5Concurrent REQUIRED)
+FIND_PACKAGE(QT5 COMPONENTS Gamepad QUIET)
+
+
 
 IF(WIN32)
   SET(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
@@ -394,6 +397,12 @@ INCLUDE_DIRECTORIES(
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
 )
+
+if (Qt5Gamepad_FOUND)
+  ADD_DEFINITIONS(${Qt5Gamepad_DEFINITIONS})
+  INCLUDE_DIRECTORIES(${Qt5Gamepad_INCLUDE_DIRS})
+  MESSAGE(STATUS "Using gamepad module")
+endif (Qt5Gamepad_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
 IF(PC_ZIP_FOUND)
