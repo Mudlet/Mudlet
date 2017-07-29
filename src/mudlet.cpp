@@ -403,11 +403,6 @@ mudlet::mudlet()
 
     readSettings();
 
-    auto timerAutologin = new QTimer(this);
-    timerAutologin->setSingleShot(true);
-    connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
-    timerAutologin->start(50);
-
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, slot_gamepadButtonRelease);
@@ -2101,9 +2096,10 @@ void mudlet::slot_show_connection_dialog()
     auto pDlg = new dlgConnectionProfiles(this);
     connect(pDlg, SIGNAL(signal_establish_connection(QString, int)), this, SLOT(slot_connection_dlg_finished(QString, int)));
     pDlg->fillout_form();
-    if (pDlg->exec() == QDialog::Accepted) {
-        enableToolbarButtons();
-    }
+
+    connect(pDlg, &QDialog::accepted, [=]() { enableToolbarButtons(); });
+    pDlg->setAttribute(Qt::WA_DeleteOnClose);
+    pDlg->show();
 }
 
 void mudlet::show_trigger_dialog()
