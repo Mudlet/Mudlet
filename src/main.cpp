@@ -427,11 +427,14 @@ int main(int argc, char* argv[])
         mudlet::self()->move(initialSpace.width() / 8, initialSpace.height() / 8);
     }
 
-    mudlet::self()->show();
-
     if (show_splash) {
         splash.finish(mudlet::self());
     }
+
+    mudlet::self()->show();
+
+    mudlet::self()->startAutoLogin();
+
     app->restoreOverrideCursor();
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
