@@ -130,7 +130,7 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {
-        pChild->Tree<TAlias>::setParent(0);
+        pChild->Tree<TAlias>::setParent(nullptr);
         addAliasRootNode(pChild, parentPosition, childPosition, true);
     }
 }
@@ -155,7 +155,7 @@ TAlias* AliasUnit::getAlias(int id)
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -164,7 +164,7 @@ TAlias* AliasUnit::getAliasPrivate(int id)
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -275,7 +275,7 @@ TAlias* AliasUnit::findAlias(const QString& name)
         TAlias* pT = it.value();
         return pT;
     }
-    return 0;
+    return nullptr;
 }
 
 bool AliasUnit::enableAlias(const QString& name)

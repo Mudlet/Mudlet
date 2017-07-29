@@ -42,7 +42,7 @@ TKey::TKey(TKey* parent, Host* pHost)
 }
 
 TKey::TKey(QString name, Host* pHost)
-: Tree<TKey>( 0 )
+: Tree<TKey>( nullptr )
 , exportItem( true )
 , mModuleMasterFolder( false )
 , mName( name )

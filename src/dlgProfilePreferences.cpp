@@ -292,7 +292,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
                 continue;
             }
 
-            auto pItem = new QAction(s, 0);
+            auto pItem = new QAction(s, nullptr);
             pItem->setCheckable(true);
             pItem->setChecked(false);
             pMenu->addAction(pItem);

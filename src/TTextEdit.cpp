@@ -61,7 +61,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
-, mpScrollBar(0)
+, mpScrollBar(nullptr)
 {
     mLastClickTimer.start();
     if (!mIsDebugConsole) {
@@ -1019,7 +1019,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mudletEvent.mArgumentList.append(QString::number(3));
             break;
         default: // TODO: What about those of us with more than three mouse buttons?
-            mudletEvent.mArgumentList.append(0);
+            mudletEvent.mArgumentList.append(nullptr);
             break;
         }
         mudletEvent.mArgumentList.append(QString::number(event->x()));

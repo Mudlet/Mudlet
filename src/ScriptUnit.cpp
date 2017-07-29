@@ -111,7 +111,7 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {
-        pChild->Tree<TScript>::setParent(0);
+        pChild->Tree<TScript>::setParent(nullptr);
         addScriptRootNode(pChild, parentPosition, childPosition);
     }
 }
@@ -130,7 +130,7 @@ TScript* ScriptUnit::getScript(int id)
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -139,7 +139,7 @@ TScript* ScriptUnit::getScriptPrivate(int id)
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 

@@ -60,7 +60,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpHost(pH)
 , buffer(pH)
 , emergencyStop(new QToolButton)
-, layerCommandLine(0)
+, layerCommandLine(nullptr)
 , mBgColor(QColor(Qt::black))
 , mClipboard(mpHost)
 , mCommandBgColor(Qt::black)
@@ -85,7 +85,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpMainFrame(new QWidget(mpBaseHFrame))
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
-, mpMapper(0)
+, mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
 
 , mRecordReplay(false)
@@ -2150,7 +2150,7 @@ TConsole* TConsole::createBuffer(const QString& name)
         pC->setUserWindow();
         return pC;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2182,7 +2182,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
     if (mSubConsoleMap.find(key) == mSubConsoleMap.end()) {
         auto pC = new TConsole(mpHost, false, mpMainFrame);
         if (!pC) {
-            return 0;
+            return nullptr;
         }
         mSubConsoleMap[key] = pC;
         pC->setObjectName(name);
@@ -2200,7 +2200,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->show();
         return pC;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2218,7 +2218,7 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
         pC->show();
         return pC;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 

@@ -40,7 +40,7 @@ TScript::TScript( TScript * parent, Host * pHost )
 }
 
 TScript::TScript(const QString& name, Host * pHost )
-: Tree<TScript>(0)
+: Tree<TScript>(nullptr)
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mName( name )

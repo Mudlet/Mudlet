@@ -60,7 +60,7 @@ GLWidget::GLWidget(QWidget *parent)
 , rotQuad()
 , mTarget()
 {
-    mpMap = 0;
+    mpMap = nullptr;
     xDist = 0.0;
     yDist = 0.0;
     zDist = 0.0;
@@ -104,7 +104,7 @@ GLWidget::GLWidget(TMap* pM, QWidget* parent)
 , mScale()
 , mTarget()
 {
-    mpHost = 0;
+    mpHost = nullptr;
     mpMap = pM;
     is2DView = false;
     mShiftMode = false;

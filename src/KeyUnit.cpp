@@ -85,7 +85,7 @@ TKey* KeyUnit::findKey(QString& name)
         TKey* pT = it.value();
         return pT;
     }
-    return 0;
+    return nullptr;
 }
 
 bool KeyUnit::enableKey(const QString& name)
@@ -180,7 +180,7 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
         //cout << "dumping family of newParent:"<<endl;
         //pNewParent->Dump();
     } else {
-        pChild->Tree<TKey>::setParent(0);
+        pChild->Tree<TKey>::setParent(nullptr);
         addKeyRootNode(pChild, parentPosition, childPosition);
     }
 }
@@ -205,7 +205,7 @@ TKey* KeyUnit::getKey(int id)
     if (mKeyMap.find(id) != mKeyMap.end()) {
         return mKeyMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -215,7 +215,7 @@ TKey* KeyUnit::getKeyPrivate(int id)
     if (mKeyMap.find(id) != mKeyMap.end()) {
         return mKeyMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 

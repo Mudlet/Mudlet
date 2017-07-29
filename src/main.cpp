@@ -48,7 +48,7 @@
 
 using namespace std;
 
-TConsole* spDebugConsole = 0;
+TConsole* spDebugConsole = nullptr;
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
         pcre_stack_free = pcre_free_dbg;
     }
 #endif // _MSC_VER && _DEBUG
-    spDebugConsole = 0;
+    spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
     Q_INIT_RESOURCE(mudlet);
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-    if (app == 0) {
+    if (app == nullptr) {
         if (startupAction & 2) {
             // Do "version" action - wording and format is quite tightly specified by the coding standards
             std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;
