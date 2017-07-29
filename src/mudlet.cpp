@@ -1859,7 +1859,6 @@ bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
 bool mudlet::echoLink(Host* pHost, const QString& name, const QString& text, QStringList& func, QStringList& hint, bool customFormat)
 {
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QString t = text;
     if (dockWindowConsoleMap.contains(name)) {
         dockWindowConsoleMap[name]->echoLink(text, func, hint, customFormat);
         return true;
