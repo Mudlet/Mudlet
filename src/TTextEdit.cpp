@@ -1019,7 +1019,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mudletEvent.mArgumentList.append(QString::number(3));
             break;
         default: // TODO: What about those of us with more than three mouse buttons?
-            mudletEvent.mArgumentList.append(nullptr);
+            mudletEvent.mArgumentList.append(QString());
             break;
         }
         mudletEvent.mArgumentList.append(QString::number(event->x()));

@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-    if (app == nullptr) {
+    if (!app) {
         if (startupAction & 2) {
             // Do "version" action - wording and format is quite tightly specified by the coding standards
             std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;

@@ -3119,18 +3119,18 @@ void T2DMap::slot_setCharacter()
                                                   QLineEdit::Normal,    // QLineEdit::EchoMode mode = QLineEdit::Normal
                                                   QString(),            // const QString & text = QString()
                                                   &isOk,                // bool * ok = 0
-                                                  nullptr,                    // Qt::WindowFlags flags = 0
+                                                  Qt::Widget,           // Qt::WindowFlags flags = 0
                                                   Qt::ImhLatinOnly);    // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
         } else {
             newLetterText = QInputDialog::getText(this,
-                                                  tr("Enter rooom marker"),
+                                                  tr("Enter room marker"),
                                                   tr("Delete the existing, or\n"
                                                      "enter a new (non-space),\n"
                                                      "marker letter:"),
                                                   QLineEdit::Normal,
                                                   usedLetters.keys().first(),
                                                   &isOk,
-                                                  nullptr,
+                                                  Qt::Widget,
                                                   Qt::ImhLatinOnly);
         }
     } else {
@@ -3142,7 +3142,7 @@ void T2DMap::slot_setCharacter()
                                                   QLineEdit::Normal,
                                                   QString(),
                                                   &isOk,
-                                                  nullptr,
+                                                  Qt::Widget,
                                                   Qt::ImhLatinOnly);
         } else if (usedLetters.size() == 1) {
             newLetterText = QInputDialog::getText(this,
@@ -3155,7 +3155,7 @@ void T2DMap::slot_setCharacter()
                                                   QLineEdit::Normal,
                                                   usedLetters.keys().first(),
                                                   &isOk,
-                                                  nullptr,
+                                                  Qt::Widget,
                                                   Qt::ImhLatinOnly);
         } else {
             QMapIterator<QString, uint> itSymbolUsed = usedLetters;
