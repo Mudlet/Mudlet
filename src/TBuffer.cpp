@@ -3740,7 +3740,7 @@ QString TBuffer::bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int 
         // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
         s.append(R"(<span style="color: rgb(200,150,0); background: rgb(22,22,22); )");
         s.append(R"(font-weight: normal; font-style: normal; text-decoration: normal">)");
-        s.append(timeBuffer[y].left(13));
+        s.append(timeBuffer[y].leftRef(13));
     }
     if (spacePadding > 0) {
         // used for "copy HTML", first line of selection

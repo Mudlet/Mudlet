@@ -1228,7 +1228,7 @@ void TTextEdit::copySelectionToClipboard()
         }
         // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
         if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y()) {
-            text.append(mpBuffer->timeBuffer[y].left(13));
+            text.append(mpBuffer->timeBuffer[y].leftRef(13));
         }
         int x = 0;
         if (y == mPA.y()) {
