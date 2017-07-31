@@ -312,7 +312,7 @@ void dlgRoomExits::save()
         pR->setSpecialExit(-1, value);
     }
 
-    if (nw->isEnabled() && nw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
+    if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
         // There IS a valid exit on the dialogue in this direction
         if (originalExits.value(DIR_NORTHWEST)->destination != nw->text().toInt()) {
             pR->setExit(nw->text().toInt(), DIR_NORTHWEST); // Destination is different - so store it
@@ -340,7 +340,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NW")); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
-    if (n->isEnabled() && n->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
+    if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_NORTH)->destination != n->text().toInt()) {
             pR->setExit(n->text().toInt(), DIR_NORTH);
         }
@@ -366,7 +366,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("N"));
     }
 
-    if (ne->isEnabled() && ne->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
+    if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_NORTHEAST)->destination != ne->text().toInt()) {
             pR->setExit(ne->text().toInt(), DIR_NORTHEAST);
         }
@@ -392,7 +392,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("NE"));
     }
 
-    if (up->isEnabled() && up->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
+    if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_UP)->destination != up->text().toInt()) {
             pR->setExit(up->text().toInt(), DIR_UP);
         }
@@ -418,7 +418,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("UP"));
     }
 
-    if (w->isEnabled() && w->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
+    if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_WEST)->destination != w->text().toInt()) {
             pR->setExit(w->text().toInt(), DIR_WEST);
         }
@@ -444,7 +444,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("W"));
     }
 
-    if (e->isEnabled() && e->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
+    if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_EAST)->destination != e->text().toInt()) {
             pR->setExit(e->text().toInt(), DIR_EAST);
         }
@@ -470,7 +470,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("E"));
     }
 
-    if (down->isEnabled() && down->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
+    if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_DOWN)->destination != down->text().toInt()) {
             pR->setExit(down->text().toInt(), DIR_DOWN);
         }
@@ -496,7 +496,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("DOWN"));
     }
 
-    if (sw->isEnabled() && sw->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
+    if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_SOUTHWEST)->destination != sw->text().toInt()) {
             pR->setExit(sw->text().toInt(), DIR_SOUTHWEST);
         }
@@ -522,7 +522,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SW"));
     }
 
-    if (s->isEnabled() && s->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
+    if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_SOUTH)->destination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), DIR_SOUTH);
         }
@@ -548,7 +548,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("S"));
     }
 
-    if (se->isEnabled() && se->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
+    if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_SOUTHEAST)->destination != se->text().toInt()) {
             pR->setExit(se->text().toInt(), DIR_SOUTHEAST);
         }
@@ -574,7 +574,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("SE"));
     }
 
-    if (in->isEnabled() && in->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
+    if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_IN)->destination != in->text().toInt()) {
             pR->setExit(in->text().toInt(), DIR_IN);
         }
@@ -600,7 +600,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(QStringLiteral("IN"));
     }
 
-    if (out->isEnabled() && out->text().size() > 0 && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
+    if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
         if (originalExits.value(DIR_OUT)->destination != out->text().toInt()) {
             pR->setExit(out->text().toInt(), DIR_OUT);
         }
@@ -706,7 +706,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         // Valid exit roomID in place
         nw->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_nw->setChecked(false);
@@ -730,7 +730,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overriden by a non-zero exit weight here or not.")
                                                 .arg(exitToRoom->getWeight())));
         }
-    } else if (text.size() > 0) {
+    } else if (!text.isEmpty()) {
         // Something is entered but it does not yield a valid exit roomID
         // Enable stub exit control
         nw->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
@@ -762,7 +762,7 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         n->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         ;
         stub_n->setChecked(false);
@@ -815,7 +815,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         ne->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_ne->setChecked(false);
         stub_ne->setEnabled(false);
@@ -867,7 +867,7 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         up->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_up->setChecked(false);
         stub_up->setEnabled(false);
@@ -919,7 +919,7 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         w->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_w->setChecked(false);
         stub_w->setEnabled(false);
@@ -971,7 +971,7 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         e->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_e->setChecked(false);
         stub_e->setEnabled(false);
@@ -1023,7 +1023,7 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         down->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_down->setChecked(false);
         stub_down->setEnabled(false);
@@ -1075,7 +1075,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         sw->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_sw->setChecked(false);
         stub_sw->setEnabled(false);
@@ -1127,7 +1127,7 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         s->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_s->setChecked(false);
         stub_s->setEnabled(false);
@@ -1179,7 +1179,7 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         se->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_se->setChecked(false);
         stub_se->setEnabled(false);
@@ -1231,7 +1231,7 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         in->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_in->setChecked(false);
         stub_in->setEnabled(false);
@@ -1283,7 +1283,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
 
-    if (exitToRoom != nullptr) {
+    if (exitToRoom) {
         out->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
         stub_out->setChecked(false);
         stub_out->setEnabled(false);
