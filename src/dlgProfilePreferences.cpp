@@ -183,6 +183,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     for (int i = 1; i < 40; i++) {
         sizeList << QString::number(i);
     }
+    // this seems to attempt adding an empty index at 0, but doesn't seem to work as expected.
     fontSize->insertItems(1, sizeList);
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
 
@@ -226,8 +227,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         if (mFontSize < 0) {
             mFontSize = 10;
         }
-        if (mFontSize <= 40) {
-            fontSize->setCurrentIndex(mFontSize);
+        if (mFontSize < 40 && mFontSize > 0) {
+            fontSize->setCurrentIndex( (mFontSize - 1) );
+        } else {
+            // if the font size set for the main console is outside the pre-set range
+            // this will unfortunately reset the font to default size.
+            // without this the first entry (font-size 1) is selected and on-save
+            // will make the console font far too tiny to read.
+            // Maybe our font-size range should be generated differently if the console
+            // has a font size larger than the preset range offers?
+            fontSize->setCurrentIndex(9); // default font is size 10, index 9.
         }
 
         setColors();
@@ -615,7 +624,7 @@ void dlgProfilePreferences::setCommandBgColor()
 
 void dlgProfilePreferences::setFontSize()
 {
-    mFontSize = fontSize->currentIndex();
+    mFontSize = fontSize->currentIndex() + 1;
     setDisplayFont();
 }
 
@@ -631,6 +640,13 @@ void dlgProfilePreferences::setDisplayFont()
         pHost->mDisplayFont = font;
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
+
+            // update the display properly when font or size selections change.
+            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
         }
         auto config = edbeePreviewWidget->config();
         config->beginChanges();
@@ -1393,8 +1409,12 @@ void dlgProfilePreferences::slot_save_and_exit()
         file_use_smallscreen.remove();
     }
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        // these lines may be redundant now, previously console2 was missing which
+        // caused the lower-half of main console to not get display updates.
         mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
         mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+        mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+        mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
         mudlet::self()->mConsoleMap[pHost]->refresh();
         int x = mudlet::self()->mConsoleMap[pHost]->width();
         int y = mudlet::self()->mConsoleMap[pHost]->height();
