@@ -2305,7 +2305,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
         lua_pushfstring(L, "setFontSize: bad argument #%d type (size as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
-        size = lua_tonumber(L, s);
+        size = lua_tointeger(L, s);
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
