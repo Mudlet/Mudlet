@@ -2308,8 +2308,22 @@ int TLuaInterpreter::setFontSize(lua_State* L)
         size = lua_tointeger(L, s);
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
-        // change main window here
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            // get host profile display font and alter it, since that is how it's done in Settings.
+            QFont font = pHost->mDisplayFont;
+            font.setPointSize(size);
+            pHost->mDisplayFont = font;
+            // apply changes to main console and its while-scrolling component too.
+            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
+            lua_pushboolean(L, true);
+        } else {
+            lua_pushboolean(L, false);
+        }
     } else {
         lua_pushboolean(L, mudlet::self()->setFontSize(pHost, windowName, size));
     }
@@ -2320,15 +2334,24 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
 
-    QString windowName = "";
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getFontSize: bad argument #1 type (name as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
-        return lua_error(L);
-    } else {
-        windowName = QString(lua_tostring(L, 1));
-    }
+    QString windowName = "main";
+    int rval = -1;
+    if (lua_gettop(L) == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
 
-    int rval = mudlet::self()->getFontSize(pHost, windowName);
+            if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+                rval = pHost->mDisplayFont.pointSize();
+            } else {
+                rval = mudlet::self()->getFontSize(pHost, windowName);
+            }
+        }
+    } else {
+        rval = pHost->mDisplayFont.pointSize();
+    }
 
     if (rval <= -1) {
         lua_pushnil(L);
