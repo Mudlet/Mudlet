@@ -766,11 +766,16 @@ void TTextEdit::highlight()
         if (y == y1) {
             x = mPA.x();
         }
+
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            break;
+        }
+        mpBuffer->dirty[y] = true;
+
         for (;; x++) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
-            mpBuffer->dirty[y] = true;
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 mpBuffer->buffer[y][x].flags |= TCHAR_INVERSE;
             } else {
@@ -794,14 +799,16 @@ void TTextEdit::unHighlight(QRegion& region)
         if (y == y1) {
             x = mPA.x();
         }
+
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            break;
+        }
+        mpBuffer->dirty[y] = true;
+
         for (;; x++) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
-            if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-                break;
-            }
-            mpBuffer->dirty[y] = true;
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
                 mpBuffer->dirty[y] = true;
