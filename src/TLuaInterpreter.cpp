@@ -474,7 +474,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 2) {
         if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaultsto "main" if omitted}, got %s!))", s, luaL_typename(L, s));
+            lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", s, luaL_typename(L, s));
             lua_error(L);
             return 1;
         } else {
@@ -4578,7 +4578,7 @@ int TLuaInterpreter::deselect(lua_State* L)
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, R"(deselect: bad argument #1 type (window name as string, is optional {defaultsto "main" if omitted}, got %s!))", luaL_typename(L, 1));
+            lua_pushfstring(L, R"(deselect: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         } else {
@@ -4609,7 +4609,7 @@ int TLuaInterpreter::resetFormat(lua_State* L)
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, R"(resetFormat: bad argument #1 type (window name as string, is optional {defaultsto "main" if omitted}, got %s!))", luaL_typename(L, 1));
+            lua_pushfstring(L, R"(resetFormat: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         } else {
