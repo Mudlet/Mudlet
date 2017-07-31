@@ -2285,27 +2285,39 @@ int TLuaInterpreter::setFontSize(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
 
-    QString windowName = "";
-    int size = pHost->mDisplayFont.pointSize();
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setFontSize: bad argument #1 type (name as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
-        return lua_error(L);
-    } else {
-        windowName = QString( lua_tostring(L, 1) );
+    QString windowName;
+    int s = 0;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L,
+                            "setFontSize: bad argument #%d type (more than one argument supplied and first,\n"
+                            "window name, as string expected (omission selects \"main\" window), got %s!",
+                            s,
+                            luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setFontSize: bad argument #2 type (size as number expected, got %s!)", lua_typename(L, lua_type(L, 2)));
+    int size;
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setFontSize: bad argument #%d type (size as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
-        size = lua_tointeger(L, 2);
+        size = lua_tonumber(L, s);
     }
 
-    lua_pushboolean(L, mudlet::self()->setFontSize(pHost, windowName, size) );
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+        // change main window here
+    } else {
+        lua_pushboolean(L, mudlet::self()->setFontSize(pHost, windowName, size));
+    }
     return 1;
 }
 
-int TLuaInterpreter::getFontSize(lua_State *L) {
+int TLuaInterpreter::getFontSize(lua_State* L)
+{
     Host* pHost = &getHostFromLua(L);
 
     QString windowName = "";
@@ -2313,7 +2325,7 @@ int TLuaInterpreter::getFontSize(lua_State *L) {
         lua_pushfstring(L, "getFontSize: bad argument #1 type (name as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
     } else {
-        windowName = QString( lua_tostring(L, 1) );
+        windowName = QString(lua_tostring(L, 1));
     }
 
     int rval = mudlet::self()->getFontSize(pHost, windowName);
