@@ -2340,7 +2340,7 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
 
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     int rval = -1;
     if (lua_gettop(L) == 1) {
         if (!lua_isstring(L, 1)) {
