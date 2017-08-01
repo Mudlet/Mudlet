@@ -2307,13 +2307,10 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     } else {
         size = lua_tointeger(L, s);
         if (size <= 0) {
-            // a size of 0 or less is not valid, so these values will reset the font size to default.
-            // the main console font size is used as the default size for sub-console windows.
-            if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-                size = 10;
-            } else {
-                size = pHost->mDisplayFont.pointSize();
-            }
+            // just throw an error, no default needed.
+            lua_pushnil(L);
+            lua_pushstring(L, "size cannot be 0 or negative");
+            return 2;
         }
     }
 
