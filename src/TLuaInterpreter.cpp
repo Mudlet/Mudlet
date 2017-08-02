@@ -2281,7 +2281,99 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     }
 }
 
-// openUserWindow( session, string window_name )
+int TLuaInterpreter::setFontSize(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName;
+    int s = 0;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L,
+                            "setFontSize: bad argument #%d type (more than one argument supplied and first,\n"
+                            "window name, as string expected (omission selects \"main\" window), got %s!",
+                            s,
+                            luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
+    }
+
+    int size;
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setFontSize: bad argument #%d type (size as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        size = lua_tointeger(L, s);
+        if (size <= 0) {
+            // just throw an error, no default needed.
+            lua_pushnil(L);
+            lua_pushstring(L, "size cannot be 0 or negative");
+            return 2;
+        }
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            // get host profile display font and alter it, since that is how it's done in Settings.
+            QFont font = pHost->mDisplayFont;
+            font.setPointSize(size);
+            pHost->mDisplayFont = font;
+            // apply changes to main console and its while-scrolling component too.
+            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
+            lua_pushboolean(L, true);
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
+        }
+    } else {
+        if (mudlet::self()->setFontSize(pHost, windowName, size)) {
+            lua_pushboolean(L, true);
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+        }
+    }
+    return 1;
+}
+
+int TLuaInterpreter::getFontSize(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName = QStringLiteral("main");
+    int rval = -1;
+    if (lua_gettop(L) == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+
+            if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+                rval = pHost->mDisplayFont.pointSize();
+            } else {
+                rval = mudlet::self()->getFontSize(pHost, windowName);
+            }
+        }
+    } else {
+        rval = pHost->mDisplayFont.pointSize();
+    }
+
+    if (rval <= -1) {
+        lua_pushnil(L);
+    } else {
+        lua_pushnumber(L, rval);
+    }
+    return 1;
+}
+
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -11659,6 +11751,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
     lua_register(pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout);
     lua_register(pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout);
+    lua_register(pGlobalLua, "setFontSize", TLuaInterpreter::setFontSize);
+    lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
     lua_register(pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow);
     lua_register(pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer);
