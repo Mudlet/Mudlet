@@ -2328,10 +2328,17 @@ int TLuaInterpreter::setFontSize(lua_State* L)
             mudlet::self()->mConsoleMap[pHost]->refresh();
             lua_pushboolean(L, true);
         } else {
-            lua_pushboolean(L, false);
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
         }
     } else {
-        lua_pushboolean(L, mudlet::self()->setFontSize(pHost, windowName, size));
+        if (mudlet::self()->setFontSize(pHost, windowName, size)) {
+            lua_pushboolean(L, true);
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+        }
     }
     return 1;
 }
