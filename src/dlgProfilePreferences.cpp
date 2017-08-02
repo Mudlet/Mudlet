@@ -183,7 +183,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     for (int i = 1; i < 40; i++) {
         sizeList << QString::number(i);
     }
-    // this seems to attempt adding an empty index at 0, but doesn't seem to work as expected.
     fontSize->insertItems(1, sizeList);
     connect(fontSize, SIGNAL(currentIndexChanged(int)), this, SLOT(setFontSize()));
 
@@ -625,7 +624,8 @@ void dlgProfilePreferences::setCommandBgColor()
 void dlgProfilePreferences::setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
-    setDisplayFont();
+    // delay setting pHost->mDisplayFont until save is clicked by the user.
+    //setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -1408,14 +1408,10 @@ void dlgProfilePreferences::slot_save_and_exit()
         QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
         file_use_smallscreen.remove();
     }
+
+    setDisplayFont();
+
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        // these lines may be redundant now, previously console2 was missing which
-        // caused the lower-half of main console to not get display updates.
-        mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-        mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-        mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
-        mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
-        mudlet::self()->mConsoleMap[pHost]->refresh();
         int x = mudlet::self()->mConsoleMap[pHost]->width();
         int y = mudlet::self()->mConsoleMap[pHost]->height();
         QSize s = QSize(x, y);
