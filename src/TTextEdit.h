@@ -78,7 +78,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void highlight();
-    void unHighlight(QRegion&);
+    void unHighlight();
     void swap(QPoint& p1, QPoint& p2);
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
@@ -136,7 +136,7 @@ private:
     bool mCtrlSelecting;
     int mDragStartY;
     int mOldScrollPos;
-    QPoint mP_aussen;
+
     QPoint mPA;
     bool mPainterInit;
     QPoint mPB;

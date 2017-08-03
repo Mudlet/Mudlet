@@ -770,14 +770,16 @@ void TTextEdit::highlight()
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             break;
         }
-        mpBuffer->dirty[y] = true;
 
         for (;; x++) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
-            if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                mpBuffer->buffer[y][x].flags |= TCHAR_INVERSE;
+            if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                if (!(mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE)) {
+                    mpBuffer->buffer.at(y).at(x).flags |= TCHAR_INVERSE;
+                    mpBuffer->dirty[y] = true;
+                }
             } else {
                 break;
             }
@@ -788,7 +790,7 @@ void TTextEdit::highlight()
     mSelectedRegion = newRegion;
 }
 
-void TTextEdit::unHighlight(QRegion& region)
+void TTextEdit::unHighlight()
 {
     int y1 = mPA.y();
     if (y1 < 0) {
@@ -803,15 +805,16 @@ void TTextEdit::unHighlight(QRegion& region)
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             break;
         }
-        mpBuffer->dirty[y] = true;
 
         for (;; x++) {
             if ((y == mPB.y()) && (x > mPB.x())) {
                 break;
             }
-            if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
-                mpBuffer->dirty[y] = true;
+            if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
+                    mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                    mpBuffer->dirty[y] = true;
+                }
             } else {
                 break;
             }
@@ -923,32 +926,31 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
                 if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
                     break;
                 }
-                int x = mpBuffer->buffer[y].size() - 1;
+                int x = mpBuffer->buffer.at(y).size() - 1;
                 if (y == y1) {
                     x = PC.x();
-                    if (x >= static_cast<int>(mpBuffer->buffer[y].size())) {
-                        x = static_cast<int>(mpBuffer->buffer[y].size()) - 1;
+                    if (x >= static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                        x = static_cast<int>(mpBuffer->buffer.at(y).size()) - 1;
                     }
                     if (x < 0) {
                         x = 0;
                     }
                 }
-                mpBuffer->dirty[y] = true;
                 for (;; x--) {
                     if ((y == mPA.y()) && (x < mPA.x())) {
                         break;
                     }
 
                     if (x < static_cast<int>(mpBuffer->buffer[y].size()) && x >= 0) {
-                        mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                        if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
+                            mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                            mpBuffer->dirty[y] = true;
+                        }
                     } else {
                         break;
                     }
                 }
             }
-            mP_aussen = mPA;
-        } else {
-            mP_aussen = PC;
         }
         mPA = PC;
     } else {
@@ -962,22 +964,22 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
                 if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
                     break;
                 }
-                mpBuffer->dirty[y] = true;
                 for (;; x++) {
                     if ((y == mPB.y()) && (x > mPB.x())) {
                         break;
                     }
-                    if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                        mpBuffer->buffer[y][x].flags &= ~(TCHAR_INVERSE);
+                    if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
+                        if (mpBuffer->buffer.at(y).at(x).flags & TCHAR_INVERSE) {
+                            mpBuffer->buffer.at(y).at(x).flags &= ~(TCHAR_INVERSE);
+                            mpBuffer->dirty[y] = true;
+                        }
                     } else {
                         break;
                     }
                 }
             }
-            mP_aussen = mPB;
-        } else {
-            mP_aussen = PC;
         }
+
         mPB = PC;
     }
     if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
@@ -986,7 +988,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     if (mPA.y() > mPB.y()) {
         swap(mPA, mPB);
     }
-    mP_aussen = PC;
+
     highlight();
 }
 
@@ -1069,7 +1071,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 }
             }
         }
-        unHighlight(mSelectedRegion);
+        unHighlight();
         mSelectedRegion = QRegion(0, 0, 0, 0);
         if (mLastClickTimer.elapsed() < 300) {
             int xind = x;
