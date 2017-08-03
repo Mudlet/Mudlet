@@ -1497,7 +1497,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 // player location. Though this is written as a member function it is intended
 // also for use to retrieve details from maps from OTHER profiles, importantly
 // it does (or should) NOT interact with this TMap instance...!
-bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, int* fileVersion = 0, int* roomId = 0, int* areaCount = 0, int* roomCount = 0)
+bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, int* areaCount = nullptr, int* roomCount = nullptr)
 {
     if (profile.isEmpty()) {
         return false;
@@ -1602,7 +1602,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
         }
         // read each area
         for (int i = 0; i < areaSize; i++) {
-            TArea pA(0, 0);
+            TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
@@ -1697,7 +1697,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
         }
     }
 
-    TRoom _pT(0);
+    TRoom _pT(nullptr);
     QSet<int> _dummyRoomIdSet;
     while (!ifs.atEnd()) {
         int i;
@@ -2183,7 +2183,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     if (isLocalImport) {
         // clean-up
         mpProgressDialog->deleteLater();
-        mpProgressDialog = 0;
+        mpProgressDialog = nullptr;
     }
     mpMapper->show();
 

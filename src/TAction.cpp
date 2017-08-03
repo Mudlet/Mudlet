@@ -37,8 +37,8 @@ using namespace std;
 
 TAction::TAction(TAction* parent, Host* pHost)
 : Tree<TAction>(parent)
-, mpToolBar(0)
-, mpEasyButtonBar(0)
+, mpToolBar(nullptr)
+, mpEasyButtonBar(nullptr)
 , mButtonState(false)
 , mPosX(0)
 , mPosY(0)
@@ -65,9 +65,9 @@ TAction::TAction(TAction* parent, Host* pHost)
 }
 
 TAction::TAction(const QString& name, Host* pHost)
-: Tree<TAction>(0)
-, mpToolBar(0)
-, mpEasyButtonBar(0)
+: Tree<TAction>(nullptr)
+, mpToolBar(nullptr)
+, mpEasyButtonBar(nullptr)
 , mButtonState(false)
 , mPosX(0)
 , mPosY(0)

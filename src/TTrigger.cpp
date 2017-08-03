@@ -76,7 +76,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 }
 
 TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host* pHost)
-: Tree<TTrigger>(0)
+: Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex( false )
 , mPerlSlashGOption( false )
 , mFilterTrigger( false )
@@ -171,7 +171,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
 
             int erroffset;
 
-            QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, 0), pcre_deleter);
+            QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, nullptr), pcre_deleter);
 
             if (!re) {
                 if (mudlet::debugMode) {
@@ -214,7 +214,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
             int _pos = regex.indexIn(regexList[i]);
             if (_pos == -1) {
-                mColorPatternList.push_back(0);
+                mColorPatternList.push_back(nullptr);
                 state = false;
                 continue;
             }
@@ -222,12 +222,12 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             int ansiBg = regex.cap(2).toInt();
 
             if (!setupColorTrigger(ansiFg, ansiBg)) {
-                mColorPatternList.push_back(0);
+                mColorPatternList.push_back(nullptr);
                 state = false;
                 continue;
             }
         } else {
-            mColorPatternList.push_back(0);
+            mColorPatternList.push_back(nullptr);
         }
     }
     if (!state) {
@@ -265,7 +265,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     std::list<int> posList;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
 
-    rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
 
     if (rc < 0) {
         return false;
@@ -298,15 +298,15 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
         }
     }
-    pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMECOUNT, &namecount);
+    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount <= 0) {
         ;
     } else {
         unsigned char* tabptr;
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMETABLE, &name_table);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
 
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
 
         tabptr = name_table;
         for (i = 0; i < namecount; i++) {
@@ -328,7 +328,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), NULL, subject, subject_length, start_offset, options, ovector, 30);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
@@ -1171,12 +1171,12 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
     }
 
     if (invalidColorCode) {
-        return 0;
+        return nullptr;
     }
 
     auto pCT = new TColorTable;
     if (!pCT) {
-        return 0;
+        return nullptr;
     }
 
     pCT->ansiBg = ansiBg;
@@ -1334,5 +1334,5 @@ TTrigger* TTrigger::killTrigger(const QString& name)
     for (auto trigger : *mpMyChildrenList) {
         trigger->killTrigger(name);
     }
-    return 0;
+    return nullptr;
 }

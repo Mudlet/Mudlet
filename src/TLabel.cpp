@@ -30,7 +30,7 @@
 #include "post_guard.h"
 
 
-TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(0), mouseInside()
+TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
 {
     setMouseTracking(true);
 }

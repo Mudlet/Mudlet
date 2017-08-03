@@ -68,7 +68,7 @@ cTelnet::cTelnet(Host* pH)
 , mAlertOnNewData(true)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
-, mpComposer(0)
+, mpComposer(nullptr)
 , mpHost(pH)
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
@@ -1206,7 +1206,7 @@ void cTelnet::atcpComposerCancel()
         return;
     }
     mpComposer->close();
-    mpComposer = 0;
+    mpComposer = nullptr;
     string msg = "*q\nno\n";
     socketOutRaw(msg);
 }
@@ -1250,7 +1250,7 @@ void cTelnet::atcpComposerSave(QString txt)
         return;
     }
     mpComposer->close();
-    mpComposer = 0;
+    mpComposer = nullptr;
 }
 
 // Revamped to take additional [ WARN ], [ ALERT ] and [ INFO ] prefixes and to indent

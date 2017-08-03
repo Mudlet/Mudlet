@@ -85,7 +85,7 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
         , mHostID( id )
         , purgeTimer(this)
 {
-    pGlobalLua = 0;
+    pGlobalLua = nullptr;
 
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
@@ -248,50 +248,50 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
     if (lua_isnumber(L, position)) {
         dirNum = lua_tonumber(L, position);
         if (dirNum <= 0 || dirNum >= 13) {
-            return 0;
+            return QString();
         }
         if (dirNum == 1) {
-            return "north";
+            return QStringLiteral("north");
         }
         if (dirNum == 2) {
-            return "northeast";
+            return QStringLiteral("northeast");
         }
         if (dirNum == 3) {
-            return "northwest";
+            return QStringLiteral("northwest");
         }
         if (dirNum == 4) {
-            return "east";
+            return QStringLiteral("east");
         }
         if (dirNum == 5) {
-            return "west";
+            return QStringLiteral("west");
         }
         if (dirNum == 6) {
-            return "south";
+            return QStringLiteral("south");
         }
         if (dirNum == 7) {
-            return "southeast";
+            return QStringLiteral("southeast");
         }
         if (dirNum == 8) {
-            return "southwest";
+            return QStringLiteral("southwest");
         }
         if (dirNum == 9) {
-            return "up";
+            return QStringLiteral("up");
         }
         if (dirNum == 10) {
-            return "down";
+            return QStringLiteral("down");
         }
         if (dirNum == 11) {
-            return "in";
+            return QStringLiteral("in");
         }
         if (dirNum == 12) {
-            return "out";
+            return QStringLiteral("out");
         }
     }
     if (lua_isstring(L, position)) {
         dir = lua_tostring(L, position);
         return dir;
     }
-    return 0;
+    return QString();
 }
 
 int TLuaInterpreter::dirToNumber(lua_State* L, int position)
@@ -6475,11 +6475,11 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
         luaTitle = lua_tostring(L, 2);
     }
     if (!luaDir) {
-        QString fileName = QFileDialog::getExistingDirectory(0, QString(luaTitle.c_str()), QDir::currentPath());
+        QString fileName = QFileDialog::getExistingDirectory(nullptr, QString(luaTitle.c_str()), QDir::currentPath());
         lua_pushstring(L, fileName.toLatin1().data());
         return 1;
     } else {
-        QString fileName = QFileDialog::getOpenFileName(0, QString(luaTitle.c_str()), QDir::currentPath());
+        QString fileName = QFileDialog::getOpenFileName(nullptr, QString(luaTitle.c_str()), QDir::currentPath());
         lua_pushstring(L, fileName.toLatin1().data());
         return 1;
     }
@@ -7695,7 +7695,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
         roomID = lua_tointeger(L, 1);
     }
     text = dirToString(L, 2);
-    if (text == 0) {
+    if (text.isEmpty()) {
         lua_pushstring(L, "setExitWeight: wrong argument type");
         lua_error(L);
         return 1;
@@ -7778,7 +7778,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         }
     }
     direction = dirToString(L, 3);
-    if (direction == 0) {
+    if (direction.isEmpty()) {
         lua_pushstring(L, "addCustomLine: Third argument must be direction");
         lua_error(L);
         return 1;
@@ -12421,7 +12421,7 @@ int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& 
     //    QList<int> propertyList;
     //    propertyList << REGEX_SUBSTRING;// substring trigger is default
     //    pT = new TTrigger("a", sList, propertyList, false, mpHost );
-    pT = new TTrigger(0, mpHost);
+    pT = new TTrigger(nullptr, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
@@ -12442,7 +12442,7 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
     //    QList<int> propertyList;
     //    propertyList << REGEX_SUBSTRING;// substring trigger is default
     //    pT = new TTrigger("a", sList, propertyList, false, mpHost );
-    pT = new TTrigger(0, mpHost);
+    pT = new TTrigger(nullptr, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);

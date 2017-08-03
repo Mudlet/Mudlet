@@ -129,7 +129,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
             pChild->setParent(pNewParent);
         }
     } else {
-        pChild->Tree<TTrigger>::setParent(0);
+        pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
     }
 }
@@ -154,7 +154,7 @@ TTrigger* TriggerUnit::getTrigger(int id)
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -163,7 +163,7 @@ TTrigger* TriggerUnit::getTriggerPrivate(int id)
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -296,7 +296,7 @@ TTrigger* TriggerUnit::findTrigger(const QString& name)
         TTrigger* pT = it.value();
         return pT;
     }
-    return 0;
+    return nullptr;
 }
 
 bool TriggerUnit::enableTrigger(const QString& name)
