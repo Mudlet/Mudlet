@@ -116,8 +116,8 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 //          codes would break or destroy the script that used it.
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
 
-QPointer<TConsole> mudlet::mpDebugConsole = 0;
-QMainWindow* mudlet::mpDebugArea = 0;
+QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
+QMainWindow* mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 
@@ -141,22 +141,22 @@ mudlet::mudlet()
 , mWindowMinimized(false)
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
-, mpCurrentActiveHost(0)
+, mpCurrentActiveHost(nullptr)
 , mIsGoingDown(false)
-, actionReplaySpeedDown(0)
-, actionReplaySpeedUp(0)
-, actionSpeedDisplay(0)
-, actionReplayTime(0)
-, replaySpeedDisplay(0)
-, replayTime(0)
-, replayTimer(0)
-, replayToolBar(0)
-, moduleTable(0)
+, actionReplaySpeedDown(nullptr)
+, actionReplaySpeedUp(nullptr)
+, actionSpeedDisplay(nullptr)
+, actionReplayTime(nullptr)
+, replaySpeedDisplay(nullptr)
+, replayTime(nullptr)
+, replayTimer(nullptr)
+, replayToolBar(nullptr)
+, moduleTable(nullptr)
 , mshowMapAuditErrors(false)
-, mpAboutDlg(0)
-, mpModuleDlg(0)
-, mpPackageManagerDlg(0)
-, mpProfilePreferencesDlg(0)
+, mpAboutDlg(nullptr)
+, mpModuleDlg(nullptr)
+, mpPackageManagerDlg(nullptr)
+, mpProfilePreferencesDlg(nullptr)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -295,7 +295,7 @@ mudlet::mudlet()
 
     disableToolbarButtons();
 
-    mpDebugArea = new QMainWindow(0);
+    mpDebugArea = new QMainWindow(nullptr);
     mHostManager.addHost("default_host", "", "", "");
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
     mpDebugConsole = new TConsole(mpDefaultHost, true);
@@ -426,7 +426,7 @@ mudlet::mudlet()
 
 void mudlet::initEdbee()
 {
-    // We only need the single Lua lexer, problably ever
+    // We only need the single Lua lexer, probably ever
     // Optional additional themes will be added in future
 
     edbee::Edbee* edbee = edbee::Edbee::instance();
@@ -921,7 +921,7 @@ void mudlet::slot_close_profile()
 void mudlet::slot_tab_changed(int tabID)
 {
     if ((!mTabMap.contains(mpTabBar->tabText(tabID))) && (tabID != -1)) {
-        mpCurrentActiveHost = 0;
+        mpCurrentActiveHost = nullptr;
         return;
     }
 
@@ -931,14 +931,14 @@ void mudlet::slot_tab_changed(int tabID)
         if (mTabMap.contains(host)) {
             mpCurrentActiveHost = mTabMap[host]->mpHost;
         } else {
-            mpCurrentActiveHost = 0;
+            mpCurrentActiveHost = nullptr;
             return;
         }
     } else {
         if (mTabMap.size() > 0) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
-            mpCurrentActiveHost = 0;
+            mpCurrentActiveHost = nullptr;
             return;
         }
     }
@@ -960,7 +960,7 @@ void mudlet::slot_tab_changed(int tabID)
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
     } else {
-        mpCurrentActiveHost = 0;
+        mpCurrentActiveHost = nullptr;
         return;
     }
 
@@ -1961,7 +1961,7 @@ Host* mudlet::getActiveHost()
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         return mpCurrentActiveHost;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2637,7 +2637,7 @@ void mudlet::slot_stopAllTriggers()
 
 mudlet::~mudlet()
 {
-    mudlet::_self = 0;
+    mudlet::_self = nullptr;
 }
 
 void mudlet::toggleFullScreenView()
@@ -2726,11 +2726,11 @@ void mudlet::replayOver()
         replayToolBar->removeAction(actionReplaySpeedDown);
         replayToolBar->removeAction(actionSpeedDisplay);
         removeToolBar(replayToolBar);
-        actionReplaySpeedUp = 0;
-        actionReplaySpeedDown = 0;
-        actionSpeedDisplay = 0;
-        actionReplayTime = 0;
-        replayToolBar = 0;
+        actionReplaySpeedUp = nullptr;
+        actionReplaySpeedDown = nullptr;
+        actionSpeedDisplay = nullptr;
+        actionReplayTime = nullptr;
+        replayToolBar = nullptr;
     }
 }
 
@@ -2775,7 +2775,7 @@ void mudlet::playSound(QString s, int soundVolume)
     }
 
     QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
-    QMediaPlayer* pPlayer = 0;
+    QMediaPlayer* pPlayer = nullptr;
 
     /* find first available inactive QMediaPlayer */
     while (itMusicBox.hasNext()) {
@@ -2805,7 +2805,7 @@ void mudlet::playSound(QString s, int soundVolume)
     // theoretically this might be movable to be within the lambda function of
     // the following connect(...) but that does seem a bit twisty and this works
     // well enough!
-    disconnect(pPlayer, &QMediaPlayer::stateChanged, 0, 0);
+    disconnect(pPlayer, &QMediaPlayer::stateChanged, nullptr, nullptr);
 
     connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
         if (state == QMediaPlayer::StoppedState) {

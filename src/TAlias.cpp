@@ -41,7 +41,7 @@ TAlias::TAlias(TAlias* parent, Host* pHost)
 }
 
 TAlias::TAlias(const QString& name, Host* pHost)
-: Tree<TAlias>(0)
+: Tree<TAlias>(nullptr)
 , mName( name )
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
@@ -89,7 +89,7 @@ bool TAlias::match(const QString& toMatch)
     //bool ret = false;
     //bool conditionMet = false;
     QSharedPointer<pcre> re = mpRegex;
-    if (re == NULL) {
+    if (re == nullptr) {
         return false; //regex compile error
     }
 
@@ -110,7 +110,7 @@ bool TAlias::match(const QString& toMatch)
 
     //cout <<" LINE="<<subject<<endl;
     if (mRegexCode.size() > 0) {
-        rc = pcre_exec(re.data(), 0, subject, subject_length, 0, 0, ovector, 100);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
     } else {
         goto MUD_ERROR;
     }
@@ -154,15 +154,15 @@ bool TAlias::match(const QString& toMatch)
             TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
         }
     }
-    pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMECOUNT, &namecount);
+    pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount <= 0) {
         //cout << "no named substrings detected" << endl;
     } else {
         unsigned char* tabptr;
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMETABLE, &name_table);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
 
-        pcre_fullinfo(re.data(), NULL, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
 
         tabptr = name_table;
         for (i = 0; i < namecount; i++) {
@@ -182,7 +182,7 @@ bool TAlias::match(const QString& toMatch)
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), NULL, subject, subject_length, start_offset, options, ovector, 30);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
@@ -254,9 +254,9 @@ void TAlias::compileRegex()
     const QByteArray& local8Bit = mRegexCode.toLocal8Bit();
     int erroffset;
 
-    QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, NULL), pcre_deleter);
+    QSharedPointer<pcre> re(pcre_compile(local8Bit.constData(), 0, &error, &erroffset, nullptr), pcre_deleter);
 
-    if (re == NULL) {
+    if (re == nullptr) {
         mOK_init = false;
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
