@@ -266,7 +266,7 @@
       <enum>QDateTimeEdit::HourSection</enum>
      </property>
      <property name="displayFormat">
-      <string>h</string>
+      <string>hh</string>
      </property>
     </widget>
    </item>
@@ -387,7 +387,7 @@
       <enum>QDateTimeEdit::MinuteSection</enum>
      </property>
      <property name="displayFormat">
-      <string>m</string>
+      <string>mm</string>
      </property>
     </widget>
    </item>
@@ -511,7 +511,7 @@
       <enum>QDateTimeEdit::SecondSection</enum>
      </property>
      <property name="displayFormat">
-      <string>s</string>
+      <string>ss</string>
      </property>
     </widget>
    </item>
