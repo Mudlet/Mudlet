@@ -102,17 +102,31 @@ const QString msgInfoAddKey = "To add a new key binding <b>1.</b> add a new key 
 const QString msgInfoAddVar = "Add a new variable (can be a string, integer, boolean -- delete a variable to set it to nil).";
 
 dlgTriggerEditor::dlgTriggerEditor(Host* pH)
-: mpCurrentActionItem(0)
-, mpCurrentKeyItem(0)
-, mpCurrentTimerItem(0)
-, mpCurrentScriptItem(0)
-, mpCurrentTriggerItem(0)
-, mpCurrentAliasItem(0)
-, mpCurrentVarItem(0)
+: mpAliasBaseItem(nullptr)
+, mpTriggerBaseItem(nullptr)
+, mpScriptsBaseItem(nullptr)
+, mpTimerBaseItem(nullptr)
+, mpActionBaseItem(nullptr)
+, mpKeyBaseItem(nullptr)
+, mpVarBaseItem(nullptr)
+, mpCurrentActionItem(nullptr)
+, mpCurrentKeyItem(nullptr)
+, mpCurrentTimerItem(nullptr)
+, mpCurrentScriptItem(nullptr)
+, mpCurrentTriggerItem(nullptr)
+, mpCurrentAliasItem(nullptr)
+, mpCurrentVarItem(nullptr)
 , mpHost(pH)
-, mpSourceEditorDocument(0)
-, mpSourceEditorEdbee(0)
-, mpSourceEditorEdbeeDocument(0)
+, mpSourceEditorDocument(nullptr)
+, mpSourceEditorEdbee(nullptr)
+, mpSourceEditorEdbeeDocument(nullptr)
+, mSearchOptions(SearchOptionNone)
+, mpAction_searchOptions(nullptr)
+, mIcon_searchOptions(QIcon())
+, mpAction_searchCaseSensitive(nullptr)
+// TODO: Implement other searchOptions:
+//, mpAction_searchWholeWords(nullptr)
+//, mpAction_searchRegExp(nullptr)
 {
     // init generated dialog
     setupUi(this);
@@ -158,13 +172,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpActionsMainArea = new dlgActionMainArea(mainArea);
     mpActionsMainArea->setSizePolicy(sizePolicy8);
-    connect(mpActionsMainArea->checkBox_pushdownbutton, SIGNAL(stateChanged(const int)), this, SLOT(slot_toggle_isPushDownButton(const int)));
+    connect(mpActionsMainArea->checkBox_action_button_isPushDown, SIGNAL(stateChanged(const int)), this, SLOT(slot_toggle_isPushDownButton(const int)));
     pVB1->addWidget(mpActionsMainArea);
 
     mpKeysMainArea = new dlgKeysMainArea(mainArea);
     mpKeysMainArea->setSizePolicy(sizePolicy8);
     pVB1->addWidget(mpKeysMainArea);
-    connect(mpKeysMainArea->pushButton_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
+    connect(mpKeysMainArea->pushButton_key_grabKey, SIGNAL(pressed()), this, SLOT(slot_grab_key()));
 
     mpVarsMainArea = new dlgVarsMainArea(mainArea);
     mpVarsMainArea->setSizePolicy(sizePolicy8);
@@ -176,9 +190,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pVB1->addWidget(mpScriptsMainArea);
 
     mIsScriptsMainAreaEditHandler = false;
-    mpScriptsMainAreaEditHandlerItem = 0;
-    connect(mpScriptsMainArea->lineEdit, SIGNAL(returnPressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->listWidget_registered_event_handlers, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
+    mpScriptsMainAreaEditHandlerItem = nullptr;
+    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, SIGNAL(returnPressed()), this, SLOT(slot_script_main_area_add_handler()));
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(slot_script_main_area_edit_handler(QListWidgetItem*)));
 
     // source editor area
 
@@ -216,10 +230,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pHB2->addWidget(mpErrorConsole);
     mpErrorConsole->show();
 
-    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey.png);} "
-                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey.png);}"
-                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down.png);} "
-                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right.png);}"));
+    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey-16x.png);} "
+                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
+                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
+                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
     connect(button_toggleSearchAreaResults, SIGNAL(clicked(const bool)), this, SLOT(slot_showSearchAreaResults(const bool)));
 
     // additional settings
@@ -420,7 +434,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->setIconSize(QSize(mudlet::self()->mMainIconSize * 8, mudlet::self()->mMainIconSize * 8));
     connect(button_displayAllVariables, SIGNAL(toggled(bool)), this, SLOT(slot_toggleHiddenVariables(bool)));
 
-    connect(mpVarsMainArea->hideVariable, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar(bool)));
+    connect(mpVarsMainArea->checkBox_variable_hidden, SIGNAL(clicked(bool)), this, SLOT(slot_toggleHiddenVar(bool)));
 
     toolBar2->addAction(viewTriggerAction);
     toolBar2->addAction(viewAliasAction);
@@ -448,7 +462,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 
-    connect(comboBox_searchTerms, SIGNAL(activated(const QString)), this, SLOT(slot_search_triggers(const QString)));
+    connect(comboBox_searchTerms, SIGNAL(activated(const QString&)), this, SLOT(slot_searchMudletItems(const QString&)));
     connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_trigger_selected(QTreeWidgetItem*)));
     connect(treeWidget_triggers, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
     connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_key_selected(QTreeWidgetItem*)));
@@ -464,7 +478,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_var_selected(QTreeWidgetItem*)));
     connect(treeWidget_variables, SIGNAL(itemChanged(QTreeWidgetItem*, int)), this, SLOT(slot_var_changed(QTreeWidgetItem*)));
     connect(treeWidget_variables, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
-    connect(treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_search_list(QTreeWidgetItem*, int)));
+    connect(treeWidget_searchResults, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_search_list(QTreeWidgetItem*)));
 
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search
@@ -473,8 +487,49 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     button_toggleSearchAreaResults->setMaximumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
     button_toggleSearchAreaResults->setMinimumSize(QSize((3 * comboBox_searchTerms->height()) / 4, (3 * comboBox_searchTerms->height()) / 4));
 
-    connect(mpScriptsMainArea->toolButton_add, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
-    connect(mpScriptsMainArea->toolButton_remove, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
+    comboBox_searchTerms->lineEdit()->setClearButtonEnabled(true);
+    auto pLineEdit_searchTerm = comboBox_searchTerms->lineEdit();
+
+    // QLineEdit does not provide a signal to hook on for the clear action
+    // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
+    // credit to Albert for the workaround
+    for (int i(0); i < pLineEdit_searchTerm->children().size(); ++i) {
+        QAction *pAction_clear(qobject_cast<QAction *>(pLineEdit_searchTerm->children().at(i)));
+
+        // The name was found by inspection - but as it is a QT internal it
+        // might change in the future:
+        if (pAction_clear && pAction_clear->objectName() == QLatin1String("_q_qlineeditclearaction")) {
+            connect(pAction_clear, &QAction::triggered,
+                    this, &dlgTriggerEditor::slot_clearSearchResults,
+                    Qt::QueuedConnection);
+            break;
+        }
+    }
+
+    mpAction_searchOptions = new QAction(tr("Search Options"), this);
+    mpAction_searchOptions->setObjectName(QStringLiteral("mpAction_searchOptions"));
+
+    QMenu* pMenu_searchOptions = new QMenu(tr("Search Options"), this);
+    pMenu_searchOptions->setObjectName(QStringLiteral("pMenu_searchOptions"));
+    pMenu_searchOptions->setToolTipsVisible(true);
+
+    mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
+    mpAction_searchCaseSensitive->setObjectName(QStringLiteral("mpAction_searchCaseSensitive"));
+    mpAction_searchCaseSensitive->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+        .arg(tr("If checked then what is searched for must match the case precisely otherwise case is ignored.")));
+    mpAction_searchCaseSensitive->setCheckable(true);
+
+    pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
+    connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchCaseSensitivity);
+
+    createSearchOptionIcon();
+
+    mpAction_searchOptions->setMenu(pMenu_searchOptions);
+
+    pLineEdit_searchTerm->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
+
+    connect(mpScriptsMainArea->toolButton_script_add_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_add_handler()));
+    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, SIGNAL(pressed()), this, SLOT(slot_script_main_area_delete_handler()));
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
@@ -528,19 +583,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                      << "Lua function"
                      << "line spacer"
                      << "color trigger";
-        QComboBox* pBox = pItem->patternType;
+        QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(_patternList);
         pBox->setItemData(0, QVariant(i));
         connect(pBox, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_set_pattern_type_color(int)));
-        connect(pItem->fgB, SIGNAL(pressed()), this, SLOT(slot_color_trigger_fg()));
-        connect(pItem->bgB, SIGNAL(pressed()), this, SLOT(slot_color_trigger_bg()));
+        connect(pItem->pushButton_fgColor, SIGNAL(pressed()), this, SLOT(slot_color_trigger_fg()));
+        connect(pItem->pushButton_bgColor, SIGNAL(pressed()), this, SLOT(slot_color_trigger_bg()));
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
-        pItem->fgB->hide();
-        pItem->bgB->hide();
-        pItem->number->setText(QString::number(i));
-        pItem->number->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        pItem->label_patternNumber->setText(QString::number(i+1));
+        pItem->label_patternNumber->show();
     }
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
@@ -652,7 +707,7 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("script_editor_size", size());
 }
 
-void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, int mode)
+void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -662,299 +717,668 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem, in
     // the new view first before changing the TreeWidgetItem. Because we save changes to
     // the current item when it is left, if we change the TreeWidgetItem and then swap
     // views the contents of the previous item will be overwritten.
-    if (pItem->text(0) == QString("Trigger")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_triggers->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+    QList<QTreeWidgetItem*> foundItemsList;
+    switch (pItem->data(0, ItemRole).toInt()) {
+    case cmTriggerView: { // DONE
+        // These searches are to be case sensitive and recursive and find an
+        // exact match - we are trying to find the "Name" of the item and then,
+        // in case of duplicates we do a match on exact ID number
+        foundItemsList = treeWidget_triggers->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
+
+        // This was inside the loop but it is a constant value for the duration
+        // of this method!
+        int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : foundItemsList) {
-            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
-            int idSearch = pItem->data(0, Qt::UserRole).toInt();
-            if (idTree == idSearch) {
+
+            if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_triggers();
                 slot_trigger_selected(treeWidgetItem);
                 treeWidget_triggers->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_triggers->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsScript:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                case SearchResultIsName:
+                    mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
+                    mpTriggersMainArea->lineEdit_trigger_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsPattern: {
+                    dlgTriggerPatternEdit * pTriggerPattern = mTriggerPatternEdit.at(pItem->data(0, PatternOrLineRole).toInt());
+                    mpScrollArea->ensureWidgetVisible(pTriggerPattern);
+                    if (pTriggerPattern->lineEdit_pattern->isVisible()) {
+                        // If is a colour trigger the lineEdit_pattern is not shown
+                        pTriggerPattern->lineEdit_pattern->setFocus();
+                        pTriggerPattern->lineEdit_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    }
+                    break;
+                }
+                case SearchResultIsCommand:
+                    mpTriggersMainArea->lineEdit_trigger_command->setFocus(Qt::OtherFocusReason);
+                    mpTriggersMainArea->lineEdit_trigger_command->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a TRIGGER type item but handler for element of type:"
+                             << treeWidgetItem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                }
                 return;
             }
         }
+        break;
     }
-    if (pItem->text(0) == QString("Alias")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_aliases->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+
+    case cmAliasView: {
+        foundItemsList = treeWidget_aliases->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
+
+        int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : foundItemsList) {
-            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
-            int idSearch = pItem->data(0, Qt::UserRole).toInt();
-            if (idTree == idSearch) {
+
+            if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_aliases();
                 slot_alias_selected(treeWidgetItem);
                 treeWidget_aliases->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_aliases->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsScript:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                case SearchResultIsName:
+                    mpAliasMainArea->lineEdit_alias_name->setFocus(Qt::OtherFocusReason);
+                    mpAliasMainArea->lineEdit_alias_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsPattern:
+                    mpAliasMainArea->lineEdit_alias_pattern->setFocus(Qt::OtherFocusReason);
+                    mpAliasMainArea->lineEdit_alias_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsCommand:
+                    mpAliasMainArea->lineEdit_alias_command->setFocus(Qt::OtherFocusReason);
+                    mpAliasMainArea->lineEdit_alias_command->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a ALIAS type item but handler for element of type:"
+                             << treeWidgetItem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                }
                 return;
             }
         }
+        break;
     }
-    if (pItem->text(0) == QString("Script")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_scripts->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+
+    case cmScriptView: {
+        foundItemsList = treeWidget_scripts->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
+
+        int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : foundItemsList) {
-            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
-            int idSearch = pItem->data(0, Qt::UserRole).toInt();
-            if (idTree == idSearch) {
+
+            if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_scripts();
                 slot_scripts_selected(treeWidgetItem);
                 treeWidget_scripts->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_scripts->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsScript:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                case SearchResultIsName:
+                    mpScriptsMainArea->lineEdit_script_name->setFocus(Qt::OtherFocusReason);
+                    mpScriptsMainArea->lineEdit_script_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsEventHandler:
+                    mpScriptsMainArea->listWidget_script_registered_event_handlers->setCurrentRow(pItem->data(0, PatternOrLineRole).toInt(), QItemSelectionModel::Clear);
+                    mpScriptsMainArea->listWidget_script_registered_event_handlers->scrollTo(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentIndex());
+                    // Taken from slot_script_main_area_edit_handler():
+                    // Note the handler item being edited:
+                    mpScriptsMainAreaEditHandlerItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
+                    // Copy the event name to the entry widget:
+                    mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(mpScriptsMainAreaEditHandlerItem->text());
+                    // Activate editing flag:
+                    mIsScriptsMainAreaEditHandler = true;
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a SCRIPT type item but handler for element of type:"
+                             << treeWidgetItem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                }
+
                 return;
             }
         }
-        return;
+        break;
     }
 
-    if (pItem->text(0) == QString("Button")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_actions->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+    case cmActionView: {
+        foundItemsList = treeWidget_actions->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
+
+        int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetitem : foundItemsList) {
-            int idTree = treeWidgetitem->data(0, Qt::UserRole).toInt();
-            int idSearch = pItem->data(0, Qt::UserRole).toInt();
-            if (idTree == idSearch) {
+
+            if (treeWidgetitem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_actions();
                 slot_action_selected(treeWidgetitem);
                 treeWidget_actions->setCurrentItem(treeWidgetitem, 0);
                 treeWidget_actions->scrollToItem(treeWidgetitem);
-                return;
-            }
-        }
-        return;
-    }
 
-    if (pItem->text(0) == QString("Timer")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_timers->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsScript:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                case SearchResultIsName:
+                    mpActionsMainArea->lineEdit_action_name->setFocus(Qt::OtherFocusReason);
+                    mpActionsMainArea->lineEdit_action_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsCommand:
+                    mpActionsMainArea->lineEdit_action_button_command_down ->setFocus(Qt::OtherFocusReason);
+                    mpActionsMainArea->lineEdit_action_button_command_down->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsExtraCommand:
+                    if (mpActionsMainArea->checkBox_action_button_isPushDown->isChecked()) {
+                        mpActionsMainArea->lineEdit_action_button_command_up->setFocus(Qt::OtherFocusReason);
+                        mpActionsMainArea->lineEdit_action_button_command_up->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    }
+                    break;
+                case SearchResultsIsCss: {
+                    mpActionsMainArea->plainTextEdit_action_css->setFocus(Qt::OtherFocusReason);
+                    QTextCursor cssCursor(mpActionsMainArea->plainTextEdit_action_css->textCursor());
+                    cssCursor.movePosition(QTextCursor::Start, QTextCursor::MoveAnchor);
+                    if (pItem->data(0, PatternOrLineRole).toInt()) {
+                        // Are we not on the first line - so move down that many lines?
+                        cssCursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, pItem->data(0, PatternOrLineRole).toInt());
+                    }
+                    if (pItem->data(0, PositionRole).toInt()) {
+                        // Are we not on the first character - if so move right that many QChars...
+                        cssCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, pItem->data(0, PositionRole).toInt());
+                    }
+                    mpActionsMainArea->plainTextEdit_action_css->setTextCursor(cssCursor);
+                } // End case SearchResultsIsCss
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a BUTTON type item but handler for element of type:"
+                             << treeWidgetitem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                } // End or switch()
+                return;
+            } // End of if()
+        } // End of for()
+        break;
+    } // End of case cmActionView
+
+    case cmTimerView: {
+        foundItemsList = treeWidget_timers->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
+
+        int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : foundItemsList) {
-            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
-            int idSearch = pItem->data(0, Qt::UserRole).toInt();
-            if (idTree == idSearch) {
+
+            if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_timers();
                 slot_timer_selected(treeWidgetItem);
                 treeWidget_timers->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_timers->scrollToItem(treeWidgetItem);
-                return;
-            }
-        }
-        return;
-    }
 
-    if (pItem->text(0) == QString("Key")) {
-        QList<QTreeWidgetItem*> foundItemsList = treeWidget_keys->findItems(pItem->text(1), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive, 0);
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsScript:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                case SearchResultIsName:
+                    mpTimersMainArea->lineEdit_timer_name->setFocus(Qt::OtherFocusReason);
+                    mpTimersMainArea->lineEdit_timer_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsCommand:
+                    mpTimersMainArea->lineEdit_timer_command->setFocus(Qt::OtherFocusReason);
+                    mpTimersMainArea->lineEdit_timer_command->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a TIMER type item but handler for element of type:"
+                             << treeWidgetItem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                } // End of switch()
+                return;
+            } // End of if()
+        } // End of for()
+        break;
+    } // End of case cmTimerView
+
+    case cmKeysView: {
+        foundItemsList = treeWidget_keys->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : foundItemsList) {
-            int idTree = treeWidgetItem->data(0, Qt::UserRole).toInt();
-            int idSearch = pItem->data(0, Qt::UserRole).toInt();
+            int idTree = treeWidgetItem->data(0, IdRole).toInt();
+            int idSearch = pItem->data(0, IdRole).toInt();
             if (idTree == idSearch) {
                 slot_show_keys();
                 slot_key_selected(treeWidgetItem);
                 treeWidget_keys->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_keys->scrollToItem(treeWidgetItem);
-                return;
-            }
-        }
-        return;
-    }
 
-    if (pItem->text(0) == QString("Variable")) {
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsScript:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                case SearchResultIsName:
+                    mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
+                    mpTriggersMainArea->lineEdit_trigger_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsPattern: {
+                    dlgTriggerPatternEdit * pTriggerPattern = mTriggerPatternEdit.at(pItem->data(0, PatternOrLineRole).toInt());
+                    mpScrollArea->ensureWidgetVisible(pTriggerPattern);
+                    if (pTriggerPattern->lineEdit_pattern->isVisible()) {
+                        // If is a colour trigger the lineEdit_pattern is not shown
+                        pTriggerPattern->lineEdit_pattern->setFocus();
+                        pTriggerPattern->lineEdit_pattern->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    }
+                    break;
+                }
+                case SearchResultIsCommand:
+                    mpTriggersMainArea->lineEdit_trigger_command->setFocus(Qt::OtherFocusReason);
+                    mpTriggersMainArea->lineEdit_trigger_command->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a KEY type item but handler for element of type:"
+                             << treeWidgetItem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                } // End of switch()
+                return;
+            } // End of if
+        } // End of for
+        break;
+    } // End of case cmKeysView
+
+    case cmVarsView: {
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
-        QStringList varShort = pItem->data(0, Qt::UserRole).toStringList();
+        QStringList varShort = pItem->data(0, IdRole).toStringList();
         QList<QTreeWidgetItem*> list;
         recurseVariablesDown(mpVarBaseItem, list);
         QListIterator<QTreeWidgetItem*> it(list);
         while (it.hasNext()) {
-            QTreeWidgetItem* pI = it.next();
-            TVar* var = vu->getWVar(pI);
+            QTreeWidgetItem* treeWidgetItem = it.next();
+            TVar* var = vu->getWVar(treeWidgetItem);
             if (vu->shortVarName(var) == varShort) {
                 show_vars();
-                treeWidget_variables->setCurrentItem(pI, 0);
-                treeWidget_variables->scrollToItem(pI);
+                treeWidget_variables->setCurrentItem(treeWidgetItem, 0);
+                treeWidget_variables->scrollToItem(treeWidgetItem);
+
+                // highlight all instances of the item that we're searching for.
+                // edbee already remembers this from a setSearchTerm() call elsewhere
+                auto controller = mpSourceEditorEdbee->controller();
+                auto searcher = controller->textSearcher();
+                searcher->markAll(controller->borderedTextRanges());
+                controller->update();
+
+                switch (pItem->data(0, TypeRole).toInt()) {
+                case SearchResultIsName:
+                    mpVarsMainArea->lineEdit_var_name->setFocus(Qt::OtherFocusReason);
+                    mpVarsMainArea->lineEdit_var_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
+                    break;
+                case SearchResultIsValue:
+                    mpSourceEditorEdbee->setFocus();
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
+                    controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    break;
+                default:
+                    qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a VAR type item but handler for element of type:"
+                             << treeWidgetItem->data(0, TypeRole).toInt() << "not yet done/applicable...!";
+                }
                 return;
             }
         }
-        return;
-    }
+    }  // End of case cmVarsView
+        break;
+    default:
+        ; // No-op
+    } // End of switch()
 }
 
-void dlgTriggerEditor::slot_search_triggers(const QString s)
+void dlgTriggerEditor::slot_searchMudletItems(const QString & s)
 {
-    QRegExp pattern = QRegExp(s);
+    if (s.isEmpty()) {
+        // It does NOT make sense to search for an empty string...!
+        return;
+    }
 
     treeWidget_searchResults->clear();
     slot_showSearchAreaResults(true);
     treeWidget_searchResults->setUpdatesEnabled(false);
 
-    // type   | name | line number/pattern/name what has been found
-    //-------------------------------------------------------------------------
-    //trigger | name | line 204: a la sd  akd
-    //trigger | asdf | pattern: ^alsd
-    //trigger | asdf | name     |
-    if (true) {
+    { // Blocked to limit scope of same variablenames that are different types for different item types
         std::list<TTrigger*> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
         for (auto trigger : nodes) {
             QTreeWidgetItem* pItem;
-            QTreeWidgetItem* parent = 0;
-            QString n = trigger->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            QTreeWidgetItem* parent = nullptr;
+            QString name = trigger->getName();
+            int startPos = 0;
+
+            if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Trigger" << trigger->getName() << "name";
+                sl << tr("Trigger") << name << tr("Name");
+                // This part can never have a parent as it is the first part of this item
+                parent = new QTreeWidgetItem(sl);
+                parent->setFirstColumnSpanned(false);
+                setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsName, startPos);
+                treeWidget_searchResults->addTopLevelItem(parent);
+            }
+
+            // The simple "command"
+            // TODO: (A) Revise to count multiple instances of search string within command?
+            if ((startPos = trigger->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QStringList sl;
                 if (!parent) {
+                    sl << tr("Trigger") << name << tr("Command");
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, trigger->getID());
+                    setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
                     treeWidget_searchResults->addTopLevelItem(parent);
                 } else {
+                    sl << QString() << QString() << tr("Command");
                     pItem = new QTreeWidgetItem(parent, sl);
                     pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, trigger->getID());
+                    setAllSearchData(pItem, cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
                     parent->addChild(pItem);
                     parent->setExpanded(true);
                 }
             }
-            QStringList scriptList = trigger->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
-                QStringList sl;
-                sl << "Trigger" << trigger->getName() << "script" << resultList[i];
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, trigger->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, trigger->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
+
+            // Trigger patterns
+            QStringList textList = trigger->getRegexCodeList();
+            int total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine this line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Trigger") << name << tr("Pattern {%1}").arg(index+1) << textList.at(index);
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Pattern {%1}").arg(index+1) << textList.at(index);
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
-            QStringList regexList = trigger->getRegexCodeList();
-            resultList = regexList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
-                QStringList sl;
-                sl << "Trigger" << trigger->getName() << "pattern" << resultList[i];
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, trigger->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, trigger->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
+
+            // Script content - now put last
+            textList = trigger->getScript().split("\n");
+            total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QStringList sl;
+                    QString whatText(textList.at(index));
+                    whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                    if (!parent) {
+                        sl << tr("Trigger") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsScript, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmTriggerView, name, trigger->getID(), SearchResultIsScript, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
+
             recursiveSearchTriggers(trigger, s);
         }
     }
 
-    if (true) {
+    {
         std::list<TAlias*> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
         for (auto alias : nodes) {
             QTreeWidgetItem* pItem;
-            QTreeWidgetItem* parent = 0;
-            QString n = alias->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            QTreeWidgetItem* parent = nullptr;
+            QString name = alias->getName();
+            int startPos = 0;
+
+            if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Alias" << alias->getName() << "name";
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, alias->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, alias->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
-                }
+                sl << tr("Alias") << name << tr("Name");
+                parent = new QTreeWidgetItem(sl);
+                parent->setFirstColumnSpanned(false);
+                setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsName, startPos);
+                treeWidget_searchResults->addTopLevelItem(parent);
             }
-            QStringList scriptList = alias->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
+
+            // The simple "command"
+            if ((startPos = alias->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Alias" << alias->getName() << "script" << resultList[i];
                 if (!parent) {
+                    sl << tr("ALias") << name << tr("Command");
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, alias->getID());
+                    setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
                     treeWidget_searchResults->addTopLevelItem(parent);
                 } else {
+                    sl << QString() << QString() << tr("Command");
                     pItem = new QTreeWidgetItem(parent, sl);
                     pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, alias->getID());
+                    setAllSearchData(pItem, cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
                     parent->addChild(pItem);
                     parent->setExpanded(true);
                 }
             }
 
-            if (alias->getRegexCode().indexOf(s, 0, Qt::CaseInsensitive) > -1) {
+            // There is only ONE entry for "Patterns" for Aliases
+            if ((startPos = alias->getRegexCode().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Alias" << alias->getName() << "pattern" << alias->getRegexCode();
                 if (!parent) {
+                    sl << tr("Alias") << name << tr("Pattern") << alias->getRegexCode();
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, alias->getID());
+                    setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
                     treeWidget_searchResults->addTopLevelItem(parent);
                 } else {
+                    sl << QString() << QString() << tr("Pattern") << alias->getRegexCode();
                     pItem = new QTreeWidgetItem(parent, sl);
                     pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, alias->getID());
+                    setAllSearchData(pItem, cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
                     parent->addChild(pItem);
                     parent->setExpanded(true);
                 }
             }
+
+            // Script content - now put last
+            QStringList textList = alias->getScript().split("\n");
+            int total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QString whatText(textList.at(index));
+                    whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Alias") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsScript, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmAliasView, name, alias->getID(), SearchResultIsScript, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
+                }
+            }
+
             recursiveSearchAlias(alias, s);
         }
     }
 
-    if (true) {
+    {
         std::list<TScript*> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
         for (auto script : nodes) {
             QTreeWidgetItem* pItem;
-            QTreeWidgetItem* parent = 0;
-            QString n = script->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            QTreeWidgetItem* parent = nullptr;
+            QString name = script->getName();
+            int startPos = 0;
+
+            if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Script" << script->getName() << "name";
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, script->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, script->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
+                sl << tr("Script") << name << tr("Name");
+                // This part can never have a parent as it is the first part of this item
+                parent = new QTreeWidgetItem(sl);
+                parent->setFirstColumnSpanned(false);
+                setAllSearchData(parent, cmScriptView, name, script->getID(), SearchResultIsName, startPos);
+                treeWidget_searchResults->addTopLevelItem(parent);
+            }
+
+            // New: Also search event handlers
+            QStringList textList = script->getEventHandlerList();
+            int total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Script") << name << tr("Event Handler") << textList.at(index);
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Event Handler").arg(index+1) << textList.at(index);
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
-            QStringList scriptList = script->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
-                QStringList sl;
-                sl << "Script" << script->getName() << "script" << resultList[i];
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, script->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, script->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
+
+            // Script content
+            textList = script->getScript().split("\n");
+            total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                int startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QString whatText(textList.at(index));
+                    whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Script") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmScriptView, name, script->getID(), SearchResultIsScript, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmScriptView, name, script->getID(), SearchResultIsScript, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
 
@@ -962,44 +1386,129 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
         }
     }
 
-    if (true) {
+    { // Blocked to limit scope of same variablenames that are different types for different item types
         std::list<TAction*> nodes = mpHost->getActionUnit()->getActionRootNodeList();
         for (auto action : nodes) {
             QTreeWidgetItem* pItem;
-            QTreeWidgetItem* parent = 0;
-            QString n = action->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            QTreeWidgetItem* parent = nullptr;
+            QString name = action->getName();
+            int startPos = 0;
+
+            if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Button" << action->getName() << "name";
+                sl << tr("Button") << name << tr("Name");
+                // This part can never have a parent as it is the first part of this item
+                parent = new QTreeWidgetItem(sl);
+                parent->setFirstColumnSpanned(false);
+                setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsName, startPos);
+                treeWidget_searchResults->addTopLevelItem(parent);
+            }
+
+            // The simple (down) "command"
+            // TODO: (A) Revise to count multiple instances of search string within command?
+            if ((startPos = action->getCommandButtonDown().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QStringList sl;
                 if (!parent) {
+                    sl << tr("Button") << name << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, action->getID());
+                    setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
                     treeWidget_searchResults->addTopLevelItem(parent);
                 } else {
+                    sl << QString() << QString() << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
                     pItem = new QTreeWidgetItem(parent, sl);
                     pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, action->getID());
+                    setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
                     parent->addChild(pItem);
                     parent->setExpanded(true);
                 }
             }
-            QStringList scriptList = action->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
-                QStringList sl;
-                sl << "Button" << action->getName() << "script" << resultList[i];
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, action->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, action->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
+
+            if (action->isPushDownButton()) {
+                // We should only search this field if it IS a push-down button
+                // as we can not show it if it is not...!
+                if ((startPos = action->getCommandButtonUp().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Button") << name << tr("Command {Up}");
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Command {Up}");
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                }
+            }
+
+            // Css / StyleSheet
+            QStringList textList = action->css.split("\n");
+            int total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Action") << name << tr("Stylesheet {L: %1 C: %2}").arg(index+1).arg(startPos+1) << textList.at(index);
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Stylesheet {L: %1 C: %2}").arg(index+1).arg(startPos+1) << textList.at(index);
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
+                }
+            }
+
+            // Script content - now put last
+            textList = action->getScript().split("\n");
+            total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QString whatText(textList.at(index));
+                    whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Button") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsScript, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultIsScript, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
 
@@ -1007,44 +1516,75 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
         }
     }
 
-    if (true) {
+    { // Blocked to limit scope of same variablenames that are different types for different item types
         std::list<TTimer*> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
         for (auto timer : nodes) {
             QTreeWidgetItem* pItem;
-            QTreeWidgetItem* parent = 0;
-            QString n = timer->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            QTreeWidgetItem* parent = nullptr;
+            QString name = timer->getName();
+            int startPos = 0;
+
+            if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Timer" << timer->getName() << "name";
+                sl << tr("Timer") << name << tr("Name");
+                // This part can never have a parent as it is the first part of this item
+                parent = new QTreeWidgetItem(sl);
+                parent->setFirstColumnSpanned(false);
+                setAllSearchData(parent, cmTimerView, name, timer->getID(), SearchResultIsName, startPos);
+                treeWidget_searchResults->addTopLevelItem(parent);
+            }
+
+            // The simple "command"
+            // TODO: (A) Revise to count multiple instances of search string within command?
+            if (timer->getCommand().contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                QStringList sl;
                 if (!parent) {
+                    sl << tr("Timer") << name << tr("Command");
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, timer->getID());
+                    setAllSearchData(parent, cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
                     treeWidget_searchResults->addTopLevelItem(parent);
                 } else {
+                    sl << QString() << QString() << tr("Command");
                     pItem = new QTreeWidgetItem(parent, sl);
                     pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, timer->getID());
+                    setAllSearchData(pItem, cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
                     parent->addChild(pItem);
                     parent->setExpanded(true);
                 }
             }
-            QStringList scriptList = timer->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
-                QStringList sl;
-                sl << "Timer" << timer->getName() << "script" << resultList[i];
-                if (!parent) {
-                    parent = new QTreeWidgetItem(sl);
-                    parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, timer->getID());
-                    treeWidget_searchResults->addTopLevelItem(parent);
-                } else {
-                    pItem = new QTreeWidgetItem(parent, sl);
-                    pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, timer->getID());
-                    parent->addChild(pItem);
-                    parent->setExpanded(true);
+
+            // Script content
+            QStringList textList = timer->getScript().split("\n");
+            int total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QString whatText(textList.at(index));
+                    whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Timer") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmTimerView, name, timer->getID(), SearchResultIsScript, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmTimerView, name, timer->getID(), SearchResultIsScript, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
 
@@ -1052,36 +1592,75 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
         }
     }
 
-    if (true) {
+    { // Blocked to limit scope of same variablenames that are different types for different item types
         std::list<TKey*> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
         for (auto key : nodes) {
             QTreeWidgetItem* pItem;
-            QTreeWidgetItem* parent = 0;
-            QString n = key->getName();
-            if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+            QTreeWidgetItem* parent = nullptr;
+            QString name = key->getName();
+            int startPos = 0;
+
+            if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Key" << key->getName() << "name";
+                sl << tr("Key") << name << tr("Name");
+                // This part can never have a parent as it is the first part of this item
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, key->getID());
+                setAllSearchData(parent, cmKeysView, name, key->getID(), SearchResultIsName, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             }
-            QStringList scriptList = key->getScript().split("\n");
-            QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-            for (int i = 0; i < resultList.size(); i++) {
+
+            // The simple "command"
+            // TODO: (A) Revise to count multiple instances of search string within command?
+            if ((startPos = key->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                 QStringList sl;
-                sl << "Key" << key->getName() << "script" << resultList[i];
                 if (!parent) {
+                    sl << tr("Key") << name << tr("Command");
                     parent = new QTreeWidgetItem(sl);
                     parent->setFirstColumnSpanned(false);
-                    parent->setData(0, Qt::UserRole, key->getID());
+                    setAllSearchData(parent, cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
                     treeWidget_searchResults->addTopLevelItem(parent);
                 } else {
+                    sl << QString() << QString() << tr("Command");
                     pItem = new QTreeWidgetItem(parent, sl);
                     pItem->setFirstColumnSpanned(false);
-                    pItem->setData(0, Qt::UserRole, key->getID());
+                    setAllSearchData(pItem, cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
                     parent->addChild(pItem);
                     parent->setExpanded(true);
+                }
+            }
+
+            // Script content
+            QStringList textList = key->getScript().split("\n");
+            int total = textList.count();
+            for (int index = 0; index < total; ++index) {
+                // CHECK: This may NOT be an optimisation...!
+                if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                    // Short-cuts that mean we do not have to examine the line in more detail
+                    continue;
+                }
+
+                int instance = 0;
+                startPos = 0;
+                while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QString whatText(textList.at(index));
+                    whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Key") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        setAllSearchData(parent, cmKeysView, name, key->getID(), SearchResultIsScript, startPos, index, instance++);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                        pItem = new QTreeWidgetItem(parent, sl);
+                        pItem->setFirstColumnSpanned(false);
+                        setAllSearchData(pItem, cmKeysView, name, key->getID(), SearchResultIsScript, startPos, index, instance++);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
+                    ++startPos;
                 }
             }
 
@@ -1089,44 +1668,98 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
         }
     }
 
-    if (true) {
+    {
         if (mCurrentView != cmVarsView) {
+            // repopulateVars can take some time should there be a large number
+            // of variables or big tables... 8-(
             repopulateVars();
         }
+
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         TVar* base = vu->getBase();
-        QListIterator<TVar*> it(base->getChildren(false));
-        while (it.hasNext()) {
-            TVar* var = it.next();
+        QListIterator<TVar*> itBaseVarChildren(base->getChildren(false));
+        while (itBaseVarChildren.hasNext()) {
+            TVar* var = itBaseVarChildren.next();
+            // We do not search for hidden variables - probably because we would
+            // have to unhide all of them to show the hidden ones found by
+            // searching
             if (!showHiddenVars && vu->isHidden(var)) {
                 continue;
             }
+
             //recurse down this variable
             QList<TVar*> list;
-            recurseVariablesDown(var, list, 0);
-            QListIterator<TVar*> it2(list);
-            while (it2.hasNext()) {
-                TVar* var2 = it2.next();
-                if (!showHiddenVars && vu->isHidden(var2)) {
+            recursiveSearchVariables(var, list, false);
+            QListIterator<TVar*> itVarDecendent(list);
+            while (itVarDecendent.hasNext()) {
+                TVar* varDecendent = itVarDecendent.next();
+                if (!showHiddenVars && vu->isHidden(varDecendent)) {
                     continue;
                 }
-                QTreeWidgetItem* pItem2;
-                if (!var2->getName().isEmpty() && (var2->getName().indexOf(s, 0, Qt::CaseInsensitive) != -1)) {
-                    QStringList sl;
-                    sl << "Variable" << var2->getName() << "name";
-                    pItem2 = new QTreeWidgetItem(sl);
-                    pItem2->setFirstColumnSpanned(false);
-                    pItem2->setData(0, Qt::UserRole, vu->shortVarName(var2));
-                    treeWidget_searchResults->addTopLevelItem(pItem2);
+
+                QTreeWidgetItem* pItem;
+                QTreeWidgetItem* parent = nullptr;
+                QString name = varDecendent->getName();
+                QString value = varDecendent->getValue();
+                QStringList idStringList = vu->shortVarName(varDecendent);
+                QString idString;
+                // Take the first element - to comply with lua requirement it
+                // must begin with not a digit and not contain any spaces so is
+                // a string - and it is used "unquoted" as is to be the base
+                // of a lua table
+                if (idStringList.size() > 1) {
+                    QStringList midStrings = idStringList;
+                    idString = midStrings.takeFirst();
+                    QStringListIterator itSubString(midStrings);
+                    while (itSubString.hasNext()) {
+                        QString intermediate = itSubString.next();
+                        bool isOk = false;
+                        int numberValue = intermediate.toInt(&isOk);
+                        if ( isOk && QString::number(numberValue) == intermediate ) {
+                            // This seems to be an integer
+                            idString.append(QStringLiteral("[%1]").arg(intermediate));
+                        } else {
+                            idString.append(QStringLiteral("[\"%1\"]").arg(intermediate));
+                        }
+                    }
+                } else if (idStringList.size()) {
+                    idString = idStringList.at(0);
                 }
-                if (!var2->getValue().isEmpty() && (var2->getValue().indexOf(s, 0, Qt::CaseInsensitive) != -1)) {
+
+                int startPos = 0;
+                if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
                     QStringList sl;
-                    sl << "Variable" << var2->getName() << "value";
-                    pItem2 = new QTreeWidgetItem(sl);
-                    pItem2->setFirstColumnSpanned(false);
-                    pItem2->setData(0, Qt::UserRole, vu->shortVarName(var2));
-                    treeWidget_searchResults->addTopLevelItem(pItem2);
+                    sl << tr("Variable") << idString << tr("Name");
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    // We do not (yet) worry about multiple search results in the "name"
+                    setAllSearchData(parent, name, vu->shortVarName(varDecendent), SearchResultIsName, startPos);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                }
+
+                // The additional first test is needed to exclude the case when
+                // the search term matches on the word "function" which will
+                // appear in EVERY "value" for a lua function in the variable
+                // tree widget...
+                if (value != QLatin1String("function") && (startPos = value.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                    QStringList sl;
+                    if (!parent) {
+                        sl << tr("Variable") << idString << tr("Value") << value;
+                        parent = new QTreeWidgetItem(sl);
+                        parent->setFirstColumnSpanned(false);
+                        // We do not (yet) worry about multiple search results in the "value"
+                        setAllSearchData(parent, name, vu->shortVarName(varDecendent), SearchResultIsValue, startPos);
+                        treeWidget_searchResults->addTopLevelItem(parent);
+                    } else {
+                        sl << QString() << QString() << tr("Value") << value;
+                        pItem = new QTreeWidgetItem(sl);
+                        pItem->setFirstColumnSpanned(false);
+                        // We do not (yet) worry about multiple search results in the "value"
+                        setAllSearchData(pItem, name, vu->shortVarName(varDecendent), SearchResultIsValue, startPos);
+                        parent->addChild(pItem);
+                        parent->setExpanded(true);
+                    }
                 }
             }
         }
@@ -1142,66 +1775,121 @@ void dlgTriggerEditor::slot_search_triggers(const QString s)
     // functionality isn't implemented.
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
-    //mpSourceEditorEdbee->controller()->textSearcher()->selectAll( mpSourceEditorEdbee);
-    //mpSourceEditorEdbee->controller()->textRenderer()->theme()->setFindHighlightBackgroundColor( QColor(0,0,0)); // This does nothing
-    mpSourceEditorEdbee->controller()->textSearcher()->findNext(mpSourceEditorEdbee);
-
-    //==
+    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(mSearchOptions & SearchOptionCaseSensitive);
 
     treeWidget_searchResults->setUpdatesEnabled(true);
+
+    // Need to highlight the contents if something is already showing in the editor:
+    mpSourceEditorEdbee->controller()->update();
 }
 
 void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const QString& s)
 {
-    list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
     for (auto trigger : *childrenList) {
         QTreeWidgetItem* pItem;
-        QTreeWidgetItem* parent = 0;
-        QString n = trigger->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        QTreeWidgetItem* parent = nullptr;
+        QString name = trigger->getName();
+        int startPos = 0;
+
+        if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Trigger" << trigger->getName() << "name";
+            sl << tr("Trigger") << name << tr("Name");
+            // This part can never have a parent as it is the first part of this item
             parent = new QTreeWidgetItem(sl);
             parent->setFirstColumnSpanned(false);
-            parent->setData(0, Qt::UserRole, trigger->getID());
+            setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsName, startPos);
             treeWidget_searchResults->addTopLevelItem(parent);
         }
-        QStringList scriptList = trigger->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
+
+        // The simple "command"
+        // TODO: (A) Revise to count multiple instances of search string within command?
+        if ((startPos = trigger->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Trigger" << trigger->getName() << "script" << resultList[i];
             if (!parent) {
+                sl << tr("Trigger") << name << tr("Command");
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, trigger->getID());
+                setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             } else {
+                sl << QString() << QString() << tr("Command");
                 pItem = new QTreeWidgetItem(parent, sl);
                 pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, trigger->getID());
+                setAllSearchData(pItem, cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
                 parent->addChild(pItem);
                 parent->setExpanded(true);
             }
         }
-        QStringList regexList = trigger->getRegexCodeList();
-        resultList = regexList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
-            QStringList sl;
-            sl << "Trigger" << trigger->getName() << "pattern" << resultList[i];
-            if (!parent) {
-                parent = new QTreeWidgetItem(sl);
-                parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, trigger->getID());
-                treeWidget_searchResults->addTopLevelItem(parent);
-            } else {
-                pItem = new QTreeWidgetItem(parent, sl);
-                pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, trigger->getID());
-                parent->addChild(pItem);
-                parent->setExpanded(true);
+
+        // Trigger patterns
+        QStringList textList = trigger->getRegexCodeList();
+        int total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Trigger") << name << tr("Pattern {%1}").arg(index+1) << textList.at(index);
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Pattern {%1}").arg(index+1) << textList.at(index);
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
             }
         }
+
+        // Script content - now put last
+        textList = trigger->getScript().split("\n");
+        total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                // We need to replace tabs in the script with two spaces
+                // otherwise the displayed text A) does not match the main
+                // editor settings and B). often gets shifted out of view by
+                // any leading tabs which are quite common in Lua formatting...!
+                QString whatText(textList.at(index));
+                whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Trigger") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmTriggerView, name, trigger->getID(), SearchResultIsScript, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmTriggerView, name, trigger->getID(), SearchResultIsScript, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
+            }
+        }
+
         if (trigger->hasChildren()) {
             recursiveSearchTriggers(trigger, s);
         }
@@ -1210,55 +1898,94 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
 
 void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QString& s)
 {
-    list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
     for (auto alias : *childrenList) {
         QTreeWidgetItem* pItem;
-        QTreeWidgetItem* parent = 0;
-        QString n = alias->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        QTreeWidgetItem* parent = nullptr;
+        QString name = alias->getName();
+        int startPos = 0;
+
+        if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Alias" << alias->getName() << "name";
+            sl << tr("Alias") << name << tr("Name");
             parent = new QTreeWidgetItem(sl);
             parent->setFirstColumnSpanned(false);
-            parent->setData(0, Qt::UserRole, alias->getID());
+            setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsName, startPos);
             treeWidget_searchResults->addTopLevelItem(parent);
         }
-        QStringList scriptList = alias->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
+
+        // The simple "command"
+        if ((startPos = alias->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Alias" << alias->getName() << "script" << resultList[i];
             if (!parent) {
+                sl << tr("ALias") << name << tr("Command");
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, alias->getID());
+                setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             } else {
+                sl << QString() << QString() << tr("Command");
                 pItem = new QTreeWidgetItem(parent, sl);
                 pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, alias->getID());
+                setAllSearchData(pItem, cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
                 parent->addChild(pItem);
                 parent->setExpanded(true);
             }
         }
 
-
-        if (alias->getRegexCode().indexOf(s, 0, Qt::CaseInsensitive) > -1) {
+        // There is only ONE entry for "Patterns" for Aliases
+        if ((startPos = alias->getRegexCode().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Alias" << alias->getName() << "pattern" << alias->getRegexCode();
             if (!parent) {
+                sl << tr("Alias") << name << tr("Pattern") << alias->getRegexCode();
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, alias->getID());
+                setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             } else {
+                sl << QString() << QString() << tr("Pattern") << alias->getRegexCode();
                 pItem = new QTreeWidgetItem(parent, sl);
                 pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, alias->getID());
+                setAllSearchData(pItem, cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
                 parent->addChild(pItem);
                 parent->setExpanded(true);
             }
         }
+
+        // Script content - now put last
+        QStringList textList = alias->getScript().split("\n");
+        int total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QString whatText(textList.at(index));
+                whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Alias") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmAliasView, name, alias->getID(), SearchResultIsScript, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmAliasView, name, alias->getID(), SearchResultIsScript, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
+            }
+        }
+
         if (alias->hasChildren()) {
             recursiveSearchAlias(alias, s);
         }
@@ -1267,35 +1994,86 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
 
 void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QString& s)
 {
-    list<TScript*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TScript*>* childrenList = pTriggerParent->getChildrenList();
     for (auto script : *childrenList) {
         QTreeWidgetItem* pItem;
-        QTreeWidgetItem* parent = 0;
-        QString n = script->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        QTreeWidgetItem* parent = nullptr;
+        QString name = script->getName();
+        int startPos = 0;
+
+        if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Script" << script->getName() << "name";
+            sl << tr("Script") << name << tr("Name");
+            // This part can never have a parent as it is the first part of this item
             parent = new QTreeWidgetItem(sl);
             parent->setFirstColumnSpanned(false);
-            parent->setData(0, Qt::UserRole, script->getID());
+            setAllSearchData(parent, cmScriptView, name, script->getID(), SearchResultIsName, startPos);
             treeWidget_searchResults->addTopLevelItem(parent);
         }
-        QStringList scriptList = script->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
-            QStringList sl;
-            sl << "Script" << script->getName() << "script" << resultList[i];
-            if (!parent) {
-                parent = new QTreeWidgetItem(sl);
-                parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, script->getID());
-                treeWidget_searchResults->addTopLevelItem(parent);
-            } else {
-                pItem = new QTreeWidgetItem(parent, sl);
-                pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, script->getID());
-                parent->addChild(pItem);
-                parent->setExpanded(true);
+
+        // New: Also search event handlers
+        QStringList textList = script->getEventHandlerList();
+        int total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Script") << name << tr("Event Handler") << textList.at(index);
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Event Handler").arg(index+1) << textList.at(index);
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
+            }
+        }
+
+        // Script content
+        textList = script->getScript().split("\n");
+        total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QString whatText(textList.at(index));
+                whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Script") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmScriptView, name, script->getID(), SearchResultIsScript, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmScriptView, name, script->getID(), SearchResultIsScript, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
             }
         }
 
@@ -1307,35 +2085,128 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
 
 void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QString& s)
 {
-    list<TAction*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TAction*>* childrenList = pTriggerParent->getChildrenList();
     for (auto action : *childrenList) {
         QTreeWidgetItem* pItem;
-        QTreeWidgetItem* parent = 0;
-        QString n = action->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        QTreeWidgetItem* parent = nullptr;
+        QString name = action->getName();
+        int startPos = 0;
+
+        if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Button" << action->getName() << "name";
+            sl << tr("Button") << name << tr("Name");
+            // This part can never have a parent as it is the first part of this item
             parent = new QTreeWidgetItem(sl);
             parent->setFirstColumnSpanned(false);
-            parent->setData(0, Qt::UserRole, action->getID());
+            setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsName, startPos);
             treeWidget_searchResults->addTopLevelItem(parent);
         }
-        QStringList scriptList = action->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
+
+        // The simple (down) "command"
+        // TODO: (A) Revise to count multiple instances of search string within command?
+        if ((startPos = action->getCommandButtonDown().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Button" << action->getName() << "script" << resultList[i];
             if (!parent) {
+                sl << tr("Button") << name << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, action->getID());
+                setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             } else {
+                sl << QString() << QString() << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
                 pItem = new QTreeWidgetItem(parent, sl);
                 pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, action->getID());
+                setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
                 parent->addChild(pItem);
                 parent->setExpanded(true);
+            }
+        }
+
+        if (action->isPushDownButton()) {
+            // We should only search this field if it IS a push-down button
+            // as we can not show it if it is not...!
+            if ((startPos = action->getCommandButtonUp().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Button") << name << tr("Command {Up}");
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Command {Up}");
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+            }
+        }
+
+        // Css / StyleSheet
+        QStringList textList = action->css.split("\n");
+        int total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Action") << name << tr("Stylesheet {L: %1 C: %2}").arg(index+1).arg(startPos+1) << textList.at(index);
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Stylesheet {L: %1 C: %2}").arg(index+1).arg(startPos+1) << textList.at(index);
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
+            }
+        }
+
+        // Script content - now put last
+        textList = action->getScript().split("\n");
+        total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QString whatText(textList.at(index));
+                whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Button") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmActionView, name, action->getID(), SearchResultIsScript, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmActionView, name, action->getID(), SearchResultIsScript, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
             }
         }
 
@@ -1347,35 +2218,74 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
 
 void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QString& s)
 {
-    list<TTimer*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TTimer*>* childrenList = pTriggerParent->getChildrenList();
     for (auto timer : *childrenList) {
         QTreeWidgetItem* pItem;
-        QTreeWidgetItem* parent = 0;
-        QString n = timer->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        QTreeWidgetItem* parent = nullptr;
+        QString name = timer->getName();
+        int startPos = 0;
+
+        if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Timer" << timer->getName() << "name";
+            sl << tr("Timer") << name << tr("Name");
+            // This part can never have a parent as it is the first part of this item
             parent = new QTreeWidgetItem(sl);
             parent->setFirstColumnSpanned(false);
-            parent->setData(0, Qt::UserRole, timer->getID());
+            setAllSearchData(parent, cmTimerView, name, timer->getID(), SearchResultIsName, startPos);
             treeWidget_searchResults->addTopLevelItem(parent);
         }
-        QStringList scriptList = timer->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
+
+        // The simple "command"
+        // TODO: (A) Revise to count multiple instances of search string within command?
+        if ((startPos = timer->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Timer" << timer->getName() << "script" << resultList[i];
             if (!parent) {
+                sl << tr("Timer") << name << tr("Command");
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, timer->getID());
+                setAllSearchData(parent, cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             } else {
+                sl << QString() << QString() << tr("Command");
                 pItem = new QTreeWidgetItem(parent, sl);
                 pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, timer->getID());
+                setAllSearchData(pItem, cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
                 parent->addChild(pItem);
                 parent->setExpanded(true);
+            }
+        }
+
+        // Script content
+        QStringList textList = timer->getScript().split("\n");
+        int total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QString whatText(textList.at(index));
+                whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Timer") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmTimerView, name, timer->getID(), SearchResultIsScript, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmTimerView, name, timer->getID(), SearchResultIsScript, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
             }
         }
 
@@ -1387,35 +2297,74 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
 
 void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& s)
 {
-    list<TKey*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TKey*>* childrenList = pTriggerParent->getChildrenList();
     for (auto key : *childrenList) {
         QTreeWidgetItem* pItem;
-        QTreeWidgetItem* parent = 0;
-        QString n = key->getName();
-        if (n.indexOf(s, 0, Qt::CaseInsensitive) != -1) {
+        QTreeWidgetItem* parent = nullptr;
+        QString name = key->getName();
+        int startPos = 0;
+
+        if ((startPos = name.indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Key" << key->getName() << "name";
+            sl << tr("Key") << name << tr("Name");
+            // This part can never have a parent as it is the first part of this item
             parent = new QTreeWidgetItem(sl);
             parent->setFirstColumnSpanned(false);
-            parent->setData(0, Qt::UserRole, key->getID());
+            setAllSearchData(parent, cmKeysView, name, key->getID(), SearchResultIsName, startPos);
             treeWidget_searchResults->addTopLevelItem(parent);
         }
-        QStringList scriptList = key->getScript().split("\n");
-        QStringList resultList = scriptList.filter(s, Qt::CaseInsensitive);
-        for (int i = 0; i < resultList.size(); i++) {
+
+        // The simple "command"
+        // TODO: (A) Revise to count multiple instances of search string within command?
+        if ((startPos = key->getCommand().indexOf(s, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
             QStringList sl;
-            sl << "Key" << key->getName() << "script" << resultList[i];
             if (!parent) {
+                sl << tr("Key") << name << tr("Command");
                 parent = new QTreeWidgetItem(sl);
                 parent->setFirstColumnSpanned(false);
-                parent->setData(0, Qt::UserRole, key->getID());
+                setAllSearchData(parent, cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
                 treeWidget_searchResults->addTopLevelItem(parent);
             } else {
+                sl << QString() << QString() << tr("Command");
                 pItem = new QTreeWidgetItem(parent, sl);
                 pItem->setFirstColumnSpanned(false);
-                pItem->setData(0, Qt::UserRole, key->getID());
+                setAllSearchData(pItem, cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
                 parent->addChild(pItem);
                 parent->setExpanded(true);
+            }
+        }
+
+        // Script content
+        QStringList textList = key->getScript().split("\n");
+        int total = textList.count();
+        for (int index = 0; index < total; ++index) {
+            // CHECK: This may NOT be an optimisation...!
+            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+                // Short-cuts that mean we do not have to examine the line in more detail
+                continue;
+            }
+
+            int instance = 0;
+            startPos = 0;
+            while ((startPos = textList.at(index).indexOf(s, startPos, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
+                QString whatText(textList.at(index));
+                whatText.replace(QString(QChar::SpecialCharacter::Tabulation), QString(QChar::Space).repeated(2));
+                QStringList sl;
+                if (!parent) {
+                    sl << tr("Key") << name << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    parent = new QTreeWidgetItem(sl);
+                    parent->setFirstColumnSpanned(false);
+                    setAllSearchData(parent, cmKeysView, name, key->getID(), SearchResultIsScript, startPos, index, instance++);
+                    treeWidget_searchResults->addTopLevelItem(parent);
+                } else {
+                    sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index+1).arg(startPos+1) << whatText;
+                    pItem = new QTreeWidgetItem(parent, sl);
+                    pItem->setFirstColumnSpanned(false);
+                    setAllSearchData(pItem, cmKeysView, name, key->getID(), SearchResultIsScript, startPos, index, instance++);
+                    parent->addChild(pItem);
+                    parent->setExpanded(true);
+                }
+                ++startPos;
             }
         }
 
@@ -1520,7 +2469,7 @@ void dlgTriggerEditor::slot_deleteAlias()
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteAlias() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mpCurrentAliasItem = 0;
+    mpCurrentAliasItem = nullptr;
 }
 
 void dlgTriggerEditor::slot_deleteAction()
@@ -1549,7 +2498,7 @@ void dlgTriggerEditor::slot_deleteAction()
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteAction() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mpCurrentActionItem = 0;
+    mpCurrentActionItem = nullptr;
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -1577,7 +2526,7 @@ void dlgTriggerEditor::slot_deleteVar()
     } else {
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteAction() child to be deleted doesnt have a parent";
     }
-    mpCurrentVarItem = 0;
+    mpCurrentVarItem = nullptr;
 }
 
 void dlgTriggerEditor::slot_deleteScript()
@@ -1598,7 +2547,7 @@ void dlgTriggerEditor::slot_deleteScript()
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteScript() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mpCurrentScriptItem = 0;
+    mpCurrentScriptItem = nullptr;
 }
 
 void dlgTriggerEditor::slot_deleteKey()
@@ -1620,7 +2569,7 @@ void dlgTriggerEditor::slot_deleteKey()
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteScript() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mpCurrentKeyItem = 0;
+    mpCurrentKeyItem = nullptr;
 }
 
 void dlgTriggerEditor::slot_deleteTrigger()
@@ -1642,7 +2591,7 @@ void dlgTriggerEditor::slot_deleteTrigger()
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteTrigger() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mpCurrentTriggerItem = 0;
+    mpCurrentTriggerItem = nullptr;
 }
 
 void dlgTriggerEditor::slot_deleteTimer()
@@ -1664,7 +2613,7 @@ void dlgTriggerEditor::slot_deleteTimer()
         qDebug() << "ERROR: dlgTriggerEditor::slot_deleteTimer() child to be deleted doesnt have a parent";
     }
     delete pT;
-    mpCurrentTimerItem = 0;
+    mpCurrentTimerItem = nullptr;
 }
 
 
@@ -2205,8 +3154,8 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_triggers->currentItem();
-    QTreeWidgetItem* pNewItem = 0;
-    TTrigger* pT = 0;
+    QTreeWidgetItem* pNewItem = nullptr;
+    TTrigger* pT = nullptr;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -2273,7 +3222,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
     clearDocument(mpSourceEditorEdbee); // New Trigger
 
-    mpTriggersMainArea->trigger_command->clear();
+    mpTriggersMainArea->lineEdit_trigger_command->clear();
     mpTriggersMainArea->filterTrigger->setChecked(false);
     mpTriggersMainArea->spinBox_stayOpen->setValue(0);
     mpTriggersMainArea->spinBox_linemargin->setValue(0);
@@ -2306,8 +3255,8 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_timers->currentItem();
-    QTreeWidgetItem* pNewItem = 0;
-    TTimer* pT = 0;
+    QTreeWidgetItem* pNewItem = nullptr;
+    TTimer* pT = nullptr;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -2367,7 +3316,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     }
     //FIXME
     //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
-    mpTimersMainArea->lineEdit_command->clear();
+    mpTimersMainArea->lineEdit_timer_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Timer
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem(pNewItem);
@@ -2378,69 +3327,70 @@ void dlgTriggerEditor::addTimer(bool isFolder)
 void dlgTriggerEditor::addVar(bool isFolder)
 {
     saveVar();
-    QString name;
-    mpVarsMainArea->key_type->setCurrentIndex(0);
+    mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(0);
     if (isFolder) {
         // Edbee doesn't have a readonly option, so I'm using setEnabled
         mpSourceEditorEdbee->setEnabled(false);
-        mpVarsMainArea->var_type->setDisabled(true);
-        mpVarsMainArea->var_type->setCurrentIndex(4);
-        mpVarsMainArea->lineEdit_var_name->setText("");
-        mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Table name...");
+        mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
+        mpVarsMainArea->lineEdit_var_name->setText(QString());
+        mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Table name..."));
 
         clearDocument(mpSourceEditorEdbee, QLatin1Literal("NewTable"));
-        name = "";
     } else {
         // Edbee doesn't have a readonly option, so I'm using setEnabled
         mpSourceEditorEdbee->setEnabled(true);
-        mpVarsMainArea->lineEdit_var_name->setText("");
-        mpVarsMainArea->lineEdit_var_name->setPlaceholderText("Variable name...");
-        mpVarsMainArea->var_type->setDisabled(false);
-        mpVarsMainArea->var_type->setCurrentIndex(0);
-        name = "";
+        mpVarsMainArea->lineEdit_var_name->setText(QString());
+        mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Variable name..."));
+        mpVarsMainArea->comboBox_variable_value_type->setDisabled(false);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
     }
+
     QStringList nameL;
-    nameL << name;
+    nameL << QString();
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     TVar* cVar = vu->getWVar(cItem);
     QTreeWidgetItem* pParent;
-    QTreeWidgetItem* newItem;
+    QTreeWidgetItem* pNewItem;
     if (cVar && cVar->getValueType() == LUA_TTABLE) {
         pParent = cItem;
     } else {
         pParent = cItem->parent();
     }
+
     auto newVar = new TVar();
     if (pParent) {
         //we're nested under something, or going to be.  This HAS to be a table
         TVar* parent = vu->getWVar(pParent);
         if (parent && parent->getValueType() == LUA_TTABLE) {
             //create it under the parent
-            newItem = new QTreeWidgetItem(pParent, nameL);
+            pNewItem = new QTreeWidgetItem(pParent, nameL);
             newVar->setParent(parent);
         } else {
-            newItem = new QTreeWidgetItem(mpVarBaseItem, nameL);
+            pNewItem = new QTreeWidgetItem(mpVarBaseItem, nameL);
             newVar->setParent(vu->getBase());
         }
     } else {
-        newItem = new QTreeWidgetItem(mpVarBaseItem, nameL);
+        pNewItem = new QTreeWidgetItem(mpVarBaseItem, nameL);
         newVar->setParent(vu->getBase());
     }
+
     if (isFolder) {
-        newVar->setValue("", LUA_TTABLE);
+        newVar->setValue(QString(), LUA_TTABLE);
     } else {
         newVar->setValueType(LUA_TNONE);
     }
-    vu->addTempVar(newItem, newVar);
-    newItem->setFlags(newItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
-    if (newItem) {
-        mpCurrentVarItem = newItem;
-        treeWidget_variables->setCurrentItem(newItem);
+    vu->addTempVar(pNewItem, newVar);
+    pNewItem->setFlags(pNewItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
+// The following test is pointless - we will already have seg. faulted if pNewItem is a nullptr...!
+//    if (pNewItem) {
+        mpCurrentVarItem = pNewItem;
+        treeWidget_variables->setCurrentItem(pNewItem);
         showInfo(msgInfoAddVar);
         slot_var_selected(treeWidget_variables->currentItem());
-    }
+//    }
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -2457,8 +3407,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
     nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_keys->currentItem();
-    QTreeWidgetItem* pNewItem = 0;
-    TKey* pT = 0;
+    QTreeWidgetItem* pNewItem = nullptr;
+    TKey* pT = nullptr;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -2517,8 +3467,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
     if (pParent) {
         pParent->setExpanded(true);
     }
-    mpKeysMainArea->lineEdit_command->clear();
-    mpKeysMainArea->lineEdit_key->setText("no key chosen");
+    mpKeysMainArea->lineEdit_key_command->clear();
+    mpKeysMainArea->lineEdit_key_binding->setText("no key chosen");
     clearDocument(mpSourceEditorEdbee); // New Key
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem(pNewItem);
@@ -2543,8 +3493,8 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_aliases->currentItem();
-    QTreeWidgetItem* pNewItem = 0;
-    TAlias* pT = 0;
+    QTreeWidgetItem* pNewItem = nullptr;
+    TAlias* pT = nullptr;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -2606,8 +3556,8 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     }
 
     mpAliasMainArea->lineEdit_alias_name->clear();
-    mpAliasMainArea->pattern_textedit->clear();
-    mpAliasMainArea->substitution->clear();
+    mpAliasMainArea->lineEdit_alias_pattern->clear();
+    mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Alias
 
     mpAliasMainArea->lineEdit_alias_name->setText(name);
@@ -2634,8 +3584,8 @@ void dlgTriggerEditor::addAction(bool isFolder)
     nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_actions->currentItem();
-    QTreeWidgetItem* pNewItem = 0;
-    QPointer<TAction> pT = 0;
+    QTreeWidgetItem* pNewItem = nullptr;
+    QPointer<TAction> pT = nullptr;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -2703,7 +3653,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
         pParent->setExpanded(true);
     }
     mpActionsMainArea->lineEdit_action_icon->clear();
-    mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
+    mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
     clearDocument(mpSourceEditorEdbee); // New Action
 
 
@@ -2739,8 +3689,8 @@ void dlgTriggerEditor::addScript(bool isFolder)
     nameL << name;
 
     QTreeWidgetItem* pParent = treeWidget_scripts->currentItem();
-    QTreeWidgetItem* pNewItem = 0;
-    TScript* pT = 0;
+    QTreeWidgetItem* pNewItem = nullptr;
+    TScript* pT = nullptr;
 
     if (pParent) {
         int parentID = pParent->data(0, Qt::UserRole).toInt();
@@ -2798,7 +3748,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     if (pParent) {
         pParent->setExpanded(true);
     }
-    mpScriptsMainArea->lineEdit_scripts_name->clear();
+    mpScriptsMainArea->lineEdit_script_name->clear();
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
@@ -2910,31 +3860,39 @@ void dlgTriggerEditor::saveTrigger()
     }
 
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
-    QString command = mpTriggersMainArea->trigger_command->text();
+    QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
     QStringList regexList;
     QList<int> regexPropertyList;
     for (int i = 0; i < 50; i++) {
-        QString pattern = mTriggerPatternEdit[i]->lineEdit->text();
+        QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
         if (pattern.size() < 1) {
             continue;
         }
         regexList << pattern;
-        int _type = mTriggerPatternEdit[i]->patternType->currentIndex();
-        if (_type == 0) {
+
+        switch(mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex()) {
+        case 0:
             regexPropertyList << REGEX_SUBSTRING;
-        } else if (_type == 1) {
+            break;
+        case 1:
             regexPropertyList << REGEX_PERL;
-        } else if (_type == 2) {
+            break;
+        case 2:
             regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
-        } else if (_type == 3) {
+            break;
+        case 3:
             regexPropertyList << REGEX_EXACT_MATCH;
-        } else if (_type == 4) {
+            break;
+        case 4:
             regexPropertyList << REGEX_LUA_CODE;
-        } else if (_type == 5) {
+            break;
+        case 5:
             regexPropertyList << REGEX_LINE_SPACER;
-        } else if (_type == 6) {
+            break;
+        case 6:
             regexPropertyList << REGEX_COLOR_PATTERN;
+            break;
         }
     }
 
@@ -3056,11 +4014,11 @@ void dlgTriggerEditor::saveTimer()
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
         pT->setName(name);
-        QString command = mpTimersMainArea->lineEdit_command->text();
-        int hours = mpTimersMainArea->timeEdit_hours->time().hour();
-        int minutes = mpTimersMainArea->timeEdit_minutes->time().minute();
-        int secs = mpTimersMainArea->timeEdit_seconds->time().second();
-        int msecs = mpTimersMainArea->timeEdit_msecs->time().msec();
+        QString command = mpTimersMainArea->lineEdit_timer_command->text();
+        int hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
+        int minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
+        int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
+        int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
         QTime time(hours, minutes, secs, msecs);
         pT->setTime(time);
         pT->setCommand(command);
@@ -3118,11 +4076,11 @@ void dlgTriggerEditor::saveAlias()
     }
 
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
-    QString regex = mpAliasMainArea->pattern_textedit->text();
+    QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
     if ((name.size() < 1) || (name == "New Alias")) {
         name = regex;
     }
-    QString substitution = mpAliasMainArea->substitution->text();
+    QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
     QRegExp rx(regex);
     if (!regex.isEmpty() && rx.indexIn(substitution) != -1) {
@@ -3225,22 +4183,22 @@ void dlgTriggerEditor::saveAction()
 
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
-    QString commandDown = mpActionsMainArea->lineEdit_command_down->text();
-    QString commandUp = mpActionsMainArea->lineEdit_command_up->text();
+    QString commandDown = mpActionsMainArea->lineEdit_action_button_command_down->text();
+    QString commandUp = mpActionsMainArea->lineEdit_action_button_command_up->text();
     QString script = mpSourceEditorEdbeeDocument->text();
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
-    int rotation = qMax(0, mpActionsMainArea->buttonRotation->currentIndex());
-    int columns = mpActionsMainArea->buttonColumns->text().toInt();
-    bool isChecked = mpActionsMainArea->checkBox_pushdownbutton->isChecked();
+    int rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
+    int columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
+    bool isChecked = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
-    int location = qMax(0, mpActionsMainArea->comboBox_location->currentIndex());
+    int location = qMax(0, mpActionsMainArea->comboBox_action_bar_location->currentIndex());
     if (location > 0) {
         location++;
     }
 
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
-    int orientation = qMax(0, mpActionsMainArea->comboBox_orientation->currentIndex());
+    int orientation = qMax(0, mpActionsMainArea->comboBox_action_bar_orientation->currentIndex());
 
     // This is an unnecessary level of indentation but has been retained to
     // reduce the noise in a git commit/diff caused by the removal of a
@@ -3250,7 +4208,7 @@ void dlgTriggerEditor::saveAction()
     if (pA) {
         // Check if data has been changed before it gets updated.
         bool actionDataChanged = false;
-        if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->css->toPlainText()) {
+        if (pA->mLocation != location || pA->mOrientation != orientation || pA->css != mpActionsMainArea->plainTextEdit_action_css->toPlainText()) {
             actionDataChanged = true;
         }
 
@@ -3268,7 +4226,7 @@ void dlgTriggerEditor::saveAction()
             pA->setButtonRotation(rotation);
             pA->setButtonColumns(columns);
             pA->mUseCustomLayout = false;
-            pA->css = mpActionsMainArea->css->toPlainText();
+            pA->css = mpActionsMainArea->plainTextEdit_action_css->toPlainText();
         }
 
         QIcon icon;
@@ -3350,12 +4308,12 @@ void dlgTriggerEditor::saveScript()
     }
 
     QString old_name;
-    QString name = mpScriptsMainArea->lineEdit_scripts_name->text();
+    QString name = mpScriptsMainArea->lineEdit_script_name->text();
     QString script = mpSourceEditorEdbeeDocument->text();
-    mpScriptsMainAreaEditHandlerItem = 0;
+    mpScriptsMainAreaEditHandlerItem = nullptr;
     QList<QListWidgetItem*> itemList;
-    for (int i = 0; i < mpScriptsMainArea->listWidget_registered_event_handlers->count(); i++) {
-        QListWidgetItem* pItem = mpScriptsMainArea->listWidget_registered_event_handlers->item(i);
+    for (int i = 0; i < mpScriptsMainArea->listWidget_script_registered_event_handlers->count(); i++) {
+        QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->item(i);
         itemList << pItem;
     }
     QStringList handlerList;
@@ -3493,8 +4451,8 @@ void dlgTriggerEditor::saveVar()
         return;
     }
     mChangingVar = true;
-    int nameType = mpVarsMainArea->key_type->itemData(mpVarsMainArea->key_type->currentIndex(), Qt::UserRole).toInt();
-    int valueType = mpVarsMainArea->var_type->itemData(mpVarsMainArea->var_type->currentIndex(), Qt::UserRole).toInt();
+    int nameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
+    int valueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
     if ((nameType == 3 || nameType == 4) && newVar) {
         nameType = -1;
     }
@@ -3531,7 +4489,7 @@ void dlgTriggerEditor::saveVar()
             vu->addTreeItem(pItem, var);
             vu->removeTempVar(pItem);
             pItem->setText(0, newName);
-            mpCurrentVarItem = 0;
+            mpCurrentVarItem = nullptr;
         } else if (var) {
             if (newName == var->getName() && (var->getValueType() == LUA_TTABLE && newValue == var->getValue())) {
                 //no change made
@@ -3571,7 +4529,7 @@ void dlgTriggerEditor::saveVar()
                         lI->setValue(var);
                     }
                     pItem->setText(0, newName);
-                    mpCurrentVarItem = 0;
+                    mpCurrentVarItem = nullptr;
                 } else {
                     var->clearNewName();
                 }
@@ -3588,7 +4546,7 @@ void dlgTriggerEditor::saveVar()
             vu->addVariable(var);
             vu->addTreeItem(pItem, var);
             pItem->setText(0, newName);
-            mpCurrentVarItem = 0;
+            mpCurrentVarItem = nullptr;
         } else if (var) {
             //we're trying to rename it/recast it
             int change = 0;
@@ -3626,7 +4584,7 @@ void dlgTriggerEditor::saveVar()
                     lI->setValue(var);
                 }
                 pItem->setText(0, newName);
-                mpCurrentVarItem = 0;
+                mpCurrentVarItem = nullptr;
             }
         }
     }
@@ -3666,11 +4624,11 @@ void dlgTriggerEditor::saveKey()
         return;
     }
 
-    QString name = mpKeysMainArea->lineEdit_name->text();
-    if (name.size() < 1) {
-        name = mpKeysMainArea->lineEdit_key->text();
+    QString name = mpKeysMainArea->lineEdit_key_name->text();
+    if (name.isEmpty()) {
+        name = mpKeysMainArea->lineEdit_key_binding->text();
     }
-    QString command = mpKeysMainArea->lineEdit_command->text();
+    QString command = mpKeysMainArea->lineEdit_key_command->text();
     QString script = mpSourceEditorEdbeeDocument->text();
 
 
@@ -3747,48 +4705,48 @@ void dlgTriggerEditor::slot_set_pattern_type_color(int type)
     switch (type) {
     case 0:
         palette.setColor(QPalette::Text, QColor(Qt::black));
-        pItem->lineEdit->show();
-        pItem->fgB->hide();
-        pItem->bgB->hide();
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
         break;
     case 1:
         palette.setColor(QPalette::Text, QColor(Qt::blue));
-        pItem->lineEdit->show();
-        pItem->fgB->hide();
-        pItem->bgB->hide();
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
         break;
     case 2:
         palette.setColor(QPalette::Text, QColor(195, 0, 0));
-        pItem->lineEdit->show();
-        pItem->fgB->hide();
-        pItem->bgB->hide();
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
         break;
     case 3:
         palette.setColor(QPalette::Text, QColor(0, 195, 0));
-        pItem->lineEdit->show();
-        pItem->fgB->hide();
-        pItem->bgB->hide();
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
         break;
     case 4:
         palette.setColor(QPalette::Text, QColor(0, 155, 155));
-        pItem->lineEdit->show();
-        pItem->fgB->hide();
-        pItem->bgB->hide();
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
         break;
     case 5:
         palette.setColor(QPalette::Text, QColor(137, 0, 205));
-        pItem->lineEdit->show();
-        pItem->fgB->hide();
-        pItem->bgB->hide();
+        pItem->lineEdit_pattern->show();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
         break;
     case 6:
         palette.setColor(QPalette::Text, QColor(100, 100, 100));
-        pItem->lineEdit->hide();
-        pItem->fgB->show();
-        pItem->bgB->show();
+        pItem->lineEdit_pattern->hide();
+        pItem->pushButton_fgColor->show();
+        pItem->pushButton_bgColor->show();
         break;
     }
-    pItem->lineEdit->setPalette(palette);
+    pItem->lineEdit_pattern->setPalette(palette);
 }
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
@@ -3831,88 +4789,82 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 break;
             }
             dlgTriggerPatternEdit* pItem = mTriggerPatternEdit[i];
-            QComboBox* pBox = pItem->patternType;
+            QComboBox* pBox = pItem->comboBox_patternType;
             QPalette palette;
             switch (propertyList[i]) {
             case REGEX_SUBSTRING:
                 palette.setColor(QPalette::Text, QColor(Qt::black));
                 pBox->setCurrentIndex(0);
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->lineEdit_pattern->show();
                 break;
             case REGEX_PERL:
                 palette.setColor(QPalette::Text, QColor(Qt::blue));
                 pBox->setCurrentIndex(1);
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->lineEdit_pattern->show();
                 break;
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
                 palette.setColor(QPalette::Text, QColor(195, 0, 0));
                 pBox->setCurrentIndex(2);
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->lineEdit_pattern->show();
                 break;
             case REGEX_EXACT_MATCH:
                 palette.setColor(QPalette::Text, QColor(0, 195, 0));
                 pBox->setCurrentIndex(3);
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->lineEdit_pattern->show();
                 break;
             case REGEX_LUA_CODE:
                 palette.setColor(QPalette::Text, QColor(0, 155, 155));
                 pBox->setCurrentIndex(4);
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->lineEdit_pattern->show();
                 break;
             case REGEX_LINE_SPACER:
                 palette.setColor(QPalette::Text, QColor(137, 0, 205));
                 pBox->setCurrentIndex(5);
-                pItem->fgB->hide();
-                pItem->bgB->hide();
-                pItem->lineEdit->show();
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->lineEdit_pattern->show();
                 break;
             case REGEX_COLOR_PATTERN:
                 palette.setColor(QPalette::Text, QColor(100, 100, 100));
                 pBox->setCurrentIndex(6);
-                pItem->fgB->show();
-                pItem->bgB->show();
-                pItem->lineEdit->hide();
-                QPalette fgPal;
-                QPalette bgPal;
+                pItem->pushButton_fgColor->show();
+                pItem->pushButton_bgColor->show();
+                pItem->lineEdit_pattern->hide();
                 if (!pT->mColorPatternList[i]) {
                     break;
                 }
-                auto fgC = QColor(pT->mColorPatternList[i]->fgR, pT->mColorPatternList[i]->fgG, pT->mColorPatternList[i]->fgB);
-                fgPal.setColor(QPalette::Button, fgC);
-                QString fgstyleSheet = QString("QPushButton{background-color:") + fgC.name() + QString(";}");
-                auto bgC = QColor(pT->mColorPatternList[i]->bgR, pT->mColorPatternList[i]->bgG, pT->mColorPatternList[i]->bgB);
-                bgPal.setColor(QPalette::Button, bgC);
-                QString bgstyleSheet = QString("QPushButton{background-color:") + bgC.name() + QString(";}");
-                pItem->fgB->setStyleSheet(fgstyleSheet);
-                pItem->bgB->setStyleSheet(bgstyleSheet);
+                pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->fgR, pT->mColorPatternList[i]->fgG, pT->mColorPatternList[i]->fgB).name()));
+                pItem->pushButton_bgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->bgR, pT->mColorPatternList[i]->bgG, pT->mColorPatternList[i]->bgB).name()));
                 break;
             }
 
-            pItem->lineEdit->setPalette(palette);
-            pItem->lineEdit->setText(patternList[i]);
+            pItem->lineEdit_pattern->setPalette(palette);
+            pItem->lineEdit_pattern->setText(patternList[i]);
         }
         for (int i = patternList.size(); i < 50; i++) {
-            mTriggerPatternEdit[i]->lineEdit->clear();
-            if (mTriggerPatternEdit[i]->lineEdit->isHidden()) {
-                mTriggerPatternEdit[i]->lineEdit->show();
+            mTriggerPatternEdit[i]->lineEdit_pattern->clear();
+            if (mTriggerPatternEdit[i]->lineEdit_pattern->isHidden()) {
+                mTriggerPatternEdit[i]->lineEdit_pattern->show();
             }
-            mTriggerPatternEdit[i]->fgB->hide();
-            mTriggerPatternEdit[i]->bgB->hide();
-            mTriggerPatternEdit[i]->patternType->setCurrentIndex(0);
+            mTriggerPatternEdit[i]->pushButton_fgColor->hide();
+            mTriggerPatternEdit[i]->pushButton_bgColor->hide();
+            mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
         }
+        // Scroll to the last used pattern:
+        mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), 49)));
         QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
-        mpTriggersMainArea->trigger_command->setText(command);
+        mpTriggersMainArea->lineEdit_trigger_command->setText(command);
         mpTriggersMainArea->checkBox_multlinetrigger->setChecked(pT->isMultiline());
         mpTriggersMainArea->perlSlashGOption->setChecked(pT->mPerlSlashGOption);
         mpTriggersMainArea->filterTrigger->setChecked(pT->mFilterTrigger);
@@ -3920,22 +4872,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->spinBox_stayOpen->setValue(pT->mStayOpen);
         mpTriggersMainArea->soundTrigger->setChecked(pT->mSoundTrigger);
         mpTriggersMainArea->lineEdit_soundFile->setText(pT->mSoundFile);
-        QPalette pal = palette();
-        QColor color = pal.color(QPalette::Button);
-        QString styleSheet = QString("QPushButton{background-color:") + color.name() + QString(";}");
-
-        QColor fgColor = pT->getFgColor();
-        QColor bgColor = pT->getBgColor();
-        QPalette FgColorPalette;
-        QPalette BgColorPalette;
-        FgColorPalette.setColor(QPalette::Button, fgColor);
-        BgColorPalette.setColor(QPalette::Button, bgColor);
-        QString FgColorStyleSheet = QString("QPushButton{background-color:") + fgColor.name() + QString(";}");
-        QString BgColorStyleSheet = QString("QPushButton{background-color:") + bgColor.name() + QString(";}");
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(FgColorStyleSheet);
-        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(BgColorStyleSheet);
-        mpTriggersMainArea->pushButtonFgColor->setPalette(FgColorPalette);
-        mpTriggersMainArea->pushButtonBgColor->setPalette(BgColorPalette);
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pT->getFgColor().name()));
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pT->getBgColor().name()));
         mpTriggersMainArea->colorizerTrigger->setChecked(pT->isColorizerTrigger());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
@@ -3962,8 +4900,8 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     mpAliasMainArea->lineEdit_alias_name->clear();
-    mpAliasMainArea->pattern_textedit->clear();
-    mpAliasMainArea->substitution->clear();
+    mpAliasMainArea->lineEdit_alias_pattern->clear();
+    mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // Alias Select
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
@@ -3974,12 +4912,12 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
         QString command = pT->getCommand();
         QString name = pT->getName();
 
-        mpAliasMainArea->pattern_textedit->clear();
-        mpAliasMainArea->substitution->clear();
+        mpAliasMainArea->lineEdit_alias_pattern->clear();
+        mpAliasMainArea->lineEdit_alias_command->clear();
         mpAliasMainArea->lineEdit_alias_name->clear();
 
-        mpAliasMainArea->pattern_textedit->setText(pattern);
-        mpAliasMainArea->substitution->setText(command);
+        mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
+        mpAliasMainArea->lineEdit_alias_command->setText(command);
         mpAliasMainArea->lineEdit_alias_name->setText(name);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
@@ -4005,22 +4943,22 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
     mpKeysMainArea->show();
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
-    mpKeysMainArea->lineEdit_command->clear();
-    mpKeysMainArea->lineEdit_key->clear();
-    mpKeysMainArea->lineEdit_name->clear();
+    mpKeysMainArea->lineEdit_key_command->clear();
+    mpKeysMainArea->lineEdit_key_binding->clear();
+    mpKeysMainArea->lineEdit_key_name->clear();
     clearDocument(mpSourceEditorEdbee); // Key Select
 
-    mpKeysMainArea->lineEdit_key->setText(pItem->text(0));
+    mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(ID);
     if (pT) {
         QString command = pT->getCommand();
         QString name = pT->getName();
-        mpKeysMainArea->lineEdit_command->clear();
-        mpKeysMainArea->lineEdit_command->setText(command);
-        mpKeysMainArea->lineEdit_name->setText(name);
+        mpKeysMainArea->lineEdit_key_command->clear();
+        mpKeysMainArea->lineEdit_key_command->setText(command);
+        mpKeysMainArea->lineEdit_key_name->setText(name);
         QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
-        mpKeysMainArea->lineEdit_key->setText(keyName);
+        mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -4049,12 +4987,14 @@ void dlgTriggerEditor::recurseVariablesDown(QTreeWidgetItem* const pItem, QList<
     }
 }
 
-void dlgTriggerEditor::recurseVariablesDown(TVar* var, QList<TVar*>& list, bool isSorted)
+// This WAS called recurseVariablesDown(TVar*, QList<TVar*>&, bool) but it is
+// used for searching like the other resursiveSearchXxxxx(...) are
+void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, bool isSorted)
 {
     list.append(var);
     QListIterator<TVar*> it(var->getChildren(isSorted));
     while (it.hasNext()) {
-        recurseVariablesDown(it.next(), list, isSorted);
+        recursiveSearchVariables(it.next(), list, isSorted);
     }
 }
 
@@ -4196,68 +5136,102 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
     VarUnit* vu = lI->getVarUnit();
     TVar* var = vu->getWVar(pItem);
     if (!var) {
-        mpVarsMainArea->hideVariable->setChecked(false);
+        mpVarsMainArea->checkBox_variable_hidden->setChecked(false);
         mpVarsMainArea->lineEdit_var_name->setText("");
         clearDocument(mpSourceEditorEdbee); // Var Select
         //check for temp item
         var = vu->getTVar(pItem);
         if (var && var->getValueType() == LUA_TTABLE) {
-            mpVarsMainArea->var_type->setDisabled(true);
-            mpVarsMainArea->var_type->setCurrentIndex(4);
+            mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
+            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
         } else {
-            mpVarsMainArea->var_type->setDisabled(false);
-            mpVarsMainArea->var_type->setCurrentIndex(0);
+            mpVarsMainArea->comboBox_variable_value_type->setDisabled(false);
+            mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
         }
-        mpVarsMainArea->key_type->setCurrentIndex(0);
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(0);
         mChangingVar = false;
         return;
     }
+
     int varType = var->getValueType();
     int keyType = var->getKeyType();
     QIcon icon;
-    mpVarsMainArea->key_type->setEnabled(true);
-    // Edbee doesn't have a readonly option, so I'm using setEnabled
-    mpSourceEditorEdbee->setEnabled(true);
-    mpVarsMainArea->var_type->setEnabled(true);
-    if (keyType == 4) {
-        mpVarsMainArea->key_type->setCurrentIndex(1);
-    } else if (keyType == 3) {
-        mpVarsMainArea->key_type->setCurrentIndex(2);
-    } else if (keyType == 5) {
-        mpVarsMainArea->key_type->setCurrentIndex(3);
-        mpVarsMainArea->key_type->setDisabled(true);
-    } else if (keyType == 6) {
-        mpVarsMainArea->key_type->setCurrentIndex(4);
-        mpVarsMainArea->key_type->setDisabled(true);
-    }
-    if (varType == LUA_TTABLE || varType == LUA_TFUNCTION) {
-        // Edbee doesn't have a readonly option, so I'm using setEnabled
-        mpSourceEditorEdbee->setEnabled(false);
 
-        if (varType == LUA_TTABLE) {
-            if (pItem->childCount()) {
-                mpVarsMainArea->var_type->setDisabled(true);
-            }
-            mpVarsMainArea->var_type->setCurrentIndex(4);
-            icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
-        } else {
-            mpVarsMainArea->var_type->setCurrentIndex(5);
-            mpVarsMainArea->var_type->setDisabled(true);
-            icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
-        }
-    } else {
+    switch (keyType) {
+//    case LUA_TNONE: // -1
+//    case LUA_TNIL: // 0
+//    case LUA_TBOOLEAN: // 1
+//    case LUA_TLIGHTUSERDATA: // 2
+    case LUA_TNUMBER: // 3
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(2);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
+        break;
+    case LUA_TSTRING: // 4
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(1);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(true);
+        break;
+    case LUA_TTABLE: // 5
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(3);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(false);
+        break;
+    case LUA_TFUNCTION: // 6
+        mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(4);
+        mpVarsMainArea->comboBox_variable_key_type->setEnabled(false);
+        break;
+//    case LUA_TUSERDATA: // 7
+//    case LUA_TTHREAD: // 8
+    }
+
+    switch (varType) {
+//    case LUA_TNONE:
+//    case LUA_TNIL:
+
+// TODO: I would like to hide the editor where it is not required but currently
+// this messes up the editor layout - hopefully when I can finished/update:
+// https://github.com/Mudlet/Mudlet/pull/436 "(release 30)bug fix get splitter
+// working properly on editor right side" this will be do-able - Slysven
+//        mpSourceEditorArea->show();
+    case LUA_TBOOLEAN:
+//        mpSourceEditorArea->show();
         mpSourceEditorEdbee->setEnabled(true);
-
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
-        if (varType == LUA_TSTRING) {
-            mpVarsMainArea->var_type->setCurrentIndex(1);
-        } else if (varType == LUA_TNUMBER) {
-            mpVarsMainArea->var_type->setCurrentIndex(2);
-        } else if (varType == LUA_TBOOLEAN) {
-            mpVarsMainArea->var_type->setCurrentIndex(3);
-        }
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(3);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
+        break;
+//    case LUA_TLIGHTUSERDATA:
+    case LUA_TNUMBER:
+//        mpSourceEditorArea->show();
+        mpSourceEditorEdbee->setEnabled(true);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(2);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
+        break;
+    case LUA_TSTRING:
+        mpSourceEditorEdbee->setEnabled(true);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(1);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(true);
+        break;
+    case LUA_TTABLE:
+//        mpSourceEditorArea->hide();
+        mpSourceEditorEdbee->setEnabled(false);
+        // Only allow the type to be changed away from a table if it is empty:
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(!(pItem->childCount() > 0));
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+        break;
+    case LUA_TFUNCTION:
+//        mpSourceEditorArea->hide();
+        mpSourceEditorEdbee->setEnabled(false);
+        mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(5);
+        mpVarsMainArea->comboBox_variable_value_type->setEnabled(false);
+        icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+        break;
+//    case LUA_TUSERDATA:
+//    case LUA_TTHREAD:
     }
-    mpVarsMainArea->hideVariable->setChecked(vu->isHidden(var));
+
+    mpVarsMainArea->checkBox_variable_hidden->setChecked(vu->isHidden(var));
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     clearDocument(mpSourceEditorEdbee, lI->getValue(var));
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
@@ -4294,15 +5268,15 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
-    mpActionsMainArea->checkBox_pushdownbutton->setChecked(false);
-    mpActionsMainArea->lineEdit_command_down->clear();
-    mpActionsMainArea->lineEdit_command_up->clear();
-    mpActionsMainArea->buttonColumns->clear();
-    mpActionsMainArea->css->clear();
-    mpActionsMainArea->comboBox_location->setCurrentIndex(0);
-    mpActionsMainArea->comboBox_orientation->setCurrentIndex(0);
-    mpActionsMainArea->buttonRotation->setCurrentIndex(0);
-    mpActionsMainArea->buttonColumns->setValue(1);
+    mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
+    mpActionsMainArea->lineEdit_action_button_command_down->clear();
+    mpActionsMainArea->lineEdit_action_button_command_up->clear();
+    mpActionsMainArea->spinBox_action_bar_columns->clear();
+    mpActionsMainArea->plainTextEdit_action_css->clear();
+    mpActionsMainArea->comboBox_action_bar_location->setCurrentIndex(0);
+    mpActionsMainArea->comboBox_action_bar_orientation->setCurrentIndex(0);
+    mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(0);
+    mpActionsMainArea->spinBox_action_bar_columns->setValue(1);
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
@@ -4311,15 +5285,15 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
         mpActionsMainArea->lineEdit_action_name->setText(pT->getName());
-        mpActionsMainArea->checkBox_pushdownbutton->setChecked(pT->isPushDownButton());
-        mpActionsMainArea->label_command_up->hide();
-        mpActionsMainArea->label_command_down->hide();
-        mpActionsMainArea->lineEdit_command_up->hide();
-        mpActionsMainArea->lineEdit_command_down->hide();
-        mpActionsMainArea->label_command_down->setText(tr("Command:"));
+        mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(pT->isPushDownButton());
+        mpActionsMainArea->label_action_button_command_up->hide();
+        mpActionsMainArea->label_action_button_command_down->hide();
+        mpActionsMainArea->lineEdit_action_button_command_up->hide();
+        mpActionsMainArea->lineEdit_action_button_command_down->hide();
+        mpActionsMainArea->label_action_button_command_down->setText(tr("Command:"));
         mpActionsMainArea->lineEdit_action_icon->setText(pT->getIcon());
-        mpActionsMainArea->lineEdit_command_down->setText(pT->getCommandButtonDown());
-        mpActionsMainArea->lineEdit_command_up->setText(pT->getCommandButtonUp());
+        mpActionsMainArea->lineEdit_action_button_command_down->setText(pT->getCommandButtonDown());
+        mpActionsMainArea->lineEdit_action_button_command_up->setText(pT->getCommandButtonUp());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -4328,57 +5302,57 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
         if (location > 0) {
             location--;
         }
-        mpActionsMainArea->comboBox_location->setCurrentIndex(location);
-        mpActionsMainArea->comboBox_orientation->setCurrentIndex(pT->mOrientation);
-        mpActionsMainArea->buttonRotation->setCurrentIndex(pT->getButtonRotation());
-        mpActionsMainArea->buttonColumns->setValue(pT->getButtonColumns());
-        mpActionsMainArea->css->setPlainText(pT->css);
+        mpActionsMainArea->comboBox_action_bar_location->setCurrentIndex(location);
+        mpActionsMainArea->comboBox_action_bar_orientation->setCurrentIndex(pT->mOrientation);
+        mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(pT->getButtonRotation());
+        mpActionsMainArea->spinBox_action_bar_columns->setValue(pT->getButtonColumns());
+        mpActionsMainArea->plainTextEdit_action_css->setPlainText(pT->css);
         if (pT->isFolder()) {
             if (!pT->getPackageName().isEmpty()) {
                 // We have a non-empty package name (Tree<T>::mModuleName
                 // is NEVER used but Tree<T>::mPackageName is for both!)
                 // THUS: We are a module master folder
 
-                mpActionsMainArea->groupBox_toolBar->hide();
-                mpActionsMainArea->groupBox_appearance->hide();
-                mpActionsMainArea->widget_2->hide();
+                mpActionsMainArea->groupBox_action_bar->hide();
+                mpActionsMainArea->groupBox_action_button_appearance->hide();
+                mpActionsMainArea->widget_top->hide();
                 mpSourceEditorArea->hide();
             } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->getPackageName().isEmpty()))
             // We are a top-level folder with no parent
             // OR: We have a parent and that IS a module master folder
             // THUS: We are a toolbar
             {
-                mpActionsMainArea->groupBox_toolBar->show();
-                mpActionsMainArea->groupBox_appearance->hide();
-                mpActionsMainArea->widget_2->show();
+                mpActionsMainArea->groupBox_action_bar->show();
+                mpActionsMainArea->groupBox_action_button_appearance->hide();
+                mpActionsMainArea->widget_top->show();
                 mpSourceEditorArea->show();
             } else {
                 // We must be a MENU
 
-                mpActionsMainArea->groupBox_appearance->setTitle(tr("Menu properties"));
-                mpActionsMainArea->groupBox_toolBar->hide();
-                mpActionsMainArea->checkBox_pushdownbutton->hide();
-                mpActionsMainArea->groupBox_appearance->show();
-                mpActionsMainArea->widget_2->show();
+                mpActionsMainArea->groupBox_action_button_appearance->setTitle(tr("Menu properties"));
+                mpActionsMainArea->groupBox_action_bar->hide();
+                mpActionsMainArea->checkBox_action_button_isPushDown->hide();
+                mpActionsMainArea->groupBox_action_button_appearance->show();
+                mpActionsMainArea->widget_top->show();
                 mpSourceEditorArea->show();
             }
         } else {
             // We are a BUTTON
 
-            mpActionsMainArea->groupBox_appearance->setTitle(tr("Button properties"));
-            mpActionsMainArea->groupBox_toolBar->hide();
-            mpActionsMainArea->groupBox_appearance->show();
-            mpActionsMainArea->label_command_down->show();
-            mpActionsMainArea->lineEdit_command_down->show();
-            mpActionsMainArea->checkBox_pushdownbutton->show();
+            mpActionsMainArea->groupBox_action_button_appearance->setTitle(tr("Button properties"));
+            mpActionsMainArea->groupBox_action_bar->hide();
+            mpActionsMainArea->groupBox_action_button_appearance->show();
+            mpActionsMainArea->label_action_button_command_down->show();
+            mpActionsMainArea->lineEdit_action_button_command_down->show();
+            mpActionsMainArea->checkBox_action_button_isPushDown->show();
             mpSourceEditorArea->show();
             if (pT->isPushDownButton()) {
-                mpActionsMainArea->label_command_down->setText(tr("Command (down);"));
-                mpActionsMainArea->lineEdit_command_up->show();
-                mpActionsMainArea->label_command_up->show();
+                mpActionsMainArea->label_action_button_command_down->setText(tr("Command (down);"));
+                mpActionsMainArea->lineEdit_action_button_command_up->show();
+                mpActionsMainArea->label_action_button_command_up->show();
             }
 
-            mpActionsMainArea->widget_2->show();
+            mpActionsMainArea->widget_top->show();
         }
 
         if (!pT->state()) {
@@ -4435,24 +5409,24 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
     mpSystemMessageArea->hide();
     clearDocument(mpSourceEditorEdbee); // Script Select
-    mpScriptsMainArea->lineEdit_scripts_name->clear();
-    mpScriptsMainArea->listWidget_registered_event_handlers->clear();
-    mpScriptsMainArea->lineEdit_scripts_name->setText(pItem->text(0));
+    mpScriptsMainArea->lineEdit_script_name->clear();
+    mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
+    mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
         QString name = pT->getName();
         QStringList eventHandlerList = pT->getEventHandlerList();
         for (int i = 0; i < eventHandlerList.size(); i++) {
-            auto pItem = new QListWidgetItem(mpScriptsMainArea->listWidget_registered_event_handlers);
+            auto pItem = new QListWidgetItem(mpScriptsMainArea->listWidget_script_registered_event_handlers);
             pItem->setText(eventHandlerList[i]);
-            mpScriptsMainArea->listWidget_registered_event_handlers->addItem(pItem);
+            mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
         }
-        mpScriptsMainArea->lineEdit_scripts_name->clear();
+        mpScriptsMainArea->lineEdit_script_name->clear();
         QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
 
-        mpScriptsMainArea->lineEdit_scripts_name->setText(name);
+        mpScriptsMainArea->lineEdit_script_name->setText(name);
         if (!pT->state()) {
             showError(pT->getError());
         }
@@ -4476,12 +5450,12 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     mpSystemMessageArea->hide();
     clearDocument(mpSourceEditorEdbee); // Timer Select
 
-    mpTimersMainArea->lineEdit_command->clear();
+    mpTimersMainArea->lineEdit_timer_command->clear();
     mpTimersMainArea->lineEdit_timer_name->clear();
-    mpTimersMainArea->timeEdit_hours->clear();
-    mpTimersMainArea->timeEdit_minutes->clear();
-    mpTimersMainArea->timeEdit_seconds->clear();
-    mpTimersMainArea->timeEdit_msecs->clear();
+    mpTimersMainArea->timeEdit_timer_hours->clear();
+    mpTimersMainArea->timeEdit_timer_minutes->clear();
+    mpTimersMainArea->timeEdit_timer_seconds->clear();
+    mpTimersMainArea->timeEdit_timer_msecs->clear();
 
     mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
     int ID = pItem->data(0, Qt::UserRole).toInt();
@@ -4495,7 +5469,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
         }
         QString command = pT->getCommand();
         QString name = pT->getName();
-        mpTimersMainArea->lineEdit_command->setText(command);
+        mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
         QTime time = pT->getTime();
         int hours = time.hour();
@@ -4504,16 +5478,16 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
         int msecs = time.msec();
 
         QTime t2(hours, 0, 0, 0);
-        mpTimersMainArea->timeEdit_hours->setTime(t2);
+        mpTimersMainArea->timeEdit_timer_hours->setTime(t2);
 
         QTime t3(0, minutes, 0, 0);
-        mpTimersMainArea->timeEdit_minutes->setTime(t3);
+        mpTimersMainArea->timeEdit_timer_minutes->setTime(t3);
 
         QTime t4(0, 0, secs);
-        mpTimersMainArea->timeEdit_seconds->setTime(t4);
+        mpTimersMainArea->timeEdit_timer_seconds->setTime(t4);
 
         QTime t5(0, 0, 0, msecs);
-        mpTimersMainArea->timeEdit_msecs->setTime(t5);
+        mpTimersMainArea->timeEdit_timer_msecs->setTime(t5);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -4527,27 +5501,24 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
 void dlgTriggerEditor::fillout_form()
 {
     mCurrentView = 0;
-    mpCurrentTriggerItem = 0;
-    mpCurrentAliasItem = 0;
-    mpCurrentKeyItem = 0;
-    mpCurrentActionItem = 0;
-    mpCurrentScriptItem = 0;
-    mpCurrentTimerItem = 0;
-    mpCurrentVarItem = 0;
+    mpCurrentTriggerItem = nullptr;
+    mpCurrentAliasItem = nullptr;
+    mpCurrentKeyItem = nullptr;
+    mpCurrentActionItem = nullptr;
+    mpCurrentScriptItem = nullptr;
+    mpCurrentTimerItem = nullptr;
+    mpCurrentVarItem = nullptr;
 
     mNeedUpdateData = false;
-    QStringList sL;
-    sL << "Triggers";
-    mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL);
+    mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
     mpTriggerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon;
-    mainIcon.addPixmap( QPixmap( QStringLiteral( ":/icons/tools-wizard.png" ) ), QIcon::Normal, QIcon::Off );
-    mpTriggerBaseItem->setIcon( 0, mainIcon );
+    mpTriggerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/tools-wizard.png")));
     treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
-    list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
-    for(auto trigger : baseNodeList)
-    {
-        if( trigger->isTemporary() ) { continue; }
+    std::list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    for (auto trigger : baseNodeList) {
+        if (trigger->isTemporary()) {
+            continue;
+        }
         QString s = trigger->getName();
         QStringList sList;
         sList << s;
@@ -4619,19 +5590,16 @@ void dlgTriggerEditor::fillout_form()
 
     mpTriggerBaseItem->setExpanded(true);
 
-    QStringList sL2;
-    sL2 << "Timers";
-    mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL2);
+    mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Timers")));
     mpTimerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon2;
-    mainIcon2.addPixmap( QPixmap( QStringLiteral( ":/icons/chronometer.png" ) ), QIcon::Normal, QIcon::Off );
-    mpTimerBaseItem->setIcon( 0, mainIcon2 );
+    mpTimerBaseItem->setIcon( 0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
     treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
     mpTriggerBaseItem->setExpanded( true );
-    list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
-    for(auto timer : baseNodeList_timers)
-    {
-        if( timer->isTemporary() ) { continue; }
+    std::list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    for (auto timer : baseNodeList_timers) {
+        if( timer->isTemporary() ) {
+            continue;
+        }
         QString s = timer->getName();
         QStringList sList;
         sList << s;
@@ -4682,16 +5650,12 @@ void dlgTriggerEditor::fillout_form()
     }
     mpTimerBaseItem->setExpanded(true);
 
-    QStringList sL3;
-    sL3 << "Scripts";
-    mpScriptsBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL3);
+    mpScriptsBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Scripts")));
     mpScriptsBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon3;
-    mainIcon3.addPixmap(QPixmap(QStringLiteral(":/icons/accessories-text-editor.png")), QIcon::Normal, QIcon::Off);
-    mpScriptsBaseItem->setIcon(0, mainIcon3);
+    mpScriptsBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/accessories-text-editor.png")));
     treeWidget_scripts->insertTopLevelItem(0, mpScriptsBaseItem);
     mpScriptsBaseItem->setExpanded(true);
-    list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
+    std::list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : baseNodeList_scripts) {
         QString s = script->getName();
 
@@ -4736,16 +5700,12 @@ void dlgTriggerEditor::fillout_form()
     }
     mpScriptsBaseItem->setExpanded(true);
 
-    QStringList sL4;
-    sL4 << "Aliases - Input Triggers";
-    mpAliasBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL4);
+    mpAliasBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Aliases - Input Triggers")));
     mpAliasBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon4;
-    mainIcon4.addPixmap(QPixmap(QStringLiteral(":/icons/system-users.png")), QIcon::Normal, QIcon::Off);
-    mpAliasBaseItem->setIcon(0, mainIcon4);
+    mpAliasBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/system-users.png")));
     treeWidget_aliases->insertTopLevelItem(0, mpAliasBaseItem);
     mpAliasBaseItem->setExpanded(true);
-    list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
+    std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
         QString s = alias->getName();
         QStringList sList;
@@ -4803,16 +5763,12 @@ void dlgTriggerEditor::fillout_form()
     }
     mpAliasBaseItem->setExpanded(true);
 
-    QStringList sL5;
-    sL5 << "Buttons";
-    mpActionBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL5);
+    mpActionBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Buttons")));
     mpActionBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon5;
-    mainIcon5.addPixmap(QPixmap(QStringLiteral(":/icons/bookmarks.png")), QIcon::Normal, QIcon::Off);
-    mpActionBaseItem->setIcon(0, mainIcon5);
+    mpActionBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/bookmarks.png")));
     treeWidget_actions->insertTopLevelItem(0, mpActionBaseItem);
     mpActionBaseItem->setExpanded(true);
-    list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
+    std::list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : baseNodeList_action) {
         QString s = action->getName();
         QStringList sList;
@@ -4862,16 +5818,12 @@ void dlgTriggerEditor::fillout_form()
     }
     mpActionBaseItem->setExpanded(true);
 
-    QStringList sL6;
-    sL6 << "Action Key Bindings";
-    mpKeyBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(0), sL6);
+    mpKeyBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Key Bindings")));
     mpKeyBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon6;
-    mainIcon6.addPixmap(QPixmap(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), QIcon::Normal, QIcon::Off);
-    mpKeyBaseItem->setIcon(0, mainIcon6);
+    mpKeyBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/preferences-desktop-keyboard.png")));
     treeWidget_keys->insertTopLevelItem(0, mpKeyBaseItem);
     mpKeyBaseItem->setExpanded(true);
-    list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
+    std::list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : baseNodeList_key) {
         QString s = key->getName();
         QStringList sList;
@@ -4933,16 +5885,12 @@ void dlgTriggerEditor::fillout_form()
 void dlgTriggerEditor::repopulateVars()
 {
     treeWidget_variables->setUpdatesEnabled(false);
-    QStringList sL7;
-    sL7 << "Variables";
-    mpVarBaseItem = new QTreeWidgetItem(sL7);
+    mpVarBaseItem = new QTreeWidgetItem(QStringList(tr("Variables")));
     mpVarBaseItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
     mpVarBaseItem->setBackground(0, QColor(255, 254, 215, 255));
-    QIcon mainIcon5;
-    mainIcon5.addPixmap(QPixmap(QStringLiteral(":/icons/variables.png")), QIcon::Normal, QIcon::Off);
-    mpVarBaseItem->setIcon(0, mainIcon5);
+    mpVarBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/variables.png")));
     treeWidget_variables->clear();
-    mpCurrentVarItem = 0;
+    mpCurrentVarItem = nullptr;
     treeWidget_variables->insertTopLevelItem(0, mpVarBaseItem);
     mpVarBaseItem->setExpanded(true);
     LuaInterface* lI = mpHost->getLuaInterface();
@@ -4955,7 +5903,7 @@ void dlgTriggerEditor::repopulateVars()
 
 void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
     for (auto trigger : *childrenList) {
         QString s = trigger->getName();
         QStringList sList;
@@ -5026,7 +5974,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
 
 void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    list<TKey*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TKey*>* childrenList = pTriggerParent->getChildrenList();
     for (auto key : *childrenList) {
         QString s = key->getName();
         QStringList sList;
@@ -5082,7 +6030,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
 
 void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    list<TScript*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TScript*>* childrenList = pTriggerParent->getChildrenList();
     for (auto script : *childrenList) {
         QString s = script->getName();
         QStringList sList;
@@ -5121,7 +6069,7 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
 
 void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
     for (auto alias : *childrenList) {
         QString s = alias->getName();
         QStringList sList;
@@ -5176,7 +6124,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
 
 void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    list<TAction*>* childrenList = pTriggerParent->getChildrenList();
+    std::list<TAction*>* childrenList = pTriggerParent->getChildrenList();
     for (auto action : *childrenList) {
         QString s = action->getName();
         QStringList sList;
@@ -5226,7 +6174,7 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
 
 void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent)
 {
-    list<TTimer*>* childrenList = pTimerParent->getChildrenList();
+    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         QString s = timer->getName();
         QStringList sList;
@@ -5352,12 +6300,12 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
     }
 
     if (!mCurrentView) {
-        mpCurrentTriggerItem = 0;
-        mpCurrentAliasItem = 0;
-        mpCurrentKeyItem = 0;
-        mpCurrentActionItem = 0;
-        mpCurrentScriptItem = 0;
-        mpCurrentTimerItem = 0;
+        mpCurrentTriggerItem = nullptr;
+        mpCurrentAliasItem = nullptr;
+        mpCurrentKeyItem = nullptr;
+        mpCurrentActionItem = nullptr;
+        mpCurrentScriptItem = nullptr;
+        mpCurrentTimerItem = nullptr;
         return;
     }
 
@@ -5526,7 +6474,7 @@ void dlgTriggerEditor::slot_show_vars()
 {
     changeView(cmVarsView);
     repopulateVars();
-    mpCurrentVarItem = 0;
+    mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
     button_displayAllVariables->setChecked(showHiddenVars);
@@ -5552,7 +6500,7 @@ void dlgTriggerEditor::show_vars()
 {
     //no repopulation of variables
     changeView(cmVarsView);
-    mpCurrentVarItem = 0;
+    mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
     button_displayAllVariables->show();
     button_displayAllVariables->setChecked(showHiddenVars);
@@ -5826,9 +6774,12 @@ void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
     };
 }
 
+// Should the functionality change in this method be sure to review the code
+// for "case SearchResultIsEventHandler" for "Scripts" in:
+// slot_item_selected_search_list(...)
 void dlgTriggerEditor::slot_script_main_area_edit_handler(QListWidgetItem*)
 {
-    QListWidgetItem* pItem = mpScriptsMainArea->listWidget_registered_event_handlers->currentItem();
+    QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
     if (!pItem) {
         return;
     }
@@ -5839,12 +6790,12 @@ void dlgTriggerEditor::slot_script_main_area_edit_handler(QListWidgetItem*)
         mIsScriptsMainAreaEditHandler = false;
         return;
     }
-    mpScriptsMainArea->lineEdit->setText(regex);
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
 void dlgTriggerEditor::slot_script_main_area_delete_handler()
 {
-    mpScriptsMainArea->listWidget_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_registered_event_handlers->currentRow());
+    mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
 }
 
 void dlgTriggerEditor::slot_script_main_area_add_handler()
@@ -5855,20 +6806,20 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
             goto LAZY;
             return;
         }
-        QListWidgetItem* pItem = mpScriptsMainArea->listWidget_registered_event_handlers->currentItem();
+        QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
         if (!pItem) {
             return;
         }
-        pItem->setText(mpScriptsMainArea->lineEdit->text());
+        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
         mIsScriptsMainAreaEditHandler = false;
-        mpScriptsMainAreaEditHandlerItem = 0;
+        mpScriptsMainAreaEditHandlerItem = nullptr;
     } else {
     LAZY:
         auto pItem = new QListWidgetItem;
-        pItem->setText(mpScriptsMainArea->lineEdit->text());
-        mpScriptsMainArea->listWidget_registered_event_handlers->addItem(pItem);
+        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
+        mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
     }
-    mpScriptsMainArea->lineEdit->clear();
+    mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 }
 
 void dlgTriggerEditor::slot_debug_mode()
@@ -5881,7 +6832,7 @@ void dlgTriggerEditor::slot_debug_mode()
 void dlgTriggerEditor::exportTrigger(QFile& file)
 {
     QString name;
-    TTrigger* pT = 0;
+    TTrigger* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -5905,7 +6856,7 @@ void dlgTriggerEditor::exportTrigger(QFile& file)
 void dlgTriggerEditor::exportTimer(QFile& file)
 {
     QString name;
-    TTimer* pT = 0;
+    TTimer* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -5929,7 +6880,7 @@ void dlgTriggerEditor::exportTimer(QFile& file)
 void dlgTriggerEditor::exportAlias(QFile& file)
 {
     QString name;
-    TAlias* pT = 0;
+    TAlias* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -5953,7 +6904,7 @@ void dlgTriggerEditor::exportAlias(QFile& file)
 void dlgTriggerEditor::exportAction(QFile& file)
 {
     QString name;
-    TAction* pT = 0;
+    TAction* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -5977,7 +6928,7 @@ void dlgTriggerEditor::exportAction(QFile& file)
 void dlgTriggerEditor::exportScript(QFile& file)
 {
     QString name;
-    TScript* pT = 0;
+    TScript* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -6001,7 +6952,7 @@ void dlgTriggerEditor::exportScript(QFile& file)
 void dlgTriggerEditor::exportKey(QFile& file)
 {
     QString name;
-    TKey* pT = 0;
+    TKey* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -6466,12 +7417,12 @@ void dlgTriggerEditor::slot_import()
 
     fillout_form();
 
-    mpCurrentTriggerItem = 0;
-    mpCurrentTimerItem = 0;
-    mpCurrentAliasItem = 0;
-    mpCurrentScriptItem = 0;
-    mpCurrentActionItem = 0;
-    mpCurrentKeyItem = 0;
+    mpCurrentTriggerItem = nullptr;
+    mpCurrentTimerItem = nullptr;
+    mpCurrentAliasItem = nullptr;
+    mpCurrentScriptItem = nullptr;
+    mpCurrentActionItem = nullptr;
+    mpCurrentKeyItem = nullptr;
 
     slot_show_triggers();
 }
@@ -6507,12 +7458,12 @@ void dlgTriggerEditor::doCleanReset()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
     fillout_form();
-    mpCurrentTriggerItem = 0;
-    mpCurrentTimerItem = 0;
-    mpCurrentAliasItem = 0;
-    mpCurrentScriptItem = 0;
-    mpCurrentActionItem = 0;
-    mpCurrentKeyItem = 0;
+    mpCurrentTriggerItem = nullptr;
+    mpCurrentTimerItem = nullptr;
+    mpCurrentAliasItem = nullptr;
+    mpCurrentScriptItem = nullptr;
+    mpCurrentActionItem = nullptr;
+    mpCurrentKeyItem = nullptr;
     slot_show_triggers();
 }
 
@@ -6613,7 +7564,7 @@ void dlgTriggerEditor::grab_key_callback(int key, int modifier)
     }
     QString keyName = pKeyUnit->getKeyName(key, modifier);
     QString name = keyName;
-    mpKeysMainArea->lineEdit_key->setText(name);
+    mpKeysMainArea->lineEdit_key_binding->setText(name);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -6634,13 +7585,13 @@ void dlgTriggerEditor::slot_chose_action_icon()
 void dlgTriggerEditor::slot_toggle_isPushDownButton(const int state)
 {
     if (state == Qt::Checked) {
-        mpActionsMainArea->lineEdit_command_up->show();
-        mpActionsMainArea->label_command_up->show();
-        mpActionsMainArea->label_command_down->setText(tr("Command (down):"));
+        mpActionsMainArea->lineEdit_action_button_command_up->show();
+        mpActionsMainArea->label_action_button_command_up->show();
+        mpActionsMainArea->label_action_button_command_down->setText(tr("Command (down):"));
     } else {
-        mpActionsMainArea->lineEdit_command_up->hide();
-        mpActionsMainArea->label_command_up->hide();
-        mpActionsMainArea->label_command_down->setText(tr("Command:"));
+        mpActionsMainArea->lineEdit_action_button_command_up->hide();
+        mpActionsMainArea->label_action_button_command_up->hide();
+        mpActionsMainArea->label_action_button_command_down->setText(tr("Command:"));
     }
 }
 
@@ -6712,7 +7663,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
         return;
     }
 
-    QString pattern = pI->lineEdit->text();
+    QString pattern = pI->lineEdit_pattern->text();
     QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
     int _pos = regex.indexIn(pattern);
     int ansiFg, ansiBg;
@@ -6740,7 +7691,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 
     row = ((dlgTriggerPatternEdit*)pB->parent())->mRow;
     pI = mTriggerPatternEdit[row];
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)));
+    pI->lineEdit_pattern->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)));
     pB->setStyleSheet(styleSheet);
 }
 
@@ -6766,7 +7717,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
         return;
     }
 
-    QString pattern = pI->lineEdit->text();
+    QString pattern = pI->lineEdit_pattern->text();
     QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
     int _pos = regex.indexIn(pattern);
     int ansiFg, ansiBg;
@@ -6797,7 +7748,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     if (!pI) {
         return;
     }
-    pI->lineEdit->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)));
+    pI->lineEdit_pattern->setText(QString("FG%1BG%2").arg(QString::number(pT->mColorTriggerFgAnsi), QString::number(pT->mColorTriggerBgAnsi)));
     pB->setStyleSheet(styleSheet);
 }
 
@@ -6851,6 +7802,10 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setFont(mpHost->mDisplayFont);
     config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setSmartTab(true);
+    config->setCaretBlinkRate(200);
+    config->setIndentSize(2);
+    config->setCaretWidth(1);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
@@ -6873,4 +7828,55 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
         localConfig->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
         localConfig->endChanges();
-};
+}
+
+void dlgTriggerEditor::createSearchOptionIcon()
+{
+    // When we add new search options we must create icons for each combination
+    // beforehand - which is simpler than having to do code to combine the
+    // QPixMaps...
+    QIcon newIcon;
+    switch(mSearchOptions) {
+    // Each combination must be handled here
+    case SearchOptionCaseSensitive:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
+        break;
+
+    case SearchOptionNone:
+        // Use the grey icon as that is appropriate for the "No options set" case
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
+        break;
+
+    default:
+        // Don't grey out this one - is a diagnositic for an uncoded combination
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-unspecified.png"));
+    }
+
+    // Store the current setting icon - may need to copy it into the grandparent QComboBox items
+    mIcon_searchOptions = newIcon;
+    // Applied it to the QLineEdit for display purposes
+    mpAction_searchOptions->setIcon(newIcon);
+}
+
+void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
+{
+    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+        createSearchOptionIcon();
+    }
+
+}
+
+void dlgTriggerEditor::slot_clearSearchResults()
+{
+    // Want the clearing of the search results to show:
+    treeWidget_searchResults->clear();
+    treeWidget_searchResults->update();
+
+    // unhighlight all instances of the item that we've searched for.
+    // edbee already remembers this from a setSearchTerm() call elsewhere
+    auto controller = mpSourceEditorEdbee->controller();
+    auto textRanges = controller->borderedTextRanges();
+    textRanges->clear();
+    controller->update();
+}

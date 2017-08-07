@@ -41,7 +41,7 @@ include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.2.0
+VERSION = 3.4.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -58,8 +58,8 @@ VERSION = 3.2.0
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
 !msvc:QMAKE_CXXFLAGS_DEBUG += -O0
 
-# enable C++14 for builds.
-CONFIG += c++14
+# enable C++11 for builds.
+CONFIG += c++11
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -78,7 +78,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
 # i.e. the line should be "BUILD =" without quotes
-  BUILD = "-dev"
+  BUILD = ""
 }
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
@@ -214,6 +214,7 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
+    ircmessageformatter.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -251,8 +252,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    ircmessageformatter.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
@@ -285,6 +285,7 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
+    ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -328,8 +329,7 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h \
-    ircmessageformatter.h
+    XMLimport.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -390,11 +390,11 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/KeyCodes.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua \
-    $${PWD}/mudlet-lua/lua/KeyCodes.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
@@ -462,7 +462,6 @@ unix:!macx: {
 
 DISTFILES += \
     ../.travis.yml \
-    CMakeLists.txt \
     ../CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
@@ -475,4 +474,5 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    .clang-format
+    .clang-format \
+    CMakeLists.txt

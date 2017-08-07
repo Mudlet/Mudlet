@@ -33,9 +33,13 @@
         <file>icons/applications-engineering.png</file>
         <file>icons/applications-internet.png</file>
         <file>icons/arrow-down.png</file>
+        <file>icons/arrow-down-16x.png</file>
         <file>icons/arrow-down_grey.png</file>
+        <file>icons/arrow-down_grey-16x.png</file>
         <file>icons/arrow-right.png</file>
+        <file>icons/arrow-right-16x.png</file>
         <file>icons/arrow-right_grey.png</file>
+        <file>icons/arrow-right_grey-16x.png</file>
         <file>icons/avalon.png</file>
         <file>icons/badge.png</file>
         <file>icons/batmud_mud.png</file>
@@ -57,6 +61,8 @@
         <file>icons/document-save-as.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-copy.png</file>
+        <file>icons/edit-clear-locationbar-rtl.png</file>
+        <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-delete-shred.png</file>
         <file>icons/edit-paste.png</file>
         <file>icons/errors.png</file>
@@ -128,6 +134,9 @@
         <file>icons/preferences-web-browser-cache.png</file>
         <file>icons/rating.png</file>
         <file>icons/red-bomb.png</file>
+        <file>icons/searchOptions-caseSensitive.png</file>
+        <file>icons/searchOptions-none.png</file>
+        <file>icons/searchOptions-unspecified.png</file>
         <file>icons/Slothmud.png</file>
         <file>icons/system-restart.png</file>
         <file>icons/system-users.png</file>

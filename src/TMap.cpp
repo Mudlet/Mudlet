@@ -511,6 +511,12 @@ void TMap::audit()
         postMessage(infoMsg);
         appendErrorMsg(infoMsg);
     }
+
+    auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
+    if (loadTime != -1.0) {
+        QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
+        postMessage(msg);
+    }
 }
 
 
@@ -1451,9 +1457,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         customEnvColors[271] = mpHost->mLightWhite_2;
         customEnvColors[272] = mpHost->mLightBlack_2;
 
-        QString okMsg = tr("[ INFO ]  - Sucessfully read the map file (%1s), checking some\n"
-                           "consistency details...")
-                                .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+        QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
+                                        "consistency details..." )
+                            .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
 
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
@@ -1491,7 +1497,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 // player location. Though this is written as a member function it is intended
 // also for use to retrieve details from maps from OTHER profiles, importantly
 // it does (or should) NOT interact with this TMap instance...!
-bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, int* fileVersion = 0, int* roomId = 0, int* areaCount = 0, int* roomCount = 0)
+bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, int* areaCount = nullptr, int* roomCount = nullptr)
 {
     if (profile.isEmpty()) {
         return false;
@@ -1596,7 +1602,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
         }
         // read each area
         for (int i = 0; i < areaSize; i++) {
-            TArea pA(0, 0);
+            TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
@@ -1691,7 +1697,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = 0, in
         }
     }
 
-    TRoom _pT(0);
+    TRoom _pT(nullptr);
     QSet<int> _dummyRoomIdSet;
     while (!ifs.atEnd()) {
         int i;
@@ -2177,7 +2183,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     if (isLocalImport) {
         // clean-up
         mpProgressDialog->deleteLater();
-        mpProgressDialog = 0;
+        mpProgressDialog = nullptr;
     }
     mpMapper->show();
 

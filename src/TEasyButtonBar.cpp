@@ -40,7 +40,7 @@ TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
 , mpWidget( new QWidget )
 , mName( name )
 , mRecordMove( false )
-, mpLayout( 0 )
+, mpLayout( nullptr )
 , mItemCount( 0 )
 , mpBar( pW )
 {
@@ -207,7 +207,7 @@ void TEasyButtonBar::clear()
         mpWidget->setContentsMargins(0, 0, 0, 0);
         mpLayout->setMargin(0);
     } else {
-        mpLayout = 0;
+        mpLayout = nullptr;
         mpWidget->setMinimumHeight(mpTAction->mSizeY);
         mpWidget->setMaximumHeight(mpTAction->mSizeY);
         mpWidget->setMinimumWidth(mpTAction->mSizeX);

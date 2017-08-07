@@ -98,6 +98,8 @@ public:
     void setDockLayoutUpdated(Host*, const QString&);
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
+    bool setFontSize(Host*, const QString&, int);
+    int getFontSize(Host*, const QString&);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host*, const QString&, int, int, int, int, bool);
@@ -199,15 +201,6 @@ public:
     void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
     static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
 
-    enum StatusBarOption {
-        statusBarHidden = 0x0,    // Currently not on display
-        statusBarAutoShown = 0x1, // Currently shown but to hide as soon as there is no text to display
-        statusBarAlwaysShown = 0x2
-    };
-
-    Q_DECLARE_FLAGS(StatusBarOptions, StatusBarOption)
-    StatusBarOptions mStatusBarState;
-
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
@@ -279,7 +272,6 @@ private slots:
     void show_key_dialog();
     void show_variable_dialog();
     void show_options_dialog();
-    void slot_statusBarMessageChanged(QString);
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -287,6 +279,7 @@ private slots:
     void slot_gamepadDisconnected(int deviceId);
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
+    void slot_module_manager_destroyed();
 
 private:
     void initEdbee();
@@ -319,22 +312,20 @@ private:
 
     void check_for_mappingscript();
 
-    QListWidget* packageList;
-    QPushButton* uninstallButton;
-    QPushButton* installButton;
+    QPointer<QListWidget> packageList;
+    QPointer<QPushButton> uninstallButton;
+    QPointer<QPushButton> installButton;
 
-    QTableWidget* moduleTable;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
-    QPushButton* moduleHelpButton;
+    QPointer<Host> mpModuleTableHost;
+    QPointer<QTableWidget> moduleTable;
+    QPointer<QPushButton> moduleUninstallButton;
+    QPointer<QPushButton> moduleInstallButton;
+    QPointer<QPushButton> moduleHelpButton;
 
     HostManager mHostManager;
-    QStatusBar* mpMainStatusBar;
 
     bool mshowMapAuditErrors;
 };
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::StatusBarOptions)
 
 class TConsoleMonitor : public QObject
 {

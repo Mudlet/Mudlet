@@ -85,7 +85,7 @@ TLuaInterpreter::TLuaInterpreter( Host * pH, int id )
         , mHostID( id )
         , purgeTimer(this)
 {
-    pGlobalLua = 0;
+    pGlobalLua = nullptr;
 
     connect(&purgeTimer, SIGNAL(timeout()), this, SLOT(slotPurge()));
 
@@ -248,50 +248,50 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
     if (lua_isnumber(L, position)) {
         dirNum = lua_tonumber(L, position);
         if (dirNum <= 0 || dirNum >= 13) {
-            return 0;
+            return QString();
         }
         if (dirNum == 1) {
-            return "north";
+            return QStringLiteral("north");
         }
         if (dirNum == 2) {
-            return "northeast";
+            return QStringLiteral("northeast");
         }
         if (dirNum == 3) {
-            return "northwest";
+            return QStringLiteral("northwest");
         }
         if (dirNum == 4) {
-            return "east";
+            return QStringLiteral("east");
         }
         if (dirNum == 5) {
-            return "west";
+            return QStringLiteral("west");
         }
         if (dirNum == 6) {
-            return "south";
+            return QStringLiteral("south");
         }
         if (dirNum == 7) {
-            return "southeast";
+            return QStringLiteral("southeast");
         }
         if (dirNum == 8) {
-            return "southwest";
+            return QStringLiteral("southwest");
         }
         if (dirNum == 9) {
-            return "up";
+            return QStringLiteral("up");
         }
         if (dirNum == 10) {
-            return "down";
+            return QStringLiteral("down");
         }
         if (dirNum == 11) {
-            return "in";
+            return QStringLiteral("in");
         }
         if (dirNum == 12) {
-            return "out";
+            return QStringLiteral("out");
         }
     }
     if (lua_isstring(L, position)) {
         dir = lua_tostring(L, position);
         return dir;
     }
-    return 0;
+    return QString();
 }
 
 int TLuaInterpreter::dirToNumber(lua_State* L, int position)
@@ -474,7 +474,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 2) {
         if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaultsto "main" if omitted}, got %s!))", s, luaL_typename(L, s));
+            lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", s, luaL_typename(L, s));
             lua_error(L);
             return 1;
         } else {
@@ -2281,7 +2281,99 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     }
 }
 
-// openUserWindow( session, string window_name )
+int TLuaInterpreter::setFontSize(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName;
+    int s = 0;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L,
+                            "setFontSize: bad argument #%d type (more than one argument supplied and first,\n"
+                            "window name, as string expected (omission selects \"main\" window), got %s!",
+                            s,
+                            luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
+    }
+
+    int size;
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setFontSize: bad argument #%d type (size as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        size = lua_tointeger(L, s);
+        if (size <= 0) {
+            // just throw an error, no default needed.
+            lua_pushnil(L);
+            lua_pushstring(L, "size cannot be 0 or negative");
+            return 2;
+        }
+    }
+
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            // get host profile display font and alter it, since that is how it's done in Settings.
+            QFont font = pHost->mDisplayFont;
+            font.setPointSize(size);
+            pHost->mDisplayFont = font;
+            // apply changes to main console and its while-scrolling component too.
+            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
+            lua_pushboolean(L, true);
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
+        }
+    } else {
+        if (mudlet::self()->setFontSize(pHost, windowName, size)) {
+            lua_pushboolean(L, true);
+        } else {
+            lua_pushnil(L);
+            lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+        }
+    }
+    return 1;
+}
+
+int TLuaInterpreter::getFontSize(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+
+    QString windowName = QStringLiteral("main");
+    int rval = -1;
+    if (lua_gettop(L) == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+
+            if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+                rval = pHost->mDisplayFont.pointSize();
+            } else {
+                rval = mudlet::self()->getFontSize(pHost, windowName);
+            }
+        }
+    } else {
+        rval = pHost->mDisplayFont.pointSize();
+    }
+
+    if (rval <= -1) {
+        lua_pushnil(L);
+    } else {
+        lua_pushnumber(L, rval);
+    }
+    return 1;
+}
+
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     string luaSendText = "";
@@ -3304,7 +3396,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         }
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
+    if (windowName.isEmpty() || !windowName.compare(QStringLiteral("main"), Qt::CaseSensitive)) {
         TConsole* pC = host.mpConsole;
         pC->mFormatCurrent.bgR = colorComponents.at(0);
         pC->mFormatCurrent.bgG = colorComponents.at(1);
@@ -4578,7 +4670,7 @@ int TLuaInterpreter::deselect(lua_State* L)
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, R"(deselect: bad argument #1 type (window name as string, is optional {defaultsto "main" if omitted}, got %s!))", luaL_typename(L, 1));
+            lua_pushfstring(L, R"(deselect: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         } else {
@@ -4609,7 +4701,7 @@ int TLuaInterpreter::resetFormat(lua_State* L)
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, R"(resetFormat: bad argument #1 type (window name as string, is optional {defaultsto "main" if omitted}, got %s!))", luaL_typename(L, 1));
+            lua_pushfstring(L, R"(resetFormat: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
             lua_error(L);
             return 1;
         } else {
@@ -5973,32 +6065,32 @@ int TLuaInterpreter::isActive(lua_State* L)
     type = type.toLower();
     QString name = _name.c_str();
     if (type == "timer") {
-        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.find(name);
-        while (it1 != host.getTimerUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
     } else if (type == "trigger") {
-        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.find(name);
-        while (it1 != host.getTriggerUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
     } else if (type == "alias") {
-        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.find(name);
-        while (it1 != host.getAliasUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
     } else if (type == "keybind") {
-        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.find(name);
-        while (it1 != host.getKeyUnit()->mLookupTable.end() && it1.key() == name) {
+        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(name);
+        while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == name) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
@@ -6383,11 +6475,11 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
         luaTitle = lua_tostring(L, 2);
     }
     if (!luaDir) {
-        QString fileName = QFileDialog::getExistingDirectory(0, QString(luaTitle.c_str()), QDir::currentPath());
+        QString fileName = QFileDialog::getExistingDirectory(nullptr, QString(luaTitle.c_str()), QDir::currentPath());
         lua_pushstring(L, fileName.toLatin1().data());
         return 1;
     } else {
-        QString fileName = QFileDialog::getOpenFileName(0, QString(luaTitle.c_str()), QDir::currentPath());
+        QString fileName = QFileDialog::getOpenFileName(nullptr, QString(luaTitle.c_str()), QDir::currentPath());
         lua_pushstring(L, fileName.toLatin1().data());
         return 1;
     }
@@ -7603,7 +7695,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
         roomID = lua_tointeger(L, 1);
     }
     text = dirToString(L, 2);
-    if (text == 0) {
+    if (text.isEmpty()) {
         lua_pushstring(L, "setExitWeight: wrong argument type");
         lua_error(L);
         return 1;
@@ -7686,7 +7778,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         }
     }
     direction = dirToString(L, 3);
-    if (direction == 0) {
+    if (direction.isEmpty()) {
         lua_pushstring(L, "addCustomLine: Third argument must be direction");
         lua_error(L);
         return 1;
@@ -11065,51 +11157,51 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
     while (i < srclen) {
         switch (src[i]) {
             case MSDP_TABLE_OPEN:
-                script.append("{");
+                script.append(QLatin1Char('{'));
                 nest++;
                 last = MSDP_TABLE_OPEN;
                 break;
             case MSDP_TABLE_CLOSE:
                 if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 }
                 if (nest) {
                     nest--;
                 }
-                script.append("}");
+                script.append(QLatin1Char('}'));
                 last = MSDP_TABLE_CLOSE;
                 break;
             case MSDP_ARRAY_OPEN:
-                script.append("[");
+                script.append(QLatin1Char('['));
                 nest++;
                 last = MSDP_ARRAY_OPEN;
                 break;
             case MSDP_ARRAY_CLOSE:
                 if (last == MSDP_VAL || last == MSDP_VAR) {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 }
                 if (nest) {
                     nest--;
                 }
-                script.append("]");
+                script.append(QLatin1Char(']'));
                 last = MSDP_ARRAY_CLOSE;
                 break;
             case MSDP_VAR:
                 if (nest) {
                     if (last == MSDP_VAL || last == MSDP_VAR) {
-                        script.append(R"(")");
+                        script.append(QLatin1Char('"'));
                     }
                     if (last == MSDP_VAL || last == MSDP_VAR || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
-                        script.append(",");
+                        script.append(QLatin1Char(','));
                     }
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 } else {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
 
                     if (varList.size()) {
-                        script = script.replace(0, varList.front().size() + 3, "");
+                        script = script.replace(0, varList.front().size() + 3, QString());
                         QString token = varList.front();
-                        token = token.replace(R"(")", "");
+                        token = token.replace(QLatin1Char('"'), QString());
                         //qDebug()<<"[SET]<Token><"<<token<<"><JSON><"<<script<<">";
                         setMSDPTable(token, script);
                         varList.clear();
@@ -11123,23 +11215,26 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
 
             case MSDP_VAL:
                 if (last == MSDP_VAR) {
-                    script.append(R"(":)");
+                    script.append(QLatin1String(R"(":)"));
                 }
                 if (last == MSDP_VAL) {
                     no_array_marker_bug = true;
-                    script.append(R"(",)");
+                    script.append(QLatin1Char('"'));
+                }
+                if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
+                    script.append(QLatin1Char(','));
                 }
                 if (src[i + 1] != MSDP_TABLE_OPEN && src[i + 1] != MSDP_ARRAY_OPEN) {
-                    script.append(R"(")");
+                    script.append(QLatin1Char('"'));
                 }
                 varList.append(lastVar);
                 last = MSDP_VAL;
                 break;
             case '\\':
-                script.append(R"(\\)");
+                script.append(QLatin1String(R"(\\)"));
                 break;
             case '"':
-                script.append(R"(\")");
+                script.append(QLatin1String(R"(\")"));
                 break;
             default:
                 script.append(src[i]);
@@ -11149,21 +11244,21 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
         i++;
     }
     if (last != MSDP_ARRAY_CLOSE && last != MSDP_TABLE_CLOSE) {
-        script.append(R"(")");
-        if (!script.startsWith('"')) {
-            script.prepend('"');
+        script.append(QLatin1Char('"'));
+        if (!script.startsWith(QLatin1Char('"'))) {
+            script.prepend(QLatin1Char('"'));
         }
     }
     if (varList.size()) {
         //qDebug()<<"<script>"<<script;
         // N/U:         int startVal = script.indexOf(":")+1;
         QString token = varList.front();
-        token = token.replace(R"(")", "");
+        token = token.replace(QLatin1Char('"'), QString());
         script = script.replace(0, token.size() + 3, "");
         if (no_array_marker_bug) {
-            if (!script.startsWith('[')) {
-                script.prepend('[');
-                script.append(']');
+            if (!script.startsWith(QLatin1Char('['))) {
+                script.prepend(QLatin1Char('['));
+                script.append(QLatin1Char(']'));
             }
         }
         //qDebug()<<"[END]<Token>"<<token<<"<JSON>"<<script;
@@ -11413,7 +11508,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     }
 }
 
-
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
 {
     if (function.isEmpty()) {
@@ -11469,6 +11563,46 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
 
     lua_pop(L, lua_gettop(L));
     return !error;
+}
+
+double TLuaInterpreter::condenseMapLoad()
+{
+    QString luaFunction = QStringLiteral("condenseMapLoad");
+    double loadTime = -1.0;
+
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qWarning() << "condenseMapLoad: no suitable Lua execution unit found.";
+        return false;
+    }
+
+    lua_getfield(L, LUA_GLOBALSINDEX, "condenseMapLoad");
+    int error = lua_pcall(L, 0, 1, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                QString _f = luaFunction.toLatin1();
+                logError(e, luaFunction, _f);
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK " << luaFunction << " ran without errors\n" >> 0;
+        }
+    }
+
+    int returnValues = lua_gettop(L);
+    if (returnValues > 0 && !lua_isnoneornil(L, 1)) {
+        loadTime = lua_tonumber(L, 1);
+    }
+    lua_pop(L, returnValues);
+    return loadTime;
 }
 
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
@@ -11617,6 +11751,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "closeMudlet", TLuaInterpreter::closeMudlet);
     lua_register(pGlobalLua, "loadWindowLayout", TLuaInterpreter::loadWindowLayout);
     lua_register(pGlobalLua, "saveWindowLayout", TLuaInterpreter::saveWindowLayout);
+    lua_register(pGlobalLua, "setFontSize", TLuaInterpreter::setFontSize);
+    lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
     lua_register(pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow);
     lua_register(pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer);
@@ -12285,7 +12421,7 @@ int TLuaInterpreter::startTempLineTrigger(int from, int howmany, const QString& 
     //    QList<int> propertyList;
     //    propertyList << REGEX_SUBSTRING;// substring trigger is default
     //    pT = new TTrigger("a", sList, propertyList, false, mpHost );
-    pT = new TTrigger(0, mpHost);
+    pT = new TTrigger(nullptr, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
@@ -12306,7 +12442,7 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
     //    QList<int> propertyList;
     //    propertyList << REGEX_SUBSTRING;// substring trigger is default
     //    pT = new TTrigger("a", sList, propertyList, false, mpHost );
-    pT = new TTrigger(0, mpHost);
+    pT = new TTrigger(nullptr, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);

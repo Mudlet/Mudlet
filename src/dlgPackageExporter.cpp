@@ -74,11 +74,11 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     // reset zipFile and filePath from possible previous use
     zipFile = filePath = "";
 
-    packageName = QInputDialog::getText(0, "Package name", "Package name:");
+    packageName = QInputDialog::getText(nullptr, "Package name", "Package name:");
     if (packageName.isEmpty()) {
         return;
     }
-    QString packagePath = QFileDialog::getExistingDirectory(0, "Where do you want to save the package?", "Where do you want to save the package?");
+    QString packagePath = QFileDialog::getExistingDirectory(nullptr, "Where do you want to save the package?", "Where do you want to save the package?");
     if (packagePath.isEmpty()) {
         return;
     }
@@ -279,7 +279,7 @@ void dlgPackageExporter::slot_export_package()
             }
             QString fullName = tempDir + "/" + contents[i];
             struct zip_source* s = zip_source_file(archive, fullName.toStdString().c_str(), 0, 0);
-            if (s == NULL) {
+            if (s == nullptr) {
                 int sep = 0;
                 zip_error_get(archive, &err, &sep);
                 zip_error_to_str(buf, sizeof(buf), err, errno);

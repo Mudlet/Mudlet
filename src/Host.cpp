@@ -50,7 +50,7 @@
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this)
-, mpConsole(0)
+, mpConsole(nullptr)
 , mLuaInterpreter(this, id)
 , mTriggerUnit(this)
 , mTimerUnit(this)
@@ -87,9 +87,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMainIconSize(3)
 , mNoAntiAlias(false)
 , mPass(pass)
-, mpEditorDialog(0)
+, mpEditorDialog(nullptr)
 , mpMap(new TMap(this))
-, mpNotePad(0)
+, mpNotePad(nullptr)
 , mPort(port)
 , mPrintCommand(true)
 , mIsCurrentLogFileInHtmlFormat(false)
@@ -227,7 +227,7 @@ void Host::saveModules(int sync)
         QString moduleName = it.key();
         QString tempDir;
         QString zipName;
-        zip* zipFile = 0;
+        zip* zipFile = nullptr;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
             tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mHostName + "/" + moduleName;
@@ -475,10 +475,18 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         mpConsole->update();
     }
-    QStringList commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    QStringList commandList;
+    if (!mCommandSeparator.isEmpty()) {
+        commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+    } else {
+        // don't split command if the command separator is blank
+        commandList << cmd;
+    }
+
     if (!dontExpandAliases) {
+        // allow sending blank commands
         if (commandList.size() == 0) {
-            sendRaw("\n"); //NOTE: damit leerprompt moeglich sind
+            sendRaw("\n");
             return;
         }
     }
@@ -746,7 +754,7 @@ bool Host::installPackage(const QString& fileName, int module)
         QUiLoader loader(this);
         QFile uiFile(QStringLiteral(":/ui/package_manager_unpack.ui"));
         uiFile.open(QFile::ReadOnly);
-        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, 0));
+        pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
         uiFile.close();
         if (!pUnzipDialog) {
             return false;

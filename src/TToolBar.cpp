@@ -41,7 +41,7 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 , mpWidget( new QWidget( this ) )
 , mName( name )
 , mRecordMove( false )
-, mpLayout( 0 )
+, mpLayout( nullptr )
 , mItemCount( 0 )
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
@@ -225,7 +225,7 @@ void TToolBar::clear()
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
-        mpLayout = 0;
+        mpLayout = nullptr;
     }
     auto test = new QWidget;
     setStyleSheet(mpTAction->css);

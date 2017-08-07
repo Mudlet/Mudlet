@@ -218,17 +218,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     connect(mFORCE_MCCP_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
     connect(mFORCE_GA_OFF, SIGNAL(clicked()), need_reconnect_for_specialoption, SLOT(show()));
 
-    comboBox_statusBarSetting->addItem(tr("Off"), QVariant(mudlet::self()->statusBarHidden));
-    comboBox_statusBarSetting->addItem(tr("Auto"), QVariant(mudlet::self()->statusBarAutoShown));
-    comboBox_statusBarSetting->addItem(tr("On"), QVariant(mudlet::self()->statusBarAlwaysShown));
-    comboBox_statusBarSetting->setMaxCount(3);
-    comboBox_statusBarSetting->setInsertPolicy(QComboBox::NoInsert);
-    comboBox_statusBarSetting->setMaxVisibleItems(3);
-    int _indexForStatusBarSetting = comboBox_statusBarSetting->findData(QVariant(mudlet::self()->mStatusBarState), Qt::UserRole);
-    if (_indexForStatusBarSetting >= 0) {
-        comboBox_statusBarSetting->setCurrentIndex(_indexForStatusBarSetting);
-    }
-
     checkBox_reportMapIssuesOnScreen->setChecked(mudlet::self()->showMapAuditErrors());
     Host* pHost = mpHost;
     if (pHost) {
@@ -237,8 +226,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         if (mFontSize < 0) {
             mFontSize = 10;
         }
-        if (mFontSize <= 40) {
-            fontSize->setCurrentIndex(mFontSize);
+        if (mFontSize < 40 && mFontSize > 0) {
+            fontSize->setCurrentIndex( (mFontSize - 1) );
+        } else {
+            // if the font size set for the main console is outside the pre-set range
+            // this will unfortunately reset the font to default size.
+            // without this the first entry (font-size 1) is selected and on-save
+            // will make the console font far too tiny to read.
+            // Maybe our font-size range should be generated differently if the console
+            // has a font size larger than the preset range offers?
+            fontSize->setCurrentIndex(9); // default font is size 10, index 9.
         }
 
         setColors();
@@ -303,7 +300,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
                 continue;
             }
 
-            auto pItem = new QAction(s, 0);
+            auto pItem = new QAction(s, nullptr);
             pItem->setCheckable(true);
             pItem->setChecked(false);
             pMenu->addAction(pItem);
@@ -626,8 +623,9 @@ void dlgProfilePreferences::setCommandBgColor()
 
 void dlgProfilePreferences::setFontSize()
 {
-    mFontSize = fontSize->currentIndex();
-    setDisplayFont();
+    mFontSize = fontSize->currentIndex() + 1;
+    // delay setting pHost->mDisplayFont until save is clicked by the user.
+    //setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -642,6 +640,13 @@ void dlgProfilePreferences::setDisplayFont()
         pHost->mDisplayFont = font;
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
+
+            // update the display properly when font or size selections change.
+            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
         }
         auto config = edbeePreviewWidget->config();
         config->beginChanges();
@@ -1319,7 +1324,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mDoubleClickIgnore.insert(character);
     }
 
-    mudlet::self()->mStatusBarState = mudlet::StatusBarOptions(comboBox_statusBarSetting->currentData().toInt());
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
     QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
@@ -1404,10 +1408,10 @@ void dlgProfilePreferences::slot_save_and_exit()
         QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
         file_use_smallscreen.remove();
     }
+
+    setDisplayFont();
+
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-        mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-        mudlet::self()->mConsoleMap[pHost]->refresh();
         int x = mudlet::self()->mConsoleMap[pHost]->width();
         int y = mudlet::self()->mConsoleMap[pHost]->height();
         QSize s = QSize(x, y);
@@ -1675,9 +1679,8 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Updating themes from colorsublime.com..."));
+        QTimer::singleShot(5000, theme_download_label, [this] {
+            slot_resetThemeUpdateLabel();
         });
         getReply->deleteLater();
     });
@@ -1744,7 +1747,7 @@ void dlgProfilePreferences::populateThemesList()
     }
     sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
-    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
+    std::sort(sortedThemes.begin(), sortedThemes.end(), [](const std::pair<QString, QString>& a, const std::pair<QString, QString>& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
     // temporary disable painting and event updates while we refill the list
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
@@ -1834,4 +1837,10 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
     config->beginChanges();
     config->setUseLineSeparator(state);
     config->endChanges();
+}
+
+void dlgProfilePreferences::slot_resetThemeUpdateLabel()
+{
+    theme_download_label->hide();
+    theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
 }

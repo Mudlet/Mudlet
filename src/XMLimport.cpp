@@ -77,7 +77,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
     module = moduleFlag;
 
     if (!packName.isEmpty()) {
-        mpKey = new TKey(0, mpHost);
+        mpKey = new TKey(nullptr, mpHost);
         if (module) {
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
@@ -87,7 +87,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpKey->setName(mPackageName);
         mpKey->setIsFolder(true);
 
-        mpTrigger = new TTrigger(0, mpHost);
+        mpTrigger = new TTrigger(nullptr, mpHost);
         if (module) {
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
@@ -97,7 +97,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpTrigger->setName(mPackageName);
         mpTrigger->setIsFolder(true);
 
-        mpTimer = new TTimer(0, mpHost);
+        mpTimer = new TTimer(nullptr, mpHost);
         if (module) {
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
@@ -107,7 +107,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpTimer->setName(mPackageName);
         mpTimer->setIsFolder(true);
 
-        mpAlias = new TAlias(0, mpHost);
+        mpAlias = new TAlias(nullptr, mpHost);
         if (module) {
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
@@ -119,7 +119,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpAlias->setRegexCode(QString());
         mpAlias->setIsFolder(true);
 
-        mpAction = new TAction(0, mpHost);
+        mpAction = new TAction(nullptr, mpHost);
         if (module) {
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
@@ -129,7 +129,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         mpAction->setName(mPackageName);
         mpAction->setIsFolder(true);
 
-        mpScript = new TScript(0, mpHost);
+        mpScript = new TScript(nullptr, mpHost);
         if (module) {
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
@@ -1005,7 +1005,7 @@ int XMLimport::readTriggerPackage()
         if (isStartElement()) {
             if (name() == "TriggerGroup" || name() == "Trigger") {
                 gotTrigger = true;
-                parentItemID = readTriggerGroup(mPackageName.isEmpty() ? 0 : mpTrigger);
+                parentItemID = readTriggerGroup(mPackageName.isEmpty() ? nullptr : mpTrigger);
             } else {
                 readUnknownTriggerElement();
             }
@@ -1116,7 +1116,7 @@ int XMLimport::readTimerPackage()
         } else if (isStartElement()) {
             if (name() == "TimerGroup" || name() == "Timer") {
                 gotTimer = true;
-                lastImportedTimerID = readTimerGroup(mPackageName.isEmpty() ? 0 : mpTimer);
+                lastImportedTimerID = readTimerGroup(mPackageName.isEmpty() ? nullptr: mpTimer);
             } else {
                 readUnknownTimerElement();
             }
@@ -1187,7 +1187,7 @@ int XMLimport::readAliasPackage()
         } else if (isStartElement()) {
             if (name() == "AliasGroup" || name() == "Alias") {
                 gotAlias = true;
-                lastImportedAliasID = readAliasGroup(mPackageName.isEmpty() ? 0 : mpAlias);
+                lastImportedAliasID = readAliasGroup(mPackageName.isEmpty() ? nullptr : mpAlias);
             } else {
                 readUnknownAliasElement();
             }
@@ -1249,7 +1249,7 @@ int XMLimport::readActionPackage()
         } else if (isStartElement()) {
             if (name() == "ActionGroup" || name() == "Action") {
                 gotAction = true;
-                lastImportedActionID = readActionGroup(mPackageName.isEmpty() ? 0 : mpAction);
+                lastImportedActionID = readActionGroup(mPackageName.isEmpty() ? nullptr : mpAction);
             } else {
                 readUnknownActionElement();
             }
@@ -1340,7 +1340,7 @@ int XMLimport::readScriptPackage()
         } else if (isStartElement()) {
             if (name() == "ScriptGroup" || name() == "Script") {
                 gotScript = true;
-                lastImportedScriptID = readScriptGroup(mPackageName.isEmpty() ? 0 : mpScript);
+                lastImportedScriptID = readScriptGroup(mPackageName.isEmpty() ? nullptr : mpScript);
             } else {
                 readUnknownScriptElement();
             }
@@ -1401,7 +1401,7 @@ int XMLimport::readKeyPackage()
         } else if (isStartElement()) {
             if (name() == "KeyGroup" || name() == "Key") {
                 gotKey = true;
-                lastImportedKeyID = readKeyGroup(mPackageName.isEmpty() ? 0 : mpKey);
+                lastImportedKeyID = readKeyGroup(mPackageName.isEmpty() ? nullptr : mpKey);
             } else {
                 readUnknownKeyElement();
             }

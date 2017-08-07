@@ -1372,7 +1372,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file, 0); // TODO: Missing false return value handler
+        importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
     } else {
         needsGenericPackagesInstall = true;
     }

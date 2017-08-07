@@ -78,6 +78,7 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
     bool call_luafunction(void*);
+    double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
@@ -239,6 +240,8 @@ public:
     static int loadWindowLayout(lua_State* L);
     static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
+    static int setFontSize(lua_State* L);
+    static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
     static int echoUserWindow(lua_State* L);
     static int clearUserWindow(lua_State* L);
