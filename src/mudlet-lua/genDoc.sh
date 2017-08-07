@@ -1,4 +1,4 @@
-
+#!/bin/sh
 # wipe all old html files
 cd mudlet-lua-doc/
 find . -name "*.html" -type f

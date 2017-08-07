@@ -37,31 +37,31 @@
  */
 #define IRC_STATIC
 #if defined(IRC_SHARED)
-#
+
 #  if defined(BUILD_IRC_CORE)
 #    define IRC_CORE_EXPORT Q_DECL_EXPORT
 #  else
 #    define IRC_CORE_EXPORT Q_DECL_IMPORT
 #  endif
-#
+
 #  if defined(BUILD_IRC_MODEL)
 #    define IRC_MODEL_EXPORT Q_DECL_EXPORT
 #  else
 #    define IRC_MODEL_EXPORT Q_DECL_IMPORT
 #  endif
-#
+
 #  if defined(BUILD_IRC_UTIL)
 #    define IRC_UTIL_EXPORT Q_DECL_EXPORT
 #  else
 #    define IRC_UTIL_EXPORT Q_DECL_IMPORT
 #  endif
-#
+
 #elif defined(IRC_STATIC) || defined(BUILD_IRC_CORE) || defined(BUILD_IRC_MODEL) || defined(BUILD_IRC_UTIL)
-#
+
 #    define IRC_CORE_EXPORT
 #    define IRC_MODEL_EXPORT
 #    define IRC_UTIL_EXPORT
-#
+
 #else
 #  error Installation problem: either IRC_SHARED or IRC_STATIC must be defined!
 #endif
