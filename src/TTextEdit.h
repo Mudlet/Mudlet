@@ -117,8 +117,6 @@ public slots:
 private:
     void initDefaultSettings();
 
-    QFont mCommandLineFont;
-    QFont mCommandSeperator;
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
@@ -136,9 +134,7 @@ private:
     bool mCtrlSelecting;
     int mDragStartY;
     int mOldScrollPos;
-
     QPoint mPA;
-    bool mPainterInit;
     QPoint mPB;
     TBuffer* mpBuffer;
     TConsole* mpConsole;
@@ -147,9 +143,6 @@ private:
     int mScreenHeight;
     QPixmap mScreenMap;
     int mScreenWidth;
-    bool mScrollUp;
-    int mTopMargin;
-    bool mUpdateSlice;
     QTime mLastClickTimer;
 };
 

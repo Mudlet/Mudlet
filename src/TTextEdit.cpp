@@ -57,7 +57,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mIsSplitScreen(isSplitScreen)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
-, mPainterInit(false)
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
@@ -208,8 +207,6 @@ void TTextEdit::initDefaultSettings()
     mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
     mDisplayFont.setFixedPitch(true);
     setFont(mDisplayFont);
-    mCommandLineFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-    mCommandSeperator = QString(";");
     mWrapAt = 100;
     mWrapIndentCount = 5;
 }
@@ -314,9 +311,6 @@ void TTextEdit::showNewLines()
     mCursorY = mpBuffer->size();
     if (!mIsSplitScreen) {
         mpBuffer->mCursorY = mpBuffer->size();
-    }
-    if (mCursorY > mScreenHeight) {
-        mScrollUp = true;
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
     if (!mIsSplitScreen) {
@@ -720,7 +714,6 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
     drawBackground(painter, borderRect2, mBgColor);
     drawForeground(painter, rect);
-    mUpdateSlice = false;
 }
 
 
