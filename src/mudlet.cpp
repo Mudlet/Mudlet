@@ -997,7 +997,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-    connect(pConsole->emergencyStop, SIGNAL(pressed()), this, SLOT(slot_stopAllTriggers()));
 
     auto pEditor = new dlgTriggerEditor(pH);
     pH->mpEditorDialog = pEditor;
@@ -2625,10 +2624,6 @@ void mudlet::slot_multi_view()
         it.next();
         it.value()->show();
     }
-}
-
-void mudlet::slot_stopAllTriggers()
-{
 }
 
 mudlet::~mudlet()

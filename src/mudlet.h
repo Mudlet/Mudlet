@@ -229,7 +229,6 @@ public slots:
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view();
-    void slot_stopAllTriggers();
     void slot_userToolBar_hovered(QAction* pA);
     void slot_connection_dlg_finished(const QString& profile, int historyVersion);
     void slot_timer_fires();

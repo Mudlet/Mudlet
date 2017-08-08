@@ -136,7 +136,6 @@ public:
 
     void setIsAutologin(bool b) { mIsAutologin = b; }
     bool isAutologin() { return mIsAutologin; }
-    void setReplacementCommand(const QString&);
     void registerEventHandler(const QString&, TScript*);
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
@@ -359,11 +358,6 @@ private:
     QStringList mParagraphList;
 
     int mPort;
-    QString mPrompt;
-
-    QString mReplacementCommand;
-
-    QString mRest;
 
     int mRetries;
     bool mSaveProfileOnExit;

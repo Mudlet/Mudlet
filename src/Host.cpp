@@ -443,11 +443,6 @@ void Host::adjustNAWS()
     mTelnet.setDisplayDimensions();
 }
 
-void Host::setReplacementCommand(const QString& s)
-{
-    mReplacementCommand = s;
-}
-
 void Host::stopAllTriggers()
 {
     mTriggerUnit.stopAllTriggers();
@@ -496,17 +491,13 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         QString command = commandList[i];
         command.remove(QChar::LineFeed);
-        mReplacementCommand = "";
         if (dontExpandAliases) {
             mTelnet.sendData(command);
             continue;
         }
+
         if (!mAliasUnit.processDataStream(command)) {
-            if (mReplacementCommand.size() > 0) {
-                mTelnet.sendData(mReplacementCommand);
-            } else {
-                mTelnet.sendData(command);
-            }
+            mTelnet.sendData(command);
         }
     }
 }
