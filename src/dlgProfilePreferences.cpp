@@ -1791,17 +1791,23 @@ void dlgProfilePreferences::slot_script_selected(int index)
 
     auto preview = edbeePreviewWidget->textDocument();
     if (itemType == QStringLiteral("trigger")) {
-        preview->setText(mpHost->getTriggerUnit()->getTrigger(itemId)->getScript());
+        auto pT = mpHost->getTriggerUnit()->getTrigger(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted trigger item}"));
     } else if (itemType == QStringLiteral("alias")) {
-        preview->setText(mpHost->getAliasUnit()->getAlias(itemId)->getScript());
+        auto pT = mpHost->getAliasUnit()->getAlias(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted alias item}"));
     } else if (itemType == QStringLiteral("script")) {
-        preview->setText(mpHost->getScriptUnit()->getScript(itemId)->getScript());
+        auto pT = mpHost->getScriptUnit()->getScript(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted script item}"));
     } else if (itemType == QStringLiteral("timer")) {
-        preview->setText(mpHost->getTimerUnit()->getTimer(itemId)->getScript());
+        auto pT = mpHost->getTimerUnit()->getTimer(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted timer item}"));
     } else if (itemType == QStringLiteral("key")) {
-        preview->setText(mpHost->getKeyUnit()->getKey(itemId)->getScript());
+        auto pT = mpHost->getKeyUnit()->getKey(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted key item}"));
     } else if (itemType == QStringLiteral("button")) {
-        preview->setText(mpHost->getActionUnit()->getAction(itemId)->getScript());
+        auto pT = mpHost->getActionUnit()->getAction(itemId);
+        preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted button item}"));
     }
 }
 
