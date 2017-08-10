@@ -120,7 +120,6 @@ public:
     int wrap(int);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, QRegExp splitter);
-    bool replace(int line, const QString& what, const QString& with);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);
     bool deleteLine(int);
     bool deleteLines(int from, int to);
