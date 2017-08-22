@@ -36,8 +36,17 @@ macx: {
     include(../3rdparty/luazip/luazip.pri)
 }
 
-# Include shiny, new (and quite substantial) editor widget
-include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
+!exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+    system("git submodule update --init");
+}
+
+exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    # Include shiny, new (and quite substantial) editor widget
+    include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
+} else {
+    error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+}
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:

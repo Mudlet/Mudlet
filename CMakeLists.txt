@@ -74,6 +74,18 @@ ADD_SUBDIRECTORY(3rdparty/lua_yajl)
 IF(APPLE)
   ADD_SUBDIRECTORY(3rdparty/luazip)
 ENDIF()
-ADD_SUBDIRECTORY(3rdparty/edbee-lib/edbee-lib)
+
+IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
+  MESSAGE(STATUS "git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' in ${CMAKE_HOME_DIRECTORY} to get it...")
+  EXECUTE_PROCESS(TIMEOUT 30
+    WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}"
+    COMMAND git submodule update --init )
+ENDIF()
+
+IF(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
+  ADD_SUBDIRECTORY(3rdparty/edbee-lib/edbee-lib)
+ELSEIF()
+  MESSAGE(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+ENDIF()
 
 ADD_SUBDIRECTORY(src)
