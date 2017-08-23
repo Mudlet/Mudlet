@@ -1,6 +1,6 @@
-# This file does not not real code owners. We use it to automate the process
-# of assigning code reviews. But generally all members of the project own
-# the whole product.
+# This file does not signify real code owners. We use it to automate the 
+# process of assigning code reviews. But generally all members of the
+# project own the whole product.
 
 # Normally, *.ui, *.cpp and *.h files are reviewed by the core-cpp team only
 *.cpp                           @Mudlet/core-cpp
