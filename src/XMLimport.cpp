@@ -235,6 +235,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
     return !error();
 }
 
+// returns the type of item and ID of the first (root) element
 pair<int, int> XMLimport::importFromClipboard()
 {
 
@@ -556,6 +557,7 @@ void XMLimport::readUnknownMapElement()
     }
 }
 
+// returns the type of item and ID of the first (root) element
 pair<int, int> XMLimport::readPackage()
 {
     int objectType = 0;
