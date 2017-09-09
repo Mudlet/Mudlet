@@ -324,8 +324,6 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
-    void importFromClipboard();
-
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
 
     void setAllSearchData(QTreeWidgetItem* pItem, const int& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
