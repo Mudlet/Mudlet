@@ -238,35 +238,29 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 // returns the type of item and ID of the first (root) element
 pair<int, int> XMLimport::importFromClipboard()
 {
-
     QString xml;
-    QClipboard *clipboard = QApplication::clipboard();
+    QClipboard* clipboard = QApplication::clipboard();
 
     int packageType = 0;
     pair<int, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
-            //setText( xml, QClipboard::Clipboard );
+    //setText( xml, QClipboard::Clipboard );
 
     QByteArray ba = xml.toUtf8();
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::ReadOnly);
 
-    while( ! atEnd() )
-    {
+    while (!atEnd()) {
         readNext();
 
-        if( isStartElement() )
-        {
-            if( name() == "MudletPackage" )
-            {
+        if (isStartElement()) {
+            if (name() == "MudletPackage") {
                 result = readPackage();
-            }
-            else
-            {
-                qDebug()<<"ERROR:name="<<name().toString()<<"text:"<<text().toString();
+            } else {
+                qDebug() << "ERROR:name=" << name().toString() << "text:" << text().toString();
             }
         }
     }
