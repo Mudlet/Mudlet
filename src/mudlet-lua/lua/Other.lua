@@ -700,3 +700,93 @@ function condenseMapLoad()
 
   return loadtime
 end
+
+do
+  local nametofunc = {}
+  local handlers = {}
+
+  -- Registers a lua function to a list of events
+  -- name:   Name of the function. This allows to overwrite existing definitions of functions
+  --         and deregistering them
+  -- events: List of events to register this function to. You can also give a string if you
+  --         only want to register to a single event.
+  -- func:   Function to register to the given events.
+  function registerFunctionEventHandler(name, events, func)
+    if type(name) ~= "string" then
+      error(
+        string.format(
+          "Unexpected argument type in function registerFunctionEventHandler for argument #1. String expected, got %s.",
+          type(name)
+        )
+      )
+    end
+
+    if type(events) ~= "string" and type(events) ~= "table" then
+      error(
+        string.format(
+          "Unexpected argument type in function registerFunctionEventHandler for argument #2. String or table expected, got %s.",
+          type(events)
+        )
+      )
+    end
+
+    if type(func) ~= "function" then
+      error(
+        string.format(
+          "Unexpected argument type in function registerFunctionEventHandler for argument #3. Function expected, got %s.",
+          type(func)
+        )
+      )
+    end
+
+    nametofunc[name] = func
+    if type(events) == "string" then
+      events = { events }
+    end
+    for _, event in ipairs(events) do
+      local existinghandlers = handlers[event]
+      if not existinghandlers then
+        existinghandlers = {}
+        handlers[event] = existinghandlers
+        registerAnonymousEventHandler(event, "dispatchEventToFunctions")
+      end
+      if not table.contains(existinghandlers, name) then
+        existinghandlers[#existinghandlers + 1] = name
+      end
+    end
+  end
+
+  -- Unregisters a lua function from all its event handlers.
+  -- name: The registered name of the function to unregister.
+  function unregisterFunctionEventHandler(name)
+    if type(name) ~= "string" then
+      error(
+        string.format(
+          "Unexpected argument type in function unregisterFunctionEventHandler for argument #1. String expected, got %s.",
+          type(name)
+        )
+      )
+    end
+
+    nametofunc[name] = nil
+    for _, handlerList in pairs(handlers) do
+      if table.contains(handlerList, name) then
+        table.remove(handlerList, table.index_of(handlerList, name))
+      end
+    end
+  end
+
+  -- Dispatches an event to the registered lua functions.
+  -- name: The name of the event that was fired.
+  -- ...:  All arguments passed to the raised event.
+  function dispatchEventToFunctions(event, ...)
+    if handlers[event] then
+      for _, funcName in ipairs(handlers[event]) do
+        local handlerFunc = nametofunc[funcName]
+        if handlerFunc then
+          handlerFunc(event, ...)
+        end
+      end
+    end
+  end
+end
