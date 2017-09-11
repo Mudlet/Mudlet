@@ -705,7 +705,7 @@ do
   local nametofunc = {}
   local handlers = {}
 
-  -- Registers a lua function to a list of events
+  -- Registers a lua function to a list of events.
   -- name:   Name of the function. This allows to overwrite existing definitions of functions
   --         and deregistering them
   -- events: List of events to register this function to. You can also give a string if you
@@ -751,7 +751,8 @@ do
         registerAnonymousEventHandler(event, "dispatchEventToFunctions")
       end
       if not table.contains(existinghandlers, name) then
-        existinghandlers[#existinghandlers + 1] = name
+        existinghandlers[#existinghandlers + 1] = name 
+        -- Above may fill gaps if handlers have been deleted, but that's okay.
       end
     end
   end
@@ -770,18 +771,21 @@ do
 
     nametofunc[name] = nil
     for _, handlerList in pairs(handlers) do
-      if table.contains(handlerList, name) then
-        table.remove(handlerList, table.index_of(handlerList, name))
+      for index, existingName in pairs(handlerList) do
+        if existingName == name then
+          handlerList[index] = nil -- This may create gaps, but we use pairs for that.
+        end
       end
     end
   end
 
   -- Dispatches an event to the registered lua functions.
+  -- The order of registered events is not preserved.
   -- name: The name of the event that was fired.
   -- ...:  All arguments passed to the raised event.
   function dispatchEventToFunctions(event, ...)
     if handlers[event] then
-      for _, funcName in ipairs(handlers[event]) do
+      for _, funcName in pairs(handlers[event]) do
         local handlerFunc = nametofunc[funcName]
         if handlerFunc then
           handlerFunc(event, ...)
