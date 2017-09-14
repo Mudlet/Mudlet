@@ -702,80 +702,79 @@ function condenseMapLoad()
 end
 
 do
-  local nametofunc = {}
+  -- management things
+
+  -- Dictionary with events as keys and lists of lua functions as values to dispatch events
+  -- to the right functions.
   local handlers = {}
 
-  -- Registers a lua function to a list of events.
-  -- name:   Name of the function. This allows to overwrite existing definitions of functions
-  --         and deregistering them
-  -- events: List of events to register this function to. You can also give a string if you
-  --         only want to register to a single event.
-  -- func:   Function to register to the given events.
-  function registerFunctionEventHandler(name, events, func)
-    if type(name) ~= "string" then
+  -- Remember highest hander ID to avoid ID reuse.
+  local highestHandlerId = 0
+  -- Helps us finding the right event handler from an ID.
+  local handlerIdsToHandlers = {}
+
+  -- C functions that get overwritten.
+  local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
+  local origkillAnonymousEventHandler = killAnonymousEventHandler
+
+  function registerAnonymousEventHandler(event, func)
+    if type(event) ~= "string"then
       error(
         string.format(
-          "Unexpected argument type in function registerFunctionEventHandler for argument #1. String expected, got %s.",
-          type(name)
+          "Unexpected argument type in function registerAnonymousEventHandler for argument #1. String expected, got %s.",
+          type(event)
         )
       )
     end
 
-    if type(events) ~= "string" and type(events) ~= "table" then
+    if type(func) ~= "function" and type(func) ~= "string" then
       error(
         string.format(
-          "Unexpected argument type in function registerFunctionEventHandler for argument #2. String or table expected, got %s.",
-          type(events)
-        )
-      )
-    end
-
-    if type(func) ~= "function" then
-      error(
-        string.format(
-          "Unexpected argument type in function registerFunctionEventHandler for argument #3. Function expected, got %s.",
+          "Unexpected argument type in function registerAnonymousEventHandler for argument #2. Function or string expected, got %s.",
           type(func)
         )
       )
     end
 
-    nametofunc[name] = func
-    if type(events) == "string" then
-      events = { events }
-    end
-    for _, event in ipairs(events) do
+    local handlerId
+    if type(func) == "function" then
       local existinghandlers = handlers[event]
       if not existinghandlers then
         existinghandlers = {}
         handlers[event] = existinghandlers
-        registerAnonymousEventHandler(event, "dispatchEventToFunctions")
+        origRegisterAnonymousEventHandler(event, "dispatchEventToFunctions")
       end
-      if not table.contains(existinghandlers, name) then
-        existinghandlers[#existinghandlers + 1] = name 
-        -- Above may fill gaps if handlers have been deleted, but that's okay.
-      end
+      local newId = #existinghandlers + 1
+      existinghandlers[newId] = name
+      -- Above may fill gaps if handlers have been deleted, but that's okay.
+      highestHandlerId = highestHandlerId + 1
+      handlerIdsToHandlers[highestHandlerId] = {
+        event = event,
+        index = newId
+      }
+      handlerId = "lua" + highestHandlerId
+    else
+      handlerId = origRegisterAnonymousEventHandler(event, func)
     end
+    return handlerId
   end
 
-  -- Unregisters a lua function from all its event handlers.
-  -- name: The registered name of the function to unregister.
-  function unregisterFunctionEventHandler(name)
-    if type(name) ~= "string" then
-      error(
-        string.format(
-          "Unexpected argument type in function unregisterFunctionEventHandler for argument #1. String expected, got %s.",
-          type(name)
-        )
-      )
-    end
-
-    nametofunc[name] = nil
-    for _, handlerList in pairs(handlers) do
-      for index, existingName in pairs(handlerList) do
-        if existingName == name then
-          handlerList[index] = nil -- This may create gaps, but we use pairs for that.
-        end
+  function killAnonymousEventHandler(id)
+    if id:starts("lua") then
+      local actualId = tonumber(id:match("%d+$")
+      if not actualId then
+        return nil, string.format("'%s' is not a valid event handler ID.", id)
       end
+      local findObject = handlerIdsToHandlers[actualId]
+      if not findObject then
+        return nil, string.format("Handler with ID '%s' not found.", id)
+      end
+
+      handlerIdsToHandlers[actualId] = nil
+      handlers[findObject.event][findObject.index] = nil
+      return true
+    else
+      return origKillAnonymousEventHandler(id)
     end
   end
 
