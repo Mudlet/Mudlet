@@ -358,19 +358,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
 
-    QAction * copyAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-copy.png" ) ), tr("Copy (as XML)"), this);
+    QAction* copyAction = new QAction(QIcon(QStringLiteral(":/icons/edit-copy.png")), tr("Copy (as XML)"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     copyAction->setToolTip(tr("Copies the trigger/script/alias/etc as XML."));
     copyAction->setStatusTip(tr("Copies the trigger/script/alias/etc as XML."));
 
-    connect( copyAction, SIGNAL(triggered()), this, SLOT( slot_copy_xml() ));
+    connect(copyAction, SIGNAL(triggered()), this, SLOT(slot_copy_xml()));
 
-    QAction * pasteAction = new QAction( QIcon( QStringLiteral( ":/icons/edit-paste.png" ) ), tr("Paste"), this);
+    QAction* pasteAction = new QAction(QIcon(QStringLiteral(":/icons/edit-paste.png")), tr("Paste"), this);
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
     pasteAction->setToolTip(tr("Pastes triggers/scripts/aliases/etc from the clipboard."));
     pasteAction->setStatusTip(tr("Pastes triggers/scripts/aliases/etc from the clipboard."));
 
-    connect( pasteAction, SIGNAL(triggered()), this, SLOT( slot_paste_xml() ));
+    connect(pasteAction, SIGNAL(triggered()), this, SLOT(slot_paste_xml()));
 
     QAction* importAction = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
@@ -7267,7 +7267,23 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
 
-    std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
+    // get the currently selected object while handling the case that nothing might be selected
+    auto currentlySelectedTrigger = !mpCurrentTriggerItem ? nullptr : mpHost->getTriggerUnit()->getTrigger(mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
+    auto currentlySelectedAlias = !mpCurrentAliasItem ? nullptr : mpHost->getAliasUnit()->getAlias(mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
+    auto currentlySelectedAction = !mpCurrentActionItem ? nullptr : mpHost->getActionUnit()->getAction(mpCurrentActionItem->data(0, Qt::UserRole).toInt());
+    auto currentlySelectedTimer = !mpCurrentTimerItem ? nullptr : mpHost->getTimerUnit()->getTimer(mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
+    auto a = mpCurrentScriptItem->isSelected();
+    qDebug() << a;
+    qDebug() << mpCurrentScriptItem;
+    auto ar = mpCurrentScriptItem->data(0, Qt::UserRole);
+    qDebug() << ar;
+    qDebug() << mpCurrentScriptItem;
+    auto arr = ar.toInt();
+    auto currentlySelectedScript = !mpCurrentScriptItem ? nullptr : mpHost->getScriptUnit()->getScript(mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
+    auto currentlySelectedKey = !mpCurrentKeyItem ? nullptr : mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+
+    std::tie(importedItemType, importedItemID) =
+            reader.importFromClipboard(currentlySelectedTrigger, currentlySelectedAlias, currentlySelectedAction, currentlySelectedTimer, currentlySelectedScript, currentlySelectedKey);
 
     slot_profileSaveAction();
 
