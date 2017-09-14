@@ -943,7 +943,7 @@
             <string/>
            </property>
            <property name="pixmap">
-            <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-warning.png</pixmap>
+            <pixmap resource="../mudlet.qrc">:/icons/dialog-warning.png</pixmap>
            </property>
            <property name="scaledContents">
             <bool>false</bool>
@@ -1392,7 +1392,7 @@
             <string/>
            </property>
            <property name="pixmap">
-            <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-error.png</pixmap>
+            <pixmap resource="../mudlet.qrc">:/icons/dialog-error.png</pixmap>
            </property>
            <property name="scaledContents">
             <bool>false</bool>
@@ -1841,7 +1841,7 @@
             <string/>
            </property>
            <property name="pixmap">
-            <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-information.png</pixmap>
+            <pixmap resource="../mudlet.qrc">:/icons/dialog-information.png</pixmap>
            </property>
            <property name="scaledContents">
             <bool>false</bool>
@@ -2404,7 +2404,7 @@
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="../mudlet_alpha.qrc">
+                  <iconset resource="../mudlet.qrc">
                    <normaloff>:/icons/application-exit.png</normaloff>:/icons/application-exit.png</iconset>
                  </property>
                  <property name="autoRaise">
@@ -2440,7 +2440,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>
