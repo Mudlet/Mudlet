@@ -760,8 +760,17 @@ do
   end
 
   function killAnonymousEventHandler(id)
+    if type(id) ~= "string" then
+      error(
+        string.format(
+          "Unexpected argument type in function killAnonymousEventHandler for argument #1. String expected, got %s.",
+          type(id)
+        )
+      )
+    end
+
     if id:starts("lua") then
-      local actualId = tonumber(id:match("%d+$")
+      local actualId = tonumber(id:match("%d+$"))
       if not actualId then
         return nil, string.format("'%s' is not a valid event handler ID.", id)
       end
