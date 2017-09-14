@@ -15,7 +15,7 @@
    <string>Exits for Room &quot;&quot; [*]</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_room_exits.png</normaloff>:/icons/mudlet_room_exits.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_all" rowstretch="1,1,0">
@@ -2169,7 +2169,7 @@ or LUA script</string>
   <tabstop>button_cancel</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections>
   <connection>

@@ -105,7 +105,7 @@
    <string>About Mudlet</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet_alpha.qrc">
+   <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_information.png</normaloff>:/icons/mudlet_information.png</iconset>
   </property>
   <property name="autoFillBackground">
@@ -991,7 +991,7 @@ p, li { white-space: pre-wrap; }
   </layout>
  </widget>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>
