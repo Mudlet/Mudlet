@@ -360,6 +360,8 @@ mudlet::mudlet()
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction(actionFullScreeniew);
+        actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
+        mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     } else {
         mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
@@ -2702,10 +2704,14 @@ void mudlet::replayStart()
     actionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction(actionReplaySpeedUp);
+    actionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
+    mpMainToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
 
     actionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction(actionReplaySpeedDown);
+    actionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
+    mpMainToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
     replaySpeedDisplay = new QLabel(this);
     actionSpeedDisplay = replayToolBar->addWidget(replaySpeedDisplay);
 
