@@ -16,9 +16,6 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="windowTitle">
-   <string>Dialog</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0" rowminimumheight="0,230,0">
    <item row="0" column="0" colspan="2">
     <widget class="QTableWidget" name="moduleTable">
