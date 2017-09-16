@@ -26,7 +26,7 @@
 #include "ui_connection_profiles.h"
 #include "post_guard.h"
 
-class dlgConnectionProfiles : public QDialog, public Ui::profile_dialog
+class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 

@@ -1,6 +1,6 @@
 <ui version="4.0" >
- <class>NotesEditor</class>
- <widget class="QMainWindow" name="NotesEditor" >
+ <class>notes_editor</class>
+ <widget class="QMainWindow" name="notes_editor" >
   <property name="geometry" >
    <rect>
     <x>0</x>

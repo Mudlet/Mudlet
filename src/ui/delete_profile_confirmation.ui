@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>delete_profile_dialog</class>
- <widget class="QDialog" name="delete_profile_dialog">
+ <class>delete_profile_confirmation</class>
+ <widget class="QDialog" name="delete_profile_confirmation">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -85,7 +85,7 @@ If you are, please type in the profile name as a confirmation:</string>
   <connection>
    <sender>cancel_button</sender>
    <signal>clicked()</signal>
-   <receiver>delete_profile_dialog</receiver>
+   <receiver>delete_profile_confirmation</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -101,7 +101,7 @@ If you are, please type in the profile name as a confirmation:</string>
   <connection>
    <sender>delete_button</sender>
    <signal>clicked()</signal>
-   <receiver>delete_profile_dialog</receiver>
+   <receiver>delete_profile_confirmation</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
