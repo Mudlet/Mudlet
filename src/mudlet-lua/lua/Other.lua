@@ -715,9 +715,8 @@ do
 
   -- C functions that get overwritten.
   local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
-  local origkillAnonymousEventHandler = killAnonymousEventHandler
 
-  function registerAnonymousEventHandler(event, func)
+  function registerAnonymousEventHandler(event, func, isOneShot)
     if type(event) ~= "string"then
       error(
         string.format(
@@ -736,27 +735,37 @@ do
       )
     end
 
-    local handlerId
-    if type(func) == "function" then
-      local existinghandlers = handlers[event]
-      if not existinghandlers then
-        existinghandlers = {}
-        handlers[event] = existinghandlers
-        origRegisterAnonymousEventHandler(event, "dispatchEventToFunctions")
-      end
-      local newId = #existinghandlers + 1
-      existinghandlers[newId] = name
-      -- Above may fill gaps if handlers have been deleted, but that's okay.
-      highestHandlerId = highestHandlerId + 1
-      handlerIdsToHandlers[highestHandlerId] = {
-        event = event,
-        index = newId
-      }
-      handlerId = "lua" + highestHandlerId
-    else
-      handlerId = origRegisterAnonymousEventHandler(event, func)
+    if type(func) == "string" then
+      func = assert(loadstring(string.format("%s(...)", func)))
     end
-    return handlerId
+
+    local eventHandlerId
+    if isOneShot then
+      -- wrap the original function to remove itself from the event handler list.
+      local origFunc = func
+      func = function(...)
+        origFunc(...)
+        killAnonymousEventHandler(eventHandlerId)
+      end
+    end
+
+    local existinghandlers = handlers[event]
+    if not existinghandlers then
+      existinghandlers = {}
+      handlers[event] = existinghandlers
+      origRegisterAnonymousEventHandler(event, "dispatchEventToFunctions")
+    end
+    local newId = #existinghandlers + 1
+    existinghandlers[newId] = func
+    -- Above may fill gaps if handlers have been deleted, but that's okay.
+    highestHandlerId = highestHandlerId + 1
+    handlerIdsToHandlers[highestHandlerId] = {
+      event = event,
+      index = newId
+    }
+    -- do not remove the line below as it must be part of the closure for one shot event handlers.
+    eventHandlerId = "lua" .. highestHandlerId
+    return eventHandlerId
   end
 
   function killAnonymousEventHandler(id)
@@ -783,7 +792,7 @@ do
       handlers[findObject.event][findObject.index] = nil
       return true
     else
-      return origKillAnonymousEventHandler(id)
+      return nil, string.format("'%s' is not a valid event handler ID.", id)
     end
   end
 
@@ -793,11 +802,8 @@ do
   -- ...:  All arguments passed to the raised event.
   function dispatchEventToFunctions(event, ...)
     if handlers[event] then
-      for _, funcName in pairs(handlers[event]) do
-        local handlerFunc = nametofunc[funcName]
-        if handlerFunc then
-          handlerFunc(event, ...)
-        end
+      for _, func in pairs(handlers[event]) do
+        func(event, ...)
       end
     end
   end
