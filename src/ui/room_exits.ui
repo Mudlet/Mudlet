@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <author>Stephen Lyons</author>
- <class>roomExits</class>
- <widget class="QDialog" name="roomExits">
+ <class>room_exits</class>
+ <widget class="QDialog" name="room_exits">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -2175,7 +2175,7 @@ or LUA script</string>
   <connection>
    <sender>button_cancel</sender>
    <signal>clicked()</signal>
-   <receiver>roomExits</receiver>
+   <receiver>room_exits</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

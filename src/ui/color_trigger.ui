@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>color_trigger_dlg</class>
- <widget class="QDialog" name="color_trigger_dlg">
+ <class>color_trigger</class>
+ <widget class="QDialog" name="color_trigger">
   <property name="windowModality">
    <enum>Qt::ApplicationModal</enum>
   </property>
