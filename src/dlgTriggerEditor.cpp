@@ -6897,6 +6897,8 @@ void dlgTriggerEditor::slot_export()
     };
 }
 
+// CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
+// Do we really need two different sets of code to import packages?
 void dlgTriggerEditor::slot_import()
 {
     if (mCurrentView) {
@@ -6933,28 +6935,27 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
-    QString packageName = fileName.section("/", -1);
-    packageName.replace(".zip", "");
-    packageName.replace("trigger", "");
-    packageName.replace("xml", "");
-    packageName.replace(".mpackage", "");
-    packageName.replace('/', "");
-    packageName.replace('\\', "");
-    packageName.replace('.', "");
+    QString packageName = fileName.section(QChar('/'), -1);
+    packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QChar('/'));
+    packageName.remove(QChar('\\'));
+    packageName.remove(QChar('.'));
 
     if (mpHost->mInstalledPackages.contains(packageName)) {
         QMessageBox::information(this, tr("Import Mudlet Package:"), tr("Package %1 is already installed.").arg(packageName));
+        file.close();
         return;
     }
+
     QFile file2;
-    if (fileName.endsWith(".zip") || fileName.endsWith(".mpackage")) {
-        QString _home = QDir::homePath();
-        _home.append("/.config/mudlet/profiles/");
-        _home.append(mpHost->getName());
-        QString _dest = QString("%1/%2/").arg(_home, packageName);
+    if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName);
         QDir _tmpDir;
         _tmpDir.mkpath(_dest);
-        QString _script = QString("unzip([[%1]], [[%2]])").arg(fileName, _dest);
+        QString _script = QStringLiteral("unzip([[%1]], [[%2]])").arg(fileName, _dest);
         mpHost->mLuaInterpreter.compileAndExecuteScript(_script);
 
         // requirements for zip packages:

@@ -949,10 +949,8 @@ void cTelnet::processTelnetCommand(const string& command)
                     mpHost->mpConsole->print("<package is already installed>\n");
                     return;
                 }
-                QString _home = QDir::homePath();
-                _home.append("/.config/mudlet/profiles/");
-                _home.append(mpHost->getName());
-                mServerPackage = QString("%1/%2").arg(_home, fileName);
+
+                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
@@ -1170,10 +1168,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
             mpHost->mpConsole->print("<package is already installed>\n");
             return;
         }
-        QString _home = QDir::homePath();
-        _home.append("/.config/mudlet/profiles/");
-        _home.append(mpHost->getName());
-        mServerPackage = QString("%1/%2").arg(_home, fileName);
+
+        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);

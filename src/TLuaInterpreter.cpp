@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -4851,13 +4851,11 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
 
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
-    QString home = QDir::homePath();
-    home.append("/.config/mudlet/profiles/");
     Host& host = getHostFromLua(L);
-    QString name = host.getName();
-    home.append(name);
-    QString erg = QDir::toNativeSeparators(home);
-    lua_pushstring(L, erg.toLatin1().data());
+    QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, host.getName()));
+    // Was using toLatin1() but that fails to accommodate Windows OS which allows
+    // none ASCII characters in user names...
+    lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
 
@@ -12131,41 +12129,6 @@ void TLuaInterpreter::initLuaGlobals()
         QString msg = "[  OK  ]  - Lua module utf8 loaded.";
         mpHost->postMessage(msg);
     }
-
-    //    QString path = QDir::homePath()+"/.config/mudlet/mudlet-lua/lua/LuaGlobal.lua";
-    //    error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-    //    if( error != 0 )
-    //    {
-    //        string e = "no error message available from Lua";
-    //        if( lua_isstring( pGlobalLua, 1 ) )
-    //        {
-    //            e = "[CRITICAL ERROR] LuaGlobal.lua compile error - please report";
-    //            e += lua_tostring( pGlobalLua, 1 );
-    //        }
-    //        gSysErrors << e.c_str();
-    //    }
-    //    else
-    //    {
-    //        gSysErrors << "[INFO] LuaGlobal.lua loaded successfully.";
-    //    }
-
-    /*path = QDir::homePath()+"/.config/mudlet/db.lua";
-	   error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-	   if( error != 0 )
-	   {
-	    string e = "no error message available from Lua";
-	    if( lua_isstring( pGlobalLua, 1 ) )
-	    {
-	        e = "[CRITICAL ERROR] db.lua compile error - please report";
-	        e += lua_tostring( pGlobalLua, 1 );
-	    }
-	    gSysErrors << e.c_str();
-	   }
-	   else
-	   {
-	    gSysErrors << "[INFO] db.lua loaded successfully.";
-	   }*/
-
 
     QString tn = "atcp";
     QStringList args;

@@ -336,11 +336,12 @@ void dlgConnectionProfiles::slot_save_name()
 
         pItem->setText(newProfileName);
 
-        QDir currentPath(QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), currentProfileEditName));
+        QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
         QDir dir;
 
         if (currentPath.exists()) {
-            QDir parentpath(QStringLiteral("%1/.config/mudlet/profiles/").arg(QDir::homePath()));
+            // CHECKME: previous code specified a path ending in a '/'
+            QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
             if (!parentpath.rename(currentProfileEditName, newProfileName)) {
                 notificationArea->show();
                 notificationAreaIconLabelWarning->show();
@@ -349,7 +350,7 @@ void dlgConnectionProfiles::slot_save_name()
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
             }
-        } else if (!dir.mkpath(QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), newProfileName))) {
+        } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
             notificationAreaIconLabelError->hide();
@@ -484,7 +485,7 @@ void dlgConnectionProfiles::slot_deleteprofile_check(const QString text)
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-    QDir dir(QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), profile));
+    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
     dir.removeRecursively(); // note: we should replace this with a function that pops up a progress dialog should the deletion be taking longer than a second
     fillout_form();
     profiles_tree_widget->setFocus();
@@ -533,7 +534,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), profile, item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
@@ -545,24 +546,9 @@ QString dlgConnectionProfiles::readProfileData(QString profile, QString item)
     return ret;
 }
 
-QStringList dlgConnectionProfiles::readProfileHistory(QString profile, QString item)
-{
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), profile, item));
-    file.open(QIODevice::ReadOnly);
-    QDataStream ifs(&file);
-    QString ret;
-    QStringList historyList;
-    while (ifs.status() == QDataStream::Ok) {
-        ifs >> ret;
-        historyList << ret;
-    }
-    file.close();
-    return historyList;
-}
-
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), profile, item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
@@ -831,7 +817,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     profile_history->clear();
 
-    QDir dir(QStringLiteral("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), profile_name));
+    QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
@@ -922,7 +908,7 @@ void dlgConnectionProfiles::fillout_form()
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(QStringLiteral("%1/.config/mudlet/profiles").arg(QDir::homePath())).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     // if only the default_host is present it means no profiles have yet been created
     if (mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QStringLiteral("default_host"))) {
@@ -1252,7 +1238,7 @@ void dlgConnectionProfiles::fillout_form()
         auto profile = profiles_tree_widget->item(i);
         auto profileName = profile->text();
 
-        QDateTime profile_lastRead = QFileInfo(QStringLiteral("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), profileName)).lastModified();
+        QDateTime profile_lastRead = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
         // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
         // work as expected - so test for validity of the test_date value as well
         if ((!test_date.isValid()) || profile_lastRead > test_date) {
@@ -1328,12 +1314,13 @@ void dlgConnectionProfiles::slot_copy_profile()
     port_entry->setReadOnly(false);
 
     // copy the folder on-disk
-    QDir dir(QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), oldname));
+    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
         return;
     }
 
-    copyFolder(QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), oldname), QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), profile_name));
+    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname),
+               mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     mProfileList << profile_name;
     slot_item_clicked(pItem);
 }
@@ -1360,7 +1347,7 @@ void dlgConnectionProfiles::slot_connectToServer()
         return;
     }
 
-    QString folder = QStringLiteral("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), profile_name);
+    QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);

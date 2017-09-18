@@ -37,7 +37,6 @@ public:
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(QString, QString);
-    QStringList readProfileHistory(QString, QString);
     void accept() override;
 
 signals:
