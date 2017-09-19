@@ -5451,13 +5451,12 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     clearDocument(mpSourceEditorEdbee); // Timer Select
 
     mpTimersMainArea->lineEdit_timer_command->clear();
-    mpTimersMainArea->lineEdit_timer_name->clear();
-    mpTimersMainArea->timeEdit_timer_hours->clear();
-    mpTimersMainArea->timeEdit_timer_minutes->clear();
-    mpTimersMainArea->timeEdit_timer_seconds->clear();
-    mpTimersMainArea->timeEdit_timer_msecs->clear();
-
+    mpTimersMainArea->timeEdit_timer_hours->setTime(QTime(0, 0, 0, 0));
+    mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, 0, 0, 0));
+    mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
+    mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
+
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
     if (pT) {
@@ -5472,22 +5471,10 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
         mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
         QTime time = pT->getTime();
-        int hours = time.hour();
-        int minutes = time.minute();
-        int secs = time.second();
-        int msecs = time.msec();
-
-        QTime t2(hours, 0, 0, 0);
-        mpTimersMainArea->timeEdit_timer_hours->setTime(t2);
-
-        QTime t3(0, minutes, 0, 0);
-        mpTimersMainArea->timeEdit_timer_minutes->setTime(t3);
-
-        QTime t4(0, 0, secs);
-        mpTimersMainArea->timeEdit_timer_seconds->setTime(t4);
-
-        QTime t5(0, 0, 0, msecs);
-        mpTimersMainArea->timeEdit_timer_msecs->setTime(t5);
+        mpTimersMainArea->timeEdit_timer_hours->setTime(QTime(time.hour(), 0, 0, 0));
+        mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, time.minute(), 0, 0));
+        mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, time.second(), 0));
+        mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, time.msec()));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 

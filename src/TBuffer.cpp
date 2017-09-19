@@ -3312,35 +3312,6 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     return true;
 }
 
-
-bool TBuffer::replace(int line, const QString& what, const QString& with)
-{
-    if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
-        return false;
-    }
-    lineBuffer[line].replace(what, with);
-
-    // fix size of the corresponding format buffer
-
-    int delta = lineBuffer[line].size() - static_cast<int>(buffer[line].size());
-
-    if (delta > 0) {
-        for (int i = 0; i < delta; i++) {
-            TChar c(mpHost); // cloning default char format according to profile
-            // because a lookup would be too expensive as
-            // this is a very often used function and this standard
-            // behaviour is acceptable. If the user wants special colors
-            // he can apply format changes
-            buffer[line].push_back(c);
-        }
-    } else if (delta < 0) {
-        for (int i = 0; i < delta; i++) {
-            buffer[line].pop_back();
-        }
-    }
-    return true;
-}
-
 void TBuffer::clear()
 {
     while (buffer.size() > 0) {
