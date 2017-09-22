@@ -717,10 +717,10 @@ do
   local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
 
   function registerAnonymousEventHandler(event, func, isOneShot)
-    if type(event) ~= "string"then
+    if type(event) ~= "string" then
       error(
         string.format(
-          "Unexpected argument type in function registerAnonymousEventHandler for argument #1. String expected, got %s.",
+          "registerAnonymousEventHandler: bad argument #1 type (event name as string expected, got %s!)",
           type(event)
         )
       )
@@ -729,7 +729,7 @@ do
     if type(func) ~= "function" and type(func) ~= "string" then
       error(
         string.format(
-          "Unexpected argument type in function registerAnonymousEventHandler for argument #2. Function or string expected, got %s.",
+          "registerAnonymousEventHandler: bad argument #2 type (function as string or function type expected, got %s!)",
           type(func)
         )
       )
@@ -764,36 +764,28 @@ do
       index = newId
     }
     -- do not remove the line below as it must be part of the closure for one shot event handlers.
-    eventHandlerId = "lua" .. highestHandlerId
+    eventHandlerId = highestHandlerId
     return eventHandlerId
   end
 
   function killAnonymousEventHandler(id)
-    if type(id) ~= "string" then
+    if type(id) ~= "number" then
       error(
         string.format(
-          "Unexpected argument type in function killAnonymousEventHandler for argument #1. String expected, got %s.",
+          "killAnonymousEventHandler: bad argument #1 type (handler ID as number expected, got %s!)",
           type(id)
         )
       )
     end
 
-    if id:starts("lua") then
-      local actualId = tonumber(id:match("%d+$"))
-      if not actualId then
-        return nil, string.format("'%s' is not a valid event handler ID.", id)
-      end
-      local findObject = handlerIdsToHandlers[actualId]
-      if not findObject then
-        return nil, string.format("Handler with ID '%s' not found.", id)
-      end
-
-      handlerIdsToHandlers[actualId] = nil
-      handlers[findObject.event][findObject.index] = nil
-      return true
-    else
-      return nil, string.format("'%s' is not a valid event handler ID.", id)
+    local findObject = handlerIdsToHandlers[id]
+    if not findObject then
+      return nil, string.format("Handler with ID '%s' not found.", id)
     end
+
+    handlerIdsToHandlers[id] = nil
+    handlers[findObject.event][findObject.index] = nil
+    return true
   end
 
   -- Dispatches an event to the registered lua functions.
