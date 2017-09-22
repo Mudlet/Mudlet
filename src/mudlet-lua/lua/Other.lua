@@ -754,7 +754,7 @@ do
 
     local existinghandlers = handlers[event]
     if type(func) == "string" then
-      local functionString = string.format("%s(...)", func)
+      local functionString = string.format("return %s(...)", func)
       local functionExists = findStringEventHandler(existinghandlers, functionString)
       
       if not functionExists then
