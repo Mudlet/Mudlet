@@ -716,6 +716,23 @@ do
   -- C functions that get overwritten.
   local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
 
+  -- helper function to find an already existing string event handler
+  -- This function may not the most performant one as it uses debug.getinfo,
+  -- but since event handlers are only rarely registered, this may be ok.
+  local function findStringEventHandler(existingHandlers, functionString)
+    local functionExists = false
+    if existingHandlers then
+      for index, handlerFunction in pairs(existingHandlers) do
+        local info = debug.getinfo(handlerFunction, "S")
+        if info.source == functionString then
+          functionExists = index
+          break
+        end
+      end
+    end
+    return functionExists
+  end
+  
   function registerAnonymousEventHandler(event, func, isOneShot)
     if type(event) ~= "string" then
       error(
@@ -735,8 +752,22 @@ do
       )
     end
 
+    local existinghandlers = handlers[event]
     if type(func) == "string" then
-      func = assert(loadstring(string.format("%s(...)", func)))
+      local functionString = string.format("%s(...)", func)
+      local functionExists = findStringEventHandler(existinghandlers, functionString)
+      
+      if not functionExists then
+        func = assert(loadstring(functionString))
+      else
+        -- find and return the ID of existing event handlers
+        for id, findObject in pairs(handlerIdsToHandlers) do
+          if findObject.event == event and findObject.index == functionExists then
+            return id
+          end
+        end
+      end
+      
     end
 
     local eventHandlerId
@@ -751,7 +782,6 @@ do
       end
     end
 
-    local existinghandlers = handlers[event]
     if not existinghandlers then
       existinghandlers = {}
       handlers[event] = existinghandlers
