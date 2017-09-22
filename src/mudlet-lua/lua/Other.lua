@@ -744,8 +744,10 @@ do
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
       func = function(...)
-        origFunc(...)
-        killAnonymousEventHandler(eventHandlerId)
+        local keepEvaluating = origFunc(...)
+        if not keepEvaluating then
+          killAnonymousEventHandler(eventHandlerId)
+        end
       end
     end
 
