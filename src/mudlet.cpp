@@ -2705,13 +2705,13 @@ void mudlet::replayStart()
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction(actionReplaySpeedUp);
     actionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
-    mpMainToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
+    replayToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
 
     actionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction(actionReplaySpeedDown);
     actionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
-    mpMainToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
+    replayToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
     replaySpeedDisplay = new QLabel(this);
     actionSpeedDisplay = replayToolBar->addWidget(replaySpeedDisplay);
 
