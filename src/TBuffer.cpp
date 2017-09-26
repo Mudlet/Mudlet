@@ -3047,38 +3047,48 @@ inline int TBuffer::wrap(int startLine)
     return insertedLines > 0 ? insertedLines : 0;
 }
 
-void TBuffer::log(int from, int to)
+void TBuffer::log(int fromLine, int toLine)
 {
     TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB == this) {
-        if (mpHost->mpConsole->mLogToLogFile) {
-            if (from >= size() || from < 0) {
-                return;
-            }
-            if (to >= size()) {
-                to = size() - 1;
-            }
-            if (to < 0) {
-                return;
-            }
-            for (int i = from; i <= to; i++) {
-                QString toLog;
-                if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-                    QPoint P1 = QPoint(0, i);
-                    QPoint P2 = QPoint(buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
-                } else {
-                    if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
-                        toLog = timeBuffer[i].left(13);
-                    }
-                    toLog.append(lineBuffer[i]);
-                    toLog.append("\n");
-                }
-                mpHost->mpConsole->mLogStream << toLog;
-            }
-            mpHost->mpConsole->mLogStream.flush();
-        }
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) { return; }
+
+    if (fromLine >= size() || fromLine < 0) {
+        return;
     }
+    if (toLine >= size()) {
+        toLine = size() - 1;
+    }
+    if (toLine < 0) {
+        return;
+    }
+
+    // if we've been called to log the same line - which can happen when the user
+    // enters a command after in-game text - then skip recording the last line
+    if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
+        mpHost->mpConsole->mLogStream << lastTextToLog;
+        mpHost->mpConsole->mLogStream.flush();
+    }
+
+    QString toLog;
+    for (int i = fromLine; i <= toLine; i++) {
+        QString lineToLog;
+        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            QPoint P1 = QPoint(0, i);
+            QPoint P2 = QPoint(buffer[i].size(), i);
+            lineToLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
+        } else {
+            if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
+                lineToLog = timeBuffer[i].left(13);
+            }
+            lineToLog.append(lineBuffer[i]);
+            lineToLog.append("\n");
+        }
+        toLog = toLog % lineToLog;
+    }
+
+    lastTextToLog = std::move(toLog);
+    lastLoggedFromLine = fromLine;
+    lastloggedToLine = toLine;
 }
 
 // returns how many new lines have been inserted by the wrapping action
