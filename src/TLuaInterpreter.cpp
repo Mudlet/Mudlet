@@ -10328,6 +10328,9 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 }
 
 
+// The function below is mostly unused now as it is overwritten in lua.
+// The overwriting function poses as a transperant proxy and internally uses
+// this function to get called events.
 int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
     string event;
