@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QMessageBox>
 #include <QDir>
 #include <QFile>
 #include <QPainter>
@@ -138,7 +139,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     }
 }
 
-void checkAndCopyFont(const QString& pathName, const QString& fileName)
+void copyFont(const QString& pathName, const QString& fileName)
 {
     if (!QFile::exists(QStringLiteral("%1/%2").arg(pathName, fileName))) {
         QFile fileToCopy(QStringLiteral(":/fonts/ttf-bitstream-vera-1.10/%1").arg(fileName));
@@ -381,20 +382,20 @@ int main(int argc, char* argv[])
     // the Debian packager already removes these fonts anyhow as they are
     // already present in a shared form in the OS anyhow so our copy is
     // ancient and superfluous (they are using 2.37 compared to our 1.10) ...!
-    checkAndCopyFont(fontDirectory, QLatin1String("COPYRIGHT.TXT"));
-    checkAndCopyFont(fontDirectory, QLatin1String("RELEASENOTES.TXT"));
-    checkAndCopyFont(fontDirectory, QLatin1String("README.TXT"));
-    checkAndCopyFont(fontDirectory, QLatin1String("local.conf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("Vera.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraBd.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraBI.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraIt.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraMono.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraMoBd.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraMoBI.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraMoIt.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraSe.ttf"));
-    checkAndCopyFont(fontDirectory, QLatin1String("VeraSeBd.ttf"));
+    copyFont(fontDirectory, QLatin1String("COPYRIGHT.TXT"));
+    copyFont(fontDirectory, QLatin1String("RELEASENOTES.TXT"));
+    copyFont(fontDirectory, QLatin1String("README.TXT"));
+    copyFont(fontDirectory, QLatin1String("local.conf"));
+    copyFont(fontDirectory, QLatin1String("Vera.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraBd.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraBI.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraIt.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMono.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMoBd.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMoBI.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMoIt.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraSe.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraSeBd.ttf"));
 
     if (show_splash) {
         splash_message.append("Done.\n\n"
@@ -407,6 +408,7 @@ int main(int argc, char* argv[])
     mudlet::debugMode = false;
     FontManager fm;
     fm.addFonts();
+    QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32
     /*
      * From Qt Documentation for:
@@ -420,11 +422,31 @@ int main(int argc, char* argv[])
      * does not mention this particular restriction it is not unreasonable to
      * assume the same condition applies...
      */
-    QString homeLink = QStringLiteral("%1/mudlet-data.lnk").arg(QDir::homePath());
+    QString homeLinkWindows = QStringLiteral("%1/mudlet-data.lnk").arg(QDir::homePath());
+    QFile oldLinkFile(homeLink);
+    if (oldLinkFile.exists()) {
+        // A One-time fix up past error that did not include the ".lnk" extension
+        oldLinkFile.rename(homeLinkWindows);
+        QMessageBox::information(nullptr,
+                                 qApp->tr("Fixup", "main"),
+                                 QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(qApp->tr("<p>An error in some previous <i>Windows</i> versions of Mudlet failed to correctly make a symbolic link called \"mudlet-data\" from your <b>home</b> directory to where Mudlet stores <u>your</u> personal Mudlet game data; "
+                                         "this message is to advise you that a plain <i>file</i> with that name has been adjusted so that it is now a valid Windows <i>symlink</i>!</p>"
+                                         "<p>Unless you re-run an older version of Mudlet again you should not see this message again... 8-)</p>",
+                                               "main")));
+    } else {
+        QFile linkFile(homeLinkWindows);
+        if (!linkFile.exists()) {
+            QFile::link(homeDirectory, homeLinkWindows);
+        }
+    }
 #else
-    QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
+    QFile linkFile(homeLink);
+    if (!linkFile.exists()) {
+        QFile::link(homeDirectory, homeLink);
+    }
 #endif
-    QFile::link(homeDirectory, homeLink);
+
     mudlet::start();
 
     if (first_launch) {
