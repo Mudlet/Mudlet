@@ -4853,8 +4853,6 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, host.getName()));
-    // Was using toLatin1() but that fails to accommodate Windows OS which allows
-    // none ASCII characters in user names...
     lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
