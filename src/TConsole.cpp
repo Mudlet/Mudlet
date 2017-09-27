@@ -2552,6 +2552,9 @@ void TConsole::slot_searchBufferUp()
     if (_txt != mSearchQuery) {
         mSearchQuery = _txt;
         mCurrentSearchResult = buffer.lineBuffer.size();
+    } else {
+        // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
+        mCurrentSearchResult = std::min(mCurrentSearchResult, buffer.lineBuffer.size());
     }
     if (buffer.lineBuffer.size() < 1) {
         return;
