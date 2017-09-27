@@ -346,10 +346,12 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
 
-    auto buttonMainLayer = new QWidget; //( layerCommandLine );
+    buttonMainLayer = new QWidget; //( layerCommandLine );
+    buttonMainLayer->setObjectName(QStringLiteral("buttonMainLayer"));
     buttonMainLayer->setSizePolicy(sizePolicy);
     buttonMainLayer->setContentsMargins(0, 0, 0, 0);
     auto layoutButtonMainLayer = new QVBoxLayout(buttonMainLayer);
+    layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
     layoutButtonMainLayer->setMargin(0);
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
@@ -357,6 +359,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     /*buttonMainLayer->setMinimumHeight(31);
            buttonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
+    buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
     layoutButtonLayer->setMargin(0);
     layoutButtonLayer->setSpacing(0);

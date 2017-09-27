@@ -324,6 +324,8 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
+
+    void slot_show_blah(bool checked);
 };
 
 class TConsoleMonitor : public QObject

@@ -263,6 +263,7 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     bool mSaveLayoutRequested;
+    QWidget *buttonMainLayer;
 
 signals:
 
@@ -278,6 +279,7 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
 };
 
 #endif // MUDLET_TCONSOLE_H

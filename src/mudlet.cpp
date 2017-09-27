@@ -425,6 +425,7 @@ mudlet::mudlet()
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
     connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
+    connect(actionToggle_blah, &QAction::toggled, this, &mudlet::slot_show_blah);
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -2666,6 +2667,16 @@ void mudlet::slot_multi_view()
     while (it.hasNext()) {
         it.next();
         it.value()->show();
+    }
+}
+
+
+void mudlet::slot_show_blah(bool checked)
+{
+    if (checked) {
+        mpCurrentActiveHost->mpConsole->buttonMainLayer->show();
+    } else {
+        mpCurrentActiveHost->mpConsole->buttonMainLayer->hide();
     }
 }
 

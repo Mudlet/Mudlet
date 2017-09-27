@@ -115,6 +115,7 @@
     <addaction name="dactionReplay"/>
     <addaction name="actionModule_manager"/>
     <addaction name="actionPackage_Exporter"/>
+    <addaction name="actionToggle_blah"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -357,6 +358,17 @@
    </property>
    <property name="shortcut">
     <string>Alt+V</string>
+   </property>
+  </action>
+  <action name="actionToggle_blah">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle blah</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+J</string>
    </property>
   </action>
  </widget>
