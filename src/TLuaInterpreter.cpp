@@ -10357,11 +10357,11 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 }
 
 
-int TLuaInterpreter::Send(lua_State* L)
+int TLuaInterpreter::expandAlias(lua_State *L)
 {
     string luaSendText;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "Send: wrong argument type");
+        lua_pushstring(L, "expandAlias: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -10369,12 +10369,8 @@ int TLuaInterpreter::Send(lua_State* L)
     }
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushstring(L, "Send: wrong argument type");
-            lua_error(L);
-            return 1;
-        } else {
-            wantPrint = lua_toboolean(L, 2);
+        if (lua_isboolean(L, 2) && !lua_toboolean(L, 2)) {
+            wantPrint = false;
         }
     }
     Host& host = getHostFromLua(L);
@@ -11741,7 +11737,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_settable(pGlobalLua, LUA_GLOBALSINDEX);
     lua_register(pGlobalLua, "showUnzipProgress", TLuaInterpreter::showUnzipProgress);//internal function used by the package system NOT FOR USERS
     lua_register(pGlobalLua, "wait", TLuaInterpreter::Wait);
-    lua_register(pGlobalLua, "expandAlias", TLuaInterpreter::Send);
+    lua_register(pGlobalLua, "expandAlias", TLuaInterpreter::expandAlias);
     lua_register(pGlobalLua, "echo", TLuaInterpreter::Echo);
     lua_register(pGlobalLua, "selectString", TLuaInterpreter::selectString);
     lua_register(pGlobalLua, "selectSection", TLuaInterpreter::selectSection);
