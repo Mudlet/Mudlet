@@ -2105,7 +2105,6 @@ bool T2DMap::event(QEvent* event)
 
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* ke = static_cast<QKeyEvent*>(event);
-        qDebug() << "modifier=" << ke->modifiers() << " key=" << ke->key();
         //        if( ke->key() == Qt::Key_Delete )
         //        {
         //            if( mCustomLineSelectedRoom != 0  )
@@ -5680,7 +5679,7 @@ void T2DMap::resizeMultiSelectionWidget()
     if (mMultiSelectionListWidget.topLevelItemCount() > 0) {
         QTreeWidgetItem* rowItem = mMultiSelectionListWidget.topLevelItem(1);
         // The following factors are tweaks to ensure that the widget shows all
-        // the rows, as the header seems biggger than the value returned, statics
+        // the rows, as the header seems bigger than the value returned, statics
         // used to enable values to be change by debugger at runtime!
         static float headerFactor = 1.2;
         static float rowFactor = 1.0;
@@ -5688,7 +5687,6 @@ void T2DMap::resizeMultiSelectionWidget()
         if (rowItem) { // Have some data rows - and we have forced them to be the same height:
             _newHeight += rowFactor * mMultiSelectionListWidget.topLevelItemCount() * mMultiSelectionListWidget.visualItemRect(rowItem).height();
         }
-        //        qDebug() << "Row count:" << mMultiSelectionListWidget.topLevelItemCount() << "header height:" << mMultiSelectionListWidget.header()->height() << "row height:" << mMultiSelectionListWidget.visualItemRect(rowItem).height();
     }
     if (_newHeight < height()) {
         mMultiSelectionListWidget.resize(_newWidth, _newHeight);
