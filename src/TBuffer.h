@@ -152,6 +152,7 @@ public:
     static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
+    void logRemainingOutput();
 
 
     std::deque<TChar> bufferLine;

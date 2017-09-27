@@ -893,6 +893,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         }
         logButton->setToolTip(tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>"));
     } else {
+        buffer.logRemainingOutput();
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << "</div></body>\n";
             mLogStream << "</html>\n";

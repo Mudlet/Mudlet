@@ -3086,9 +3086,18 @@ void TBuffer::log(int fromLine, int toLine)
         toLog = toLog % lineToLog;
     }
 
+    // record the last log call into a temporary buffer - we'll actually log
+    // on the next iteration after duplication detection has run
     lastTextToLog = std::move(toLog);
     lastLoggedFromLine = fromLine;
     lastloggedToLine = toLine;
+}
+
+// logs the remaining output when logging gets stopped, without duplication checks
+void TBuffer::logRemainingOutput()
+{
+    mpHost->mpConsole->mLogStream << lastTextToLog;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // returns how many new lines have been inserted by the wrapping action
