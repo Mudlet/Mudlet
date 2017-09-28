@@ -1267,8 +1267,13 @@ void TTrigger::compile()
 bool TTrigger::setScript(const QString& script)
 {
     mScript = script;
-    mNeedsToBeCompiled = true;
-    mOK_code = compileScript();
+    if (script == QString("")) {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+    } else {
+        mNeedsToBeCompiled = true;
+        mOK_code = compileScript();
+    }
     return mOK_code;
 }
 
