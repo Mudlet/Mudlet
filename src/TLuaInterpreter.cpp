@@ -5669,8 +5669,6 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     return 1;
 }
 
-// tempTrigger( string name, string regex, string function to call, multiline, fg, bg, filter, match all(perlSlashG), highlight,
-// play sound, fire length(mStayOpen), lineDelta).
 int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 {
     bool multiLine, matchAll, highlight, playSound, filter, colorTrigger;
@@ -5954,33 +5952,39 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     return 1;
 }
 
-// tempTrigger( string regex, string function to call ) // one shot timer.
 int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 {
-    string luaRegex;
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "tempRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaRegex = lua_tostring(L, 1);
-    }
-
-    string luaFunction;
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "tempRegexTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 2);
-    }
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _luaFunction = luaFunction.c_str();
-    QString _luaRegex = luaRegex.c_str();
-    int timerID = pLuaInterpreter->startTempRegexTrigger(_luaRegex, _luaFunction);
-    lua_pushnumber(L, timerID);
+    QString regexPattern;
+    int triggerID;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "tempRegexTrigger: bad argument #1 type (regex pattern as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    regexPattern = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (lua_isstring(L, 2)) {
+        string luaFunction = lua_tostring(L, 2);
+        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, luaFunction.c_str());
+    } else if (lua_isfunction(L, 2)) {
+        triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, QString());
+
+        auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        trigger->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, trigger);
+        lua_pushvalue(L, 2);
+        lua_settable(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pushfstring(L, "tempRegexTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, triggerID);
     return 1;
 }
 
