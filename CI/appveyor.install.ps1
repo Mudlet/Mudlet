@@ -7,19 +7,19 @@ Set-Location "C:\src"
 $Env:PATH="$Env:MINGW_BASE_DIR\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:PATH"
 
 Write-Output "==== downloading dependencies ====" >> verbose_output.log 2>&1
-wget --no-check-certificate -nv --output-document hunspell-1.4.1.tar.gz https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz >> verbose_output.log 2>&1
-wget -nv http://www.lua.org/ftp/lua-5.1.5.tar.gz >> verbose_output.log 2>&1
-wget --no-check-certificate -nv https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download >> verbose_output.log 2>&1
-wget -nv http://zlib.net/zlib-1.2.11.tar.gz >> verbose_output.log 2>&1
-wget -nv http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz >> verbose_output.log 2>&1
-wget -nv --no-check-certificate https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz >> verbose_output.log 2>&1
-wget -nv --no-check-certificate --output-document yajl-2.0.1.tar.gz https://github.com/lloyd/yajl/tarball/2.0.1 >> verbose_output.log 2>&1
-wget -nv --no-check-certificate https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download >> verbose_output.log 2>&1
-wget -nv --no-check-certificate https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
-wget -nv --no-check-certificate http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip >> verbose_output.log 2>&1
-wget -nv --no-check-certificate --output-document luazip.zip https://github.com/rjpcomputing/luazip/archive/master.zip >> verbose_output.log 2>&1
-wget -nv --no-check-certificate --output-document luawinmake.zip https://github.com/Tieske/luawinmake/archive/master.zip >> verbose_output.log 2>&1
-wget --no-check-certificate -nv --output-document installbuilder-qt-installer.exe https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe >> verbose_output.log 2>&1
+Invoke-WebRequest https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz -SkipCertificateCheck -OutFile hunspell-1.4.1.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest http://www.lua.org/ftp/lua-5.1.5.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download -SkipCertificateCheck >> verbose_output.log 2>&1
+Invoke-WebRequest http://zlib.net/zlib-1.2.11.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz -SkipCertificateCheck >> verbose_output.log 2>&1
+Invoke-WebRequest https://github.com/lloyd/yajl/tarball/2.0.1 -SkipCertificateCheck -OutFile yajl-2.0.1.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download -SkipCertificateCheck >> verbose_output.log 2>&1
+Invoke-WebRequest https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip -SkipCertificateCheck >> verbose_output.log 2>&1
+Invoke-WebRequest http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip -SkipCertificateCheck >> verbose_output.log 2>&1
+Invoke-WebRequest https://github.com/rjpcomputing/luazip/archive/master.zip -SkipCertificateCheck -OutFile luazip.zip >> verbose_output.log 2>&1
+Invoke-WebRequest https://github.com/Tieske/luawinmake/archive/master.zip -SkipCertificateCheck -OutFile luawinmake.zip >> verbose_output.log 2>&1
+Invoke-WebRequest https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe -SkipCertificateCheck -OutFile installbuilder-qt-installer.exe >> verbose_output.log 2>&1
 Write-Output "==== finished downloading dependencies ===="  >> verbose_output.log 2>&1
 
 Write-Output "==== extracting archives ====" >> verbose_output.log 2>&1
