@@ -261,7 +261,11 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    ../3rdparty/dblsqd/feed.cpp \
+    ../3rdparty/dblsqd/release.cpp \
+    ../3rdparty/dblsqd/semver.cpp \
+    ../3rdparty/dblsqd/update_dialog.cpp
 
 
 HEADERS += \
@@ -338,7 +342,11 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h
+    XMLimport.h \
+    ../3rdparty/dblsqd/feed.h \
+    ../3rdparty/dblsqd/release.h \
+    ../3rdparty/dblsqd/semver.h \
+    ../3rdparty/dblsqd/update_dialog.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -363,8 +371,11 @@ FORMS += \
     ui/triggers_main_area.ui \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
-    ui/vars_main_area.ui
+    ui/vars_main_area.ui \
+    ../3rdparty/dblsqd/update_dialog.ui
 
+SUBDIRS += \
+    ../3rdparty/dblsqd/dblsqd-sdk-qt.pro
 
 RESOURCES = \
     mudlet.qrc
