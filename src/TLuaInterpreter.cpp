@@ -5556,6 +5556,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     QString substringPattern;
+    int triggerID;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempTrigger: bad argument #1 type (substring pattern as string expected, got %s!)", luaL_typename(L, 1));
@@ -5567,25 +5568,23 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 
     if (lua_isstring(L, 2)) {
         string luaFunction = lua_tostring(L, 2);
-        int timerID = pLuaInterpreter->startTempTrigger(substringPattern, luaFunction.c_str());
-        lua_pushnumber(L, timerID);
-        return 1;
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, luaFunction.c_str());
     } else if (lua_isfunction(L, 2)) {
-        int triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString());
+        triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString());
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
-
-        lua_pushnumber(L, triggerID);
-        return 1;
     } else {
         lua_pushfstring(L, "tempTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
+
+    lua_pushnumber(L, triggerID);
+    return 1;
 }
 
 
