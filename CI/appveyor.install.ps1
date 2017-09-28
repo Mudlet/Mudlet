@@ -8,20 +8,20 @@ $Env:PATH="$Env:MINGW_BASE_DIR\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\
 
 Write-Output "==== downloading dependencies ====" >> verbose_output.log 2>&1
 Invoke-WebRequest https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz -OutFile hunspell-1.4.1.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest http://www.lua.org/ftp/lua-5.1.5.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download >> verbose_output.log 2>&1
-Invoke-WebRequest http://zlib.net/zlib-1.2.11.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest http://www.lua.org/ftp/lua-5.1.5.tar.gz -OutFile lua-5.1.5.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download -OutFile pcre-8.38.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest http://zlib.net/zlib-1.2.11.tar.gz -OutFile zlib-1.2.11.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz -OutFile sqlite-autoconf-3071700.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz -OutFile libzip_0.11.2.orig.tar.gz >> verbose_output.log 2>&1
 Invoke-WebRequest https://github.com/lloyd/yajl/tarball/2.0.1 -OutFile yajl-2.0.1.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download >> verbose_output.log 2>&1
-Invoke-WebRequest https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
-Invoke-WebRequest http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip >> verbose_output.log 2>&1
+Invoke-WebRequest https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download -OutFile zziplib-0.13.62.tar.bz2 >> verbose_output.log 2>&1
+Invoke-WebRequest https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip -OutFile openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
+Invoke-WebRequest http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip -OutFile luarocks-2.4.0-win32.zip >> verbose_output.log 2>&1
 Invoke-WebRequest https://github.com/rjpcomputing/luazip/archive/master.zip -OutFile luazip.zip >> verbose_output.log 2>&1
 Invoke-WebRequest https://github.com/Tieske/luawinmake/archive/master.zip -OutFile luawinmake.zip >> verbose_output.log 2>&1
 Invoke-WebRequest https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe -OutFile installbuilder-qt-installer.exe >> verbose_output.log 2>&1
 Write-Output "==== finished downloading dependencies ===="  >> verbose_output.log 2>&1
-<#
+
 Write-Output "==== extracting archives ====" >> verbose_output.log 2>&1
 bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"\$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf \"\$a\" || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj \"\$a\" || true; done)"  >> verbose_output.log 2>&1
 7z -oopenssl-1.0.2l e openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
@@ -167,4 +167,3 @@ $VersionRegex = [regex]'= {1}(.+)$'
 $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
 
 Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD"
-#>
