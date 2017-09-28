@@ -5562,9 +5562,9 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         lua_pushfstring(L, "tempTrigger: bad argument #1 type (substring pattern as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
-    } else {
-        substringPattern = QString::fromUtf8(lua_tostring(L, 1));
     }
+
+    substringPattern = QString::fromUtf8(lua_tostring(L, 1));
 
     if (lua_isstring(L, 2)) {
         string luaFunction = lua_tostring(L, 2);
