@@ -5619,7 +5619,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         lua_pushvalue(L, 3);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
@@ -5628,41 +5628,44 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     return 1;
 }
 
-
-// triggerID = tempLineTrigger( from, howmany, func )
 int TLuaInterpreter::tempLineTrigger(lua_State* L)
 {
-    int luaFrom;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "tempLineTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFrom = lua_tointeger(L, 1);
-    }
-    int luaTo;
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "tempLineTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaTo = lua_tointeger(L, 2);
-    }
-
-    string luaFunction;
-    if (!lua_isstring(L, 3)) {
-        lua_pushstring(L, "tempLineTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 3);
-    }
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _fun = luaFunction.c_str();
-    int timerID = pLuaInterpreter->startTempLineTrigger(luaFrom, luaTo, _fun);
-    lua_pushnumber(L, timerID);
+    int from, howMany;
+    int triggerID;
+
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "tempLineTrigger: bad argument #1 type (line to start matching from as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "tempLineTrigger: bad argument #2 type (how many lines to match for as number expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        return 1;
+    }
+
+    from = lua_tointeger(L, 1);
+    howMany = lua_tointeger(L, 2);
+
+    if (lua_isstring(L, 3)) {
+        string luaFunction = lua_tostring(L, 3);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, luaFunction.c_str());
+    } else if (lua_isfunction(L, 3)) {
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString());
+
+        auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        trigger->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, trigger);
+        lua_pushvalue(L, 3);
+        lua_settable(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pushfstring(L, "tempLineTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, triggerID);
     return 1;
 }
 
