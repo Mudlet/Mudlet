@@ -21,7 +21,7 @@ Invoke-WebRequest https://github.com/rjpcomputing/luazip/archive/master.zip -Out
 Invoke-WebRequest https://github.com/Tieske/luawinmake/archive/master.zip -OutFile luawinmake.zip >> verbose_output.log 2>&1
 Invoke-WebRequest https://installbuilder.bitrock.com/installbuilder-qt-enterprise-17.3.0-windows-installer.exe -OutFile installbuilder-qt-installer.exe >> verbose_output.log 2>&1
 Write-Output "==== finished downloading dependencies ===="  >> verbose_output.log 2>&1
-
+<#
 Write-Output "==== extracting archives ====" >> verbose_output.log 2>&1
 bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"\$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf \"\$a\" || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj \"\$a\" || true; done)"  >> verbose_output.log 2>&1
 7z -oopenssl-1.0.2l e openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
@@ -167,3 +167,4 @@ $VersionRegex = [regex]'= {1}(.+)$'
 $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
 
 Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD"
+#>
