@@ -13,7 +13,7 @@ environment:
     MINGW_BASE_DIR: C:\Qt\Tools\mingw530_32
     MINGW_BASE_DIR_BASH: /c/Qt/Tools/mingw530_32
 install:
-- call CI\appveyor.install.bat
+- powershell ".\CI\appveyor.install.ps1"
 
 build_script:
 - cd C:\projects\mudlet-1\src
