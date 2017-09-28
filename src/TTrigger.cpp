@@ -72,6 +72,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -106,6 +107,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -1301,6 +1303,8 @@ void TTrigger::execute()
     }
     if (mIsMultiline) {
         mpLua->callMulti(mFuncName, mName);
+    } else if (mRegisteredAnonymousLuaFunction) {
+        mpLua->call_luafunction(this);
     } else {
         mpLua->call(mFuncName, mName);
     }

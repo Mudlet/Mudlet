@@ -5465,15 +5465,14 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         luaTimeout = lua_tonumber(L, 1);
     }
 
-    string luaFunction;
+    string luaCodeAsString;
     if (lua_isfunction(L, 2)) {
         Host& host = getHostFromLua(L);
         TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-        QString _fun;
-        int timerID = pLuaInterpreter->startTempTimer(luaTimeout, _fun);
-        TTimer* pT = host.getTimerUnit()->getTimer(timerID);
-        pT->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, pT);
+        int timerID = pLuaInterpreter->startTempTimer(luaTimeout, QString());
+        TTimer* timer = host.getTimerUnit()->getTimer(timerID);
+        timer->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, timerID);
@@ -5484,13 +5483,12 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         lua_error(L);
         return 1;
     } else {
-        luaFunction = lua_tostring(L, 2);
+        luaCodeAsString = lua_tostring(L, 2);
     }
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _fun = luaFunction.c_str();
-    int timerID = pLuaInterpreter->startTempTimer(luaTimeout, _fun);
+    int timerID = pLuaInterpreter->startTempTimer(luaTimeout, luaCodeAsString.c_str());
     lua_pushnumber(L, timerID);
     return 1;
 }
@@ -5553,36 +5551,41 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
     return 1;
 }
 
-
-// tempTrigger( string regex, string function to call ) // one shot timer.
 int TLuaInterpreter::tempTrigger(lua_State* L)
 {
-    string luaRegex;
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "tempTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaRegex = lua_tostring(L, 1);
-    }
-
-    string luaFunction;
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "tempTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 2);
-    }
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _reg = luaRegex.c_str();
-    QString _fun = luaFunction.c_str();
-    int timerID = pLuaInterpreter->startTempTrigger(_reg, _fun);
-    lua_pushnumber(L, timerID);
-    //lua_pushstring( L, _reg.toLatin1().data());
-    return 1;
+    QString substringPattern;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "tempTrigger: bad argument #1 type (substring pattern as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        substringPattern = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    if (lua_isstring(L, 2)) {
+        string luaFunction = lua_tostring(L, 2);
+        int timerID = pLuaInterpreter->startTempTrigger(substringPattern, luaFunction.c_str());
+        lua_pushnumber(L, timerID);
+        return 1;
+    } else if (lua_isfunction(L, 2)) {
+        int triggerID = pLuaInterpreter->startTempTrigger(substringPattern, QString());
+
+        auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        trigger->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, trigger);
+        lua_pushvalue(L, 2);
+        lua_settable(L, LUA_REGISTRYINDEX);
+
+        lua_pushnumber(L, triggerID);
+        return 1;
+    } else {
+        lua_pushfstring(L, "tempTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
 }
 
 
