@@ -61,6 +61,7 @@ Write-Output "---- changing CMakeLists.txt ----" | Tee-Object -File "..\verbose_
 mkdir build
 cd build
 Write-Output "---- running cmake ----" | Tee-Object -File "..\..\verbose_output.log" -Append
+$Env:Path
 cmake -G "MinGW Makefiles" ..  >> ..\..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\..\verbose_output.log" -Append
 mingw32-make -j 2  >> ..\..\verbose_output.log 2>&1
