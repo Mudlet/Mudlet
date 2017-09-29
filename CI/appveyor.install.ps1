@@ -23,7 +23,11 @@ Invoke-WebRequest https://installbuilder.bitrock.com/installbuilder-qt-enterpris
 Write-Output "==== finished downloading dependencies ===="  >> verbose_output.log 2>&1
 
 Write-Output "==== extracting archives ====" >> verbose_output.log 2>&1
-bash -c "cd /c/src/ && (for a in `ls -1 *.tar.gz`; do if [ \"\$a\" != \"boost_1_60_0.tar.gz\" ]; then  tar -zxf \"\$a\" || true; fi; done) && (for a in `ls -1 *.tar.bz2`; do tar xfj \"\$a\" || true; done)"  >> verbose_output.log 2>&1
+Get-ChildItem "C:\src" -Include *.tar.gz,*.tar.bz2 | 
+Foreach-Object {
+  7z x $_.FullName >> verbose_output.log 2>&1
+  7z x $_.BaseName + ".tar" >> verbose_output.log 2>&1
+}
 7z -oopenssl-1.0.2l e openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
 7z x luarocks-2.4.0-win32.zip >> verbose_output.log 2>&1
 7z x luazip.zip >> verbose_output.log 2>&1
