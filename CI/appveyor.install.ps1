@@ -23,7 +23,12 @@ Invoke-WebRequest https://installbuilder.bitrock.com/installbuilder-qt-enterpris
 Write-Output "==== finished downloading dependencies ===="  >> verbose_output.log 2>&1
 
 Write-Output "==== extracting archives ====" >> verbose_output.log 2>&1
-Get-ChildItem "C:\src" -Include *.tar.gz,*.tar.bz2 | 
+Get-ChildItem "C:\src" -Filter *.tar.gz | 
+Foreach-Object {
+  7z x $_.FullName >> verbose_output.log 2>&1
+  7z x $_.BaseName + ".tar" >> verbose_output.log 2>&1
+}
+Get-ChildItem "C:\src" -Filter *.tar.bz2 | 
 Foreach-Object {
   7z x $_.FullName >> verbose_output.log 2>&1
   7z x $_.BaseName + ".tar" >> verbose_output.log 2>&1
