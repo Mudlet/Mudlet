@@ -5524,30 +5524,37 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
 
 int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 {
-    string luaRegex;
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "tempBeginOfLineTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaRegex = lua_tostring(L, 1);
-    }
-
-    string luaFunction;
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "tempBeginOfLineTrigger: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 2);
-    }
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _reg = luaRegex.c_str();
-    QString _fun = luaFunction.c_str();
-    int timerID = pLuaInterpreter->startTempBeginOfLineTrigger(_reg, _fun);
-    lua_pushnumber(L, timerID);
+    QString pattern;
+    int triggerID;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #1 type (pattern as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    pattern = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (lua_isstring(L, 2)) {
+        string luaFunction = lua_tostring(L, 2);
+        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, luaFunction.c_str());
+    } else if (lua_isfunction(L, 2)) {
+        triggerID = pLuaInterpreter->startTempBeginOfLineTrigger(pattern, QString());
+
+        auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        trigger->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, trigger);
+        lua_pushvalue(L, 2);
+        lua_settable(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    lua_pushnumber(L, triggerID);
     return 1;
 }
 
