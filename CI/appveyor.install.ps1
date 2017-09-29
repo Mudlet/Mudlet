@@ -46,7 +46,7 @@ bash -c "./configure --prefix=$Env:MINGW_BASE_DIR_BASH" >> ..\verbose_output.log
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
 mingw32-make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
-make install >> ..\verbose_output.log 2>&1
+mingw32-make install >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling hunspell ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
 
@@ -59,7 +59,7 @@ cd build
 Write-Output "---- running cmake ----" | Tee-Object -File "..\..\verbose_output.log" -Append
 cmake -G "MSYS Makefiles" ..  >> ..\..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\..\verbose_output.log" -Append
-make -j 2  >> ..\..\verbose_output.log 2>&1
+mingw32-make -j 2  >> ..\..\verbose_output.log 2>&1
 Write-Output "---- installing yajl ----" | Tee-Object -File "..\..\verbose_output.log" -Append
 COPY yajl-2.0.1\lib\* $Env:MINGW_BASE_DIR\lib >> ..\..\verbose_output.log 2>&1
 XCOPY /S /I /Q yajl-2.0.1\include $Env:MINGW_BASE_DIR\include >> ..\..\verbose_output.log 2>&1
@@ -82,9 +82,9 @@ Write-Output "==== compiling and installing pcre ====" | Tee-Object -File "..\ve
 Write-Output "---- running configure ----" | Tee-Object -File "..\verbose_output.log" -Append
 bash -c "./configure --prefix=$Env:MINGW_BASE_DIR_BASH" >> ..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
-make -j 2 >> ..\verbose_output.log 2>&1
+mingw32-make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
-make install >> ..\verbose_output.log 2>&1
+mingw32-make install >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling pcre ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
 
@@ -93,21 +93,21 @@ Write-Output "==== compiling and installing sqlite ====" | Tee-Object -File "..\
 Write-Output "---- running configure ----" | Tee-Object -File "..\verbose_output.log" -Append
 bash -c "./configure --prefix=$Env:MINGW_BASE_DIR_BASH" >> ..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
-make -j 2 >> ..\verbose_output.log 2>&1
+mingw32-make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
-make install >> ..\verbose_output.log 2>&1
+mingw32-make install >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling sqlite ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
 
 cd zlib-1.2.11
 Write-Output "==== compiling and installing zlib ====" | Tee-Object -File "..\verbose_output.log" -Append
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
-make -f win32/Makefile.gcc -j 2 >> ..\verbose_output.log 2>&1
+mingw32-make -f win32/Makefile.gcc -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
 SET INCLUDE_PATH=$Env:MINGW_BASE_DIR\include
 SET LIBRARY_PATH=$Env:MINGW_BASE_DIR\lib
 SET BINARY_PATH=$Env:MINGW_BASE_DIR\bin
-make -f win32/Makefile.gcc install >> ..\verbose_output.log 2>&1
+mingw32-make -f win32/Makefile.gcc install >> ..\verbose_output.log 2>&1
 COPY zlib1.dll $Env:MINGW_BASE_DIR\bin >> ..\verbose_output.log 2>&1
 COPY libz.dll.a $Env:MINGW_BASE_DIR\lib >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling zlib ====" | Tee-Object -File "..\verbose_output.log" -Append
@@ -118,9 +118,9 @@ Write-Output "==== compiling and installing libzip ====" | Tee-Object -File "..\
 Write-Output "---- running configure ----" | Tee-Object -File "..\verbose_output.log" -Append
 bash -c "./configure --prefix=$Env:MINGW_BASE_DIR_BASH" >> ..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
-make -j 2 >> ..\verbose_output.log 2>&1
+mingw32-make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
-make install >> ..\verbose_output.log 2>&1
+mingw32-make install >> ..\verbose_output.log 2>&1
 COPY lib\zipconf.h $Env:MINGW_BASE_DIR\include >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling libzip ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
@@ -132,9 +132,9 @@ Write-Output "---- changing configure script ----" | Tee-Object -File "..\verbos
 Write-Output "---- running configure ----" | Tee-Object -File "..\verbose_output.log" -Append
 bash -c "./configure --disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH" >> ..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
-make -j 2 >> ..\verbose_output.log 2>&1
+mingw32-make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
-make install >> ..\verbose_output.log 2>&1
+mingw32-make install >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling zziplib ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
 
