@@ -4,10 +4,10 @@ if (-not $(Test-Path "C:\src")) {
     New-Item "C:\src" -ItemType "directory"
 }
 Set-Location "C:\src"
-$MsysPath = "$Env:MINGW_BASE_DIR\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:PATH"
-$NoMsysPath = "$Env:MINGW_BASE_DIR\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:PATH"
+$ShPath = "$Env:MINGW_BASE_DIR\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:PATH"
+$NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 
-$Env:PATH=$MsysPath
+$Env:PATH=$ShPath
 
 Write-Output "==== downloading dependencies ===="  | Tee-Object -File "verbose_output.log" -Append
 Invoke-WebRequest https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz -OutFile hunspell-1.4.1.tar.gz >> verbose_output.log 2>&1
@@ -53,7 +53,7 @@ mingw32-make install >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling hunspell ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
 
-$Env:Path = $NoMsysPath
+$Env:Path = $NoShPath
 cd lloyd-yajl-f4b2b1a
 Write-Output "==== compiling and installing yajl ====" | Tee-Object -File "..\verbose_output.log" -Append
 Write-Output "---- changing CMakeLists.txt ----" | Tee-Object -File "..\verbose_output.log" -Append
@@ -70,7 +70,7 @@ COPY yajl-2.0.1\lib\* $Env:MINGW_BASE_DIR\lib >> ..\..\verbose_output.log 2>&1
 XCOPY /S /I /Q yajl-2.0.1\include $Env:MINGW_BASE_DIR\include >> ..\..\verbose_output.log 2>&1
 Write-Output "==== finished handling yajl ====" | Tee-Object -File "..\..\verbose_output.log" -Append
 cd ..\..
-$Env:Path = $MsysPath
+$Env:Path = $ShPath
 
 Write-Output "==== compiling and installing lua ====" | Tee-Object -File "verbose_output.log" -Append
 Write-Output "---- copying luawinmake files ----" | Tee-Object -File "verbose_output.log" -Append
