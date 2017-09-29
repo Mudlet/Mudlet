@@ -28,10 +28,10 @@ Foreach-Object {
   7z x $_.FullName >> verbose_output.log 2>&1
   7z x $_.BaseName + ".tar" >> verbose_output.log 2>&1
 }
-7z -oopenssl-1.0.2l e openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
-7z x luarocks-2.4.0-win32.zip >> verbose_output.log 2>&1
-7z x luazip.zip >> verbose_output.log 2>&1
-7z x luawinmake.zip >> verbose_output.log 2>&1
+7z -o"openssl-1.0.2l" e "openssl-1.0.2l-i386-win32.zip" >> verbose_output.log 2>&1
+7z x "luarocks-2.4.0-win32.zip" >> verbose_output.log 2>&1
+7z x "luazip.zip" >> verbose_output.log 2>&1
+7z x "luawinmake.zip" >> verbose_output.log 2>&1
 Write-Output "==== finished extracting archives ====" >> verbose_output.log 2>&1
 
 cd hunspell-1.4.1
