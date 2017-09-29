@@ -3050,7 +3050,9 @@ inline int TBuffer::wrap(int startLine)
 void TBuffer::log(int fromLine, int toLine)
 {
     TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB != this || !mpHost->mpConsole->mLogToLogFile) { return; }
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+        return;
+    }
 
     if (fromLine >= size() || fromLine < 0) {
         return;
