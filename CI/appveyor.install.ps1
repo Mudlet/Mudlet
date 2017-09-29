@@ -44,7 +44,7 @@ Write-Output "==== compiling and installing hunspell ====" | Tee-Object -File ".
 Write-Output "---- running configure ----" | Tee-Object -File "..\verbose_output.log" -Append
 bash -c "./configure --prefix=$Env:MINGW_BASE_DIR_BASH" >> ..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
-make -j 2 >> ..\verbose_output.log 2>&1
+mingw32-make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
 make install >> ..\verbose_output.log 2>&1
 Write-Output "==== finished handling hunspell ====" | Tee-Object -File "..\verbose_output.log" -Append
