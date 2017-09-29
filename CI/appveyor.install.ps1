@@ -25,18 +25,18 @@ Write-Output "==== finished downloading dependencies ====" | Tee-Object -File "v
 Write-Output "==== extracting archives ====" | Tee-Object -File "verbose_output.log" -Append
 Get-ChildItem "C:\src" -Filter *.tar.gz | 
 Foreach-Object {
-  7z x $_.FullName >> verbose_output.log 2>&1
-  7z x $_.Directory + "\" + $_.BaseName >> verbose_output.log 2>&1
+  7z x $_.FullName -y >> verbose_output.log 2>&1
+  7z x $_.Directory + "\" + $_.BaseName -y> > verbose_output.log 2>&1
 }
 Get-ChildItem "C:\src" -Filter *.tar.bz2 | 
 Foreach-Object {
-  7z x $_.FullName >> verbose_output.log 2>&1
-  7z x $_.Directory + "\" + $_.BaseName>> verbose_output.log 2>&1
+  7z x $_.FullName >> verbose_output.log -y 2>&1
+  7z x $_.Directory + "\" + $_.BaseName -y >> verbose_output.log 2>&1
 }
-7z -o"openssl-1.0.2l" e "openssl-1.0.2l-i386-win32.zip" >> verbose_output.log 2>&1
-7z x "luarocks-2.4.0-win32.zip" >> verbose_output.log 2>&1
-7z x "luazip.zip" >> verbose_output.log 2>&1
-7z x "luawinmake.zip" >> verbose_output.log 2>&1
+7z -o"openssl-1.0.2l" e "openssl-1.0.2l-i386-win32.zip" -y >> verbose_output.log 2>&1
+7z x "luarocks-2.4.0-win32.zip" -y >> verbose_output.log 2>&1
+7z x "luazip.zip" -y >> verbose_output.log 2>&1
+7z x "luawinmake.zip" -y >> verbose_output.log 2>&1
 Write-Output "==== finished extracting archives ====" | Tee-Object -File "verbose_output.log" -Append
 
 cd hunspell-1.4.1
