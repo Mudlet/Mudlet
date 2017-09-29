@@ -9,12 +9,12 @@ $Env:PATH="$Env:MINGW_BASE_DIR\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\
 Write-Output "==== downloading dependencies ===="  | Tee-Object -File "verbose_output.log" -Append
 Invoke-WebRequest https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz -OutFile hunspell-1.4.1.tar.gz >> verbose_output.log 2>&1
 Invoke-WebRequest http://www.lua.org/ftp/lua-5.1.5.tar.gz -OutFile lua-5.1.5.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download -OutFile pcre-8.38.tar.gz >> verbose_output.log 2>&1
+Invoke-WebRequest https://sourceforge.net/projects/pcre/files/pcre/8.38/pcre-8.38.tar.gz/download -OutFile pcre-8.38.tar.gz -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome >> verbose_output.log 2>&1
 Invoke-WebRequest http://zlib.net/zlib-1.2.11.tar.gz -OutFile zlib-1.2.11.tar.gz >> verbose_output.log 2>&1
 Invoke-WebRequest http://www.sqlite.org/2013/sqlite-autoconf-3071700.tar.gz -OutFile sqlite-autoconf-3071700.tar.gz >> verbose_output.log 2>&1
 Invoke-WebRequest https://launchpad.net/ubuntu/+archive/primary/+files/libzip_0.11.2.orig.tar.gz -OutFile libzip_0.11.2.orig.tar.gz >> verbose_output.log 2>&1
 Invoke-WebRequest https://github.com/lloyd/yajl/tarball/2.0.1 -OutFile yajl-2.0.1.tar.gz >> verbose_output.log 2>&1
-Invoke-WebRequest https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download -OutFile zziplib-0.13.62.tar.bz2 >> verbose_output.log 2>&1
+Invoke-WebRequest https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download -OutFile zziplib-0.13.62.tar.bz2 -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome >> verbose_output.log 2>&1
 Invoke-WebRequest https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip -OutFile openssl-1.0.2l-i386-win32.zip >> verbose_output.log 2>&1
 Invoke-WebRequest http://keplerproject.github.io/luarocks/releases/luarocks-2.4.0-win32.zip -OutFile luarocks-2.4.0-win32.zip >> verbose_output.log 2>&1
 Invoke-WebRequest https://github.com/rjpcomputing/luazip/archive/master.zip -OutFile luazip.zip >> verbose_output.log 2>&1
@@ -25,13 +25,13 @@ Write-Output "==== finished downloading dependencies ====" | Tee-Object -File "v
 Write-Output "==== extracting archives ====" | Tee-Object -File "verbose_output.log" -Append
 Get-ChildItem "C:\src" -Filter *.tar.gz | 
 Foreach-Object {
-  7z x $_.FullName -y >> verbose_output.log 2>&1
-  7z x $_.Directory + "\" + $_.BaseName -y >> verbose_output.log 2>&1
+  7z x "$($_.FullName)" -y >> verbose_output.log 2>&1
+  7z x "$($_.Directory)\$($_.BaseName)" -y >> verbose_output.log 2>&1
 }
 Get-ChildItem "C:\src" -Filter *.tar.bz2 | 
 Foreach-Object {
-  7z x $_.FullName -y >> verbose_output.log 2>&1
-  7z x $_.Directory + "\" + $_.BaseName -y >> verbose_output.log 2>&1
+  7z x "$($_.FullName)" -y >> verbose_output.log 2>&1
+  7z x "$($_.Directory)\$($_.BaseName)" -y >> verbose_output.log 2>&1
 }
 7z -o"openssl-1.0.2l" e "openssl-1.0.2l-i386-win32.zip" -y >> verbose_output.log 2>&1
 7z x "luarocks-2.4.0-win32.zip" -y >> verbose_output.log 2>&1
