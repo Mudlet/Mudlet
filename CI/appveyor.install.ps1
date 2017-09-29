@@ -147,19 +147,19 @@ cd ..
 cd luarocks-2.4.0-win32
 Write-Output "==== installing luarocks and lua libraries ====" | Tee-Object -File "..\verbose_output.log" -Append
 Write-Output "---- installing luarocks ----" | Tee-Object -File "..\verbose_output.log" -Append
-& "install.bat" /P C:\LuaRocks /MW /Q >> ..\verbose_output.log 2>&1
+.\install.bat /P C:\LuaRocks /MW /Q >> ..\verbose_output.log 2>&1
 cd \LuaRocks\lua\luarocks
 Write-Output "---- changing luarocks config ----" | Tee-Object -File "..\verbose_output.log" -Append
 (gc cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> C:\src\verbose_output.log 2>&1
 cd \LuaRocks
 Write-Output "---- installing lfs ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
-luarocks install LuaFileSystem >> C:\src\verbose_output.log 2>&1
+.\luarocks install LuaFileSystem >> C:\src\verbose_output.log 2>&1
 Write-Output "---- installing luasql.sqlite3 ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
-luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="$Env:MINGW_BASE_DIR\include" SQLITE_LIBDIR="$Env:MINGW_BASE_DIR\lib" >> C:\src\verbose_output.log 2>&1
+.\luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="$Env:MINGW_BASE_DIR\include" SQLITE_LIBDIR="$Env:MINGW_BASE_DIR\lib" >> C:\src\verbose_output.log 2>&1
 Write-Output "---- installing rex.pcre ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
-luarocks install lrexlib-pcre PCRE_LIBDIR="$Env:MINGW_BASE_DIR\lib" PCRE_INCDIR="$Env:MINGW_BASE_DIR\include" >> C:\src\verbose_output.log 2>&1
+.\luarocks install lrexlib-pcre PCRE_LIBDIR="$Env:MINGW_BASE_DIR\lib" PCRE_INCDIR="$Env:MINGW_BASE_DIR\include" >> C:\src\verbose_output.log 2>&1
 Write-Output "---- installing lua-utf8 ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
-luarocks install luautf8 >> C:\src\verbose_output.log 2>&1
+.\luarocks install luautf8 >> C:\src\verbose_output.log 2>&1
 cd C:\src\luazip-master
 Write-Output "---- installing luazip ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
 gcc -O2 -c -o src/luazip.o -I$Env:MINGW_BASE_DIR\include src/luazip.c >> ..\verbose_output.log 2>&1
