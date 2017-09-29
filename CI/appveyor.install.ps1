@@ -47,11 +47,11 @@ Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log"
 make -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
 make install >> ..\verbose_output.log 2>&1
-Write-Output "==== finished handling hunspell ====" >> | Tee-Object -File "..\verbose_output.log" -Append
+Write-Output "==== finished handling hunspell ====" | Tee-Object -File "..\verbose_output.log" -Append
 cd ..
 
 cd lloyd-yajl-f4b2b1a
-Write-Output "==== compiling and installing yajl ====" >> | Tee-Object -File "..\verbose_output.log" -Append
+Write-Output "==== compiling and installing yajl ====" | Tee-Object -File "..\verbose_output.log" -Append
 Write-Output "---- changing CMakeLists.txt ----" | Tee-Object -File "..\verbose_output.log" -Append
 (Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt >> ..\verbose_output.log 2>&1
 mkdir build
@@ -67,7 +67,7 @@ Write-Output "==== finished handling yajl ====" | Tee-Object -File "..\..\verbos
 cd ..\..
 
 Write-Output "==== compiling and installing lua ====" | Tee-Object -File "verbose_output.log" -Append
-Write-Output "---- copying luawinmake files ----" >> | Tee-Object -File "verbose_output.log" -Append
+Write-Output "---- copying luawinmake files ----" | Tee-Object -File "verbose_output.log" -Append
 XCOPY /S /I /Q C:\src\luawinmake-master\etc C:\src\lua-5.1.5\etc >> verbose_output.log 2>&1
 cd lua-5.1.5
 Write-Output "---- compiling lua ----" | Tee-Object -File "..\verbose_output.log" -Append
@@ -158,7 +158,7 @@ cd C:\src\luazip-master
 Write-Output "---- installing luazip ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
 gcc -O2 -c -o src/luazip.o -I$Env:MINGW_BASE_DIR\include src/luazip.c >> ..\verbose_output.log 2>&1
 gcc -shared -o zip.dll src/luazip.o -L$Env:MINGW_BASE_DIR\lib -lzzip -lz $Env:MINGW_BASE_DIR\bin\lua51.dll -lm >> ..\verbose_output.log 2>&1
-Write-Output "==== finished installing luarocks and lua libraries ====" >> | Tee-Object -File "C:\src\verbose_output.log" -Append
+Write-Output "==== finished installing luarocks and lua libraries ====" | Tee-Object -File "C:\src\verbose_output.log" -Append
 
 if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   $Env:MUDLET_VERSION_BUILD = "-testing"
