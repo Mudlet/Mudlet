@@ -57,7 +57,7 @@ Write-Output "---- changing CMakeLists.txt ----" | Tee-Object -File "..\verbose_
 mkdir build
 cd build
 Write-Output "---- running cmake ----" | Tee-Object -File "..\..\verbose_output.log" -Append
-cmake -G "MSYS Makefiles" ..  >> ..\..\verbose_output.log 2>&1
+cmake -G "MinGW Makefiles" ..  >> ..\..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\..\verbose_output.log" -Append
 mingw32-make -j 2  >> ..\..\verbose_output.log 2>&1
 Write-Output "---- installing yajl ----" | Tee-Object -File "..\..\verbose_output.log" -Append
@@ -104,9 +104,9 @@ Write-Output "==== compiling and installing zlib ====" | Tee-Object -File "..\ve
 Write-Output "---- running make ----" | Tee-Object -File "..\verbose_output.log" -Append
 mingw32-make -f win32/Makefile.gcc -j 2 >> ..\verbose_output.log 2>&1
 Write-Output "---- running make install ----" | Tee-Object -File "..\verbose_output.log" -Append
-SET INCLUDE_PATH=$Env:MINGW_BASE_DIR\include
-SET LIBRARY_PATH=$Env:MINGW_BASE_DIR\lib
-SET BINARY_PATH=$Env:MINGW_BASE_DIR\bin
+$Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
+$Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
+$Env:BINARY_PATH = "$Env:MINGW_BASE_DIR\bin"
 mingw32-make -f win32/Makefile.gcc install >> ..\verbose_output.log 2>&1
 COPY zlib1.dll $Env:MINGW_BASE_DIR\bin >> ..\verbose_output.log 2>&1
 COPY libz.dll.a $Env:MINGW_BASE_DIR\lib >> ..\verbose_output.log 2>&1
@@ -141,7 +141,7 @@ cd ..
 cd luarocks-2.4.0-win32
 Write-Output "==== installing luarocks and lua libraries ====" | Tee-Object -File "..\verbose_output.log" -Append
 Write-Output "---- installing luarocks ----" | Tee-Object -File "..\verbose_output.log" -Append
-install.bat /P C:\LuaRocks /MW /Q >> ..\verbose_output.log 2>&1
+& "install.bat" /P C:\LuaRocks /MW /Q >> ..\verbose_output.log 2>&1
 cd \LuaRocks\lua\luarocks
 Write-Output "---- changing luarocks config ----" | Tee-Object -File "..\verbose_output.log" -Append
 (gc cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> C:\src\verbose_output.log 2>&1
