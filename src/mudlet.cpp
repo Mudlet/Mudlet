@@ -427,7 +427,7 @@ mudlet::mudlet()
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
     connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -1038,6 +1038,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
         mpCurrentActiveHost->mpConsole->hide();
     }
     mpCurrentActiveHost = pH;
+
+    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -1066,8 +1068,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
     mpCurrentActiveHost->mpConsole->show();
     mpTabBar->setCurrentIndex(newTabID);
-
-    slot_compact_input_line();
 
     int x = mpCurrentActiveHost->mpConsole->width();
     int y = mpCurrentActiveHost->mpConsole->height();
@@ -2678,7 +2678,7 @@ void mudlet::slot_multi_view()
 }
 
 
-void mudlet::slot_compact_input_line()
+void mudlet::slot_toggle_compact_input_line()
 {
     if (!mpCurrentActiveHost) { return; }
 
@@ -2692,6 +2692,21 @@ void mudlet::slot_compact_input_line()
         buttons->hide();
         dactionInputLine->setText(tr("Standard input line"));
         setCompactInputLine(true);
+    }
+}
+
+void mudlet::set_compact_input_line()
+{
+    if (!mpCurrentActiveHost) { return; }
+
+    auto buttons = mpCurrentActiveHost->mpConsole->buttonMainLayer;
+
+    if (!compactInputLine()) {
+        buttons->show();
+        dactionInputLine->setText(tr("Compact input line"));
+    } else {
+        buttons->hide();
+        dactionInputLine->setText(tr("Standard input line"));
     }
 }
 

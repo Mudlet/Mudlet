@@ -328,7 +328,9 @@ private:
     bool mshowMapAuditErrors;
     bool mCompactInputLine;
 
-    void slot_compact_input_line();
+    void slot_toggle_compact_input_line();
+
+    void set_compact_input_line();
 };
 
 class TConsoleMonitor : public QObject
