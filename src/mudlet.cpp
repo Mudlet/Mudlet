@@ -153,6 +153,7 @@ mudlet::mudlet()
 , replayToolBar(nullptr)
 , moduleTable(nullptr)
 , mshowMapAuditErrors(false)
+, mCompactInputLine(false)
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
@@ -372,6 +373,7 @@ mudlet::mudlet()
     mpTabBar->setFont(mdiFont);
 
     mainPane->show();
+
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -425,7 +427,7 @@ mudlet::mudlet()
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
     connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
-    connect(actionToggle_blah, &QAction::toggled, this, &mudlet::slot_show_blah);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -1064,6 +1066,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
     mpCurrentActiveHost->mpConsole->show();
     mpTabBar->setCurrentIndex(newTabID);
+
+    slot_compact_input_line();
+
     int x = mpCurrentActiveHost->mpConsole->width();
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
@@ -2080,6 +2085,7 @@ void mudlet::readSettings()
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     resize(size);
     move(pos);
     setIcoSize(mMainIconSize);
@@ -2132,6 +2138,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
+    settings.setValue("compactInputLine", mCompactInputLine);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2671,12 +2678,20 @@ void mudlet::slot_multi_view()
 }
 
 
-void mudlet::slot_show_blah(bool checked)
+void mudlet::slot_compact_input_line()
 {
-    if (checked) {
-        mpCurrentActiveHost->mpConsole->buttonMainLayer->show();
+    if (!mpCurrentActiveHost) { return; }
+
+    auto buttons = mpCurrentActiveHost->mpConsole->buttonMainLayer;
+
+    if (compactInputLine()) {
+        buttons->show();
+        dactionInputLine->setText(tr("Compact input line"));
+        setCompactInputLine(false);
     } else {
-        mpCurrentActiveHost->mpConsole->buttonMainLayer->hide();
+        buttons->hide();
+        dactionInputLine->setText(tr("Standard input line"));
+        setCompactInputLine(true);
     }
 }
 

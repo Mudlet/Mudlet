@@ -109,13 +109,13 @@
     </property>
     <addaction name="dactionScriptEditor"/>
     <addaction name="actionShow_Map"/>
+    <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
     <addaction name="actionLive_Help_Chat"/>
     <addaction name="actionPackage_manager"/>
     <addaction name="dactionReplay"/>
     <addaction name="actionModule_manager"/>
     <addaction name="actionPackage_Exporter"/>
-    <addaction name="actionToggle_blah"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -360,12 +360,9 @@
     <string>Alt+V</string>
    </property>
   </action>
-  <action name="actionToggle_blah">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
+  <action name="dactionInputLine">
    <property name="text">
-    <string>Toggle blah</string>
+    <string>Compact input line</string>
    </property>
    <property name="shortcut">
     <string>Alt+J</string>
