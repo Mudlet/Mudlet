@@ -162,8 +162,8 @@ Write-Output "---- installing lua-utf8 ----" | Tee-Object -File "C:\src\verbose_
 .\luarocks install luautf8 >> C:\src\verbose_output.log 2>&1
 cd C:\src\luazip-master
 Write-Output "---- installing luazip ----" | Tee-Object -File "C:\src\verbose_output.log" -Append
-gcc -O2 -c -o src/luazip.o -I$Env:MINGW_BASE_DIR\include src/luazip.c >> ..\verbose_output.log 2>&1
-gcc -shared -o zip.dll src/luazip.o -L$Env:MINGW_BASE_DIR\lib -lzzip -lz $Env:MINGW_BASE_DIR\bin\lua51.dll -lm >> ..\verbose_output.log 2>&1
+gcc -O2 -c -o src/luazip.o -I"$Env:MINGW_BASE_DIR/include" src/luazip.c >> ..\verbose_output.log 2>&1
+gcc -shared -o zip.dll src/luazip.o -L"$Env:MINGW_BASE_DIR/lib" -lzzip -lz "$Env:MINGW_BASE_DIR/bin/lua51.dll" -lm >> ..\verbose_output.log 2>&1
 Write-Output "==== finished installing luarocks and lua libraries ====" | Tee-Object -File "C:\src\verbose_output.log" -Append
 
 cd $Env:APPVEYOR_BUILD_FOLDER
