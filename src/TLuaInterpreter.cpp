@@ -10369,6 +10369,8 @@ int TLuaInterpreter::expandAlias(lua_State *L)
     }
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
+        // check if the 2nd argument is a 'false', but don't match if it is 'nil'
+        // because expandAlias("command") should be the same as expandAlias("command", nil)
         if (lua_isboolean(L, 2) && !lua_toboolean(L, 2)) {
             wantPrint = false;
         }
