@@ -76,7 +76,9 @@ TRoom::~TRoom()
     static quint64 runCount = 0;
     QElapsedTimer timer;
     timer.start();
-    mpRoomDB->__removeRoom(id);
+    if (mpRoomDB) {
+        mpRoomDB->__removeRoom(id);
+    }
     quint64 thisTime = timer.nsecsElapsed();
     cumulativeMean += (((thisTime * 1.0e-9) - cumulativeMean) / ++runCount);
     if (runCount % 1000 == 0) {
