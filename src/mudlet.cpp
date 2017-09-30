@@ -2682,7 +2682,7 @@ void mudlet::slot_toggle_compact_input_line()
 {
     if (!mpCurrentActiveHost) { return; }
 
-    auto buttons = mpCurrentActiveHost->mpConsole->buttonMainLayer;
+    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
 
     if (compactInputLine()) {
         buttons->show();
@@ -2699,7 +2699,7 @@ void mudlet::set_compact_input_line()
 {
     if (!mpCurrentActiveHost) { return; }
 
-    auto buttons = mpCurrentActiveHost->mpConsole->buttonMainLayer;
+    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
 
     if (!compactInputLine()) {
         buttons->show();
