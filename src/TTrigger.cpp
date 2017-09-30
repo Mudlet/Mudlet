@@ -1267,7 +1267,7 @@ void TTrigger::compile()
 bool TTrigger::setScript(const QString& script)
 {
     mScript = script;
-    if (script == QString("")) {
+    if (script.isEmpty()) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
     } else {
