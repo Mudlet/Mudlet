@@ -6,7 +6,7 @@
 #include <QSettings>
 #include <QTemporaryFile>
 #include <QFile>
-#include <QErrorMessage>
+#include <QMessageBox>
 #include <QDesktopServices>
 
 namespace dblsqd {

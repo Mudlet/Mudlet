@@ -455,5 +455,4 @@ void initUpdater()
 {
     auto feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
     auto updateDialog = new dblsqd::UpdateDialog(feed);
-    updateDialog->exec();
 }

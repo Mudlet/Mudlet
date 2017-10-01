@@ -39,11 +39,14 @@ private:
 
     QList<Release> releases;
 
+    void makeDownloadRequest(QUrl url);
+
     QNetworkAccessManager nam;
     QNetworkReply* feedReply;
     Release release;
     QNetworkReply* downloadReply;
     QTemporaryFile* downloadFile;
+    uint redirects;
 
 private slots:
     void handleFeedFinished();

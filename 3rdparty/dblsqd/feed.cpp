@@ -59,8 +59,10 @@ void Feed::setUrl(QString baseUrl, QString channel, QString os, QString arch, QS
         QString autoOs = QSysInfo::productType().toLower();
         if (autoOs == "windows") {
             autoOs = "win";
-        } else if (autoOs== "osx") {
+        } else if (autoOs == "osx" || autoOs == "macos") {
             autoOs = "mac";
+        } else {
+            autoOs = QSysInfo::kernelType();
         }
         urlParts << autoOs;
     }
@@ -149,6 +151,15 @@ void Feed::load() {
  * \sa downloadFinished() downloadError() downloadProgress()
  */
 void Feed::downloadRelease(Release release) {
+    release = release;
+    redirects = 0;
+    makeDownloadRequest(release.getDownloadUrl());
+}
+
+/*
+ * Private methods
+ */
+void Feed::makeDownloadRequest(QUrl url) {
     if (downloadReply != NULL && !downloadReply->isFinished()) {
         disconnect(downloadReply);
         downloadReply->abort();
@@ -158,11 +169,11 @@ void Feed::downloadRelease(Release release) {
         disconnect(downloadFile);
         downloadFile->close();
         downloadFile->deleteLater();
+        downloadFile = NULL;
     }
 
-    this->release = release;
-    QNetworkRequest request(release.getDownloadUrl());
-    downloadReply = nam.get(request);
+    QNetworkRequest request(url);
+    downloadReply= nam.get(request);
     connect(downloadReply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(handleDownloadProgress(qint64,qint64)));
     connect(downloadReply, SIGNAL(readyRead()), this, SLOT(handleDownloadReadyRead()));
     connect(downloadReply, SIGNAL(finished()), this, SLOT(handleDownloadFinished()));
@@ -244,7 +255,21 @@ void Feed::handleDownloadFinished() {
     if (downloadReply->error() != QNetworkReply::NoError) {
         emit downloadError(downloadReply->errorString());
         return;
+    } else if (!downloadReply->attribute(QNetworkRequest::RedirectionTargetAttribute).isNull()) {
+        if (redirects >= 8) {
+            emit downloadError(tr("Too many redirects."));
+            return;
+        }
+        QUrl redirectionTarget = downloadReply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+        QUrl redirectedUrl = downloadReply->url().resolved(redirectionTarget);
+        redirects ++;
+        makeDownloadRequest(redirectedUrl);
+        return;
+    } else if (downloadFile == NULL) {
+        emit downloadError(tr("No data received from server"));
+        return;
     }
+
     downloadFile->flush();
     downloadFile->seek(0);
     QCryptographicHash fileHash(QCryptographicHash::Sha256);

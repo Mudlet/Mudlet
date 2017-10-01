@@ -243,6 +243,7 @@ void UpdateDialog::startDownload() {
 
 void UpdateDialog::startUpdate() {
     if (QDesktopServices::openUrl(QUrl::fromLocalFile(updateFilePath))) {
+        done(QDialog::Accepted);
         QApplication::quit();
     } else {
         handleDownloadError(tr("Could not open downloaded file %1").arg(updateFilePath));
@@ -344,8 +345,11 @@ void UpdateDialog::handleDownloadFinished() {
 }
 
 void UpdateDialog::handleDownloadError(QString message) {
-    QErrorMessage* errorMessage = new QErrorMessage(this);
-    errorMessage->showMessage(message);
+    QMessageBox* messageBox = new QMessageBox(this);
+    messageBox->setIcon(QMessageBox::Warning);
+    messageBox->setText("There was an error while downloading the update.");
+    messageBox->setInformativeText(message);
+    messageBox->show();
     done(QDialog::Rejected);
 }
 
