@@ -427,13 +427,6 @@ int main(int argc, char* argv[])
     if (oldLinkFile.exists()) {
         // A One-time fix up past error that did not include the ".lnk" extension
         oldLinkFile.rename(homeLinkWindows);
-        QMessageBox::information(nullptr,
-                                 qApp->tr("Fixup", "main"),
-                                 QStringLiteral("<html><head/><body>%1</body></html>")
-                                 .arg(qApp->tr("<p>An error in some previous <i>Windows</i> versions of Mudlet failed to correctly make a symbolic link called \"mudlet-data\" from your <b>home</b> directory to where Mudlet stores <u>your</u> personal Mudlet game data; "
-                                         "this message is to advise you that a plain <i>file</i> with that name has been adjusted so that it is now a valid Windows <i>symlink</i>!</p>"
-                                         "<p>Unless you re-run an older version of Mudlet again you should not see this message again... 8-)</p>",
-                                               "main")));
     } else {
         QFile linkFile(homeLinkWindows);
         if (!linkFile.exists()) {
