@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>18</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -365,7 +365,7 @@
     <string>Compact input line</string>
    </property>
    <property name="shortcut">
-    <string>Alt+J</string>
+    <string>Alt+L</string>
    </property>
   </action>
  </widget>
