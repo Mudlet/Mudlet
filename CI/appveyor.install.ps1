@@ -1,5 +1,4 @@
 git submodule update --init --recursive
-Get-ChildItem Env:
 if (-not $(Test-Path "C:\src")) {
     New-Item "C:\src" -ItemType "directory"
 }
@@ -26,12 +25,12 @@ Invoke-WebRequest https://installbuilder.bitrock.com/installbuilder-qt-enterpris
 Write-Output "==== finished downloading dependencies ====" | Tee-Object -File "verbose_output.log" -Append
 
 Write-Output "==== extracting archives ====" | Tee-Object -File "verbose_output.log" -Append
-Get-ChildItem "C:\src" -Filter *.tar.gz | 
+Get-ChildItem "C:\src" -Filter *.tar.gz |
 Foreach-Object {
   7z x "$($_.FullName)" -y >> verbose_output.log 2>&1
   7z x "$($_.Directory)\$($_.BaseName)" -y >> verbose_output.log 2>&1
 }
-Get-ChildItem "C:\src" -Filter *.tar.bz2 | 
+Get-ChildItem "C:\src" -Filter *.tar.bz2 |
 Foreach-Object {
   7z x "$($_.FullName)" -y >> verbose_output.log 2>&1
   7z x "$($_.Directory)\$($_.BaseName)" -y >> verbose_output.log 2>&1
@@ -58,10 +57,9 @@ cd lloyd-yajl-f4b2b1a
 Write-Output "==== compiling and installing yajl ====" | Tee-Object -File "..\verbose_output.log" -Append
 Write-Output "---- changing CMakeLists.txt ----" | Tee-Object -File "..\verbose_output.log" -Append
 (Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt >> ..\verbose_output.log 2>&1
-mkdir build
+mkdir build  >>  ..\verbose_output.log 2>&1 #mkdir is an alias for New-Item, which returns the created item. We only want that output in the verbose log.
 cd build
 Write-Output "---- running cmake ----" | Tee-Object -File "..\..\verbose_output.log" -Append
-$Env:Path
 cmake -G "MinGW Makefiles" ..  >> ..\..\verbose_output.log 2>&1
 Write-Output "---- running make ----" | Tee-Object -File "..\..\verbose_output.log" -Append
 mingw32-make -j 2  >> ..\..\verbose_output.log 2>&1
