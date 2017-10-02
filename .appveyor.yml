@@ -16,11 +16,7 @@ install:
 - powershell ".\CI\appveyor.install.ps1"
 
 build_script:
-- cd C:\projects\mudlet-1\src
-- SET PATH=C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;%QT_BASE_DIR%\bin;%MINGW_BASE_DIR%\bin;C:\MinGW\msys\1.0\bin;%PATH%
-- qmake CONFIG+=release LIBPATH+=%MINGW_BASE_DIR_BASH%/bin INCLUDEPATH+=/c/Libraries/boost_1_63_0 INCLUDEPATH+=%MINGW_BASE_DIR_BASH%/include INCLUDEPATH+=%MINGW_BASE_DIR_BASH%/lib/include
-
-- make -j 2
+- powershell ".\CI\appveyor.build.ps1"
 
 - cd release
 - windeployqt.exe --release mudlet.exe

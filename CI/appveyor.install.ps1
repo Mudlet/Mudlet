@@ -163,21 +163,3 @@ Write-Output "---- installing luazip ----" | Tee-Object -File "C:\src\verbose_ou
 gcc -O2 -c -o src/luazip.o -I"$Env:MINGW_BASE_DIR/include" src/luazip.c >> ..\verbose_output.log 2>&1
 gcc -shared -o zip.dll src/luazip.o -L"$Env:MINGW_BASE_DIR/lib" -lzzip -lz "$Env:MINGW_BASE_DIR/bin/lua51.dll" -lm >> ..\verbose_output.log 2>&1
 Write-Output "==== finished installing luarocks and lua libraries ====" | Tee-Object -File "C:\src\verbose_output.log" -Append
-
-cd $Env:APPVEYOR_BUILD_FOLDER
-if ($Env:APPVEYOR_REPO_TAG -eq "false") {
-  $Env:MUDLET_VERSION_BUILD = "-testing"
-  if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-      $Script:Commit = git rev-parse --short $Env:APPVEYOR_REPO_COMMIT
-      $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-$Env:APPVEYOR_PULL_REQUEST_NUMBER$Commit"
-  } else {
-    $Script:Commit = git rev-parse --short HEAD
-    $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-$Commit"
-  }
-}
-
-$VersionLine = Select-String -Pattern "Version =" $Env:APPVEYOR_BUILD_FOLDER/src/mudlet.pro
-$VersionRegex = [regex]'= {1}(.+)$'
-$Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
-
-Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD"
