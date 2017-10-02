@@ -68,7 +68,7 @@ class dlgAboutDialog;
 class dlgProfilePreferences;
 
 
-class mudlet : public QMainWindow, public Ui::MainWindow
+class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
 
