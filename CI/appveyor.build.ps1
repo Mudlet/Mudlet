@@ -8,3 +8,5 @@ $Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_
 qmake CONFIG+=release LIBPATH+=$Env:MINGW_BASE_DIR\bin INCLUDEPATH+=C:\Libraries\boost_1_63_0 INCLUDEPATH+=$Env:MINGW_BASE_DIR\include INCLUDEPATH+=$Env:MINGW_BASE_DIR\lib\include mudlet.pro
 
 mingw32-make -j 2
+
+CI\appveyor.after_success.ps1

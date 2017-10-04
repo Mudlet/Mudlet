@@ -18,31 +18,6 @@ install:
 build_script:
 - powershell ".\CI\appveyor.build.ps1"
 
-- cd release
-- windeployqt.exe --release mudlet.exe
-- COPY %MINGW_BASE_DIR%\lib\libyajl.dll .
-- COPY C:\src\lua-5.1.5\src\lua51.dll .
-- COPY C:\src\openssl-1.0.2l\libeay32.dll .
-- COPY C:\src\openssl-1.0.2l\ssleay32.dll .
-- COPY %MINGW_BASE_DIR%\bin\libzip-2.dll .
-- COPY %MINGW_BASE_DIR%\bin\libhunspell-1.4-0.dll .
-- COPY %MINGW_BASE_DIR%\bin\libpcre-1.dll .
-- COPY %MINGW_BASE_DIR%\bin\libsqlite3-0.dll .
-- COPY %MINGW_BASE_DIR%\bin\zlib1.dll .
-- XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
-- COPY ..\*.dic .
-- COPY C:\src\luazip-master\zip.dll .
-- XCOPY /S /I /Q %MINGW_BASE_DIR%\lib\lua\5.1 .
-
-- DEL /Q *.cpp
-- DEL /Q *.o
-
-after_build:
-- C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
-- git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
-- cd C:\projects\installers\windows
-- nuget install secure-file -ExcludeVersion
-
 on_failure:
 - cd C:\src
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
