@@ -31,6 +31,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
 
+    C:\MinGW\msys\1.0\bin\scp.exe --help
 
    <#
     This is the shell version:
