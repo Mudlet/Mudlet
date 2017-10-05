@@ -24,7 +24,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   Remove-Item * -include *.cpp, *.o
 
   if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-      DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+      $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
   } else {
     C:\src\installbuilder-qt-installer.exe --mode unattended --unattendedmodeui none
     git clone https://github.com/keneanung/mudlet-installers.git C:\projects\installers
@@ -56,7 +56,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-  prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
+  $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
 }
 
 if (Test-Path variable:DEPLOY_URL) {
