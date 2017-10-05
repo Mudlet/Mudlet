@@ -20,7 +20,7 @@
 
 
 #include "THighlighter.h"
-
+#include <QRegularExpression>
 
 THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 {
@@ -54,7 +54,7 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
                     << R"(\breturn\b)"
                     << R"(\belseif\b)";
     foreach (QString pattern, keywordPatterns) {
-        rule.pattern = QRegExp(pattern);
+        rule.pattern = QRegularExpression(pattern);
         rule.format = keywordFormat;
         highlightingRules.append(rule);
     }
@@ -62,38 +62,39 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 
     classFormat.setFontWeight(QFont::Bold);
     classFormat.setForeground(Qt::darkMagenta);
-    rule.pattern = QRegExp(R"(\bQ[A-Za-z]+\b)");
+    rule.pattern = QRegularExpression(QStringLiteral(R"(\bQ[A-Za-z]+\b)"));
     rule.format = classFormat;
     highlightingRules.append(rule);
 
     functionFormat.setFontItalic(false);
     functionFormat.setFontWeight(QFont::Bold);
     functionFormat.setForeground(Qt::black);
-    rule.pattern = QRegExp(R"(\b[A-Za-z0-9_]+(?=\())");
+    rule.pattern = QRegularExpression(QStringLiteral(R"(\b[A-Za-z0-9_]+(?=\())"));
     rule.format = functionFormat;
     highlightingRules.append(rule);
 
     quotationFormat.setForeground(Qt::darkGreen);
-    rule.pattern = QRegExp(R"("[^"]*")");
+    rule.pattern = QRegularExpression(QStringLiteral(R"("[^"]*")"));
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 
-    rule.pattern = QRegExp(R"(\[\[[^\]\]]*\]\])");
+    rule.pattern = QRegularExpression(QStringLiteral(R"(\[\[[^\]\]]*\]\])"));
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 
     singleLineCommentFormat.setForeground(Qt::darkGreen);
-    rule.pattern = QRegExp("--[^\n]*"); //\\[\\]]*" );
+    rule.pattern = QRegularExpression(QStringLiteral("--[^\n]*")); //\\[\\]]*" ));
+
     rule.format = singleLineCommentFormat;
     highlightingRules.append(rule);
 
     multiLineCommentFormat.setForeground(Qt::darkGreen);
 
-    stringStart = QRegExp(R"(\[\[)");
-    stringEnd = QRegExp(R"(\]\])");
+    stringStart = QRegularExpression(QStringLiteral(R"(\[\[)"));
+    stringEnd = QRegularExpression(QStringLiteral(R"(\]\])"));
 
-    commentStartExpression = QRegExp(R"(\[\[)");
-    commentEndExpression = QRegExp(R"(\]\])");
+    commentStartExpression = QRegularExpression(QStringLiteral(R"(\[\[)"));
+    commentEndExpression = QRegularExpression(QStringLiteral(R"(\]\])"));
 
 
     searchFormat.setForeground(QColor(Qt::black));
@@ -103,7 +104,7 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
     searchFormat.setForeground(QColor(Qt::black));
     searchFormat.setBackground(QColor(Qt::yellow));
 
-    rule.pattern = QRegExp(mSearchPattern);
+    rule.pattern = QRegularExpression(mSearchPattern);
     rule.format = searchFormat;
     highlightingRules.append(rule);
 }
@@ -111,12 +112,11 @@ THighlighter::THighlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 void THighlighter::setSearchPattern(QString p)
 {
     HighlightingRule rule;
-    mSearchPattern = QRegExp::escape(p);
+    mSearchPattern = QRegularExpression::escape(p);
     searchFormat.setForeground(QColor(Qt::black));
     searchFormat.setBackground(QColor(Qt::yellow));
 
-    rule.pattern = QRegExp(mSearchPattern);
-    rule.pattern.setCaseSensitivity(Qt::CaseInsensitive);
+    rule.pattern = QRegularExpression(mSearchPattern, QRegularExpression::CaseInsensitiveOption);
     rule.format = searchFormat;
     highlightingRules.last() = rule;
 }
@@ -127,12 +127,15 @@ void THighlighter::highlightBlock(const QString& text)
         return;
     }
     foreach (HighlightingRule rule, highlightingRules) {
-        QRegExp expression(rule.pattern);
-        int index = text.indexOf(expression);
+        QRegularExpression expression(rule.pattern);
+        QRegularExpressionMatch match = expression.match(text);
+
+        int index = match.capturedStart();
         while (index >= 0) {
-            int length = expression.matchedLength();
+            int length = match.capturedLength();
             setFormat(index, length, rule.format);
-            index = text.indexOf(expression, index + length);
+            match = expression.match(text, index + length);
+            index = match.capturedStart();
         }
     }
     setCurrentBlockState(0);
@@ -154,7 +157,7 @@ void THighlighter::highlightBlock(const QString& text)
     }
 
 
-    QRegExp expression(highlightingRules.last().pattern);
+    QRegularExpression expression(highlightingRules.last().pattern);
     int index = text.indexOf(mSearchPattern, 0, Qt::CaseInsensitive);
     while (index >= 0) {
         int length = mSearchPattern.length();

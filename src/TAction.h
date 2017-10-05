@@ -29,6 +29,7 @@
 #include <QColor>
 #include <QIcon>
 #include <QPointer>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 class Host;
@@ -110,7 +111,7 @@ public:
     QString mName;
     QString mCommandButtonUp;
     QString mCommandButtonDown;
-    QRegExp mRegex;
+    QRegularExpression mRegex;
     QString mScript;
     bool mIsPushDownButton;
 

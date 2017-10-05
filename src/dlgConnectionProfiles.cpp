@@ -221,7 +221,7 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
         return;
     }
 
-    if (port.indexOf(QRegExp(QStringLiteral("^\\d+$")), 0) == -1) {
+    if (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1) {
         QString val = port;
         val.chop(1);
         port_entry->setText(val);
@@ -822,23 +822,25 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (int i = 0; i < entries.size(); ++i) {
-        QRegExp rx(QStringLiteral("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        if (rx.indexIn(entries.at(i)) != -1) {
+        QRegularExpression rx(QStringLiteral("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
+        QRegularExpressionMatch match = rx.match(entries.at(i));
+
+        if (match.capturedStart() != -1) {
             QString day;
-            QString month = rx.cap(2);
+            QString month = match.captured(2);
             QString year;
-            QString hour = rx.cap(4);
-            QString minute = rx.cap(5);
-            QString second = rx.cap(6);
-            if (rx.cap(1).toInt() > 31 && rx.cap(3).toInt() >= 1 && rx.cap(3).toInt() <= 31) {
+            QString hour = match.captured(4);
+            QString minute = match.captured(5);
+            QString second = match.captured(6);
+            if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
                 // I have been experimenting with code that puts the year first
                 // which is actually quite useful - this accommodates such cases
                 // as well... - SlySven
-                year = rx.cap(1);
-                day = rx.cap(3);
+                year = match.captured(1);
+                day = match.captured(3);
             } else {
-                day = rx.cap(1);
-                year = rx.cap(3);
+                day = match.captured(1);
+                year = match.captured(3);
             }
 
 

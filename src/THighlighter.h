@@ -25,6 +25,7 @@
 #include "pre_guard.h"
 #include <QSyntaxHighlighter>
 #include <QTextCharFormat>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 class QTextDocument;
@@ -47,15 +48,15 @@ protected:
 private:
     struct HighlightingRule
     {
-        QRegExp pattern;
+        QRegularExpression pattern;
         QTextCharFormat format;
     };
     QString mSearchPattern;
     QVector<HighlightingRule> highlightingRules;
-    QRegExp commentStartExpression;
-    QRegExp commentEndExpression;
-    QRegExp stringStart;
-    QRegExp stringEnd;
+    QRegularExpression commentStartExpression;
+    QRegularExpression commentEndExpression;
+    QRegularExpression stringStart;
+    QRegularExpression stringEnd;
     QTextCharFormat keywordFormat;
     QTextCharFormat searchFormat;
     QTextCharFormat classFormat;
