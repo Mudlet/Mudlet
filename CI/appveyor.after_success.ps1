@@ -60,7 +60,7 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 }
 
 if (Test-Path variable:DEPLOY_URL) {
-  Invoke-WebRequest -Body "message=Deployed Mudlet ``$Env:VERSION$Env:MUDLET_VERSION_BUILD`` (windows${prId}) to [$DEPLOY_URL]($DEPLOY_URL)" https://webhooks.gitter.im/e/cc99072d43b642c4673a
+  Invoke-WebRequest -Method POST -Body "message=Deployed Mudlet ``$Env:VERSION$Env:MUDLET_VERSION_BUILD`` (windows${prId}) to [$DEPLOY_URL]($DEPLOY_URL)" https://webhooks.gitter.im/e/cc99072d43b642c4673a
 }
 
 echo ""
