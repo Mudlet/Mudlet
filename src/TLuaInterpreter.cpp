@@ -53,7 +53,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
@@ -11121,15 +11121,18 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     // auto-detect IRE composer
     if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
-        QRegExp rx(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit");
-        if (rx.indexIn(string_data) != -1) {
-            QString title = rx.cap(1);
-            QString initialText = rx.cap(2);
-            initialText.replace(QString(R"(\n)"), QString("\n"));
+        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
+        QRegularExpressionMatch match = rx.match(string_data);
+
+        if (match.capturedStart() != -1) {
+            QString title = match.captured(1);
+            QString initialText = match.captured(2);
+            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
             Host& host = getHostFromLua(L);
             if (host.mTelnet.mpComposer) {
                 return;
             }
+
             host.mTelnet.mpComposer = new dlgComposer(&host);
             host.mTelnet.mpComposer->init(title, initialText);
             host.mTelnet.mpComposer->raise();

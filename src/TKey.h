@@ -26,7 +26,7 @@
 
 #include "pre_guard.h"
 #include <QPointer>
-#include <QRegExp>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 class Host;
@@ -82,7 +82,7 @@ private:
     int mKeyModifier;
 
     QString mRegexCode;
-    QRegExp mRegex;
+    QRegularExpression mRegex;
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;

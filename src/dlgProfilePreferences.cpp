@@ -45,7 +45,7 @@
 #include <QMainWindow>
 #include <QNetworkDiskCache>
 #include <QPalette>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextOption>
 #include <QToolBar>
@@ -103,10 +103,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     QDir dir(path);
 
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegExp rex(R"(\.dic$)");
+    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
     entries = entries.filter(rex);
     for (int i = 0; i < entries.size(); i++) {
-        QString n = entries[i].replace(".dic", "");
+        QString n = entries[i].replace(QStringLiteral(".dic"), "");
         auto item = new QListWidgetItem(entries[i]);
         dictList->addItem(item);
         if (entries[i] == mpHost->mSpellDic) {
