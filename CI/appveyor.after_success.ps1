@@ -21,8 +21,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   COPY C:\src\luazip-master\zip.dll .
   XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
-  DEL /Q *.cpp
-  DEL /Q *.o
+  Remove-Item * -include *.cpp, *.o
 
   if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
       DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
