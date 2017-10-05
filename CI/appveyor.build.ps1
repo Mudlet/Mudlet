@@ -9,4 +9,4 @@ qmake CONFIG+=release LIBPATH+=$Env:MINGW_BASE_DIR\bin INCLUDEPATH+=C:\Libraries
 
 mingw32-make -j 2
 
-CI\appveyor.after_success.ps1
+.\CI\appveyor.after_success.ps1
