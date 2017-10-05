@@ -31,8 +31,6 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
     cd C:\projects\installers\windows
     nuget install secure-file -ExcludeVersion
 
-    C:\MinGW\msys\1.0\bin\scp.exe --help
-
    <#
     This is the shell version:
     # add ssh-key to ssh-agent for deployment
@@ -55,6 +53,8 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
 
   }
 }
+
+C:\MinGW\msys\1.0\bin\scp.exe --help
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
   $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
