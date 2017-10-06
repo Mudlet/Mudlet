@@ -463,8 +463,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->endChanges();
 
     connect(comboBox_searchTerms, SIGNAL(activated(const QString&)), this, SLOT(slot_searchMudletItems(const QString&)));
-    connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_trigger_selected(QTreeWidgetItem*)));
-    connect(treeWidget_triggers, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
+    connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
     connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_key_selected(QTreeWidgetItem*)));
     connect(treeWidget_keys, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
     connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_timer_selected(QTreeWidgetItem*)));
@@ -7267,20 +7267,23 @@ void dlgTriggerEditor::slot_paste_xml()
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
 
-    // get the currently selected object while handling the case that nothing might be selected
-    auto currentlySelectedTrigger = !mpCurrentTriggerItem ? nullptr : mpHost->getTriggerUnit()->getTrigger(mpCurrentTriggerItem->data(0, Qt::UserRole).toInt());
-    auto currentlySelectedAlias = !mpCurrentAliasItem ? nullptr : mpHost->getAliasUnit()->getAlias(mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
-    auto currentlySelectedAction = !mpCurrentActionItem ? nullptr : mpHost->getActionUnit()->getAction(mpCurrentActionItem->data(0, Qt::UserRole).toInt());
-    auto currentlySelectedTimer = !mpCurrentTimerItem ? nullptr : mpHost->getTimerUnit()->getTimer(mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
-    auto a = mpCurrentScriptItem->isSelected();
-    qDebug() << a;
-    qDebug() << mpCurrentScriptItem;
-    auto ar = mpCurrentScriptItem->data(0, Qt::UserRole);
-    qDebug() << ar;
-    qDebug() << mpCurrentScriptItem;
-    auto arr = ar.toInt();
-    auto currentlySelectedScript = !mpCurrentScriptItem ? nullptr : mpHost->getScriptUnit()->getScript(mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
-    auto currentlySelectedKey = !mpCurrentKeyItem ? nullptr : mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+    // get the currently selected object, while handling the case that nothing might be selected
+    TTrigger* currentlySelectedTrigger = nullptr;
+    TAlias* currentlySelectedAlias = nullptr;
+    TAction* currentlySelectedAction = nullptr;
+    TTimer* currentlySelectedTimer = nullptr;
+    TScript* currentlySelectedScript = nullptr;
+    TKey* currentlySelectedKey = nullptr;
+
+    if (mpCurrentTriggerItem) {
+        auto blah = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
+        currentlySelectedTrigger = mpHost->getTriggerUnit()->getTrigger(blah);
+    }
+    currentlySelectedAlias = !mpCurrentAliasItem ? nullptr : mpHost->getAliasUnit()->getAlias(mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
+    currentlySelectedAction = !mpCurrentActionItem ? nullptr : mpHost->getActionUnit()->getAction(mpCurrentActionItem->data(0, Qt::UserRole).toInt());
+    currentlySelectedTimer = !mpCurrentTimerItem ? nullptr : mpHost->getTimerUnit()->getTimer(mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
+    currentlySelectedScript = !mpCurrentScriptItem ? nullptr : mpHost->getScriptUnit()->getScript(mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
+    currentlySelectedKey = !mpCurrentKeyItem ? nullptr : mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
 
     std::tie(importedItemType, importedItemID) =
             reader.importFromClipboard(currentlySelectedTrigger, currentlySelectedAlias, currentlySelectedAction, currentlySelectedTimer, currentlySelectedScript, currentlySelectedKey);
