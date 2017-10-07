@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -730,8 +730,9 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             if (mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
-                QString filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (3 of 6)
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -766,8 +767,9 @@ void TConsole::closeEvent(QCloseEvent* event)
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
-                QString filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (4 of 6)
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -812,14 +814,15 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         // We don't support logging anything other than main console (at present?)
     }
 
-    QFile file(QStringLiteral("%1/.config/mudlet/autolog").arg(QDir::homePath()));
+    // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
+    // but the action is "Per Profile"...!
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file);
         file.close();
 
-        QString directoryLogFile = QStringLiteral("%1/.config/mudlet/profiles/%2/log").arg(QDir::homePath(), profile_name);
-        mLogFileName = QStringLiteral("%1/%2").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
+        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
         // Revised file name derived from time so that alphabetical filename and
         // date sort order are the same...
         QDir dirLogFile;
@@ -829,9 +832,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
 
         mpHost->mIsCurrentLogFileInHtmlFormat = mpHost->mIsNextLogFileInHtmlFormat;
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogFileName.append(QStringLiteral(".html"));
+            mLogFileName = QStringLiteral("%1/%2.html").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
         } else {
-            mLogFileName.append(QStringLiteral(".txt"));
+            mLogFileName = QStringLiteral("%1/%2.txt").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#hh-mm-ss")));
         }
         mLogFile.setFileName(mLogFileName);
         mLogFile.open(QIODevice::WriteOnly);
@@ -893,6 +896,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         }
         logButton->setToolTip(tr("<html><head/><body><p>Stop logging MUD output to log file.</p></body></html>"));
     } else {
+        buffer.logRemainingOutput();
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << "</div></body>\n";
             mLogStream << "</html>\n";
@@ -925,9 +929,10 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/log";
-        QString mLogFileName = directoryLogFile + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
-        mLogFileName.append(".dat");
+        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (5 of 6)
+        QString mLogFileName = QStringLiteral("%1/%2.dat")
+                               .arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -1090,11 +1095,12 @@ void TConsole::setConsoleFgColor(int r, int g, int b)
     return time;
    } */
 
-
+// Actually means load a "replay" (which will currently be a *.dat) file
 void TConsole::loadRawFile(std::string n)
 {
-    QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/log";
-    QString fileName = directoryLogFile + "/" + QString(n.c_str());
+    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+    QString fileName = QStringLiteral("%1/%2")
+                       .arg(directoryLogFile, QString(n.c_str()));
     mpHost->mTelnet.loadReplay(fileName);
 }
 
@@ -1434,10 +1440,11 @@ bool TConsole::saveMap(const QString& location)
 {
     QDir dir_map;
     QString filename_map;
-    QString directory_map = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/map";
+    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
 
-    if (location == "") {
-        filename_map = directory_map + "/" + QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss") + "map.dat";
+    if (location.isEmpty()) {
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (6 of 6)
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     } else {
         filename_map = location;
     }
@@ -1554,7 +1561,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {
             // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), pHost->getName(), fileInfo.filePath()));
+            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
                 filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
@@ -2552,6 +2559,9 @@ void TConsole::slot_searchBufferUp()
     if (_txt != mSearchQuery) {
         mSearchQuery = _txt;
         mCurrentSearchResult = buffer.lineBuffer.size();
+    } else {
+        // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
+        mCurrentSearchResult = std::min(mCurrentSearchResult, buffer.lineBuffer.size());
     }
     if (buffer.lineBuffer.size() < 1) {
         return;

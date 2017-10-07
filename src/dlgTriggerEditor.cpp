@@ -353,7 +353,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* saveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-as.png")), tr("Save Item"), this);
     saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                   .arg(tr("Saves the selected item. (CTRL+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, "
+                                   .arg(tr("Saves the selected item. (Ctrl+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, "
                                            "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
@@ -385,7 +385,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     profileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     profileSaveAction->setToolTip(
             QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                    .arg(tr(R"(Saves your profile. (CTRL+SHIFT+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
+                    .arg(tr(R"(Saves your profile. (Ctrl+Shift+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
     profileSaveAction->setStatusTip(
             tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
     connect(profileSaveAction, SIGNAL(triggered()), this, SLOT(slot_profileSaveAction()));
@@ -541,7 +541,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpSourceEditorArea->hide();
 
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
 
     treeWidget_triggers->show();
     treeWidget_aliases->hide();
@@ -3975,6 +3975,8 @@ void dlgTriggerEditor::saveTrigger()
             }
         }
         if (pT->state()) {
+            clearEditorNotification();
+
             if (old_name == "New Trigger" || old_name == "New Trigger Group") {
                 QIcon _icon;
                 if (pT->isFolder()) {
@@ -4057,6 +4059,8 @@ void dlgTriggerEditor::saveTimer()
         }
 
         if (pT->state()) {
+            clearEditorNotification();
+
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
         } else {
@@ -4064,6 +4068,7 @@ void dlgTriggerEditor::saveTimer()
             iconError.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
+            showError(pT->getError());
         }
     }
 }
@@ -4142,6 +4147,8 @@ void dlgTriggerEditor::saveAlias()
         }
 
         if (pT->state()) {
+            clearEditorNotification();
+
             if (old_name == "New Alias") {
                 QIcon _icon;
                 if (pT->isFolder()) {
@@ -4263,14 +4270,16 @@ void dlgTriggerEditor::saveAction()
         }
 
         if (pA->state()) {
+            clearEditorNotification();
+
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
-
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
+            showError(pA->getError());
         }
 
         // If not active, don't bother raising the TToolBar for this save.
@@ -4325,60 +4334,71 @@ void dlgTriggerEditor::saveScript()
     }
 
 
-    int triggerID = pItem->data(0, Qt::UserRole).toInt();
-    TScript* pT = mpHost->getScriptUnit()->getScript(triggerID);
-    if (pT) {
-        old_name = pT->getName();
-        pT->setName(name);
-        pT->setEventHandlerList(handlerList);
-        pT->setScript(script);
+    int scriptID = pItem->data(0, Qt::UserRole).toInt();
+    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
+    if (!pT) {
+        return;
+    }
 
-        pT->compile();
-        QIcon icon;
-        if (pT->isFolder()) {
-            if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
-                    icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                }
+    old_name = pT->getName();
+    pT->setName(name);
+    pT->setEventHandlerList(handlerList);
+    pT->setScript(script);
+
+    pT->compile();
+    QIcon icon;
+    if (pT->isFolder()) {
+        if (!pT->mPackageName.isEmpty()) {
+            if (pT->isActive()) {
+                icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
             } else {
-                if (pT->isActive()) {
-                    icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
-                }
+                icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
             }
         } else {
             if (pT->isActive()) {
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
             } else {
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
             }
         }
-
-        if (pT->state()) {
-            if (old_name == "New Script" || old_name == "New Script Group") {
-                QIcon _icon;
-                if (pT->isFolder()) {
-                    _icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                } else {
-                    _icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                }
-                pItem->setIcon(0, _icon);
-                pItem->setText(0, name);
-                pT->setIsActive(true);
-            } else {
-                pItem->setIcon(0, icon);
-                pItem->setText(0, name);
-            }
+    } else {
+        if (pT->isActive()) {
+            icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
         } else {
-            QIcon iconError;
-            iconError.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            pItem->setIcon(0, iconError);
-            pItem->setText(0, name);
+            icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
         }
     }
+
+    if (pT->state()) {
+        clearEditorNotification();
+
+        if (old_name == "New Script" || old_name == "New Script Group") {
+            QIcon _icon;
+            if (pT->isFolder()) {
+                _icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
+            } else {
+                _icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+            }
+            pItem->setIcon(0, _icon);
+            pItem->setText(0, name);
+            pT->setIsActive(true);
+        } else {
+            pItem->setIcon(0, icon);
+            pItem->setText(0, name);
+        }
+
+    } else {
+        QIcon iconError;
+        iconError.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
+        pItem->setIcon(0, iconError);
+        pItem->setText(0, name);
+        showError(pT->getError());
+    }
+}
+
+void dlgTriggerEditor::clearEditorNotification() const
+{
+    mpSystemMessageArea->hide();
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int nameType, int valueType)
@@ -4678,14 +4698,15 @@ void dlgTriggerEditor::saveKey()
         }
 
         if (pT->state()) {
+            clearEditorNotification();
             pItem->setIcon(0, icon);
             pItem->setText(0, name);
-
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
+            showError(pT->getError());
         }
     }
 }
@@ -4763,7 +4784,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     mpCurrentTriggerItem = pItem;
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     mpTriggersMainArea->lineEdit_trigger_name->setText("");
     clearDocument(mpSourceEditorEdbee); // Trigger Select
     mpTriggersMainArea->checkBox_multlinetrigger->setChecked(false);
@@ -4898,7 +4919,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
     mpCurrentAliasItem = pItem;
     mpAliasMainArea->show();
     mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
@@ -4942,7 +4963,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
     mpCurrentKeyItem = pItem;
     mpKeysMainArea->show();
     mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     mpKeysMainArea->lineEdit_key_command->clear();
     mpKeysMainArea->lineEdit_key_binding->clear();
     mpKeysMainArea->lineEdit_key_name->clear();
@@ -5263,7 +5284,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
     mpActionsMainArea->show();
     mpSourceEditorEdbee->show();
 
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     clearDocument(mpSourceEditorEdbee); // Action Select
 
     mpActionsMainArea->lineEdit_action_icon->clear();
@@ -5407,7 +5428,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
     mpCurrentScriptItem = pItem;
     mpScriptsMainArea->show();
     mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     clearDocument(mpSourceEditorEdbee); // Script Select
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
@@ -5447,7 +5468,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     mpCurrentTimerItem = pItem;
     mpTimersMainArea->show();
     mpSourceEditorArea->show();
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     clearDocument(mpSourceEditorEdbee); // Timer Select
 
     mpTimersMainArea->lineEdit_timer_command->clear();
@@ -5517,6 +5538,8 @@ void dlgTriggerEditor::fillout_form()
             expand_child_triggers(trigger, pItem);
         }
         if (trigger->state()) {
+            clearEditorNotification();
+
             if (trigger->isFilterChain()) {
                 if (trigger->isActive()) {
                     if (trigger->ancestorsActive()) {
@@ -5598,6 +5621,8 @@ void dlgTriggerEditor::fillout_form()
             expand_child_timers(timer, pItem);
         }
         if (timer->state()) {
+            clearEditorNotification();
+
             if (timer->isFolder()) {
                 if (!timer->mPackageName.isEmpty()) {
                     if (timer->isActive()) {
@@ -5656,6 +5681,8 @@ void dlgTriggerEditor::fillout_form()
             expand_child_scripts(script, pItem);
         }
         if (script->state()) {
+            clearEditorNotification();
+
             if (script->isFolder()) {
                 if (!script->mPackageName.isEmpty()) {
                     if (script->isActive()) {
@@ -5705,6 +5732,8 @@ void dlgTriggerEditor::fillout_form()
             expand_child_alias(alias, pItem);
         }
         if (alias->state()) {
+            clearEditorNotification();
+
             if (alias->isFolder()) {
                 if (!alias->mPackageName.isEmpty()) {
                     if (alias->isActive()) {
@@ -5768,6 +5797,8 @@ void dlgTriggerEditor::fillout_form()
             expand_child_action(action, pItem);
         }
         if (action->state()) {
+            clearEditorNotification();
+
             if (action->isFolder()) {
                 if (!action->mPackageName.isEmpty()) {
                     if (action->isActive()) {
@@ -5823,6 +5854,8 @@ void dlgTriggerEditor::fillout_form()
             expand_child_key(key, pItem);
         }
         if (key->state()) {
+            clearEditorNotification();
+
             if (key->isFolder()) {
                 if (!key->mPackageName.isEmpty()) {
                     if (key->isActive()) {
@@ -5904,6 +5937,8 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
             expand_child_triggers(trigger, pItem);
         }
         if (trigger->state()) {
+            clearEditorNotification();
+
             if (trigger->isFilterChain()) {
                 if (trigger->isActive()) {
                     if (trigger->ancestorsActive()) {
@@ -5975,6 +6010,8 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
             expand_child_key(key, pItem);
         }
         if (key->state()) {
+            clearEditorNotification();
+
             if (key->isFolder()) {
                 if (key->isActive()) {
                     if (key->ancestorsActive()) {
@@ -6031,6 +6068,8 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
             expand_child_scripts(script, pItem);
         }
         if (script->state()) {
+            clearEditorNotification();
+
             if (script->isFolder()) {
                 if (script->isActive()) {
                     icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
@@ -6070,6 +6109,8 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
             expand_child_alias(alias, pItem);
         }
         if (alias->state()) {
+            clearEditorNotification();
+
             if (alias->isFolder()) {
                 if (alias->isActive()) {
                     if (alias->ancestorsActive()) {
@@ -6125,6 +6166,8 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
             expand_child_action(action, pItem);
         }
         if (action->state()) {
+            clearEditorNotification();
+
             if (!action->getParent()->mPackageName.isEmpty()) {
                 // Must have a parent (or would not be IN this method) and the
                 // parent has a package name - this is a toolbar
@@ -6175,6 +6218,8 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
             expand_child_timers(timer, pItem);
         }
         if (timer->state()) {
+            clearEditorNotification();
+
             if (timer->isFolder()) {
                 if (timer->shouldBeActive()) {
                     icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
@@ -6354,7 +6399,7 @@ void dlgTriggerEditor::changeView(int view)
     mpVarsMainArea->hide();
     button_displayAllVariables->hide();
 
-    mpSystemMessageArea->hide();
+    clearEditorNotification();
     treeWidget_triggers->hide();
     treeWidget_aliases->hide();
     treeWidget_timers->hide();
@@ -7321,6 +7366,8 @@ void dlgTriggerEditor::slot_paste_xml()
     }
 }
 
+// CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
+// Do we really need two different sets of code to import packages?
 void dlgTriggerEditor::slot_import()
 {
     if (mCurrentView) {
@@ -7357,28 +7404,27 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
-    QString packageName = fileName.section("/", -1);
-    packageName.replace(".zip", "");
-    packageName.replace("trigger", "");
-    packageName.replace("xml", "");
-    packageName.replace(".mpackage", "");
-    packageName.replace('/', "");
-    packageName.replace('\\', "");
-    packageName.replace('.', "");
+    QString packageName = fileName.section(QChar('/'), -1);
+    packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QChar('/'));
+    packageName.remove(QChar('\\'));
+    packageName.remove(QChar('.'));
 
     if (mpHost->mInstalledPackages.contains(packageName)) {
         QMessageBox::information(this, tr("Import Mudlet Package:"), tr("Package %1 is already installed.").arg(packageName));
+        file.close();
         return;
     }
+
     QFile file2;
-    if (fileName.endsWith(".zip") || fileName.endsWith(".mpackage")) {
-        QString _home = QDir::homePath();
-        _home.append("/.config/mudlet/profiles/");
-        _home.append(mpHost->getName());
-        QString _dest = QString("%1/%2/").arg(_home, packageName);
+    if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
+        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName);
         QDir _tmpDir;
         _tmpDir.mkpath(_dest);
-        QString _script = QString("unzip([[%1]], [[%2]])").arg(fileName, _dest);
+        QString _script = QStringLiteral("unzip([[%1]], [[%2]])").arg(fileName, _dest);
         mpHost->mLuaInterpreter.compileAndExecuteScript(_script);
 
         // requirements for zip packages:

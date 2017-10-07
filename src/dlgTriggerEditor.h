@@ -438,6 +438,7 @@ private:
     // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
+    void clearEditorNotification() const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

@@ -949,10 +949,8 @@ void cTelnet::processTelnetCommand(const string& command)
                     mpHost->mpConsole->print("<package is already installed>\n");
                     return;
                 }
-                QString _home = QDir::homePath();
-                _home.append("/.config/mudlet/profiles/");
-                _home.append(mpHost->getName());
-                mServerPackage = QString("%1/%2").arg(_home, fileName);
+
+                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
@@ -1170,10 +1168,8 @@ void cTelnet::setGMCPVariables(const QString& msg)
             mpHost->mpConsole->print("<package is already installed>\n");
             return;
         }
-        QString _home = QDir::homePath();
-        _home.append("/.config/mudlet/profiles/");
-        _home.append(mpHost->getName());
-        mServerPackage = QString("%1/%2").arg(_home, fileName);
+
+        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog("downloading game GUI from server", "Abort", 0, 4000000, mpHost->mpConsole);
@@ -1573,11 +1569,6 @@ void cTelnet::_loadReplay()
 
         char* pB = &loadBuffer[0];
         loadedBytes = replayStream.readRawData(pB, amount);
-        qDebug("_loadReplay(): loaded: %i/%i bytes, wait for %1.3f seconds. (Single shot duration is: %1.3f seconds.)",
-               loadedBytes,
-               amount,
-               offset / 1000.0,
-               offset / (1000.0 * mudlet::self()->mReplaySpeed));
         loadBuffer[loadedBytes] = '\0'; // Previous use of loadedBytes + 1 caused a spurious character at end of string display by a qDebug of the loadBuffer contents
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
         QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, SLOT(readPipe()));
@@ -1596,13 +1587,9 @@ void cTelnet::readPipe()
     int datalen = loadedBytes;
     string cleandata = "";
     recvdGA = false;
-    qDebug(R"(Replay data: "%s")", loadBuffer);
     for (int i = 0; i < datalen; i++) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
-#ifdef DEBUG
-            qDebug() << " SERVER sends telnet command " << (quint8)ch;
-#endif
             if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
                 iac = true;
                 command += ch;

@@ -197,14 +197,14 @@ mudlet::mudlet()
     mainPane->setSizePolicy(sizePolicy);
     mainPane->setFocusPolicy(Qt::NoFocus);
 
-    QFile file_autolog(QDir::homePath() + "/.config/mudlet/autolog");
+    QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
     if (file_autolog.exists()) {
         mAutolog = true;
     } else {
         mAutolog = false;
     }
 
-    QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
+    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (file_use_smallscreen.exists()) {
         mpMainToolBar->setIconSize(QSize(16, 16));
     } else {
@@ -666,7 +666,8 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
     }
 
     if (mpModuleTableHost->moduleHelp.contains(entry->text())) {
-        moduleHelpButton->setDisabled((!mpModuleTableHost->moduleHelp.value(entry->text()).contains(QLatin1String("helpURL")) || mpModuleTableHost->moduleHelp.value(entry->text()).value("helpURL").isEmpty()));
+        moduleHelpButton->setDisabled(( !mpModuleTableHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
+                                      || mpModuleTableHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
     } else {
         moduleHelpButton->setDisabled(true);
     }
@@ -1146,7 +1147,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -1168,7 +1169,7 @@ bool mudlet::loadWindowLayout()
 {
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -2457,9 +2458,8 @@ void mudlet::slot_replay()
     if (!pHost) {
         return;
     }
-    QString home = QDir::homePath() + "/.config/mudlet/profiles/";
-    home.append(pHost->getName());
-    home.append("/log/");
+
+    QString home = getMudletPath(profileReplayAndLogFilesPath, pHost->getName());
     QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), home, tr("*.dat"));
     if (fileName.isEmpty()) {
         return;
@@ -2470,8 +2470,7 @@ void mudlet::slot_replay()
         QMessageBox::warning(this, tr("Select Replay"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
-    //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    //QString fileName = directoryLogFile + "/"+QString(n.c_str());
+
     pHost->mTelnet.loadReplay(fileName);
 }
 
@@ -2487,7 +2486,7 @@ void mudlet::print(Host* pH, const QString& s)
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
-    QFile file(QDir::homePath() + "/.config/mudlet/profiles/" + profile + "/" + item);
+    QFile file(getMudletPath(profileDataItemPath, profile, item));
     file.open(QIODevice::ReadOnly);
     if (!file.exists()) {
         return "";
@@ -2504,7 +2503,8 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(QDir::homePath() + "/.config/mudlet/profiles").entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QStringList hostList = QDir(getMudletPath(profilesPath))
+                           .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
     for (auto host : hostList) {
@@ -2542,12 +2542,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
 
-    QString folder = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/current/";
+    QString folder = getMudletPath(profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    if (entries.size() > 0) {
-        QFile file(folder + "/" + entries[0]);
+    if (!entries.isEmpty()) {
+        QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
@@ -2705,13 +2705,13 @@ void mudlet::replayStart()
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction(actionReplaySpeedUp);
     actionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
-    mpMainToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
+    replayToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
 
     actionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction(actionReplaySpeedDown);
     actionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
-    mpMainToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
+    replayToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
     replaySpeedDisplay = new QLabel(this);
     actionSpeedDisplay = replayToolBar->addWidget(replaySpeedDisplay);
 
@@ -2994,12 +2994,12 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
 
-    QString themeLocation;
-    if (themeFile == QStringLiteral("Mudlet.tmTheme")) {
-        themeLocation = QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
-    } else {
-        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFile);
-    }
+    // getMudletPath(...) needs the themeFile to determine if it is the
+    // "default" which is stored in the resource file and not downloaded into
+    // the cache:
+    QString themeLocation(
+                getMudletPath(editorWidgetThemePathFile,
+                              themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -3099,3 +3099,115 @@ void mudlet::slot_module_manager_destroyed()
     mpModuleTableHost = nullptr;
 }
 
+// Convenience helper - may aide things if we want to put files in a different
+// place...!
+QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
+{
+    switch(mode) {
+    case mainPath:
+        // The root of all mudlet data for the user - does not end in a '/'
+        return QStringLiteral("%1/.config/mudlet")
+                .arg(QDir::homePath());
+    case mainDataItemPath:
+        // Takes one extra argument as a file (or directory) relating to
+        // (profile independent) mudlet data - may end with a '/' if the extra
+        // argument does:
+        return QStringLiteral("%1/.config/mudlet/%2")
+                .arg(QDir::homePath(), extra1);
+    case mainFontsPath:
+        // (Added for 3.5.0) a revised location to store Mudlet provided fonts
+        return QStringLiteral("%1/.config/mudlet/fonts")
+                .arg(QDir::homePath());
+    case profilesPath:
+        // The directory containing all the saved user's profiles - does not end
+        // in '/'
+        return QStringLiteral("%1/.config/mudlet/profiles")
+                .arg(QDir::homePath());
+    case profileHomePath:
+        // Takes one extra argument (profile name) that returns the base
+        // directory for that profile - does NOT end in a '/' unless the
+        // supplied profle name does:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2")
+                .arg(QDir::homePath(), extra1);
+    case profileXmlFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save XML files - ends in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/current/")
+                .arg(QDir::homePath(), extra1);
+    case profileMapsPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save maps files - does NOT end in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map")
+                .arg(QDir::homePath(), extra1);
+    case profileDateTimeStampedMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.dat")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileMapPathFileName:
+        // Takes two extra arguments (profile name, mapFileName) that returns
+        // the pathFile name for any map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileXmlMapPathFileName:
+        // Takes one extra argument (profile name) that returns the pathFile
+        // name for the downloaded IRE Server provided XML map:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map.xml")
+                .arg(QDir::homePath(), extra1);
+    case profileDataItemPath:
+        // Takes two extra arguments (profile name, data item) that gives a
+        // path file name for, typically a data item stored as a single item
+        // (binary) profile data) file (ideally these can be moved to a per
+        // profile QSettings file but that is a future pipe-dream on my part
+        // SlySven):
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackagePath:
+        // Takes two extra arguments (profile name, package name) returns the
+        // per profile directory used to store (unpacked) package contents
+        // - ends with a '/':
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackagePathFileName:
+        // Takes two extra arguments (profile name, package name) returns the
+        // filename of the XML file that contains the (per profile, unpacked)
+        // package mudlet items in that package/module:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/%3.xml")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileReplayAndLogFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // that contains replays (*.dat files) and logs (*.html or *.txt) files
+        // for that profile - does NOT end in '/':
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/log")
+                .arg(QDir::homePath(), extra1);
+    case profileLogErrorsFilePath:
+        // Takes one extra argument (profile name) that returns the pathFileName
+        // to the map auditing report file that is appended to each time a
+        // map is loaded:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt")
+                .arg(QDir::homePath(), extra1);
+    case editorWidgetThemePathFile:
+        // Takes two extra arguments (profile name, theme name) that returns the
+        // pathFileName of the theme file used by the edbee editor - also
+        // handles the special case of the default theme "mudlet.thTheme" that
+        // is carried internally in the resource file:
+        if (extra1.compare(QStringLiteral("Mudlet.tmTheme"),Qt::CaseSensitive)) {
+            // No match
+            return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2")
+                    .arg(QDir::homePath(), extra1);
+        } else {
+            // Match - return path to copy held in resource file
+            return QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
+        }
+    case editorWidgetThemeJsonFile:
+        // Returns the pathFileName to the external JSON file needed to process
+        // an edbee edtor widget theme:
+        return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json")
+                .arg(QDir::homePath());
+    case moduleBackupsPath:
+        // Returns the directory used to store module backups that is used in
+        // when saving/resyncing packages/modules - ends in a '/'
+        return QStringLiteral("%1/.config/mudlet/moduleBackups/")
+                .arg(QDir::homePath());
+    }
+}
