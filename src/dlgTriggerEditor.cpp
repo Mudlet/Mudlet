@@ -7313,33 +7313,59 @@ void dlgTriggerEditor::slot_paste_xml()
     // of the currently selected item instead
     switch (importedItemType) {
     case cmTriggerView: {
+        // in case this is a nested item, grab the parent data for the move function
+        // as well. In case it's a root item, this doesn't seem to matter
+        auto parent = treeWidget_triggers->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
         int siblingRow = treeWidget_triggers->currentIndex().row() + 1;
-        mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, 0, 0, siblingRow);
+        mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
     case cmTimerView: {
+        auto parent = treeWidget_timers->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
         int siblingRow = treeWidget_timers->currentIndex().row() + 1;
-        mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, 0, 0, siblingRow);
+        mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
     case cmAliasView: {
+        auto parent = treeWidget_aliases->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
         int siblingRow = treeWidget_aliases->currentIndex().row() + 1;
-        mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, 0, 0, siblingRow);
+        mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
     case cmScriptView: {
+        auto parent = treeWidget_scripts->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
         int siblingRow = treeWidget_scripts->currentIndex().row() + 1;
-        mpHost->getScriptUnit()->reParentScript(importedItemID, 0, 0, 0, siblingRow);
+        mpHost->getScriptUnit()->reParentScript(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
     case cmActionView: {
+        auto parent = treeWidget_actions->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
         int siblingRow = treeWidget_actions->currentIndex().row() + 1;
-        mpHost->getActionUnit()->reParentAction(importedItemID, 0, 0, 0, siblingRow);
+        mpHost->getActionUnit()->reParentAction(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
     case cmKeysView: {
+        auto parent = treeWidget_keys->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
         int siblingRow = treeWidget_keys->currentIndex().row() + 1;
-        mpHost->getKeyUnit()->reParentKey(importedItemID, 0, 0, 0, siblingRow);
+        mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
     }
@@ -7355,27 +7381,48 @@ void dlgTriggerEditor::slot_paste_xml()
 
     switch (importedItemType) {
     case cmTriggerView: {
+        // the view becomes collapsed as a result of the clear & redo and then
+        // animates back into the unfolding, which doesn't look nice - so turn
+        // off animation temporarily
+        auto animated = treeWidget_triggers->isAnimated();
+        treeWidget_triggers->setAnimated(false);
         selectTriggerByID(importedItemID);
+        treeWidget_triggers->setAnimated(animated);
         break;
     }
     case cmTimerView: {
+        auto animated = treeWidget_timers->isAnimated();
+        treeWidget_timers->setAnimated(false);
         selectTimerByID(importedItemID);
+        treeWidget_timers->setAnimated(animated);
         break;
     }
     case cmAliasView: {
+        auto animated = treeWidget_aliases->isAnimated();
+        treeWidget_aliases->setAnimated(false);
         selectAliasByID(importedItemID);
+        treeWidget_aliases->setAnimated(animated);
         break;
     }
     case cmScriptView: {
+        auto animated = treeWidget_scripts->isAnimated();
+        treeWidget_scripts->setAnimated(false);
         selectScriptByID(importedItemID);
+        treeWidget_scripts->setAnimated(animated);
         break;
     }
     case cmActionView: {
+        auto animated = treeWidget_actions->isAnimated();
+        treeWidget_actions->setAnimated(false);
         selectActionByID(importedItemID);
+        treeWidget_actions->setAnimated(animated);
         break;
     }
     case cmKeysView: {
+        auto animated = treeWidget_keys->isAnimated();
+        treeWidget_keys->setAnimated(false);
         selectKeyByID(importedItemID);
+        treeWidget_keys->setAnimated(animated);
         break;
     }
     }
