@@ -366,7 +366,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
 
     QAction* copyAction = new QAction(QIcon(QStringLiteral(":/icons/edit-copy.png")), tr("Copy"), this);
-    copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
+//    copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     copyAction->setToolTip(tr("Copy the trigger/script/alias/etc"));
     copyAction->setStatusTip(tr("Copy the trigger/script/alias/etc"));
     treeWidget_triggers->addAction(copyAction);
@@ -378,7 +378,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
 
     QAction* pasteAction = new QAction(QIcon(QStringLiteral(":/icons/edit-paste.png")), tr("Paste"), this);
-    pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
+//    pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
     pasteAction->setToolTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
     pasteAction->setStatusTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
     treeWidget_triggers->addAction(pasteAction);
@@ -7262,6 +7262,10 @@ void dlgTriggerEditor::slot_paste_xml()
 
     std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
 
+    // don't reset the view if what we pasted wasn't a Mudlet editor item
+    if (importedItemType == 0 && importedItemID == 0) {
+        return;
+    }
 
     mCurrentView = importedItemType;
     // importing drops the item at the bottom of the list - move it to be a sibling
