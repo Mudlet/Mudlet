@@ -7305,13 +7305,6 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     };
 
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_actions->clear();
-    treeWidget_timers->clear();
-    treeWidget_keys->clear();
-    treeWidget_scripts->clear();
-
     // get the currently selected object, while handling the case that nothing might be selected
     TTrigger* currentlySelectedTrigger = nullptr;
     TAlias* currentlySelectedAlias = nullptr;
@@ -7320,46 +7313,64 @@ void dlgTriggerEditor::slot_paste_xml()
     TScript* currentlySelectedScript = nullptr;
     TKey* currentlySelectedKey = nullptr;
 
-    if (mpCurrentTriggerItem) {
-        auto blah = mpCurrentTriggerItem->data(0, Qt::UserRole).toInt();
-        currentlySelectedTrigger = mpHost->getTriggerUnit()->getTrigger(blah);
-    }
+    auto index = treeWidget_triggers->currentIndex();
+    auto indexVariant = index.data(Qt::UserRole);
+    auto indexVariantID = indexVariant.toInt();
+
+    auto item = treeWidget_triggers->currentItem();
+    auto variant = item->data(0, Qt::UserRole);
+    auto id = variant.toInt();
+    currentlySelectedTrigger = mpHost->getTriggerUnit()->getTrigger(id);
+
     currentlySelectedAlias = !mpCurrentAliasItem ? nullptr : mpHost->getAliasUnit()->getAlias(mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
     currentlySelectedAction = !mpCurrentActionItem ? nullptr : mpHost->getActionUnit()->getAction(mpCurrentActionItem->data(0, Qt::UserRole).toInt());
     currentlySelectedTimer = !mpCurrentTimerItem ? nullptr : mpHost->getTimerUnit()->getTimer(mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
     currentlySelectedScript = !mpCurrentScriptItem ? nullptr : mpHost->getScriptUnit()->getScript(mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
     currentlySelectedKey = !mpCurrentKeyItem ? nullptr : mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
 
+    int rowToInsertInto = treeWidget_triggers->currentIndex().row()+1;
+
+    treeWidget_triggers->clear();
+    treeWidget_aliases->clear();
+    treeWidget_actions->clear();
+    treeWidget_timers->clear();
+    treeWidget_keys->clear();
+    treeWidget_scripts->clear();
+
     std::tie(importedItemType, importedItemID) =
-            reader.importFromClipboard(currentlySelectedTrigger, currentlySelectedAlias, currentlySelectedAction, currentlySelectedTimer, currentlySelectedScript, currentlySelectedKey);
+            reader.importFromClipboard(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
     slot_profileSaveAction();
-
-    fillout_form(); // This resets mCurrentView
-
     mCurrentView = importedItemType;
     switch (importedItemType) {
     case cmTriggerView: {
+        mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, 0, 0, rowToInsertInto);
+        fillout_form();
         selectTriggerByID(importedItemID);
         break;
     }
     case cmTimerView: {
+        fillout_form();
         selectTimerByID(importedItemID);
         break;
     }
     case cmAliasView: {
+        fillout_form();
         selectAliasByID(importedItemID);
         break;
     }
     case cmScriptView: {
+        fillout_form();
         selectScriptByID(importedItemID);
         break;
     }
     case cmActionView: {
+        fillout_form();
         selectActionByID(importedItemID);
         break;
     }
     case cmKeysView: {
+        fillout_form();
         selectKeyByID(importedItemID);
         break;
     }
