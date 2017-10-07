@@ -25,11 +25,11 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
+#include <QBuffer>
+#include <QClipboard>
 #include <QPointer>
 #include <QXmlStreamWriter>
-#include <QApplication>
-#include <QClipboard>
-#include <QBuffer>
 #include "post_guard.h"
 
 class Host;
@@ -65,7 +65,6 @@ public:
     bool writeKey(TKey*);
     bool writeVariable(TVar*, LuaInterface*, VarUnit*);
     bool writeModuleXML(QIODevice* device, QString moduleName);
-    bool exportHost(Host*);
 
     bool exportHost(QIODevice*);
     bool exportGenericPackage(QIODevice* device);
@@ -77,21 +76,14 @@ public:
     bool exportScript(QIODevice*);
     bool exportKey(QIODevice*);
 
-    bool exportTrigger(TTrigger*);
-    bool exportTimer(TTimer*);
-    bool exportAlias(TAlias*);
-    bool exportAction(TAction*);
-    bool exportScript(TScript*);
-    bool exportKey(TKey*);
+    bool exportToClipboard(TTrigger*);
+    bool exportToClipboard(TTimer*);
+    bool exportToClipboard(TAlias*);
+    bool exportToClipboard(TAction*);
+    bool exportToClipboard(TScript*);
+    bool exportToClipboard(TKey*);
 
-    bool exportToClipboard( TTrigger * );
-    bool exportToClipboard( TTimer * );
-    bool exportToClipboard( TAlias * );
-    bool exportToClipboard( TAction * );
-    bool exportToClipboard( TScript * );
-    bool exportToClipboard( TKey * );
-    
-    bool writeScriptElement(const QString &);
+    bool writeScriptElement(const QString&);
 
 private:
     QPointer<Host> mpHost;

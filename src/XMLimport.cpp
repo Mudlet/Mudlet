@@ -245,7 +245,6 @@ pair<int, int> XMLimport::importFromClipboard()
     pair<int, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
-    //setText( xml, QClipboard::Clipboard );
 
     QByteArray ba = xml.toUtf8();
     QBuffer xmlBuffer(&ba);
@@ -266,7 +265,6 @@ pair<int, int> XMLimport::importFromClipboard()
     }
 
     return result;
-    //return ! error();
 }
 
 void XMLimport::readVariableGroup(TVar* pParent)

@@ -746,56 +746,35 @@ bool XMLexport::exportTrigger(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportToClipboard( TTrigger * pT )
+bool XMLexport::exportToClipboard(TTrigger* pT)
 {
-/*    QString xml = QString("");
-    QXmlStreamWriter xmlWriter( &xml );
-
-    xmlWriter.writeStartDocument();
-    xmlWriter.writeDTD("<!DOCTYPE MudletPackage>");
-
-    xmlWriter.writeStartElement( "MudletPackage" );
-    xmlWriter.writeAttribute("version", "1.0");
-
-    xmlWriter.writeStartElement( "TriggerPackage" );
-    writeTrigger( mpTrigger, & xmlWriter );
-    xmlWriter.writeEndElement();//TriggerPackage
-
-    xmlWriter.writeEndElement();//MudletPackage
-    xmlWriter.writeEndDocument();
-
-    QClipboard *cb = QApplication::clipboard();
-
-    cb->setText( xml, QClipboard::Clipboard );
-    return true;*/
     setAutoFormatting(true);
 
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard* cb = QApplication::clipboard();
 
     QByteArray ba = "";
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement( "TriggerPackage" );
-    writeTrigger( mpTrigger );
-    writeEndElement();//TriggerPackage
+    writeStartElement("TriggerPackage");
+    writeTrigger(mpTrigger);
+    writeEndElement(); //TriggerPackage
 
-    writeEndElement();//MudletPackage
+    writeEndElement(); //MudletPackage
     writeEndDocument();
 
-    cb->setText( QString(ba), QClipboard::Clipboard );
+    cb->setText(QString(ba), QClipboard::Clipboard);
     setAutoFormatting(false);
     return true;
 }
-
 
 bool XMLexport::writeTrigger(TTrigger* pT)
 {
@@ -894,42 +873,42 @@ bool XMLexport::exportAlias(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportToClipboard( TAlias * pT )
+bool XMLexport::exportToClipboard(TAlias* pT)
 {
     setAutoFormatting(true);
 
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard* cb = QApplication::clipboard();
 
     QByteArray ba = "";
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
-    if( hasError() ) {
+    if (hasError()) {
         return false;
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement( "AliasPackage" );
-    bool isOk = writeAlias( mpAlias );
+    writeStartElement("AliasPackage");
+    bool isOk = writeAlias(mpAlias);
     writeEndElement(); // </AliasPackage>
 
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText( QString(ba), QClipboard::Clipboard );
+    cb->setText(QString(ba), QClipboard::Clipboard);
     setAutoFormatting(false);
 
-    return ( isOk && ( ! hasError() ) );
+    return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeAlias( TAlias * pT )
+bool XMLexport::writeAlias(TAlias* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
@@ -986,42 +965,42 @@ bool XMLexport::exportAction(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportToClipboard( TAction * pT )
+bool XMLexport::exportToClipboard(TAction* pT)
 {
     setAutoFormatting(true);
 
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard* cb = QApplication::clipboard();
 
     QByteArray ba = "";
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
-    if( hasError() ) {
+    if (hasError()) {
         return false;
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement( "ActionPackage" );
-    bool isOk = writeAction( mpAction );
+    writeStartElement("ActionPackage");
+    bool isOk = writeAction(mpAction);
     writeEndElement(); // </ActionPackage>
 
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText( QString(ba), QClipboard::Clipboard );
+    cb->setText(QString(ba), QClipboard::Clipboard);
     setAutoFormatting(false);
 
-    return ( isOk && ( ! hasError() ) );
+    return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeAction( TAction * pT )
+bool XMLexport::writeAction(TAction* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
@@ -1095,42 +1074,42 @@ bool XMLexport::exportTimer(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportToClipboard( TTimer * pT )
+bool XMLexport::exportToClipboard(TTimer* pT)
 {
     setAutoFormatting(true);
 
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard* cb = QApplication::clipboard();
 
     QByteArray ba = "";
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
-    if( hasError() ) {
+    if (hasError()) {
         return false;
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement( "TimerPackage" );
-    bool isOk = writeTimer( mpTimer );
+    writeStartElement("TimerPackage");
+    bool isOk = writeTimer(mpTimer);
     writeEndElement(); // </TimerPackage>
 
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText( QString(ba), QClipboard::Clipboard );
+    cb->setText(QString(ba), QClipboard::Clipboard);
     setAutoFormatting(false);
 
-    return ( isOk && ( ! hasError() ) );
+    return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeTimer( TTimer * pT )
+bool XMLexport::writeTimer(TTimer* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
@@ -1190,42 +1169,42 @@ bool XMLexport::exportScript(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportToClipboard( TScript * pT )
+bool XMLexport::exportToClipboard(TScript* pT)
 {
     setAutoFormatting(true);
 
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard* cb = QApplication::clipboard();
 
     QByteArray ba = "";
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
-    if( hasError() ) {
+    if (hasError()) {
         return false;
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement( "ScriptPackage" );
-    bool isOk = writeScript( mpScript );
+    writeStartElement("ScriptPackage");
+    bool isOk = writeScript(mpScript);
     writeEndElement(); // </ScriptPackage>
 
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText( QString(ba), QClipboard::Clipboard );
+    cb->setText(QString(ba), QClipboard::Clipboard);
     setAutoFormatting(false);
 
-    return ( isOk && ( ! hasError() ) );
+    return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeScript( TScript * pT )
+bool XMLexport::writeScript(TScript* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {
@@ -1287,42 +1266,42 @@ bool XMLexport::exportKey(QIODevice* device)
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportToClipboard( TKey * pT )
+bool XMLexport::exportToClipboard(TKey* pT)
 {
     setAutoFormatting(true);
 
-    QClipboard *cb = QApplication::clipboard();
+    QClipboard* cb = QApplication::clipboard();
 
     QByteArray ba = "";
-    QBuffer xmlBuffer( &ba );
+    QBuffer xmlBuffer(&ba);
 
-    setDevice( &xmlBuffer );
+    setDevice(&xmlBuffer);
     xmlBuffer.open(QIODevice::WriteOnly);
 
     writeStartDocument();
-    if( hasError() ) {
+    if (hasError()) {
         return false;
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
 
-    writeStartElement( "MudletPackage" );
-    writeAttribute("version", "1.0");
+    writeStartElement("MudletPackage");
+    writeAttribute(QStringLiteral("version"), mudlet::self()->scmMudletXmlDefaultVersion);
 
-    writeStartElement( "KeyPackage" );
-    bool isOk = writeKey( mpKey );
+    writeStartElement("KeyPackage");
+    bool isOk = writeKey(mpKey);
     writeEndElement(); // </KeyPackage>
 
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    cb->setText( QString(ba), QClipboard::Clipboard );
+    cb->setText(QString(ba), QClipboard::Clipboard);
     setAutoFormatting(false);
 
-    return ( isOk && ( ! hasError() ) );
+    return (isOk && (!hasError()));
 }
 
-bool XMLexport::writeKey( TKey * pT )
+bool XMLexport::writeKey(TKey* pT)
 {
     bool isOk = true;
     if (!pT->mModuleMasterFolder && pT->exportItem) {

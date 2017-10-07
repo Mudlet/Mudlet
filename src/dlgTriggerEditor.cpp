@@ -3782,6 +3782,7 @@ void dlgTriggerEditor::selectTriggerByID(int id)
             treeWidget_triggers->setCurrentItem((*it), 0);
             treeWidget_triggers->scrollToItem((*it));
             mpCurrentTriggerItem = (*it);
+            return;
         }
         ++it;
     }
@@ -3797,6 +3798,7 @@ void dlgTriggerEditor::selectTimerByID(int id)
             treeWidget_timers->setCurrentItem((*it), 0);
             treeWidget_timers->scrollToItem((*it));
             mpCurrentTimerItem = (*it);
+            return;
         }
         ++it;
     }
@@ -3812,6 +3814,7 @@ void dlgTriggerEditor::selectAliasByID(int id)
             treeWidget_aliases->setCurrentItem((*it), 0);
             treeWidget_aliases->scrollToItem((*it));
             mpCurrentAliasItem = (*it);
+            return;
         }
         ++it;
     }
@@ -3827,6 +3830,7 @@ void dlgTriggerEditor::selectScriptByID(int id)
             treeWidget_scripts->setCurrentItem((*it), 0);
             treeWidget_scripts->scrollToItem((*it));
             mpCurrentScriptItem = (*it);
+            return;
         }
         ++it;
     }
@@ -3842,6 +3846,7 @@ void dlgTriggerEditor::selectActionByID(int id)
             treeWidget_actions->setCurrentItem((*it), 0);
             treeWidget_actions->scrollToItem((*it));
             mpCurrentActionItem = (*it);
+            return;
         }
         ++it;
     }
@@ -3857,6 +3862,7 @@ void dlgTriggerEditor::selectKeyByID(int id)
             treeWidget_keys->setCurrentItem((*it), 0);
             treeWidget_keys->scrollToItem((*it));
             mpCurrentKeyItem = (*it);
+            return;
         }
         ++it;
     }
@@ -7211,25 +7217,24 @@ void dlgTriggerEditor::slot_export()
 
 void dlgTriggerEditor::slot_copy_xml()
 {
-    switch( mCurrentView )
-    {
+    switch (mCurrentView) {
     case cmTriggerView:
-        exportTriggerToClipboard( );
+        exportTriggerToClipboard();
         break;
     case cmTimerView:
-        exportTimerToClipboard( );
+        exportTimerToClipboard();
         break;
     case cmAliasView:
-        exportAliasToClipboard( );
+        exportAliasToClipboard();
         break;
     case cmScriptView:
-        exportScriptToClipboard( );
+        exportScriptToClipboard();
         break;
     case cmActionView:
-        exportActionToClipboard( );
+        exportActionToClipboard();
         break;
     case cmKeysView:
-        exportKeyToClipboard( );
+        exportKeyToClipboard();
         break;
     };
 }
