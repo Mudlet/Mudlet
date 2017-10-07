@@ -242,6 +242,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setRootIsDecorated(false);
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
+    treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_aliases->hide();
@@ -250,6 +251,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->setColumnCount(1);
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
+    treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_aliases, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_actions->hide();
@@ -258,6 +260,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
+    treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_actions, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_timers->hide();
@@ -266,6 +269,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
+    treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_variables->hide();
@@ -275,6 +279,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->hideColumn(1);
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
+    treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_keys->hide();
@@ -283,6 +288,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
+    treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_scripts->hide();
@@ -291,6 +297,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
+    treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_scripts, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     QAction* viewTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -358,19 +365,29 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
 
-    QAction* copyAction = new QAction(QIcon(QStringLiteral(":/icons/edit-copy.png")), tr("Copy (as XML)"), this);
+    QAction* copyAction = new QAction(QIcon(QStringLiteral(":/icons/edit-copy.png")), tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
-    copyAction->setToolTip(tr("Copies the trigger/script/alias/etc as XML."));
-    copyAction->setStatusTip(tr("Copies the trigger/script/alias/etc as XML."));
-
-    connect(copyAction, SIGNAL(triggered()), this, SLOT(slot_copy_xml()));
+    copyAction->setToolTip(tr("Copy the trigger/script/alias/etc"));
+    copyAction->setStatusTip(tr("Copy the trigger/script/alias/etc"));
+    treeWidget_triggers->addAction(copyAction);
+    treeWidget_aliases->addAction(copyAction);
+    treeWidget_timers->addAction(copyAction);
+    treeWidget_scripts->addAction(copyAction);
+    treeWidget_actions->addAction(copyAction);
+    treeWidget_keys->addAction(copyAction);
+    connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
 
     QAction* pasteAction = new QAction(QIcon(QStringLiteral(":/icons/edit-paste.png")), tr("Paste"), this);
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
-    pasteAction->setToolTip(tr("Pastes triggers/scripts/aliases/etc from the clipboard."));
-    pasteAction->setStatusTip(tr("Pastes triggers/scripts/aliases/etc from the clipboard."));
-
-    connect(pasteAction, SIGNAL(triggered()), this, SLOT(slot_paste_xml()));
+    pasteAction->setToolTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
+    pasteAction->setStatusTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
+    treeWidget_triggers->addAction(pasteAction);
+    treeWidget_aliases->addAction(pasteAction);
+    treeWidget_timers->addAction(pasteAction);
+    treeWidget_scripts->addAction(pasteAction);
+    treeWidget_actions->addAction(pasteAction);
+    treeWidget_keys->addAction(pasteAction);
+    connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_paste_xml);
 
     QAction* importAction = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
@@ -420,8 +437,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(addFolderAction);
 
     toolBar->addSeparator();
-    toolBar->addAction(copyAction);
-    toolBar->addAction(pasteAction);
     toolBar->addAction(deleteTriggerAction);
     toolBar->addAction(importAction);
     toolBar->addAction(exportAction);
@@ -7006,209 +7021,149 @@ void dlgTriggerEditor::exportKey(QFile& file)
     }
 }
 
-void dlgTriggerEditor::exportTriggerToClipboard( )
+void dlgTriggerEditor::exportTriggerToClipboard()
 {
     QString name;
-    TTrigger * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget_triggers->currentItem();
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getTriggerUnit()->getTrigger( triggerID );
-        if( pT )
-        {
+    TTrigger* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+        if (pT) {
             name = pT->getName();
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer( pT );
-    if( writer.exportToClipboard( pT ) )
-    {
-        statusBar()->showMessage(tr("Package ")+name+tr(" copied to clipboard"), 2000);
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
     }
-
 }
 
-void dlgTriggerEditor::exportTimerToClipboard( )
+void dlgTriggerEditor::exportTimerToClipboard()
 {
     QString name;
-    TTimer * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget_timers->currentItem();
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getTimerUnit()->getTimer( triggerID );
-        if( pT )
-        {
+    TTimer* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getTimerUnit()->getTimer(triggerID);
+        if (pT) {
             name = pT->getName();
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer( pT );
-    if( writer.exportToClipboard( pT ) )
-    {
-        statusBar()->showMessage(tr("Package")+name+tr(" saved"), 2000);
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
     }
-
 }
 
-void dlgTriggerEditor::exportAliasToClipboard( )
+void dlgTriggerEditor::exportAliasToClipboard()
 {
     QString name;
-    TAlias * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget_aliases->currentItem();
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getAliasUnit()->getAlias( triggerID );
-        if( pT )
-        {
+    TAlias* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getAliasUnit()->getAlias(triggerID);
+        if (pT) {
             name = pT->getName();
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer( pT );
-    if( writer.exportToClipboard( pT ) )
-    {
-        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
     }
-
 }
 
-void dlgTriggerEditor::exportActionToClipboard( )
+void dlgTriggerEditor::exportActionToClipboard()
 {
     QString name;
-    TAction * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget_actions->currentItem();
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getActionUnit()->getAction( triggerID );
-        if( pT )
-        {
+    TAction* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getActionUnit()->getAction(triggerID);
+        if (pT) {
             name = pT->getName();
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer( pT );
-    if( writer.exportToClipboard( pT ) )
-    {
-        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
     }
-
 }
 
-void dlgTriggerEditor::exportScriptToClipboard( )
+void dlgTriggerEditor::exportScriptToClipboard()
 {
     QString name;
-    TScript * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget_scripts->currentItem();
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getScriptUnit()->getScript( triggerID );
-        if( pT )
-        {
+    TScript* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getScriptUnit()->getScript(triggerID);
+        if (pT) {
             name = pT->getName();
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer( pT );
-    if( writer.exportToClipboard( pT ) )
-    {
-        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
     }
-
 }
 
-void dlgTriggerEditor::exportKeyToClipboard( )
+void dlgTriggerEditor::exportKeyToClipboard()
 {
     QString name;
-    TKey * pT = 0;
-    QTreeWidgetItem * pItem = treeWidget_keys->currentItem();
-    if( pItem )
-    {
-        int triggerID = pItem->data( 0, Qt::UserRole ).toInt();
-        pT = mpHost->getKeyUnit()->getKey( triggerID );
-        if( pT )
-        {
+    TKey* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getKeyUnit()->getKey(triggerID);
+        if (pT) {
             name = pT->getName();
-        }
-        else
-        {
-             QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
 
-    }
-    else
-    {
-        QMessageBox::warning(this, tr("Export Package:"),
-                             tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
-    XMLexport writer( pT );
-    if( writer.exportToClipboard( pT ) )
-    {
-        statusBar()->showMessage(tr("Package ")+name+tr(" saved"), 2000);
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
     }
-
 }
 
 
@@ -7426,8 +7381,6 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     }
     }
-
-    slot_profileSaveAction();
 }
 
 // CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
