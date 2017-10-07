@@ -7305,76 +7305,82 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     };
 
-    // get the currently selected object, while handling the case that nothing might be selected
-    TTrigger* currentlySelectedTrigger = nullptr;
-    TAlias* currentlySelectedAlias = nullptr;
-    TAction* currentlySelectedAction = nullptr;
-    TTimer* currentlySelectedTimer = nullptr;
-    TScript* currentlySelectedScript = nullptr;
-    TKey* currentlySelectedKey = nullptr;
+    std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
 
-    auto index = treeWidget_triggers->currentIndex();
-    auto indexVariant = index.data(Qt::UserRole);
-    auto indexVariantID = indexVariant.toInt();
 
-    auto item = treeWidget_triggers->currentItem();
-    auto variant = item->data(0, Qt::UserRole);
-    auto id = variant.toInt();
-    currentlySelectedTrigger = mpHost->getTriggerUnit()->getTrigger(id);
-
-    currentlySelectedAlias = !mpCurrentAliasItem ? nullptr : mpHost->getAliasUnit()->getAlias(mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
-    currentlySelectedAction = !mpCurrentActionItem ? nullptr : mpHost->getActionUnit()->getAction(mpCurrentActionItem->data(0, Qt::UserRole).toInt());
-    currentlySelectedTimer = !mpCurrentTimerItem ? nullptr : mpHost->getTimerUnit()->getTimer(mpCurrentTimerItem->data(0, Qt::UserRole).toInt());
-    currentlySelectedScript = !mpCurrentScriptItem ? nullptr : mpHost->getScriptUnit()->getScript(mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
-    currentlySelectedKey = !mpCurrentKeyItem ? nullptr : mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
-
-    int rowToInsertInto = treeWidget_triggers->currentIndex().row()+1;
-
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_actions->clear();
-    treeWidget_timers->clear();
-    treeWidget_keys->clear();
-    treeWidget_scripts->clear();
-
-    std::tie(importedItemType, importedItemID) =
-            reader.importFromClipboard(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-
-    slot_profileSaveAction();
     mCurrentView = importedItemType;
+    // importing drops the item at the bottom of the list - move it to be a sibling
+    // of the currently selected item instead
     switch (importedItemType) {
     case cmTriggerView: {
-        mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, 0, 0, rowToInsertInto);
-        fillout_form();
+        int siblingRow = treeWidget_triggers->currentIndex().row() + 1;
+        mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, 0, 0, siblingRow);
+        break;
+    }
+    case cmTimerView: {
+        int siblingRow = treeWidget_timers->currentIndex().row() + 1;
+        mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, 0, 0, siblingRow);
+        break;
+    }
+    case cmAliasView: {
+        int siblingRow = treeWidget_aliases->currentIndex().row() + 1;
+        mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, 0, 0, siblingRow);
+        break;
+    }
+    case cmScriptView: {
+        int siblingRow = treeWidget_scripts->currentIndex().row() + 1;
+        mpHost->getScriptUnit()->reParentScript(importedItemID, 0, 0, 0, siblingRow);
+        break;
+    }
+    case cmActionView: {
+        int siblingRow = treeWidget_actions->currentIndex().row() + 1;
+        mpHost->getActionUnit()->reParentAction(importedItemID, 0, 0, 0, siblingRow);
+        break;
+    }
+    case cmKeysView: {
+        int siblingRow = treeWidget_keys->currentIndex().row() + 1;
+        mpHost->getKeyUnit()->reParentKey(importedItemID, 0, 0, 0, siblingRow);
+        break;
+    }
+    }
+
+    // reset the form so the newly imported item is rendered in the right location
+    treeWidget_triggers->clear();
+    treeWidget_timers->clear();
+    treeWidget_aliases->clear();
+    treeWidget_scripts->clear();
+    treeWidget_actions->clear();
+    treeWidget_keys->clear();
+    fillout_form();
+
+    switch (importedItemType) {
+    case cmTriggerView: {
         selectTriggerByID(importedItemID);
         break;
     }
     case cmTimerView: {
-        fillout_form();
         selectTimerByID(importedItemID);
         break;
     }
     case cmAliasView: {
-        fillout_form();
         selectAliasByID(importedItemID);
         break;
     }
     case cmScriptView: {
-        fillout_form();
         selectScriptByID(importedItemID);
         break;
     }
     case cmActionView: {
-        fillout_form();
         selectActionByID(importedItemID);
         break;
     }
     case cmKeysView: {
-        fillout_form();
         selectKeyByID(importedItemID);
         break;
     }
     }
+
+    slot_profileSaveAction();
 }
 
 // CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)

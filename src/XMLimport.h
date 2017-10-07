@@ -51,23 +51,19 @@ class XMLimport : public QXmlStreamReader
 public:
     XMLimport(Host*);
     bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
-    std::pair<int, int> importFromClipboard(TTrigger *currentlySelectedTrigger, TAlias *currentlySelectedAlias,
-                                            TAction *currentlySelectedAction, TTimer *currentlySelectedTimer,
-                                            TScript *currentlySelectedScript, TKey *currentlySelectedKey);
+    std::pair<int, int> importFromClipboard();
 
 private:
-    std::pair<int, int> readPackage(TTrigger *parentTrigger, TAlias *parentAlias, TAction *parentAction,
-                                    TTimer *parentTimer,
-                                    TScript *parentScript, TKey *parentKey);
+    std::pair<int, int> readPackage();
     void readUnknownPackage();
 
     void readHostPackage();
-    int readTriggerPackage(TTrigger *parentTrigger);
-    int readTimerPackage(TTimer *parentTimer);
-    int readAliasPackage(TAlias *parentAlias);
-    int readActionPackage(TAction *parentAction);
-    int readScriptPackage(TScript *parentScript);
-    int readKeyPackage(TKey *parentKey);
+    int readTriggerPackage();
+    int readTimerPackage();
+    int readAliasPackage();
+    int readActionPackage();
+    int readScriptPackage();
+    int readKeyPackage();
     void readVariablePackage();
     void readUnknownMapElement();
     void readMap();

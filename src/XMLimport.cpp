@@ -181,7 +181,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                     return false;
                 }
 
-                readPackage(0, 0, 0, 0, 0, 0);
+                readPackage();
             } else if (name() == "map") {
                 readMap();
                 mpHost->mpMap->audit();
@@ -236,9 +236,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::importFromClipboard(
-        TTrigger *currentlySelectedTrigger, TAlias *currentlySelectedAlias, TAction *currentlySelectedAction,
-        TTimer *currentlySelectedTimer, TScript *currentlySelectedScript, TKey *currentlySelectedKey)
+pair<int, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
@@ -260,7 +258,7 @@ pair<int, int> XMLimport::importFromClipboard(
 
         if (isStartElement()) {
             if (name() == "MudletPackage") {
-                result = readPackage(currentlySelectedTrigger, currentlySelectedAlias, currentlySelectedAction, currentlySelectedTimer, currentlySelectedScript, currentlySelectedKey);
+                result = readPackage();
             } else {
                 qDebug() << "ERROR:name=" << name().toString() << "text:" << text().toString();
             }
@@ -554,7 +552,7 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::readPackage(TTrigger* parentTrigger, TAlias* parentAlias, TAction* parentAction, TTimer* parentTimer, TScript* parentScript, TKey* parentKey)
+pair<int, int> XMLimport::readPackage()
 {
     int objectType = 0;
     int rootItemID = -1;
@@ -568,22 +566,22 @@ pair<int, int> XMLimport::readPackage(TTrigger* parentTrigger, TAlias* parentAli
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
                 objectType = dlgTriggerEditor::cmTriggerView;
-                rootItemID = readTriggerPackage(parentTrigger);
+                rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
                 objectType = dlgTriggerEditor::cmTimerView;
-                rootItemID = readTimerPackage(parentTimer);
+                rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
                 objectType = dlgTriggerEditor::cmAliasView;
-                rootItemID = readAliasPackage(parentAlias);
+                rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
                 objectType = dlgTriggerEditor::cmActionView;
-                rootItemID = readActionPackage(parentAction);
+                rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
                 objectType = dlgTriggerEditor::cmScriptView;
-                rootItemID = readScriptPackage(parentScript);
+                rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
                 objectType = dlgTriggerEditor::cmKeysView;
-                rootItemID = readKeyPackage(parentKey);
+                rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
@@ -626,7 +624,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            auto result = readPackage(0, 0, 0, 0, 0, 0);
+            auto result = readPackage();
         }
     }
 }
@@ -662,7 +660,7 @@ void XMLimport::readUnknownTriggerElement()
         }
 
         if (isStartElement()) {
-            readTriggerPackage(0);
+            readTriggerPackage();
         }
     }
 }
@@ -680,7 +678,7 @@ void XMLimport::readUnknownTimerElement()
         }
 
         if (isStartElement()) {
-            readTimerPackage(0);
+            readTimerPackage();
         }
     }
 }
@@ -698,7 +696,7 @@ void XMLimport::readUnknownAliasElement()
         }
 
         if (isStartElement()) {
-            readAliasPackage(0);
+            readAliasPackage();
         }
     }
 }
@@ -716,7 +714,7 @@ void XMLimport::readUnknownActionElement()
         }
 
         if (isStartElement()) {
-            readActionPackage(0);
+            readActionPackage();
         }
     }
 }
@@ -734,7 +732,7 @@ void XMLimport::readUnknownScriptElement()
         }
 
         if (isStartElement()) {
-            readScriptPackage(0);
+            readScriptPackage();
         }
     }
 }
@@ -752,7 +750,7 @@ void XMLimport::readUnknownKeyElement()
         }
 
         if (isStartElement()) {
-            readKeyPackage(0);
+            readKeyPackage();
         }
     }
 }
@@ -990,7 +988,7 @@ void XMLimport::readHostPackage(Host* pHost)
 }
 
 // returns the ID of the root imported trigger/group
-int XMLimport::readTriggerPackage(TTrigger* parentTrigger)
+int XMLimport::readTriggerPackage()
 {
     int parentItemID = -1;
 
@@ -1003,12 +1001,7 @@ int XMLimport::readTriggerPackage(TTrigger* parentTrigger)
         if (isStartElement()) {
             if (name() == "TriggerGroup" || name() == "Trigger") {
                 gotTrigger = true;
-
-                // the parent can either be the mpTrigger in case of importing a package/module
-                // or the passed item in case of pasting from the clipboard
-                auto parent = parentTrigger ? parentTrigger : (mPackageName.isEmpty() ? nullptr : mpTrigger);
-
-                parentItemID = readTriggerGroup(parent);
+                parentItemID = readTriggerGroup(mPackageName.isEmpty() ? nullptr : mpTrigger);
             } else {
                 readUnknownTriggerElement();
             }
@@ -1108,7 +1101,7 @@ int XMLimport::readTriggerGroup(TTrigger *pParent)
     return pT->getID();
 }
 
-int XMLimport::readTimerPackage(TTimer *parentTimer)
+int XMLimport::readTimerPackage()
 {
     int lastImportedTimerID = -1;
 
@@ -1119,12 +1112,7 @@ int XMLimport::readTimerPackage(TTimer *parentTimer)
         } else if (isStartElement()) {
             if (name() == "TimerGroup" || name() == "Timer") {
                 gotTimer = true;
-
-                // the parent can either be the mpTimer in case of importing a package/module
-                // or the passed item in case of pasting from the clipboard
-                auto parent = parentTimer ? parentTimer : (mPackageName.isEmpty() ? nullptr : mpTimer);
-
-                lastImportedTimerID = readTimerGroup(parent);
+                lastImportedTimerID = readTimerGroup(mPackageName.isEmpty() ? nullptr : mpTimer);
             } else {
                 readUnknownTimerElement();
             }
@@ -1184,7 +1172,7 @@ int XMLimport::readTimerGroup(TTimer* pParent)
     return pT->getID();
 }
 
-int XMLimport::readAliasPackage(TAlias *parentAlias)
+int XMLimport::readAliasPackage()
 {
     int lastImportedAliasID = -1;
 
@@ -1195,12 +1183,7 @@ int XMLimport::readAliasPackage(TAlias *parentAlias)
         } else if (isStartElement()) {
             if (name() == "AliasGroup" || name() == "Alias") {
                 gotAlias = true;
-
-                // the parent can either be the mpAlias in case of importing a package/module
-                // or the passed item in case of pasting from the clipboard
-                auto parent = parentAlias ? parentAlias: (mPackageName.isEmpty() ? nullptr : mpAlias);
-
-                lastImportedAliasID = readAliasGroup(parent);
+                lastImportedAliasID = readAliasGroup(mPackageName.isEmpty() ? nullptr : mpAlias);
             } else {
                 readUnknownAliasElement();
             }
@@ -1251,7 +1234,7 @@ int XMLimport::readAliasGroup(TAlias* pParent)
     return pT->getID();
 }
 
-int XMLimport::readActionPackage(TAction *parentAction)
+int XMLimport::readActionPackage()
 {
     int lastImportedActionID = -1;
 
@@ -1262,12 +1245,7 @@ int XMLimport::readActionPackage(TAction *parentAction)
         } else if (isStartElement()) {
             if (name() == "ActionGroup" || name() == "Action") {
                 gotAction = true;
-
-                // the parent can either be the mpAction in case of importing a package/module
-                // or the passed item in case of pasting from the clipboard
-                auto parent = parentAction ? parentAction: (mPackageName.isEmpty() ? nullptr : mpAction);
-
-                lastImportedActionID = readActionGroup(parent);
+                lastImportedActionID = readActionGroup(mPackageName.isEmpty() ? nullptr : mpAction);
             } else {
                 readUnknownActionElement();
             }
@@ -1347,7 +1325,7 @@ int XMLimport::readActionGroup(TAction* pParent)
     return pT->getID();
 }
 
-int XMLimport::readScriptPackage(TScript *parentScript)
+int XMLimport::readScriptPackage()
 {
     int lastImportedScriptID = -1;
 
@@ -1358,12 +1336,7 @@ int XMLimport::readScriptPackage(TScript *parentScript)
         } else if (isStartElement()) {
             if (name() == "ScriptGroup" || name() == "Script") {
                 gotScript = true;
-
-                // the parent can either be the mpScript in case of importing a package/module
-                // or the passed item in case of pasting from the clipboard
-                auto parent = parentScript ? parentScript : (mPackageName.isEmpty() ? nullptr : mpScript);
-
-                lastImportedScriptID = readScriptGroup(parent);
+                lastImportedScriptID = readScriptGroup(mPackageName.isEmpty() ? nullptr : mpScript);
             } else {
                 readUnknownScriptElement();
             }
@@ -1413,7 +1386,7 @@ int XMLimport::readScriptGroup(TScript* pParent)
     return pT->getID();
 }
 
-int XMLimport::readKeyPackage(TKey *parentKey)
+int XMLimport::readKeyPackage()
 {
     int lastImportedKeyID = -1;
 
@@ -1424,12 +1397,7 @@ int XMLimport::readKeyPackage(TKey *parentKey)
         } else if (isStartElement()) {
             if (name() == "KeyGroup" || name() == "Key") {
                 gotKey = true;
-
-                // the parent can either be the mpKey in case of importing a package/module
-                // or the passed item in case of pasting from the clipboard
-                auto parent = parentKey ? parentKey : (mPackageName.isEmpty() ? nullptr : mpKey);
-
-                lastImportedKeyID = readKeyGroup(parent);
+                lastImportedKeyID = readKeyGroup(mPackageName.isEmpty() ? nullptr : mpKey);
             } else {
                 readUnknownKeyElement();
             }
