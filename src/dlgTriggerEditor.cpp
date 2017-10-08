@@ -6424,6 +6424,7 @@ void dlgTriggerEditor::changeView(int view)
     mpActionsMainArea->hide();
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
+    // hiding this for some reason shifts focus to the search box
     button_displayAllVariables->hide();
 
     clearEditorNotification();
@@ -7340,14 +7341,8 @@ void dlgTriggerEditor::slot_paste_xml()
     }
     }
 
-    // reset the form so the newly imported item is rendered in the right location
-    treeWidget_triggers->clear();
-    treeWidget_timers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_scripts->clear();
-    treeWidget_actions->clear();
-    treeWidget_keys->clear();
-    fillout_form();
+    // flag for re-rendering so the new item shows up in the right spot
+    mNeedUpdateData = true;
 
     switch (importedItemType) {
     case cmTriggerView: {
@@ -7358,6 +7353,11 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_triggers->setAnimated(false);
         selectTriggerByID(importedItemID);
         treeWidget_triggers->setAnimated(animated);
+
+        // set the focus because hiding button_displayAllVariables in changeView
+        // changes the focus to the search box for some reason. This thus breaks
+        // successive pastes because you'll now be pasting into the search box
+        treeWidget_triggers->setFocus();
         break;
     }
     case cmTimerView: {
@@ -7365,6 +7365,7 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_timers->setAnimated(false);
         selectTimerByID(importedItemID);
         treeWidget_timers->setAnimated(animated);
+        treeWidget_timers->setFocus();
         break;
     }
     case cmAliasView: {
@@ -7372,6 +7373,7 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_aliases->setAnimated(false);
         selectAliasByID(importedItemID);
         treeWidget_aliases->setAnimated(animated);
+        treeWidget_aliases->setFocus();
         break;
     }
     case cmScriptView: {
@@ -7379,6 +7381,7 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_scripts->setAnimated(false);
         selectScriptByID(importedItemID);
         treeWidget_scripts->setAnimated(animated);
+        treeWidget_scripts->setFocus();
         break;
     }
     case cmActionView: {
@@ -7386,6 +7389,7 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_actions->setAnimated(false);
         selectActionByID(importedItemID);
         treeWidget_actions->setAnimated(animated);
+        treeWidget_actions->setFocus();
         break;
     }
     case cmKeysView: {
@@ -7393,6 +7397,7 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_keys->setAnimated(false);
         selectKeyByID(importedItemID);
         treeWidget_keys->setAnimated(animated);
+        treeWidget_keys->setFocus();
         break;
     }
     }
