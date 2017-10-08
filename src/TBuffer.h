@@ -31,6 +31,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QString>
+#include <QStringBuilder>
 #include <QStringList>
 #include <QTime>
 #include <QVector>
@@ -119,7 +120,7 @@ public:
     int find(int line, const QString& what, int pos);
     int wrap(int);
     QStringList split(int line, const QString& splitter);
-    QStringList split(int line, QRegExp splitter);
+    QStringList split(int line, QRegularExpression splitter);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);
     bool deleteLine(int);
     bool deleteLines(int from, int to);
@@ -151,6 +152,7 @@ public:
     static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
+    void logRemainingOutput();
 
 
     std::deque<TChar> bufferLine;
@@ -314,6 +316,11 @@ private:
     // a packet:
     std::string mIncompleteUtf8SequenceBytes;
 
+    // keeps track of the previously logged buffer lines to ensure no log duplication
+    // happens when you enter a command
+    int lastLoggedFromLine;
+    int lastloggedToLine;
+    QString lastTextToLog;
 };
 
 #endif // MUDLET_TBUFFER_H

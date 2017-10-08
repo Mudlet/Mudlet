@@ -31,7 +31,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QRegExp>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 #include <assert.h>
@@ -211,15 +211,19 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
         }
 
         if (propertyList[i] == REGEX_COLOR_PATTERN) {
-            QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
-            int _pos = regex.indexIn(regexList[i]);
+            QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
+            QRegularExpressionMatch match = regex.match(regexList[i]);
+
+            int _pos = match.capturedStart();
+
             if (_pos == -1) {
                 mColorPatternList.push_back(nullptr);
                 state = false;
                 continue;
             }
-            int ansiFg = regex.cap(1).toInt();
-            int ansiBg = regex.cap(2).toInt();
+
+            int ansiFg = match.captured(1).toInt();
+            int ansiBg = match.captured(2).toInt();
 
             if (!setupColorTrigger(ansiFg, ansiBg)) {
                 mColorPatternList.push_back(nullptr);
@@ -301,7 +305,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount <= 0) {
-        ;
+        ;// Do something?
     } else {
         unsigned char* tabptr;
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);

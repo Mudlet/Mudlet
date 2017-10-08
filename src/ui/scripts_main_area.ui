@@ -16,9 +16,6 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="windowTitle">
-   <string>Scripts_main_area</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="0,1,0" columnstretch="0,1,0">
    <item row="0" column="0">
     <widget class="QLabel" name="label_script_name">

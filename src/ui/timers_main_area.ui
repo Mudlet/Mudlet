@@ -16,9 +16,6 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="windowTitle">
-   <string>Timers_main_area</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_timer_name">

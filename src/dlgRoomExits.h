@@ -60,7 +60,7 @@ public:
     }
 };
 
-class dlgRoomExits : public QDialog, public Ui::roomExits
+class dlgRoomExits : public QDialog, public Ui::room_exits
 {
     Q_OBJECT
 

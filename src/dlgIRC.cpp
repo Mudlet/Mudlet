@@ -3,6 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -714,7 +715,7 @@ QString dlgIRC::readIrcNickName(Host* pH)
 
 QString dlgIRC::readAppDefaultIrcNick()
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("irc_nick")));
     bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
@@ -727,7 +728,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/irc_nick").arg(QDir::homePath()));
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("irc_nick")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ifs(&file);

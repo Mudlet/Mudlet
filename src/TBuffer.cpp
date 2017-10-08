@@ -26,7 +26,7 @@
 #include "TConsole.h"
 
 #include <queue>
-
+#include <QRegularExpression>
 #include <assert.h>
 
 // Define this to get qDebug() messages about the decoding of UTF-8 data when it
@@ -1992,7 +1992,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (_t2.size() < 1) {
                             _userTag = false;
                         }
-                        QRegExp _rex;
+                        QRegularExpression _rex;
                         QStringList _rl1, _rl2;
                         int _ki1 = _tp.indexOf('\'');
                         int _ki2 = _tp.indexOf('\"');
@@ -2023,18 +2023,22 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             }
                         }
                         // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
-                        if (_tp.contains(R"(=')")) {
-                            _rex = QRegExp(R"(\b(\w+)=\'([^\']*) ?)");
+                        if (_tp.contains(QStringLiteral(R"(=')"))) {
+                            _rex = QRegularExpression(QStringLiteral(R"(\b(\w+)=\'([^\']*) ?)"));
                         } else {
-                            _rex = QRegExp(R"(\b(\w+)=\"([^\"]*) ?)");
+                            _rex = QRegularExpression(QStringLiteral(R"(\b(\w+)=\"([^\"]*) ?)"));
                         }
 
                         int _rpos = 0;
-                        while ((_rpos = _rex.indexIn(_tp, _rpos)) != -1) {
-                            _rl1 << _rex.cap(1).toUpper();
-                            _rl2 << _rex.cap(2);
-                            _rpos += _rex.matchedLength();
+                        QRegularExpressionMatch match = _rex.match(_tp, _rpos);
+                        while ((_rpos = match.capturedStart()) != -1) {
+                            _rl1 << match.captured(1).toUpper();
+                            _rl2 << match.captured(2);
+                            _rpos += match.capturedLength();
+
+                            match = _rex.match(_tp, _rpos);
                         }
+
                         if ((_rl1.size() == _rl2.size()) && (_rl1.size() > 0)) {
                             for (int i = 0; i < _rl1.size(); i++) {
                                 QString _var = _rl1[i];
@@ -2043,10 +2047,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     _t2 = _t2.replace(_var, _rl2[i]);
                                     _t3 = _t3.replace(_var, _rl2[i]);
                                 } else {
-                                    if (_rl1[i] == "HREF") {
+                                    if (_rl1[i] == QStringLiteral("HREF")) {
                                         _t2 = _rl2[i];
                                     }
-                                    if (_rl1[i] == "HINT") {
+                                    if (_rl1[i] == QStringLiteral("HINT")) {
                                         _t3 = _rl2[i];
                                     }
                                 }
@@ -3047,38 +3051,59 @@ inline int TBuffer::wrap(int startLine)
     return insertedLines > 0 ? insertedLines : 0;
 }
 
-void TBuffer::log(int from, int to)
+void TBuffer::log(int fromLine, int toLine)
 {
     TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB == this) {
-        if (mpHost->mpConsole->mLogToLogFile) {
-            if (from >= size() || from < 0) {
-                return;
-            }
-            if (to >= size()) {
-                to = size() - 1;
-            }
-            if (to < 0) {
-                return;
-            }
-            for (int i = from; i <= to; i++) {
-                QString toLog;
-                if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-                    QPoint P1 = QPoint(0, i);
-                    QPoint P2 = QPoint(buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
-                } else {
-                    if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
-                        toLog = timeBuffer[i].left(13);
-                    }
-                    toLog.append(lineBuffer[i]);
-                    toLog.append("\n");
-                }
-                mpHost->mpConsole->mLogStream << toLog;
-            }
-            mpHost->mpConsole->mLogStream.flush();
-        }
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+        return;
     }
+
+    if (fromLine >= size() || fromLine < 0) {
+        return;
+    }
+    if (toLine >= size()) {
+        toLine = size() - 1;
+    }
+    if (toLine < 0) {
+        return;
+    }
+
+    // if we've been called to log the same line - which can happen when the user
+    // enters a command after in-game text - then skip recording the last line
+    if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
+        mpHost->mpConsole->mLogStream << lastTextToLog;
+        mpHost->mpConsole->mLogStream.flush();
+    }
+
+    QString toLog;
+    for (int i = fromLine; i <= toLine; i++) {
+        QString lineToLog;
+        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            QPoint P1 = QPoint(0, i);
+            QPoint P2 = QPoint(buffer[i].size(), i);
+            lineToLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
+        } else {
+            if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
+                lineToLog = timeBuffer[i].left(13);
+            }
+            lineToLog.append(lineBuffer[i]);
+            lineToLog.append("\n");
+        }
+        toLog = toLog % lineToLog;
+    }
+
+    // record the last log call into a temporary buffer - we'll actually log
+    // on the next iteration after duplication detection has run
+    lastTextToLog = std::move(toLog);
+    lastLoggedFromLine = fromLine;
+    lastloggedToLine = toLine;
+}
+
+// logs the remaining output when logging gets stopped, without duplication checks
+void TBuffer::logRemainingOutput()
+{
+    mpHost->mpConsole->mLogStream << lastTextToLog;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // returns how many new lines have been inserted by the wrapping action
@@ -3245,7 +3270,7 @@ QStringList TBuffer::split(int line, const QString& splitter)
 }
 
 
-QStringList TBuffer::split(int line, QRegExp splitter)
+QStringList TBuffer::split(int line, QRegularExpression splitter)
 {
     if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
         return QStringList();
