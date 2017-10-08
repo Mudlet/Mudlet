@@ -1306,10 +1306,15 @@ void TTrigger::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpLua->call_luafunction(this);
+    } else if (mScript.isEmpty()) {
+        return;
+    }
+
     if (mIsMultiline) {
         mpLua->callMulti(mFuncName, mName);
-    } else if (mRegisteredAnonymousLuaFunction) {
-        mpLua->call_luafunction(this);
     } else {
         mpLua->call(mFuncName, mName);
     }
