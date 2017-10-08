@@ -365,8 +365,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
 
-    QAction* copyAction = new QAction(QIcon(QStringLiteral(":/icons/edit-copy.png")), tr("Copy"), this);
-//    copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
+    QAction* copyAction = new QAction(tr("Copy"), this);
+    copyAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+    copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
+    // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
+    copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     copyAction->setToolTip(tr("Copy the trigger/script/alias/etc"));
     copyAction->setStatusTip(tr("Copy the trigger/script/alias/etc"));
     treeWidget_triggers->addAction(copyAction);
@@ -377,8 +380,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->addAction(copyAction);
     connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
 
-    QAction* pasteAction = new QAction(QIcon(QStringLiteral(":/icons/edit-paste.png")), tr("Paste"), this);
-//    pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
+    QAction* pasteAction = new QAction(tr("Paste"), this);
+    pasteAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))));
+    pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
+    // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
+    pasteAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     pasteAction->setToolTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
     pasteAction->setStatusTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
     treeWidget_triggers->addAction(pasteAction);
