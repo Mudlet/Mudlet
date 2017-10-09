@@ -103,7 +103,7 @@ function InstallLua() {
   DownloadFile "https://github.com/Tieske/luawinmake/archive/master.zip" "luawinmake.zip"
   ExtractTar "luawinmake.zip" "luawinmake"
   Step "copying luawinmake files"
-  XCOPY /S /I /Q "$workingBaseDir\luawinmake\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
+  XCOPY /S /I /Q "$workingBaseDir\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
   $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
