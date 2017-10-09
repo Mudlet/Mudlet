@@ -101,10 +101,9 @@ function InstallLua() {
   DownloadFile "http://www.lua.org/ftp/lua-5.1.5.tar.gz" "lua-5.1.5.tar.gz"
   ExtractTar "lua-5.1.5.tar.gz" "lua-5.1.5"
   DownloadFile "https://github.com/Tieske/luawinmake/archive/master.zip" "luawinmake.zip"
-  ExtractTar "luawinmake.zip" "luawinmake"
+  ExtractFile "luawinmake.zip" "luawinmake"
   Step "copying luawinmake files"
-  XCOPY /S /I /Q "$workingBaseDir\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
-  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  XCOPY /S /I /Q "$workingBaseDir\luawinmake\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
   .\etc\winmake >> "$logFile" 2>&1
