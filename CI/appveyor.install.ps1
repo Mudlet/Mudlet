@@ -101,7 +101,7 @@ function InstallLua() {
   DownloadFile "http://www.lua.org/ftp/lua-5.1.5.tar.gz" "lua-5.1.5.tar.gz"
   ExtractTar "lua-5.1.5.tar.gz" "lua-5.1.5"
   DownloadFile "https://github.com/Tieske/luawinmake/archive/master.zip" "luawinmake.zip"
-  ExtractFile "luawinmake.zip" "luawinmake"
+  ExtractZip "luawinmake.zip" "luawinmake"
   Step "copying luawinmake files"
   XCOPY /S /I /Q "$workingBaseDir\luawinmake\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
   Set-Location lua-5.1.5\lua-5.1.5
