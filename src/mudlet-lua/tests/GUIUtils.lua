@@ -28,6 +28,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     it("Should convert simple single ANSI sequences correctly", function()
       local sequences = {
         {"\27[0m", "<r>"},
+        {"\27[00m", "<r>"},
         {"\27[30m", "<0,0,0:>"},
         {"\27[31m", "<128,0,0:>"},
         {"\27[32m", "<0,179,0:>"},
@@ -150,7 +151,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
       for _, pair in ipairs(hexStrings) do
         setHexFgColor(pair[1])
-        assert.are.same(pair[2], outputTable) 
+        assert.are.same(pair[2], outputTable)
       end
     end)
 
@@ -171,7 +172,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
       for _, pair in ipairs(hexStrings) do
         setHexBgColor(pair[1])
-        assert.are.same(pair[2], outputTable) 
+        assert.are.same(pair[2], outputTable)
       end
     end)
 
