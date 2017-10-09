@@ -105,9 +105,9 @@ function InstallLua() {
   XCOPY /S /I /Q "$workingBaseDir\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
-  etc\winmake >> "$logFile" 2>&1
+  .\etc\winmake >> "$logFile" 2>&1
   Step "installing lua"
-  etc\winmake install $Env:MINGW_BASE_DIR >> "$logFile" 2>&1
+  .\etc\winmake install $Env:MINGW_BASE_DIR >> "$logFile" 2>&1
 }
 
 function InstallPcre() {
