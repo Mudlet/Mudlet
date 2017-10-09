@@ -6,7 +6,7 @@ $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' 
 
 # Helper functions
 function PartSkeleton([string] $content) {
-  Write-Output"==== $content ====" | Tee-Object -File "$logFile" -Append
+  Write-Output "==== $content ====" | Tee-Object -File "$logFile" -Append
 }
 
 function StartPart([string] $partName) {
@@ -18,7 +18,7 @@ function FinishPart([string] $partName) {
 }
 
 function Step([string] $stepName) {
-  Write-Output"---- $stepName ----" | Tee-Object -File "$logFile" -Append
+  Write-Output "---- $stepName ----" | Tee-Object -File "$logFile" -Append
 }
 
 function DownloadFile([string] $url, [string] $outputFile) {
@@ -55,7 +55,7 @@ function RunMakeInstall([string] $makefile = "Makefile"){
 
 function CheckAndInstall([string] $dependencyName, [string] $signalFile, [scriptblock] $installationFunction){
   StartPart($dependencyName)
-  if(Test-Path -Path $signalFile -PathType Leaf){
+  if(Test-Path -Path "$signalFile" -PathType Leaf){
     Step("$dependencyName is already installed, skipping...")
   } else {
     Set-Location "$workingBaseDir"
