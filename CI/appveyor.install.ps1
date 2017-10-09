@@ -55,7 +55,7 @@ function RunMakeInstall([string] $makefile = "Makefile"){
 
 function CheckAndInstall([string] $dependencyName, [string] $signalFile, [scriptblock] $installationFunction){
   StartPart($dependencyName)
-  if(Test-Path -Path "$signalFile" -PathType Leaf){
+  if(Test-Path "$signalFile" -PathType Leaf){
     Step("$dependencyName is already installed, skipping...")
   } else {
     Set-Location "$workingBaseDir"
