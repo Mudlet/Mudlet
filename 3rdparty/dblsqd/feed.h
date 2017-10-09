@@ -20,7 +20,7 @@ public:
 
     //Async API
     void load();
-    void downloadRelease(Release release);
+    void downloadRelease(Release *latestRelease);
 
     //Sync API
     QList<Release> getUpdates(Release currentRelease = Release(QCoreApplication::applicationVersion()));
@@ -43,7 +43,7 @@ private:
 
     QNetworkAccessManager nam;
     QNetworkReply* feedReply;
-    Release release;
+    Release* release;
     QNetworkReply* downloadReply;
     QTemporaryFile* downloadFile;
     uint redirects;

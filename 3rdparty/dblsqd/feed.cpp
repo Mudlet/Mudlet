@@ -150,10 +150,10 @@ void Feed::load() {
  * \brief Starts the download of a given Release.
  * \sa downloadFinished() downloadError() downloadProgress()
  */
-void Feed::downloadRelease(Release release) {
-    release = release;
+void Feed::downloadRelease(Release *latestRelease) {
+    release = latestRelease;
     redirects = 0;
-    makeDownloadRequest(release.getDownloadUrl());
+    makeDownloadRequest(release->getDownloadUrl());
 }
 
 /*
@@ -275,7 +275,8 @@ void Feed::handleDownloadFinished() {
     QCryptographicHash fileHash(QCryptographicHash::Sha256);
     fileHash.addData(downloadFile->readAll());
     QString hashResult = fileHash.result().toHex();
-    if (hashResult.toLower() != release.getDownloadSHA256().toLower())
+    qDebug() << "computed hash:" << hashResult.toLower() << " actual release hash:" << release->getDownloadSHA256().toLower();
+    if (hashResult.toLower() != release->getDownloadSHA256().toLower())
     {
         emit downloadError(tr("Could not verify download integrity."));
         return;

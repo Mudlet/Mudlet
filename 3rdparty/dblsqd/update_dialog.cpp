@@ -237,7 +237,7 @@ void UpdateDialog::replaceAppVars(QString &string) {
 }
 
 void UpdateDialog::startDownload() {
-    feed->downloadRelease(latestRelease);
+    feed->downloadRelease(&latestRelease);
     disableButtons(true);
 }
 
