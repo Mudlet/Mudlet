@@ -8,7 +8,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
   windeployqt.exe --release mudlet.exe
   COPY $Env:MINGW_BASE_DIR\lib\libyajl.dll .
-  COPY C:\src\lua-5.1.5\src\lua51.dll .
+  COPY C:\src\lua-5.1.5\lua-5.1.5\src\lua51.dll .
   COPY C:\src\openssl-1.0.2l\libeay32.dll .
   COPY C:\src\openssl-1.0.2l\ssleay32.dll .
   COPY $Env:MINGW_BASE_DIR\bin\libzip-2.dll .
@@ -18,7 +18,7 @@ if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
   COPY $Env:MINGW_BASE_DIR\bin\zlib1.dll .
   XCOPY /S /I /Q ..\mudlet-lua mudlet-lua
   COPY ..\*.dic .
-  COPY C:\src\luazip-master\zip.dll .
+  COPY C:\src\luazip\luazip-master\zip.dll .
   XCOPY /S /I /Q $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
   Remove-Item * -include *.cpp, *.o
