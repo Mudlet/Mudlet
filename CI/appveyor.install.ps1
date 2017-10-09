@@ -30,12 +30,12 @@ function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
   $file = Get-ChildItem $tarFile
   7z x "$($file.FullName)" -y >> "$logFile" 2>&1
-  7z -o "$outputPath" x "$($file.Directory)\$($file.BaseName)" -y >> "$logFile" 2>&1
+  7z -o"$outputPath" x "$($file.Directory)\$($file.BaseName)" -y >> "$logFile" 2>&1
 }
 
 function ExtractZip([string] $zipFile, [string] $outputPath) {
   Step "Extracting source distribution"
-  7z -o "$outputPath" x "$zipFile" -y >> "$logFile" 2>&1
+  7z -o"$outputPath" x "$zipFile" -y >> "$logFile" 2>&1
 }
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
@@ -189,7 +189,7 @@ function InstallLuaModules(){
   Step "installing luazip"
   Set-Location "$workingBaseDir"
   DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
-  ExtractZip "luazip.zip", "luazip"
+  ExtractZip "luazip.zip" "luazip"
   Set-Location luazip\luazip-master
   Step "installing luazip"
   gcc -O2 -c -o src/luazip.o -I"$Env:MINGW_BASE_DIR/include" src/luazip.c >> "$logFile" 2>&1
