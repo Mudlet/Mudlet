@@ -1,6 +1,6 @@
-#if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
-#    exit 0
-#}
+if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
+  exit 0
+}
 
 # we deploy only QT 5.6 for windows at the moment
 if ("$Env:QT_BASE_DIR" -eq "C:\Qt\5.6\mingw49_32") {
