@@ -32,6 +32,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QMenu>
+#include <QRegularExpression>
 #include "post_guard.h"
 
 
@@ -535,7 +536,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), "\n");
     buffer.replace(QChar('\n'), " ");
 
-    QStringList wordList = buffer.split(QRegExp(R"(\b)"), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)")), QString::SkipEmptyParts);
     if (direction) {
         mTabCompletionCount++;
     } else {
@@ -546,14 +547,17 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegExp reg = QRegExp(R"(\b(\w+)$)");
-        int typePosition = reg.indexIn(mTabCompletionTyped);
+        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"));
+        QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
+        int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
-            lastWord = reg.cap(1);
+            lastWord = match.captured(1);
         } else {
             lastWord = "";
         }
-        QStringList filterList = wordList.filter(QRegExp("^" + lastWord + R"(\w+)", Qt::CaseInsensitive));
+
+        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"),
+                                                                    QRegularExpression::CaseInsensitiveOption));
         if (filterList.size() < 1) {
             return;
         }

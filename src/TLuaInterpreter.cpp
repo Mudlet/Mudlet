@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2017 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -53,7 +53,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QSound>
 #include <QSslConfiguration>
 #include <QString>
@@ -4851,13 +4851,9 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
 
 int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 {
-    QString home = QDir::homePath();
-    home.append("/.config/mudlet/profiles/");
     Host& host = getHostFromLua(L);
-    QString name = host.getName();
-    home.append(name);
-    QString erg = QDir::toNativeSeparators(home);
-    lua_pushstring(L, erg.toLatin1().data());
+    QString nativeHomeDirectory = QDir::toNativeSeparators(mudlet::getMudletPath(mudlet::profileHomePath, host.getName()));
+    lua_pushstring(L, nativeHomeDirectory.toUtf8().constData());
     return 1;
 }
 
@@ -10354,11 +10350,11 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 }
 
 
-int TLuaInterpreter::Send(lua_State* L)
+int TLuaInterpreter::expandAlias(lua_State *L)
 {
     string luaSendText;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "Send: wrong argument type");
+        lua_pushstring(L, "expandAlias: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -10366,12 +10362,10 @@ int TLuaInterpreter::Send(lua_State* L)
     }
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushstring(L, "Send: wrong argument type");
-            lua_error(L);
-            return 1;
-        } else {
-            wantPrint = lua_toboolean(L, 2);
+        // check if the 2nd argument is a 'false', but don't match if it is 'nil'
+        // because expandAlias("command") should be the same as expandAlias("command", nil)
+        if (lua_isboolean(L, 2) && !lua_toboolean(L, 2)) {
+            wantPrint = false;
         }
     }
     Host& host = getHostFromLua(L);
@@ -11124,15 +11118,18 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     // auto-detect IRE composer
     if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
-        QRegExp rx(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit");
-        if (rx.indexIn(string_data) != -1) {
-            QString title = rx.cap(1);
-            QString initialText = rx.cap(2);
-            initialText.replace(QString(R"(\n)"), QString("\n"));
+        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
+        QRegularExpressionMatch match = rx.match(string_data);
+
+        if (match.capturedStart() != -1) {
+            QString title = match.captured(1);
+            QString initialText = match.captured(2);
+            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
             Host& host = getHostFromLua(L);
             if (host.mTelnet.mpComposer) {
                 return;
             }
+
             host.mTelnet.mpComposer = new dlgComposer(&host);
             host.mTelnet.mpComposer->init(title, initialText);
             host.mTelnet.mpComposer->raise();
@@ -11738,7 +11735,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_settable(pGlobalLua, LUA_GLOBALSINDEX);
     lua_register(pGlobalLua, "showUnzipProgress", TLuaInterpreter::showUnzipProgress);//internal function used by the package system NOT FOR USERS
     lua_register(pGlobalLua, "wait", TLuaInterpreter::Wait);
-    lua_register(pGlobalLua, "expandAlias", TLuaInterpreter::Send);
+    lua_register(pGlobalLua, "expandAlias", TLuaInterpreter::expandAlias);
     lua_register(pGlobalLua, "echo", TLuaInterpreter::Echo);
     lua_register(pGlobalLua, "selectString", TLuaInterpreter::selectString);
     lua_register(pGlobalLua, "selectSection", TLuaInterpreter::selectSection);
@@ -12131,41 +12128,6 @@ void TLuaInterpreter::initLuaGlobals()
         QString msg = "[  OK  ]  - Lua module utf8 loaded.";
         mpHost->postMessage(msg);
     }
-
-    //    QString path = QDir::homePath()+"/.config/mudlet/mudlet-lua/lua/LuaGlobal.lua";
-    //    error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-    //    if( error != 0 )
-    //    {
-    //        string e = "no error message available from Lua";
-    //        if( lua_isstring( pGlobalLua, 1 ) )
-    //        {
-    //            e = "[CRITICAL ERROR] LuaGlobal.lua compile error - please report";
-    //            e += lua_tostring( pGlobalLua, 1 );
-    //        }
-    //        gSysErrors << e.c_str();
-    //    }
-    //    else
-    //    {
-    //        gSysErrors << "[INFO] LuaGlobal.lua loaded successfully.";
-    //    }
-
-    /*path = QDir::homePath()+"/.config/mudlet/db.lua";
-	   error = luaL_dofile( pGlobalLua, path.toLatin1().data() );
-	   if( error != 0 )
-	   {
-	    string e = "no error message available from Lua";
-	    if( lua_isstring( pGlobalLua, 1 ) )
-	    {
-	        e = "[CRITICAL ERROR] db.lua compile error - please report";
-	        e += lua_tostring( pGlobalLua, 1 );
-	    }
-	    gSysErrors << e.c_str();
-	   }
-	   else
-	   {
-	    gSysErrors << "[INFO] db.lua loaded successfully.";
-	   }*/
-
 
     QString tn = "atcp";
     QStringList args;

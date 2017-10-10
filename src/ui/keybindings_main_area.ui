@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>keys_main_area</class>
- <widget class="QWidget" name="keys_main_area">
+ <class>keybindings_main_area</class>
+ <widget class="QWidget" name="keybindings_main_area">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,9 +15,6 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
-  </property>
-  <property name="windowTitle">
-   <string>Keys_main_area</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>irc_dlg</class>
- <widget class="QMainWindow" name="irc_dlg">
+ <class>irc</class>
+ <widget class="QMainWindow" name="irc">
   <property name="geometry">
    <rect>
     <x>0</x>
