@@ -292,7 +292,8 @@ SOURCES += \
     ../3rdparty/dblsqd/feed.cpp \
     ../3rdparty/dblsqd/release.cpp \
     ../3rdparty/dblsqd/semver.cpp \
-    ../3rdparty/dblsqd/update_dialog.cpp
+    ../3rdparty/dblsqd/update_dialog.cpp \
+    updater.cpp
 
 
 HEADERS += \
@@ -373,7 +374,8 @@ HEADERS += \
     ../3rdparty/dblsqd/feed.h \
     ../3rdparty/dblsqd/release.h \
     ../3rdparty/dblsqd/semver.h \
-    ../3rdparty/dblsqd/update_dialog.h
+    ../3rdparty/dblsqd/update_dialog.h \
+    updater.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
