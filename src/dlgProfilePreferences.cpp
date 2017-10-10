@@ -45,7 +45,7 @@
 #include <QMainWindow>
 #include <QNetworkDiskCache>
 #include <QPalette>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextOption>
 #include <QToolBar>
@@ -103,10 +103,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     QDir dir(path);
 
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegExp rex(R"(\.dic$)");
+    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
     entries = entries.filter(rex);
     for (int i = 0; i < entries.size(); i++) {
-        QString n = entries[i].replace(".dic", "");
+        QString n = entries[i].replace(QStringLiteral(".dic"), "");
         auto item = new QListWidgetItem(entries[i]);
         dictList->addItem(item);
         if (entries[i] == mpHost->mSpellDic) {
@@ -226,8 +226,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         if (mFontSize < 0) {
             mFontSize = 10;
         }
-        if (mFontSize <= 40) {
-            fontSize->setCurrentIndex(mFontSize);
+        if (mFontSize < 40 && mFontSize > 0) {
+            fontSize->setCurrentIndex( (mFontSize - 1) );
+        } else {
+            // if the font size set for the main console is outside the pre-set range
+            // this will unfortunately reset the font to default size.
+            // without this the first entry (font-size 1) is selected and on-save
+            // will make the console font far too tiny to read.
+            // Maybe our font-size range should be generated differently if the console
+            // has a font size larger than the preset range offers?
+            fontSize->setCurrentIndex(9); // default font is size 10, index 9.
         }
 
         setColors();
@@ -245,12 +253,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
         checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
         USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
-        QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
-        if (file_use_smallscreen.exists()) {
-            checkBox_USE_SMALL_SCREEN->setChecked(true);
-        } else {
-            checkBox_USE_SMALL_SCREEN->setChecked(false);
-        }
+        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        checkBox_USE_SMALL_SCREEN->setChecked(file_use_smallscreen.exists());
         topBorderHeight->setValue(pHost->mBorderTopHeight);
         bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
         leftBorderWidth->setValue(pHost->mBorderLeftWidth);
@@ -279,7 +283,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         // load profiles into mappers "copy map to profile" combobox
         // this feature should work seamlessly both for online and offline profiles
-        QStringList profileList = QDir(QStringLiteral("%1/.config/mudlet/profiles").arg(QDir::homePath())).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+        QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
         pushButton_chooseProfiles->setEnabled(false);
         pushButton_copyMap->setEnabled(false);
         QMenu* pMenu = new QMenu(tr("Other profiles to Map to:"));
@@ -292,7 +296,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
                 continue;
             }
 
-            auto pItem = new QAction(s, 0);
+            auto pItem = new QAction(s, nullptr);
             pItem->setCheckable(true);
             pItem->setChecked(false);
             pMenu->addAction(pItem);
@@ -615,8 +619,9 @@ void dlgProfilePreferences::setCommandBgColor()
 
 void dlgProfilePreferences::setFontSize()
 {
-    mFontSize = fontSize->currentIndex();
-    setDisplayFont();
+    mFontSize = fontSize->currentIndex() + 1;
+    // delay setting pHost->mDisplayFont until save is clicked by the user.
+    //setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -631,6 +636,13 @@ void dlgProfilePreferences::setDisplayFont()
         pHost->mDisplayFont = font;
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
+
+            // update the display properly when font or size selections change.
+            mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->console2->updateScreenView();
+            mudlet::self()->mConsoleMap[pHost]->console2->forceUpdate();
+            mudlet::self()->mConsoleMap[pHost]->refresh();
         }
         auto config = edbeePreviewWidget->config();
         config->beginChanges();
@@ -948,7 +960,11 @@ void dlgProfilePreferences::loadMap()
     }
 
     QString fileName = QFileDialog::getOpenFileName(
-            this, tr("Load Mudlet map"), QDir::homePath(), tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)", "Do not change extensions (in braces) they are used programmatically!"));
+                           this,
+                           tr("Load Mudlet map"),
+                           mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
+                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                              "Do not change extensions (in braces) they are used programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -1054,7 +1070,7 @@ void dlgProfilePreferences::copyMap()
 
             // Check for the destination directory for the other profiles
             QDir toProfileDir;
-            QString toProfileDirPathString = QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), toProfileName);
+            QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName);
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -1173,7 +1189,7 @@ void dlgProfilePreferences::copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString sourceMapFolder(QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), pHost->getName()));
+    QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
     QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -1203,7 +1219,7 @@ void dlgProfilePreferences::copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3").arg(QDir::homePath(), otherHostName, thisProfileLatestMapPathFileName))) {
+        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10 * 1000, this, SLOT(hideActionLabel()));
             continue; // Try again with next profile
@@ -1383,19 +1399,19 @@ void dlgProfilePreferences::slot_save_and_exit()
         mudlet::self()->mpIrcClientMap[pHost]->ircRestart();
     }
 
+    QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (checkBox_USE_SMALL_SCREEN->isChecked()) {
-        QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
         file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file_use_smallscreen);
+        Q_UNUSED(out);
         file_use_smallscreen.close();
     } else {
-        QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
         file_use_smallscreen.remove();
     }
+
+    setDisplayFont();
+
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->console->updateScreenView();
-        mudlet::self()->mConsoleMap[pHost]->console->forceUpdate();
-        mudlet::self()->mConsoleMap[pHost]->refresh();
         int x = mudlet::self()->mConsoleMap[pHost]->width();
         int y = mudlet::self()->mConsoleMap[pHost]->height();
         QSize s = QSize(x, y);
@@ -1635,7 +1651,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
 
-    auto themesAge = QFileInfo(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath())).lastModified().toUTC();
+    auto themesAge = QFileInfo(mudlet::getMudletPath(mudlet::editorWidgetThemeJsonFile)).lastModified().toUTC();
 
     // if the cache file exists and is younger than the specified age (24h by default), don't refresh it
     if (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1) {
@@ -1694,7 +1710,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), QStringLiteral("%1/.config/mudlet/edbee/").arg(QDir::homePath()), temporaryDir.path());
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
                             if (future.result() == true) {
@@ -1714,7 +1730,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 // selection combobox with them
 void dlgProfilePreferences::populateThemesList()
 {
-    QFile themesFile(QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath()));
+    QFile themesFile(mudlet::getMudletPath(mudlet::editorWidgetThemeJsonFile));
     QList<std::pair<QString, QString>> sortedThemes;
     QJsonArray unsortedThemes;
 

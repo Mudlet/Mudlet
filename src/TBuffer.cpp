@@ -26,7 +26,7 @@
 #include "TConsole.h"
 
 #include <queue>
-
+#include <QRegularExpression>
 #include <assert.h>
 
 // Define this to get qDebug() messages about the decoding of UTF-8 data when it
@@ -1992,7 +1992,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (_t2.size() < 1) {
                             _userTag = false;
                         }
-                        QRegExp _rex;
+                        QRegularExpression _rex;
                         QStringList _rl1, _rl2;
                         int _ki1 = _tp.indexOf('\'');
                         int _ki2 = _tp.indexOf('\"');
@@ -2023,18 +2023,22 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             }
                         }
                         // parse parameters in the form var="val" or var='val' where val can be given in the form "foo'b'ar" or 'foo"b"ar'
-                        if (_tp.contains(R"(=')")) {
-                            _rex = QRegExp(R"(\b(\w+)=\'([^\']*) ?)");
+                        if (_tp.contains(QStringLiteral(R"(=')"))) {
+                            _rex = QRegularExpression(QStringLiteral(R"(\b(\w+)=\'([^\']*) ?)"));
                         } else {
-                            _rex = QRegExp(R"(\b(\w+)=\"([^\"]*) ?)");
+                            _rex = QRegularExpression(QStringLiteral(R"(\b(\w+)=\"([^\"]*) ?)"));
                         }
 
                         int _rpos = 0;
-                        while ((_rpos = _rex.indexIn(_tp, _rpos)) != -1) {
-                            _rl1 << _rex.cap(1).toUpper();
-                            _rl2 << _rex.cap(2);
-                            _rpos += _rex.matchedLength();
+                        QRegularExpressionMatch match = _rex.match(_tp, _rpos);
+                        while ((_rpos = match.capturedStart()) != -1) {
+                            _rl1 << match.captured(1).toUpper();
+                            _rl2 << match.captured(2);
+                            _rpos += match.capturedLength();
+
+                            match = _rex.match(_tp, _rpos);
                         }
+
                         if ((_rl1.size() == _rl2.size()) && (_rl1.size() > 0)) {
                             for (int i = 0; i < _rl1.size(); i++) {
                                 QString _var = _rl1[i];
@@ -2043,10 +2047,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                     _t2 = _t2.replace(_var, _rl2[i]);
                                     _t3 = _t3.replace(_var, _rl2[i]);
                                 } else {
-                                    if (_rl1[i] == "HREF") {
+                                    if (_rl1[i] == QStringLiteral("HREF")) {
                                         _t2 = _rl2[i];
                                     }
-                                    if (_rl1[i] == "HINT") {
+                                    if (_rl1[i] == QStringLiteral("HINT")) {
                                         _t3 = _rl2[i];
                                     }
                                 }
@@ -2249,25 +2253,27 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // time because there is not necessarily a one-byte to one TChar
             // mapping, instead we use one TChar per QChar - and that has to be
             // tweaked for non-BMP characters that use TWO QChars per codepoint.
-            if (localBuffer[localBufferPosition] & 0x80) {
+            if (static_cast<quint8>(localBuffer[localBufferPosition]) & 0x80) {
                 // MSB is set, so if this is Utf-8 then assume this is the first byte
                 size_t utf8SequenceLength = 1;
-                if ((localBuffer[localBufferPosition] & 0xE0) == 0xC0) {
+                // clang-format off
+                if        ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xE0) == 0xC0) {
                     // 2 byte sequence - Unicode code-points: U+00000080 to U+000007FF
                     utf8SequenceLength = 2;
-                } else if ((localBuffer[localBufferPosition] & 0xF0) == 0xE0) {
+                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xF0) == 0xE0) {
                     // 3 byte sequence - Unicode code-points: U+00000800 to U+0000FFFF
                     utf8SequenceLength = 3;
-                } else if ((localBuffer[localBufferPosition] & 0xF8) == 0xF0) {
+                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xF8) == 0xF0) {
                     // 4 byte sequence - Unicode code-points: U+00010000 to U+001FFFFF (<= U+0010FFF LEGAL)
                     utf8SequenceLength = 4;
-                } else if ((localBuffer[localBufferPosition] & 0xFC) == 0xF8) {
+                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xFC) == 0xF8) {
                     // 5 byte sequence - Unicode code-points: U+00200000 to U+03FFFFFF (ALL ILLEGAL)
                     utf8SequenceLength = 5;
-                } else if ((localBuffer[localBufferPosition] & 0xFE) == 0xFC) {
+                } else if ((static_cast<quint8>(localBuffer[localBufferPosition]) & 0xFE) == 0xFC) {
                     // 6 byte sequence - Unicode code-points: U+04000000 to U+7FFFFFFF (ALL ILLEGAL)
                     utf8SequenceLength = 6;
                 }
+                // clang-format on
 
                 if ((localBufferPosition + utf8SequenceLength) > localBufferLength) {
                     // Not enough bytes left in localBuffer to complete the utf-8
@@ -2292,13 +2298,20 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 bool isToUseByteOrderMark = false; // When BOM seen in stream it transcodes as zero characters
                 switch (utf8SequenceLength) {
                 case 4:
-                    if ((localBuffer[localBufferPosition + 3] & 0xC0) != 0x80) {
+                    // clang-format off
+                    if        (   (   static_cast<quint8>(localBuffer[localBufferPosition + 3]) & 0xC0) != 0x80) {
+                        // clang-format on
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 4th byte in UTF-8 sequence is invalid!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    } else if (((localBuffer[localBufferPosition] & 0x07) > 0x04) || (((localBuffer[localBufferPosition] & 0x07) == 0x04) && ((localBuffer[localBufferPosition + 1] & 0x3F) > 0x0F))) {
+                        // clang-format off
+                    } else if ( ( (   static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0x07) >  0x04)
+                                ||( ((static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0x07) == 0x04)
+                                  &&((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0x3F) >  0x0F)) ) {
+                        // clang-format on
+
 // For 4 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3    Byte 4
 // 11110ABC  10DEFGHI  10JKLMNO  10PQRSTU   A is MSB
@@ -2320,15 +2333,19 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         isToUseReplacementMark = true;
                     }
 
-                // Fall-through
+                    [[clang::fallthrough]];
                 case 3:
-                    if ((localBuffer[localBufferPosition + 2] & 0xC0) != 0x80) {
+                    // clang-format off
+                    if        ((static_cast<quint8>(localBuffer[localBufferPosition + 2]) & 0xC0) != 0x80) {
+                        // clang-format on
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 3rd byte in UTF-8 sequence is invalid!";
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    } else if ((localBuffer[localBufferPosition] & 0x0F) == 0x0D) {
+                        // clang-format off
+                    } else if ((static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0x0F) == 0x0D) {
+                        // clang-format on
 // For 3 byte values the bits are distributed:
 //  Byte 1    Byte 2    Byte 3
 // 1110ABCD  10DEFGHI  10JKLMNO   A is MSB
@@ -2362,8 +2379,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #endif
                         isValid = false;
                         isToUseReplacementMark = true;
-                    } else if ((static_cast<quint8>(localBuffer[localBufferPosition + 2]) == 0xbf) && (static_cast<quint8>(localBuffer[localBufferPosition + 1]) == 0xbb)
-                               && (static_cast<quint8>(localBuffer[localBufferPosition]) == 0xef)) {
+                        // clang-format off
+                    } else if (  (static_cast<quint8>(localBuffer[localBufferPosition + 2]) == 0xbf)
+                              && (static_cast<quint8>(localBuffer[localBufferPosition + 1]) == 0xbb)
+                              && (static_cast<quint8>(localBuffer[localBufferPosition    ]) == 0xef) ) {
+                        // clang-format on
 // Got caught out by this one - it is the Utf-8 BOM and
 // needs to be ignored as it transcodes to NO codepoints!
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -2372,10 +2392,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         isValid = false;
                         isToUseByteOrderMark = true;
                     }
-
-                // Fall-through
+                    [[clang::fallthrough]];
                 case 2:
-                    if ((localBuffer[localBufferPosition + 1] & 0xC0) != 0x80) {
+                    // clang-format off
+                    if (     (static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xC0) != 0x80) {
+                        // clang-format on
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug() << "TBuffer::translateToPlainText(...) 2nd byte in UTF-8 sequence is invalid!";
 #endif
@@ -2385,9 +2406,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                     // Also test for (and reject) overlong sequences - don't
                     // need to check 5 or 6 ones as those are already rejected:
-                    if ((((localBuffer[localBufferPosition] & 0xFE) == 0xC0) && ((localBuffer[localBufferPosition + 1] & 0xC0) == 0x80))
-                        || ((localBuffer[localBufferPosition] == 0xE0) && ((localBuffer[localBufferPosition + 1] & 0xE0) == 0x80))
-                        || ((localBuffer[localBufferPosition] == 0xF0) && ((localBuffer[localBufferPosition + 1] & 0xF0) == 0x80))) {
+                    // clang-format off
+                    if ( (     ((static_cast<quint8>(localBuffer[localBufferPosition    ]) & 0xFE) == 0xC0)
+                            && ((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xC0) == 0x80))
+                         || (  ( static_cast<quint8>(localBuffer[localBufferPosition    ])         == 0xE0)
+                            && ((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xE0) == 0x80))
+                         || (  ( static_cast<quint8>(localBuffer[localBufferPosition    ])         == 0xF0)
+                            && ((static_cast<quint8>(localBuffer[localBufferPosition + 1]) & 0xF0) == 0x80)) ) {
+                    // clang-format on
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug().nospace() << "TBuffer::translateToPlainText(...) Overlong " << utf8SequenceLength << "-byte sequence as UTF-8 rejected!";
 #endif
@@ -2417,7 +2443,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         break;
                     case 2:
                         isTwoTCharsNeeded = true;
-                    // Fall-through
+                        [[clang::fallthrough]];
                     case 1:
 #if defined(DEBUG_UTF8_PROCESSING)
                         qDebug().nospace() << "TBuffer::translateToPlainText(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long ["
@@ -3025,38 +3051,59 @@ inline int TBuffer::wrap(int startLine)
     return insertedLines > 0 ? insertedLines : 0;
 }
 
-void TBuffer::log(int from, int to)
+void TBuffer::log(int fromLine, int toLine)
 {
     TBuffer* pB = &mpHost->mpConsole->buffer;
-    if (pB == this) {
-        if (mpHost->mpConsole->mLogToLogFile) {
-            if (from >= size() || from < 0) {
-                return;
-            }
-            if (to >= size()) {
-                to = size() - 1;
-            }
-            if (to < 0) {
-                return;
-            }
-            for (int i = from; i <= to; i++) {
-                QString toLog;
-                if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-                    QPoint P1 = QPoint(0, i);
-                    QPoint P2 = QPoint(buffer[i].size(), i);
-                    toLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
-                } else {
-                    if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
-                        toLog = timeBuffer[i].left(13);
-                    }
-                    toLog.append(lineBuffer[i]);
-                    toLog.append("\n");
-                }
-                mpHost->mpConsole->mLogStream << toLog;
-            }
-            mpHost->mpConsole->mLogStream.flush();
-        }
+    if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
+        return;
     }
+
+    if (fromLine >= size() || fromLine < 0) {
+        return;
+    }
+    if (toLine >= size()) {
+        toLine = size() - 1;
+    }
+    if (toLine < 0) {
+        return;
+    }
+
+    // if we've been called to log the same line - which can happen when the user
+    // enters a command after in-game text - then skip recording the last line
+    if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
+        mpHost->mpConsole->mLogStream << lastTextToLog;
+        mpHost->mpConsole->mLogStream.flush();
+    }
+
+    QString toLog;
+    for (int i = fromLine; i <= toLine; i++) {
+        QString lineToLog;
+        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+            QPoint P1 = QPoint(0, i);
+            QPoint P2 = QPoint(buffer[i].size(), i);
+            lineToLog = bufferToHtml(P1, P2, mpHost->mIsLoggingTimestamps);
+        } else {
+            if (mpHost->mIsLoggingTimestamps && !timeBuffer[i].isEmpty()) {
+                lineToLog = timeBuffer[i].left(13);
+            }
+            lineToLog.append(lineBuffer[i]);
+            lineToLog.append("\n");
+        }
+        toLog = toLog % lineToLog;
+    }
+
+    // record the last log call into a temporary buffer - we'll actually log
+    // on the next iteration after duplication detection has run
+    lastTextToLog = std::move(toLog);
+    lastLoggedFromLine = fromLine;
+    lastloggedToLine = toLine;
+}
+
+// logs the remaining output when logging gets stopped, without duplication checks
+void TBuffer::logRemainingOutput()
+{
+    mpHost->mpConsole->mLogStream << lastTextToLog;
+    mpHost->mpConsole->mLogStream.flush();
 }
 
 // returns how many new lines have been inserted by the wrapping action
@@ -3223,7 +3270,7 @@ QStringList TBuffer::split(int line, const QString& splitter)
 }
 
 
-QStringList TBuffer::split(int line, QRegExp splitter)
+QStringList TBuffer::split(int line, QRegularExpression splitter)
 {
     if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
         return QStringList();
@@ -3287,35 +3334,6 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
     // insert replacement
     insertInLine(P_begin, with, format);
-    return true;
-}
-
-
-bool TBuffer::replace(int line, const QString& what, const QString& with)
-{
-    if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
-        return false;
-    }
-    lineBuffer[line].replace(what, with);
-
-    // fix size of the corresponding format buffer
-
-    int delta = lineBuffer[line].size() - static_cast<int>(buffer[line].size());
-
-    if (delta > 0) {
-        for (int i = 0; i < delta; i++) {
-            TChar c(mpHost); // cloning default char format according to profile
-            // because a lookup would be too expensive as
-            // this is a very often used function and this standard
-            // behaviour is acceptable. If the user wants special colors
-            // he can apply format changes
-            buffer[line].push_back(c);
-        }
-    } else if (delta < 0) {
-        for (int i = 0; i < delta; i++) {
-            buffer[line].pop_back();
-        }
-    }
     return true;
 }
 
@@ -3718,7 +3736,7 @@ QString TBuffer::bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int 
         // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
         s.append(R"(<span style="color: rgb(200,150,0); background: rgb(22,22,22); )");
         s.append(R"(font-weight: normal; font-style: normal; text-decoration: normal">)");
-        s.append(timeBuffer[y].left(13));
+        s.append(timeBuffer[y].leftRef(13));
     }
     if (spacePadding > 0) {
         // used for "copy HTML", first line of selection

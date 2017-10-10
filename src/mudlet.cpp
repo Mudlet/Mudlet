@@ -60,6 +60,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTableWidget>
 #include <QTextCharFormat>
 #include <QToolBar>
 #include "post_guard.h"
@@ -115,8 +116,8 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 //          codes would break or destroy the script that used it.
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
 
-QPointer<TConsole> mudlet::mpDebugConsole = 0;
-QMainWindow* mudlet::mpDebugArea = 0;
+QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
+QMainWindow* mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 static const QString timeFormat = "hh:mm:ss";
 
@@ -140,22 +141,22 @@ mudlet::mudlet()
 , mWindowMinimized(false)
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
-, mpCurrentActiveHost(0)
+, mpCurrentActiveHost(nullptr)
 , mIsGoingDown(false)
-, actionReplaySpeedDown(0)
-, actionReplaySpeedUp(0)
-, actionSpeedDisplay(0)
-, actionReplayTime(0)
-, replaySpeedDisplay(0)
-, replayTime(0)
-, replayTimer(0)
-, replayToolBar(0)
-, moduleTable(0)
+, actionReplaySpeedDown(nullptr)
+, actionReplaySpeedUp(nullptr)
+, actionSpeedDisplay(nullptr)
+, actionReplayTime(nullptr)
+, replaySpeedDisplay(nullptr)
+, replayTime(nullptr)
+, replayTimer(nullptr)
+, replayToolBar(nullptr)
+, moduleTable(nullptr)
 , mshowMapAuditErrors(false)
-, mpAboutDlg(0)
-, mpModuleDlg(0)
-, mpPackageManagerDlg(0)
-, mpProfilePreferencesDlg(0)
+, mpAboutDlg(nullptr)
+, mpModuleDlg(nullptr)
+, mpPackageManagerDlg(nullptr)
+, mpProfilePreferencesDlg(nullptr)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -196,14 +197,14 @@ mudlet::mudlet()
     mainPane->setSizePolicy(sizePolicy);
     mainPane->setFocusPolicy(Qt::NoFocus);
 
-    QFile file_autolog(QDir::homePath() + "/.config/mudlet/autolog");
+    QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
     if (file_autolog.exists()) {
         mAutolog = true;
     } else {
         mAutolog = false;
     }
 
-    QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
+    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (file_use_smallscreen.exists()) {
         mpMainToolBar->setIconSize(QSize(16, 16));
     } else {
@@ -214,49 +215,76 @@ mudlet::mudlet()
     actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction(actionConnect);
 
+    // add name to the action's widget in the toolbar, which doesn't have one by default
+    // see https://stackoverflow.com/a/32460562/72944
+    actionConnect->setObjectName(QStringLiteral("connect_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+
     QAction* actionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     actionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction(actionTriggers);
+    actionConnect->setObjectName(QStringLiteral("triggers_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionAlias = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     actionAlias->setToolTip(tr("Show and edit aliases"));
     mpMainToolBar->addAction(actionAlias);
+    actionConnect->setObjectName(QStringLiteral("aliases_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
     actionTimers->setToolTip(tr("Show and edit timers"));
     mpMainToolBar->addAction(actionTimers);
+    actionConnect->setObjectName(QStringLiteral("timers_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
     actionButtons->setToolTip(tr("Show and edit easy buttons"));
     mpMainToolBar->addAction(actionButtons);
+    actionConnect->setObjectName(QStringLiteral("buttons_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
     actionScripts->setToolTip(tr("Show and edit scripts"));
     mpMainToolBar->addAction(actionScripts);
+    actionConnect->setObjectName(QStringLiteral("scripts_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     actionKeys->setToolTip(tr("Show and edit keys"));
     mpMainToolBar->addAction(actionKeys);
+    actionConnect->setObjectName(QStringLiteral("keys_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionVars = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
-    actionVars->setToolTip(tr("Show and edit lua variables"));
+    actionVars->setToolTip(tr("Show and edit Lua variables"));
     mpMainToolBar->addAction(actionVars);
+    actionConnect->setObjectName(QStringLiteral("variables_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionIRC = new QAction(QIcon(QStringLiteral(":/icons/internet-telephony.png")), tr("IRC"), this);
-    actionIRC->setToolTip(tr("Open the Mudlet IRC client."));
+    actionIRC->setToolTip(tr("Open the Mudlet IRC client"));
     mpMainToolBar->addAction(actionIRC);
+    actionConnect->setObjectName(QStringLiteral("irc_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
     actionMapper->setToolTip(tr("Show/hide the map"));
     mpMainToolBar->addAction(actionMapper);
+    actionConnect->setObjectName(QStringLiteral("map_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
     actionHelp->setToolTip(tr("Browse reference material and documentation"));
     mpMainToolBar->addAction(actionHelp);
+    actionConnect->setObjectName(QStringLiteral("manual_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
     actionOptions->setToolTip(tr("See and edit profile preferences"));
     mpMainToolBar->addAction(actionOptions);
+    actionConnect->setObjectName(QStringLiteral("settings_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
     // now used for the window when the visual change to the toolbar caused can
@@ -264,26 +292,38 @@ mudlet::mudlet()
     QAction* actionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
     actionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
     mpMainToolBar->addAction(actionNotes);
+    actionConnect->setObjectName(QStringLiteral("notepad_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionPackageM = new QAction(QIcon(QStringLiteral(":/icons/package-manager.png")), tr("Package Manager"), this);
     actionPackageM->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
     mpMainToolBar->addAction(actionPackageM);
+    actionConnect->setObjectName(QStringLiteral("package_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionModuleM = new QAction(QIcon(QStringLiteral(":/icons/module-manager.png")), tr("Module Manager"), this);
     actionModuleM->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
     mpMainToolBar->addAction(actionModuleM);
+    actionConnect->setObjectName(QStringLiteral("module_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
     actionReplay->setToolTip(tr("Load a Mudlet replay"));
     mpMainToolBar->addAction(actionReplay);
+    actionConnect->setObjectName(QStringLiteral("replay_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     actionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
     actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
     mpMainToolBar->addAction(actionReconnect);
+    actionConnect->setObjectName(QStringLiteral("reconnect_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
     actionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
     mpMainToolBar->addAction(actionMultiView);
+    actionConnect->setObjectName(QStringLiteral("multiview_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionStopAllTriggers = new QAction(QIcon(QStringLiteral(":/icons/edit-bomb.png")), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
@@ -291,10 +331,12 @@ mudlet::mudlet()
     QAction* actionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction(actionAbout);
+    actionConnect->setObjectName(QStringLiteral("about_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     disableToolbarButtons();
 
-    mpDebugArea = new QMainWindow(0);
+    mpDebugArea = new QMainWindow(nullptr);
     mHostManager.addHost("default_host", "", "", "");
     mpDefaultHost = mHostManager.getHost(QString("default_host"));
     mpDebugConsole = new TConsole(mpDefaultHost, true);
@@ -318,6 +360,8 @@ mudlet::mudlet()
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction(actionFullScreeniew);
+        actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
+        mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     } else {
         mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
@@ -402,11 +446,6 @@ mudlet::mudlet()
 
     readSettings();
 
-    auto timerAutologin = new QTimer(this);
-    timerAutologin->setSingleShot(true);
-    connect(timerAutologin, SIGNAL(timeout()), this, SLOT(startAutoLogin()));
-    timerAutologin->start(50);
-
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, slot_gamepadButtonRelease);
@@ -425,7 +464,7 @@ mudlet::mudlet()
 
 void mudlet::initEdbee()
 {
-    // We only need the single Lua lexer, problably ever
+    // We only need the single Lua lexer, probably ever
     // Optional additional themes will be added in future
 
     edbee::Edbee* edbee = edbee::Edbee::instance();
@@ -448,15 +487,16 @@ bool mudlet::moduleTableVisible()
 
 void mudlet::layoutModules()
 {
-    Host* pH = getActiveHost();
-    QMapIterator<QString, QStringList> it(pH->mInstalledModules);
+    if (!mpModuleTableHost) {
+        return;
+    }
+
+    QMapIterator<QString, QStringList> it(mpModuleTableHost->mInstalledModules);
     QStringList sl;
-    // The following seems like a non-intuitive operator
-    // overload but that is how they do it...
-    sl << "Module Name"
-       << "Priority"
-       << "Save & Sync?"
-       << "Module Location";
+    sl << tr("Module Name")
+       << tr("Priority")
+       << tr("Sync")
+       << tr("Module Location");
     moduleTable->setHorizontalHeaderLabels(sl);
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
@@ -469,7 +509,7 @@ void mudlet::layoutModules()
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
         it.next();
-        int priority = pH->mModulePriorities[it.key()];
+        int priority = mpModuleTableHost->mModulePriorities[it.key()];
         if (mOrder.contains(priority)) {
             mOrder[priority].append(it.key());
         } else {
@@ -489,14 +529,18 @@ void mudlet::layoutModules()
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
             masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-            QStringList moduleInfo = pH->mInstalledModules[pModules[i]];
-            masterModule->setText("sync?");
-            if (moduleInfo[1].toInt()) {
-                masterModule->setCheckState(Qt::Checked); //Qt::Checked);
+            QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
+
+            if (moduleInfo.at(1).toInt()) {
+                masterModule->setCheckState(Qt::Checked);
             } else {
-                masterModule->setCheckState(Qt::Unchecked); //Qt::Checked);
+                masterModule->setCheckState(Qt::Unchecked);
             }
-            masterModule->setToolTip(QString("Checking this box will cause the module to be saved & resync'd across all open sessions."));
+            masterModule->setText(QString());
+            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it is saved at the end of the session.")));
+            // Although there is now no text used here this may help to make the
+            // checkbox more central in the column
+            masterModule->setTextAlignment(Qt::AlignCenter);
 
             QString moduleName = pModules[i];
             itemEntry->setText(moduleName);
@@ -504,7 +548,7 @@ void mudlet::layoutModules()
             itemLocation->setText(moduleInfo[0]);
             itemLocation->setToolTip(moduleInfo[0]);                          // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
-            itemPriority->setData(Qt::EditRole, pH->mModulePriorities[moduleName]);
+            itemPriority->setData(Qt::EditRole, mpModuleTableHost->mModulePriorities[moduleName]);
             moduleTable->setItem(row, 0, itemEntry);
             moduleTable->setItem(row, 1, itemPriority);
             moduleTable->setItem(row, 2, masterModule);
@@ -522,6 +566,9 @@ void mudlet::slot_module_manager()
     }
 
     if (!mpModuleDlg) {
+        // No dialog open, note the profile concerned
+        mpModuleTableHost = pH;
+
         QUiLoader loader;
         QFile file(":/ui/module_manager.ui");
         file.open(QFile::ReadOnly);
@@ -547,7 +594,8 @@ void mudlet::slot_module_manager()
         connect(moduleHelpButton, SIGNAL(clicked()), this, SLOT(slot_help_module()));
         connect(moduleTable, SIGNAL(itemClicked(QTableWidgetItem*)), this, SLOT(slot_module_clicked(QTableWidgetItem*)));
         connect(moduleTable, SIGNAL(itemChanged(QTableWidgetItem*)), this, SLOT(slot_module_changed(QTableWidgetItem*)));
-        mpModuleDlg->setWindowTitle(tr("Module Manager"));
+        connect(mpModuleDlg, SIGNAL(destroyed()), this, SLOT(slot_module_manager_destroyed()));
+        mpModuleDlg->setWindowTitle(tr("Module Manager - %1").arg(mpModuleTableHost->getName()));
         mpModuleDlg->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -569,8 +617,7 @@ bool mudlet::openWebPage(const QString& path)
 
 void mudlet::slot_help_module()
 {
-    Host* pH = getActiveHost();
-    if (!pH) {
+    if (!mpModuleTableHost) {
         return;
     }
     int cRow = moduleTable->currentRow();
@@ -578,16 +625,16 @@ void mudlet::slot_help_module()
     if (!pI) {
         return;
     }
-    if (pH->moduleHelp[pI->text()].contains("helpURL") && !pH->moduleHelp[pI->text()]["helpURL"].isEmpty()) {
-        if (!openWebPage(pH->moduleHelp[pI->text()]["helpURL"])) {
+    if (mpModuleTableHost->moduleHelp.value(pI->text()).contains(QLatin1String("helpURL")) && !mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")).isEmpty()) {
+        if (!openWebPage(mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
             //failed first open, try for a module related path
             QTableWidgetItem* item = moduleTable->item(cRow, 3);
             QString itemPath = item->text();
             QStringList path = itemPath.split(QDir::separator());
             path.pop_back();
             path.append(QDir::separator());
-            path.append(pH->moduleHelp[pI->text()]["helpURL"]);
-            QString path2 = path.join("");
+            path.append(mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
+            QString path2 = path.join(QString());
             if (!openWebPage(path2)) {
                 moduleHelpButton->setDisabled(true);
             }
@@ -598,14 +645,18 @@ void mudlet::slot_help_module()
 
 void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
 {
+    if (!mpModuleTableHost) {
+        return;
+    }
+
     int i = pItem->row();
-    Host* pH = getActiveHost();
+
     QTableWidgetItem* entry = moduleTable->item(i, 0);
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
     qDebug() << itemPath->text();
-    if (!entry || !checkStatus || !itemPriority || !pH->mInstalledModules.contains(entry->text())) {
+    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         moduleHelpButton->setDisabled(true);
         if (checkStatus) {
             checkStatus->setCheckState(Qt::Unchecked);
@@ -613,8 +664,10 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
         }
         return;
     }
-    if (pH->moduleHelp.contains(entry->text())) {
-        moduleHelpButton->setDisabled((!pH->moduleHelp[entry->text()].contains("helpURL") || pH->moduleHelp[entry->text()]["helpURL"].isEmpty()));
+
+    if (mpModuleTableHost->moduleHelp.contains(entry->text())) {
+        moduleHelpButton->setDisabled(( !mpModuleTableHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
+                                      || mpModuleTableHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
     } else {
         moduleHelpButton->setDisabled(true);
     }
@@ -622,30 +675,35 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
 
 void mudlet::slot_module_changed(QTableWidgetItem* pItem)
 {
+    if (!mpModuleTableHost) {
+        return;
+    }
+
     int i = pItem->row();
-    Host* pH = getActiveHost();
+
     QStringList moduleStringList;
     QTableWidgetItem* entry = moduleTable->item(i, 0);
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
-    if (!entry || !checkStatus || !itemPriority || !pH->mInstalledModules.contains(entry->text())) {
+    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         return;
     }
-    moduleStringList = pH->mInstalledModules[entry->text()];
-    if (checkStatus->checkState() == Qt::Unchecked) {
-        moduleStringList[1] = "0";
-        checkStatus->setText("don't sync");
-    }
+    moduleStringList = mpModuleTableHost->mInstalledModules.value(entry->text());
     if (checkStatus->checkState() == Qt::Checked) {
-        moduleStringList[1] = "1";
-        checkStatus->setText("sync");
+        moduleStringList[1] = QLatin1String("1");
+    } else  {
+        moduleStringList[1] = QLatin1String("0");
     }
-    pH->mInstalledModules[entry->text()] = moduleStringList;
-    pH->mModulePriorities[entry->text()] = itemPriority->text().toInt();
+    mpModuleTableHost->mInstalledModules[entry->text()] = moduleStringList;
+    mpModuleTableHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
 }
 
 void mudlet::slot_install_module()
 {
+    if (!mpModuleTableHost) {
+        return;
+    }
+
     QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
@@ -657,27 +715,24 @@ void mudlet::slot_install_module()
         return;
     }
 
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    pH->installPackage(fileName, 1);
+    mpModuleTableHost->installPackage(fileName, 1);
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
+
     layoutModules();
 }
 
 void mudlet::slot_uninstall_module()
 {
-    Host* pH = getActiveHost();
-    if (!pH) {
+    if (!mpModuleTableHost) {
         return;
     }
+
     int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
-        pH->uninstallPackage(pI->text(), 1);
+        mpModuleTableHost->uninstallPackage(pI->text(), 1);
     }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
@@ -905,7 +960,7 @@ void mudlet::slot_close_profile()
 void mudlet::slot_tab_changed(int tabID)
 {
     if ((!mTabMap.contains(mpTabBar->tabText(tabID))) && (tabID != -1)) {
-        mpCurrentActiveHost = 0;
+        mpCurrentActiveHost = nullptr;
         return;
     }
 
@@ -915,14 +970,14 @@ void mudlet::slot_tab_changed(int tabID)
         if (mTabMap.contains(host)) {
             mpCurrentActiveHost = mTabMap[host]->mpHost;
         } else {
-            mpCurrentActiveHost = 0;
+            mpCurrentActiveHost = nullptr;
             return;
         }
     } else {
         if (mTabMap.size() > 0) {
             mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
         } else {
-            mpCurrentActiveHost = 0;
+            mpCurrentActiveHost = nullptr;
             return;
         }
     }
@@ -944,7 +999,7 @@ void mudlet::slot_tab_changed(int tabID)
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
     } else {
-        mpCurrentActiveHost = 0;
+        mpCurrentActiveHost = nullptr;
         return;
     }
 
@@ -986,7 +1041,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-    connect(pConsole->emergencyStop, SIGNAL(pressed()), this, SLOT(slot_stopAllTriggers()));
 
     auto pEditor = new dlgTriggerEditor(pH);
     pH->mpEditorDialog = pEditor;
@@ -1093,7 +1147,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -1115,7 +1169,7 @@ bool mudlet::loadWindowLayout()
 {
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -1194,6 +1248,46 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
+bool mudlet::setFontSize(Host* pHost, const QString& name, int size)
+{
+    if (!pHost) {
+        return false;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
+
+    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+        TConsole* pC = dockWindowConsoleMap.value(name);
+        pC->console->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+        pC->console->updateScreenView();
+        pC->console->forceUpdate();
+        pC->console2->mDisplayFont = QFont("Bitstream Vera Sans Mono", size, QFont::Normal);
+        pC->console2->updateScreenView();
+        pC->console2->forceUpdate();
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+int mudlet::getFontSize(Host* pHost, const QString& name)
+{
+    if (!pHost) {
+        return -1;
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    QMap<QString, TDockWidget*>& dockWindowMap = mHostDockConsoleMap[pHost];
+
+    if (dockWindowMap.contains(name) && dockWindowConsoleMap.contains(name)) {
+        return dockWindowConsoleMap.value(name)->console->mDisplayFont.pointSize();
+    } else {
+        return -1;
+    }
+}
+
 bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
 {
     if (!pHost) {
@@ -1217,8 +1311,12 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
         pC->setUserWindow();
+        pC->console->setIsMiniConsole();
+        pC->console2->setIsMiniConsole();
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
+
+        setFontSize(pHost, name, 10);
 
         if (loadLayout) {
             loadWindowLayout();
@@ -1843,7 +1941,6 @@ bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
 bool mudlet::echoLink(Host* pHost, const QString& name, const QString& text, QStringList& func, QStringList& hint, bool customFormat)
 {
     QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
-    QString t = text;
     if (dockWindowConsoleMap.contains(name)) {
         dockWindowConsoleMap[name]->echoLink(text, func, hint, customFormat);
         return true;
@@ -1902,7 +1999,7 @@ Host* mudlet::getActiveHost()
     if (mConsoleMap.contains(mpCurrentActiveHost)) {
         return mpCurrentActiveHost;
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2042,9 +2139,10 @@ void mudlet::slot_show_connection_dialog()
     auto pDlg = new dlgConnectionProfiles(this);
     connect(pDlg, SIGNAL(signal_establish_connection(QString, int)), this, SLOT(slot_connection_dlg_finished(QString, int)));
     pDlg->fillout_form();
-    if (pDlg->exec() == QDialog::Accepted) {
-        enableToolbarButtons();
-    }
+
+    connect(pDlg, &QDialog::accepted, [=]() { enableToolbarButtons(); });
+    pDlg->setAttribute(Qt::WA_DeleteOnClose);
+    pDlg->show();
 }
 
 void mudlet::show_trigger_dialog()
@@ -2360,9 +2458,8 @@ void mudlet::slot_replay()
     if (!pHost) {
         return;
     }
-    QString home = QDir::homePath() + "/.config/mudlet/profiles/";
-    home.append(pHost->getName());
-    home.append("/log/");
+
+    QString home = getMudletPath(profileReplayAndLogFilesPath, pHost->getName());
     QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), home, tr("*.dat"));
     if (fileName.isEmpty()) {
         return;
@@ -2373,8 +2470,7 @@ void mudlet::slot_replay()
         QMessageBox::warning(this, tr("Select Replay"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
-    //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    //QString fileName = directoryLogFile + "/"+QString(n.c_str());
+
     pHost->mTelnet.loadReplay(fileName);
 }
 
@@ -2390,7 +2486,7 @@ void mudlet::print(Host* pH, const QString& s)
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
-    QFile file(QDir::homePath() + "/.config/mudlet/profiles/" + profile + "/" + item);
+    QFile file(getMudletPath(profileDataItemPath, profile, item));
     file.open(QIODevice::ReadOnly);
     if (!file.exists()) {
         return "";
@@ -2407,7 +2503,8 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(QDir::homePath() + "/.config/mudlet/profiles").entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QStringList hostList = QDir(getMudletPath(profilesPath))
+                           .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
     for (auto host : hostList) {
@@ -2445,12 +2542,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
 
-    QString folder = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/current/";
+    QString folder = getMudletPath(profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    if (entries.size() > 0) {
-        QFile file(folder + "/" + entries[0]);
+    if (!entries.isEmpty()) {
+        QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
@@ -2572,13 +2669,9 @@ void mudlet::slot_multi_view()
     }
 }
 
-void mudlet::slot_stopAllTriggers()
-{
-}
-
 mudlet::~mudlet()
 {
-    mudlet::_self = 0;
+    mudlet::_self = nullptr;
 }
 
 void mudlet::toggleFullScreenView()
@@ -2611,10 +2704,14 @@ void mudlet::replayStart()
     actionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction(actionReplaySpeedUp);
+    actionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
+    replayToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
 
     actionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction(actionReplaySpeedDown);
+    actionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
+    replayToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
     replaySpeedDisplay = new QLabel(this);
     actionSpeedDisplay = replayToolBar->addWidget(replaySpeedDisplay);
 
@@ -2667,11 +2764,11 @@ void mudlet::replayOver()
         replayToolBar->removeAction(actionReplaySpeedDown);
         replayToolBar->removeAction(actionSpeedDisplay);
         removeToolBar(replayToolBar);
-        actionReplaySpeedUp = 0;
-        actionReplaySpeedDown = 0;
-        actionSpeedDisplay = 0;
-        actionReplayTime = 0;
-        replayToolBar = 0;
+        actionReplaySpeedUp = nullptr;
+        actionReplaySpeedDown = nullptr;
+        actionSpeedDisplay = nullptr;
+        actionReplayTime = nullptr;
+        replayToolBar = nullptr;
     }
 }
 
@@ -2716,7 +2813,7 @@ void mudlet::playSound(QString s, int soundVolume)
     }
 
     QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
-    QMediaPlayer* pPlayer = 0;
+    QMediaPlayer* pPlayer = nullptr;
 
     /* find first available inactive QMediaPlayer */
     while (itMusicBox.hasNext()) {
@@ -2746,7 +2843,7 @@ void mudlet::playSound(QString s, int soundVolume)
     // theoretically this might be movable to be within the lambda function of
     // the following connect(...) but that does seem a bit twisty and this works
     // well enough!
-    disconnect(pPlayer, &QMediaPlayer::stateChanged, 0, 0);
+    disconnect(pPlayer, &QMediaPlayer::stateChanged, nullptr, nullptr);
 
     connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
         if (state == QMediaPlayer::StoppedState) {
@@ -2897,12 +2994,12 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
 
-    QString themeLocation;
-    if (themeFile == QStringLiteral("Mudlet.tmTheme")) {
-        themeLocation = QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
-    } else {
-        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFile);
-    }
+    // getMudletPath(...) needs the themeFile to determine if it is the
+    // "default" which is stored in the resource file and not downloaded into
+    // the cache:
+    QString themeLocation(
+                getMudletPath(editorWidgetThemePathFile,
+                              themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -2916,10 +3013,11 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadButtonPress");
+    event.mArgumentList.append(QLatin1String("sysGamepadButtonPress"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2933,10 +3031,11 @@ void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButto
 void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadButtonRelease");
+    event.mArgumentList.append(QLatin1String("sysGamepadButtonRelease"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2948,10 +3047,11 @@ void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadBut
 void mudlet::slot_gamepadConnected(int deviceId)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadConnected");
+    event.mArgumentList.append(QLatin1String("sysGamepadConnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2961,10 +3061,11 @@ void mudlet::slot_gamepadConnected(int deviceId)
 void mudlet::slot_gamepadDisconnected(int deviceId)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadDisconnected");
+    event.mArgumentList.append(QLatin1String("sysGamepadDisconnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2974,10 +3075,11 @@ void mudlet::slot_gamepadDisconnected(int deviceId)
 void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value)
 {
     Host* pH = getActiveHost();
-    if (!pH)
+    if (!pH) {
         return;
+    }
     TEvent event;
-    event.mArgumentList.append("sysGamepadAxisMove");
+    event.mArgumentList.append(QLatin1String("sysGamepadAxisMove"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2987,4 +3089,125 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     pH->raiseEvent(event);
 }
-#endif
+
+#endif // #ifdef QT_GAMEPAD_LIB
+
+void mudlet::slot_module_manager_destroyed()
+{
+    // Clear the record of the profile that had the module manager open so
+    // another profile can use it...
+    mpModuleTableHost = nullptr;
+}
+
+// Convenience helper - may aide things if we want to put files in a different
+// place...!
+QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
+{
+    switch(mode) {
+    case mainPath:
+        // The root of all mudlet data for the user - does not end in a '/'
+        return QStringLiteral("%1/.config/mudlet")
+                .arg(QDir::homePath());
+    case mainDataItemPath:
+        // Takes one extra argument as a file (or directory) relating to
+        // (profile independent) mudlet data - may end with a '/' if the extra
+        // argument does:
+        return QStringLiteral("%1/.config/mudlet/%2")
+                .arg(QDir::homePath(), extra1);
+    case mainFontsPath:
+        // (Added for 3.5.0) a revised location to store Mudlet provided fonts
+        return QStringLiteral("%1/.config/mudlet/fonts")
+                .arg(QDir::homePath());
+    case profilesPath:
+        // The directory containing all the saved user's profiles - does not end
+        // in '/'
+        return QStringLiteral("%1/.config/mudlet/profiles")
+                .arg(QDir::homePath());
+    case profileHomePath:
+        // Takes one extra argument (profile name) that returns the base
+        // directory for that profile - does NOT end in a '/' unless the
+        // supplied profle name does:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2")
+                .arg(QDir::homePath(), extra1);
+    case profileXmlFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save XML files - ends in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/current/")
+                .arg(QDir::homePath(), extra1);
+    case profileMapsPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save maps files - does NOT end in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map")
+                .arg(QDir::homePath(), extra1);
+    case profileDateTimeStampedMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.dat")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileMapPathFileName:
+        // Takes two extra arguments (profile name, mapFileName) that returns
+        // the pathFile name for any map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileXmlMapPathFileName:
+        // Takes one extra argument (profile name) that returns the pathFile
+        // name for the downloaded IRE Server provided XML map:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map.xml")
+                .arg(QDir::homePath(), extra1);
+    case profileDataItemPath:
+        // Takes two extra arguments (profile name, data item) that gives a
+        // path file name for, typically a data item stored as a single item
+        // (binary) profile data) file (ideally these can be moved to a per
+        // profile QSettings file but that is a future pipe-dream on my part
+        // SlySven):
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackagePath:
+        // Takes two extra arguments (profile name, package name) returns the
+        // per profile directory used to store (unpacked) package contents
+        // - ends with a '/':
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackagePathFileName:
+        // Takes two extra arguments (profile name, package name) returns the
+        // filename of the XML file that contains the (per profile, unpacked)
+        // package mudlet items in that package/module:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/%3.xml")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileReplayAndLogFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // that contains replays (*.dat files) and logs (*.html or *.txt) files
+        // for that profile - does NOT end in '/':
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/log")
+                .arg(QDir::homePath(), extra1);
+    case profileLogErrorsFilePath:
+        // Takes one extra argument (profile name) that returns the pathFileName
+        // to the map auditing report file that is appended to each time a
+        // map is loaded:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt")
+                .arg(QDir::homePath(), extra1);
+    case editorWidgetThemePathFile:
+        // Takes two extra arguments (profile name, theme name) that returns the
+        // pathFileName of the theme file used by the edbee editor - also
+        // handles the special case of the default theme "mudlet.thTheme" that
+        // is carried internally in the resource file:
+        if (extra1.compare(QStringLiteral("Mudlet.tmTheme"),Qt::CaseSensitive)) {
+            // No match
+            return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2")
+                    .arg(QDir::homePath(), extra1);
+        } else {
+            // Match - return path to copy held in resource file
+            return QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
+        }
+    case editorWidgetThemeJsonFile:
+        // Returns the pathFileName to the external JSON file needed to process
+        // an edbee edtor widget theme:
+        return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json")
+                .arg(QDir::homePath());
+    case moduleBackupsPath:
+        // Returns the directory used to store module backups that is used in
+        // when saving/resyncing packages/modules - ends in a '/'
+        return QStringLiteral("%1/.config/mudlet/moduleBackups/")
+                .arg(QDir::homePath());
+    }
+}

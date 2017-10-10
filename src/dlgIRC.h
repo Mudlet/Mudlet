@@ -42,7 +42,7 @@
 
 class Host;
 
-class dlgIRC : public QMainWindow, public Ui::irc_dlg
+class dlgIRC : public QMainWindow, public Ui::irc
 {
     Q_OBJECT
 

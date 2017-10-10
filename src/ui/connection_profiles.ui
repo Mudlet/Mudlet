@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>profile_dialog</class>
- <widget class="QDialog" name="profile_dialog">
+ <class>connection_profiles</class>
+ <widget class="QDialog" name="connection_profiles">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -630,7 +630,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-warning.png</pixmap>
+               <pixmap resource="../mudlet.qrc">:/icons/dialog-warning.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -1079,7 +1079,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-error.png</pixmap>
+               <pixmap resource="../mudlet.qrc">:/icons/dialog-error.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -1528,7 +1528,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap resource="../mudlet_alpha.qrc">:/icons/dialog-information.png</pixmap>
+               <pixmap resource="../mudlet.qrc">:/icons/dialog-information.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>false</bool>
@@ -2063,7 +2063,7 @@
                <string>Remove</string>
               </property>
               <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
+               <iconset resource="../mudlet.qrc">
                 <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
               </property>
              </widget>
@@ -2092,7 +2092,7 @@
                <string>Copy</string>
               </property>
               <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
+               <iconset resource="../mudlet.qrc">
                 <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
               </property>
              </widget>
@@ -2121,7 +2121,7 @@
                <string>New</string>
               </property>
               <property name="icon">
-               <iconset resource="../mudlet_alpha.qrc">
+               <iconset resource="../mudlet.qrc">
                 <normaloff>:/icons/list-add_small.png</normaloff>:/icons/list-add_small.png</iconset>
               </property>
              </widget>
@@ -2587,7 +2587,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>remove_profile_button</tabstop>
  </tabstops>
  <resources>
-  <include location="../mudlet_alpha.qrc"/>
+  <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
 </ui>

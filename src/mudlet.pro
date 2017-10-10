@@ -36,12 +36,21 @@ macx: {
     include(../3rdparty/luazip/luazip.pri)
 }
 
-# Include shiny, new (and quite substantial) editor widget
-include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
+!exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
+    system("git submodule update --init");
+}
+
+exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    # Include shiny, new (and quite substantial) editor widget
+    include("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri");
+} else {
+    error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+}
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.3.1
+VERSION = 3.4.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -51,12 +60,17 @@ VERSION = 3.3.1
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
 # alternatives during compilations.
-!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+!msvc {
+    QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+    QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
 # NOW we can put ours in:
-!msvc:QMAKE_CXXFLAGS_RELEASE += -O3
+    QMAKE_CXXFLAGS_RELEASE += -O3
+    QMAKE_CFLAGS_RELEASE += -O3
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
+    QMAKE_CXXFLAGS_DEBUG += -O0
+    QMAKE_CFLAGS_DEBUG += -O0
+}
 
 # enable C++11 for builds.
 CONFIG += c++11
@@ -85,7 +99,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
 # i.e. the line should be "BUILD =" without quotes
-  BUILD = ""
+  BUILD = "-dev"
 }
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
@@ -116,25 +130,47 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 # the files in the place documented here the user will not be bothered by this.
 #
 # (Geyser files should be in a "geyser" subdirectory of this)
+
+# We should consider the XDG specifications in:
+# https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
     isEmpty( PREFIX ) PREFIX = /usr/local
-    isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
+    # Now picks up the first element of the environmental XDG_DATA_DIRS if
+    # not overridden:
+    isEmpty( DATAROOTDIR ) {
+        DATAROOTDIR = $$first($$replace( XDG_DATA_DIRS, ":", " "))
+        isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
+    }
+
     isEmpty( DATADIR ) DATADIR = $${DATAROOTDIR}/mudlet
 # According to Linux FHS /usr/local/games is an alternative location for leasure time BINARIES 8-):
     isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    freebsd {
+        LIBS += \
+# Some OS platforms have a hyphen (I think Cygwin does as well):
+            -llua-5.1\
+# FreeFSB appends the version number to hunspell:
+            -lhunspell-1.6
+# FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
+        INCLUDEPATH += \
+            /usr/local/include/lua51
+    } else {
+        LIBS += \
+            -llua5.1 \
+            -lhunspell
+        INCLUDEPATH += /usr/include/lua5.1
+    }
     LIBS += -lpcre \
-        -llua5.1 \
-        -lhunspell \
         -L/usr/local/lib/ \
         -lyajl \
         -lGLU \
         -lzip \
         -lz
-    INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
     LIBS += -L"C:\\mingw32\\bin" \
@@ -221,6 +257,7 @@ SOURCES += \
     glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
+    ircmessageformatter.cpp \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
@@ -258,8 +295,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    ircmessageformatter.cpp
+    XMLimport.cpp
 
 
 HEADERS += \
@@ -292,6 +328,7 @@ HEADERS += \
     glwidget.h \
     Host.h \
     HostManager.h \
+    ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
@@ -335,8 +372,7 @@ HEADERS += \
     TVar.h \
     VarUnit.h \
     XMLexport.h \
-    XMLimport.h \
-    ircmessageformatter.h
+    XMLimport.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
@@ -397,11 +433,11 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/KeyCodes.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua \
-    $${PWD}/mudlet-lua/lua/KeyCodes.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
@@ -469,7 +505,6 @@ unix:!macx: {
 
 DISTFILES += \
     ../.travis.yml \
-    CMakeLists.txt \
     ../CMakeLists.txt \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
@@ -482,4 +517,5 @@ DISTFILES += \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    .clang-format
+    .clang-format \
+    CMakeLists.txt

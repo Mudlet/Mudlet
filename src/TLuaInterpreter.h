@@ -225,7 +225,7 @@ public:
     static int isPrompt(lua_State* L);
     static int feedTriggers(lua_State*);
     static int Wait(lua_State* L);
-    static int Send(lua_State* L);
+    static int expandAlias(lua_State *L);
     static int sendRaw(lua_State* L);
     static int Echo(lua_State* L);
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
@@ -243,6 +243,8 @@ public:
     static int loadWindowLayout(lua_State* L);
     static int saveWindowLayout(lua_State* L);
     static int saveProfile(lua_State* L);
+    static int setFontSize(lua_State* L);
+    static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
     static int echoUserWindow(lua_State* L);
     static int clearUserWindow(lua_State* L);

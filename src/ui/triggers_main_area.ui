@@ -28,9 +28,6 @@
     <height>240</height>
    </size>
   </property>
-  <property name="windowTitle">
-   <string>Form</string>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="spacing">
     <number>0</number>
@@ -48,7 +45,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget_6" native="true">
+    <widget class="QWidget" name="widget_top" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
        <horstretch>0</horstretch>
@@ -122,29 +119,14 @@
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_5">
-      <property name="spacing">
-       <number>6</number>
-      </property>
-      <property name="leftMargin">
-       <number>6</number>
-      </property>
-      <property name="topMargin">
-       <number>2</number>
-      </property>
-      <property name="rightMargin">
-       <number>6</number>
-      </property>
-      <property name="bottomMargin">
-       <number>2</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="label_4">
-        <property name="minimumSize">
-         <size>
-          <width>51</width>
-          <height>0</height>
-         </size>
+     <layout class="QGridLayout" name="gridLayout_top">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_trigger_name">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
         <property name="maximumSize">
          <size>
@@ -153,14 +135,17 @@
          </size>
         </property>
         <property name="text">
-         <string>name:</string>
+         <string>Name:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
         <property name="buddy">
          <cstring>lineEdit_trigger_name</cstring>
         </property>
        </widget>
       </item>
-      <item>
+      <item row="0" column="1">
        <widget class="QLineEdit" name="lineEdit_trigger_name">
         <property name="maximumSize">
          <size>
@@ -169,22 +154,25 @@
          </size>
         </property>
         <property name="toolTip">
-         <string>Choose a good name for your trigger. This name will be displayed in the trigger tree.</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLabel" name="label_5">
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_trigger_command">
         <property name="text">
-         <string>send plain text:</string>
+         <string>Command:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
         <property name="buddy">
-         <cstring>trigger_command</cstring>
+         <cstring>lineEdit_trigger_command</cstring>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLineEdit" name="trigger_command">
+      <item row="0" column="3">
+       <widget class="QLineEdit" name="lineEdit_trigger_command">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -192,7 +180,7 @@
          </size>
         </property>
         <property name="toolTip">
-         <string>Type in what command you want the trigger to send to the MUD if it fires. (optional)</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in one or more commands you want the trigger to send directly to the MUD if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the MUD Server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
@@ -261,13 +249,13 @@
            <property name="widgetResizable">
             <bool>true</bool>
            </property>
-           <widget class="QWidget" name="scrollAreaWidgetContents_2">
+           <widget class="QWidget" name="widget_scrollArea">
             <property name="geometry">
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>483</width>
-              <height>139</height>
+              <width>453</width>
+              <height>125</height>
              </rect>
             </property>
            </widget>

@@ -479,7 +479,7 @@ void T2DMap::slot_switchArea(QString name)
                     // to that:
                     QSetIterator<TRoom*> itpRoom(pSRoom);
                     float closestSquareDistance = -1.0;
-                    TRoom* pClosestRoom = 0;
+                    TRoom* pClosestRoom = nullptr;
                     while (itpRoom.hasNext()) {
                         TRoom* pR = itpRoom.next();
                         QVector2D meanToRoom(static_cast<float>(pR->x) - mean_x, static_cast<float>(pR->y) - mean_y);
@@ -535,7 +535,7 @@ void T2DMap::slot_switchArea(QString name)
                 // to that:
                 QSetIterator<TRoom*> itpRoom(pSRoom);
                 float closestSquareDistance = -1.0;
-                TRoom* pClosestRoom = 0;
+                TRoom* pClosestRoom = nullptr;
                 while (itpRoom.hasNext()) {
                     TRoom* pR = itpRoom.next();
                     QVector2D meanToRoom(static_cast<float>(pR->x) - mean_x, static_cast<float>(pR->y) - mean_y);
@@ -1997,19 +1997,19 @@ void T2DMap::createLabel(QRectF labelRect)
     msgBox.exec();
     if (msgBox.clickedButton() == textButton) {
         QString title = "Enter label text.";
-        _font = QFontDialog::getFont(0);
-        t = QInputDialog::getText(0, title, title);
+        _font = QFontDialog::getFont(nullptr);
+        t = QInputDialog::getText(nullptr, title, title);
         if (t.length() < 1) {
             t = "no text";
         }
         label.text = t;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), 0, "Background color");
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), 0, "Foreground color");
+        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, "Background color");
+        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, "Foreground color");
     } else if (msgBox.clickedButton() == imageButton) {
         label.bgColor = QColor(50, 50, 150, 100);
         label.fgColor = QColor(255, 255, 50, 255);
         label.text = "";
-        imagePath = QFileDialog::getOpenFileName(0, "Select image");
+        imagePath = QFileDialog::getOpenFileName(nullptr, "Select image");
     } else {
         return;
     }
@@ -2041,7 +2041,7 @@ void T2DMap::createLabel(QRectF labelRect)
     lp.setPen(lpen);
     lp.fillRect(drawRect, label.bgColor);
     if (msgBox.clickedButton() == textButton) {
-        lp.drawText(drawRect, Qt::AlignHCenter | Qt::AlignCenter, t, 0);
+        lp.drawText(drawRect, Qt::AlignHCenter | Qt::AlignCenter, t, nullptr);
     } else {
         QPixmap imagePixmap = QPixmap(imagePath);
         lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRect.size()));
@@ -2105,7 +2105,6 @@ bool T2DMap::event(QEvent* event)
 
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* ke = static_cast<QKeyEvent*>(event);
-        qDebug() << "modifier=" << ke->modifiers() << " key=" << ke->key();
         //        if( ke->key() == Qt::Key_Delete )
         //        {
         //            if( mCustomLineSelectedRoom != 0  )
@@ -2869,7 +2868,7 @@ void T2DMap::slot_doneCustomLine()
 {
     if (mpCustomLinesDialog) {
         mpCustomLinesDialog->accept();
-        mpCustomLinesDialog = 0;
+        mpCustomLinesDialog = nullptr;
     }
     mHelpMsg = "";
     mCustomLinesRoomFrom = 0;
@@ -3119,18 +3118,18 @@ void T2DMap::slot_setCharacter()
                                                   QLineEdit::Normal,    // QLineEdit::EchoMode mode = QLineEdit::Normal
                                                   QString(),            // const QString & text = QString()
                                                   &isOk,                // bool * ok = 0
-                                                  0,                    // Qt::WindowFlags flags = 0
+                                                  Qt::Widget,           // Qt::WindowFlags flags = 0
                                                   Qt::ImhLatinOnly);    // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
         } else {
             newLetterText = QInputDialog::getText(this,
-                                                  tr("Enter rooom marker"),
+                                                  tr("Enter room marker"),
                                                   tr("Delete the existing, or\n"
                                                      "enter a new (non-space),\n"
                                                      "marker letter:"),
                                                   QLineEdit::Normal,
                                                   usedLetters.keys().first(),
                                                   &isOk,
-                                                  0,
+                                                  Qt::Widget,
                                                   Qt::ImhLatinOnly);
         }
     } else {
@@ -3142,7 +3141,7 @@ void T2DMap::slot_setCharacter()
                                                   QLineEdit::Normal,
                                                   QString(),
                                                   &isOk,
-                                                  0,
+                                                  Qt::Widget,
                                                   Qt::ImhLatinOnly);
         } else if (usedLetters.size() == 1) {
             newLetterText = QInputDialog::getText(this,
@@ -3155,7 +3154,7 @@ void T2DMap::slot_setCharacter()
                                                   QLineEdit::Normal,
                                                   usedLetters.keys().first(),
                                                   &isOk,
-                                                  0,
+                                                  Qt::Widget,
                                                   Qt::ImhLatinOnly);
         } else {
             QMapIterator<QString, uint> itSymbolUsed = usedLetters;
@@ -3193,7 +3192,7 @@ void T2DMap::slot_setCharacter()
                                                   0,                                                                // int current = 0
                                                   true,                                                             // bool editable = true
                                                   &isOk,                                                            // bool * ok = 0
-                                                  0,                                                                // Qt::WindowFlags flags = 0
+                                                  nullptr,                                                                // Qt::WindowFlags flags = 0
                                                   Qt::ImhLatinOnly);                                                // Qt::InputMethodHints inputMethodHints = Qt::ImhNone,
                                                                                                                     // to change when I rework the room symbols for any Unicode Grapheme!
         }
@@ -3618,7 +3617,7 @@ void T2DMap::slot_setRoomWeight()
                                                           0,                                                                // int current = 0, last value in list
                                                           true,                                                             // bool editable = true
                                                           &isOk,                                                            // bool * ok = 0
-                                                          0,                                                                // Qt::WindowFlags flags = 0
+                                                          nullptr,                                                                // Qt::WindowFlags flags = 0
                                                           Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
@@ -4367,7 +4366,7 @@ void T2DMap::slot_customLineColor()
 void T2DMap::slot_cancelCustomLineDialog()
 {
     mpCustomLinesDialog->deleteLater();
-    mpCustomLinesDialog = 0;
+    mpCustomLinesDialog = nullptr;
     mCustomLinesRoomFrom = 0;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit.clear();
@@ -5680,7 +5679,7 @@ void T2DMap::resizeMultiSelectionWidget()
     if (mMultiSelectionListWidget.topLevelItemCount() > 0) {
         QTreeWidgetItem* rowItem = mMultiSelectionListWidget.topLevelItem(1);
         // The following factors are tweaks to ensure that the widget shows all
-        // the rows, as the header seems biggger than the value returned, statics
+        // the rows, as the header seems bigger than the value returned, statics
         // used to enable values to be change by debugger at runtime!
         static float headerFactor = 1.2;
         static float rowFactor = 1.0;
@@ -5688,7 +5687,6 @@ void T2DMap::resizeMultiSelectionWidget()
         if (rowItem) { // Have some data rows - and we have forced them to be the same height:
             _newHeight += rowFactor * mMultiSelectionListWidget.topLevelItemCount() * mMultiSelectionListWidget.visualItemRect(rowItem).height();
         }
-        //        qDebug() << "Row count:" << mMultiSelectionListWidget.topLevelItemCount() << "header height:" << mMultiSelectionListWidget.header()->height() << "row height:" << mMultiSelectionListWidget.visualItemRect(rowItem).height();
     }
     if (_newHeight < height()) {
         mMultiSelectionListWidget.resize(_newWidth, _newHeight);

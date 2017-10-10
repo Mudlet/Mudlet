@@ -59,11 +59,11 @@ ENDIF()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-SET(APP_VERSION 3.3.1)
+SET(APP_VERSION 3.4.0)
 IF(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
-  SET(APP_BUILD "")
+  SET(APP_BUILD "-dev")
 ENDIF()
 
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
@@ -74,6 +74,18 @@ ADD_SUBDIRECTORY(3rdparty/lua_yajl)
 IF(APPLE)
   ADD_SUBDIRECTORY(3rdparty/luazip)
 ENDIF()
-ADD_SUBDIRECTORY(3rdparty/edbee-lib/edbee-lib)
+
+IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
+  MESSAGE(STATUS "git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' in ${CMAKE_HOME_DIRECTORY} to get it...")
+  EXECUTE_PROCESS(TIMEOUT 30
+    WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}"
+    COMMAND git submodule update --init )
+ENDIF()
+
+IF(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
+  ADD_SUBDIRECTORY(3rdparty/edbee-lib/edbee-lib)
+ELSEIF()
+  MESSAGE(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+ENDIF()
 
 ADD_SUBDIRECTORY(src)

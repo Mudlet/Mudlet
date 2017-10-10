@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,12 +44,13 @@
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QFlag>
 #include <QFile>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QScrollArea>
-#include <QTableWidget>
-#include <QTableWidgetItem>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
 #include "post_guard.h"
 
 // Edbee Editor Includes
@@ -89,8 +90,72 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
     Q_DISABLE_COPY(dlgTriggerEditor)
 
+    enum SearchDataRole {
+        // Value is the ID of the item found MUST BE Qt::UserRole to avoid
+        // having to modify existing code that puts it into the item:
+              IdRole = Qt::UserRole,
+        // Was the "name" field inserted into the search widget tree {as
+        // pItem->text(1)} but since we now suppress that for subsequent
+        // elements for the same "item" we need to carry the same data
+        // internally even when we do not insert the text in the display:
+            NameRole = Qt::UserRole + 1,
+        // What the Item is (one of the cmXxxxxView values) so we know how to
+        // interpret the search result:
+            ItemRole = Qt::UserRole + 2,
+        // Value of one of SearchDataResultType (below)
+            TypeRole = Qt::UserRole + 3,
+        // When the result is a pattern or event handler ("Script" item) type or
+        // lua script this is the pattern number (0-49 for "Triggers"), (event
+        // handler index for "Scripts") or script line (so we know which
+        // field/line to jump to)
+   PatternOrLineRole = Qt::UserRole + 4,
+        // Value is the position (starting at 0, counting in QChars) of the
+        // particular find used to position cursor at start of match:
+        PositionRole = Qt::UserRole + 5,
+        // Value is the index (starting at 0) of the particular find used to
+        // disambiguate multiple finds in the same "thing" (so we know which one
+        // to jump to) - may not be as much use as it seems...
+           IndexRole = Qt::UserRole + 6
+    };
+
+    // Classify the search result - so we know where to position the cursor as
+    // we impliment moving the focus to the origin of the result:
+    enum SearchDataResultType {
+        // Unset (?):
+               SearchResultIsUnknown = 0x0,
+        // The contents in the Edbee Editor widget:
+                SearchResultIsScript = 0x1,
+        // The item's "Name":
+                  SearchResultIsName = 0x2,
+        // Only for "Triggers"/"Aliases" (and only the former has multiples):
+               SearchResultIsPattern = 0x3,
+        // All but "Variable" - the simple "Command":
+               SearchResultIsCommand = 0x4,
+        // Only Push-down "Buttons" - the additional "Up" "Command" field:
+          SearchResultIsExtraCommand = 0x5,
+        // Only "Buttons" - "Css" - unlikely to be useful currently but might be
+        //useful in future if we really get into stylesheets:
+                  SearchResultsIsCss = 0x6,
+        // Only "Scripts":
+          SearchResultIsEventHandler = 0x7,
+        // Only "Variables":
+                 SearchResultIsValue = 0x8
+    };
+
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1 /*,
+        SearchOptionRegExp = 0x2,
+        SearchOptionWholeWord = 0x4 */
+    };
+
+
 public:
     dlgTriggerEditor(Host*);
+
+    Q_DECLARE_FLAGS(SearchOptions,SearchOption)
+
     void fillout_form();
     void closeEvent(QCloseEvent* event) override;
     void showError(const QString&);
@@ -110,7 +175,6 @@ public:
     void changeView(int);
     void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
     void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
-    void recurseVariablesDown(TVar*, QList<TVar*>&, bool);
     void show_vars();
     void setThemeAndOtherSettings(const QString&);
 
@@ -152,12 +216,6 @@ public slots:
     void slot_addTrigger();
     void slot_addTriggerGroup();
     void slot_addTimer();
-    void recursiveSearchTriggers(TTrigger* pTriggerParent, const QString&);
-    void recursiveSearchAlias(TAlias* pTriggerParent, const QString& s);
-    void recursiveSearchScripts(TScript* pTriggerParent, const QString& s);
-    void recursiveSearchActions(TAction* pTriggerParent, const QString& s);
-    void recursiveSearchTimers(TTimer* pTriggerParent, const QString& s);
-    void recursiveSearchKeys(TKey* pTriggerParent, const QString& s);
     void slot_addTimerGroup();
     void slot_addAlias();
     void slot_addAliasGroup();
@@ -174,8 +232,8 @@ public slots:
     void slot_alias_toggle_active();
     void slot_script_toggle_active();
     void slot_key_toggle_active();
-    void slot_search_triggers(const QString s);
-    void slot_item_selected_search_list(QTreeWidgetItem*, int);
+    void slot_searchMudletItems(const QString&); // Was slot_search_triggers(...)
+    void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
     void slot_deleteTrigger();
     void slot_deleteTimer();
@@ -203,6 +261,8 @@ public slots:
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(const int);
+    void slot_toggleSearchCaseSensitivity(const bool);
+    void slot_clearSearchResults();
 
 public:
     TConsole* mpErrorConsole;
@@ -241,6 +301,60 @@ private:
 
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
 
+    void setAllSearchData(QTreeWidgetItem* pItem, const int& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
+        // Which is it? A Trigger, an alias etc:
+        pItem->setData(0, ItemRole, type);
+        // What is its name:
+        pItem->setData(0, NameRole, name);
+        // What is its (Unique per Item Type) identifier - note that variables
+        // use a different data type (QStringList):
+        pItem->setData(0, IdRole, id);
+        // What part of the "item" is it: the "name", the "command", the
+        // "lua script", etc.:
+        pItem->setData(0, TypeRole, what);
+        // How far into the line/string is the start of the match, used to
+        // position cursor there when chosen in search results
+        pItem->setData(0, PositionRole, pos);
+        // If it is a script: what line is it on (starting at 0 not 1), if a
+        // trigger pattern: which one (0 to 49):
+        pItem->setData(0, PatternOrLineRole, instance);
+        // If there is more than one match within what the above specify - which
+        // one is it, (not all things support/need to support multiples)
+        pItem->setData(0, IndexRole, subInstance);
+    }
+
+    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0) {
+        // Which is it? A Trigger, an alias etc:
+        pItem->setData(0, ItemRole, cmVarsView);
+        // What is its name:
+        pItem->setData(0, NameRole, name);
+        // What is its (Unique per item type) identifier - note that things
+        // other then variables use a simple integer:
+        pItem->setData(0, IdRole, id);
+        // What part of the "item" is it: the "name", the "command", the
+        // "lua script", etc.:
+        pItem->setData(0, TypeRole, what);
+        // How far into the line/string is the start of the match, used to
+        // position cursor there when chosen in search results
+        pItem->setData(0, PositionRole, pos);
+        // Not used for variables:
+        pItem->setData(0, PatternOrLineRole, 0);
+        // If there is more than one match within what the above specify - which
+        // one is it, (not all things support/need to support multiples)
+        pItem->setData(0, IndexRole, subInstance);
+    }
+
+    // These were declared as "public slots" but they are not used as SLOTs...
+    void recursiveSearchTriggers(TTrigger*, const QString&);
+    void recursiveSearchAlias(TAlias*, const QString& s);
+    void recursiveSearchScripts(TScript*, const QString& s);
+    void recursiveSearchActions(TAction*, const QString& s);
+    void recursiveSearchTimers(TTimer*, const QString& s);
+    void recursiveSearchKeys(TKey*, const QString& s);
+    void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
+
+    void createSearchOptionIcon();
+
     QToolBar* toolBar;
     QToolBar* toolBar2;
     bool showHiddenVars;
@@ -260,7 +374,7 @@ private:
     QTreeWidgetItem* mpCurrentTriggerItem;
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
-    QLineEdit* mpCursorPositionIndicator;
+// Not used:    QLineEdit* mpCursorPositionIndicator;
     int mCurrentView;
     static const int cmTriggerView;
     static const int cmTimerView;
@@ -295,6 +409,19 @@ private:
 
     QRegularExpression* simplifyEdbeeStatusBarRegex;
 
+    SearchOptions mSearchOptions;
+
+    // This has a menu which the following QActions are inserted into:
+    QAction* mpAction_searchOptions;
+    QIcon mIcon_searchOptions;
+
+    QAction* mpAction_searchCaseSensitive;
+    // TODO: Add other searchOptions
+    // QAction* mpAction_searchWholeWords;
+    // QAction* mpAction_searchRegExp;
+    void clearEditorNotification() const;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QMessageBox>
 #include <QDir>
 #include <QFile>
 #include <QPainter>
@@ -48,7 +49,7 @@
 
 using namespace std;
 
-TConsole* spDebugConsole = 0;
+TConsole* spDebugConsole = nullptr;
 
 #if defined(_DEBUG) && defined(_MSC_VER)
 // Enable leak detection for MSVC debug builds.
@@ -138,6 +139,14 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     }
 }
 
+void copyFont(const QString& pathName, const QString& fileName)
+{
+    if (!QFile::exists(QStringLiteral("%1/%2").arg(pathName, fileName))) {
+        QFile fileToCopy(QStringLiteral(":/fonts/ttf-bitstream-vera-1.10/%1").arg(fileName));
+        fileToCopy.copy(QStringLiteral("%1/%2").arg(pathName, fileName));
+    }
+}
+
 int main(int argc, char* argv[])
 {
 #if defined(_MSC_VER) && defined(_DEBUG)
@@ -171,7 +180,7 @@ int main(int argc, char* argv[])
         pcre_stack_free = pcre_free_dbg;
     }
 #endif // _MSC_VER && _DEBUG
-    spDebugConsole = 0;
+    spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
     Q_INIT_RESOURCE(mudlet);
@@ -182,7 +191,7 @@ int main(int argc, char* argv[])
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-    if (app == 0) {
+    if (!app) {
         if (startupAction & 2) {
             // Do "version" action - wording and format is quite tightly specified by the coding standards
             std::cout << APP_TARGET << " " << APP_VERSION << APP_BUILD << std::endl;
@@ -257,6 +266,10 @@ int main(int argc, char* argv[])
         }
         return 0;
     }
+
+    /*******************************************************************
+     * If we get to HERE then we are going to run a GUI application... *
+     *******************************************************************/
 
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
@@ -344,12 +357,17 @@ int main(int argc, char* argv[])
     // seed random number generator (should be done once per lifetime)
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
-    QString directory = QDir::homePath() + "/.config/mudlet";
+    QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
+    QString fontDirectory = mudlet::getMudletPath(mudlet::mainFontsPath);
     QDir dir;
     bool first_launch = false;
-    if (!dir.exists(directory)) {
-        dir.mkpath(directory);
+    if (!dir.exists(homeDirectory)) {
+        dir.mkpath(homeDirectory);
         first_launch = true;
+    }
+
+    if (!dir.exists(fontDirectory)) {
+        dir.mkpath(fontDirectory);
     }
 
     if (show_splash) {
@@ -358,50 +376,26 @@ int main(int argc, char* argv[])
         app->processEvents();
     }
 
-    if (!QFile::exists(directory + "/COPYRIGHT.TXT")) {
-        QFile file_f1(":/fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT");
-        file_f1.copy(directory + "/COPYRIGHT.TXT");
-    }
-
-    if (!QFile::exists(directory + "/RELEASENOTES.TXT")) {
-        QFile file_f2(":/fonts/ttf-bitstream-vera-1.10/RELEASENOTES.TXT");
-        file_f2.copy(directory + "/RELEASENOTES.TXT");
-    }
-
-    if (!QFile::exists(directory + "/VeraMoIt.ttf")) {
-        QFile file_f3(":/fonts/ttf-bitstream-vera-1.10/VeraMoIt.ttf");
-        file_f3.copy(directory + "/VeraMoIt.ttf");
-    }
-
-    if (!QFile::exists(directory + "/local.conf")) {
-        QFile file_f4(":/fonts/ttf-bitstream-vera-1.10/local.conf");
-        file_f4.copy(directory + "/local.conf");
-    }
-
-    if (!QFile::exists(directory + "/VeraMoBd.ttf")) {
-        QFile file_f5(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
-        file_f5.copy(directory + "/VeraMoBd.ttf");
-    }
-
-    if (!QFile::exists(directory + "/VeraMoBd.ttf")) {
-        QFile file_f6(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf");
-        file_f6.copy(directory + "/VeraMoBd.ttf");
-    }
-
-    if (!QFile::exists(directory + "/README.TXT")) {
-        QFile file_f7(":/fonts/ttf-bitstream-vera-1.10/README.TXT");
-        file_f7.copy(directory + "/README.TXT");
-    }
-
-    if (!QFile::exists(directory + "/VeraMoBI.ttf")) {
-        QFile file_f8(":/fonts/ttf-bitstream-vera-1.10/VeraMoBI.ttf");
-        file_f8.copy(directory + "/VeraMoBI.ttf");
-    }
-
-    if (!QFile::exists(directory + "/VeraMono.ttf")) {
-        QFile file_f9(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf");
-        file_f9.copy(directory + "/VeraMono.ttf");
-    }
+    // The original code plonks the fonts AND the Copyright into the MAIN mudlet
+    // directory - but the Copyright statement is specifically for the fonts
+    // so now they all go into a "./fonts/" subdirectory - I note that
+    // the Debian packager already removes these fonts anyhow as they are
+    // already present in a shared form in the OS anyhow so our copy is
+    // ancient and superfluous (they are using 2.37 compared to our 1.10) ...!
+    copyFont(fontDirectory, QLatin1String("COPYRIGHT.TXT"));
+    copyFont(fontDirectory, QLatin1String("RELEASENOTES.TXT"));
+    copyFont(fontDirectory, QLatin1String("README.TXT"));
+    copyFont(fontDirectory, QLatin1String("local.conf"));
+    copyFont(fontDirectory, QLatin1String("Vera.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraBd.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraBI.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraIt.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMono.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMoBd.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMoBI.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraMoIt.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraSe.ttf"));
+    copyFont(fontDirectory, QLatin1String("VeraSeBd.ttf"));
 
     if (show_splash) {
         splash_message.append("Done.\n\n"
@@ -414,9 +408,38 @@ int main(int argc, char* argv[])
     mudlet::debugMode = false;
     FontManager fm;
     fm.addFonts();
-    QString home = QDir::homePath() + "/.config/mudlet";
-    QString homeLink = QDir::homePath() + "/mudlet-data";
-    QFile::link(home, homeLink);
+    QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
+#ifdef Q_OS_WIN32
+    /*
+     * From Qt Documentation for:
+     * bool QFile::link(const QString &linkName)
+     *
+     * "Note: To create a valid link on Windows, linkName must have a .lnk file
+     * extension."
+     *
+     * Whilst the static form:
+     * [static] bool QFile::link(const QString &fileName, const QString &linkName)
+     * does not mention this particular restriction it is not unreasonable to
+     * assume the same condition applies...
+     */
+    QString homeLinkWindows = QStringLiteral("%1/mudlet-data.lnk").arg(QDir::homePath());
+    QFile oldLinkFile(homeLink);
+    if (oldLinkFile.exists()) {
+        // A One-time fix up past error that did not include the ".lnk" extension
+        oldLinkFile.rename(homeLinkWindows);
+    } else {
+        QFile linkFile(homeLinkWindows);
+        if (!linkFile.exists()) {
+            QFile::link(homeDirectory, homeLinkWindows);
+        }
+    }
+#else
+    QFile linkFile(homeLink);
+    if (!linkFile.exists()) {
+        QFile::link(homeDirectory, homeLink);
+    }
+#endif
+
     mudlet::start();
 
     if (first_launch) {
@@ -427,11 +450,14 @@ int main(int argc, char* argv[])
         mudlet::self()->move(initialSpace.width() / 8, initialSpace.height() / 8);
     }
 
-    mudlet::self()->show();
-
     if (show_splash) {
         splash.finish(mudlet::self());
     }
+
+    mudlet::self()->show();
+
+    mudlet::self()->startAutoLogin();
+
     app->restoreOverrideCursor();
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately

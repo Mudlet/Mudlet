@@ -30,7 +30,7 @@ class Host;
 class TTrigger;
 
 
-class dlgColorTrigger : public QDialog, public Ui::color_trigger_dlg
+class dlgColorTrigger : public QDialog, public Ui::color_trigger
 {
     Q_OBJECT
 

@@ -700,3 +700,135 @@ function condenseMapLoad()
 
   return loadtime
 end
+
+do
+  -- management things
+
+  -- Dictionary with events as keys and lists of lua functions as values to dispatch events
+  -- to the right functions.
+  local handlers = {}
+
+  -- Remember highest hander ID to avoid ID reuse.
+  local highestHandlerId = 0
+  -- Helps us finding the right event handler from an ID.
+  local handlerIdsToHandlers = {}
+
+  -- C functions that get overwritten.
+  local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
+
+  -- helper function to find an already existing string event handler
+  -- This function may not the most performant one as it uses debug.getinfo,
+  -- but since event handlers are only rarely registered, this may be ok.
+  local function findStringEventHandler(existingHandlers, functionString)
+    local functionExists = false
+    if existingHandlers then
+      for index, handlerFunction in pairs(existingHandlers) do
+        local info = debug.getinfo(handlerFunction, "S")
+        if info.source == functionString then
+          functionExists = index
+          break
+        end
+      end
+    end
+    return functionExists
+  end
+  
+  function registerAnonymousEventHandler(event, func, isOneShot)
+    if type(event) ~= "string" then
+      error(
+        string.format(
+          "registerAnonymousEventHandler: bad argument #1 type (event name as string expected, got %s!)",
+          type(event)
+        )
+      )
+    end
+
+    if type(func) ~= "function" and type(func) ~= "string" then
+      error(
+        string.format(
+          "registerAnonymousEventHandler: bad argument #2 type (function as string or function type expected, got %s!)",
+          type(func)
+        )
+      )
+    end
+
+    local existinghandlers = handlers[event]
+    if type(func) == "string" then
+      local functionString = string.format("return %s(...)", func)
+      local functionExists = findStringEventHandler(existinghandlers, functionString)
+      
+      if not functionExists then
+        func = assert(loadstring(functionString))
+      else
+        -- find and return the ID of existing event handlers
+        for id, findObject in pairs(handlerIdsToHandlers) do
+          if findObject.event == event and findObject.index == functionExists then
+            return id
+          end
+        end
+      end
+      
+    end
+
+    local eventHandlerId
+    if isOneShot then
+      -- wrap the original function to remove itself from the event handler list.
+      local origFunc = func
+      func = function(...)
+        local keepEvaluating = origFunc(...)
+        if not keepEvaluating then
+          killAnonymousEventHandler(eventHandlerId)
+        end
+      end
+    end
+
+    if not existinghandlers then
+      existinghandlers = {}
+      handlers[event] = existinghandlers
+      origRegisterAnonymousEventHandler(event, "dispatchEventToFunctions")
+    end
+    local newId = #existinghandlers + 1
+    existinghandlers[newId] = func
+    -- Above may fill gaps if handlers have been deleted, but that's okay.
+    highestHandlerId = highestHandlerId + 1
+    handlerIdsToHandlers[highestHandlerId] = {
+      event = event,
+      index = newId
+    }
+    -- do not remove the line below as it must be part of the closure for one shot event handlers.
+    eventHandlerId = highestHandlerId
+    return eventHandlerId
+  end
+
+  function killAnonymousEventHandler(id)
+    if type(id) ~= "number" then
+      error(
+        string.format(
+          "killAnonymousEventHandler: bad argument #1 type (handler ID as number expected, got %s!)",
+          type(id)
+        )
+      )
+    end
+
+    local findObject = handlerIdsToHandlers[id]
+    if not findObject then
+      return nil, string.format("Handler with ID '%s' not found.", id)
+    end
+
+    handlerIdsToHandlers[id] = nil
+    handlers[findObject.event][findObject.index] = nil
+    return true
+  end
+
+  -- Dispatches an event to the registered lua functions.
+  -- The order of registered events is not preserved.
+  -- name: The name of the event that was fired.
+  -- ...:  All arguments passed to the raised event.
+  function dispatchEventToFunctions(event, ...)
+    if handlers[event] then
+      for _, func in pairs(handlers[event]) do
+        func(event, ...)
+      end
+    end
+  end
+end

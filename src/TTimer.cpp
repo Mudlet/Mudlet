@@ -43,7 +43,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 }
 
 TTimer::TTimer(const QString& name, QTime time, Host* pHost)
-: Tree<TTimer>(0)
+: Tree<TTimer>(nullptr)
 , mRegisteredAnonymousLuaFunction(false)
 , exportItem(true)
 , mModuleMasterFolder(false)
@@ -116,7 +116,7 @@ bool TTimer::isOffsetTimer()
 bool TTimer::setIsActive(bool b)
 {
     bool condition1 = Tree<TTimer>::setIsActive(b);
-    bool condition2 = canBeUnlocked(0);
+    bool condition2 = canBeUnlocked(nullptr);
     if (condition1 && condition2) {
         start();
     } else {
@@ -258,7 +258,7 @@ bool TTimer::canBeUnlocked(TTimer* pChild)
         if (!mpParent) {
             return true;
         } else {
-            return mpParent->canBeUnlocked(0);
+            return mpParent->canBeUnlocked(nullptr);
         }
     } else {
         return false;
@@ -268,7 +268,7 @@ bool TTimer::canBeUnlocked(TTimer* pChild)
 void TTimer::enableTimer(int id)
 {
     if (mID == id) {
-        if (canBeUnlocked(0)) {
+        if (canBeUnlocked(nullptr)) {
             if (activate()) {
                 if (mScript.size() > 0) {
                     mpTimer->start();
@@ -305,7 +305,7 @@ void TTimer::disableTimer(int id)
 
 void TTimer::enableTimer()
 {
-    if (canBeUnlocked(0)) {
+    if (canBeUnlocked(nullptr)) {
         if (activate()) {
             if (mScript.size() > 0) {
                 mpTimer->start();
@@ -337,7 +337,7 @@ void TTimer::disableTimer()
 void TTimer::enableTimer(const QString& name)
 {
     if (mName == name) {
-        if (canBeUnlocked(0)) {
+        if (canBeUnlocked(nullptr)) {
             if (activate()) {
                 mpTimer->start();
             } else {
