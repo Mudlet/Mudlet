@@ -29,6 +29,7 @@ artifacts:
 notifications:
 - provider: Webhook
   url: https://webhooks.gitter.im/e/4acfacb7023e655d6be8
+  message: Appveyor {{repositoryName}}{{#isPullRequest}}#{{pullRequestId}}{{/isPullRequest}}{{^isPullRequest}} ({{branch}}){{/isPullRequest}} {{#passed}}passed{{/passed}}{{#failed}}failed{{/failed}} ({{buildNumber}})
   on_build_success: true
   on_build_failure: true
   on_build_status_changed: true
