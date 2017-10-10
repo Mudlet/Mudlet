@@ -471,6 +471,13 @@ mudlet::mudlet()
 
 void mudlet::initUpdater()
 {
+    auto devSuffix = QByteArray(APP_BUILD).trimmed();
+
+    // only update release builds
+    if (!devSuffix.isEmpty()) {
+        return;
+    }
+
     auto feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
     auto updateDialog = new dblsqd::UpdateDialog(feed);
     updateDialog->showIfUpdatesAvailable();
