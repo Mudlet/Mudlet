@@ -197,14 +197,14 @@ mudlet::mudlet()
     mainPane->setSizePolicy(sizePolicy);
     mainPane->setFocusPolicy(Qt::NoFocus);
 
-    QFile file_autolog(QDir::homePath() + "/.config/mudlet/autolog");
+    QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
     if (file_autolog.exists()) {
         mAutolog = true;
     } else {
         mAutolog = false;
     }
 
-    QFile file_use_smallscreen(QDir::homePath() + "/.config/mudlet/mudlet_option_use_smallscreen");
+    QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
     if (file_use_smallscreen.exists()) {
         mpMainToolBar->setIconSize(QSize(16, 16));
     } else {
@@ -215,49 +215,76 @@ mudlet::mudlet()
     actionConnect->setToolTip(tr("Connect to a MUD"));
     mpMainToolBar->addAction(actionConnect);
 
+    // add name to the action's widget in the toolbar, which doesn't have one by default
+    // see https://stackoverflow.com/a/32460562/72944
+    actionConnect->setObjectName(QStringLiteral("connect_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+
     QAction* actionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     actionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction(actionTriggers);
+    actionConnect->setObjectName(QStringLiteral("triggers_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionAlias = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     actionAlias->setToolTip(tr("Show and edit aliases"));
     mpMainToolBar->addAction(actionAlias);
+    actionConnect->setObjectName(QStringLiteral("aliases_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
     actionTimers->setToolTip(tr("Show and edit timers"));
     mpMainToolBar->addAction(actionTimers);
+    actionConnect->setObjectName(QStringLiteral("timers_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
     actionButtons->setToolTip(tr("Show and edit easy buttons"));
     mpMainToolBar->addAction(actionButtons);
+    actionConnect->setObjectName(QStringLiteral("buttons_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
     actionScripts->setToolTip(tr("Show and edit scripts"));
     mpMainToolBar->addAction(actionScripts);
+    actionConnect->setObjectName(QStringLiteral("scripts_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     actionKeys->setToolTip(tr("Show and edit keys"));
     mpMainToolBar->addAction(actionKeys);
+    actionConnect->setObjectName(QStringLiteral("keys_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionVars = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
-    actionVars->setToolTip(tr("Show and edit lua variables"));
+    actionVars->setToolTip(tr("Show and edit Lua variables"));
     mpMainToolBar->addAction(actionVars);
+    actionConnect->setObjectName(QStringLiteral("variables_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionIRC = new QAction(QIcon(QStringLiteral(":/icons/internet-telephony.png")), tr("IRC"), this);
-    actionIRC->setToolTip(tr("Open the Mudlet IRC client."));
+    actionIRC->setToolTip(tr("Open the Mudlet IRC client"));
     mpMainToolBar->addAction(actionIRC);
+    actionConnect->setObjectName(QStringLiteral("irc_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
     actionMapper->setToolTip(tr("Show/hide the map"));
     mpMainToolBar->addAction(actionMapper);
+    actionConnect->setObjectName(QStringLiteral("map_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
     actionHelp->setToolTip(tr("Browse reference material and documentation"));
     mpMainToolBar->addAction(actionHelp);
+    actionConnect->setObjectName(QStringLiteral("manual_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
     actionOptions->setToolTip(tr("See and edit profile preferences"));
     mpMainToolBar->addAction(actionOptions);
+    actionConnect->setObjectName(QStringLiteral("settings_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
     // now used for the window when the visual change to the toolbar caused can
@@ -265,26 +292,38 @@ mudlet::mudlet()
     QAction* actionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
     actionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
     mpMainToolBar->addAction(actionNotes);
+    actionConnect->setObjectName(QStringLiteral("notepad_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionPackageM = new QAction(QIcon(QStringLiteral(":/icons/package-manager.png")), tr("Package Manager"), this);
     actionPackageM->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
     mpMainToolBar->addAction(actionPackageM);
+    actionConnect->setObjectName(QStringLiteral("package_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionModuleM = new QAction(QIcon(QStringLiteral(":/icons/module-manager.png")), tr("Module Manager"), this);
     actionModuleM->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
     mpMainToolBar->addAction(actionModuleM);
+    actionConnect->setObjectName(QStringLiteral("module_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
     actionReplay->setToolTip(tr("Load a Mudlet replay"));
     mpMainToolBar->addAction(actionReplay);
+    actionConnect->setObjectName(QStringLiteral("replay_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     actionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
     actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
     mpMainToolBar->addAction(actionReconnect);
+    actionConnect->setObjectName(QStringLiteral("reconnect_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
     actionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
     mpMainToolBar->addAction(actionMultiView);
+    actionConnect->setObjectName(QStringLiteral("multiview_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     QAction* actionStopAllTriggers = new QAction(QIcon(QStringLiteral(":/icons/edit-bomb.png")), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
@@ -292,6 +331,8 @@ mudlet::mudlet()
     QAction* actionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction(actionAbout);
+    actionConnect->setObjectName(QStringLiteral("about_action"));
+    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
 
     disableToolbarButtons();
 
@@ -319,6 +360,8 @@ mudlet::mudlet()
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction(actionFullScreeniew);
+        actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
+        mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, SIGNAL(triggered()), this, SLOT(toggleFullScreenView()));
     } else {
         mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
@@ -623,7 +666,8 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
     }
 
     if (mpModuleTableHost->moduleHelp.contains(entry->text())) {
-        moduleHelpButton->setDisabled((!mpModuleTableHost->moduleHelp.value(entry->text()).contains(QLatin1String("helpURL")) || mpModuleTableHost->moduleHelp.value(entry->text()).value("helpURL").isEmpty()));
+        moduleHelpButton->setDisabled(( !mpModuleTableHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
+                                      || mpModuleTableHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
     } else {
         moduleHelpButton->setDisabled(true);
     }
@@ -997,7 +1041,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-    connect(pConsole->emergencyStop, SIGNAL(pressed()), this, SLOT(slot_stopAllTriggers()));
 
     auto pEditor = new dlgTriggerEditor(pH);
     pH->mpEditorDialog = pEditor;
@@ -1104,7 +1147,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -1126,7 +1169,7 @@ bool mudlet::loadWindowLayout()
 {
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    QString layoutFilePath = QStringLiteral("%1/.config/mudlet/windowLayout.dat").arg(QDir::homePath());
+    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -2415,9 +2458,8 @@ void mudlet::slot_replay()
     if (!pHost) {
         return;
     }
-    QString home = QDir::homePath() + "/.config/mudlet/profiles/";
-    home.append(pHost->getName());
-    home.append("/log/");
+
+    QString home = getMudletPath(profileReplayAndLogFilesPath, pHost->getName());
     QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), home, tr("*.dat"));
     if (fileName.isEmpty()) {
         return;
@@ -2428,8 +2470,7 @@ void mudlet::slot_replay()
         QMessageBox::warning(this, tr("Select Replay"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
-    //QString directoryLogFile = QDir::homePath()+"/.config/mudlet/profiles/"+profile_name+"/log";
-    //QString fileName = directoryLogFile + "/"+QString(n.c_str());
+
     pHost->mTelnet.loadReplay(fileName);
 }
 
@@ -2445,7 +2486,7 @@ void mudlet::print(Host* pH, const QString& s)
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
-    QFile file(QDir::homePath() + "/.config/mudlet/profiles/" + profile + "/" + item);
+    QFile file(getMudletPath(profileDataItemPath, profile, item));
     file.open(QIODevice::ReadOnly);
     if (!file.exists()) {
         return "";
@@ -2462,7 +2503,8 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
-    QStringList hostList = QDir(QDir::homePath() + "/.config/mudlet/profiles").entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QStringList hostList = QDir(getMudletPath(profilesPath))
+                           .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
     for (auto host : hostList) {
@@ -2500,12 +2542,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
 
-    QString folder = QDir::homePath() + "/.config/mudlet/profiles/" + profile_name + "/current/";
+    QString folder = getMudletPath(profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    if (entries.size() > 0) {
-        QFile file(folder + "/" + entries[0]);
+    if (!entries.isEmpty()) {
+        QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
@@ -2627,10 +2669,6 @@ void mudlet::slot_multi_view()
     }
 }
 
-void mudlet::slot_stopAllTriggers()
-{
-}
-
 mudlet::~mudlet()
 {
     mudlet::_self = nullptr;
@@ -2666,10 +2704,14 @@ void mudlet::replayStart()
     actionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
     actionReplaySpeedUp->setStatusTip(tr("Replay Speed Up"));
     replayToolBar->addAction(actionReplaySpeedUp);
+    actionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
+    replayToolBar->widgetForAction(actionReplaySpeedUp)->setObjectName(actionReplaySpeedUp->objectName());
 
     actionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
     actionReplaySpeedDown->setStatusTip(tr("Replay Speed Down"));
     replayToolBar->addAction(actionReplaySpeedDown);
+    actionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
+    replayToolBar->widgetForAction(actionReplaySpeedDown)->setObjectName(actionReplaySpeedDown->objectName());
     replaySpeedDisplay = new QLabel(this);
     actionSpeedDisplay = replayToolBar->addWidget(replaySpeedDisplay);
 
@@ -2952,12 +2994,12 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
 
-    QString themeLocation;
-    if (themeFile == QStringLiteral("Mudlet.tmTheme")) {
-        themeLocation = QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
-    } else {
-        themeLocation = QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), themeFile);
-    }
+    // getMudletPath(...) needs the themeFile to determine if it is the
+    // "default" which is stored in the resource file and not downloaded into
+    // the cache:
+    QString themeLocation(
+                getMudletPath(editorWidgetThemePathFile,
+                              themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -3057,3 +3099,115 @@ void mudlet::slot_module_manager_destroyed()
     mpModuleTableHost = nullptr;
 }
 
+// Convenience helper - may aide things if we want to put files in a different
+// place...!
+QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, const QString& extra2)
+{
+    switch(mode) {
+    case mainPath:
+        // The root of all mudlet data for the user - does not end in a '/'
+        return QStringLiteral("%1/.config/mudlet")
+                .arg(QDir::homePath());
+    case mainDataItemPath:
+        // Takes one extra argument as a file (or directory) relating to
+        // (profile independent) mudlet data - may end with a '/' if the extra
+        // argument does:
+        return QStringLiteral("%1/.config/mudlet/%2")
+                .arg(QDir::homePath(), extra1);
+    case mainFontsPath:
+        // (Added for 3.5.0) a revised location to store Mudlet provided fonts
+        return QStringLiteral("%1/.config/mudlet/fonts")
+                .arg(QDir::homePath());
+    case profilesPath:
+        // The directory containing all the saved user's profiles - does not end
+        // in '/'
+        return QStringLiteral("%1/.config/mudlet/profiles")
+                .arg(QDir::homePath());
+    case profileHomePath:
+        // Takes one extra argument (profile name) that returns the base
+        // directory for that profile - does NOT end in a '/' unless the
+        // supplied profle name does:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2")
+                .arg(QDir::homePath(), extra1);
+    case profileXmlFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save XML files - ends in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/current/")
+                .arg(QDir::homePath(), extra1);
+    case profileMapsPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save maps files - does NOT end in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map")
+                .arg(QDir::homePath(), extra1);
+    case profileDateTimeStampedMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.dat")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileMapPathFileName:
+        // Takes two extra arguments (profile name, mapFileName) that returns
+        // the pathFile name for any map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileXmlMapPathFileName:
+        // Takes one extra argument (profile name) that returns the pathFile
+        // name for the downloaded IRE Server provided XML map:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map.xml")
+                .arg(QDir::homePath(), extra1);
+    case profileDataItemPath:
+        // Takes two extra arguments (profile name, data item) that gives a
+        // path file name for, typically a data item stored as a single item
+        // (binary) profile data) file (ideally these can be moved to a per
+        // profile QSettings file but that is a future pipe-dream on my part
+        // SlySven):
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackagePath:
+        // Takes two extra arguments (profile name, package name) returns the
+        // per profile directory used to store (unpacked) package contents
+        // - ends with a '/':
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackagePathFileName:
+        // Takes two extra arguments (profile name, package name) returns the
+        // filename of the XML file that contains the (per profile, unpacked)
+        // package mudlet items in that package/module:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/%3.xml")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profileReplayAndLogFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // that contains replays (*.dat files) and logs (*.html or *.txt) files
+        // for that profile - does NOT end in '/':
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/log")
+                .arg(QDir::homePath(), extra1);
+    case profileLogErrorsFilePath:
+        // Takes one extra argument (profile name) that returns the pathFileName
+        // to the map auditing report file that is appended to each time a
+        // map is loaded:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt")
+                .arg(QDir::homePath(), extra1);
+    case editorWidgetThemePathFile:
+        // Takes two extra arguments (profile name, theme name) that returns the
+        // pathFileName of the theme file used by the edbee editor - also
+        // handles the special case of the default theme "mudlet.thTheme" that
+        // is carried internally in the resource file:
+        if (extra1.compare(QStringLiteral("Mudlet.tmTheme"),Qt::CaseSensitive)) {
+            // No match
+            return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2")
+                    .arg(QDir::homePath(), extra1);
+        } else {
+            // Match - return path to copy held in resource file
+            return QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
+        }
+    case editorWidgetThemeJsonFile:
+        // Returns the pathFileName to the external JSON file needed to process
+        // an edbee edtor widget theme:
+        return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json")
+                .arg(QDir::homePath());
+    case moduleBackupsPath:
+        // Returns the directory used to store module backups that is used in
+        // when saving/resyncing packages/modules - ends in a '/'
+        return QStringLiteral("%1/.config/mudlet/moduleBackups/")
+                .arg(QDir::homePath());
+    }
+}

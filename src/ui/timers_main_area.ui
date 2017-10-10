@@ -16,9 +16,6 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="windowTitle">
-   <string>Timers_main_area</string>
-  </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_timer_name">
@@ -266,7 +263,7 @@
       <enum>QDateTimeEdit::HourSection</enum>
      </property>
      <property name="displayFormat">
-      <string>h</string>
+      <string>hh</string>
      </property>
     </widget>
    </item>
@@ -387,7 +384,7 @@
       <enum>QDateTimeEdit::MinuteSection</enum>
      </property>
      <property name="displayFormat">
-      <string>m</string>
+      <string>mm</string>
      </property>
     </widget>
    </item>
@@ -511,7 +508,7 @@
       <enum>QDateTimeEdit::SecondSection</enum>
      </property>
      <property name="displayFormat">
-      <string>s</string>
+      <string>ss</string>
      </property>
     </widget>
    </item>

@@ -168,10 +168,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
-    QString directoryLogFile = QDir::homePath() + "/.config/mudlet/profiles/";
-    directoryLogFile.append(mHostName);
-    directoryLogFile.append("/log");
-    QString logFileName = directoryLogFile + "/errors.txt";
+    QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"));
+    QString logFileName = QStringLiteral("%1/errors.txt").arg(directoryLogFile);
     QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
         dirLogFile.mkpath(directoryLogFile);
@@ -214,7 +212,7 @@ void Host::saveModules(int sync)
     }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     QStringList modulesToSync;
-    QString dirName = QDir::homePath() + "/.config/mudlet/moduleBackups/";
+    QString dirName = mudlet::getMudletPath(mudlet::moduleBackupsPath);
     QDir savePath = QDir(dirName);
     if (!savePath.exists()) {
         savePath.mkpath(dirName);
@@ -223,21 +221,21 @@ void Host::saveModules(int sync)
         it.next();
         QStringList entry = it.value();
         QString filename_xml = entry[0];
+        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (1 of 6)
         QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         QString moduleName = it.key();
-        QString tempDir;
         QString zipName;
         zip* zipFile = nullptr;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mHostName + "/" + moduleName;
-            filename_xml = tempDir + "/" + moduleName + ".xml";
+            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
             zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
             zipName = filename_xml;
-            QDir packageDir = QDir(tempDir);
+            QDir packageDir = QDir(packagePathName);
             if (!packageDir.exists()) {
-                packageDir.mkpath(tempDir);
+                packageDir.mkpath(packagePathName);
             }
         } else {
             savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
@@ -372,12 +370,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveLocation
 {
     QString directory_xml;
     if (saveLocation.isEmpty()) {
-        directory_xml = QStringLiteral("%1/.config/mudlet/profiles/%2/current").arg(QDir::homePath(), getName());
+        directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
     } else {
         directory_xml = saveLocation;
     }
 
-    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (2 of 6)
+    QString filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
@@ -443,11 +442,6 @@ void Host::adjustNAWS()
     mTelnet.setDisplayDimensions();
 }
 
-void Host::setReplacementCommand(const QString& s)
-{
-    mReplacementCommand = s;
-}
-
 void Host::stopAllTriggers()
 {
     mTriggerUnit.stopAllTriggers();
@@ -496,17 +490,13 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         }
         QString command = commandList[i];
         command.remove(QChar::LineFeed);
-        mReplacementCommand = "";
         if (dontExpandAliases) {
             mTelnet.sendData(command);
             continue;
         }
+
         if (!mAliasUnit.processDataStream(command)) {
-            if (mReplacementCommand.size() > 0) {
-                mTelnet.sendData(mReplacementCommand);
-            } else {
-                mTelnet.sendData(command);
-            }
+            mTelnet.sendData(command);
         }
     }
 }
@@ -744,8 +734,8 @@ bool Host::installPackage(const QString& fileName, int module)
     }
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _home = QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), getName());
-        QString _dest = QStringLiteral("%1/%2/").arg(_home, packageName);
+        QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
+        QString _dest = mudlet::getMudletPath(mudlet::profileHomePath, getName(), packageName);
         QDir _tmpDir(_home); // home directory for the PROFILE
         _tmpDir.mkpath(_dest);
 
@@ -1028,11 +1018,8 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     getActionUnit()->updateToolbar();
 
-    QString _home = QDir::homePath();
-    _home.append("/.config/mudlet/profiles/");
-    _home.append(getName());
-    QString _dest = QString("%1/%2/").arg(_home, packageName);
-    removeDir(_dest, _dest);
+    QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+    removeDir(dest, dest);
     saveProfile();
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
@@ -1111,7 +1098,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
@@ -1128,7 +1115,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
