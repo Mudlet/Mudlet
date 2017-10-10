@@ -4114,8 +4114,10 @@ void dlgTriggerEditor::saveAlias()
     }
     QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
-    QRegExp rx(regex);
-    if (!regex.isEmpty() && rx.indexIn(substitution) != -1) {
+    QRegularExpression rx(regex);
+    QRegularExpressionMatch match = rx.match(substitution);
+
+    if (!regex.isEmpty() && match.capturedStart() != -1) {
         //we have a loop
         QIcon iconError;
         iconError.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
@@ -4124,6 +4126,7 @@ void dlgTriggerEditor::saveAlias()
         showError(QString("Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever.").arg(name));
         return;
     }
+
     QString script = mpSourceEditorEdbeeDocument->text();
 
 
@@ -7753,8 +7756,9 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     }
 
     QString pattern = pI->lineEdit_pattern->text();
-    QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
-    int _pos = regex.indexIn(pattern);
+    QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
+    QRegularExpressionMatch match = regex.match(pattern);
+    int _pos = match.capturedStart();
     int ansiFg, ansiBg;
     if (_pos == -1) {
         //setup default colors
@@ -7762,8 +7766,8 @@ void dlgTriggerEditor::slot_color_trigger_fg()
         ansiBg = 0;
     } else {
         // use user defined colors
-        ansiFg = regex.cap(1).toInt();
-        ansiBg = regex.cap(2).toInt();
+        ansiFg = match.captured(1).toInt();
+        ansiBg = match.captured(2).toInt();
     }
     pT->mColorTriggerFgAnsi = ansiFg;
     pT->mColorTriggerBgAnsi = ansiBg;
@@ -7807,8 +7811,9 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     }
 
     QString pattern = pI->lineEdit_pattern->text();
-    QRegExp regex = QRegExp(R"(FG(\d+)BG(\d+))");
-    int _pos = regex.indexIn(pattern);
+    QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
+    QRegularExpressionMatch match = regex.match(pattern);
+    int _pos = match.capturedStart();
     int ansiFg, ansiBg;
     if (_pos == -1) {
         //setup default colors
@@ -7816,8 +7821,8 @@ void dlgTriggerEditor::slot_color_trigger_bg()
         ansiBg = 0;
     } else {
         // use user defined colors
-        ansiFg = regex.cap(1).toInt();
-        ansiBg = regex.cap(2).toInt();
+        ansiFg = match.captured(1).toInt();
+        ansiBg = match.captured(2).toInt();
     }
 
     pT->mColorTriggerFgAnsi = ansiFg;

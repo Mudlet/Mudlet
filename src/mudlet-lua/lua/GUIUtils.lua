@@ -1283,7 +1283,7 @@ function ansi2decho(text)
     while i <= #t do
       local code = t[i]
 
-      if code == '0' then -- reset attributes
+      if code == '0' or code == '00' then -- reset attributes
         output[#output+1] = "<r>"
         fg,bg = nil,nil
         coloursToUse = colours
