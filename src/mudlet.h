@@ -282,6 +282,7 @@ private slots:
 
 private:
     void initEdbee();
+    void initUpdater();
 
     void goingDown() { mIsGoingDown = true; }
     QMap<QString, TConsole*> mTabMap;

@@ -25,6 +25,9 @@
 
 #include "mudlet.h"
 
+#include "../3rdparty/dblsqd/feed.h"
+#include "../3rdparty/dblsqd/update_dialog.h"
+
 
 #include "EAction.h"
 #include "Host.h"
@@ -460,7 +463,31 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+
+    initUpdater();
 }
+
+void mudlet::initUpdater()
+{
+    auto feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
+    auto updateDialog = new dblsqd::UpdateDialog(feed);
+    updateDialog->showIfUpdatesAvailable();
+
+
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
+        qDebug() << "feed ready!" << feed->getUpdates().size() << "update available";
+
+        feed->downloadRelease(feed->getUpdates().first());
+    });
+
+
+    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() { qDebug() << "fuck yeah! shit is downloaded!";
+    auto file = feed->getDownloadFile();
+    qDebug() << file->fileName();
+
+    });
+}
+
 
 void mudlet::initEdbee()
 {

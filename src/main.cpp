@@ -21,8 +21,6 @@
  ***************************************************************************/
 
 
-#include "../3rdparty/dblsqd/feed.h"
-#include "../3rdparty/dblsqd/update_dialog.h"
 #include "FontManager.h"
 #include "HostManager.h"
 #include "mudlet.h"
@@ -441,18 +439,10 @@ int main(int argc, char* argv[])
 
     app->restoreOverrideCursor();
 
-    initUpdater();
-
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
     // click something in a parent process to the application when you are stuck
     // with some OS's choice of wait cursor - you might wish to temparily disable
     // the earlier setOverrideCursor() line and this one.
     return app->exec();
-}
-
-void initUpdater()
-{
-    auto feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    auto updateDialog = new dblsqd::UpdateDialog(feed);
 }
