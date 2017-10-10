@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2017 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +23,7 @@
 #include "dlgPackageExporter.h"
 
 
+#include "mudlet.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -82,9 +83,9 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     if (packagePath.isEmpty()) {
         return;
     }
-
-    tempDir = QDir::homePath() + "/.config/mudlet/profiles/" + mpHost->getName() + "/tmp/";
     packagePath.replace(R"(\)", "/");
+
+    tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("/tmp/"));
     tempDir = tempDir + "/" + packageName;
     QDir packageDir = QDir(tempDir);
     if (!packageDir.exists()) {

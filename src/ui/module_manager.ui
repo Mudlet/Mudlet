@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>packageDialog</class>
- <widget class="QDialog" name="module_manager_dialog">
+ <class>module_manager</class>
+ <widget class="QDialog" name="module_manager">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,9 +15,6 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
-  </property>
-  <property name="windowTitle">
-   <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0" rowminimumheight="0,230,0">
    <item row="0" column="0" colspan="2">
