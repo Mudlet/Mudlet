@@ -25,3 +25,9 @@ on_failure:
 artifacts:
 - path: src\release
   name: mudlet
+
+notifications:
+- provider: Webhook
+  url: https://webhooks.gitter.im/e/4ed7158868fecdc7192c
+  on_build_success: true
+  on_build_failure: true

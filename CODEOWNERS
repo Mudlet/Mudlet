@@ -21,8 +21,9 @@
 /src/mudlet-mapper.xml          @Mudlet/lua-interface
 /src/run-lua-code-v4.xml        @Mudlet/lua-interface
 
-# Travis CI and compiler files are reviewed by the infrastructure team
+# CI and compiler files are reviewed by the infrastructure team
 .travis.yml                     @Mudlet/infrastructure
+.appveyor.yml                   @Mudlet/infrastructure
 /CI/                            @Mudlet/infrastructure
 *.pro                           @Mudlet/infrastructure
 *.pri                           @Mudlet/infrastructure
