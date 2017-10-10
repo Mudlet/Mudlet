@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1245,7 +1245,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), mpHost->getName());
+        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName());
         QDir dir(folder);
         dir.setSorting(QDir::Time);
         entries = dir.entryList(QDir::Files, QDir::Time);
@@ -1253,7 +1253,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
     bool canRestore = true;
     if (entries.size() || !location.isEmpty()) {
-        QFile file(location.isEmpty() ? QStringLiteral("%1%2").arg(folder, entries.at(0)) : location);
+        QFile file(location.isEmpty() ? QStringLiteral("%1/%2").arg(folder, entries.at(0)) : location);
 
         if (!file.open(QFile::ReadOnly)) {
             QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
@@ -1505,7 +1505,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     QString folder;
     QStringList entries;
-    folder = QStringLiteral("%1/.config/mudlet/profiles/%2/map/").arg(QDir::homePath(), profile);
+    folder = mudlet::getMudletPath(mudlet::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
@@ -1515,7 +1515,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     // As the files are sorted by time this gets the latest one
-    QFile file(QStringLiteral("%1%2").arg(folder, entries.at(0)));
+    QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
 
     if (!file.open(QFile::ReadOnly)) {
         QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
@@ -1994,7 +1994,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt").arg(QDir::homePath(), mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
     } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
@@ -2002,7 +2002,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt").arg(QDir::homePath(), mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2046,7 +2046,7 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     }
 
     if (!localFileName || localFileName->isEmpty()) {
-        mLocalMapFileName = QStringLiteral("%1/.config/mudlet/profiles/%2/map.xml").arg(QDir::homePath(), pHost->getName());
+        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
     } else {
         mLocalMapFileName = *localFileName;
     }

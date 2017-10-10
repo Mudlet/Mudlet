@@ -60,12 +60,17 @@ VERSION = 3.4.0
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
 # alternatives during compilations.
-!msvc:QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+!msvc {
+    QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
+    QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
 # NOW we can put ours in:
-!msvc:QMAKE_CXXFLAGS_RELEASE += -O3
+    QMAKE_CXXFLAGS_RELEASE += -O3
+    QMAKE_CFLAGS_RELEASE += -O3
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
-!msvc:QMAKE_CXXFLAGS_DEBUG += -O0
+    QMAKE_CXXFLAGS_DEBUG += -O0
+    QMAKE_CFLAGS_DEBUG += -O0
+}
 
 # enable C++11 for builds.
 CONFIG += c++11
@@ -118,25 +123,47 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 # the files in the place documented here the user will not be bothered by this.
 #
 # (Geyser files should be in a "geyser" subdirectory of this)
+
+# We should consider the XDG specifications in:
+# https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
     isEmpty( PREFIX ) PREFIX = /usr/local
-    isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
+    # Now picks up the first element of the environmental XDG_DATA_DIRS if
+    # not overridden:
+    isEmpty( DATAROOTDIR ) {
+        DATAROOTDIR = $$first($$replace( XDG_DATA_DIRS, ":", " "))
+        isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
+    }
+
     isEmpty( DATADIR ) DATADIR = $${DATAROOTDIR}/mudlet
 # According to Linux FHS /usr/local/games is an alternative location for leasure time BINARIES 8-):
     isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    freebsd {
+        LIBS += \
+# Some OS platforms have a hyphen (I think Cygwin does as well):
+            -llua-5.1\
+# FreeFSB appends the version number to hunspell:
+            -lhunspell-1.6
+# FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
+        INCLUDEPATH += \
+            /usr/local/include/lua51
+    } else {
+        LIBS += \
+            -llua5.1 \
+            -lhunspell
+        INCLUDEPATH += /usr/include/lua5.1
+    }
     LIBS += -lpcre \
-        -llua5.1 \
-        -lhunspell \
         -L/usr/local/lib/ \
         -lyajl \
         -lGLU \
         -lzip \
         -lz
-    INCLUDEPATH += /usr/include/lua5.1
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32: {
     LIBS += -L"C:\\mingw32\\bin" \
