@@ -65,6 +65,12 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 }
 
 # installation functions
+function Install7z() {
+  DownloadFile "http://www.7-zip.org/a/7z1701-x64.exe" "7z-installer.exe"
+  Step "installing 7z"
+  .\7z-installer.exe /S /D="C:\Program Files\7-Zip"
+}
+
 function InstallOpenssl() {
   DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l-i386-win32.zip"
   ExtractZip "openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l"
@@ -206,6 +212,7 @@ if (-not $(Test-Path "$workingBaseDir")) {
 
 $Env:PATH=$ShPath
 
+CheckAndInstall "7z", "C:\Program Files\7-Zip\7z.exe" { & Install7z }
 CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { & InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { & InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { & InstallYajl }
