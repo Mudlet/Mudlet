@@ -2,7 +2,7 @@
 # Mudlet
 
 
-[![Build Status](https://travis-ci.org/Mudlet/Mudlet.svg?branch=development)](https://travis-ci.org/Mudlet/Mudlet)![https://ci.appveyor.com/api/projects/status/github/Mudlet](https://ci.appveyor.com/api/projects/status/github/Mudlet) [![GitHub stars](https://img.shields.io/github/stars/Mudlet/Mudlet.svg)](https://github.com/Mudlet/Mudlet/stargazers)
+[![Build Status](https://travis-ci.org/Mudlet/Mudlet.svg?branch=development)](https://travis-ci.org/Mudlet/Mudlet) ![https://ci.appveyor.com/api/projects/status/github/Mudlet](https://ci.appveyor.com/api/projects/status/github/Mudlet) [![GitHub stars](https://img.shields.io/github/stars/Mudlet/Mudlet.svg)](https://github.com/Mudlet/Mudlet/stargazers)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Mudlet/Mudlet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
