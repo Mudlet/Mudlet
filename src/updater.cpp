@@ -6,9 +6,9 @@
 #include <QtConcurrent>
 #include "post_guard.h"
 
-Updater::Updater(QObject* parent, bool mNoAutomaticUpdates) : QObject(parent)
+Updater::Updater(QObject* parent, bool mautomaticUpdates) : QObject(parent)
 {
-    this->mNoAutomaticUpdates = mNoAutomaticUpdates;
+    this->mautomaticUpdates = mautomaticUpdates;
 }
 
 // start the update process and figure out what needs to be done
@@ -24,9 +24,9 @@ void Updater::doUpdates()
 
     // constructing the UpdateDialog triggers the update check
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    updateDialog = new dblsqd::UpdateDialog(feed, mNoAutomaticUpdates ? dblsqd::UpdateDialog::OnUpdateAvailable : dblsqd::UpdateDialog::Manual);
+    updateDialog = new dblsqd::UpdateDialog(feed, !mautomaticUpdates ? dblsqd::UpdateDialog::OnUpdateAvailable : dblsqd::UpdateDialog::Manual);
 
-    if (!mNoAutomaticUpdates) {
+    if (mautomaticUpdates) {
         silentlyUpdate();
     }
 }
@@ -42,34 +42,11 @@ void Updater::silentlyUpdate() const
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
         auto file = feed->getDownloadFile();
 
-        QFuture<void> future = QtConcurrent::run([=](const QString& fileName) { untarOnLinux(fileName); }, file->fileName());
-
+        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, file->fileName());
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
-        QObject::connect(watcher, &QFutureWatcher<void>::finished, [=]() {
-            // FIXME don't hardcode name in case we want to change it
-            QFileInfo unzippedBinary("/tmp/Mudlet.AppImage");
-            QString currentBinaryPath(QCoreApplication::applicationFilePath());
-
-            auto executablePermissions = unzippedBinary.permissions();
-            executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
-
-            QDir dir;
-            if (!(dir.remove(currentBinaryPath) && QDir().rename(unzippedBinary.filePath(), currentBinaryPath))) {
-                qDebug() << "updating" << currentBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
-                return;
-            }
-
-            QFile updatedBinary(QCoreApplication::applicationFilePath());
-            if (!updatedBinary.setPermissions(executablePermissions)) {
-                qDebug() << "couldn't executable permissions on updated Mudlet binary at" << QCoreApplication::applicationFilePath();
-                return;
-            }
-
-            qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-
-        });
+        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
         watcher->setFuture(future);
     });
 }
@@ -84,5 +61,30 @@ void Updater::untarOnLinux(const QString& fileName) const
                             << "/tmp/");
     if (!tar.waitForFinished()) {
         qDebug() << "Untarring" << fileName << "failed:" << tar.errorString();
+    } else {
+        qDebug() << "Tar output:" << tar.readAll().trimmed();
     }
+}
+
+void Updater::updateBinaryOnLinux() const
+{ // FIXME don't hardcode name in case we want to change it
+    QFileInfo unzippedBinary("/tmp/Mudlet.AppImage");
+    QString currentBinaryPath(QCoreApplication::applicationFilePath());
+
+    auto executablePermissions = unzippedBinary.permissions();
+    executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
+
+    QDir dir;
+    if (!(dir.remove(currentBinaryPath) && QDir().rename(unzippedBinary.filePath(), currentBinaryPath))) {
+        qDebug() << "updating" << currentBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
+        return;
+    }
+
+    QFile updatedBinary(QCoreApplication::applicationFilePath());
+    if (!updatedBinary.setPermissions(executablePermissions)) {
+        qDebug() << "couldn't executable permissions on updated Mudlet binary at" << QCoreApplication::applicationFilePath();
+        return;
+    }
+
+    qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
 }

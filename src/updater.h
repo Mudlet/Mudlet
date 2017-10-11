@@ -15,11 +15,11 @@ class Updater : public QObject
     Q_DISABLE_COPY(Updater)
 
 public:
-    explicit Updater(QObject* parent = nullptr, bool mNoAutomaticUpdates = false);
+    explicit Updater(QObject* parent = nullptr, bool mautomaticUpdates = false);
     void doUpdates();
 
 private:
-    bool mNoAutomaticUpdates;
+    bool mautomaticUpdates;
     dblsqd::Feed* feed;
     dblsqd::UpdateDialog* updateDialog;
 
@@ -30,6 +30,7 @@ signals:
 
 public slots:
 
+    void updateBinaryOnLinux() const;
 };
 
 #endif // UPDATER_H
