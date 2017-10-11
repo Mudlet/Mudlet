@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2014-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -242,6 +242,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setRootIsDecorated(false);
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
+    treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_aliases->hide();
@@ -250,6 +251,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->setColumnCount(1);
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
+    treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_aliases, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_actions->hide();
@@ -258,6 +260,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
+    treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_actions, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_timers->hide();
@@ -266,6 +269,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
+    treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_variables->hide();
@@ -275,6 +279,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->hideColumn(1);
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
+    treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_variables, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_keys->hide();
@@ -283,6 +288,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
+    treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     treeWidget_scripts->hide();
@@ -291,6 +297,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
+    treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(treeWidget_scripts, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_item_selected_save(QTreeWidgetItem*)));
 
     QAction* viewTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -357,6 +364,36 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                            "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slot_save_edit()));
+
+    QAction* copyAction = new QAction(tr("Copy"), this);
+    copyAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+    copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
+    // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
+    copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    copyAction->setToolTip(tr("Copy the trigger/script/alias/etc"));
+    copyAction->setStatusTip(tr("Copy the trigger/script/alias/etc"));
+    treeWidget_triggers->addAction(copyAction);
+    treeWidget_aliases->addAction(copyAction);
+    treeWidget_timers->addAction(copyAction);
+    treeWidget_scripts->addAction(copyAction);
+    treeWidget_actions->addAction(copyAction);
+    treeWidget_keys->addAction(copyAction);
+    connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
+
+    QAction* pasteAction = new QAction(tr("Paste"), this);
+    pasteAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))));
+    pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
+    // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
+    pasteAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    pasteAction->setToolTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
+    pasteAction->setStatusTip(tr("Paste triggers/scripts/aliases/etc from the clipboard"));
+    treeWidget_triggers->addAction(pasteAction);
+    treeWidget_aliases->addAction(pasteAction);
+    treeWidget_timers->addAction(pasteAction);
+    treeWidget_scripts->addAction(pasteAction);
+    treeWidget_actions->addAction(pasteAction);
+    treeWidget_keys->addAction(pasteAction);
+    connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_paste_xml);
 
     QAction* importAction = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
@@ -447,8 +484,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->endChanges();
 
     connect(comboBox_searchTerms, SIGNAL(activated(const QString&)), this, SLOT(slot_searchMudletItems(const QString&)));
-    connect(treeWidget_triggers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_trigger_selected(QTreeWidgetItem*)));
-    connect(treeWidget_triggers, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
+    connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
     connect(treeWidget_keys, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_key_selected(QTreeWidgetItem*)));
     connect(treeWidget_keys, SIGNAL(itemSelectionChanged()), this, SLOT(slot_tree_selection_changed()));
     connect(treeWidget_timers, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_timer_selected(QTreeWidgetItem*)));
@@ -3741,6 +3778,102 @@ void dlgTriggerEditor::addScript(bool isFolder)
     slot_scripts_selected(treeWidget_scripts->currentItem());
 }
 
+void dlgTriggerEditor::selectTriggerByID(int id)
+{
+    slot_show_triggers();
+    QTreeWidgetItemIterator it(treeWidget_triggers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == id) {
+            slot_trigger_selected((*it));
+            treeWidget_triggers->setCurrentItem((*it), 0);
+            treeWidget_triggers->scrollToItem((*it));
+            mpCurrentTriggerItem = (*it);
+            return;
+        }
+        ++it;
+    }
+}
+
+void dlgTriggerEditor::selectTimerByID(int id)
+{
+    slot_show_timers();
+    QTreeWidgetItemIterator it(treeWidget_timers);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == id) {
+            slot_timer_selected((*it));
+            treeWidget_timers->setCurrentItem((*it), 0);
+            treeWidget_timers->scrollToItem((*it));
+            mpCurrentTimerItem = (*it);
+            return;
+        }
+        ++it;
+    }
+}
+
+void dlgTriggerEditor::selectAliasByID(int id)
+{
+    slot_show_aliases();
+    QTreeWidgetItemIterator it(treeWidget_aliases);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == id) {
+            slot_alias_selected((*it));
+            treeWidget_aliases->setCurrentItem((*it), 0);
+            treeWidget_aliases->scrollToItem((*it));
+            mpCurrentAliasItem = (*it);
+            return;
+        }
+        ++it;
+    }
+}
+
+void dlgTriggerEditor::selectScriptByID(int id)
+{
+    slot_show_scripts();
+    QTreeWidgetItemIterator it(treeWidget_scripts);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == id) {
+            slot_scripts_selected((*it));
+            treeWidget_scripts->setCurrentItem((*it), 0);
+            treeWidget_scripts->scrollToItem((*it));
+            mpCurrentScriptItem = (*it);
+            return;
+        }
+        ++it;
+    }
+}
+
+void dlgTriggerEditor::selectActionByID(int id)
+{
+    slot_show_actions();
+    QTreeWidgetItemIterator it(treeWidget_actions);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == id) {
+            slot_action_selected((*it));
+            treeWidget_actions->setCurrentItem((*it), 0);
+            treeWidget_actions->scrollToItem((*it));
+            mpCurrentActionItem = (*it);
+            return;
+        }
+        ++it;
+    }
+}
+
+void dlgTriggerEditor::selectKeyByID(int id)
+{
+    slot_show_keys();
+    QTreeWidgetItemIterator it(treeWidget_keys);
+    while (*it) {
+        if ((*it)->data(0, Qt::UserRole).toInt() == id) {
+            slot_key_selected((*it));
+            treeWidget_keys->setCurrentItem((*it), 0);
+            treeWidget_keys->scrollToItem((*it));
+            mpCurrentKeyItem = (*it);
+            return;
+        }
+        ++it;
+    }
+}
+
 void dlgTriggerEditor::saveTrigger()
 {
     QTime t;
@@ -6294,6 +6427,7 @@ void dlgTriggerEditor::changeView(int view)
     mpActionsMainArea->hide();
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
+    // hiding this for some reason shifts focus to the search box
     button_displayAllVariables->hide();
 
     clearEditorNotification();
@@ -6903,6 +7037,152 @@ void dlgTriggerEditor::exportKey(QFile& file)
     }
 }
 
+void dlgTriggerEditor::exportTriggerToClipboard()
+{
+    QString name;
+    TTrigger* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+        if (pT) {
+            name = pT->getName();
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;
+    }
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    }
+}
+
+void dlgTriggerEditor::exportTimerToClipboard()
+{
+    QString name;
+    TTimer* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getTimerUnit()->getTimer(triggerID);
+        if (pT) {
+            name = pT->getName();
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;
+    }
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    }
+}
+
+void dlgTriggerEditor::exportAliasToClipboard()
+{
+    QString name;
+    TAlias* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getAliasUnit()->getAlias(triggerID);
+        if (pT) {
+            name = pT->getName();
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;
+    }
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    }
+}
+
+void dlgTriggerEditor::exportActionToClipboard()
+{
+    QString name;
+    TAction* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getActionUnit()->getAction(triggerID);
+        if (pT) {
+            name = pT->getName();
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;
+    }
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    }
+}
+
+void dlgTriggerEditor::exportScriptToClipboard()
+{
+    QString name;
+    TScript* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getScriptUnit()->getScript(triggerID);
+        if (pT) {
+            name = pT->getName();
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;
+    }
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    }
+}
+
+void dlgTriggerEditor::exportKeyToClipboard()
+{
+    QString name;
+    TKey* pT = nullptr;
+    QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
+    if (pItem) {
+        int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        pT = mpHost->getKeyUnit()->getKey(triggerID);
+        if (pT) {
+            name = pT->getName();
+        } else {
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            return;
+        }
+
+    } else {
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        return;
+    }
+    XMLexport writer(pT);
+    if (writer.exportToClipboard(pT)) {
+        statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    }
+}
+
+
 void dlgTriggerEditor::slot_export()
 {
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
@@ -6943,6 +7223,187 @@ void dlgTriggerEditor::slot_export()
         exportKey(file);
         break;
     };
+}
+
+void dlgTriggerEditor::slot_copy_xml()
+{
+    switch (mCurrentView) {
+    case cmTriggerView:
+        exportTriggerToClipboard();
+        break;
+    case cmTimerView:
+        exportTimerToClipboard();
+        break;
+    case cmAliasView:
+        exportAliasToClipboard();
+        break;
+    case cmScriptView:
+        exportScriptToClipboard();
+        break;
+    case cmActionView:
+        exportActionToClipboard();
+        break;
+    case cmKeysView:
+        exportKeyToClipboard();
+        break;
+    };
+}
+
+void dlgTriggerEditor::slot_paste_xml()
+{
+    XMLimport reader(mpHost);
+    int importedItemType, importedItemID;
+
+    switch (mCurrentView) {
+    case cmTriggerView:
+        saveTrigger();
+        break;
+    case cmTimerView:
+        saveTimer();
+        break;
+    case cmAliasView:
+        saveAlias();
+        break;
+    case cmScriptView:
+        saveScript();
+        break;
+    case cmActionView:
+        saveAction();
+        break;
+    case cmKeysView:
+        saveKey();
+        break;
+    };
+
+    std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
+
+    // don't reset the view if what we pasted wasn't a Mudlet editor item
+    if (importedItemType == 0 && importedItemID == 0) {
+        return;
+    }
+
+    mCurrentView = importedItemType;
+    // importing drops the item at the bottom of the list - move it to be a sibling
+    // of the currently selected item instead
+    switch (importedItemType) {
+    case cmTriggerView: {
+        // in case this is a nested item, grab the parent data for the move function
+        // as well. In case it's a root item, this doesn't seem to matter
+        auto parent = treeWidget_triggers->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
+        int siblingRow = treeWidget_triggers->currentIndex().row() + 1;
+        mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, parentId, parentRow, siblingRow);
+        break;
+    }
+    case cmTimerView: {
+        auto parent = treeWidget_timers->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
+        int siblingRow = treeWidget_timers->currentIndex().row() + 1;
+        mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, parentId, parentRow, siblingRow);
+        break;
+    }
+    case cmAliasView: {
+        auto parent = treeWidget_aliases->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
+        int siblingRow = treeWidget_aliases->currentIndex().row() + 1;
+        mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, parentId, parentRow, siblingRow);
+        break;
+    }
+    case cmScriptView: {
+        auto parent = treeWidget_scripts->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
+        int siblingRow = treeWidget_scripts->currentIndex().row() + 1;
+        mpHost->getScriptUnit()->reParentScript(importedItemID, 0, parentId, parentRow, siblingRow);
+        break;
+    }
+    case cmActionView: {
+        auto parent = treeWidget_actions->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
+        int siblingRow = treeWidget_actions->currentIndex().row() + 1;
+        mpHost->getActionUnit()->reParentAction(importedItemID, 0, parentId, parentRow, siblingRow);
+        break;
+    }
+    case cmKeysView: {
+        auto parent = treeWidget_keys->currentIndex().parent();
+        auto parentRow = parent.row();
+        auto parentId = parent.data(Qt::UserRole).toInt();
+
+        int siblingRow = treeWidget_keys->currentIndex().row() + 1;
+        mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
+        break;
+    }
+    }
+
+    // flag for re-rendering so the new item shows up in the right spot
+    mNeedUpdateData = true;
+
+    switch (importedItemType) {
+    case cmTriggerView: {
+        // the view becomes collapsed as a result of the clear & redo and then
+        // animates back into the unfolding, which doesn't look nice - so turn
+        // off animation temporarily
+        auto animated = treeWidget_triggers->isAnimated();
+        treeWidget_triggers->setAnimated(false);
+        selectTriggerByID(importedItemID);
+        treeWidget_triggers->setAnimated(animated);
+
+        // set the focus because hiding button_displayAllVariables in changeView
+        // changes the focus to the search box for some reason. This thus breaks
+        // successive pastes because you'll now be pasting into the search box
+        treeWidget_triggers->setFocus();
+        break;
+    }
+    case cmTimerView: {
+        auto animated = treeWidget_timers->isAnimated();
+        treeWidget_timers->setAnimated(false);
+        selectTimerByID(importedItemID);
+        treeWidget_timers->setAnimated(animated);
+        treeWidget_timers->setFocus();
+        break;
+    }
+    case cmAliasView: {
+        auto animated = treeWidget_aliases->isAnimated();
+        treeWidget_aliases->setAnimated(false);
+        selectAliasByID(importedItemID);
+        treeWidget_aliases->setAnimated(animated);
+        treeWidget_aliases->setFocus();
+        break;
+    }
+    case cmScriptView: {
+        auto animated = treeWidget_scripts->isAnimated();
+        treeWidget_scripts->setAnimated(false);
+        selectScriptByID(importedItemID);
+        treeWidget_scripts->setAnimated(animated);
+        treeWidget_scripts->setFocus();
+        break;
+    }
+    case cmActionView: {
+        auto animated = treeWidget_actions->isAnimated();
+        treeWidget_actions->setAnimated(false);
+        selectActionByID(importedItemID);
+        treeWidget_actions->setAnimated(animated);
+        treeWidget_actions->setFocus();
+        break;
+    }
+    case cmKeysView: {
+        auto animated = treeWidget_keys->isAnimated();
+        treeWidget_keys->setAnimated(false);
+        selectKeyByID(importedItemID);
+        treeWidget_keys->setAnimated(animated);
+        treeWidget_keys->setFocus();
+        break;
+    }
+    }
 }
 
 // CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
