@@ -26,7 +26,7 @@ void Updater::doUpdates()
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
     updateDialog = new dblsqd::UpdateDialog(feed, !mautomaticUpdates ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual);
 
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update(s) available"; });
 
     if (mautomaticUpdates) {
         silentlyUpdate();
@@ -36,7 +36,6 @@ void Updater::doUpdates()
 void Updater::silentlyUpdate() const
 {
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { feed->downloadRelease(feed->getUpdates().first()); });
-
 
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
         auto file = feed->getDownloadFile();
@@ -68,20 +67,20 @@ void Updater::untarOnLinux(const QString& fileName) const
 void Updater::updateBinaryOnLinux() const
 { // FIXME don't hardcode name in case we want to change it
     QFileInfo unzippedBinary("/tmp/Mudlet.AppImage");
-    QString currentBinaryPath(QCoreApplication::applicationFilePath());
+    QString installedBinaryPath(QCoreApplication::applicationFilePath());
 
     auto executablePermissions = unzippedBinary.permissions();
     executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
 
     QDir dir;
-    if (!(dir.remove(currentBinaryPath) && QDir().rename(unzippedBinary.filePath(), currentBinaryPath))) {
-        qDebug() << "updating" << currentBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
+    if (!(dir.remove(installedBinaryPath) && QDir().rename(unzippedBinary.filePath(), installedBinaryPath))) {
+        qDebug() << "updating" << installedBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
         return;
     }
 
     QFile updatedBinary(QCoreApplication::applicationFilePath());
     if (!updatedBinary.setPermissions(executablePermissions)) {
-        qDebug() << "couldn't executable permissions on updated Mudlet binary at" << QCoreApplication::applicationFilePath();
+        qDebug() << "couldn't executable permissions on updated Mudlet binary at" << installedBinaryPath;
         return;
     }
 
