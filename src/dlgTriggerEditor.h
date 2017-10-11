@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -178,6 +179,14 @@ public:
     void show_vars();
     void setThemeAndOtherSettings(const QString&);
 
+    static const int cmTriggerView;
+    static const int cmTimerView;
+    static const int cmAliasView;
+    static const int cmScriptView;
+    static const int cmActionView;
+    static const int cmKeysView;
+    static const int cmVarsView;
+
 public slots:
     void slot_toggleHiddenVariables(bool);
     void slot_toggleHiddenVar(bool);
@@ -242,6 +251,8 @@ public slots:
     void slot_deleteAction();
     void slot_deleteKey();
     void slot_save_edit();
+    void slot_copy_xml();
+    void slot_paste_xml();
     void slot_chose_action_icon();
     void slot_showSearchAreaResults(const bool);
     void slot_script_main_area_delete_handler();
@@ -285,6 +296,13 @@ private:
     void addAction(bool isFolder);
     void addKey(bool);
 
+    void selectTriggerByID(int id);
+    void selectTimerByID(int id);
+    void selectAliasByID(int id);
+    void selectScriptByID(int id);
+    void selectActionByID(int id);
+    void selectKeyByID(int id);
+
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
     void expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -298,6 +316,13 @@ private:
     void exportAction(QFile&);
     void exportScript(QFile&);
     void exportKey(QFile&);
+
+    void exportTriggerToClipboard();
+    void exportTimerToClipboard();
+    void exportAliasToClipboard();
+    void exportActionToClipboard();
+    void exportScriptToClipboard();
+    void exportKeyToClipboard();
 
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
 
@@ -375,14 +400,8 @@ private:
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
 // Not used:    QLineEdit* mpCursorPositionIndicator;
+
     int mCurrentView;
-    static const int cmTriggerView;
-    static const int cmTimerView;
-    static const int cmAliasView;
-    static const int cmScriptView;
-    static const int cmActionView;
-    static const int cmKeysView;
-    static const int cmVarsView;
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
