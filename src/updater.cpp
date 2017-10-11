@@ -24,14 +24,11 @@ void Updater::doUpdates()
 
     // constructing the UpdateDialog triggers the update check
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    updateDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::Manual);
+    updateDialog = new dblsqd::UpdateDialog(feed, mNoAutomaticUpdates ? dblsqd::UpdateDialog::OnUpdateAvailable : dblsqd::UpdateDialog::Manual);
 
-    if (mNoAutomaticUpdates) {
-        updateDialog->showIfUpdatesAvailable();
-        return;
+    if (!mNoAutomaticUpdates) {
+        silentlyUpdate();
     }
-
-    silentlyUpdate();
 }
 
 void Updater::silentlyUpdate() const

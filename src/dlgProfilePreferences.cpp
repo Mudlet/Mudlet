@@ -74,6 +74,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     ircChannels->setText(dlgIRC::readIrcChannels(mpHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(mpHost));
 
+    checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updateAutomatically());
+
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pH->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pH->mEchoLuaErrors);
@@ -1272,6 +1274,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEnableGMCP = mEnableGMCP->isChecked();
     pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+
+    mudlet::self()->setAutomaticUpdates(!checkbox_noAutomaticUpdates);
+
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         bool isAreaWidgetInNeedOfResetting = false;

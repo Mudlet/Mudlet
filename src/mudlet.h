@@ -26,10 +26,11 @@
 
 
 #include "HostManager.h"
-
-#include "pre_guard.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
+#include "updater.h"
+
+#include "pre_guard.h"
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
@@ -209,8 +210,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
-    bool noAutomaticUpdates() const { return mNoAutomaticUpdates; }
-    void setNoAutomaticUpdates(const bool state) { mNoAutomaticUpdates = state; }
+    bool updateAutomatically() const { return mautomaticUpdates; }
+    void setAutomaticUpdates(const bool state) { mautomaticUpdates = state; }
     void createMapper(bool loadDefaultMap = true);
 
     static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
@@ -364,7 +365,7 @@ private:
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
-
+    Updater* updater;
 
     QMenu* restoreBar;
     bool mIsGoingDown;
@@ -395,7 +396,7 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
-    bool mNoAutomaticUpdates;
+    bool mautomaticUpdates;
 };
 
 class TConsoleMonitor : public QObject
