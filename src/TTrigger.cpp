@@ -1313,7 +1313,10 @@ void TTrigger::execute()
 
     if (mRegisteredAnonymousLuaFunction) {
         mpLua->call_luafunction(this);
-    } else if (mScript.isEmpty()) {
+        return;
+    }
+
+    if (mScript.isEmpty()) {
         return;
     }
 
