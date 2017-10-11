@@ -1124,7 +1124,7 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
         uniqueName = QString::fromUtf8(lua_tostring(L, 1));
     }
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "addMapEvent: bad argument #2 type (event name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "addMapEvent: bad argument #2 type (event name as string expected, got %s!)", luaL_typename(L, 2));
         lua_error(L);
         return 1;
     } else {
@@ -5514,7 +5514,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempExactMatchTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempExactMatchTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -5548,7 +5548,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -5582,7 +5582,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -5621,7 +5621,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         lua_pushvalue(L, 3);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
 
@@ -5659,7 +5659,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
         lua_pushvalue(L, 3);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempLineTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempLineTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
 
@@ -5961,7 +5961,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
     } else {
-        lua_pushfstring(L, "tempRegexTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "tempRegexTrigger: bad argument #2 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
