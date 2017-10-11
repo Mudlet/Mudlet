@@ -151,11 +151,12 @@ mudlet::mudlet()
 , replayTimer(nullptr)
 , replayToolBar(nullptr)
 , moduleTable(nullptr)
-, mshowMapAuditErrors(false)
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
 , mpProfilePreferencesDlg(nullptr)
+, mshowMapAuditErrors(false)
+, mNoAutomaticUpdates(false)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -2079,6 +2080,9 @@ void mudlet::readSettings()
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mNoAutomaticUpdates = settings.value("noAutomaticUpdates", QVariant(false)).toBool();
+
+
     resize(size);
     move(pos);
     setIcoSize(mMainIconSize);
@@ -2131,6 +2135,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
+    settings.setValue("noAutomaticUpdates", mNoAutomaticUpdates);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2520,7 +2525,7 @@ void mudlet::startAutoLogin()
 }
 
 void mudlet::doUpdates() {
-    Updater updater;
+    Updater updater(mudlet::self(), mNoAutomaticUpdates);
     updater.doUpdates();
 }
 

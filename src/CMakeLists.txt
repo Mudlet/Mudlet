@@ -90,6 +90,7 @@ SET(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp
     ircmessageformatter.cpp
+    updater.cpp
 )
 
 # This is for compiled UI files, not those used at runtime though the resource file.
@@ -198,6 +199,7 @@ SET(mudlet_HDRS
     XMLexport.h
     XMLimport.h
     ircmessageformatter.h
+    updater.h
 )
 
 IF(MSVC)

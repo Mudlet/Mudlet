@@ -145,6 +145,7 @@ public:
     void readSettings();
     void writeSettings();
     bool openWebPage(const QString& path);
+    void doUpdates();
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
@@ -208,6 +209,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    bool noAutomaticUpdates() const { return mNoAutomaticUpdates; }
+    void setNoAutomaticUpdates(const bool state) { mNoAutomaticUpdates = state; }
     void createMapper(bool loadDefaultMap = true);
 
     static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
@@ -350,7 +353,6 @@ private slots:
 private:
     void initEdbee();
     void initUpdater();
-    void doUpdates();
 
     void goingDown() { mIsGoingDown = true; }
     QMap<QString, TConsole*> mTabMap;
@@ -393,6 +395,7 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
+    bool mNoAutomaticUpdates;
 };
 
 class TConsoleMonitor : public QObject
