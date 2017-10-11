@@ -2047,8 +2047,9 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
     }
 
+    // pass the event on so dblsqd can perform an update
+    // if automatic updates have been disabled
     event->accept();
-    qApp->quit();
 }
 
 void mudlet::forceClose()

@@ -24,6 +24,7 @@ private:
     dblsqd::UpdateDialog* updateDialog;
 
     void silentlyUpdate() const;
+    void setupManualUpdate() const;
     void untarOnLinux(const QString &fileName) const;
 
 signals:

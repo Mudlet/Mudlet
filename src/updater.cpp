@@ -12,7 +12,8 @@ Updater::Updater(QObject* parent, bool mautomaticUpdates) : QObject(parent)
 }
 
 // start the update process and figure out what needs to be done
-// if it's silent updates, do that, otherwise show the dialog
+// if it's silent updates, do that right away, otherwise
+// setup manual updates to do our custom actions
 void Updater::doUpdates()
 {
     auto devSuffix = QByteArray(APP_BUILD).trimmed();
@@ -30,13 +31,32 @@ void Updater::doUpdates()
 
     if (mautomaticUpdates) {
         silentlyUpdate();
+    } else {
+        setupManualUpdate();
     }
 }
+
 
 void Updater::silentlyUpdate() const
 {
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { feed->downloadRelease(feed->getUpdates().first()); });
 
+    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
+        auto file = feed->getDownloadFile();
+
+        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, file->fileName());
+
+        // replace current binary with the unzipped one
+        auto watcher = new QFutureWatcher<void>;
+        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
+        watcher->setFuture(future);
+    });
+}
+
+// in case of manual updates, change the update dialogs
+// action of opening the file to perform our update instead
+void Updater::setupManualUpdate() const
+{
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
         auto file = feed->getDownloadFile();
 
