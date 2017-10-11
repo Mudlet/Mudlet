@@ -24,7 +24,9 @@ void Updater::doUpdates()
 
     // constructing the UpdateDialog triggers the update check
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    updateDialog = new dblsqd::UpdateDialog(feed, !mautomaticUpdates ? dblsqd::UpdateDialog::OnUpdateAvailable : dblsqd::UpdateDialog::Manual);
+    updateDialog = new dblsqd::UpdateDialog(feed, !mautomaticUpdates ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual);
+
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update available"; });
 
     if (mautomaticUpdates) {
         silentlyUpdate();
@@ -33,10 +35,7 @@ void Updater::doUpdates()
 
 void Updater::silentlyUpdate() const
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update available";
-        feed->downloadRelease(feed->getUpdates().first());
-    });
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { feed->downloadRelease(feed->getUpdates().first()); });
 
 
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
