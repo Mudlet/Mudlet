@@ -15,16 +15,14 @@ class Updater : public QObject
     Q_DISABLE_COPY(Updater)
 
 public:
-    explicit Updater(QObject* parent = nullptr, bool mautomaticUpdates = false);
+    explicit Updater(QObject* parent = nullptr);
     void doUpdates();
 
 private:
-    bool mautomaticUpdates;
     dblsqd::Feed* feed;
     dblsqd::UpdateDialog* updateDialog;
 
-    void silentlyUpdate() const;
-    void setupManualUpdate() const;
+    void setupEvents() const;
     void untarOnLinux(const QString &fileName) const;
 
 signals:

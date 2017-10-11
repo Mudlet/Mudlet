@@ -1,14 +1,14 @@
 #include "updater.h"
 #include "../3rdparty/dblsqd/feed.h"
 #include "../3rdparty/dblsqd/update_dialog.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include "post_guard.h"
 
-Updater::Updater(QObject* parent, bool mautomaticUpdates) : QObject(parent)
+Updater::Updater(QObject* parent) : QObject(parent)
 {
-    this->mautomaticUpdates = mautomaticUpdates;
 }
 
 // start the update process and figure out what needs to be done
@@ -25,38 +25,24 @@ void Updater::doUpdates()
 
     // constructing the UpdateDialog triggers the update check
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    updateDialog = new dblsqd::UpdateDialog(feed, !mautomaticUpdates ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual);
+    updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
 
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update(s) available"; });
 
-    if (mautomaticUpdates) {
-        silentlyUpdate();
-    } else {
-        setupManualUpdate();
-    }
+    setupEvents();
 }
 
 
-void Updater::silentlyUpdate() const
+void Updater::setupEvents() const
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { feed->downloadRelease(feed->getUpdates().first()); });
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
+        if (!mudlet::self()->updateAutomatically()) {
+            return;
+        }
 
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
-        auto file = feed->getDownloadFile();
-
-        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, file->fileName());
-
-        // replace current binary with the unzipped one
-        auto watcher = new QFutureWatcher<void>;
-        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
-        watcher->setFuture(future);
+        feed->downloadRelease(feed->getUpdates().first());
     });
-}
 
-// in case of manual updates, change the update dialogs
-// action of opening the file to perform our update instead
-void Updater::setupManualUpdate() const
-{
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
         auto file = feed->getDownloadFile();
 
@@ -74,9 +60,7 @@ void Updater::untarOnLinux(const QString& fileName) const
     QProcess tar;
     tar.setProcessChannelMode(QProcess::MergedChannels);
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
-    tar.start("tar",
-              QStringList() << "-xvf" << fileName << "-C"
-                            << QStandardPaths::writableLocation(QStandardPaths::TempLocation) << "/");
+    tar.start("tar", QStringList() << "-xvf" << fileName << "-C" << QStandardPaths::writableLocation(QStandardPaths::TempLocation) << "/");
     if (!tar.waitForFinished()) {
         qDebug() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
