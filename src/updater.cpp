@@ -36,10 +36,9 @@ void Updater::doUpdates()
 
 void Updater::silentlyUpdate() const
 {
-    return;
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
         qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update available";
-//        feed->downloadRelease(feed->getUpdates().first());
+        feed->downloadRelease(feed->getUpdates().first());
     });
 
 
