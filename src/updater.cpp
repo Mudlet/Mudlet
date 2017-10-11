@@ -56,7 +56,7 @@ void Updater::untarOnLinux(const QString& fileName) const
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
     tar.start("tar",
               QStringList() << "-xvf" << fileName << "-C"
-                            << "/tmp/");
+                            << QStandardPaths::writableLocation(QStandardPaths::TempLocation) << "/");
     if (!tar.waitForFinished()) {
         qDebug() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
@@ -66,7 +66,7 @@ void Updater::untarOnLinux(const QString& fileName) const
 
 void Updater::updateBinaryOnLinux() const
 { // FIXME don't hardcode name in case we want to change it
-    QFileInfo unzippedBinary("/tmp/Mudlet.AppImage");
+    QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/Mudlet.AppImage");
     QString installedBinaryPath(QCoreApplication::applicationFilePath());
 
     auto executablePermissions = unzippedBinary.permissions();
