@@ -60,9 +60,11 @@
         <file>icons/document-save-all.png</file>
         <file>icons/document-save-as.png</file>
         <file>icons/edit-bomb.png</file>
+        <file>icons/edit-copy.png</file>
         <file>icons/edit-clear-locationbar-rtl.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-delete-shred.png</file>
+        <file>icons/edit-paste.png</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
         <file>icons/filter-grey-locked.png</file>
