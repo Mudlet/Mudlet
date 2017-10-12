@@ -179,14 +179,17 @@ public:
     void show_vars();
     void setThemeAndOtherSettings(const QString&);
 
-    static const int cmTriggerView;
-    static const int cmTimerView;
-    static const int cmAliasView;
-    static const int cmScriptView;
-    static const int cmActionView;
-    static const int cmKeysView;
-    static const int cmVarsView;
-
+ 
+    enum EditorViewType {
+    cmTriggerView = 1,
+    cmTimerView,
+    cmAliasView,
+    cmScriptView,
+    cmActionView,
+    cmKeysView,
+    cmVarsView
+    };
+    
 public slots:
     void slot_toggleHiddenVariables(bool);
     void slot_toggleHiddenVar(bool);
