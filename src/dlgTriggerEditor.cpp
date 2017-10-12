@@ -66,14 +66,6 @@
 
 using namespace std;
 
-const int dlgTriggerEditor::cmTriggerView = 1;
-const int dlgTriggerEditor::cmTimerView = 2;
-const int dlgTriggerEditor::cmAliasView = 3;
-const int dlgTriggerEditor::cmScriptView = 4;
-const int dlgTriggerEditor::cmActionView = 5;
-const int dlgTriggerEditor::cmKeysView = 6;
-const int dlgTriggerEditor::cmVarsView = 7;
-
 const QString msgInfoAddAlias = "Alias are input triggers. To make a new alias: <b>1.</b> Define an input trigger pattern with a Perl regular expression. "
                                 "<b>2.</b> Define a command to send to the MUD in clear text <b><u>instead of the alias pattern</u></b> or write a script for more complicated needs. "
                                 "<b>3. <u>Activate</u></b> the alias. "
