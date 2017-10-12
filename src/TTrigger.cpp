@@ -72,6 +72,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -106,6 +107,7 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mModuleMember(false)
 , mColorTriggerFgAnsi()
 , mColorTriggerBgAnsi()
+, mRegisteredAnonymousLuaFunction(false)
 {
     setRegexCodeList(regexList, regexProperyList);
 }
@@ -1269,8 +1271,13 @@ void TTrigger::compile()
 bool TTrigger::setScript(const QString& script)
 {
     mScript = script;
-    mNeedsToBeCompiled = true;
-    mOK_code = compileScript();
+    if (script.isEmpty()) {
+        mNeedsToBeCompiled = false;
+        mOK_code = true;
+    } else {
+        mNeedsToBeCompiled = true;
+        mOK_code = compileScript();
+    }
     return mOK_code;
 }
 
@@ -1303,6 +1310,16 @@ void TTrigger::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpLua->call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     if (mIsMultiline) {
         mpLua->callMulti(mFuncName, mName);
     } else {
