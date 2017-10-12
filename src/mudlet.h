@@ -208,6 +208,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    bool compactInputLine() const { return mCompactInputLine; }
+    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
     static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
@@ -391,6 +393,11 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
+    bool mCompactInputLine;
+
+    void slot_toggle_compact_input_line();
+
+    void set_compact_input_line();
 };
 
 class TConsoleMonitor : public QObject
