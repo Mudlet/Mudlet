@@ -77,7 +77,7 @@ void Updater::updateBinaryOnLinux() const
     executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
 
     QDir dir;
-    if (!(dir.remove(installedBinaryPath) && QDir().rename(unzippedBinary.filePath(), installedBinaryPath))) {
+    if (!(dir.remove(installedBinaryPath) && dir.rename(unzippedBinary.filePath(), installedBinaryPath))) {
         qDebug() << "updating" << installedBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
         return;
     }
