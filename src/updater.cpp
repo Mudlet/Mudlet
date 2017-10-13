@@ -1,6 +1,6 @@
 #include "updater.h"
-#include "../3rdparty/dblsqd/dblsqd/feed.h"
-#include "../3rdparty/dblsqd/dblsqd/update_dialog.h"
+#include "dblsqd/feed.h"
+#include "dblsqd/update_dialog.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
