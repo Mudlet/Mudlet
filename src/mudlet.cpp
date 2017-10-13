@@ -151,6 +151,7 @@ mudlet::mudlet()
 , replayTimer(nullptr)
 , replayToolBar(nullptr)
 , moduleTable(nullptr)
+, mCompactInputLine(false)
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
@@ -373,6 +374,7 @@ mudlet::mudlet()
     mpTabBar->setFont(mdiFont);
 
     mainPane->show();
+
     connect(actionConnect, SIGNAL(triggered()), this, SLOT(slot_show_connection_dialog()));
     connect(actionHelp, SIGNAL(triggered()), this, SLOT(show_help_dialog()));
     connect(actionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -426,6 +428,7 @@ mudlet::mudlet()
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
     connect(dactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
 
     connect(mactionTriggers, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
     connect(dactionScriptEditor, SIGNAL(triggered()), this, SLOT(show_trigger_dialog()));
@@ -1037,6 +1040,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
         mpCurrentActiveHost->mpConsole->hide();
     }
     mpCurrentActiveHost = pH;
+
+    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -1065,6 +1070,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
     mpCurrentActiveHost->mpConsole->show();
     mpTabBar->setCurrentIndex(newTabID);
+
     int x = mpCurrentActiveHost->mpConsole->width();
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
@@ -2083,8 +2089,7 @@ void mudlet::readSettings()
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mautomaticUpdates = settings.value("automaticUpdates", QVariant(true)).toBool();
-
-
+    mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     resize(size);
     move(pos);
     setIcoSize(mMainIconSize);
@@ -2138,6 +2143,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("automaticUpdates", mautomaticUpdates);
+    settings.setValue("compactInputLine", mCompactInputLine);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2679,6 +2685,39 @@ void mudlet::slot_multi_view()
     }
 }
 
+
+void mudlet::slot_toggle_compact_input_line()
+{
+    if (!mpCurrentActiveHost) { return; }
+
+    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
+
+    if (compactInputLine()) {
+        buttons->show();
+        dactionInputLine->setText(tr("Compact input line"));
+        setCompactInputLine(false);
+    } else {
+        buttons->hide();
+        dactionInputLine->setText(tr("Standard input line"));
+        setCompactInputLine(true);
+    }
+}
+
+void mudlet::set_compact_input_line()
+{
+    if (!mpCurrentActiveHost) { return; }
+
+    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
+
+    if (!compactInputLine()) {
+        buttons->show();
+        dactionInputLine->setText(tr("Compact input line"));
+    } else {
+        buttons->hide();
+        dactionInputLine->setText(tr("Standard input line"));
+    }
+}
+
 mudlet::~mudlet()
 {
     mudlet::_self = nullptr;
@@ -2934,7 +2973,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     QMapIterator<QString, QString> itPath(directoriesNeededMap);
     while (itPath.hasNext()) {
         itPath.next();
-        QString folderToCreate = QStringLiteral("%1/%2").arg(destination, itPath.value());
+        QString folderToCreate = QStringLiteral("%1%2").arg(destination, itPath.value());
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
                 zip_close(archive);

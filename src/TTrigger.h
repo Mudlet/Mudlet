@@ -143,6 +143,9 @@ public:
     QStringList mRegexCodeList;
     bool exportItem;
     bool mModuleMasterFolder;
+    // specifies whenever the payload is Lua code as a string
+    // or a function
+    bool mRegisteredAnonymousLuaFunction;
 
 private:
     TTrigger() {}
@@ -153,6 +156,7 @@ private:
     QList<int> mRegexCodePropertyList;
     QMap<int, QSharedPointer<pcre>> mRegexMap;
 
+    // Lua code as a string to run
     QString mScript;
 
     bool mNeedsToBeCompiled;

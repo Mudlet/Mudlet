@@ -86,6 +86,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpMapper(nullptr)
+, mpButtonMainLayer(nullptr)
 , mpScrollBar(new QScrollBar)
 
 , mRecordReplay(false)
@@ -346,18 +347,22 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
 
-    auto buttonMainLayer = new QWidget; //( layerCommandLine );
-    buttonMainLayer->setSizePolicy(sizePolicy);
-    buttonMainLayer->setContentsMargins(0, 0, 0, 0);
-    auto layoutButtonMainLayer = new QVBoxLayout(buttonMainLayer);
+    mpButtonMainLayer = new QWidget;
+    mpButtonMainLayer->setObjectName(QStringLiteral("mpButtonMainLayer"));
+    mpButtonMainLayer->setSizePolicy(sizePolicy);
+    mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
+    auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
+    layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
     layoutButtonMainLayer->setMargin(0);
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
-    /*buttonMainLayer->setMinimumHeight(31);
-           buttonMainLayer->setMaximumHeight(31);*/
+    /*mpButtonMainLayer->setMinimumHeight(31);
+           mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
+    buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
+    layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
     layoutButtonLayer->setMargin(0);
     layoutButtonLayer->setSpacing(0);
 
@@ -477,7 +482,7 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     connect(mpBufferSearchDown, SIGNAL(clicked()), this, SLOT(slot_searchBufferDown()));
 
     layoutLayer2->addWidget(mpCommandLine);
-    layoutLayer2->addWidget(buttonMainLayer);
+    layoutLayer2->addWidget(mpButtonMainLayer);
     layoutButtonLayer->addWidget(mpBufferSearchBox, 0, 0, 0, 4);
     layoutButtonLayer->addWidget(mpBufferSearchUp, 0, 5);
     layoutButtonLayer->addWidget(mpBufferSearchDown, 0, 6);
@@ -536,8 +541,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
     //buttonLayer->setMaximumWidth(31);
     buttonLayer->setMinimumWidth(400);
     buttonLayer->setMaximumWidth(400);
-    buttonMainLayer->setMinimumWidth(400);
-    buttonMainLayer->setMaximumWidth(400);
+    mpButtonMainLayer->setMinimumWidth(400);
+    mpButtonMainLayer->setMaximumWidth(400);
     setFocusPolicy(Qt::ClickFocus);
     setFocusProxy(mpCommandLine);
     console->setFocusPolicy(Qt::ClickFocus);
@@ -547,8 +552,8 @@ TConsole::TConsole(Host* pH, bool isDebugConsole, QWidget* parent)
 
     buttonLayerSpacer->setAutoFillBackground(true);
     buttonLayerSpacer->setPalette(__pal);
-    buttonMainLayer->setAutoFillBackground(true);
-    buttonMainLayer->setPalette(__pal);
+    mpButtonMainLayer->setAutoFillBackground(true);
+    mpButtonMainLayer->setPalette(__pal);
 
     buttonLayer->setAutoFillBackground(true);
     buttonLayer->setPalette(__pal);
