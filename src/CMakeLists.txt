@@ -160,6 +160,8 @@ SET(mudlet_MOC_HDRS
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
+    updater.h
+
 )
 
 SET(mudlet_HDRS
