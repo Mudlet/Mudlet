@@ -30,6 +30,8 @@ include(../3rdparty/communi/communi.pri)
 # Include lua_yajl (run time lua module needed)
 include(../3rdparty/lua_yajl/lua_yajl.pri)
 
+include(../3rdparty/dblsqd/dblsqd-sdk-qt.pri)
+
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
 macx: {
@@ -289,10 +291,6 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp \
-    ../3rdparty/dblsqd/feed.cpp \
-    ../3rdparty/dblsqd/release.cpp \
-    ../3rdparty/dblsqd/semver.cpp \
-    ../3rdparty/dblsqd/update_dialog.cpp \
     updater.cpp
 
 
@@ -371,10 +369,6 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    ../3rdparty/dblsqd/feed.h \
-    ../3rdparty/dblsqd/release.h \
-    ../3rdparty/dblsqd/semver.h \
-    ../3rdparty/dblsqd/update_dialog.h \
     updater.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -400,11 +394,7 @@ FORMS += \
     ui/triggers_main_area.ui \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
-    ui/vars_main_area.ui \
-    ../3rdparty/dblsqd/update_dialog.ui
-
-SUBDIRS += \
-    ../3rdparty/dblsqd/dblsqd-sdk-qt.pro
+    ui/vars_main_area.ui
 
 RESOURCES = \
     mudlet.qrc
