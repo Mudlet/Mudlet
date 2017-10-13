@@ -1,6 +1,4 @@
 #include "updater.h"
-#include "dblsqd/feed.h"
-#include "dblsqd/update_dialog.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -25,7 +23,7 @@ void Updater::doUpdates()
 
     // constructing the UpdateDialog triggers the update check
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
+    updateDialog = new TUpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
 
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Updates feed ready!" << feed->getUpdates().size() << "update(s) available"; });
 
@@ -89,4 +87,9 @@ void Updater::updateBinaryOnLinux() const
     }
 
     qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+}
+
+void TUpdateDialog::startUpdate() const
+{
+
 }
