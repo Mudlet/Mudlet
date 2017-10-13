@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2017 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -51,6 +51,7 @@ class QMenu;
 class QLabel;
 class QListWidget;
 class QPushButton;
+class QSettings;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -142,10 +143,43 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings();
+    void readSettings(QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
     void processEventLoopHack();
+    const QString & getGuiLanguage() const { return mGuiLanguageSelection; }
+    void setGuiLanguage(const QString &);
+    void redrawGuiTexts();
+    bool isGoingDown() { return mIsGoingDown; }
+    void setIcoSize(int s);
+    void replayStart();
+    bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
+    void replayOver();
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    bool resetFormat(Host*, QString& name);
+    bool moduleTableVisible();
+    void doAutoLogin(const QString&);
+    bool deselect(Host* pHost, const QString& name);
+    void stopSounds();
+    void playSound(QString s, int);
+    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
+    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
+    // Used by a profile to tell the mudlet class
+    // to tell other profiles to reload the updated
+    // maps (via signal_profileMapReloadRequested(...))
+    void requestProfilesToReloadMaps(QList<QString>);
+
+    bool showMapAuditErrors() const { return mshowMapAuditErrors; }
+    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
+    bool compactInputLine() const { return mCompactInputLine; }
+    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
+    void createMapper(bool loadDefaultMap = true);
+
+    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+
+    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
+
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
     static QMainWindow* mpDebugArea;
@@ -157,22 +191,9 @@ public:
     QIcon* testicon;
     bool mShowMenuBar;
     bool mShowToolbar;
-    bool isGoingDown() { return mIsGoingDown; }
     int mMainIconSize;
     int mTEFolderIconSize;
-    void setIcoSize(int s);
-    void replayStart();
-    bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
-    void replayOver();
-    void showEvent(QShowEvent* event) override;
-    void hideEvent(QHideEvent* event) override;
-    bool resetFormat(Host*, QString& name);
-    bool moduleTableVisible();
     bool mWindowMinimized;
-    void doAutoLogin(const QString&);
-    bool deselect(Host* pHost, const QString& name);
-    void stopSounds();
-    void playSound(QString s, int);
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
@@ -198,21 +219,7 @@ public:
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
-    void setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown);
-    static bool loadEdbeeTheme(const QString &themeName, const QString &themeFile);
 
-    // Used by a profile to tell the mudlet class
-    // to tell other profiles to reload the updated
-    // maps (via signal_profileMapReloadRequested(...))
-    void requestProfilesToReloadMaps(QList<QString>);
-
-    bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
-    bool compactInputLine() const { return mCompactInputLine; }
-    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
-    void createMapper(bool loadDefaultMap = true);
-
-    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
@@ -259,6 +266,10 @@ public:
         // filename of the XML file that contains the (per profile, unpacked)
         // package mudlet items in that package/module:
         profilePackagePathFileName,
+        // Takes two extra arguments (profile name, package name) returns the
+        // path of staging area for the package/module items in that
+        // package/module - ends in '/':
+        profilePackageStagingPathFileName,
         // Takes one extra argument (profile name) that returns the directory
         // that contains replays (*.dat files) and logs (*.html or *.txt) files
         // for that profile - does NOT end in '/':
@@ -277,7 +288,14 @@ public:
         editorWidgetThemeJsonFile,
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        moduleBackupsPath
+        moduleBackupsPath,
+        // Returns path to location where mudlet_xx(_YY).qm translations are
+        // stored - will be platform spacific...
+        mudletTranslationsPath,
+        // Returns path to "master" qt library translation files, since Qt 5.3
+        // the qt_xx(_YY).qm file is a composite that refers to other components
+        // within the same directory.
+        qtTranslationsPath
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
 
@@ -319,6 +337,7 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
+    void slot_toggle_compact_input_line();
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -326,6 +345,13 @@ protected:
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
+    // This is sent AFTER all the QEvent::LanguageChange have occurred (one for
+    // every translator load or unload - basically it means that tr(...) calls
+    // will now produce results in the (presumably wanted) language and is more
+    // efficient than responding to every one of the events - the argument
+    // provided is the new language code and then the old one - is NOT sent on
+    // startup:
+    void signal_translatorChangeCompleted(const QString&, const QString&);
 
 private slots:
     void slot_close_profile();
@@ -351,8 +377,13 @@ private slots:
 
 private:
     void initEdbee();
-
+    void check_for_mappingscript();
+    void updateAfterReadingSettings(QSettings&);
+    void guiLanguageChange();
     void goingDown() { mIsGoingDown = true; }
+    void set_compact_input_line();
+
+
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
@@ -363,22 +394,39 @@ private:
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
 
-
     QMenu* restoreBar;
     bool mIsGoingDown;
 
-    QAction* actionReplaySpeedDown;
-    QAction* actionReplaySpeedUp;
-    QAction* actionSpeedDisplay;
-    QAction* actionReplayTime;
-    QLabel* replaySpeedDisplay;
-    QLabel* replayTime;
-    QTimer* replayTimer;
-    QToolBar* replayToolBar;
+    QAction* mpActionReplaySpeedDown;
+    QAction* mpActionReplaySpeedUp;
+    QAction* mpActionSpeedDisplay;
+    QAction* mpActionReplayTime;
+    QLabel* mpLabelReplaySpeedDisplay;
+    QLabel* mpLabelReplayTime;
+    QTimer* mpTimerReplay;
+    QToolBar* mpToolBarReplay;
 
-    QAction* actionReconnect;
-
-    void check_for_mappingscript();
+    QAction* mpActionAbout;
+    QAction* mpActionAliases;
+    QAction* mpActionButtons;
+    QAction* mpActionConnect;
+    QAction* mpActionDisconnect;
+    QAction* mpActionFullScreenView;
+    QAction* mpActionHelp;
+    QAction* mpActionIRC;
+    QAction* mpActionKeys;
+    QAction* mpActionMapper;
+    QAction* mpActionModuleManager;
+    QAction* mpActionMultiView;
+    QAction* mpActionNotes;
+    QAction* mpActionOptions;
+    QAction* mpActionPackageManager;
+    QAction* mpActionReconnect;
+    QAction* mpActionReplay;
+    QAction* mpActionScripts;
+    QAction* mpActionTimers;
+    QAction* mpActionTriggers;
+    QAction* mpActionVariables;
 
     QPointer<QListWidget> packageList;
     QPointer<QPushButton> uninstallButton;
@@ -395,9 +443,25 @@ private:
     bool mshowMapAuditErrors;
     bool mCompactInputLine;
 
-    void slot_toggle_compact_input_line();
+    // Has default form of "en_US" for "en"glish_"U"nited"S"tates but can be just
+    // a ISO langauge code e.g. "fr" for french, WITHOUT a country designation,
+    // replaces xx in "mudlet_xx.qm" to provide "translation" file for GUI
+    // translation - NOTE THIS IS NOT THE SAME AS THE ENCODING USED TO
+    // SEND/RECEIVE DATA FOR A SPECIFIC HOST/PROFILE - SEE: cTelnet::mEncoding
+    QString mGuiLanguageSelection;
 
-    void set_compact_input_line();
+    // QMap has key: xx_YY or xx (xx = language code, YY = country code) used
+    // above mGuiLanguageSelection
+    // value: a QList of QPointers to all the translators needed (mudlet + Qt + ??)
+    // for the specific GUI Language, on language change remove ("uninstall")
+    // the translators for the old settings and add ("install") the ones for
+    // the new setting...
+    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    QList<QPointer <QTranslator>> mTranslatorsLoadedList;
+
+    // Argument to QDateTime::toString(...) to format the elapsed time display
+    // on the mpToolBarReplay:
+    QString mTimeFormat;
 };
 
 class TConsoleMonitor : public QObject

@@ -59,6 +59,8 @@ class TMap;
 
 class Host : public QObject
 {
+    Q_OBJECT
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -176,6 +178,11 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QPair<bool, QString> writeProfileData(const QString &, const QString &);
     QString readProfileData(const QString &);
+
+
+public slots:
+    void slot_guiLanguageChange(const QString&, const QString&);
+
 
 public:
     cTelnet mTelnet;

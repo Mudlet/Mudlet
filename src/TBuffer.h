@@ -23,6 +23,8 @@
  ***************************************************************************/
 
 
+#include "dlgProfilePreferences.h" // Needed so we can befriend one method therein
+
 #include "pre_guard.h"
 #include <QApplication>
 #include <QChar>
@@ -100,10 +102,20 @@ class TBuffer
     // need to use tr() on encoding names in csmEncodingTable
     Q_DECLARE_TR_FUNCTIONS(TBuffer)
 
-    // private - a map of computer-friendly encoding names as keys,
-    // values are a pair of human-friendly name + encoding data
-    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
+    // needed to allow the method to update the human readable names in
+    // smEncodingNamesMap when the GUI language is changed as they are used in
+    // dlgProfilePreferences::comboBox_encoding
+    friend void dlgProfilePreferences::slot_guiLanguageChange();
 
+    // private - a pair of globally shared read only (nominally) maps of
+    // computer-friendly encoding names as keys,
+    // values are:
+    // 1) encoding data for the encodings where they use single byte
+    // codes but differ from ISO-8859-1 in the character encoded with the MS Bit
+    // set:
+    static const QMap<QString, QVector<QChar>> csmEncodingsMap;
+    // 2) human-friendly name:
+    static QMap<QString, QString> smEncodingNamesMap;
 
 public:
     TBuffer(Host* pH);
@@ -149,9 +161,12 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); };
-    static const QList<QString> getFriendlyEncodingNames();
-    static const QString& getComputerEncoding(const QString& encoding);
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingsMap.keys(); }
+    // Found issues with returning a const QString reference from the global
+    // static table - so keep it simple and reliable and return by value which
+    // will use the normal return value copying in conjunction with Qt's
+    // Copy-On-Write "copying reduction" system...
+    static QString getFriendlyEncodingName(const QString& encodingName, const QString& defaultName = QString()) {return smEncodingNamesMap.value(encodingName, defaultName); }
     void logRemainingOutput();
 
 

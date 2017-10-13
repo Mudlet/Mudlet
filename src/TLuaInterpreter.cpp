@@ -2946,13 +2946,13 @@ int TLuaInterpreter::startLogging(lua_State* L)
 
         lua_pushboolean(L, true);
         if (host.mpConsole->mLogToLogFile) {
-            host.mpConsole->logButton->setChecked(true);
+            host.mpConsole->mLogButton->setChecked(true);
             // Sets the button as checked but clicked() & pressed() signals are NOT generated
             lua_pushfstring(L, "Main console output has started to be logged to file: %s.", host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 1);
         } else {
-            host.mpConsole->logButton->setChecked(false);
+            host.mpConsole->mLogButton->setChecked(false);
             lua_pushfstring(L, "Main console output has stopped being logged to file: %s.", savedLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 0);
@@ -7715,7 +7715,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 {
     //args: from id, id_to, direction, style, line color, arrow (bool)
     int id_from, id_to, r = 255, g = 0, b = 0;
-    QString line_style("solid line");
+    Qt::PenStyle line_style = Qt::SolidLine;
     QString direction;
     QList<qreal> x;
     QList<qreal> y;
@@ -7864,7 +7864,22 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_pushstring(L, "attributes");
             lua_newtable(L); //customLines[attributes]
             lua_pushstring(L, "style");
-            lua_pushstring(L, pR->customLinesStyle[exits[i]].toLocal8Bit().data());
+            switch (pR->customLinesStyle.value(exits.at(i), Qt::SolidLine)) {
+            case Qt::DotLine:
+                lua_pushstring(L, "dot line");
+                break;
+            case Qt::DashLine:
+                lua_pushstring(L, "dash line");
+                break;
+            case Qt::DashDotLine:
+                lua_pushstring(L, "dash dot line");
+                break;
+            case Qt::DashDotDotLine:
+                lua_pushstring(L, "dash dot dot line");
+                break;
+            default:
+                lua_pushstring(L, "solid line");
+            }
             lua_settable(L, -3);
             lua_pushstring(L, "arrow");
             lua_pushboolean(L, pR->customLinesArrow[exits[i]]);
@@ -8748,8 +8763,8 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     {
         static bool isWarningIssued = false;
         if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
-            QString warnMsg = tr("[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+            QString warnMsg = tr("[ WARN ] - Lua command setAreaUserData() used - it is currently flagged as experimental!");
+            QString infoMsg = tr("[ INFO ] - To be fully functional the above command requests a revision to the map file format\n"
                                          "and although that has been coded it is NOT enabled so this feature's effects\n"
                                          "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
                                          "To avoid filling the screen up with repeated messages, this is your only warning about\n"
@@ -8810,8 +8825,8 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     {
         static bool isWarningIssued = false;
         if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
-            QString warnMsg = tr("[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
+            QString warnMsg = tr("[ WARN ] - Lua command setMapUserData() used - it is currently flagged as experimental!");
+            QString infoMsg = tr("[ INFO ] - To be fully functional the above command requests a revision to the map file format\n"
                                          "and although that has been coded it is NOT enabled so this feature's effects\n"
                                          "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
                                          "To avoid filling the screen up with repeated messages, this is your only warning about\n"
@@ -10320,6 +10335,19 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::getGuiLanguageCode(lua_State* L)
+{
+    const QString languageCode(mudlet::self()->getGuiLanguage());
+
+    if (languageCode.isEmpty()) {
+        lua_pushstring(L, "none");
+    } else {
+        // It SHOULD be an ASCII string but lets be prepared for odd things...
+        lua_pushstring(L, languageCode.toUtf8().constData());
+    }
+
+    return 1;
+}
 
 // The function below is mostly unused now as it is overwritten in lua.
 // The overwriting function poses as a transperant proxy and internally uses
@@ -11212,7 +11240,7 @@ void TLuaInterpreter::msdp2Lua(char* src, int srclen)
 
             case MSDP_VAL:
                 if (last == MSDP_VAR) {
-                    script.append(QLatin1String(R"(":)"));
+                    script.append(QLatin1String("\":"));
                 }
                 if (last == MSDP_VAL) {
                     no_array_marker_bug = true;
@@ -11387,7 +11415,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
+    QString msg = tr("[ LUA ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
 
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
@@ -12025,6 +12053,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
     lua_register(pGlobalLua, "alert", TLuaInterpreter::alert);
+    lua_register(pGlobalLua, "getGuiLanguageCode", TLuaInterpreter::getGuiLanguageCode);
 
 // PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
@@ -12053,63 +12082,51 @@ void TLuaInterpreter::initLuaGlobals()
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
-            e += lua_tostring(pGlobalLua, -1);
+            e = lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module rex_pcre.\n"
-                "Some functions may not be available.\n";
-        msg.append(e.c_str());
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module rex_pcre.\n"
+                               "Some functions may not be available.\n"
+                               "Error from Lua: %1").arg(e.c_str()));
     } else {
-        QString msg = "[  OK  ]  - Lua module rex_pcre loaded.";
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ OK ] - Lua module rex_pcre loaded."));
     }
 
     error = luaL_dostring(pGlobalLua, "require \"zip\"");
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
-            e += lua_tostring(pGlobalLua, -1);
+            e = lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module zip.\n";
-        msg.append(e.c_str());
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module zip.\n"
+                               "Error from Lua: %1").arg(e.c_str()));
     } else {
-        QString msg = "[  OK  ]  - Lua module zip loaded.";
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ OK ] - Lua module zip loaded."));
     }
 
     error = luaL_dostring(pGlobalLua, "require \"lfs\"");
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
-            e += lua_tostring(pGlobalLua, -1);
+            e = lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
-                "Probably will not be able to access Mudlet Lua code.\n";
-        msg.append(e.c_str());
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
+                               "Probably will not be able to access Mudlet Lua code.\n"
+                               "Error from Lua: %1").arg(e.c_str()));
     } else {
-        QString msg = "[  OK  ]  - Lua module lfs loaded.";
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ OK ] - Lua module lfs loaded."));
     }
 
     error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
-            e += lua_tostring(pGlobalLua, -1);
+            e = lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
-                "Database support will not be available.\n";
-        msg.append(e.c_str());
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
+                               "Database support will not be available.\n"
+                               "Error from Lua: %1").arg(e.c_str()));
     } else {
-        QString msg = "[  OK  ]  - Lua module sqlite3 loaded.";
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ OK ] - Lua module sqlite3 loaded."));
     }
 
 
@@ -12117,16 +12134,13 @@ void TLuaInterpreter::initLuaGlobals()
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "Lua error:";
-            e += lua_tostring(pGlobalLua, -1);
+            e = lua_tostring(pGlobalLua, -1);
         }
-        QString msg = "[ ERROR ] - Cannot find Lua module utf8.\n"
-                "utf8.* Lua functions won't be available.\n";
-        msg.append(e.c_str());
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module utf8.\n"
+                               "utf8.* Lua functions won't be available.\n"
+                               "Error from Lua: %1").arg(e.c_str()));
     } else {
-        QString msg = "[  OK  ]  - Lua module utf8 loaded.";
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ OK ] - Lua module utf8 loaded."));
     }
 
     QString tn = "atcp";
@@ -12166,11 +12180,11 @@ void TLuaInterpreter::loadGlobal()
         }
         error = luaL_dofile(pGlobalLua, path.toLatin1().data());
         if (error == 0) {
-            mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+            mpHost->postMessage(tr("[ OK ] - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         }
     } else {
-        mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+        mpHost->postMessage(tr("[ OK ] - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
     }
 
@@ -12180,13 +12194,12 @@ void TLuaInterpreter::loadGlobal()
     if (error != 0) {
         string e = "no error message available from Lua";
         if (lua_isstring(pGlobalLua, -1)) {
-            e = "[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                    "Error from Lua: ";
             e += lua_tostring(pGlobalLua, -1);
         }
-        mpHost->postMessage(e.c_str());
+        mpHost->postMessage(tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
+                               "Error from Lua: %1").arg(e.c_str()));
     } else {
-        mpHost->postMessage("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.");
+        mpHost->postMessage(tr("[ OK ] - Mudlet-lua API & Geyser Layout manager loaded."));
         return;
     }
 }

@@ -154,6 +154,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 public:
     dlgTriggerEditor(Host*);
+    bool event(QEvent*) Q_DECL_OVERRIDE;
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
@@ -259,7 +260,6 @@ public slots:
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
     void slot_grab_key();
-    bool event(QEvent* event) override;
     void grab_key_callback(int key, int modifier);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
@@ -268,6 +268,7 @@ public slots:
     void slot_color_trigger_bg();
 
     void slot_updateStatusBar( const QString statusText); // For the source code editor
+    void slot_guiLanguageChange();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
@@ -439,6 +440,40 @@ private:
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
     void clearEditorNotification() const;
+
+    // Automatics from the constructor made into members so we can reaccess them
+    // to put in new text on GUI language change:
+    QAction* mpActionViewAliases; // Was: local viewAliasAction
+    QAction* mpActionViewButtons; // Was: local viewActionAction
+    QAction* mpActionViewKeys; // Was: localviewKeysAction
+    QAction* mpActionViewScripts; // Was: local viewScriptsAction
+    QAction* mpActionViewTriggers; // Was: local viewTriggerAction
+    QAction* mpActionViewTimers; // Was: local showTimersAction
+    QAction* mpActionViewVariables; // Was: local viewVarsAction
+    QAction* mpActionToggleActive; // Was: local toggleActiveAction
+    QAction* mpActionAddItem; // Was: local addTriggerAction
+    QAction* mpActionAddGroup; // Was: local addFolderAction
+    QAction* mpActionCopy;
+    QAction* mpActionDeleteItem; // Was: local deleteTriggerAction
+    QAction* mpActionImport; // Was: local importAction
+    QAction* mpActionExport; // Was: local exportAction
+    QAction* mpActionPaste;
+    QAction* mpActionSaveItem; // Was: local saveAction
+    QAction* mpActionSaveProfile; // Was: local profileSaveAction
+    QAction* mpActionSaveProfileAs; // Was: local saveProfileAsAction
+    QAction* mpActionGenerateStatistics; // Was: local viewStatsAction
+    QAction* mpActionToggleErrorConsole; // Was: local viewErrorsAction
+    QAction* mpActionToggleCentralDebugConsole; // Was: local showDebugAreaAction
+
+    QMenu* mpMenu_searchOptions; // Was: local pMenu_searchOptions
+
+    QString mMsgInfoAddAlias; // Was: const global msgInfoAddAlias
+    QString mMsgInfoAddTrigger; // Was: const global msgInfoAddTrigger
+    QString mMsgInfoAddScript; // Was: const global msgInfoAddScript
+    QString mMsgInfoAddTimer; // Was: const global msgInfoAddScript
+    QString mMsgInfoAddButton; // Was: const global msgInfoAddScript
+    QString mMsgInfoAddKey; // Was: const global msgInfoAddKey
+    QString mMsgInfoAddVar; // Was: const global msgInfoAddVar
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

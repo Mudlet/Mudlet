@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,9 +22,33 @@
 
 #include "dlgScriptsMainArea.h"
 
+#include "mudlet.h"
+
 
 dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
+
+    // Now needed to setup the (HTML) tool-tips moved into the C++ code here
+    // from the form/dialog XML definition which would be subject to QT Designer
+    // obfustication...
+    slot_guiLanguageChange();
+    connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
+}
+
+void dlgScriptsMainArea::slot_guiLanguageChange()
+{
+    retranslateUi(this);
+    // PLACEMARKER: Redefine GUI Texts
+
+    lineEdit_script_name->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                     .arg(tr("<p>Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.</p>"
+                                             "<p>If a function within the script is to be used to handle events entered in the list below <b><u>it must have the same name as is entered here.</u></b></p>")));
+
+    toolButton_script_remove_event_handler->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                       .arg(tr("<p>Remove (selected) event handler from list.</p>")));
+
+    toolButton_script_add_event_handler->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                    .arg(tr("<p>Add entered event handler name to list.</p>")));
 }

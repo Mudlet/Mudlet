@@ -409,6 +409,7 @@ public:
     static int getServerEncoding(lua_State *);
     static int getServerEncodingsList(lua_State *);
     static int alert(lua_State* L);
+    static int getGuiLanguageCode(lua_State*);
 // PLACEMARKER: End of Lua functions declarations
 
 public slots:

@@ -14,16 +14,16 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Mudlet 1.0 - alpha 1</string>
+   <string>Mudlet - this text should have been replaced by code in the mudlet class</string>
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>:/mudlet_main_16px.png</normaloff>:/mudlet_main_16px.png</iconset>
+    <normaloff>:/mudlet_main_48px.png</normaloff>:/mudlet_main_48px.png</iconset>
   </property>
   <property name="iconSize">
    <size>
-    <width>0</width>
-    <height>0</height>
+    <width>48</width>
+    <height>48</height>
    </size>
   </property>
   <property name="dockOptions">
@@ -54,24 +54,6 @@
     </property>
     <item>
      <widget class="QMdiArea" name="mdiArea">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>6</pointsize>
-        <stylestrategy>PreferAntialias</stylestrategy>
-       </font>
-      </property>
       <property name="lineWidth">
        <number>0</number>
       </property>
@@ -103,264 +85,336 @@
      <height>19</height>
     </rect>
    </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <widget class="QMenu" name="menuGames">
+    <property name="title">
+     <string>Games</string>
+    </property>
+    <addaction name="menuActionConnect"/>
+    <addaction name="separator"/>
+    <addaction name="menuActionDisconnect"/>
+    <addaction name="menuActionReconnect"/>
+    <addaction name="separator"/>
+    <addaction name="menuActionQuit"/>
+   </widget>
    <widget class="QMenu" name="menuEditor">
     <property name="title">
      <string>Toolbox</string>
     </property>
-    <addaction name="dactionScriptEditor"/>
-    <addaction name="actionShow_Map"/>
-    <addaction name="dactionInputLine"/>
-    <addaction name="dactionNotepad"/>
-    <addaction name="actionLive_Help_Chat"/>
-    <addaction name="actionPackage_manager"/>
-    <addaction name="dactionReplay"/>
-    <addaction name="actionModule_manager"/>
-    <addaction name="actionPackage_Exporter"/>
+    <addaction name="menuActionTriggers"/>
+    <addaction name="menuActionScripts"/>
+    <addaction name="menuActionTimers"/>
+    <addaction name="menuActionAliases"/>
+    <addaction name="menuActionKeys"/>
+    <addaction name="menuActionButtons"/>
+    <addaction name="menuActionVariables"/>
+    <addaction name="separator"/>
+    <addaction name="menuActionReplay"/>
+    <addaction name="separator"/>
+    <addaction name="menuActionPackageManager"/>
+    <addaction name="menuActionModuleManager"/>
+    <addaction name="menuActionPackageExporter"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
      <string>Options</string>
     </property>
-    <addaction name="dactionOptions"/>
-    <addaction name="dactionMultiView"/>
+    <addaction name="menuActionOptions"/>
+    <addaction name="menuActionShowMap"/>
+    <addaction name="menuActionInputLine"/>
+    <addaction name="menuActionNotepad"/>
+    <addaction name="menuActionMultiView"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="dactionHelp"/>
-    <addaction name="dactionVideo"/>
-    <addaction name="dactionIRC"/>
-    <addaction name="dactionForum"/>
-   </widget>
-   <widget class="QMenu" name="menuAbout">
-    <property name="title">
-     <string>About</string>
-    </property>
-    <addaction name="dactionAbout"/>
-    <addaction name="dactionDownload"/>
-   </widget>
-   <widget class="QMenu" name="menuGames">
-    <property name="title">
-     <string>Games</string>
-    </property>
-    <addaction name="dactionConnect"/>
+    <addaction name="menuActionHelp"/>
+    <addaction name="menuActionIrcBuiltIn"/>
+    <addaction name="menuActionIrcWeb"/>
+    <addaction name="menuActionForum"/>
+    <addaction name="menuActionVideo"/>
+    <addaction name="menuActionDownload"/>
     <addaction name="separator"/>
-    <addaction name="dactionDisconnect"/>
-    <addaction name="dactionReconnect"/>
+    <addaction name="menuActionAbout"/>
+    <addaction name="menuActionAboutQt"/>
    </widget>
    <addaction name="menuGames"/>
    <addaction name="menuEditor"/>
    <addaction name="menuOptions"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuAbout"/>
   </widget>
-  <action name="dactionConnect">
-   <property name="text">
-    <string>Play</string>
+  <action name="menuActionConnect">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/preferences-web-browser-cache.png</normaloff>:/icons/preferences-web-browser-cache.png</iconset>
    </property>
-   <property name="statusTip">
-    <string>configure connection details of, and make a connection to, MUD servers</string>
+   <property name="text">
+    <string>Connect</string>
    </property>
    <property name="shortcut">
     <string>Alt+C</string>
    </property>
   </action>
-  <action name="dactionDisconnect">
+  <action name="menuActionDisconnect">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/network-disconnect.png</normaloff>:/icons/network-disconnect.png</iconset>
+   </property>
    <property name="text">
     <string>Disconnect</string>
-   </property>
-   <property name="statusTip">
-    <string>disconnect from the current MUD server</string>
    </property>
    <property name="shortcut">
     <string>Alt+D</string>
    </property>
   </action>
-  <action name="dactionReconnect">
+  <action name="menuActionReconnect">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/system-restart.png</normaloff>:/icons/system-restart.png</iconset>
+   </property>
    <property name="text">
     <string>Reconnect</string>
-   </property>
-   <property name="statusTip">
-    <string>disconnect and then reconnect to the current MUD server</string>
    </property>
    <property name="shortcut">
     <string>Alt+R</string>
    </property>
   </action>
-  <action name="dactionOptions">
+  <action name="menuActionOptions">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/configure.png</normaloff>:/icons/configure.png</iconset>
+   </property>
    <property name="text">
     <string>Preferences</string>
-   </property>
-   <property name="statusTip">
-    <string>configure setting for the Mudlet application globally and for the current profile</string>
    </property>
    <property name="shortcut">
     <string>Alt+P</string>
    </property>
+   <property name="menuRole">
+    <enum>QAction::PreferencesRole</enum>
+   </property>
   </action>
-  <action name="dactionScriptEditor">
+  <action name="menuActionAliases">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/system-users.png</normaloff>:/icons/system-users.png</iconset>
+   </property>
    <property name="text">
-    <string>Script editor</string>
+    <string>Aliases</string>
    </property>
-   <property name="toolTip">
-    <string>Open script editor</string>
+  </action>
+  <action name="menuActionTriggers">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/tools-wizard.png</normaloff>:/icons/tools-wizard.png</iconset>
    </property>
-   <property name="statusTip">
-    <string>opens the Editor for the different types of things that can be scripted by the user</string>
+   <property name="text">
+    <string>Triggers</string>
    </property>
    <property name="shortcut">
     <string>Alt+E</string>
    </property>
   </action>
-  <action name="dactionNotepad">
+  <action name="menuActionScripts">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/document-properties.png</normaloff>:/icons/document-properties.png</iconset>
+   </property>
+   <property name="text">
+    <string>Scripts</string>
+   </property>
+  </action>
+  <action name="menuActionTimers">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/chronometer.png</normaloff>:/icons/chronometer.png</iconset>
+   </property>
+   <property name="text">
+    <string>Timers</string>
+   </property>
+  </action>
+  <action name="menuActionKeys">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/preferences-desktop-keyboard.png</normaloff>:/icons/preferences-desktop-keyboard.png</iconset>
+   </property>
+   <property name="text">
+    <string>Keys</string>
+   </property>
+  </action>
+  <action name="menuActionButtons">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/bookmarks.png</normaloff>:/icons/bookmarks.png</iconset>
+   </property>
+   <property name="text">
+    <string>Buttons</string>
+   </property>
+  </action>
+  <action name="menuActionVariables">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/variables.png</normaloff>:/icons/variables.png</iconset>
+   </property>
+   <property name="text">
+    <string>Variables</string>
+   </property>
+  </action>
+  <action name="menuActionNotepad">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/applications-accessories.png</normaloff>:/icons/applications-accessories.png</iconset>
+   </property>
    <property name="text">
     <string>Notepad</string>
-   </property>
-   <property name="statusTip">
-    <string>opens a free form text editor window for the active profile that is saved between sessions</string>
    </property>
    <property name="shortcut">
     <string>Alt+N</string>
    </property>
   </action>
-  <action name="dactionHelp">
+  <action name="menuActionHelp">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/help-hint.png</normaloff>:/icons/help-hint.png</iconset>
+   </property>
    <property name="text">
     <string>API Reference</string>
    </property>
-   <property name="statusTip">
-    <string>opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser</string>
-   </property>
   </action>
-  <action name="dactionForum_2">
-   <property name="text">
-    <string>Online forum</string>
+  <action name="menuActionAbout">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/mudlet_information.png</normaloff>:/icons/mudlet_information.png</iconset>
    </property>
-  </action>
-  <action name="dactionAbout">
    <property name="text">
     <string>About Mudlet</string>
    </property>
-   <property name="statusTip">
-    <string>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</string>
+   <property name="menuRole">
+    <enum>QAction::AboutRole</enum>
    </property>
   </action>
-  <action name="dactionIRC">
+  <action name="menuActionAboutQt">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/QtIcon.png</normaloff>:/icons/QtIcon.png</iconset>
+   </property>
    <property name="text">
-    <string>IRC help channel</string>
+    <string>About Qt</string>
    </property>
-   <property name="statusTip">
-    <string>opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers</string>
+   <property name="menuRole">
+    <enum>QAction::AboutQtRole</enum>
    </property>
   </action>
-  <action name="dactionVideo">
+  <action name="menuActionVideo">
    <property name="text">
     <string>Video tutorials</string>
    </property>
-   <property name="statusTip">
-    <string>opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser</string>
-   </property>
   </action>
-  <action name="dactionReplay">
+  <action name="menuActionReplay">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/media-optical.png</normaloff>:/icons/media-optical.png</iconset>
+   </property>
    <property name="text">
     <string>Load replay</string>
    </property>
-   <property name="statusTip">
-    <string>load a previous saved MUD session that can be used to test Mudlet lua systems (off-line!)</string>
-   </property>
   </action>
-  <action name="dactionForum">
+  <action name="menuActionForum">
    <property name="text">
     <string>Online forum</string>
    </property>
-   <property name="statusTip">
-    <string>opens the (on-line) Mudlet Forum in your system web-browser</string>
-   </property>
   </action>
-  <action name="dactionDownload">
+  <action name="menuActionDownload">
    <property name="text">
     <string>Download</string>
    </property>
-   <property name="statusTip">
-    <string>opens the Mudlet website in your system web-browser, where you can download the latest version</string>
-   </property>
   </action>
-  <action name="dactionIRC_2">
+  <action name="menuActionIrcBuiltIn">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/internet-telephony.png</normaloff>:/icons/internet-telephony.png</iconset>
+   </property>
    <property name="text">
-    <string>Help chat</string>
-   </property>
-   <property name="toolTip">
-    <string>Get live help on IRC. If nobody answers right away, give it time</string>
+    <string>Live IRC Help Chat (Built-In client)</string>
    </property>
   </action>
-  <action name="actionLive_Help_Chat">
+  <action name="menuActionIrcWeb">
    <property name="text">
-    <string>Live help chat</string>
-   </property>
-   <property name="statusTip">
-    <string>opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers</string>
+    <string>Live IRC Help Chat (Browser)</string>
    </property>
   </action>
-  <action name="actionShow_Map">
+  <action name="menuActionShowMap">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/applications-internet.png</normaloff>:/icons/applications-internet.png</iconset>
+   </property>
    <property name="text">
     <string>Show map</string>
-   </property>
-   <property name="statusTip">
-    <string>show or hide the MUD Map</string>
    </property>
    <property name="shortcut">
     <string>Alt+M</string>
    </property>
   </action>
-  <action name="actionPackage_manager">
+  <action name="menuActionPackageManager">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/package-manager.png</normaloff>:/icons/package-manager.png</iconset>
+   </property>
    <property name="text">
     <string>Package manager</string>
-   </property>
-   <property name="statusTip">
-    <string>install and remove collections of Mudlet lua items (packages)</string>
    </property>
    <property name="shortcut">
     <string>Alt+O</string>
    </property>
   </action>
-  <action name="actionTest1">
-   <property name="text">
-    <string>test1</string>
+  <action name="menuActionModuleManager">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/module-manager.png</normaloff>:/icons/module-manager.png</iconset>
    </property>
-  </action>
-  <action name="actionAsdf">
-   <property name="text">
-    <string>asdf</string>
-   </property>
-  </action>
-  <action name="actionModule_manager">
    <property name="text">
     <string>Module manager</string>
    </property>
-   <property name="statusTip">
-    <string>install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules)</string>
-   </property>
   </action>
-  <action name="actionPackage_Exporter">
+  <action name="menuActionPackageExporter">
    <property name="text">
-    <string>Package exporter (experimental)</string>
-   </property>
-   <property name="statusTip">
-    <string>gather and bundle up collections of Mudlet Lua items and other reasources into a module</string>
+    <string>Package exporter</string>
    </property>
   </action>
-  <action name="dactionMultiView">
+  <action name="menuActionMultiView">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/view-split-left-right.png</normaloff>:/icons/view-split-left-right.png</iconset>
+   </property>
    <property name="text">
     <string>MultiView</string>
-   </property>
-   <property name="statusTip">
-    <string>share the screen area between multiple open profiles</string>
    </property>
    <property name="shortcut">
     <string>Alt+V</string>
    </property>
   </action>
-  <action name="dactionInputLine">
+  <action name="menuActionQuit">
+   <property name="icon">
+    <iconset resource="../mudlet.qrc">
+     <normaloff>:/icons/application-exit.png</normaloff>:/icons/application-exit.png</iconset>
+   </property>
+   <property name="text">
+    <string>Quit</string>
+   </property>
+   <property name="iconText">
+    <string>Quit</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::QuitRole</enum>
+   </property>
+  </action>
+  <action name="menuActionInputLine">
    <property name="text">
     <string>Compact input line</string>
    </property>
@@ -369,6 +423,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet.qrc"/>
+ </resources>
  <connections/>
 </ui>

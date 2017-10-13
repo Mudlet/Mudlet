@@ -190,6 +190,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
+
+    if (mudlet::self()) {
+        // CHECK: mudlet::self() is null during start-up at this point for the
+        // "default_host" case - it is not clear that this will be an issue...
+        connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange(const QString&, const QString&)));
+    }
 }
 
 Host::~Host()
@@ -1127,4 +1133,19 @@ QString Host::readProfileData(const QString& item)
     }
 
     return ret;
+}
+
+void Host::slot_guiLanguageChange(const QString& newLanguageCode, const QString& oldLanguageCode)
+{
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysGuiLanguageChange"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    event.mArgumentList.append(newLanguageCode);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    event.mArgumentList.append(oldLanguageCode);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    raiseEvent(event);
 }

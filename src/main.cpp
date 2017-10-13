@@ -274,21 +274,85 @@ int main(int argc, char* argv[])
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
-    app->setOrganizationName("Mudlet");
-    app->setApplicationName("Mudlet");
+    app->setOrganizationName(QStringLiteral("Mudlet"));
+    app->setApplicationName(QStringLiteral("Mudlet"));
     app->setApplicationVersion(APP_VERSION);
 
     bool show_splash = !(startupAction & 4); // Not --quiet.
 
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
+    // We have a chicken-and-egg situation in showing a user selected language
+    // text on the splash screen during start-up as the translation system is
+    // not yet in place to provide translations on demand - instead we retain
+    // the original en-US texts for the first start-up and store the last
+    // selected language texts in a file to be written when the language changes
+    // and to be read subsequently - this will NOT work if we provide a command
+    // line means to change/reset the translation to be used {we ought to} but
+    // should be good enough in every other case...
+    QStringList splashScreenTexts;
+    // This does not have any argument replacements i.e. QString::arg() as it
+    // is used as a "template" and they are supplied at the point of use
+    // %1 is the sematic version number and %2 is the optional build suffix
+    // for non-release builds:
+    splashScreenTexts << QStringLiteral("Version: %1%2");
+    splashScreenTexts << QStringLiteral("\nMudlet comes with\n"
+                                        "ABSOLUTELY NO WARRANTY!\n"
+                                        "This is free software, and you are\n"
+                                        "welcome to redistribute it under\n"
+                                        "certain conditions; select the\n"
+                                        "'About' item for details.\n\n"
+                                        "Locating profiles... Done.\n"
+                                        "Loading font files...");
+    splashScreenTexts << QStringLiteral("\nMudlet comes with\n"
+                                        "ABSOLUTELY NO WARRANTY!\n"
+                                        "This is free software, and you are\n"
+                                        "welcome to redistribute it under\n"
+                                        "certain conditions; select the\n"
+                                        "'About' item for details.\n\n"
+                                        "Locating profiles... Done.\n"
+                                        "Loading font files... Done.\n"
+                                        "Initiating main application...\n");
+    splashScreenTexts << QStringLiteral("\nMudlet comes with\n"
+                                        "ABSOLUTELY NO WARRANTY!\n"
+                                        "This is free software, and you are\n"
+                                        "welcome to redistribute it under\n"
+                                        "certain conditions; select the\n"
+                                        "'About' item for details.\n\n"
+                                        "Locating profiles... Done.\n"
+                                        "Loading font files... Done.\n"
+                                        "Initiating main application... Done.\n\n"
+                                        "Starting Mudlet... Have fun!");
+    QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
+    QString fontDirectory = mudlet::getMudletPath(mudlet::mainFontsPath);
+    QDir dir;
+    bool first_launch = false;
+    if (!dir.exists(homeDirectory)) {
+        dir.mkpath(homeDirectory);
+        first_launch = true;
+    } else {
+        // Hopefully the (translated splash screen texts will be available
+        if (show_splash) {
+            QFile splashScreenTextsFile(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("splashScreenTexts.dat")));
+            if (splashScreenTextsFile.open(QIODevice::ReadOnly)) {
+                QDataStream ifs(&splashScreenTextsFile);
+                // This will REPLACE the previous untranslated texts
+                ifs >> splashScreenTexts;
+            }
+        }
+    }
+
+    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " APP_VERSION APP_BUILD);
+        // The splashScreenTexts.at(0) contains a (previously translated) text
+        // with two arguments %1 and %2 which are filled in by the second QString::arg()
+        QString sourceVersionText = QStringLiteral("%1")
+                                    .arg(splashScreenTexts.at(0))
+                                    .arg(APP_VERSION, APP_BUILD);
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font("DejaVu Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(QStringLiteral("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -321,7 +385,7 @@ int main(int argc, char* argv[])
         }
 
         // Repeat for other text, but we know it will fit at given size
-        QString sourceCopyrightText = QChar(169) % QString(" Mudlet makers 2008-") % QString(__DATE__).mid(7);
+        QString sourceCopyrightText = QStringLiteral("© Mudlet makers 2008-%1").arg(QStringLiteral(__DATE__).mid(7));
         QFont font("DejaVu Serif", 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -337,51 +401,23 @@ int main(int argc, char* argv[])
     QPixmap pixmap = QPixmap::fromImage(splashImage);
     QSplashScreen splash(pixmap);
     if (show_splash) {
+        // First message says it is looking/loading fonts (having already found
+        // profiles {or rather checked and made the directory they should be in!}):
+        splash.showMessage(splashScreenTexts.at(1), Qt::AlignHCenter | Qt::AlignTop);
         splash.show();
     }
     app->processEvents();
-
-    QString splash_message;
-    if (show_splash) {
-        splash_message.append("\n\nMudlet comes with\n"
-                              "ABSOLUTELY NO WARRANTY!\n"
-                              "This is free software, and you are\n"
-                              "welcome to redistribute it under\n"
-                              "certain conditions; select the\n"
-                              "'About' item for details.\n\n");
-        splash_message.append("Locating profiles... ");
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
-
-    // seed random number generator (should be done once per lifetime)
-    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
-
-    QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
-    QString fontDirectory = mudlet::getMudletPath(mudlet::mainFontsPath);
-    QDir dir;
-    bool first_launch = false;
-    if (!dir.exists(homeDirectory)) {
-        dir.mkpath(homeDirectory);
-        first_launch = true;
-    }
 
     if (!dir.exists(fontDirectory)) {
         dir.mkpath(fontDirectory);
     }
 
-    if (show_splash) {
-        splash_message.append("Done.\n\nLoading font files... ");
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
+    // seed random number generator (should be done once per lifetime)
+    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
-    // The original code plonks the fonts AND the Copyright into the MAIN mudlet
+    // The original code plonked the fonts AND the Copyright into the MAIN mudlet
     // directory - but the Copyright statement is specifically for the fonts
-    // so now they all go into a "./fonts/" subdirectory - I note that
-    // the Debian packager already removes these fonts anyhow as they are
-    // already present in a shared form in the OS anyhow so our copy is
-    // ancient and superfluous (they are using 2.37 compared to our 1.10) ...!
+    // so now they all go into a "./fonts/" subdirectory...!
     copyFont(fontDirectory, QLatin1String("COPYRIGHT.TXT"));
     copyFont(fontDirectory, QLatin1String("RELEASENOTES.TXT"));
     copyFont(fontDirectory, QLatin1String("README.TXT"));
@@ -396,14 +432,6 @@ int main(int argc, char* argv[])
     copyFont(fontDirectory, QLatin1String("VeraMoIt.ttf"));
     copyFont(fontDirectory, QLatin1String("VeraSe.ttf"));
     copyFont(fontDirectory, QLatin1String("VeraSeBd.ttf"));
-
-    if (show_splash) {
-        splash_message.append("Done.\n\n"
-                              "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!\n\n");
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
 
     mudlet::debugMode = false;
     FontManager fm;
@@ -440,6 +468,12 @@ int main(int argc, char* argv[])
     }
 #endif
 
+    if (show_splash) {
+        // Second message says it is cranking up the main application
+        splash.showMessage(splashScreenTexts.at(2), Qt::AlignHCenter | Qt::AlignTop);
+        app->processEvents();
+    }
+
     mudlet::start();
 
     if (first_launch) {
@@ -451,6 +485,10 @@ int main(int argc, char* argv[])
     }
 
     if (show_splash) {
+        // Third message says main application is about ready to go, and the
+        // QSplashscreen::finish(...) will hide the splash screen when it does...
+        splash.showMessage(splashScreenTexts.at(3), Qt::AlignHCenter | Qt::AlignTop);
+        app->processEvents();
         splash.finish(mudlet::self());
     }
 

@@ -127,11 +127,13 @@
         <file>icons/mudlet_map_download.png</file>
         <file>icons/mudlet_notepad.png</file>
         <file>icons/mudlet_room_exits.png</file>
+        <file>icons/network-disconnect.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/preferences-desktop-keyboard.png</file>
         <file>icons/preferences-web-browser-cache.png</file>
+        <file>icons/QtIcon.png</file>
         <file>icons/rating.png</file>
         <file>icons/red-bomb.png</file>
         <file>icons/searchOptions-caseSensitive.png</file>

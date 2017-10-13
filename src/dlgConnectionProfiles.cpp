@@ -40,8 +40,6 @@
 #include "post_guard.h"
 
 
-#define _DEBUG_
-
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog( parent )
 , mProfileList( QStringList() )
@@ -111,6 +109,40 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
+
+    // Now needed to setup the (HTML) tool-tips and other texts moved into the
+    // C++ code here from the form/dialog XML definition which would be subject
+    // to QT Designer obfustication...
+    slot_guiLanguageChange();
+    connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
+}
+
+void dlgConnectionProfiles::slot_guiLanguageChange()
+{
+    retranslateUi(this);
+    // PLACEMARKER: Redefine GUI Texts
+
+    welcome_message->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
+                             .arg(tr("<p align=\"center\"><big><b>Welcome to Mudlet!</b></big></p>"
+                                     "<p align=\"center\"><b>Click on one of the MUDs on the list to play.</b></p>"
+                                     "<p>To play a game not in the list, click on <img src=\":/icons/list-add_small.png\"/> <span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, <i>Server address</i>, and <i>Port</i> fields in the <i>Required</i> area.</p>"
+                                     "<p>After that, click <img src=\":/icons/dialog-ok-apply_small.png\"/> <span style=\" color:#555753;\">Connect</span> to play.</p>"
+                                     "<p>Have fun!</p>"
+                                     "<p align=\"right\"><big>The Mudlet Team</big> <img src=\":/icons/mudlet_main_16px.png\"/></p>",
+                                     "Please try to maintain the HTML styling in your translation, noting the use of images and the need to escape quotation marks in places where paragraphs are not the default left-aligned and where images are retrieve from (the internal) resources file with file paths beginning with ':/'...!")));
+
+    connect_button->setText(tr("Connect"));
+    login_entry->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                            .arg(tr("<p>The character's name in the MUD, sent automatically with the password upon successful connection.</p>")));
+    character_password_entry->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>Character's password.</p>"
+                                                 "<p>Note that the password is not encrypted in storage though it is in the user's home area and subject to whatever OS provided protections are set up for that.</p>")));
+
+    autologin_checkBox->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>With this enabled, Mudlet will automatically start and connect on this profile when it is launched.</p>")));
+    mud_description_textedit->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>MUD description</p>")));
+
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -958,7 +990,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     QString description = getDescription(QStringLiteral("avalon.mud.de"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Achaea");
@@ -970,7 +1003,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("achaea.com"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("3Kingdoms");
@@ -984,7 +1018,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi5);
     description = getDescription(QStringLiteral("3k.org"), 3000, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                        .arg(description));
     }
 
     mudServer = QStringLiteral("3Scapes");
@@ -998,7 +1033,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi4);
     description = getDescription(QStringLiteral("3k.org"), 3200, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Lusternia");
@@ -1010,7 +1046,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("lusternia.com"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("BatMUD");
@@ -1024,7 +1061,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("God Wars II");
@@ -1036,7 +1074,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("godwars2.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Slothmud");
@@ -1048,7 +1087,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("slothmud.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Aardwolf");
@@ -1060,7 +1100,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("aardmud.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Materia Magica");
@@ -1072,7 +1113,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("materiamagica.com"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Realms of Despair");
@@ -1084,7 +1126,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("ZombieMUD");
@@ -1096,7 +1139,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("zombiemud.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Aetolia");
@@ -1108,7 +1152,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("aetolia.com"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Imperian");
@@ -1120,7 +1165,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("imperian.com"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("WoTMUD");
@@ -1132,7 +1178,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     mudServer = QStringLiteral("Midnight Sun 2");
@@ -1144,7 +1191,8 @@ void dlgConnectionProfiles::fillout_form()
     pM->setIcon(mi);
     description = getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer);
     if (!description.isEmpty()) {
-        pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pM->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                       .arg(description));
     }
 
     for (int i = 0; i < mProfileList.size(); i++) {
@@ -1431,7 +1479,8 @@ bool dlgConnectionProfiles::validateConnect()
     }
 
     connect_button->setDisabled(true);
-    connect_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+    connect_button->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>")));
     return false;
 }
 

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -362,20 +363,12 @@ QString AliasUnit::assembleReport()
             statsAliasTotal++;
         }
     }
-    QStringList msg;
-    msg << "Aliases current total: " << QString::number(statsAliasTotal) << "\n"
-        << "tempAliases current total: " << QString::number(statsTempAliases) << "\n"
-        << "active Aliases: " << QString::number(statsActiveAliases) << "\n";
-        /*<< "active Aliases max this session: " << QString::number(statsActiveAliasesMax) << "\n"
-        << "active Aliases min this session: " << QString::number(statsActiveAliasesMin) << "\n"
-        << "active Aliases average this session: " << QString::number(statsActiveAliasesAverage) << "\n"*/
-        //<< "tempAliases created this session: " << QString::number(statsTempAliasesCreated) << "\n"
-        //<< "tempAliases killed this session: " << QString::number(statsTempAliasesKilled) << "\n"
-        //<< "current total regex Aliases: " << QString::number(statsRegexAliases) << "\n"
-        //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
-        //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
-        //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
-    return msg.join("");
+    return tr( "Aliases current total: %1\n"
+               "tempAliases current total: %2\n"
+               "active Aliases: %3\n" )
+            .arg(QString::number(statsAliasTotal),
+                 QString::number(statsTempAliases),
+                 QString::number(statsActiveAliases));
 }
 
 void AliasUnit::doCleanup()

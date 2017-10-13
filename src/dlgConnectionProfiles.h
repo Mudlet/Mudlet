@@ -62,15 +62,17 @@ public slots:
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();
+    void slot_guiLanguageChange();
+
 
 private:
     void copyFolder(QString sourceFolder, QString destFolder);
     QString getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name);
+    bool validateConnect();
 
     bool validName;
     bool validUrl;
     bool validPort;
-    bool validateConnect();
 
     QStringList mProfileList;
     QPalette mRegularPalette;

@@ -21,11 +21,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+/*
+ * THIS FILE CONTAINS UTF-8 UNICODE ENCODED CHARACTER STRINGS THAT ARE (OR
+ * SHOULD BE) ALERADY TRANSLATED (IN THE CONSTRUCTOR) TO THE REQUIRED
+ * LANGAUGE...
+ */
 
 #include "dlgProfilePreferences.h"
 
 
 #include "Host.h"
+#include "TBuffer.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -63,6 +69,105 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // /testing controls can be placed if needed...
     groupBox_Debug->hide();
 
+    // The presence of an entry here does not mean that we will actually produce
+    // or maintain a particular language - what choices get made available to
+    // the user gets determined later, by the presence of the "compiled" binary
+    // translation (".qm") file, NOT here.  This just records the POSSIBLE
+    // choices that someone had allowed for, more are welcome...
+    // A "none" entry should always be present - it is a dummy entry that has
+    // NO translation file (and unloads any translation files) and is inserted
+    // further down!
+
+// LANGUAGE: 1 - enter code and native description string:
+    //                language file mudlet_     .qm    NATIVE name for language:
+    mTranslationMap.insert(QStringLiteral("en_US"), QStringLiteral("English (American)"));
+    mTranslationMap.insert(QStringLiteral("en_GB"), QStringLiteral("English (British)"));
+    QStringList tooltipLanguageEntries;
+
+    // This covers the default en_US as well as en_GB:
+    tooltipLanguageEntries.append(QStringLiteral("Choose the language for Mudlet to use..."));
+
+// CHECK: Should each "main" language have a entry here that is NOT country
+// specific?
+
+// FR: The next 2 linea of code needs checking by a French speaker:
+    mTranslationMap.insert(QStringLiteral("fr_FR"), QStringLiteral("Français (La France)"));
+    tooltipLanguageEntries.append(QStringLiteral("Choisissez la langue pour que Mudlet utilise ..."));
+
+// DE: The next 2 line of code needs checking by a German speaker:
+    mTranslationMap.insert(QStringLiteral("de_DE"), QStringLiteral("Deutsch (Deutschland)"));
+    tooltipLanguageEntries.append(QStringLiteral("Wähle die Sprache für Mudlet ..."));
+
+// ES: The next 2 linea of code needs checking by a Spanish speaker:
+    mTranslationMap.insert(QStringLiteral("es_ES"), QStringLiteral("Español (España)"));
+    tooltipLanguageEntries.append(QStringLiteral("Elija el idioma para que Mudlet use ..."));
+
+// RU: The next 2 line of code needs checking by a Russian speaker:
+    mTranslationMap.insert(QStringLiteral("ru_RU"), QStringLiteral("Русский (Россия)"));
+    tooltipLanguageEntries.append(QStringLiteral("Выберите язык для Mudlet для использования ..."));
+
+// Zh: The next 2 line of code needs checking by a Chinese speaker (should be Simplified Chinese):
+    mTranslationMap.insert(QStringLiteral("zh_CN"), QStringLiteral("简体中文（中国）"));
+    tooltipLanguageEntries.append(QStringLiteral("选择使用Mudlet的语言..."));
+
+// Eo: If UTF-8 is a Universal encoder method then Esperanto is the nearest to
+// a universal language. 8-):
+    mTranslationMap.insert(QStringLiteral("eo"), QStringLiteral("Esperanto"));
+
+// Cy: This is another example that does not get included in the tooltip (Welsh,
+// not country specific!):
+    mTranslationMap.insert(QStringLiteral("cy"), QStringLiteral("Cymraeg"));
+
+
+    // Further entries go above here:
+    QListIterator<QString> itTranslation(mudlet::self()->getAvailableTranslationCodes());
+    if (itTranslation.hasNext()) {
+        int index = -1;
+        while (itTranslation.hasNext()) {
+            QString languageCode(itTranslation.next());
+            if (mTranslationMap.contains(languageCode)) {
+                // Got the friendly text for this code so insert it, also insert
+                // the language code as data in the Qt::UserRole so it can be
+                // retrieved when the control is manipulated:
+                comboBox_languageSelection->insertItem(++index, mTranslationMap.value(languageCode), languageCode);
+            } else {
+                // Not got a friendly entry so just use code - and report this:
+                qDebug() << "dlgProfilePreference::dlgProfilePreference() - Missing friendly text for language code:" << languageCode;
+                comboBox_languageSelection->insertItem(++index, languageCode, languageCode);
+            }
+
+        }
+        /*: Although this text relates to what the control does when the entry is selected
+         *  a translation is likely in use so it DOES need a translation!*/
+        comboBox_languageSelection->insertItem(-1, tr("none (GUI translation disabled)"));
+        comboBox_languageSelection->setEnabled(true);
+
+        QString currentLanguageCode = mudlet::self()->getGuiLanguage();
+        // 0 is a valid value but -1 is NOT:
+        int selectedLanguageIndex = -1;
+        if (!currentLanguageCode.isEmpty()) {
+            selectedLanguageIndex = comboBox_languageSelection->findData(currentLanguageCode);
+        }
+
+        // Force setting to first (none) if there is a problem
+        comboBox_languageSelection->setCurrentIndex((selectedLanguageIndex < 1) ? 0 : selectedLanguageIndex);
+
+        // Now complete the tooltip:
+        QString tooltipText_comboBoxLanguageSelection = QStringLiteral("<html><head/><body><p>%1</p></body></html>" )
+                .arg(tooltipLanguageEntries.join(QStringLiteral("</p><p>")));
+        comboBox_languageSelection->setToolTip(tooltipText_comboBoxLanguageSelection);
+    } else {
+        qDebug() << "dlgProfilePreferences::dlgProfilePreferences() - No translation files detected...";
+        comboBox_languageSelection->insertItem(-1, QStringLiteral("none (GUI translation not available)"));
+        comboBox_languageSelection->setCurrentIndex(0);
+        comboBox_languageSelection->setEnabled(false);
+        comboBox_languageSelection->setToolTip(QStringLiteral("<html><head/><body><p>No translations found.</p></body></html>" ));
+    }
+
+    // Detect when the translation to use gets changed so we can tell the main
+    // mudlet class to change the translation files in use:
+    connect(comboBox_languageSelection, SIGNAL(currentIndexChanged(const QString &)), this, SLOT(slot_changeGuiLanguage(const QString &)));
+
     loadEditorTab();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
@@ -75,7 +180,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     ircNick->setText(dlgIRC::readIrcNickName(mpHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    enableSpellCheck->setChecked(pH->mEnableSpellCheck);
+    groupBox_spellCheck->setChecked(pH->mEnableSpellCheck);
     checkBox_echoLuaErrors->setChecked(pH->mEchoLuaErrors);
     checkBox_showSpacesAndTabs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces);
     checkBox_showLineFeedsAndParagraphs->setChecked(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
@@ -102,11 +207,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
     QDir dir(path);
 
+    // As these are path/file names they need to be case insensitively checked
+    // so they work on macOs platform...!
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    QRegularExpression rex(QStringLiteral(R"(\.dic$)"), QRegularExpression::CaseInsensitiveOption);
     entries = entries.filter(rex);
     for (int i = 0; i < entries.size(); i++) {
-        QString n = entries[i].replace(QStringLiteral(".dic"), "");
+        entries[i].remove(QStringLiteral(".dic"),Qt::CaseInsensitive);
         auto item = new QListWidgetItem(entries[i]);
         dictList->addItem(item);
         if (entries[i] == mpHost->mSpellDic) {
@@ -114,7 +221,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
         }
     }
 
-    if (pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+    if (   pH->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+        || pH->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
         || pH->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
         || pH->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
         downloadMapOptions->setVisible(true);
@@ -325,47 +433,88 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         // FIXME: Check this each time that it is appropriate for THIS build version
         comboBox_mapFileSaveFormatVersion->clear();
-        // Add default version:
-        comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
-        comboBox_mapFileSaveFormatVersion->setEnabled(false);
-        label_mapFileSaveFormatVersion->setEnabled(false);
-        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-            for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
-                if (i == pHost->mpMap->mDefaultVersion) {
-                    continue;
-                }
+        // Handle case when no map is present:
+        if (pHost->mpMap && pHost->mpMap->mpRoomDB && pHost->mpMap->mpRoomDB->size() > 0 ) {
+            label_mapFileSaveFormatVersion->setEnabled(true);
+            Q_ASSERT_X((pHost->mpMap->mMaxVersion >= pHost->mpMap->mDefaultVersion
+                        && pHost->mpMap->mMinVersion <= pHost->mpMap->mDefaultVersion),
+                       "dlgProfilePreferences::dlgProfilePreferences(...)",
+                       "Map default version (TMap::mMinVersion) is NOT within bounds of minimium to save as (TMap::mMinVersion) and maximum to handle (TMap::mMaxVersion), this needs fixing in the TMap constructor...");
+            for (short int i = pHost->mpMap->mMaxVersion; i >= pHost->mpMap->mMinVersion; --i) {
                 comboBox_mapFileSaveFormatVersion->setEnabled(true);
                 label_mapFileSaveFormatVersion->setEnabled(true);
                 if (i > pHost->mpMap->mDefaultVersion) {
                     comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
-                } else {
+                } else if (i < pHost->mpMap->mDefaultVersion) {
                     comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+                } else {
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(i), QVariant(i));
                 }
             }
+
             int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
             if (_indexForCurrentSaveFormat >= 0) {
                 comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
+            } else {
+                qWarning() << "dlgProfilePreferences::dlgProfilePreferences(...) ERROR - cannot find map save format version value:" << pHost->mpMap->mSaveVersion << "in range of values on control";
             }
+        } else {
+            comboBox_mapFileSaveFormatVersion->setEnabled(false);
+            comboBox_mapFileSaveFormatVersion->addItem(tr("-- {No map loaded}"));
+            comboBox_mapFileSaveFormatVersion->setCurrentIndex(0);
         }
+
         if (pHost->mpMap->mpMapper) {
             checkBox_showDefaultArea->show();
-            checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+            checkBox_showDefaultArea->setText(tr("Show \"%1\" in the map area selection")
+                                              .arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
             checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
         } else {
             checkBox_showDefaultArea->hide();
         }
 
-        comboBox_encoding->addItem(QLatin1String("ASCII"));
-        comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
-        if (pHost->mTelnet.getEncoding().isEmpty()) {
+        // Store the needed encoding "key" in the userDataRole data location,
+        // which we will need as with the use of translations as the "displayed"
+        // value...
+        // This value must go first
+        QString encodingName(QStringLiteral("ASCII"));
+        QString friendlyEncodingName;
+        friendlyEncodingName = TBuffer::getFriendlyEncodingName(encodingName);
+        comboBox_encoding->addItem(friendlyEncodingName, QLatin1String("ASCII"));
+        // And this should go second
+        encodingName = QStringLiteral("UTF-8");
+        friendlyEncodingName = TBuffer::getFriendlyEncodingName(encodingName);
+        comboBox_encoding->addItem(friendlyEncodingName, QLatin1String("UTF-8"));
+        // Now iterate through the remaining valid ones
+        QListIterator<QString> itEncoding(pHost->mTelnet.getEncodingsList());
+        while (itEncoding.hasNext()) {
+            encodingName = itEncoding.next();
+            if (encodingName == QStringLiteral("ASCII") || encodingName == QStringLiteral("UTF-8") ) {
+                continue;
+            }
+
+            friendlyEncodingName = TBuffer::getFriendlyEncodingName(encodingName);
+            comboBox_encoding->addItem(friendlyEncodingName, encodingName);
+        }
+
+        QString encodingInUse(pHost->mTelnet.getEncoding());
+        if (encodingInUse.isEmpty()) {
             // cTelnet::mEncoding is (or should be) empty for the default 7-bit
             // ASCII case, so need to set the control specially to its (the
             // first) value
             comboBox_encoding->setCurrentIndex(0);
         } else {
-            comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
+            int neededEncodingIndex = comboBox_encoding->findData(encodingInUse);
+            if (neededEncodingIndex >=0) {
+                comboBox_encoding->setCurrentIndex(neededEncodingIndex);
+            } else {
+                // In the unlikely event we cannot find the current encoding in
+                // the comboBox then reset to ASCII...
+                comboBox_encoding->setCurrentIndex(0);
+            }
         }
-        connect(comboBox_encoding, SIGNAL(currentTextChanged(const QString&)), this, SLOT(slot_setEncoding(const QString&)));
+
+        connect(comboBox_encoding, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_setEncoding()));
     }
 }
 
@@ -423,6 +572,12 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidgeta->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
+
+    // Now needed to setup the (HTML) tool-tips moved into the C++ code here
+    // from the form/dialog XML definition which would be subject to QT Designer
+    // obfustication...
+    slot_guiLanguageChange();
+    connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
 }
 
 void dlgProfilePreferences::setColors()
@@ -1253,7 +1408,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     if (dictList->currentItem()) {
         pHost->mSpellDic = dictList->currentItem()->text();
     }
-    pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
+    pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
     pHost->mWrapAt = wrap_at_spinBox->value();
     pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
     pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
@@ -1463,9 +1618,15 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
     }
 }
 
-void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
+void dlgProfilePreferences::slot_setEncoding()
 {
-    mpHost->mTelnet.setEncoding(mpHost->mTelnet.getComputerEncoding(newEncoding));
+    // We do NOT use the actual displayed text in the comboBox_encoding now
+    // because that is GUI Language dependent - instead examine the currentData
+    // item which has been stuffed with the relevant encoding name key...
+    QString selectedEncoding(comboBox_encoding->currentData().toString());
+    if (!selectedEncoding.isEmpty()) {
+        mpHost->mTelnet.setEncoding(selectedEncoding);
+    }
 }
 
 // loads available Lua scripts from triggers, aliases, scripts, etc into the
@@ -1849,4 +2010,166 @@ void dlgProfilePreferences::slot_resetThemeUpdateLabel()
 {
     theme_download_label->hide();
     theme_download_label->setText(tr("Updating themes from colorsublime.com..."));
+}
+
+// Detects the change in the setting and passes it to the mudlet class to handle
+// and THAT creates the QEvent::LanguageChange that needs to be processed in this
+// and other classes with persistent GUI items with texts that we create ourselves.
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString & languageCode)
+{
+    mudlet::self()->setGuiLanguage(mTranslationMap.key(languageCode, QStringLiteral("none")));
+}
+
+void dlgProfilePreferences::slot_guiLanguageChange()
+{
+    retranslateUi(this);
+    // PLACEMARKER: Redefine GUI Texts
+    // TODO: MANY HTML tool-tips are missing from the form/dialogue but the
+    // existing ones have ALL been moved into the C++ here as we can hide much
+    // of the HTML from translators and later versions of the Qt Designer
+    // plug-in/stand-alone utility which unhelpfully obfusticates the HTML which
+    // Qt Liguist STILL cannot handle (8 year or older QTBUG:
+    // https://bugreports.qt.io/browse/QTBUG-1136 - 8-( )
+
+    showMenuBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                            .arg(tr("<p>Enables the typical menu bar with drop-down menus in the main window. <i>May require a restart to take effect.</i></p>")));
+    showToolbar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                            .arg(tr("<p>Enables the default button bar in the main window. <i>May require a restart to take effect.</i></p>")));
+    comboBox_encoding->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>If you are playing a non-English MUD and are seeing � instead of text, or accented letters like <b>ñ</b> are not showing right - try changing the encoding to UTF-8 or to one suggested by your MUD.</p>"
+                                          "<p><b>NOTE:</b> While this will allow Mudlet to show text in other languages, internationalisation is still in development so triggers or Lua code will probably not work yet.</p>")));
+    mIsToLogInHtml->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                               .arg(tr("<p>When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.</p>")));
+    mEnableGMCP->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                            .arg(tr("<p>Enables GMCP (<i>Generic Mud Communication Protocol</i>).</p>"
+                                    "<p><b>NOTE:</b> If you have MSDP (<i>Mud Server Data Protocol</i>) enabled as well, some Servers will prefer one over the other."
+                                    "<p>Also be advised that enable this option will disable support for the related but older ATCP.</p>")));
+    mEnableMSDP->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                            .arg(tr("<p>Enables MSDP (<i>Mud Server Data Protocol</i>).</p>"
+                                    "<p><b>NOTE:</b> If you have GMCP (<i>Generic Mud Communication Protocol</i>) enabled as well, some Servers will prefer one over the other.</p>")));
+    USE_UNIX_EOL->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                             .arg(tr("<p>Use strict UNIX line endings (ASCII Line-Feed only) on commands for old UNIX Servers that do not accept standard Telnet line endings (ASCII Carriage-Return followed immediately by Line-Feed).</p>")));
+    show_sent_text_checkbox->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                        .arg(tr("<p>Echo the text you send in the display box.</p>")));
+    doubleclick_ignore_lineedit->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                            .arg(tr("<p>Enter the characters you would like double-clicking to stop selecting text on here. If you do not enter any, double-clicking on a word will only stop at a space, and will include characters like a double or a single quote. For example, double-clicking on the word <i>Hello</i> in the following will select <i>\"Hello!\"</i></p>"
+                                                    "<p>You say, <b>\"Hello!\"</b></p>"
+                                                    "<p>If you set the characters in the field to <b>'\"! </b>which will mean it should stop selecting on ' <i>or</i> \" <i>or</i> ! then double-clicking on <i>Hello</i> will just select <i>Hello</i></p>"
+                                                    "<p>You say, \"<b>Hello</b>!\"</p>")));
+    mNoAntiAlias->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                             .arg(tr("<p>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.</p>")));
+    label_26->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                         .arg(tr("<p>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</p>")));
+    topBorderHeight->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Extra space to have before text on top - can be set to negative to move text up beyond the screen.</p>")));
+    label_29->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                         .arg(tr("<p>Extra space to have before text on the left - can be set to negative to move text left beyond the screen.</p>")));
+    leftBorderWidth->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                .arg(tr("<p>Extra space to have before text on the left - can be set to negative to move text left beyond the screen.</p>")));
+    label_27->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                         .arg(tr("<p>Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.</p>")));
+    bottomBorderHeight->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen.</p>")));
+    label_28->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                         .arg(tr("<p>Extra space to have before text on the right - can be set to negative to move text right beyond the screen.</p>")));
+    rightBorderWidth->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                 .arg(tr("<p>Extra space to have before text on the right - can be set to negative to move text right beyond the screen.</p>")));
+    checkBox_USE_IRE_DRIVER_BUGFIX->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                               .arg(tr("<p>Some MUDs (notably all IRE ones) suffer from a bug where they do not properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.</p>")));
+    checkBox_USE_SMALL_SCREEN->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg(tr("<p>Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen. It adds a <i>Full-screen</i> toggle button to the main toolbar.</p>")));
+    checkBox_showSpacesAndTabs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                           .arg(tr("<p>When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.</p>")));
+    checkBox_showLineFeedsAndParagraphs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                    .arg(tr("<p>When displaying Lua contents in the main text editor area of the Editor show line and paragraphs ends with visible marks as well as whitespace.</p>")));
+    checkBox_echoLuaErrors->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                       .arg(tr("<p>Prints Lua errors to the main console in addition to the error tab in the editor.</p>")));
+    label_11->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                         .arg(tr("<p>On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will <b>overwrite</b> any changes you've done to your map, and will use the new map only.</p>")));
+    buttonDownloadMap->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                  .arg(tr("<p>On MUDs that provide maps for download (currently IRE games only), you can press this button to get the latest map. Note that this will <b>overwrite</b> any changes you've done to your map, and will use the new map only.</p>")));
+    mMapperUseAntiAlias->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                    .arg(tr("<p>This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.</p>"
+                                            "<p>The 3D map view always has anti-aliasing enabled.</p>")));
+    checkBox_showDefaultArea->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                         .arg(tr("<p>The default area (area id -1) is used by some mapper scripts as a temporary 'holding area' for rooms before they're placed in the correct area.</p>")));
+    pushButton_chooseProfiles->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                          .arg(tr("<p>Use this button to bring up a menu which lists the other profiles in your system. "
+                                                  "Click on each one that you want to copy the current map <i>as it <b>now is</b> in <b>this profile</b></i> to those profiles. "
+                                                  "You can return here and change the selection whilst this dialog is still open but no changes or copies will be made <b>until you press the '</b><i>Copy to Destination(s)' button</i></b>. "
+                                                  "When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: "
+                                                  "for profiles that are not loaded, the most recently saved map file is used; "
+                                                  "for profiles that <b>are</b> currently loaded at this time, the room where the player is currently is is noted. "
+                                                  "All of the room numbers for those locations are then written out in the save of the map for <b>this</b> profile with the normal <i>date-time-stamped</i> name which is then copied to where the maps are stored for the other profiles. "
+                                                  "For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; "
+                                                  "this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!</p>"
+                                                  "<p>To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. "
+                                                  "If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!</p>"
+                                                  "<p><i>The previous control at this point in the \"Profile Preferences\" has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.</i></p>")));
+    pushButton_copyMap->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                   .arg(tr("<p>Use this button to make the copy of the current map in <b>this profile</b> to each of the <i>profiles</i> selected via the control to the left. "
+                                           "Those profiles will be examined to determine the room where the player is located in each of those profiles: "
+                                           "for profiles that are not loaded, the most recently saved map file is used; "
+                                           "for profiles that <b>are</b> currently loaded at this time, the room where the player is currently located is noted. "
+                                           "All of the room numbers for those locations are then included in the saved data of the map for <b>this</b> profile with the normal <i>date-time-stamped</i> name which is then copied to where the maps are stored for the other profiles. "
+                                           "For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; "
+                                           "(this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)</p>"
+                                           "<p>To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. "
+                                           "If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!</p>")));
+    checkBox_reportMapIssuesOnScreen->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                 .arg(tr("<p>Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.</p>"
+                                                         "<p>However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '<b><i>./log/errors.txt</i><</b>' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.</p>"
+                                                         "<p><i>This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.</i></p>")));
+    comboBox_mapFileSaveFormatVersion->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                  .arg(tr("<p>Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so could lose any extra data available in the current map format.</p>")));
+    checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                                                    .arg(tr("<p>This option adds a line line break <LF> or <br>"
+                                                            "to your command input on empty commands. This option will rarely be necessary.</p>",
+                                                            "Uses an HTML line break <br> to fake the appearance of a line-feed!")));
+
+    // Set the friendly names for the Server encoding option:
+    TBuffer::smEncodingNamesMap[QStringLiteral("ASCII")] = TBuffer::tr("ASCII (Telnet default encoding)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("UTF-8")] = TBuffer::tr("UTF-8 (Universal encoding)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP850")] = TBuffer::tr("CP850 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP852")] = TBuffer::tr("CP852 (Central European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP866")] = TBuffer::tr("CP866 (Cyrillic/Russian)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP874")] = TBuffer::tr("CP874 (South European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-1")] = TBuffer::tr("ISO-8859-1 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-2")] = TBuffer::tr("ISO-8859-2 (Central European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-3")] = TBuffer::tr("ISO-8859-3 (South European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-4")] = TBuffer::tr("ISO-8859-4 (Northern European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-5")] = TBuffer::tr("ISO-8859-5 (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-6")] = TBuffer::tr("ISO-8859-6 (Arabic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-7")] = TBuffer::tr("ISO-8859-7 (Greek)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-8")] = TBuffer::tr("ISO-8859-8 (Hebrew, Visual)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-9")] = TBuffer::tr("ISO-8859-9 (Turkish)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-10")] = TBuffer::tr("ISO-8859-10 (Nordic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-11")] = TBuffer::tr("ISO-8859-11 (Latin/Thai)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-13")] = TBuffer::tr("ISO-8859-13 (Baltic Rim)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-14")] = TBuffer::tr("ISO-8859-14 (Celtic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-15")] = TBuffer::tr("ISO-8859-15 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-16")] = TBuffer::tr("ISO-8859-16 (South-Eastern European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("KOI8-R")] = TBuffer::tr("KOI8-R (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("KOI8-U")] = TBuffer::tr("KOI8-U (Cyrillic/Ukrainian)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("MACINTOSH")] = TBuffer::tr("MACINTOSH", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1250")] = TBuffer::tr("WINDOWS-1250 (Central European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1251")] = TBuffer::tr("WINDOWS-1251 (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1252")] = TBuffer::tr("WINDOWS-1252 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1253")] = TBuffer::tr("WINDOWS-1253 (Greek)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1254")] = TBuffer::tr("WINDOWS-1254 (Turkish)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1255")] = TBuffer::tr("WINDOWS-1255 (Hebrew, Logical)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1256")] = TBuffer::tr("WINDOWS-1256 (Arabic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1257")] = TBuffer::tr("WINDOWS-1257 (Baltic Rim)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1258")] = TBuffer::tr("WINDOWS-1258 (Vietnamese)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+
+    // Now we have the above done we can use them in the comboBox_encoding:
+    for (int index = 0, total = comboBox_encoding->count(); index < total; ++index) {
+        QString encodingName(comboBox_encoding->itemData(index).toString());
+        QString friendlyEncodingName(TBuffer::getFriendlyEncodingName(encodingName));
+        if (friendlyEncodingName.isEmpty()) {
+            qWarning() << "dlgProfilePreferences::slot_guiLanguageChange() ERROR: Name missing for language code:" << encodingName << "corresponding to item at index:" << index;
+        } else {
+            comboBox_encoding->setItemText(index, friendlyEncodingName);
+        }
+    }
 }

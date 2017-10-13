@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>146</height>
+    <height>154</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -17,62 +17,21 @@
    </sizepolicy>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" alignment="Qt::AlignRight">
-    <widget class="QLabel" name="label_timer_name">
-     <property name="text">
-      <string>Name:</string>
+   <item row="3" column="9">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1" colspan="8">
-    <widget class="QLineEdit" name="lineEdit_timer_name">
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_timer_command">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
+     <property name="sizeHint" stdset="0">
       <size>
-       <width>0</width>
-       <height>0</height>
+       <width>40</width>
+       <height>20</height>
       </size>
      </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Command:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
+    </spacer>
    </item>
-   <item row="1" column="1" colspan="8">
-    <widget class="QLineEdit" name="lineEdit_timer_command">
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Type in one or more commands you want the timer to send directly to the MUD when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the MUD Server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-    </widget>
+   <item row="0" column="1" colspan="9">
+    <widget class="QLineEdit" name="lineEdit_timer_name"/>
    </item>
    <item row="2" column="1">
     <widget class="QLabel" name="label_timer_hours">
@@ -82,44 +41,20 @@
       </font>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;hours&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>hours</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignHCenter</set>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="3">
-    <widget class="QLabel" name="label_timer_mins">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
      </property>
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;minutes&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+     <property name="buddy">
+      <cstring>timeEdit_timer_hours</cstring>
      </property>
     </widget>
    </item>
-   <item row="2" column="5">
-    <widget class="QLabel" name="label_timer_secs">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;seconds&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="7" alignment="Qt::AlignBottom">
+   <item row="2" column="7">
     <widget class="QLabel" name="label_timer_millis">
      <property name="font">
       <font>
@@ -127,21 +62,21 @@
       </font>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;miliseconds&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>milliseconds</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignHCenter</set>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+     <property name="buddy">
+      <cstring>timeEdit_timer_msecs</cstring>
+     </property>
     </widget>
    </item>
-   <item row="3" column="0" alignment="Qt::AlignRight">
+   <item row="3" column="0">
     <widget class="QLabel" name="label_timer_time">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -167,6 +102,12 @@
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+     <property name="buddy">
+      <cstring>timeEdit_timer_hours</cstring>
+     </property>
     </widget>
    </item>
    <item row="3" column="1">
@@ -181,12 +122,6 @@
       <size>
        <width>60</width>
        <height>40</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>60</width>
-       <height>16777215</height>
       </size>
      </property>
      <property name="palette">
@@ -229,10 +164,9 @@
      <property name="font">
       <font>
        <pointsize>30</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
       </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
@@ -241,10 +175,10 @@
       <bool>false</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>false</bool>
@@ -263,7 +197,7 @@
       <enum>QDateTimeEdit::HourSection</enum>
      </property>
      <property name="displayFormat">
-      <string>hh</string>
+      <string comment="Hour digits format - see QDateTime::toString() for details">hh</string>
      </property>
     </widget>
    </item>
@@ -289,14 +223,17 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>40</pointsize>
+       <pointsize>30</pointsize>
        <weight>75</weight>
        <bold>true</bold>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
      </property>
      <property name="text">
-      <string>:</string>
+      <string comment="hour-minute separator" extracomment="May be a single quoted text - ie. 'h' in France">:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -312,12 +249,6 @@
       <size>
        <width>60</width>
        <height>40</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>60</width>
-       <height>16777215</height>
       </size>
      </property>
      <property name="palette">
@@ -360,10 +291,9 @@
      <property name="font">
       <font>
        <pointsize>30</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
       </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
@@ -372,10 +302,10 @@
       <bool>false</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -384,7 +314,7 @@
       <enum>QDateTimeEdit::MinuteSection</enum>
      </property>
      <property name="displayFormat">
-      <string>mm</string>
+      <string comment="Minute digits format - see QDateTime::toString() for details">mm</string>
      </property>
     </widget>
    </item>
@@ -410,14 +340,17 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>40</pointsize>
+       <pointsize>30</pointsize>
        <weight>75</weight>
        <bold>true</bold>
        <stylestrategy>PreferAntialias</stylestrategy>
       </font>
      </property>
      <property name="text">
-      <string>:</string>
+      <string comment="minute-second separator" extracomment="May be a single quoted text - ie. 'm' in France">:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -433,12 +366,6 @@
       <size>
        <width>60</width>
        <height>40</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>60</width>
-       <height>16777215</height>
       </size>
      </property>
      <property name="palette">
@@ -481,13 +408,9 @@
      <property name="font">
       <font>
        <pointsize>30</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
       </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
@@ -496,10 +419,10 @@
       <bool>false</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -508,7 +431,7 @@
       <enum>QDateTimeEdit::SecondSection</enum>
      </property>
      <property name="displayFormat">
-      <string>ss</string>
+      <string comment="Seconds digits format - see QDateTime::toString() for details">ss</string>
      </property>
     </widget>
    </item>
@@ -534,7 +457,7 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>40</pointsize>
+       <pointsize>30</pointsize>
        <weight>75</weight>
        <bold>true</bold>
        <stylestrategy>PreferAntialias</stylestrategy>
@@ -542,6 +465,9 @@
      </property>
      <property name="text">
       <string>.</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -557,12 +483,6 @@
       <size>
        <width>110</width>
        <height>40</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>110</width>
-       <height>16777215</height>
       </size>
      </property>
      <property name="palette">
@@ -605,13 +525,9 @@
      <property name="font">
       <font>
        <pointsize>30</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
       </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="whatsThis">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
@@ -620,10 +536,10 @@
       <bool>false</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -632,22 +548,130 @@
       <enum>QDateTimeEdit::MSecSection</enum>
      </property>
      <property name="displayFormat">
-      <string>zzz</string>
+      <string notr="true" comment="Milliseconds digits as a decimal portion of a Second format - see QDateTime::toString() for details">zzz</string>
      </property>
     </widget>
    </item>
    <item row="3" column="8">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+    <widget class="QLabel" name="label_timer_seconds">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
-     <property name="sizeHint" stdset="0">
+     <property name="minimumSize">
       <size>
-       <width>40</width>
+       <width>20</width>
        <height>20</height>
       </size>
      </property>
-    </spacer>
+     <property name="maximumSize">
+      <size>
+       <width>80</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>40</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+       <stylestrategy>PreferAntialias</stylestrategy>
+      </font>
+     </property>
+     <property name="text">
+      <string comment="Trails the composite time display and is reserved for those languages where something is needed at end to enable it to get into the translation source file unfortunately because of the mechanics of the Qt system something has to be here for the default case even though we do not want something to show - have used a U+2800 {BRAILLE PATTERN BLANK} character...">⠀</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_timer_name">
+     <property name="text">
+      <string>Name:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_timer_name</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="3">
+    <widget class="QLabel" name="label_timer_mins">
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>minutes</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+     <property name="buddy">
+      <cstring>timeEdit_timer_minutes</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="5">
+    <widget class="QLabel" name="label_timer_secs">
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>seconds</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+     <property name="buddy">
+      <cstring>timeEdit_timer_seconds</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" colspan="9">
+    <widget class="QLineEdit" name="lineEdit_timer_command"/>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_timer_command">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>9</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Command:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_timer_command</cstring>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

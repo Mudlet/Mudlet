@@ -41,6 +41,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtGlobal>
 #include <QDebug>
 #include <QDir>
 #include <QNetworkAccessManager>
@@ -89,6 +90,7 @@ cTelnet::cTelnet(Host* pH)
 , mZstream()
 , recvdGA()
 , lastTimeOffset()
+, mPrefixLength(0)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -107,16 +109,10 @@ cTelnet::cTelnet(Host* pH)
     curX = 80;
     curY = 25;
 
-    if (mAcceptableEncodings.isEmpty()) {
-        mAcceptableEncodings << QLatin1String("UTF-8");
-        mAcceptableEncodings << QLatin1String("ISO 8859-1");
-        mAcceptableEncodings << TBuffer::getComputerEncodingNames();
-    }
-
-    if (mFriendlyEncodings.isEmpty()) {
-        mFriendlyEncodings << QLatin1String("UTF-8");
-        mFriendlyEncodings << QLatin1String("ISO 8859-1");
-        mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
+    if (csmAcceptableEncodings.isEmpty()) {
+        csmAcceptableEncodings << QLatin1String("UTF-8");
+        csmAcceptableEncodings << QLatin1String("ISO-8859-1");
+        csmAcceptableEncodings << TBuffer::getComputerEncodingNames();
     }
 
     // initialize the socket
@@ -140,6 +136,54 @@ cTelnet::cTelnet(Host* pH)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, SIGNAL(finished(QNetworkReply*)), this, SLOT(replyFinished(QNetworkReply*)));
+
+    slot_guiLanguageChange();
+    if (mudlet::self()) {
+        // This will not be executed for the "default host" main console as
+        // mudlet::self() is null during instantiation of the mudlet singleton
+        connect(mudlet::self(), &mudlet::signal_translatorChangeCompleted, this, &cTelnet::slot_guiLanguageChange);
+    }
+}
+
+void cTelnet::slot_guiLanguageChange()
+{
+
+    if (mudlet::self() && (mudlet::self()->getGuiLanguage().isEmpty() || mudlet::self()->getGuiLanguage() == QLatin1String("none"))) {
+        mUntranslatedPrefix.clear();
+    } else {
+
+        QString sourceText(QLatin1String("DO NOT TOUCH THIS STRING - IT IS USED INTERNALLY TO DETECT IF THERE IS A PREFIX BEING APPLIED FOR INCOMPETE TRANSLATIONS AND, IF SO, WHAT IT IS!"));
+        QString untranslatedText(tr("DO NOT TOUCH THIS STRING - IT IS USED INTERNALLY TO DETECT IF THERE IS A PREFIX BEING APPLIED FOR INCOMPETE TRANSLATIONS AND, IF SO, WHAT IT IS!",
+                                    "Yes, leave this string untouched..."));
+        if (sourceText != untranslatedText) {
+            // If translations are not in use - or there is NO prefix being applied
+            // then these two QStrings will be identical
+            mUntranslatedPrefix = untranslatedText.left(untranslatedText.size() - sourceText.size());
+        } else {
+            mUntranslatedPrefix.clear();
+        }
+    }
+
+    // In this case it is just needed to work out how much to space the [ XXXX ]
+    // messages with different values of "XXXX"
+    // NOTE: Have revised the handling so that messages are aligned so that
+    // the '-' is positioned to the same column for each tag
+    QStringList tagPrefixes;
+    tagPrefixes << tr("[ ERROR ] ");
+    tagPrefixes << tr("[ ALERT ] ");
+    tagPrefixes << tr("[ WARN ] ");
+    tagPrefixes << tr("[ INFO ] ");
+    tagPrefixes << tr("[ LUA ] ");
+    tagPrefixes << tr("[ OK ] ");
+    if (!mUntranslatedPrefix.isEmpty()) {
+        tagPrefixes << QStringLiteral("%1[ ERROR ] ").arg(mUntranslatedPrefix);
+    }
+
+    QStringListIterator itPrefix(tagPrefixes);
+    mPrefixLength = 0;
+    while(itPrefix.hasNext()) {
+        mPrefixLength = qMax(mPrefixLength, static_cast<quint8>(itPrefix.next().size()));
+    }
 }
 
 void cTelnet::reset()
@@ -190,23 +234,10 @@ void cTelnet::encodingChanged(const QString& encoding)
     // Do NOT create BOMs!
 }
 
-// returns the computer encoding name ("ISO 8859-5") given a human-friendly one ("ISO 8859-5 (Cyrillic)")
-const QString& cTelnet::getComputerEncoding(const QString& encoding)
-{
-    return TBuffer::getComputerEncoding(encoding);
-}
-
-// returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
-const QString& cTelnet::getFriendlyEncoding()
-{
-    int index = mAcceptableEncodings.indexOf(mEncoding);
-    return mFriendlyEncodings.at(index);
-}
-
 // Need to set the encoding at the start but it does not need to be written out
 // then. Return values are for Lua subsystem...!
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
-// cTelnet::csmAcceptableEncodings
+// cTelnet::cscsmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
 QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool isToStore)
@@ -223,12 +254,13 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
                 mpHost->writeProfileData(QLatin1String("encoding"), reportedEncoding);
             }
         }
-    } else if (!mAcceptableEncodings.contains(newEncoding)) {
+    } else if (!csmAcceptableEncodings.contains(newEncoding)) {
         // Not in list - so reject it
-        return qMakePair(false,
-                         QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
-                                 % mAcceptableEncodings.join(QLatin1String(R"(", ")"))
-                                 % QLatin1String(R"(".)"));
+        return qMakePair(false, QStringLiteral("Encoding \"%1\" does not exist;\n"
+                                               "use one of the following:\n"
+                                               "\"%2\".")
+                         .arg(newEncoding, csmAcceptableEncodings.join(QLatin1String("\", \""))));
+
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
         if (isToStore) {
@@ -256,7 +288,8 @@ void cTelnet::connectIt(const QString& address, int port)
 
     hostName = address;
     hostPort = port;
-    QString server = "[ INFO ]  - Looking up the IP address of server:" + address + ":" + QString::number(port) + " ...";
+    QString server = tr("[ INFO ] - Looking up the IP address of server: %1:%2 ...")
+                     .arg(address, QString::number(port));
     postMessage(server);
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
@@ -269,8 +302,7 @@ void cTelnet::disconnect()
 
 void cTelnet::handle_socket_signal_error()
 {
-    QString err = "[ ERROR ] - TCP/IP socket ERROR:" % socket.errorString();
-    postMessage(err);
+    postMessage(tr("[ ERROR ] - TCP/IP socket error, message:\n%1").arg(socket.errorString()));
 }
 
 void cTelnet::slot_send_login()
@@ -286,7 +318,8 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     reset();
-    QString msg = "[ INFO ]  - A connection has been established successfully.\n    \n    ";
+    QString msg = tr("[ INFO ] - A connection has been established successfully.\n"
+                     "\n ");
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -312,17 +345,20 @@ void cTelnet::handle_socket_signal_disconnected()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    QString msg;
     QTime timeDiff(0, 0, 0, 0);
-    msg = QString("[ INFO ]  - Connection time: %1\n    ").arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
     mNeedDecompression = false;
     reset();
-    QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % socket.errorString();
-    QString spacer = "    ";
+
     if (!mpHost->mIsGoingDown) {
-        postMessage(spacer);
-        postMessage(err);
-        postMessage(msg);
+        postMessage(QLatin1String("    "));
+        postMessage(tr("[ ALERT ] - Socket got disconnected.\n"
+                       "Reason: %1").arg(socket.errorString()));
+        postMessage(tr("[ INFO ] - Connection time: %1\n ")
+                    .arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString(tr("hh:mm:ss.zzz",
+                                                                                  "This is a coded entry that specifies how an elapsed time is displayed, "
+                                                                                  "this may be locale dependant, see QDateTime::toString(...) in Qt Documentation "
+                                                                                  "for details. To include literal characters quote them, like perhaps "
+                                                                                  "hh'h'mm'm'ss','zzz's' to produce something like 12h34m56,789s for, say, France."))));
     }
 }
 
@@ -330,16 +366,19 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 {
     if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().first();
-        QString msg = "[ INFO ]  - The IP address of " + hostName + " has been found. It is: " + mHostAddress.toString() + "\n";
-        postMessage(msg);
-        msg = "[ INFO ]  - Trying to connect to " + mHostAddress.toString() + ":" + QString::number(hostPort) + " ...\n";
-        postMessage(msg);
+        postMessage(tr("[ INFO ] - The IP address of %1 has been found.\n"
+                       "Now trying to connect to: %2:%3 ...")
+                    .arg(hostName, mHostAddress.toString(), QString::number(hostPort)));
         socket.connectToHost(mHostAddress, hostPort);
     } else {
-        socket.connectToHost(hostInfo.hostName(), hostPort);
-        QString msg = "[ ERROR ] - Host name lookup Failure!\nConnection cannot be established.\nThe server name is not correct, not working properly,\nor your nameservers are not working properly.";
-        postMessage(msg);
-        return;
+        // CHECK: have disabled the following line - it does not seem to make
+        // sense to use it when name lookup has failed - especially as we are
+        // telling the user that a connection cannot be made:
+        // socket.connectToHost(hostInfo.hostName(), hostPort);
+        postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
+                       "Connection cannot be established.\n"
+                       "The server name is not correct, not working properly,\n"
+                       "or your nameservers are not working properly."));
     }
 }
 
@@ -1265,88 +1304,108 @@ void cTelnet::postMessage(QString msg)
         return;
     }
 
+    bool isPrefixIsUse = ! mUntranslatedPrefix.isEmpty();
+
     while (messageStack.size()) {
         while (messageStack.first().endsWith('\n')) { // Must strip off final line feeds as use that character for split() - will replace it later
             messageStack.first().chop(1);
         }
 
         QStringList body = messageStack.first().split(QChar('\n'));
+        QString space(QChar::Space);
 
-        qint8 openBraceIndex = body.at(0).indexOf("[");
-        qint8 closeBraceIndex = body.at(0).indexOf("]");
-        qint8 hyphenIndex = body.at(0).indexOf("- ");
+        qint8 openBraceIndex = body.at(0).indexOf(QLatin1String("["));
+        qint8 closeBraceIndex = body.at(0).indexOf(QLatin1String("]"));
+        qint8 hyphenIndex = body.at(0).indexOf(QLatin1String("-"));
         if (openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex) {
-            quint8 prefixLength = hyphenIndex + 1;
-            while (body.at(0).at(prefixLength) == ' ') {
-                prefixLength++;
-            }
+            // prefixLength is now decided in advance on Language change and
+            // stored in mPrefixLength but we still check for the other
+            // components to confimrm validity:
+//            quint8 prefixLength = hyphenIndex + 1;
+//            while (body.at(0).at(prefixLength) == ' ') {
+//                prefixLength++;
+//            }
 
-            QString prefix = body.at(0).left(prefixLength).toUpper();
-            QString firstLineTail = body.at(0).mid(prefixLength);
+//            QString prefix = body.at(0).left(prefixLength).toUpper();
+//            QString firstLineTail = body.at(0).mid(prefixLength);
+            QString prefix = body.at(0).left(hyphenIndex-1).toUpper();
+            QString firstLineTail = body.at(0).mid(hyphenIndex+1);
             body.removeFirst();
-            if (prefix.contains("ERROR")) {
-                mpHost->mpConsole->print(prefix, Qt::red, Qt::black);                                  // Bright Red on black
+            if (prefix.contains(tr("ERROR")) || (isPrefixIsUse && prefix.contains(QLatin1String("ERROR")))) {
+                QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("ERROR")));
+                qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();
+                mpHost->mpConsole->print(QStringLiteral("%1%2-").arg(remadePrefix, space.repeated(extraSpacesCount)), Qt::red, Qt::black);                                  // Bright Red on black
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), Qt::black); // Bright Yellow on black
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
                     // Fix for lua using tabs for indentation which was messing up justification:
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), Qt::black); // Bright Yellow on black
                 }
-            } else if (prefix.contains("LUA")) {
-                mpHost->mpConsole->print(prefix, QColor(80, 160, 255), Qt::black);                    // Light blue on black
+            } else if (prefix.contains(tr("LUA")) || (isPrefixIsUse && prefix.contains(QLatin1String("LUA")))) {
+                QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("LUA")));
+                qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();
+                mpHost->mpConsole->print(QStringLiteral("%1%2-").arg(remadePrefix, space.repeated(extraSpacesCount)), QColor(80, 160, 255), Qt::black);                    // Light blue on black
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), Qt::black); // Light green on black
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size() > 0) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), Qt::black); // Red on black
                 }
-            } else if (prefix.contains("WARN")) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), Qt::black);
+            } else if (prefix.contains(tr("WARN")) || (isPrefixIsUse && prefix.contains(QLatin1String("WARN")))) {
+                QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("WARN")));
+                qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();
+                mpHost->mpConsole->print(QStringLiteral("%1%2-").arg(remadePrefix, space.repeated(extraSpacesCount)), QColor(0, 150, 190), Qt::black);
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), Qt::black); // Orange on black
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), Qt::black);
                 }
-            } else if (prefix.contains("ALERT")) {
-                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), Qt::black);                     // Orangish on black
+            } else if (prefix.contains(tr("ALERT")) || (isPrefixIsUse && prefix.contains(QLatin1String("ALERT")))) {
+                QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("ALERT")));
+                qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();
+                mpHost->mpConsole->print(QStringLiteral("%1%2-").arg(remadePrefix, space.repeated(extraSpacesCount)), QColor(190, 100, 50), Qt::black);                     // Orangish on black
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), Qt::black); // Yellow on Black
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), Qt::black); // Yellow on Black
                 }
-            } else if (prefix.contains("INFO")) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), Qt::black);                   // Cyan on black
+            } else if (prefix.contains(tr("INFO")) || (isPrefixIsUse && prefix.contains(QLatin1String("INFO")))) {
+                QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("INFO")));
+                qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();
+                mpHost->mpConsole->print(QStringLiteral("%1%2-").arg(remadePrefix, space.repeated(extraSpacesCount)), QColor(0, 150, 190), Qt::black);                   // Cyan on black
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), Qt::black); // Light Green on Black
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), Qt::black); // Light Green on Black
                 }
-            } else if (prefix.contains("OK")) {
-                mpHost->mpConsole->print(prefix, QColor(0, 160, 0), Qt::black);                        // Light Green on Black
+            } else if (prefix.contains(tr("OK")) || (isPrefixIsUse && prefix.contains(QLatin1String("OK")))) {
+                QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("OK")));
+                qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();
+                mpHost->mpConsole->print(QStringLiteral("%1%2-").arg(remadePrefix, space.repeated(extraSpacesCount)), QColor(0, 160, 0), Qt::black);                        // Light Green on Black
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), Qt::black); // Orangish on black
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), Qt::black); // Orangish on black
@@ -1357,7 +1416,7 @@ void cTelnet::postMessage(QString msg)
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', "        ");
-                    body[_i] = temp.rightJustified(temp.length() + prefixLength);
+                    body[_i] = temp.rightJustified(temp.length() + mPrefixLength);
                 }
                 if (body.size()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), QColor(190, 190, 190)); //Foreground dark grey, background bright grey
@@ -1543,7 +1602,7 @@ void cTelnet::loadReplay(QString& name)
 {
     replayFile.setFileName(name);
     if (replayFile.open(QIODevice::ReadOnly)) {
-        QString msg = tr("[ INFO ]  - Loading replay file:\n"
+        QString msg = tr("[ INFO ] - Loading replay file:\n"
                          "\"%1\".")
                               .arg(name);
         postMessage(msg);
@@ -1552,7 +1611,7 @@ void cTelnet::loadReplay(QString& name)
         mudlet::self()->replayStart();
         _loadReplay();
     } else {
-        QString msg = tr("[ ERROR ]  - Unable to open replay file:\n"
+        QString msg = tr("[ ERROR ] - Unable to open replay file:\n"
                          "\"%1\".")
                               .arg(name);
         postMessage(msg);
@@ -1575,7 +1634,7 @@ void cTelnet::_loadReplay()
     } else {
         loadingReplay = false;
         replayFile.close();
-        QString msg = tr("[  OK  ]  - The replay has ended.");
+        QString msg = tr("[ OK ] - The replay has ended.");
         postMessage(msg);
         mudlet::self()->replayOver();
     }

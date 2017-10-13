@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,6 +36,10 @@ class dlgAboutDialog : public QDialog, public Ui::about_dialog
 
 public:
     dlgAboutDialog(QWidget* parent = 0);
+
+
+public slots:
+    void slot_guiLanguageChange();
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H

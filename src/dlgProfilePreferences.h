@@ -112,23 +112,26 @@ public slots:
     void slot_save_and_exit();
 
     void hideActionLabel();
-    void slot_setEncoding(const QString&);
+    void slot_setEncoding();
+
+    // Needs to be public so it can be befriended by TBuffer class (so it
+    // can poke around directly into the static {global} list of translated
+    // names for the encodings that a server can use):
+    void slot_guiLanguageChange();
 
 private slots:
     void slot_changeShowSpacesAndTabs(const bool);
     void slot_changeShowLineFeedsAndParagraphs(const bool);
     void slot_resetThemeUpdateLabel();
+    void slot_changeGuiLanguage(const QString&);
 
 private:
     void setColors();
     void setColors2();
     void setColor(QPushButton* b, QColor& c);
 
-    int mFontSize;
-    QPointer<Host> mpHost;
-    QPointer<QTemporaryFile> tempThemesArchive;
-
     void slot_editor_tab_selected(int tabIndex);
+
     void slot_theme_selected(int index);
 
     void loadEditorTab();
@@ -142,6 +145,21 @@ private:
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
 
     void slot_script_selected(int index);
+
+    int mFontSize;
+    QPointer<Host> mpHost;
+    QPointer<QTemporaryFile> tempThemesArchive;
+
+    // Holds the identifiers for the language translation files (with names
+    // as mudlet_lang[_COUNTRY].qm) this is used to populate the language
+    // selection combobox as the constructor rescans the available possible
+    // translations; it contains:
+    // keys: in the form lang (2 letter ISO codes in lower case and optionally
+    // a country code as an UPPER CASE '_' separated suffix.
+    // Values: is the target language IN THAT COUNTRY'S language which
+    // is NOT subject to translation but is needed to provide a friendly name
+    // for the translation in the combobox that selects it..
+    QMap<QString, QString> mTranslationMap;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

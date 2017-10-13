@@ -85,11 +85,11 @@ public:
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
     bool isTailMode();
-    void copySelectionToClipboard();
     void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
-    void copySelectionToClipboardHTML();
+    // Returns whether the timestamps are showing AS A RESULT OF the call:
+    bool toggleTimeStamps();
 
     QColor mBgColor;
     int mCursorY;
@@ -108,7 +108,6 @@ public:
     qreal mLetterSpacing;
 
 public slots:
-    void slot_toggleTimeStamps();
     void slot_copySelectionToClipboard();
     void slot_scrollBarMoved(int);
     void slot_popupMenu();

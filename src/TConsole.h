@@ -254,7 +254,9 @@ public:
     QString profile_name;
     TSplitter* splitter;
     bool mIsPromptLine;
-    QToolButton* logButton;
+    QToolButton* mTimeStampButton; // was an auto (local to constructor) pointer timeStampButton
+    QToolButton* mRecordButton; // was an auto (local to constructor) pointer replayButton
+    QToolButton* mLogButton; // was logButton
     bool mUserAgreedToCloseConsole;
     QLineEdit* mpBufferSearchBox;
     QToolButton* mpBufferSearchUp;
@@ -265,8 +267,6 @@ public:
     bool mSaveLayoutRequested;
     QWidget *mpButtonMainLayer;
 
-signals:
-
 
 public slots:
     void slot_searchBufferUp();
@@ -274,12 +274,14 @@ public slots:
     void slot_toggleReplayRecording();
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
+    void slot_toggleTimeStamps();
 
     // Used by mudlet class as told by "Profile Preferences"
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
 
+    void slot_guiLanguageChange();
 };
 
 #endif // MUDLET_TCONSOLE_H

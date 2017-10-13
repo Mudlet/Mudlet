@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QMultiMap>
 #include <QMutex>
 #include <QPointer>
@@ -37,6 +39,7 @@ class TAlias;
 
 class AliasUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(AliasUnit) // Needed so we can use tr() even though AliasUnit is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 

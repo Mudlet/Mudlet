@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2017 The Communi Project                           *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmeida.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,14 +24,17 @@
 
 #include "pre_guard.h"
 #include <IrcMessage>
+#include <QApplication>
 #include <QString>
 #include "post_guard.h"
 
 class IrcMessageFormatter
 {
+    Q_DECLARE_TR_FUNCTIONS(IrcMessageFormatter) // Needed so we can use tr() even though IrcMessageFormatter is NOT derived from QObject
+
 public:
     static QString formatMessage(IrcMessage* message, bool isForLua = false);
-    static QString formatMessage(const QString& message, QString color = "#f29010", bool isForLua = false);
+    static QString formatMessage(const QString& message, QString color = QLatin1String("#f29010"), bool isForLua = false);
     static QString formatSeconds(int secs);
     static QString formatDuration(int secs);
 

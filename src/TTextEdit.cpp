@@ -161,12 +161,13 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
 }
 
-
-void TTextEdit::slot_toggleTimeStamps()
+bool TTextEdit::toggleTimeStamps()
 {
     mShowTimeStamps = !mShowTimeStamps;
     forceUpdate();
     update();
+
+    return mShowTimeStamps;
 }
 
 void TTextEdit::slot_scrollBarMoved(int line)
@@ -1201,17 +1202,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 void TTextEdit::slot_copySelectionToClipboard()
 {
-    copySelectionToClipboard();
-}
-
-void TTextEdit::slot_copySelectionToClipboardHTML()
-{
-    copySelectionToClipboardHTML();
-}
-
-
-void TTextEdit::copySelectionToClipboard()
-{
     if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
         swap(mPA, mPB);
     }
@@ -1253,7 +1243,7 @@ void TTextEdit::copySelectionToClipboard()
     }
 }
 
-void TTextEdit::copySelectionToClipboardHTML()
+void TTextEdit::slot_copySelectionToClipboardHTML()
 {
     if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
         swap(mPA, mPB);

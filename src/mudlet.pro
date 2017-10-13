@@ -477,6 +477,12 @@ OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
     ${DISTFILES} \
+    mudlet_??.ts \
+    mudlet_??_??.ts \
+    mudlet_??.qm \
+    mudlet_??_??.qm \
+    unix_lupdate.sh \
+    unix_lrelease.sh \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -496,7 +502,42 @@ unix:!macx: {
         LUA_GEYSER
 }
 
+# Ideally the EN_us one would be "plurals only" but it is not easy to get that
+# type out of the automagically produced ones when you use Qt Creator's
+# "Tools" -> "External" -> "Linguist" -> "Update translations (lupdate)"
+
+# The alternative to the use of TRANSLATIONS here is to script the following:
+
+# For EN_us which we ideally ONLY want to have the plural forms (as the rest
+# is already present in the source text {we hope}):
+# In the mudlet src directory run:
+# lupdate . -pluralonly -ts ./mudlet_EN_us,ts -recursive
+
+# For others which we need the full stuff for:
+# lupdate . -ts ./src/mudlet_XX_yy.ts -recursive
+
+# The above explicitly does NOT remove existing entries but only updates the
+# files with new entries - which is what we want during development.  The .ts
+# files can then be translated with Qt Linguist (or other on-line collaborative
+# efforts I suppose).  To generate the binary files actually used we can then
+# run:
+# lrelease -markuntranslated "#" ./mudlet_XX_yy.ts
+# The "markuntranslated" option applies a '#' prefix to all the strings where a
+# translation is missing or is not marked as done in Qt Linguist and produces
+# the .qm file that needs to be in the same location as the executable at
+# present (the build-in "lrelease" command for this in Qt Creator does not
+# include this option)...
+
+TRANSLATIONS += \
+    mudlet_en_US.ts \
+    mudlet_en_GB.ts \
+    mudlet_fr_FR.ts \
+    mudlet_de_DE.ts \
+    mudlet_ru_RU.ts \
+    mudlet_zh_CN.ts
+
 DISTFILES += \
+    ${TRANSLATIONS} \
     ../.travis.yml \
     ../CMakeLists.txt \
     ../CI/travis.before_install.sh \
