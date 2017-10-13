@@ -443,6 +443,7 @@ TARGET_LINK_LIBRARIES(mudlet
     communi
     lua_yajl
     edbee-lib
+    dblsqd
 )
 
 IF(Qt5Gamepad_FOUND)
