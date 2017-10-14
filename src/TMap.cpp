@@ -56,6 +56,7 @@ QDataStream &operator<<(QDataStream& ds, const Qt::PenStyle& value)
 {
     quint8 temporary = static_cast<quint8>(value);
     ds << temporary;
+    return ds;
 }
 
 TMap::TMap(Host* pH)

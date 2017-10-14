@@ -61,6 +61,7 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
     // Force anything else to be a solidline
         value = Qt::SolidLine;
     }
+    return ds;
 }
 
 TRoom::TRoom(TRoomDB* pRDB)

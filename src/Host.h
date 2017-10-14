@@ -37,6 +37,7 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QObject>
 #include <QPointer>
 #include <QTextStream>
 #include "post_guard.h"

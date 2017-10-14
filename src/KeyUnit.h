@@ -27,6 +27,7 @@
 #include <QApplication>
 #include <QMap>
 #include <QMutex>
+#include <QObject>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
