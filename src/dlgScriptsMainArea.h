@@ -35,6 +35,9 @@ class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
 
 public:
     dlgScriptsMainArea(QWidget*);
+    void trimName();
+private slots:
+    void on_lineEdit_script_name_editingFinished();
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

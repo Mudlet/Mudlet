@@ -35,6 +35,9 @@ class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area
 
 public:
     dlgAliasMainArea(QWidget*);
+    void trimName();
+private slots:
+    void on_lineEdit_alias_name_editingFinished();
 };
 
 #endif // MUDLET_DLGALIASESMAINAREA_H

@@ -27,3 +27,13 @@ dlgTriggersMainArea::dlgTriggersMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 }
+
+void dlgTriggersMainArea::trimName()
+{
+    lineEdit_trigger_name->setText(lineEdit_trigger_name->text().trimmed());
+}
+
+void dlgTriggersMainArea::on_lineEdit_trigger_name_editingFinished()
+{
+    trimName();
+}

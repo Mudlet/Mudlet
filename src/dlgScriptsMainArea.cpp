@@ -27,3 +27,13 @@ dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 }
+
+void dlgScriptsMainArea::trimName()
+{
+    lineEdit_script_name->setText(lineEdit_script_name->text().trimmed());
+}
+
+void dlgScriptsMainArea::on_lineEdit_script_name_editingFinished()
+{
+    trimName();
+}

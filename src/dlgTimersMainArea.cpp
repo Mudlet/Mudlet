@@ -27,3 +27,13 @@ dlgTimersMainArea::dlgTimersMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 }
+
+void dlgTimersMainArea::trimName()
+{
+    lineEdit_timer_name->setText(lineEdit_timer_name->text().trimmed());
+}
+
+void dlgTimersMainArea::on_lineEdit_timer_name_editingFinished()
+{
+    trimName();
+}

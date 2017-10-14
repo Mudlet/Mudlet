@@ -27,3 +27,13 @@ dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 }
+
+void dlgAliasMainArea::trimName()
+{
+    lineEdit_alias_name->setText(lineEdit_alias_name->text().trimmed());
+}
+
+void dlgAliasMainArea::on_lineEdit_alias_name_editingFinished()
+{
+    trimName();
+}

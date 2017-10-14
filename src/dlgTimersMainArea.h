@@ -35,6 +35,9 @@ class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 
 public:
     dlgTimersMainArea(QWidget*);
+    void trimName();
+private slots:
+    void on_lineEdit_timer_name_editingFinished();
 };
 
 #endif // MUDLET_DLGTIMERSMAINAREA_H

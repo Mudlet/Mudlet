@@ -35,6 +35,9 @@ class dlgTriggersMainArea : public QWidget, public Ui::trigger_main_area
 
 public:
     dlgTriggersMainArea(QWidget*);
+    void trimName();
+private slots:
+    void on_lineEdit_trigger_name_editingFinished();
 };
 
 #endif // MUDLET_DLGTRIGGERSMAINAREA_H
