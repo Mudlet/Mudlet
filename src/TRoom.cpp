@@ -35,6 +35,33 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
+// Helper needed to allow Qt::PenStyle enum to be serialised - the compilation
+// errors that result in not having this are really confusing...!
+// Curiously the reverse (deserialising) when reading them (as part of the
+// QMap<QString, Qt::PenStyle> customLinesStyle SEEMS possible without any
+// "help" but WILL ACTUALLY CORRUPT THE READ OF THE data stream as instead of
+// writing a single byte (?) as a "quint8" a whole chunk of bytes will be
+// writen out as a  full multi-byte "int" value which will totally mess up
+// the data afterwards...)
+QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
+{
+    quint8 temporary;
+    ds >> temporary;
+    switch(temporary) {
+    case Qt::DotLine:
+        [[clang::fallthrough]];
+    case Qt::DashLine:
+        [[clang::fallthrough]];
+    case Qt::DashDotLine:
+        [[clang::fallthrough]];
+    case Qt::DashDotDotLine:
+        value = static_cast<Qt::PenStyle>(temporary);
+    break;
+    default:
+    // Force anything else to be a solidline
+        value = Qt::SolidLine;
+    }
+}
 
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)
@@ -710,7 +737,28 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         ifs >> customLines;
         ifs >> customLinesArrow;
         ifs >> customLinesColor;
-        ifs >> customLinesStyle;
+        if (version >= 19) {
+            ifs >> customLinesStyle;
+        } else {
+            QMap<QString, QString> oldLineStyleData;
+            ifs >> oldLineStyleData;
+            QMapIterator<QString, QString> itCustomLineInstanceStyle(oldLineStyleData);
+            while (itCustomLineInstanceStyle.hasNext()) {
+                itCustomLineInstanceStyle.next();
+
+                if (itCustomLineInstanceStyle.value() == QLatin1String("dot line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DotLine);
+                } else if (itCustomLineInstanceStyle.value() == QLatin1String("dash line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DashLine);
+                } else if (itCustomLineInstanceStyle.value() == QLatin1String("dash dot line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DashDotLine);
+                } else if (itCustomLineInstanceStyle.value() == QLatin1String("dash dot dot line")) {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::DashDotDotLine);
+                } else {
+                    customLinesStyle.insert(itCustomLineInstanceStyle.key(), Qt::SolidLine);
+                }
+            }
+        }
         ifs >> exitLocks;
     }
     if (version >= 13) {
@@ -744,7 +792,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QList<int>> customLinesColorCopy = customLinesColor;
-    QMap<QString, QString> customLinesStyleCopy = customLinesStyle;
+    QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
 
     exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
@@ -1252,7 +1300,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
         // Custom Lines - styles
         if (!customLinesStyleCopy.isEmpty()) {
-            QMapIterator<QString, QString> itSpareCustomLine(customLinesStyleCopy);
+            QMapIterator<QString, Qt::PenStyle> itSpareCustomLine(customLinesStyleCopy);
             while (itSpareCustomLine.hasNext()) {
                 itSpareCustomLine.next();
                 customLinesStyle.remove(itSpareCustomLine.key());
@@ -1305,7 +1353,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, int>& doorsPool,
                       QMap<QString, QList<QPointF>>& customLinesPool,
                       QMap<QString, QList<int>>& customLinesColorPool,
-                      QMap<QString, QString>& customLinesStylePool,
+                      QMap<QString, Qt::PenStyle>& customLinesStylePool,
                       QMap<QString, bool>& customLinesArrowPool,
                       const QHash<int, int> roomRemapping)
 {

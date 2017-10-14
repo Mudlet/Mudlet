@@ -7777,19 +7777,31 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return 1;
     }
     if (lua_isstring(L, 4)) {
-        QStringList validLines;
-        validLines << "solid line"
-                   << "dot line"
-                   << "dash line"
-                   << "dash dot line"
-                   << "dash dot dot line";
-        line_style = QString(lua_tostring(L, 4));
-        if (!validLines.contains(line_style)) {
-            lua_pushstring(L, R"(addCustomLine: Valid line styles: "solid line", "dot line", "dash line", "dash dot line" or "dash dot dot line".)");
-            lua_error(L);
-            return 1;
+        QStringList validLines {QLatin1String("solid line"), QLatin1String("dot line"),
+                    QLatin1String("dash line"), QLatin1String("dash dot line"),
+                    QLatin1String("dash dot dot line")};
+        // Although the required strings are all Latin1 the user may enter a
+        // string with characters outside that and we need to handle them
+        QString requestedStyle = QString::fromUtf8(lua_tostring(L, 4));
+        if (!validLines.contains(requestedStyle)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, R"(Invalid line style: "%s" {should be one of: "solid line", "dot line", "dash line", "dash dot line" or "dash dot dot line"}.)", requestedStyle);
+            return 2;
+        }
+
+        if (requestedStyle == QLatin1String("dot line")) {
+            line_style = Qt::DotLine;
+        } else if (requestedStyle == QLatin1String("dash line")) {
+            line_style = Qt::DashLine;
+        } else if (requestedStyle == QLatin1String("dash dot line")) {
+            line_style = Qt::DashDotLine;
+        } else if (requestedStyle == QLatin1String("dash dot dot line")) {
+            line_style = Qt::DashDotDotLine;
+        } else {
+            line_style = Qt::SolidLine;
         }
     }
+
     if (lua_istable(L, 5)) {
         lua_pushnil(L);
         int tind = 0;

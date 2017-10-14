@@ -188,7 +188,7 @@ void T2DMap::init()
     }
     mCurrentLineArrow = true;
     mCurrentLineColor = QColor("red");
-    mCurrentLineStyle = QString("solid line"); // Configure custom line drawing starting points here
+    mCurrentLineStyle = Qt::SolidLine; // Configure custom line drawing starting points here
 }
 
 QColor T2DMap::_getColor(int id)
@@ -992,7 +992,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
                         _color = QColor(Qt::red);
                     }
                     bool _arrow = pR->customLinesArrow[itk.key()];
-                    QString _style = pR->customLinesStyle[itk.key()];
                     QPointF _cstartP;
                     float ex = pR->x * tx + _rx;
                     float ey = pR->y * ty * -1 + _ry;
@@ -1021,18 +1020,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     customLinePen.setColor(_color);
                     customLinePen.setCapStyle(Qt::RoundCap);
                     customLinePen.setJoinStyle(Qt::RoundJoin);
-
-                    if (_style == "solid line") {
-                        customLinePen.setStyle(Qt::SolidLine);
-                    } else if (_style == "dot line") {
-                        customLinePen.setStyle(Qt::DotLine);
-                    } else if (_style == "dash line") {
-                        customLinePen.setStyle(Qt::DashLine);
-                    } else if (_style == "dash dot line") {
-                        customLinePen.setStyle(Qt::DashDotLine);
-                    } else {
-                        customLinePen.setStyle(Qt::DashDotDotLine);
-                    }
+                    customLinePen.setStyle(pR->customLinesStyle.value(itk.key(), Qt::SolidLine));
 
                     QList<QPointF> _pL = itk.value();
                     if (_pL.size() > 0) {
@@ -2821,15 +2809,18 @@ void T2DMap::slot_customLineProperties()
                 }
             }
 
-            QStringList _lineStyles;
-            _lineStyles << "solid line"
-                        << "dot line"
-                        << "dash line"
-                        << "dash dot line"
-                        << "dash dot dot line";
-            mpCurrentLineStyle->addItems(_lineStyles);
-            QString _lineStyle = pR->customLinesStyle.value(exit);
-            mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findText(_lineStyle));
+            // In Qt 5.x they have made it a little tricky to extract the value
+            // to use as a UserData role - but we can go back to the C way of
+            // enum handling and explictly cast the enum to the underlying int type:
+            if (! mpCurrentLineStyle->count()) {
+                mpCurrentLineStyle->addItem(QIcon(":/icons/solid-line.png"), tr("solid line"), static_cast<int>(Qt::SolidLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dot-line.png"), tr("dot line"), static_cast<int>(Qt::DotLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dash-line.png"), tr("dash line"), static_cast<int>(Qt::DashLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot line"), static_cast<int>(Qt::DashDotLine));
+                mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot dot line"), static_cast<int>(Qt::DashDotDotLine));
+            }
+
+            mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(pR->customLinesStyle.value(exit, Qt::SolidLine))));
 
             mpCurrentLineArrow->setChecked(pR->customLinesArrow.value(exit));
             mCurrentLineColor.setRed(pR->customLinesColor.value(exit).at(0));
@@ -2842,8 +2833,8 @@ void T2DMap::slot_customLineProperties()
 
             if (d->exec() == QDialog::Accepted) {
                 // Make the changes
-                pR->customLinesStyle[exit] = mpCurrentLineStyle->currentText();
-                mCurrentLineStyle = mpCurrentLineStyle->currentText();
+                mCurrentLineStyle = Qt::PenStyle(mpCurrentLineStyle->currentData().toInt());
+                pR->customLinesStyle[exit] = mCurrentLineStyle;
 
                 pR->customLinesColor[exit][0] = mCurrentLineColor.red();
                 pR->customLinesColor[exit][1] = mCurrentLineColor.green();
@@ -4444,14 +4435,17 @@ void T2DMap::slot_setCustomLine()
 
     connect(d, SIGNAL(rejected()), this, SLOT(slot_cancelCustomLineDialog()));
 
-    QStringList _lineStyles;
-    _lineStyles << "solid line"
-                << "dot line"
-                << "dash line"
-                << "dash dot line"
-                << "dash dot dot line";
-    mpCurrentLineStyle->addItems(_lineStyles);
-    mpCurrentLineStyle->setCurrentText(mCurrentLineStyle);
+
+    if (! mpCurrentLineStyle->count()) {
+        mpCurrentLineStyle->addItem(QIcon(":/icons/solid-line.png"), tr("solid line"), static_cast<int>(Qt::SolidLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dot-line.png"), tr("dot line"), static_cast<int>(Qt::DotLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dash-line.png"), tr("dash line"), static_cast<int>(Qt::DashLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot line"), static_cast<int>(Qt::DashDotLine));
+        mpCurrentLineStyle->addItem(QIcon(":/icons/dash-dot-line.png"), tr("dash dot dot line"), static_cast<int>(Qt::DashDotDotLine));
+    }
+
+    mpCurrentLineStyle->setCurrentIndex(mCurrentLineStyle);
+
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
     mpCurrentLineColor->setStyleSheet("background-color:" + mCurrentLineColor.name());
     connect(pTreeWidget_specialExits, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(slot_setCustomLine2B(QTreeWidgetItem*, int)));
@@ -4554,6 +4548,7 @@ void T2DMap::slot_setCustomLine2()
 	 *            mCurrentLineColor.green(),
 	 *            mCurrentLineColor.blue() );
 	 */
+    mCurrentLineStyle = Qt::PenStyle(mpCurrentLineStyle->currentData().toInt());
     pR->customLinesStyle[exit] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
     pR->customLinesArrow[exit] = mCurrentLineArrow;
@@ -4591,6 +4586,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
 	 *            mCurrentLineColor.green(),
 	 *            mCurrentLineColor.blue() );
 	 */
+    mCurrentLineStyle = Qt::PenStyle(mpCurrentLineStyle->currentData().toInt());
     pR->customLinesStyle[exit] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %s", qPrintable(mCurrentLineStyle) );
     pR->customLinesArrow[exit] = mCurrentLineArrow;

@@ -46,6 +46,17 @@
 #include <QSslConfiguration>
 #include "post_guard.h"
 
+// Helper needed to allow Qt::PenStyle enum to be serialised - this is a
+// companion to the one in TRoom and whilst compilation does not fail if
+// THIS one is not present its absence would prevent Qt::PenStyle instances
+// being corrected written WHICH THEN BREAKS THE PARSING OF THE QDataStream
+// and causes the map file data after the first room with a custom exit line
+// to be misread later on and thus appear corrupted...!
+QDataStream &operator<<(QDataStream& ds, const Qt::PenStyle& value)
+{
+    quint8 temporary = static_cast<quint8>(value);
+    ds << temporary;
+}
 
 TMap::TMap(Host* pH)
 : mpRoomDB(new TRoomDB(this))
@@ -64,7 +75,7 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(18)
+, mMaxVersion(19)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
 , mIsFileViewingRecommended(false)
@@ -1226,7 +1237,33 @@ bool TMap::serialize(QDataStream& ofs)
         ofs << pR->customLines;
         ofs << pR->customLinesArrow;
         ofs << pR->customLinesColor;
-        ofs << pR->customLinesStyle;
+        if (mSaveVersion >=19) {
+            ofs << pR->customLinesStyle;
+        } else {
+            QMap<QString, QString> oldLineStyleData;
+            QMapIterator<QString, Qt::PenStyle> itCustomLineInstanceStyle(pR->customLinesStyle);
+            while (itCustomLineInstanceStyle.hasNext()) {
+                itCustomLineInstanceStyle.next();
+
+                switch (itCustomLineInstanceStyle.value()) {
+                case Qt::DotLine:
+                    oldLineStyleData.insert(itCustomLineInstanceStyle.key(), QLatin1String("dot line"));
+                    break;
+                case Qt::DashLine:
+                    oldLineStyleData.insert(itCustomLineInstanceStyle.key(), QLatin1String("dash line"));
+                    break;
+                case Qt::DashDotLine:
+                    oldLineStyleData.insert(itCustomLineInstanceStyle.key(), QLatin1String("dash dot line"));
+                    break;
+                case Qt::DashDotDotLine:
+                    oldLineStyleData.insert(itCustomLineInstanceStyle.key(), QLatin1String("dash dot dot line"));
+                    break;
+                default:
+                    oldLineStyleData.insert(itCustomLineInstanceStyle.key(), QLatin1String("solid line"));
+                }
+            }
+            ofs << oldLineStyleData;
+        }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();
