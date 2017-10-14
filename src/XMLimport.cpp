@@ -563,27 +563,27 @@ pair<int, int> XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = dlgTriggerEditor::cmTriggerView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmTriggerView);
                 rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = dlgTriggerEditor::cmTimerView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmTimerView);
                 rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = dlgTriggerEditor::cmAliasView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmAliasView);
                 rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = dlgTriggerEditor::cmActionView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmActionView);
                 rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = dlgTriggerEditor::cmScriptView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmScriptView);
                 rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = dlgTriggerEditor::cmKeysView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmKeysView);
                 rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = dlgTriggerEditor::cmVarsView;
+                objectType = int(dlgTriggerEditor::EditorViewType::cmVarsView);
                 readVariablePackage();
             } else {
                 readUnknownPackage();
