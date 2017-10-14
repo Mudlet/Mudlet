@@ -11387,7 +11387,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
+    QString msg = QString("[  LUA  ] - object:<%1> function:<%2>\n<%3>").arg(name, function, e.c_str());
 
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
