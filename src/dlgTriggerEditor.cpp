@@ -6869,6 +6869,7 @@ void dlgTriggerEditor::slot_script_main_area_delete_handler()
 
 void dlgTriggerEditor::slot_script_main_area_add_handler()
 {
+    mpScriptsMainArea->trimEventHandlerName();
     if (mIsScriptsMainAreaEditHandler) {
         if (!mpScriptsMainAreaEditHandlerItem) {
             mIsScriptsMainAreaEditHandler = false;
