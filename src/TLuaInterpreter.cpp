@@ -7785,7 +7785,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         QString requestedStyle = QString::fromUtf8(lua_tostring(L, 4));
         if (!validLines.contains(requestedStyle)) {
             lua_pushnil(L);
-            lua_pushfstring(L, R"(Invalid line style: "%s" {should be one of: "solid line", "dot line", "dash line", "dash dot line" or "dash dot dot line"}.)", requestedStyle);
+            lua_pushfstring(L, R"(Invalid line style: "%s" {should be one of: "solid line", "dot line", "dash line", "dash dot line" or "dash dot dot line"}.)", requestedStyle.toUtf8().constData());
             return 2;
         }
 
