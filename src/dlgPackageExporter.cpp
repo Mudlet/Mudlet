@@ -301,8 +301,13 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
         return false;
     }
 
-    // We were using zip_add(...) but that is obsolete
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
     if (zip_file_add(archive, archiveFileName.toStdString().c_str(), s, ZIP_FL_ENC_UTF_8) == -1) {
+#else
+    // We were using zip_add(...) but that is obsolete (and does not necessarily
+    // support UTF-8 encoded file-names)...
+    if (zip_add(archive, archiveFileName.toStdString().c_str(), s) == -1) {
+#endif
         infoLabel->setText(QStringLiteral("<font color='red'><big><b>%1</b></big></font>")
                            .arg(tr("Failed to add file \"%1\" to module (archive) file \"%2\", error message was:\n"
                                    "%3").arg(archiveFileName, mZipFile, QString::fromUtf8(zip_strerror(archive)))));
@@ -487,7 +492,7 @@ void dlgPackageExporter::slot_export_package()
              * store in a heirachical manner...! - Slysven
              */
 
-#if Q_OS_WIN32
+#if defined(Q_OS_WIN32)
             /*
              * From Qt Docs:
              * Note: On NTFS file systems, ownership and permissions checking is
@@ -542,7 +547,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
 
-#if Q_OS_WIN32
+#if defined(Q_OS_WIN32)
             qt_ntfs_permission_lookup--;
 #endif
 
@@ -553,7 +558,14 @@ void dlgPackageExporter::slot_export_package()
             QStringListIterator itDirectoryName(directoryEntries);
             while (itDirectoryName.hasNext() && isOk) {
                 QString directoryName = itDirectoryName.next();
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
                 if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
+#else
+                // We were using zip_dir_add(...) but that is obsolete (and does not necessarily
+                // support UTF-8 encoded file-names)...
+                if (zip_add_dir(archive, directoryName.toStdString().c_str()) == -1) {
+#endif
+
                     // zip_dir_add(...) returns the index of this item in the
                     // archive or -1 on error
 

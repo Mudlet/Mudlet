@@ -266,8 +266,15 @@ void Host::saveModules(int sync)
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
             QTime t;
             t.start();
-            //            int err = zip_file_add( zipFile, QString(moduleName+".xml").toStdString().c_str(), s, ZIP_FL_OVERWRITE );
-            int err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
+            //  Might want to include ZIP_FL_OVERWRITE flag to later version:
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+            int err = zip_file_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s, ZIP_FL_ENC_UTF_8);
+#else
+            // We were using zip_add(...) but that is obsolete (and does not necessarily
+            // support UTF-8 encoded file-names)...
+            int err = zip_add(zipFile, QStringLiteral(moduleName + ".xml").toStdString().c_str(), s);
+#endif
+
             //FIXME: error checking
             if (zipFile) {
                 err = zip_close(zipFile);
