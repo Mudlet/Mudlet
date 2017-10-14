@@ -37,7 +37,7 @@ public:
     dlgScriptsMainArea(QWidget*);
     void trimName();
 private slots:
-    void on_lineEdit_script_name_editingFinished();
+    void slot_editing_name_finished();
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

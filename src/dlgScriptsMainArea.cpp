@@ -26,6 +26,8 @@ dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
+
+    connect(lineEdit_script_name, &QLineEdit::editingFinished, this, slot_editing_name_finished);
 }
 
 void dlgScriptsMainArea::trimName()
@@ -33,7 +35,7 @@ void dlgScriptsMainArea::trimName()
     lineEdit_script_name->setText(lineEdit_script_name->text().trimmed());
 }
 
-void dlgScriptsMainArea::on_lineEdit_script_name_editingFinished()
+void dlgScriptsMainArea::slot_editing_name_finished()
 {
     trimName();
 }
