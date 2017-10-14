@@ -35,6 +35,7 @@ dlgTimersMainArea::dlgTimersMainArea(QWidget* pF) : QWidget(pF)
     // obfustication...
     slot_guiLanguageChange();
     connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
+    connect(lineEdit_timer_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
 }
 
 void dlgTimersMainArea::slot_guiLanguageChange()
@@ -59,5 +60,14 @@ void dlgTimersMainArea::slot_guiLanguageChange()
 
     timeEdit_timer_msecs->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                      .arg(tr("<p>The <b>milli-second</b> part of the interval that the timer will go off at (1000 milliseconds = 1 second).</p>")));
+}
 
+void dlgTimersMainArea::trimName()
+{
+    lineEdit_timer_name->setText(lineEdit_timer_name->text().trimmed());
+}
+
+void dlgTimersMainArea::slot_editing_name_finished()
+{
+    trimName();
 }

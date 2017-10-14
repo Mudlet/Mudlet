@@ -3919,6 +3919,7 @@ void dlgTriggerEditor::saveTrigger()
         return;
     }
 
+    mpTriggersMainArea->trimName();
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     bool isMultiline = mpTriggersMainArea->checkBox_multlinetrigger->isChecked();
@@ -4070,6 +4071,8 @@ void dlgTriggerEditor::saveTimer()
     if (!pItem) {
         return;
     }
+
+    mpTimersMainArea->trimName();
     QString name = mpTimersMainArea->lineEdit_timer_name->text();
     QString script = mpSourceEditorEdbeeDocument->text();
 
@@ -4142,6 +4145,7 @@ void dlgTriggerEditor::saveAlias()
         return;
     }
 
+    mpAliasMainArea->trimName();
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
     QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
     // We do not need to check for name == tr("New Alias Group") as THAT cannot
@@ -4382,6 +4386,8 @@ void dlgTriggerEditor::saveScript()
     }
 
     QString old_name;
+
+    mpScriptsMainArea->trimName();
     QString name = mpScriptsMainArea->lineEdit_script_name->text();
     QString script = mpSourceEditorEdbeeDocument->text();
     mpScriptsMainAreaEditHandlerItem = nullptr;
@@ -6893,6 +6899,7 @@ void dlgTriggerEditor::slot_script_main_area_delete_handler()
 
 void dlgTriggerEditor::slot_script_main_area_add_handler()
 {
+    mpScriptsMainArea->trimEventHandlerName();
     if (mIsScriptsMainAreaEditHandler) {
         if (!mpScriptsMainAreaEditHandlerItem) {
             mIsScriptsMainAreaEditHandler = false;

@@ -34,6 +34,7 @@ dlgTriggersMainArea::dlgTriggersMainArea(QWidget* pF) : QWidget(pF)
     // obfustication...
     slot_guiLanguageChange();
     connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
+    connect(lineEdit_trigger_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
 }
 
 void dlgTriggersMainArea::slot_guiLanguageChange()
@@ -67,4 +68,14 @@ void dlgTriggersMainArea::slot_guiLanguageChange()
                                          "<p>Without this option, the pattern matching will stop after the first successful match.</p>")));
     colorizerTrigger->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                  .arg(tr("<p>Highlights the capture groups if there are any, otherwise highlight the entire match.</p>")));
+}
+
+void dlgTriggersMainArea::trimName()
+{
+    lineEdit_trigger_name->setText(lineEdit_trigger_name->text().trimmed());
+}
+
+void dlgTriggersMainArea::slot_editing_name_finished()
+{
+    trimName();
 }

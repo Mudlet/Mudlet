@@ -34,6 +34,7 @@ dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
     // obfustication...
     slot_guiLanguageChange();
     connect(mudlet::self(), SIGNAL(signal_translatorChangeCompleted(const QString&, const QString&)), this, SLOT(slot_guiLanguageChange()));
+    connect(lineEdit_alias_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
 }
 
 void dlgAliasMainArea::slot_guiLanguageChange()
@@ -49,4 +50,14 @@ void dlgAliasMainArea::slot_guiLanguageChange()
                                        .arg(tr("<p>Type in one or more commands you want the alias to send directly to the MUD if the keys entered match the pattern. (Optional)</p>"
                                                "<p>To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered <i>instead</i> in the editor area below.  Anything entered here is, literally, just sent to the MUD Server.</p>"
                                                "<p>It is permissable to use both this <i>and</i> a Lua script - this will be sent <i>before</i> the script is run.</p>")));
+}
+
+void dlgAliasMainArea::trimName()
+{
+    lineEdit_alias_name->setText(lineEdit_alias_name->text().trimmed());
+}
+
+void dlgAliasMainArea::slot_editing_name_finished()
+{
+    trimName();
 }

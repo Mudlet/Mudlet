@@ -36,9 +36,15 @@ class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 
 public:
     dlgTimersMainArea(QWidget*);
+    // public function allow to trim even when QLineEdit::editingFinished()
+    // is not raised. Example: When the user saves without leaving the LineEdit
+    void trimName();
 
 public slots:
     void slot_guiLanguageChange();
+
+private slots:
+    void slot_editing_name_finished();
 };
 
 #endif // MUDLET_DLGTIMERSMAINAREA_H
