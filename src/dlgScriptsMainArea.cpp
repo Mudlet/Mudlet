@@ -27,7 +27,7 @@ dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_script_name, &QLineEdit::editingFinished, this, slot_editing_name_finished);
+    connect(lineEdit_script_name, SIGNAL(editingFinished()), this, SLOT(slot_editing_name_finished()));
 }
 
 void dlgScriptsMainArea::trimName()
