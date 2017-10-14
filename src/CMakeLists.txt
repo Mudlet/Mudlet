@@ -144,6 +144,8 @@ SET(mudlet_MOC_HDRS
     EAction.h
     exitstreewidget.h
     glwidget.h
+    Host.h
+    KeyUnit.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -165,9 +167,7 @@ SET(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
     FontManager.h
-    Host.h
     HostManager.h
-    KeyUnit.h
     LuaInterface.h
     pre_guard.h
     post_guard.h
