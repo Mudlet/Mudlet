@@ -50,7 +50,7 @@ exists("../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.4.0
+VERSION = 3.5.0
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
@@ -92,7 +92,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
 # i.e. the line should be "BUILD =" without quotes
-  BUILD = "-dev"
+  BUILD = ""
 }
 
 # Changing the above pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
