@@ -5869,6 +5869,35 @@ int TLuaInterpreter::tempButton(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
+{
+    //args: name, css text
+    QString name, css;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushstring(L, "setButtonStyleSheet: wrong first arg");
+        lua_error(L);
+        return 1;
+    } else {
+        name = lua_tostring(L, 1);
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushstring(L, "setButtonStyleSheet: wrong second arg");
+        lua_error(L);
+        return 1;
+    } else {
+        css = lua_tostring(L, 2);
+    }
+
+    Host& host = getHostFromLua(L);
+    TAction* buttonAction = host.getActionUnit()->findAction(name);
+    if (!buttonAction) {
+        return 0;
+    }
+    buttonAction->css = css;
+    host.getActionUnit()->updateToolbar();
+}
+
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 { //args: name, location(0-4), orientation(0/1)
     QString name;
@@ -11827,6 +11856,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disconnect", TLuaInterpreter::disconnect);
     lua_register(pGlobalLua, "tempButtonToolbar", TLuaInterpreter::tempButtonToolbar);
     lua_register(pGlobalLua, "tempButton", TLuaInterpreter::tempButton);
+    lua_register(pGlobalLua, "setButtonStyleSheet", TLuaInterpreter::setButtonStyleSheet);
     lua_register(pGlobalLua, "reconnect", TLuaInterpreter::reconnect);
     lua_register(pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir);
     lua_register(pGlobalLua, "getMudletLuaDefaultPaths", TLuaInterpreter::getMudletLuaDefaultPaths);
