@@ -352,7 +352,7 @@ private:
 
     void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
-        pItem->setData(0, ItemRole, int(EditorViewType::cmVarsView));
+        pItem->setData(0, ItemRole, static_cast<int>(EditorViewType::cmVarsView));
         // What is its name:
         pItem->setData(0, NameRole, name);
         // What is its (Unique per item type) identifier - note that things
