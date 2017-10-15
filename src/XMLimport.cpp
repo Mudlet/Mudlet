@@ -563,27 +563,27 @@ pair<int, int> XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmTriggerView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTriggerView);
                 rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmTimerView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTimerView);
                 rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmAliasView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmAliasView);
                 rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmActionView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmActionView);
                 rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmScriptView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmScriptView);
                 rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmKeysView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmKeysView);
                 rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = int(dlgTriggerEditor::EditorViewType::cmVarsView);
+                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmVarsView);
                 readVariablePackage();
             } else {
                 readUnknownPackage();
