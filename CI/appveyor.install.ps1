@@ -91,6 +91,12 @@ function InstallBoost() {
   ExtractTar "boost.tar.gz" "C:\Libraries"
 }
 
+function InstallQt() {
+  DownloadFile "http://download.qt.io/official_releases/qt/5.9/5.9.2/qt-opensource-windows-x86-5.9.2.exe" "qt-installer.exe"
+  Step "Warning! Installing Qt 5.9.2, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
+  .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" -platform minimal
+}
+
 function InstallOpenssl() {
   DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l-i386-win32.zip"
   ExtractZip "openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l"
@@ -236,6 +242,7 @@ CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { & InstallSevenZ }
 CheckAndInstall "cmake" "C:\Program Files (x86)\Cmake\bin\cmake.exe" { & InstallCmake }
 CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { & InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { & InstallBoost }
+CheckAndInstall "Qt" "$Env:MINGW_BASE_DIR\bin\mingw32-make.exe" { & InstallQt }
 CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { & InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { & InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { & InstallYajl }
