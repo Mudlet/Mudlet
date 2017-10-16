@@ -4,3 +4,6 @@
 [submodule "3rdparty/dblsqd"]
 	path = 3rdparty/dblsqd
 	url = https://bitbucket.org/pentacent/dblsqd-sdk-qt.git
+[submodule "3rdparty/sparkle-glue"]
+	path = 3rdparty/sparkle-glue
+	url = https://github.com/jiakuan/mixing-cocoa-and-qt.git
