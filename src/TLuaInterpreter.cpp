@@ -5875,29 +5875,31 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     QString name, css;
 
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setButtonStyleSheet: wrong first arg");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setButtonStyleSheet: bad argument #1 type (string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        name = lua_tostring(L, 1);
+        name = QString::fromUtf8(lua_tostring(L, 1));
     }
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setButtonStyleSheet: wrong second arg");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setButtonStyleSheet: bad argument #2 type (string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     } else {
-        css = lua_tostring(L, 2);
+        css = QString::fromUtf8(lua_tostring(L, 2));
     }
 
     Host& host = getHostFromLua(L);
-    std::list<TAction*> actionsList = host.getActionUnit()->findActionsByName(name);
+    auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
-        return 0;
+        lua_pushnil(L);
+        lua_pushfstring(L, "setButtonStyleSheet: no button named \"%s\" found", name);
+        return 2;
     }
-    for (std::list<TAction*>::const_iterator iterator = actionsList.begin(), end = actionsList.end(); iterator != end; ++iterator) {
-        (*iterator)->css = css;
+    for (auto action : actionsList) {
+        action->css = css;
     }
     host.getActionUnit()->updateToolbar();
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
