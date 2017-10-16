@@ -5890,11 +5890,13 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    TAction* buttonAction = host.getActionUnit()->findAction(name);
-    if (!buttonAction) {
+    std::list<TAction*> actionsList = host.getActionUnit()->findActionsByName(name);
+    if (actionsList.empty()) {
         return 0;
     }
-    buttonAction->css = css;
+    for (std::list<TAction*>::const_iterator iterator = actionsList.begin(), end = actionsList.end(); iterator != end; ++iterator) {
+        (*iterator)->css = css;
+    }
     host.getActionUnit()->updateToolbar();
 }
 

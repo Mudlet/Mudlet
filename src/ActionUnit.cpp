@@ -83,6 +83,21 @@ TAction* ActionUnit::findAction(const QString& name)
     return nullptr;
 }
 
+std::list<TAction*> ActionUnit::findActionsByName(const QString& name)
+{
+    //QMap<int, TAction *>  mActionMap;
+    std::list<TAction*> actions;
+    QMapIterator<int, TAction*> it(mActionMap);
+    while (it.hasNext()) {
+        it.next();
+        if (it.value()->getName() == name) {
+            qDebug() << it.value()->getName();
+            actions.push_back(it.value());
+        }
+    }
+    return actions;
+}
+
 void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)
 {
     if (!pT) {
