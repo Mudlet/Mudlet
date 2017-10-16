@@ -476,11 +476,11 @@ macx: {
     LIBS += -framework Sparkle
 
     SOURCES += ../3rdparty/sparkle-glue\AutoUpdater.cpp \
-        ../3rdparty/sparkle-glue\AutoUpdaterSparkle.mm \
-        ../3rdparty/sparkle-glue\CocoaInitializer.cpp
+        ../3rdparty/sparkle-glue\SparkleAutoUpdater.mm \
+        ../3rdparty/sparkle-glue\CocoaInitializer.mm
 
     HEADERS += ../3rdparty/sparkle-glue\AutoUpdater.h \
-        ../3rdparty/sparkle-glue\AutoUpdaterSparkle.h \
+        ../3rdparty/sparkle-glue\SparkleAutoUpdater.h \
         ../3rdparty/sparkle-glue\CocoaInitializer.h
 }
 
