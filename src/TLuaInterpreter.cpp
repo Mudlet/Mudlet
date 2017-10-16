@@ -5875,13 +5875,13 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     QString name, css;
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setButtonStyleSheet: bad argument #1 type (string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "setButtonStyleSheet: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         name = QString::fromUtf8(lua_tostring(L, 1));
     }
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setButtonStyleSheet: bad argument #2 type (string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "setButtonStyleSheet: bad argument #2 type (css as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else {
         css = QString::fromUtf8(lua_tostring(L, 2));

@@ -30,6 +30,7 @@
 #include "TEasyButtonBar.h"
 #include "TToolBar.h"
 #include "mudlet.h"
+#include <QtGlobal>
 
 
 using namespace std;
