@@ -80,14 +80,14 @@ function InstallCmake() {
 function InstallMsys() {
   DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z"
   Step "Creating MinGW path"
-  New-Item -Path "C:\MinGW\" >> "$logFile" 2>&1
+  New-Item -Path "C:\MinGW\" -ItemType "directory" >> "$logFile" 2>&1
   ExtractTar "msys.7z" "C:\MinGW"
 }
 
 function InstallBoost() {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz"
   Step "Creating Boost path"
-  New-Item -Path "C:\Libraries\" >> "$logFile" 2>&1
+  New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   ExtractTar "boost.tar.gz" "C:\Libraries"
 }
 
