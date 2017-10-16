@@ -464,6 +464,13 @@ macx: {
 
     # Set the .app's icns file
     ICON = icons/osx.icns
+
+    QMAKE_LFLAGS += -Wl,-rpath,@loader_path/../Frameworks
+    LIBS += -framework AppKit
+    LIBS += -framework Carbon
+    LIBS += -framework Foundation
+    LIBS += -framework ApplicationServices
+    LIBS += -framework Sparkle
 }
 
 win32: {
