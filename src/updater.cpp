@@ -91,7 +91,9 @@ void Updater::updateBinaryOnLinux() const
     qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
 }
 
-// this really gets called when the update is downloaded
+// this gets called after the update is downloaded. Default behaviour is to open
+// the downloaded file, but we already handle the event to unzip and replace it,
+// so overwrite the method to remove the auto-open functionality
 void TUpdateDialog::startUpdate()
 {    
     done(QDialog::Accepted);
