@@ -81,7 +81,14 @@ function InstallMsys() {
   DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z"
   Step "Creating MinGW path"
   New-Item -Path "C:\MinGW\" >> "$logFile" 2>&1
-  ExtractTar "msys.7z" "C:\MinGW\msys"
+  ExtractTar "msys.7z" "C:\MinGW"
+}
+
+function InstallBoost() {
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz"
+  Step "Creating Boost path"
+  New-Item -Path "C:\Libraries\" >> "$logFile" 2>&1
+  ExtractTar "boost.tar.gz" "C:\Libraries"
 }
 
 function InstallOpenssl() {
@@ -228,6 +235,7 @@ $Env:PATH=$ShPath
 CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { & InstallSevenZ }
 CheckAndInstall "cmake" "C:\Program Files (x86)\Cmake\bin\cmake.exe" { & InstallCmake }
 CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { & InstallMsys }
+CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { & InstallBoost }
 CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { & InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { & InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { & InstallYajl }
