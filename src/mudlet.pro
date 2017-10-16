@@ -470,7 +470,18 @@ macx: {
     LIBS += -framework Carbon
     LIBS += -framework Foundation
     LIBS += -framework ApplicationServices
+
+    # allow linker to find sparkle framework as we bundle it in
+    LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
+
+    SOURCES += AutoUpdater.cpp \
+        AutoUpdaterSparkle.mm \
+        CocoaInitializer.cpp
+
+    HEADERS += AutoUpdater.h \
+        AutoUpdaterSparkle.h \
+        CocoaInitializer.h
 }
 
 win32: {
