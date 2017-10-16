@@ -475,13 +475,13 @@ macx: {
     LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
 
-    SOURCES += AutoUpdater.cpp \
-        AutoUpdaterSparkle.mm \
-        CocoaInitializer.cpp
+    SOURCES += ../3rdparty/sparkle-glue\AutoUpdater.cpp \
+        ../3rdparty/sparkle-glue\AutoUpdaterSparkle.mm \
+        ../3rdparty/sparkle-glue\CocoaInitializer.cpp
 
-    HEADERS += AutoUpdater.h \
-        AutoUpdaterSparkle.h \
-        CocoaInitializer.h
+    HEADERS += ../3rdparty/sparkle-glue\AutoUpdater.h \
+        ../3rdparty/sparkle-glue\AutoUpdaterSparkle.h \
+        ../3rdparty/sparkle-glue\CocoaInitializer.h
 }
 
 win32: {
