@@ -71,6 +71,12 @@ function InstallSevenZ() {
   .\7z-installer.exe /S /D="C:\Program Files\7-Zip" >> "$logFile" 2>&1
 }
 
+function InstallCmake() {
+  DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.4-win64-x64.msi" "cmake-installer.msi"
+  Step "installing cmake"
+  .\cmake-installer.msi /q /li "$logFile"
+}
+
 function InstallOpenssl() {
   DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l-i386-win32.zip"
   ExtractZip "openssl-1.0.2l-i386-win32.zip" "openssl-1.0.2l"
@@ -213,6 +219,7 @@ if (-not $(Test-Path "$workingBaseDir")) {
 $Env:PATH=$ShPath
 
 CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { & InstallSevenZ }
+CheckAndInstall "cmake" "C:\Program Files\Cmake\bin\cmake.exe" { & InstallCmake }
 CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { & InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { & InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { & InstallYajl }
