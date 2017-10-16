@@ -5891,7 +5891,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setButtonStyleSheet: no button named \"%s\" found", name);
+        lua_pushfstring(L, "setButtonStyleSheet: no button named \"%s\" found", name.toUtf8().constData());
         return 2;
     }
     for (auto action : actionsList) {
