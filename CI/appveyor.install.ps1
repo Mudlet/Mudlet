@@ -23,7 +23,7 @@ function Step([string] $stepName) {
 
 function DownloadFile([string] $url, [string] $outputFile) {
   Step "Downloading"
-  Invoke-WebRequest "$url" -OutFile "$outputFile" -UserAgent [Microsoft.PowerShell.Commands.PSUserAgent]::Chrome >> "$logFile" 2>&1
+  (New-Object System.Net.WebClient).DownloadFile($url, "$workingBaseDir\$outputFile") >> "$logFile" 2>&1
 }
 
 function ExtractTar([string] $tarFile, [string] $outputPath) {
@@ -74,21 +74,25 @@ function InstallSevenZ() {
 function InstallCmake() {
   DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.4-win32-x86.msi" "cmake-installer.msi"
   Step "installing cmake"
-  .\cmake-installer.msi /q /li "$logFile"
+  .\cmake-installer.msi "/q"
 }
 
 function InstallMsys() {
   DownloadFile "https://sourceforge.net/projects/mingwbuilds/files/external-binary-packages/msys%2B7za%2Bwget%2Bsvn%2Bgit%2Bmercurial%2Bcvs-rev13.7z/download" "msys.7z"
   Step "Creating MinGW path"
-  New-Item -Path "C:\MinGW\" -ItemType "directory" >> "$logFile" 2>&1
-  ExtractTar "msys.7z" "C:\MinGW"
+  New-Item -Path "C:\MinGW\msys\1.0" -ItemType "directory" >> "$logFile" 2>&1
+  ExtractZip "msys.7z" "."
+  Step "Copying folder"
+  Move-Item "msys\*" "C:\MinGW\msys\1.0"
 }
 
 function InstallBoost() {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download" "boost.tar.gz"
   Step "Creating Boost path"
   New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
-  ExtractTar "boost.tar.gz" "C:\Libraries"
+  ExtractTar "boost.tar.gz" "."
+  Step "Copying folder"
+  Move-Item "boost_1_60_0" "C:\Libraries\"
 }
 
 function InstallQt() {
