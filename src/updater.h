@@ -7,7 +7,6 @@
 #include "pre_guard.h"
 #include <QObject>
 #include "post_guard.h"
-#include <netinet/in.h>
 
 class TUpdateDialog : public dblsqd::UpdateDialog
 {
