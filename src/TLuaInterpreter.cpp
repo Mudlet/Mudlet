@@ -5891,14 +5891,14 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setButtonStyleSheet: no button named \"%s\" found", name.toUtf8().constData());
+        lua_pushfstring(L, "No button named \"%s\" found.", name.toUtf8().constData());
         return 2;
     }
     for (auto action : actionsList) {
         action->css = css;
     }
     host.getActionUnit()->updateToolbar();
-    lua_pushboolean(L, 1);
+    lua_pushinteger(L, actionsList.size());
     return 1;
 }
 
