@@ -5898,7 +5898,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         action->css = css;
     }
     host.getActionUnit()->updateToolbar();
-    lua_pushinteger(L, actionsList.size());
+    lua_pushboolean(L, 1);
     return 1;
 }
 
