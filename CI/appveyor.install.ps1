@@ -68,13 +68,13 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 function InstallSevenZ() {
   DownloadFile "http://www.7-zip.org/a/7z1701-x64.exe" "7z-installer.exe"
   Step "installing 7z"
-  .\7z-installer.exe /S /D="C:\Program Files\7-Zip" >> "$logFile" 2>&1
+  .\7z-installer.exe /S /D="C:\Program Files\7-Zip" | Out-File "$logFile"
 }
 
 function InstallCmake() {
   DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.4-win32-x86.msi" "cmake-installer.msi"
   Step "installing cmake"
-  .\cmake-installer.msi "/q"
+  .\cmake-installer.msi "/q" | Out-File "$logFile"
 }
 
 function InstallMsys() {
@@ -83,7 +83,7 @@ function InstallMsys() {
   New-Item -Path "C:\MinGW\msys\1.0" -ItemType "directory" >> "$logFile" 2>&1
   ExtractZip "msys.7z" "."
   Step "Copying folder"
-  Move-Item "msys\*" "C:\MinGW\msys\1.0"
+  Move-Item "msys\*" "C:\MinGW\msys\1.0" >> "$logFile" 2>&1
 }
 
 function InstallBoost() {
@@ -92,13 +92,13 @@ function InstallBoost() {
   New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   ExtractTar "boost.tar.gz" "."
   Step "Copying folder"
-  Move-Item "boost_1_60_0" "C:\Libraries\"
+  Move-Item "boost_1_60_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/qt/5.9/5.9.2/qt-opensource-windows-x86-5.9.2.exe" "qt-installer.exe"
   Step "Warning! Installing Qt 5.9.2, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
-  .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" -platform minimal
+  .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" | Out-File "$logFile"
 }
 
 function InstallOpenssl() {
