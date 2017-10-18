@@ -479,13 +479,14 @@ macx: {
     QMAKE_RPATHDIR = @executable_path/../Frameworks
 
     # stab in the dark to get Sparkle/Sparkle.h found
-    QMAKE_LFLAGS += -F.
-    INCLUDEPATH += ../3rdparty/sparkle/Sparkle.framework/Headers
-    QMAKE_LFLAGS += -F $$PWD/../3rdparty/sparkle
-    QMAKE_CXXFLAGS += -F.
-    QMAKE_CFLAGS += -F.
-    QMAKE_OBJECTIVE_CFLAGS += -F.
+#    QMAKE_LFLAGS += -F.
+#    INCLUDEPATH += ../3rdparty/sparkle/Sparkle.framework/Headers
+#    QMAKE_LFLAGS += -F $$PWD/../3rdparty/sparkle
+#    QMAKE_CXXFLAGS += -F.
+#    QMAKE_CFLAGS += -F.
+#    QMAKE_OBJECTIVE_CFLAGS += -F.
 
+    # necessary for Sparkle to compile
     SPARKLE_PATH = $$PWD/../3rdparty/sparkle
     QMAKE_LFLAGS += -F $$SPARKLE_PATH
     QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
