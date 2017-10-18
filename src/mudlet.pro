@@ -467,18 +467,17 @@ macx: {
 
     QMAKE_LFLAGS += -Wl,-rpath,@loader_path/../Frameworks
     LIBS += -framework AppKit
-    LIBS += -framework Carbon
-    LIBS += -framework Foundation
-    LIBS += -framework ApplicationServices
+#    LIBS += -framework Carbon
+#    LIBS += -framework Foundation
+#    LIBS += -framework ApplicationServices
 
     # allow linker to find sparkle framework as we bundle it in
     LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
 
-    # And add frameworks to the rpath so that the app can find the framework.
-    QMAKE_RPATHDIR = @executable_path/../Frameworks
 
-    # stab in the dark to get Sparkle/Sparkle.h found
+
+    # does not seem necessary
 #    QMAKE_LFLAGS += -F.
 #    INCLUDEPATH += ../3rdparty/sparkle/Sparkle.framework/Headers
 #    QMAKE_LFLAGS += -F $$PWD/../3rdparty/sparkle
@@ -499,6 +498,14 @@ macx: {
     HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
         ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
         ../3rdparty/sparkle-glue/CocoaInitializer.h
+
+    # Copy Sparkle into the app bundle
+    sparkle.path = Contents/Frameworks
+    sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+    QMAKE_BUNDLE_DATA += sparkle
+
+    # And add frameworks to the rpath so that the app can find the framework.
+    QMAKE_RPATHDIR += @executable_path/../Frameworks
 }
 
 win32: {
