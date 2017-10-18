@@ -475,7 +475,7 @@ macx: {
     LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
 
-    # blindly copied from https://github.com/openscad/openscad/blob/master/openscad.pro#L58
+    # And add frameworks to the rpath so that the app can find the framework.
     QMAKE_RPATHDIR = @executable_path/../Frameworks
 
     # stab in the dark to get Sparkle/Sparkle.h found
@@ -485,6 +485,10 @@ macx: {
     QMAKE_CXXFLAGS += -F.
     QMAKE_CFLAGS += -F.
     QMAKE_OBJECTIVE_CFLAGS += -F.
+
+    SPARKLE_PATH = $$PWD/../3rdparty/sparkle
+    QMAKE_LFLAGS += -F $$SPARKLE_PATH
+    QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
 
     SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
 
