@@ -480,7 +480,7 @@ macx: {
 
     # stab in the dark to get Sparkle/Sparkle.h found
     QMAKE_LFLAGS += -F.
-    INCLUDEPATH += $$PWD/../3rdparty/sparkle
+    INCLUDEPATH += ../3rdparty/sparkle/Sparkle.framework/Headers
     QMAKE_LFLAGS += -F $$PWD/../3rdparty/sparkle
     QMAKE_CXXFLAGS += -F.
     QMAKE_CFLAGS += -F.
