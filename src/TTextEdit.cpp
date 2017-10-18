@@ -37,6 +37,7 @@
 #include <QScrollBar>
 #include <QString>
 #include <QToolTip>
+#include <QDesktopServices>
 #include "post_guard.h"
 
 
@@ -1177,9 +1178,21 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         QAction* action2 = new QAction("copy HTML", this);
         action2->setStatusTip(tr("copy selected text with colors as HTML (for web browsers)"));
         connect(action2, SIGNAL(triggered()), this, SLOT(slot_copySelectionToClipboardHTML()));
+
+        QString selectedEngine = mpHost->mSearchEngine.first;
+        QAction* action3 = new QAction(("search on " + selectedEngine), this);
+        connect(action3, SIGNAL(triggered()), this, SLOT(slot_searchSelectionOnline()));
+
+        action3->setStatusTip("search selected text on " + selectedEngine);
+
         auto popup = new QMenu(this);
         popup->addAction(action);
         popup->addAction(action2);
+        popup->addAction(action3);
+
+        // search online option only in error window?
+        // if(mpConsole->mIsSubConsole)
+
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -1207,6 +1220,11 @@ void TTextEdit::slot_copySelectionToClipboard()
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
     copySelectionToClipboardHTML();
+}
+
+void TTextEdit::slot_searchSelectionOnline()
+{
+    searchSelectionOnline();
 }
 
 
@@ -1352,6 +1370,53 @@ void TTextEdit::copySelectionToClipboardHTML()
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
     return;
+}
+
+void TTextEdit::searchSelectionOnline()
+{
+    // TODO this could be a separate function like QString ::getSelectedText()
+    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
+        swap(mPA, mPB);
+    }
+    if (mPA.y() > mPB.y()) {
+        swap(mPA, mPB);
+    }
+    QString text;
+
+    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            mSelectedRegion = QRegion(0, 0, 0, 0);
+            QString url = text.trimmed();
+            url.prepend(mpHost->mSearchEngine.second);
+            QDesktopServices::openUrl(QUrl(url));
+            forceUpdate();
+            break;
+        }
+
+        int x = 0;
+        if (y == mPA.y()) {
+            x = mPA.x();
+        }
+        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
+            text.append(mpBuffer->lineBuffer[y].at(x));
+            if (y >= mPB.y()) {
+                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
+                    QString url = text.trimmed();
+                    url.prepend(mpHost->mSearchEngine.second);
+                    QDesktopServices::openUrl(QUrl(url));
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+                    forceUpdate();
+                    return;
+                }
+            }
+            x++;
+        }
+        text.append(" ");
+    }
+
+    //QString url = text.trimmed();
+    //url.prepend(mpHost->mSearchEngine.second);
+    //QDesktopServices::openUrl(QUrl(url));
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
