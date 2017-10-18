@@ -475,6 +475,9 @@ macx: {
     LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
 
+    # blindly copied from https://github.com/openscad/openscad/blob/master/openscad.pro#L58
+    QMAKE_RPATHDIR = @executable_path/../Frameworks
+
     # stab in the dark to get Sparkle/Sparkle.h found
     QMAKE_LFLAGS += -F.
     QMAKE_CXXFLAGS += -F.
