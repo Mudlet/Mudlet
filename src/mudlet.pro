@@ -475,14 +475,20 @@ macx: {
     LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
 
-    SOURCES += ../3rdparty/sparkle-glue\AutoUpdater.cpp
+    # stab in the dark to get Sparkle/Sparkle.h found
+    QMAKE_LFLAGS += -F.
+    QMAKE_CXXFLAGS += -F.
+    QMAKE_CFLAGS += -F.
+    QMAKE_OBJECTIVE_CFLAGS += -F.
 
-    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue\SparkleAutoUpdater.mm \
-        ../3rdparty/sparkle-glue\CocoaInitializer.mm
+    SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
 
-    HEADERS += ../3rdparty/sparkle-glue\AutoUpdater.h \
-        ../3rdparty/sparkle-glue\SparkleAutoUpdater.h \
-        ../3rdparty/sparkle-glue\CocoaInitializer.h
+    OBJECTIVE_SOURCES += ../3rdparty/sparkle-glue/SparkleAutoUpdater.mm \
+        ../3rdparty/sparkle-glue/CocoaInitializer.mm
+
+    HEADERS += ../3rdparty/sparkle-glue/AutoUpdater.h \
+        ../3rdparty/sparkle-glue/SparkleAutoUpdater.h \
+        ../3rdparty/sparkle-glue/CocoaInitializer.h
 }
 
 win32: {
