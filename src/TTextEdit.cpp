@@ -1190,9 +1190,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->addAction(action2);
         popup->addAction(action3);
 
-        // search online option only in error window?
-        // if(mpConsole->mIsSubConsole)
-
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -1339,7 +1336,7 @@ void TTextEdit::copySelectionToClipboardHTML()
 void TTextEdit::searchSelectionOnline()
 {
     QString selectedText = getSelectedText(' ');
-    QString url = selectedText.trimmed();
+    QString url = QUrl::toPercentEncoding(selectedText.trimmed());
     url.prepend(mpHost->mSearchEngine.second);
     QDesktopServices::openUrl(QUrl(url));
 }
