@@ -1,7 +1,13 @@
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
 $logFile = "$workingBaseDir\verbose_output.log"
-$ShPath = "$Env:MINGW_BASE_DIR\bin;C:\MinGW\msys\1.0\bin;C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:PATH"
+$64Bit = (Get-WmiObject Win32_OperatingSystem).OSArchitecture -eq "64-bit"
+if($64Bit){
+  $CMakePath = "C:\Program Files (x86)\CMake\bin"
+} else {
+  $CMakePath = "C:\Program Files\CMake\bin"
+}
+$ShPath = "$Env:MINGW_BASE_DIR\bin;$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 
 # Helper functions
@@ -66,7 +72,12 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 
 # installation functions
 function InstallSevenZ() {
-  DownloadFile "http://www.7-zip.org/a/7z1701-x64.exe" "7z-installer.exe"
+  if($64Bit){
+    $downloadUrl = "http://www.7-zip.org/a/7z1701-x64.exe"
+  } else {
+    $downloadUrl = "http://www.7-zip.org/a/7z1701.exe"
+  }
+  DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
   .\7z-installer.exe /S /D="C:\Program Files\7-Zip" | Out-File "$logFile"
 }
@@ -243,7 +254,7 @@ if (-not $(Test-Path "$workingBaseDir")) {
 $Env:PATH=$ShPath
 
 CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { & InstallSevenZ }
-CheckAndInstall "cmake" "C:\Program Files (x86)\Cmake\bin\cmake.exe" { & InstallCmake }
+CheckAndInstall "cmake" "$CMakePath\cmake.exe" { & InstallCmake }
 CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { & InstallMsys }
 CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { & InstallBoost }
 CheckAndInstall "Qt" "$Env:MINGW_BASE_DIR\bin\mingw32-make.exe" { & InstallQt }
