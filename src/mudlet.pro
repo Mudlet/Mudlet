@@ -465,25 +465,13 @@ macx: {
     # Set the .app's icns file
     ICON = icons/osx.icns
 
-    QMAKE_LFLAGS += -Wl,-rpath,@loader_path/../Frameworks
+    # possibly unnecessary
+#    QMAKE_LFLAGS += -Wl,-rpath,@loader_path/../Frameworks
     LIBS += -framework AppKit
-#    LIBS += -framework Carbon
-#    LIBS += -framework Foundation
-#    LIBS += -framework ApplicationServices
 
     # allow linker to find sparkle framework as we bundle it in
     LIBS += -F../3rdparty/sparkle
     LIBS += -framework Sparkle
-
-
-
-    # does not seem necessary
-#    QMAKE_LFLAGS += -F.
-#    INCLUDEPATH += ../3rdparty/sparkle/Sparkle.framework/Headers
-#    QMAKE_LFLAGS += -F $$PWD/../3rdparty/sparkle
-#    QMAKE_CXXFLAGS += -F.
-#    QMAKE_CFLAGS += -F.
-#    QMAKE_OBJECTIVE_CFLAGS += -F.
 
     # necessary for Sparkle to compile
     SPARKLE_PATH = $$PWD/../3rdparty/sparkle
