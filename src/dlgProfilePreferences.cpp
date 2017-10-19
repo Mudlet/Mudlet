@@ -431,9 +431,9 @@ void dlgProfilePreferences::loadEditorTab()
     mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
 
     // populate combobox
-    for(QMap<QString, QString>::iterator engine = mSearchEngineMap.begin(); engine != mSearchEngineMap.end(); engine++)
+    for(auto engineText : mSearchEngineMap.keys())
     {
-        search_engine_combobox->addItem(engine.key());
+        search_engine_combobox->addItem(engineText);
     }
 
     connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));

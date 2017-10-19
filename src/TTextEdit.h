@@ -118,6 +118,7 @@ public slots:
 
 private:
     void initDefaultSettings();
+    QString getSelectedText(char newlineChar = '\n');
 
     int mFontHeight;
     int mFontWidth;

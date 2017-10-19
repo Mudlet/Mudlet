@@ -1230,45 +1230,9 @@ void TTextEdit::slot_searchSelectionOnline()
 
 void TTextEdit::copySelectionToClipboard()
 {
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
-    QString text;
-
-    for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            QClipboard* clipboard = QApplication::clipboard();
-            clipboard->setText(text);
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-            forceUpdate();
-            return;
-        }
-        // add timestamps to clipboard when "Show Time Stamps" is on and it is not one-line selection
-        if (mShowTimeStamps && !mpBuffer->timeBuffer[y].isEmpty() && mPA.y() != mPB.y()) {
-            text.append(mpBuffer->timeBuffer[y].leftRef(13));
-        }
-        int x = 0;
-        if (y == mPA.y()) {
-            x = mPA.x();
-        }
-        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            text.append(mpBuffer->lineBuffer[y].at(x));
-            if (y >= mPB.y()) {
-                if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
-                    QClipboard* clipboard = QApplication::clipboard();
-                    clipboard->setText(text);
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-                    forceUpdate();
-                    return;
-                }
-            }
-            x++;
-        }
-        text.append("\n");
-    }
+    QString selectedText = getSelectedText();
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(selectedText);
 }
 
 void TTextEdit::copySelectionToClipboardHTML()
@@ -1374,49 +1338,61 @@ void TTextEdit::copySelectionToClipboardHTML()
 
 void TTextEdit::searchSelectionOnline()
 {
-    // TODO this could be a separate function like QString ::getSelectedText()
+    QString selectedText = getSelectedText(' ');
+    QString url = selectedText.trimmed();
+    url.prepend(mpHost->mSearchEngine.second);
+    QDesktopServices::openUrl(QUrl(url));
+}
+
+QString TTextEdit::getSelectedText(char newlineChar)
+{
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
     if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
         swap(mPA, mPB);
     }
+    // down to up
     if (mPA.y() > mPB.y()) {
         swap(mPA, mPB);
     }
+
     QString text;
 
+    // for each selected line
     for (int y = mPA.y(); y <= mPB.y() + 1; y++) {
+        // stop if we are at the end of the buffer lines
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             mSelectedRegion = QRegion(0, 0, 0, 0);
-            QString url = text.trimmed();
-            url.prepend(mpHost->mSearchEngine.second);
-            QDesktopServices::openUrl(QUrl(url));
             forceUpdate();
-            break;
+            return text;
         }
 
         int x = 0;
+        // if the selection started on this line
         if (y == mPA.y()) {
+            // start from the column where the selection started
             x = mPA.x();
         }
+        // while we are not at the end of the buffer line
         while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
             text.append(mpBuffer->lineBuffer[y].at(x));
+            // if the selection ended on this line
             if (y >= mPB.y()) {
+                // stop if the selection ended on this column or the buffer line is ending
                 if ((x == mPB.x()) || (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1))) {
-                    QString url = text.trimmed();
-                    url.prepend(mpHost->mSearchEngine.second);
-                    QDesktopServices::openUrl(QUrl(url));
                     mSelectedRegion = QRegion(0, 0, 0, 0);
                     forceUpdate();
-                    return;
+                    return text;
                 }
             }
             x++;
         }
-        text.append(" ");
+        // we never append the last character of a buffer line se we set our own
+        text.append(newlineChar);
     }
-
-    //QString url = text.trimmed();
-    //url.prepend(mpHost->mSearchEngine.second);
-    //QDesktopServices::openUrl(QUrl(url));
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
