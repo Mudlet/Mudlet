@@ -38,7 +38,11 @@ void Updater::setupEvents() const
             return;
         }
 
-        feed->downloadRelease(feed->getUpdates().first());
+        auto updates = feed->getUpdates();
+        if (updates.isEmpty()) {
+            return;
+        }
+        feed->downloadRelease(updates.first());
     });
 
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
