@@ -3,7 +3,10 @@
 
 #include "dblsqd/feed.h"
 #include "dblsqd/update_dialog.h"
+
+#ifdef Q_OS_MACOS
 #include "../3rdparty/sparkle-glue/AutoUpdater.h"
+#endif
 
 #include "pre_guard.h"
 #include <QObject>
@@ -35,20 +38,20 @@ private:
     dblsqd::Feed* feed;
     TUpdateDialog* updateDialog;
 
-//#ifdef Q_OS_MACOS
-    AutoUpdater* updater;
-//#endif
-
     void setupOnLinux();
     void untarOnLinux(const QString& fileName) const;
+
+#ifdef Q_OS_MACOS
+    AutoUpdater* updater;
+    void setupOnMacOS();
+#endif
+
 
 signals:
 
 public slots:
 
     void updateBinaryOnLinux() const;
-
-    void setupOnMacOS();
 };
 
 #endif // UPDATER_H

@@ -1,8 +1,10 @@
 #include "updater.h"
 #include "mudlet.h"
 
+#ifdef Q_OS_MACOS
 #include "../3rdparty/sparkle-glue/CocoaInitializer.h"
 #include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
+#endif
 
 #include "pre_guard.h"
 #include <QtConcurrent>
@@ -32,6 +34,7 @@ void Updater::doUpdates()
 #endif
 }
 
+#ifdef Q_OS_MACOS
 void Updater::setupOnMacOS()
 {
     CocoaInitializer initializer;
@@ -40,6 +43,7 @@ void Updater::setupOnMacOS()
         updater->checkForUpdates();
     }
 }
+#endif
 
 void Updater::setupOnLinux()
 {
