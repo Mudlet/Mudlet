@@ -1,6 +1,9 @@
 #include "updater.h"
 #include "mudlet.h"
 
+#include "../3rdparty/sparkle-glue/CocoaInitializer.h"
+#include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
+
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include "post_guard.h"
@@ -21,18 +24,29 @@ void Updater::doUpdates()
         //        return;
     }
 
-    // constructing the UpdateDialog triggers the update check
+#ifdef Q_OS_MACOS
+    setupOnMacOS();
+#endif
+#ifdef Q_OS_LINUX
+    setupOnLinux();
+#endif
+}
+
+void Updater::setupOnMacOS()
+{
+    CocoaInitializer initializer;
+    if (mudlet::self()->updateAutomatically()) {
+        updater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
+        updater->checkForUpdates();
+    }
+}
+
+void Updater::setupOnLinux()
+{
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
-    updateDialog = new TUpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
 
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
-    setupEvents();
-}
-
-
-void Updater::setupEvents() const
-{
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
         if (!mudlet::self()->updateAutomatically()) {
             return;
@@ -55,6 +69,9 @@ void Updater::setupEvents() const
         connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
         watcher->setFuture(future);
     });
+
+    // constructing the UpdateDialog triggers the update check
+    updateDialog = new TUpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
 }
 
 void Updater::untarOnLinux(const QString& fileName) const
