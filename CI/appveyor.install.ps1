@@ -107,8 +107,8 @@ function InstallBoost() {
 }
 
 function InstallQt() {
-  DownloadFile "http://download.qt.io/official_releases/qt/5.9/5.9.2/qt-opensource-windows-x86-5.9.2.exe" "qt-installer.exe"
-  Step "Warning! Installing Qt 5.9.2, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
+  DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe"
+  Step "Warning! Installing Qt 5.6.3, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
   .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" | Out-File "$logFile"
 }
 
