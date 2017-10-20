@@ -25,9 +25,8 @@ class Updater : public QObject
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(Updater)
-
 public:
+    Q_DISABLE_COPY(Updater)
     explicit Updater(QObject* parent = nullptr);
     void doUpdates();
 
