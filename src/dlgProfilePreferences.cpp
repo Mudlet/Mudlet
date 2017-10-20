@@ -423,6 +423,35 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidgeta->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
+
+    // search engine load
+    // insert might be (/should?) moved elsewhere
+    mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
+    mSearchEngineMap.insert("DuckDuckGo", "https://duckduckgo.com/?q=");
+    mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
+
+    // populate combobox
+    for(auto engineText : mSearchEngineMap.keys())
+    {
+        search_engine_combobox->addItem(engineText);
+    }
+
+    connect(search_engine_combobox, SIGNAL(currentTextChanged(const QString)), this, SLOT(slot_search_engine_edited(const QString)));
+
+    // set to saved value or default to Google
+    int savedText = search_engine_combobox->findText(mpHost->mSearchEngine.first);
+    search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
+    setSearchEngine(search_engine_combobox->currentText());
+}
+
+void dlgProfilePreferences::setSearchEngine(const QString &text)
+{
+    mpHost->mSearchEngine = QPair<QString, QString>(text, mSearchEngineMap[text]);
+}
+
+void dlgProfilePreferences::slot_search_engine_edited(const QString &text)
+{
+    setSearchEngine(text);
 }
 
 void dlgProfilePreferences::setColors()
