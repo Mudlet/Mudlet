@@ -17,7 +17,7 @@ Updater::Updater(QObject* parent) : QObject(parent)
 // start the update process and figure out what needs to be done
 // if it's silent updates, do that right away, otherwise
 // setup manual updates to do our custom actions
-void Updater::doUpdates()
+void Updater::checkUpdatesOnStart()
 {
     auto devSuffix = QByteArray(APP_BUILD).trimmed();
 
@@ -114,6 +114,10 @@ void Updater::updateBinaryOnLinux() const
     }
 
     qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+}
+
+void Updater::manuallyCheckUpdates() {
+    updateDialog->show();
 }
 
 // this gets called after the update is downloaded. Default behaviour is to open

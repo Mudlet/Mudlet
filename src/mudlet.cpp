@@ -423,7 +423,7 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(dactionDownload, SIGNAL(triggered()), this, SLOT(slot_show_help_dialog_download()));
+    connect(dactionUpdate, SIGNAL(triggered()), this, SLOT(slot_check_manual_update()));
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
@@ -2390,9 +2390,9 @@ void mudlet::slot_open_mappingscripts_page()
     QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
 }
 
-void mudlet::slot_show_help_dialog_download()
+void mudlet::slot_check_manual_update()
 {
-    QDesktopServices::openUrl(QUrl("http://www.mudlet.org/download/"));
+    updater->manuallyCheckUpdates();
 }
 
 void mudlet::slot_show_about_dialog()
@@ -2532,8 +2532,8 @@ void mudlet::startAutoLogin()
     }
 }
 
-void mudlet::doUpdates() {
-    updater->doUpdates();
+void mudlet::checkUpdatesOnStart() {
+    updater->checkUpdatesOnStart();
 }
 
 void mudlet::doAutoLogin(const QString& profile_name)

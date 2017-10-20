@@ -1275,7 +1275,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
 
-    mudlet::self()->setAutomaticUpdates(!checkbox_noAutomaticUpdates);
+    mudlet::self()->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
 
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();

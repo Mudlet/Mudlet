@@ -146,7 +146,7 @@ public:
     void readSettings();
     void writeSettings();
     bool openWebPage(const QString& path);
-    void doUpdates();
+    void checkUpdatesOnStart();
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
@@ -297,7 +297,7 @@ public slots:
     void slot_show_help_dialog_video();
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
-    void slot_show_help_dialog_download();
+    void slot_check_manual_update();
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);

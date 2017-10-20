@@ -460,7 +460,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
-    mudlet::self()->doUpdates();
+    mudlet::self()->checkUpdatesOnStart();
 
     app->restoreOverrideCursor();
 
