@@ -352,6 +352,7 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
+    void slot_update_installed();
 
 private:
     void initEdbee();
@@ -403,6 +404,7 @@ private:
     bool mCompactInputLine;
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
+
 };
 
 class TConsoleMonitor : public QObject

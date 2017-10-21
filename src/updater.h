@@ -49,6 +49,7 @@ private:
 
 
 signals:
+    void updateInstalled();
 
 public slots:
 

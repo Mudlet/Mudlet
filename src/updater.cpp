@@ -114,6 +114,7 @@ void Updater::updateBinaryOnLinux() const
     }
 
     qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
+    emit updateInstalled();
 }
 
 void Updater::manuallyCheckUpdates() {

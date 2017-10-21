@@ -423,7 +423,8 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-    connect(dactionUpdate, SIGNAL(triggered()), this, SLOT(slot_check_manual_update()));
+    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
@@ -2062,8 +2063,27 @@ void mudlet::closeEvent(QCloseEvent* event)
 void mudlet::forceClose()
 {
     for (auto console : mConsoleMap) {
+        console->getHost()->saveProfile();
         console->mUserAgreedToCloseConsole = true;
+
+        if (console->getHost()->getName() != QStringLiteral("default_host")) {
+            console->getHost()->mTelnet.disconnect();
+            // close script-editor
+            if (console->mpHost->mpEditorDialog) {
+                console->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+                console->mpHost->mpEditorDialog->close();
+            }
+            if (console->mpHost->mpNotePad) {
+                console->mpHost->mpNotePad->save();
+                console->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+                console->mpHost->mpNotePad->close();
+            }
+        }
+
+        console->close();
     }
+
+    writeSettings();
 
     close();
 }
@@ -2388,6 +2408,19 @@ void mudlet::check_for_mappingscript()
 void mudlet::slot_open_mappingscripts_page()
 {
     QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
+}
+
+void mudlet::slot_update_installed()
+{
+    // disable existing functionality to show the updates window
+    dactionUpdate->disconnect(SIGNAL(triggered()));
+
+    // rejig to restart Mudlet instead
+    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
+        forceClose();
+        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+    });
+    dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
 }
 
 void mudlet::slot_check_manual_update()
