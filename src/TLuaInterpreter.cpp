@@ -5869,6 +5869,39 @@ int TLuaInterpreter::tempButton(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
+{
+    //args: name, css text
+    QString name, css;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setButtonStyleSheet: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 1));
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setButtonStyleSheet: bad argument #2 type (css as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        css = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    Host& host = getHostFromLua(L);
+    auto actionsList = host.getActionUnit()->findActionsByName(name);
+    if (actionsList.empty()) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "No button named \"%s\" found.", name.toUtf8().constData());
+        return 2;
+    }
+    for (auto action : actionsList) {
+        action->css = css;
+    }
+    host.getActionUnit()->updateToolbar();
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 { //args: name, location(0-4), orientation(0/1)
     QString name;
@@ -11387,7 +11420,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     QString s1 = QString("[ERROR:]");
     QString s2 = QString(" object:<%1> function:<%2>\n").arg(name, function);
     QString s3 = QString("         <%1>\n").arg(e.c_str());
-    QString msg = QString("[  LUA  ] - Object<%1> Function<%2>\n<%3>").arg(name, function, e.c_str());
+    QString msg = QString("[  LUA  ] - object:<%1> function:<%2>\n<%3>").arg(name, function, e.c_str());
 
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->printDebug(blue, black, s1);
@@ -11827,6 +11860,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disconnect", TLuaInterpreter::disconnect);
     lua_register(pGlobalLua, "tempButtonToolbar", TLuaInterpreter::tempButtonToolbar);
     lua_register(pGlobalLua, "tempButton", TLuaInterpreter::tempButton);
+    lua_register(pGlobalLua, "setButtonStyleSheet", TLuaInterpreter::setButtonStyleSheet);
     lua_register(pGlobalLua, "reconnect", TLuaInterpreter::reconnect);
     lua_register(pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir);
     lua_register(pGlobalLua, "getMudletLuaDefaultPaths", TLuaInterpreter::getMudletLuaDefaultPaths);

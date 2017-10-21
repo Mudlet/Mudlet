@@ -90,6 +90,7 @@ public:
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
     void copySelectionToClipboardHTML();
+    void searchSelectionOnline();
 
     QColor mBgColor;
     int mCursorY;
@@ -113,9 +114,11 @@ public slots:
     void slot_scrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
+    void slot_searchSelectionOnline();
 
 private:
     void initDefaultSettings();
+    QString getSelectedText(char newlineChar = '\n');
 
     int mFontHeight;
     int mFontWidth;
