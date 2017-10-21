@@ -19,10 +19,9 @@ Updater::Updater(QObject* parent) : QObject(parent)
 // setup manual updates to do our custom actions
 void Updater::checkUpdatesOnStart()
 {
-    auto devSuffix = QByteArray(APP_BUILD).trimmed();
-
-    // only update release builds
-    if (!devSuffix.isEmpty()) {
+    // only update release builds to prevent auto-update from overwriting your
+    // compiled binary while in development
+    if (mudlet::self()->onDevelopmentVersion()) {
         //        return;
     }
 
@@ -92,7 +91,7 @@ void Updater::untarOnLinux(const QString& fileName) const
     }
 }
 
-void Updater::updateBinaryOnLinux() const
+void Updater::updateBinaryOnLinux()
 { // FIXME don't hardcode name in case we want to change it
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/Mudlet.AppImage");
     QString installedBinaryPath(QCoreApplication::applicationFilePath());

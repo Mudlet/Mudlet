@@ -3293,3 +3293,14 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
                 .arg(QDir::homePath());
     }
 }
+
+// returns whenever this is a release or development build of Mudlet
+bool mudlet::onDevelopmentVersion()
+{
+    auto devSuffix = QByteArray(APP_BUILD).trimmed();
+    if (!devSuffix.isEmpty()) {
+        return true;
+    }
+
+    return false;
+}

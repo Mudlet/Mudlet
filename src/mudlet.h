@@ -175,6 +175,7 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(QString s, int);
+    bool onDevelopmentVersion();
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;

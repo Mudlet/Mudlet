@@ -53,7 +53,7 @@ signals:
 
 public slots:
 
-    void updateBinaryOnLinux() const;
+    void updateBinaryOnLinux();
 };
 
 #endif // UPDATER_H

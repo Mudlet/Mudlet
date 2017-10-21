@@ -444,6 +444,11 @@ void dlgProfilePreferences::loadEditorTab()
     int savedText = search_engine_combobox->findText(mpHost->mSearchEngine.first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
     setSearchEngine(search_engine_combobox->currentText());
+
+    if (mudlet::self()->onDevelopmentVersion()) {
+        checkbox_noAutomaticUpdates->setDisabled(true);
+        checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
+    }
 }
 
 void dlgProfilePreferences::setSearchEngine(const QString &text)
