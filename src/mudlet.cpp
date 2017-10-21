@@ -2279,22 +2279,22 @@ void mudlet::show_options_dialog()
 
 void mudlet::show_help_dialog()
 {
-    QDesktopServices::openUrl(QUrl("http://wiki.mudlet.org/w/Manual:Contents"));
+    QDesktopServices::openUrl(QUrl("https://wiki.mudlet.org/w/Manual:Contents"));
 }
 
 void mudlet::slot_show_help_dialog_video()
 {
-    QDesktopServices::openUrl(QUrl("http://www.mudlet.org/media/"));
+    QDesktopServices::openUrl(QUrl("https://www.mudlet.org/media/"));
 }
 
 void mudlet::slot_show_help_dialog_forum()
 {
-    QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/"));
+    QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/"));
 }
 
 void mudlet::slot_show_help_dialog_irc()
 {
-    QDesktopServices::openUrl(QUrl("http://webchat.freenode.net/?channels=mudlet"));
+    QDesktopServices::openUrl(QUrl("https://webchat.freenode.net/?channels=mudlet"));
 }
 
 void mudlet::slot_mapper()
@@ -2383,12 +2383,12 @@ void mudlet::check_for_mappingscript()
 
 void mudlet::slot_open_mappingscripts_page()
 {
-    QDesktopServices::openUrl(QUrl("http://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
+    QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
 }
 
 void mudlet::slot_show_help_dialog_download()
 {
-    QDesktopServices::openUrl(QUrl("http://www.mudlet.org/download/"));
+    QDesktopServices::openUrl(QUrl("https://www.mudlet.org/download/"));
 }
 
 void mudlet::slot_show_about_dialog()
