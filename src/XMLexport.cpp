@@ -618,13 +618,13 @@ bool XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     return (isOk && (!hasError()));
 }
 
-bool XMLexport::exportGenericPackage(QIODevice* device)
+QPair<bool, QString> XMLexport::exportGenericPackage(QIODevice* device)
 {
     setDevice(device);
 
     writeStartDocument();
     if (hasError()) {
-        return false;
+        return qMakePair(false, device->errorString());
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
@@ -637,7 +637,13 @@ bool XMLexport::exportGenericPackage(QIODevice* device)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    return (isOk && (!hasError()));
+    if (hasError()) {
+        return qMakePair(false, device->errorString());
+    } else if (!isOk) {
+        return qMakePair(false, tr("unknown reason", "message is intended to be included in longer string, no need to capitalise first word or add ending full stop."));
+    } else {
+        return qMakePair(true, QString());
+    }
 }
 
 bool XMLexport::writeGenericPackage(Host* pHost)

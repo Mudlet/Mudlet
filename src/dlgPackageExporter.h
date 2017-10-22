@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,25 +26,28 @@
 #include "Host.h"
 
 #include "pre_guard.h"
+#include "ui_dlgPackageExporter.h"
 #include <QDialog>
+#include <QPushButton>
+#include <QTemporaryDir>
 #include "post_guard.h"
+
+#include <zip.h>
 
 class QTreeWidget;
 class QTreeWidgetItem;
 
 
-namespace Ui {
-class dlgPackageExporter;
-}
-
-class dlgPackageExporter : public QDialog
+class dlgPackageExporter
+: public QDialog
+, public Ui::dlgPackageExporter
 {
     Q_OBJECT
 
     Q_DISABLE_COPY(dlgPackageExporter)
 
 public:
-    explicit dlgPackageExporter(QWidget* parent = 0);
+//    explicit dlgPackageExporter(QWidget* parent = 0);
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
@@ -71,21 +75,42 @@ public:
     QMap<QTreeWidgetItem*, TAction*> modActionMap;
     QMap<QTreeWidgetItem*, TTimer*> timerMap;
     QMap<QTreeWidgetItem*, TTimer*> modTimerMap;
-    QString filePath;
 
 public slots:
     void slot_addFiles();
     void slot_export_package();
 
 private:
-    Ui::dlgPackageExporter* ui;
+    bool writeFileToZip(const QString&, const QString&, zip*);
+    void displayResultMessage(const QString&, const bool isSuccessMessage = true);
+
+
     QPointer<Host> mpHost;
-    QTreeWidget* treeWidget;
-    QPushButton* exportButton;
+    QString mHostName;
+    QPushButton* addFilesButton;
+    QPushButton* cancelButton;
     QPushButton* closeButton;
-    QString tempDir;
-    QString packageName;
-    QString zipFile;
+    QPushButton* exportButton;
+    QString mPackageName;
+    QString mZipFile;
+    QString mXmlFile;
+
+    // If true (default) use the prior:
+    //     <user mudlet dir>/profiles/<profile name>/tmp/<package name>/
+    // directory else use the mTempDir which is an OS provided unique per
+    // instantation temporary directory THAT IS DESTROYED ALONG WITH ITS
+    // CONTENTS WHEN THIS CLASS IS DESTROYED - i.e. is a "proper" temporary
+    // directory...!
+    bool mIsToKeepStagedFiles;
+    bool mIsOverWriteEnabled;
+
+    // The appropriate place depending on the previous bool:
+    QDir mStagingDir;
+
+    // The temporary directory (and its files) will only persist as long as the
+    // dlgPackageExporter class instance does (unless autoremove is turned off
+    // for debugging?)
+    QTemporaryDir mTempDir;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

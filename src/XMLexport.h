@@ -46,6 +46,8 @@ class VarUnit;
 
 class XMLexport : public QXmlStreamWriter
 {
+    Q_DECLARE_TR_FUNCTIONS(XMLexport) // Needed so we can use tr() even though XMLexport is NOT derived from QObject
+
 public:
     XMLexport(Host*);
     XMLexport(TTrigger*);
@@ -67,7 +69,7 @@ public:
     bool writeModuleXML(QIODevice* device, QString moduleName);
 
     bool exportHost(QIODevice*);
-    bool exportGenericPackage(QIODevice* device);
+    QPair<bool, QString> exportGenericPackage(QIODevice* device);
     bool writeGenericPackage(Host*);
     bool exportTrigger(QIODevice*);
     bool exportTimer(QIODevice*);

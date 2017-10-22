@@ -158,6 +158,7 @@ mudlet::mudlet()
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
 , mpProfilePreferencesDlg(nullptr)
+, mpDlgPackageExporter(nullptr)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -820,16 +821,18 @@ void mudlet::slot_uninstall_package()
 void mudlet::slot_package_exporter()
 {
     Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    auto d = new dlgPackageExporter(this, pH);
-    // don't show the dialog if the user cancelled the wizard
-    if (d->filePath.isEmpty()) {
+    if (!pH || mpDlgPackageExporter) {
+        // Return if the package exporter is already active...
         return;
     }
 
-    d->show();
+    mpDlgPackageExporter = new dlgPackageExporter(this, pH);
+    // don't show the dialog if the user cancelled the wizard
+    if (mpDlgPackageExporter) {
+        mpDlgPackageExporter->show();
+    } else {
+        qDebug() << "mudlet::slot_package_exporter() INFO - dlgPackageExporter has gone away...!";
+    }
 }
 
 
@@ -3214,6 +3217,13 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // filename of the XML file that contains the (per profile, unpacked)
         // package mudlet items in that package/module:
         return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/%3.xml")
+                .arg(QDir::homePath(), extra1, extra2);
+    case profilePackageStagingPathFileName:
+        // Takes two extra arguments (profile name, package name) returns the
+        // directory where (preserved) package contents will be staged before
+        // being zipped up into a module archive file -  does NOT end in a '/':
+        // NOTE: NOT used when a properly "temporary" directory is used!
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/tmp/%3")
                 .arg(QDir::homePath(), extra1, extra2);
     case profileReplayAndLogFilesPath:
         // Takes one extra argument (profile name) that returns the directory

@@ -66,6 +66,7 @@ class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
+class dlgPackageExporter;
 
 
 class mudlet : public QMainWindow, public Ui::main_window
@@ -259,6 +260,10 @@ public:
         // filename of the XML file that contains the (per profile, unpacked)
         // package mudlet items in that package/module:
         profilePackagePathFileName,
+        // Takes two extra arguments (profile name, package name) returns the
+        // directory where (preserved) package contents will be staged before
+        // being zipped up into a module archive file -  does NOT end in a '/':
+        profilePackageStagingPathFileName,
         // Takes one extra argument (profile name) that returns the directory
         // that contains replays (*.dat files) and logs (*.html or *.txt) files
         // for that profile - does NOT end in '/':
@@ -390,6 +395,7 @@ private:
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;
 
+    QPointer<dlgPackageExporter> mpDlgPackageExporter;
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
