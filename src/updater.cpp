@@ -10,8 +10,7 @@
 #include <QtConcurrent>
 #include "post_guard.h"
 
-Updater::Updater(QObject* parent) : QObject(parent),
-                                    mUpdateInstalled(false)
+Updater::Updater(QObject* parent) : QObject(parent), mUpdateInstalled(false)
 {
 }
 
@@ -63,15 +62,13 @@ void Updater::setupOnLinux()
         feed->downloadRelease(updates.first());
     });
 
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
-        qDebug() << "downloadFinished";
-    });
+    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() { qDebug() << "downloadFinished"; });
 
     // constructing the UpdateDialog triggers the update check
-    updateDialog = new TUpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
+    updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
     installButton = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(installButton);
-    connect(updateDialog, &TUpdateDialog::installButtonClicked, this, &Updater::installButtonClicked);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installButtonClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName) const
@@ -116,11 +113,13 @@ void Updater::updateBinaryOnLinux()
     installButton->setEnabled(true);
 }
 
-void Updater::manuallyCheckUpdates() {
+void Updater::manuallyCheckUpdates()
+{
     updateDialog->show();
 }
 
-void Updater::installButtonClicked(QAbstractButton *button, QString filePath) {
+void Updater::installButtonClicked(QAbstractButton* button, QString filePath)
+{
     // if the update is already installed, then the button says 'Restart' - do so
     if (mUpdateInstalled) {
         updateDialog->close();

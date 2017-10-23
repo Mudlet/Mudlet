@@ -12,19 +12,6 @@
 #include <QObject>
 #include "post_guard.h"
 
-class TUpdateDialog : public dblsqd::UpdateDialog
-{
-public:
-    explicit TUpdateDialog(dblsqd::Feed* feed, Type type = dblsqd::UpdateDialog::Type::OnUpdateAvailable,
-                           QWidget* parent = nullptr, QSettings* settings = new QSettings())
-    : UpdateDialog(feed, type, parent, settings)
-    {
-    }
-
-private:
-//    void startUpdate() override;
-};
-
 class Updater : public QObject
 {
     Q_OBJECT
@@ -37,7 +24,7 @@ public:
 
 private:
     dblsqd::Feed* feed;
-    TUpdateDialog* updateDialog;
+    dblsqd::UpdateDialog* updateDialog;
     QPushButton* installButton;
     bool mUpdateInstalled;
 
