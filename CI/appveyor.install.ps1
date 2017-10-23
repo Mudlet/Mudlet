@@ -20,8 +20,8 @@ function script:exec {
 
 	param(
 		[Parameter(Position=0,Mandatory=1)][scriptblock]$cmd,
-		[Parameter(Position=1,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd),
-    [Parameter(Position=2,Mandatory=0)][bool]$mayFail = $False
+    [Parameter(Position=1,Mandatory=0)][bool]$mayFail = $False,
+		[Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
 	)
 	& $cmd
 	if (!$mayFail -and ($lastexitcode -ne 0))
@@ -63,7 +63,7 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
   exec { 7z -o"$outputPath" x "$zipFile" -y >> "$logFile" 2>&1 }
 }
 
-function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH", [bool] $mayFail = $False) {
+function RunConfigure([bool] $mayFail = $False, [string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
   exec { bash -c "./configure $configureArguments" >> "$logFile" 2>&1 } $mayFail
 }
