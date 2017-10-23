@@ -20,13 +20,12 @@ function script:exec {
 
 	param(
 		[Parameter(Position=0,Mandatory=1)][scriptblock]$cmd,
-    [Parameter(Position=1,Mandatory=0)][bool]$mayFail = $False,
 		[Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
 	)
   # ignore standard error for external programs
   $global:ErrorActionPreference = "Continue"
 	& $cmd
-	if (!$mayFail -and ($lastexitcode -ne 0))
+	if ($lastexitcode -ne 0)
 	{
 		throw $errorMessage
 	}
@@ -67,9 +66,9 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
   exec { 7z -o"$outputPath" x "$zipFile" -y >> "$logFile" 2>&1 }
 }
 
-function RunConfigure([bool] $mayFail = $False, [string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
+function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
-  exec { bash -c "./configure $configureArguments" >> "$logFile" 2>&1 } $mayFail
+  exec { bash -c "./configure $configureArguments" >> "$logFile" 2>&1 }
 }
 
 function RunMake([string] $makefile = "Makefile"){
@@ -144,7 +143,7 @@ function InstallHunspell() {
   DownloadFile "https://github.com/hunspell/hunspell/archive/v1.4.1.tar.gz" "hunspell-1.4.1.tar.gz"
   ExtractTar "hunspell-1.4.1.tar.gz" "hunspell-1.4.1"
   Set-Location "hunspell-1.4.1\hunspell-1.4.1"
-  RunConfigure $True
+  RunConfigure
   RunMake
   RunMakeInstall
 }
