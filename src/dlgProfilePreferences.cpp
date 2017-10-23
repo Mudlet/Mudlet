@@ -446,6 +446,8 @@ void dlgProfilePreferences::loadEditorTab()
     setSearchEngine(search_engine_combobox->currentText());
 
     if (mudlet::self()->onDevelopmentVersion()) {
+        // tick the box and make it be untickable as automatic updates are disabled in dev builds
+        checkbox_noAutomaticUpdates->setEnabled(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
     }
