@@ -122,6 +122,10 @@ void Updater::manuallyCheckUpdates() {
     updateDialog->show();
 }
 
+void Updater::installButtonClicked(QAbstractButton *button, QString filePath) {
+    qDebug() << "button clicked! filePath:" << filePath;
+}
+
 // this gets called after the update is downloaded. Default behaviour is to open
 // the downloaded file, but we already handle the event to unzip and replace it,
 // so overwrite the method to remove the auto-open functionality
