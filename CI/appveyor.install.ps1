@@ -73,7 +73,7 @@ function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_D
 
 function RunMake([string] $makefile = "Makefile"){
   Step "Running make"
-  exec { mingw32-make -f "$makefile" -j 2 >> "$logFile" 2>&1 }
+  exec { mingw32-make -f "$makefile" -j $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors") >> "$logFile" 2>&1 }
 }
 
 function RunMakeInstall([string] $makefile = "Makefile"){

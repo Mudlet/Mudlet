@@ -10,7 +10,7 @@ if("$LastExitCode" -ne "0"){
   exit 1
 }
 
-mingw32-make -j 2
+mingw32-make -j $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors")
 if("$LastExitCode" -ne "0"){
   exit 1
 }
