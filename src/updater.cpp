@@ -75,6 +75,8 @@ void Updater::setupOnLinux()
 
     // constructing the UpdateDialog triggers the update check
     updateDialog = new TUpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
+    updateDialog->addInstallButton(new QPushButton(QStringLiteral("BUTTON")));
+    connect(updateDialog, &TUpdateDialog::installButtonClicked, this, &Updater::installButtonClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName) const
@@ -123,8 +125,8 @@ void Updater::manuallyCheckUpdates() {
 // this gets called after the update is downloaded. Default behaviour is to open
 // the downloaded file, but we already handle the event to unzip and replace it,
 // so overwrite the method to remove the auto-open functionality
-void TUpdateDialog::startUpdate()
-{    
-    done(QDialog::Accepted);
-    QApplication::quit();
-}
+//void TUpdateDialog::startUpdate()
+//{
+//    done(QDialog::Accepted);
+//    QApplication::quit();
+//}

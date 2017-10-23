@@ -22,7 +22,7 @@ public:
     }
 
 private:
-    void startUpdate() override;
+//    void startUpdate() override;
 };
 
 class Updater : public QObject
@@ -51,9 +51,10 @@ private:
 signals:
     void updateInstalled();
 
+    // might want to make these private
 public slots:
-
     void updateBinaryOnLinux();
+    void installButtonClicked(QAbstractButton* button, QString filePath);
 };
 
 #endif // UPDATER_H
