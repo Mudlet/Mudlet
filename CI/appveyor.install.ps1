@@ -271,19 +271,19 @@ if (-not $(Test-Path "$workingBaseDir")) {
 
 $Env:PATH=$ShPath
 
-CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { & InstallSevenZ }
-CheckAndInstall "cmake" "$CMakePath\cmake.exe" { & InstallCmake }
-CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { & InstallMsys }
-CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { & InstallBoost }
-CheckAndInstall "Qt" "$Env:MINGW_BASE_DIR\bin\mingw32-make.exe" { & InstallQt }
-CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { & InstallOpenssl }
-CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { & InstallHunspell }
-CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { & InstallYajl }
-CheckAndInstall "lua" "$Env:MINGW_BASE_DIR\bin\lua51.dll" { & InstallLua }
-CheckAndInstall "pcre" "$Env:MINGW_BASE_DIR\bin\libpcre-1.dll" { & InstallPcre }
-CheckAndInstall "sqlite" "$Env:MINGW_BASE_DIR\lib\libsqlite3-0.dll" { & InstallSqlite }
-CheckAndInstall "zlib" "$Env:MINGW_BASE_DIR\bin\zlib1.dll" { & InstallZlib }
-CheckAndInstall "libzip" "$Env:MINGW_BASE_DIR\include\zipconf.h" { & InstallLibzip }
-CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { & InstallZziplib }
-CheckAndInstall "luarocks" "C:\LuaRocks\luarocks.bat" { & InstallLuarocks }
+CheckAndInstall "7z" "C:\Program Files\7-Zip\7z.exe" { InstallSevenZ }
+CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
+CheckAndInstall "MSYS" "C:\MinGW\msys\1.0\bin\bash.exe" { InstallMsys }
+CheckAndInstall "Boost" "C:\Libraries\boost_1_60_0\bootstrap.bat" { InstallBoost }
+CheckAndInstall "Qt" "$Env:MINGW_BASE_DIR\bin\mingw32-make.exe" { InstallQt }
+CheckAndInstall "openssl" "$workingBaseDir\openssl-1.0.2l\ssleay32.dll" { InstallOpenssl }
+CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.4-0.dll" { InstallHunspell }
+CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\lib\libyajl.dll" { InstallYajl }
+CheckAndInstall "lua" "$Env:MINGW_BASE_DIR\bin\lua51.dll" { InstallLua }
+CheckAndInstall "pcre" "$Env:MINGW_BASE_DIR\bin\libpcre-1.dll" { InstallPcre }
+CheckAndInstall "sqlite" "$Env:MINGW_BASE_DIR\lib\libsqlite3-0.dll" { InstallSqlite }
+CheckAndInstall "zlib" "$Env:MINGW_BASE_DIR\bin\zlib1.dll" { InstallZlib }
+CheckAndInstall "libzip" "$Env:MINGW_BASE_DIR\include\zipconf.h" { InstallLibzip }
+CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib }
+CheckAndInstall "luarocks" "C:\LuaRocks\luarocks.bat" { InstallLuarocks }
 InstallLuaModules
