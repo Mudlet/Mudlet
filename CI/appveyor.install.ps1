@@ -23,11 +23,15 @@ function script:exec {
     [Parameter(Position=1,Mandatory=0)][bool]$mayFail = $False,
 		[Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
 	)
+  # ignore standard error for external programs
+  $global:ErrorActionPreference = "Continue"
 	& $cmd
 	if (!$mayFail -and ($lastexitcode -ne 0))
 	{
 		throw $errorMessage
 	}
+  # restore exit behavior
+  $global:ErrorActionPreference = "Stop"
 }
 
 function PartSkeleton([string] $content) {
