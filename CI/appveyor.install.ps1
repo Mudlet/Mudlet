@@ -10,7 +10,25 @@ if($64Bit){
 $ShPath = "$Env:MINGW_BASE_DIR\bin;$CMakePath;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 $NoShPath = ($ShPath.Split(';') | Where-Object { $_ -ne 'C:\MinGW\msys\1.0\bin' } | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';'
 
+# Exit the script whenever an error in a cmdlet occurs
+$global:ErrorActionPreference = "Stop"
+
 # Helper functions
+# see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
+function script:exec {
+    [CmdletBinding()]
+
+	param(
+		[Parameter(Position=0,Mandatory=1)][scriptblock]$cmd,
+		[Parameter(Position=1,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
+	)
+	& $cmd
+	if ($lastexitcode -ne 0)
+	{
+		throw $errorMessage
+	}
+}
+
 function PartSkeleton([string] $content) {
   Write-Output "==== $content ====" | Tee-Object -File "$logFile" -Append
 }
@@ -35,28 +53,28 @@ function DownloadFile([string] $url, [string] $outputFile) {
 function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
   $file = Get-ChildItem $tarFile
-  7z x "$($file.FullName)" -y >> "$logFile" 2>&1
-  7z -o"$outputPath" x "$($file.Directory)\$($file.BaseName)" -y >> "$logFile" 2>&1
+  exec { 7z x "$($file.FullName)" -y >> "$logFile" 2>&1 }
+  exec { 7z -o"$outputPath" x "$($file.Directory)\$($file.BaseName)" -y >> "$logFile" 2>&1 }
 }
 
 function ExtractZip([string] $zipFile, [string] $outputPath) {
   Step "Extracting source distribution"
-  7z -o"$outputPath" x "$zipFile" -y >> "$logFile" 2>&1
+  exec { 7z -o"$outputPath" x "$zipFile" -y >> "$logFile" 2>&1 }
 }
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
-  bash -c "./configure $configureArguments" >> "$logFile" 2>&1
+  exec { bash -c "./configure $configureArguments" >> "$logFile" 2>&1 }
 }
 
 function RunMake([string] $makefile = "Makefile"){
   Step "Running make"
-  mingw32-make -f "$makefile" -j 2 >> "$logFile" 2>&1
+  exec { mingw32-make -f "$makefile" -j 2 >> "$logFile" 2>&1 }
 }
 
 function RunMakeInstall([string] $makefile = "Makefile"){
   Step "Running make install"
-  mingw32-make install -f "$makefile" >> "$logFile" 2>&1
+  exec { mingw32-make install -f "$makefile" >> "$logFile" 2>&1 }
 }
 
 function CheckAndInstall([string] $dependencyName, [string] $signalFile, [scriptblock] $installationFunction){
@@ -79,13 +97,13 @@ function InstallSevenZ() {
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
-  .\7z-installer.exe /S /D="C:\Program Files\7-Zip" | Out-File "$logFile"
+  exec { .\7z-installer.exe /S /D="C:\Program Files\7-Zip" | Out-File -Append "$logFile" }
 }
 
 function InstallCmake() {
   DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.4-win32-x86.msi" "cmake-installer.msi"
   Step "installing cmake"
-  .\cmake-installer.msi "/q" | Out-File "$logFile"
+  exec { .\cmake-installer.msi "/q" | Out-File -Append "$logFile" }
 }
 
 function InstallMsys() {
@@ -109,7 +127,7 @@ function InstallBoost() {
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe"
   Step "Warning! Installing Qt 5.6.3, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
-  .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" | Out-File "$logFile"
+  exec { .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" | Out-File -Append "$logFile" }
 }
 
 function InstallOpenssl() {
@@ -136,11 +154,11 @@ function InstallYajl() {
   New-Item build -ItemType Directory >> "$logFile" 2>&1
   Set-Location build
   Step "running cmake"
-  cmake -G "MinGW Makefiles" ..  >> "$logFile" 2>&1
+  exec { cmake -G "MinGW Makefiles" ..  >> "$logFile" 2>&1 }
   RunMake
   Step "installing"
-  COPY yajl-2.0.1\lib\* $Env:MINGW_BASE_DIR\lib >> "$logFile" 2>&1
-  XCOPY /S /I /Q yajl-2.0.1\include $Env:MINGW_BASE_DIR\include >> "$logFile" 2>&1
+  exec { COPY yajl-2.0.1\lib\* $Env:MINGW_BASE_DIR\lib >> "$logFile" 2>&1 }
+  exec { XCOPY /S /I /Q yajl-2.0.1\include $Env:MINGW_BASE_DIR\include >> "$logFile" 2>&1 }
   $Env:Path = $ShPath
 }
 
@@ -150,12 +168,12 @@ function InstallLua() {
   DownloadFile "https://github.com/Tieske/luawinmake/archive/master.zip" "luawinmake.zip"
   ExtractZip "luawinmake.zip" "luawinmake"
   Step "copying luawinmake files"
-  XCOPY /S /I /Q "$workingBaseDir\luawinmake\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1
+  exec { XCOPY /S /I /Q "$workingBaseDir\luawinmake\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1 }
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
-  .\etc\winmake >> "$logFile" 2>&1
+  exec { .\etc\winmake >> "$logFile" 2>&1 }
   Step "installing lua"
-  .\etc\winmake install $Env:MINGW_BASE_DIR >> "$logFile" 2>&1
+  exec { .\etc\winmake install $Env:MINGW_BASE_DIR >> "$logFile" 2>&1 }
 }
 
 function InstallPcre() {
@@ -185,8 +203,8 @@ function InstallZlib() {
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
   $Env:BINARY_PATH = "$Env:MINGW_BASE_DIR\bin"
   RunMakeInstall "win32/Makefile.gcc"
-  COPY zlib1.dll $Env:MINGW_BASE_DIR\bin >> "$logFile" 2>&1
-  COPY libz.dll.a $Env:MINGW_BASE_DIR\lib >> "$logFile" 2>&1
+  exec { COPY zlib1.dll $Env:MINGW_BASE_DIR\bin >> "$logFile" 2>&1 }
+  exec { COPY libz.dll.a $Env:MINGW_BASE_DIR\lib >> "$logFile" 2>&1 }
 }
 
 function InstallLibzip() {
@@ -196,13 +214,13 @@ function InstallLibzip() {
   RunConfigure
   RunMake
   RunMakeInstall
-  COPY lib\zipconf.h $Env:MINGW_BASE_DIR\include >> "$logFile" 2>&1
+  exec { COPY lib\zipconf.h $Env:MINGW_BASE_DIR\include >> "$logFile" 2>&1 }
 }
 
 function InstallZziplib() {
   DownloadFile "https://sourceforge.net/projects/zziplib/files/zziplib13/0.13.62/zziplib-0.13.62.tar.bz2/download" "zziplib-0.13.62.tar.bz2"
   ExtractTar "zziplib-0.13.62.tar.bz2" "zziplib"
-  cd zziplib\zziplib-0.13.62
+  Set-Location zziplib\zziplib-0.13.62
   Step "changing configure script"
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
@@ -215,7 +233,7 @@ function InstallLuarocks() {
   ExtractZip "luarocks-2.4.0-win32.zip" "luarocks"
   Set-Location luarocks\luarocks-2.4.0-win32
   Step "installing luarocks"
-  .\install.bat /P C:\LuaRocks /MW /Q >> "$logFile" 2>&1
+  exec { .\install.bat /P C:\LuaRocks /MW /Q >> "$logFile" 2>&1 }
   Set-Location \LuaRocks\lua\luarocks
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
@@ -225,13 +243,13 @@ function InstallLuaModules(){
   StartPart "Installing lua modules"
   Set-Location \LuaRocks
   Step "installing lfs"
-  .\luarocks install LuaFileSystem >> "$logFile" 2>&1
+  exec { .\luarocks install LuaFileSystem >> "$logFile" 2>&1 }
   Step "installing luasql.sqlite3"
-  .\luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="$Env:MINGW_BASE_DIR\include" SQLITE_LIBDIR="$Env:MINGW_BASE_DIR\lib" >> "$logFile" 2>&1
+  exec { .\luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="$Env:MINGW_BASE_DIR\include" SQLITE_LIBDIR="$Env:MINGW_BASE_DIR\lib" >> "$logFile" 2>&1 }
   Step "installing rex.pcre"
-  .\luarocks install lrexlib-pcre PCRE_LIBDIR="$Env:MINGW_BASE_DIR\lib" PCRE_INCDIR="$Env:MINGW_BASE_DIR\include" >> "$logFile" 2>&1
+  exec { .\luarocks install lrexlib-pcre PCRE_LIBDIR="$Env:MINGW_BASE_DIR\lib" PCRE_INCDIR="$Env:MINGW_BASE_DIR\include" >> "$logFile" 2>&1 }
   Step "installing lua-utf8"
-  .\luarocks install luautf8 >> "$logFile" 2>&1
+  exec { .\luarocks install luautf8 >> "$logFile" 2>&1 }
 
   Step "installing luazip"
   Set-Location "$workingBaseDir"
@@ -239,8 +257,8 @@ function InstallLuaModules(){
   ExtractZip "luazip.zip" "luazip"
   Set-Location luazip\luazip-master
   Step "installing luazip"
-  gcc -O2 -c -o src/luazip.o -I"$Env:MINGW_BASE_DIR/include" src/luazip.c >> "$logFile" 2>&1
-  gcc -shared -o zip.dll src/luazip.o -L"$Env:MINGW_BASE_DIR/lib" -lzzip -lz "$Env:MINGW_BASE_DIR/bin/lua51.dll" -lm >> "$logFile" 2>&1
+  exec { gcc -O2 -c -o src/luazip.o -I"$Env:MINGW_BASE_DIR/include" src/luazip.c >> "$logFile" 2>&1 }
+  exec { gcc -shared -o zip.dll src/luazip.o -L"$Env:MINGW_BASE_DIR/lib" -lzzip -lz "$Env:MINGW_BASE_DIR/bin/lua51.dll" -lm >> "$logFile" 2>&1 }
   FinishPart "Installing lua modules"
 }
 
