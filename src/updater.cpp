@@ -10,7 +10,8 @@
 #include <QtConcurrent>
 #include "post_guard.h"
 
-Updater::Updater(QObject* parent) : QObject(parent)
+Updater::Updater(QObject* parent) : QObject(parent),
+                                    mUpdateInstalled(false)
 {
 }
 
@@ -63,19 +64,13 @@ void Updater::setupOnLinux()
     });
 
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
-        auto file = feed->getDownloadFile();
-
-        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, file->fileName());
-
-        // replace current binary with the unzipped one
-        auto watcher = new QFutureWatcher<void>;
-        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
-        watcher->setFuture(future);
+        qDebug() << "downloadFinished";
     });
 
     // constructing the UpdateDialog triggers the update check
     updateDialog = new TUpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
-    updateDialog->addInstallButton(new QPushButton(QStringLiteral("BUTTON")));
+    installButton = new QPushButton(tr("Update"));
+    updateDialog->addInstallButton(installButton);
     connect(updateDialog, &TUpdateDialog::installButtonClicked, this, &Updater::installButtonClicked);
 }
 
@@ -116,6 +111,9 @@ void Updater::updateBinaryOnLinux()
 
     qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
     emit updateInstalled();
+    mUpdateInstalled = true;
+    installButton->setText(tr("Restart to apply update"));
+    installButton->setEnabled(true);
 }
 
 void Updater::manuallyCheckUpdates() {
@@ -123,14 +121,17 @@ void Updater::manuallyCheckUpdates() {
 }
 
 void Updater::installButtonClicked(QAbstractButton *button, QString filePath) {
-    qDebug() << "button clicked! filePath:" << filePath;
-}
+    // if the update is already installed, then the button says 'Restart' - do so
+    if (mUpdateInstalled) {
+        updateDialog->close();
+        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+        return;
+    }
 
-// this gets called after the update is downloaded. Default behaviour is to open
-// the downloaded file, but we already handle the event to unzip and replace it,
-// so overwrite the method to remove the auto-open functionality
-//void TUpdateDialog::startUpdate()
-//{
-//    done(QDialog::Accepted);
-//    QApplication::quit();
-//}
+    QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
+
+    // replace current binary with the unzipped one
+    auto watcher = new QFutureWatcher<void>;
+    connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
+    watcher->setFuture(future);
+}

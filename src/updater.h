@@ -38,6 +38,8 @@ public:
 private:
     dblsqd::Feed* feed;
     TUpdateDialog* updateDialog;
+    QPushButton* installButton;
+    bool mUpdateInstalled;
 
     void setupOnLinux();
     void untarOnLinux(const QString& fileName) const;
