@@ -107,10 +107,10 @@ void Updater::updateBinaryOnLinux()
     }
 
     qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-    emit updateInstalled();
     mUpdateInstalled = true;
     installButton->setText(tr("Restart to apply update"));
     installButton->setEnabled(true);
+    emit updateInstalled();
 }
 
 void Updater::manuallyCheckUpdates()
