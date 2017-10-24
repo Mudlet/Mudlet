@@ -1740,12 +1740,16 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")), temporaryDir.path());
-                        auto watcher = new QFutureWatcher<bool>;
-                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-                            if (future.result() == true) {
+                        auto watcher = new QFutureWatcher<QPair<bool, QString>>;
+                        QObject::connect(watcher, &QFutureWatcher<QPair<bool, QString>>::finished, [=]() {
+                            if (future.result().first == true) {
                                 populateThemesList();
                             }
 
+                            // TODO: Is it possible to push error messages to
+                            // current console - or will the cross-threadedness
+                            // make it hard or will the environment in which
+                            // this is being done mean it is not worthwhile?
                             theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                         });

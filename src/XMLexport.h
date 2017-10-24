@@ -66,7 +66,7 @@ public:
     bool writeScript(TScript*);
     bool writeKey(TKey*);
     bool writeVariable(TVar*, LuaInterface*, VarUnit*);
-    bool writeModuleXML(QIODevice* device, QString moduleName);
+    QPair<bool, QString> writeModuleXML(QIODevice* device, QString moduleName);
 
     bool exportHost(QIODevice*);
     QPair<bool, QString> exportGenericPackage(QIODevice* device);

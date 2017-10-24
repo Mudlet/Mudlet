@@ -719,7 +719,9 @@ void mudlet::slot_install_module()
         return;
     }
 
-    mpModuleTableHost->installPackage(fileName, 1);
+    if (!mpModuleTableHost->installPackage(fileName, 1)) {
+        qWarning().nospace() << "mudlet::slot_install_module() Host::installPackage(" << fileName << ", 1) failed...!";
+    }
     for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
         moduleTable->removeRow(i);
     }
@@ -799,7 +801,9 @@ void mudlet::slot_install_package()
         return;
     }
 
-    pH->installPackage(fileName, 0);
+    if (!pH->installPackage(fileName, 1)) {
+        qWarning().nospace() << "mudlet::slot_install_package() - Host::installPackage(" << fileName << ", 1) failed...!";
+    }
     packageList->clear();
     packageList->addItems(pH->mInstalledPackages);
 }
@@ -2643,7 +2647,9 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
         QStringList modules = it2.value();
         for (int i = 0; i < modules.size(); i++) {
             QStringList entry = pHost->mInstalledModules[modules[i]];
-            pHost->installPackage(entry[0], 1);
+            if (!pHost->installPackage(entry.at(0), 1)) {
+                qWarning().nospace() << "mudlet::slot_connection_dlg_finished(" << profile << ") Host::installPackage(" << entry.at(0) << ", 1) failed...!";
+            }
             //we repeat this step here b/c we use the same installPackage method for initial loading,
             //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
             pHost->mInstalledModules[modules[i]] = entry;
@@ -2652,7 +2658,9 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     // install default packages
     for (int i = 0; i < packagesToInstallList.size(); i++) {
-        pHost->installPackage(packagesToInstallList[i], 0);
+        if (!pHost->installPackage(packagesToInstallList.at(i), 0)) {
+            qWarning().nospace() << "mudlet::slot_connection_dlg_finished(" << profile << ") Host::installPackage(" << packagesToInstallList.at(i) << ", 0) default package install failed...!";
+        }
     }
 
     packagesToInstallList.clear();
@@ -2924,18 +2932,32 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
     emit signal_profileMapReloadRequested(affectedProfiles);
 }
 
-bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
+QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
 {
-    int err = 0;
+    int ze = 0;
+    zip* archive = nullptr;
     //from: https://gist.github.com/mobius/1759816
     struct zip_stat zs;
-    struct zip_file* zf;
+    struct zip_file* zf = nullptr;
     zip_uint64_t bytesRead = 0;
-    char buf[4096]; // Was 100 but that seems unduly stingy...!
-    zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
-        return false;
+    archive = zip_open(archivePath.toStdString().c_str(), ZIP_CHECKCONS, &ze);
+    if (!archive) {
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+        zip_error_t error;
+        zip_error_init_with_code(&error, ze);
+        QString errMsg = tr("[ ERROR ] - Failed to open module (archive) file \"%1\",\n"
+                                        "error is: \"%2\".")
+                         .arg(archivePath, QString::fromUtf8(zip_error_strerror(&error)));
+        zip_error_fini(&error);
+        return qMakePair(false, errMsg);
+#else
+        char errorMessageBuffer[128];
+        zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, errno);
+        QString errMsg = tr("[ ERROR ] - Failed to open module (archive) file \"%1\",\n"
+                                        "error is: \"%2\".")
+                         .arg(archivePath, QString::fromUtf8(errorMessageBuffer));
+        return qMakePair(false, errMsg);
+#endif
     }
 
     // We now scan for directories first, and gather needed ones first, not
@@ -2972,7 +2994,9 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
                 zip_close(archive);
-                return false; // Abort reading rest of archive
+                return qMakePair(false, tr("[ ERROR ] - Unable to create directory \"%1%2\",\n"
+                                                       "please check permissions for this and parent directorys.")
+                                 .arg(destination, itPath.value())); // Abort reading rest of archive
             }
             tmpDir.refresh();
         }
@@ -2987,34 +3011,107 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
             if (!zf) {
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+                zip_error_t* pError;
+                pError = zip_get_error(archive);
+                QString errMsg = tr("[ ERROR ] - Unable to open \"%1\" file from\n"
+                                                "within archive file \"%2\".\n"
+                                                "Error message: \"%3\"."
+                                                "Please review this and check the integrity of the archive file.")
+                                 .arg(entryInArchive, archivePath, QString::fromUtf8(zip_error_strerror(pError)));
+                zip_error_fini(pError);
+#else
+                int ze;
+                int se; // Effectively errno
+                char errorMessageBuffer[128];
+                zip_error_get(archive, &ze, &se);
+                zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                QString errMsg = tr("[ ERROR ] - Unable to open \"%1\" file\n"
+                                                "within archive file \"%2\".\n"
+                                                "Error message: \"%3\"."
+                                                "Please review this and check the integrity of the archive file.")
+                                 .arg(entryInArchive, archivePath, QString::fromUtf8(errorMessageBuffer));
+                                 return qMakePair(false, errMsg);
+#endif
+                // Abort reading rest of archive
                 zip_close(archive);
-                return false;
+                return qMakePair(false, errMsg);
             }
 
-            QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
+            QString extractedFileName(QStringLiteral("%1%2").arg(destination, entryInArchive));
+            QFile fd(extractedFileName);
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+                QString errMsg = tr("[ ERROR ] - Unable to create \"%1\" file from\n"
+                                                "within archive file \"%2\",\n"
+                                                "as \"%3\".\n"
+                                                "Please check the permissions for the directory.")
+                                 .arg(entryInArchive, archivePath, extractedFileName);
+
                 zip_fclose(zf);
                 zip_close(archive);
-                return false;
+                return qMakePair(false, errMsg);
             }
 
             bytesRead = 0;
             zip_uint64_t bytesExpected = zs.size;
+            char buffer[4096];
             while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
-                zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
+                zip_int64_t len = zip_fread(zf, buffer, sizeof(buffer));
                 if (len < 0) {
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+                    zip_error_t* pError;
+                    pError = zip_get_error(archive);
+                    QString errMsg = tr("[ ERROR ] - Failure in reading \"%1\" file from\n"
+                                                    "within archive file \"%2\"\n"
+                                                    "as \"%3\".\n"
+                                                    "Error message: \"%4\".")
+                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(zip_error_strerror(pError)));
+                    zip_error_fini(pError);
+#else
+                    int ze;
+                    int se; // Effectively errno
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    QString errMsg = tr("[ ERROR ] - Failure in reading \"%1\" file from\n"
+                                                    "within archive file \"%2\"\n"
+                                                    "as \"%3\".\n"
+                                                    "Error message: \"%4\".")
+                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(zip_error_strerror(pError)));
+#endif
                     fd.close();
                     zip_fclose(zf);
                     zip_close(archive);
-                    return false;
+                    return qMakePair(false, errMsg);
                 }
 
-                if (fd.write(buf, len) == -1) {
+                if (fd.write(buffer, len) == -1) {
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+                    zip_error_t* pError;
+                    pError = zip_get_error(archive);
+                    QString errMsg = tr("[ ERROR ] - Failure in writing \"%1\" file from\n"
+                                                    "archive file \"%2\"\n"
+                                                    "to \"%3\".\n"
+                                                    "Error message: \"%4\".")
+                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(zip_error_strerror(pError)));
+                    zip_error_fini(pError);
+#else
+                    int ze;
+                    int se; // Effectively errno
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    QString errMsg = tr("[ ERROR ] - Failure in writing \"%1\" file from\n"
+                                                    "archive file \"%2\"\n"
+                                                    "to \"%3\".\n"
+                                                    "Error message: \"%4\".")
+                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(errorMessageBuffer(pError)));
+#endif
                     fd.close();
                     zip_fclose(zf);
                     zip_close(archive);
-                    return false;
+                    return qMakePair(false, errMsg);
                 }
                 bytesRead += static_cast<zip_uint64_t>(len);
             }
@@ -3023,13 +3120,30 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
         }
     }
 
-    err = zip_close(archive);
-    if (err) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
-        return false;
+    // This shouldn't be a possible point of failure as we are only reading from
+    // the archive not writing to it...
+    if (zip_close(archive) == -1) {
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
+        zip_error_t* pError = zip_get_error(archive);
+        QString errMsg = tr("[ WARN ]  - Failure to close archive file \"%1\" cleanly,\n"
+                                        "error is: \"%2\".")
+                         .arg(archivePath, QString::fromUtf8(zip_error_strerror(pError)));
+        zip_error_fini(pError);
+        zip_discard(archive);
+#else
+        int ze;
+        int se; // Effectively errno
+        char errorMessageBuffer[128];
+        zip_error_get(archive, &ze, &se);
+        zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+        QString errMsg = tr("[ WARN ]  - Failure to close archive file \"%1\" cleanly,\n"
+                                        "error is: \"%2\".")
+                         .arg(archivePath, QString::fromUtf8(errorMessageBuffer));
+#endif
+        return qMakePair(false, errMsg);
     }
 
-    return true;
+    return qMakePair(true, QString());
 }
 
 // loads the needed edbee theme from disk for use

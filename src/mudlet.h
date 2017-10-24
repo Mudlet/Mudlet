@@ -213,7 +213,7 @@ public:
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
 
-    static bool unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
+    static QPair<bool, QString> unzip(const QString &archivePath, const QString &destination, const QDir &tmpDir);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'

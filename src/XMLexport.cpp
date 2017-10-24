@@ -122,7 +122,7 @@ XMLexport::XMLexport( TKey * pT )
     setAutoFormatting(true);
 }
 
-bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
+QPair<bool, QString> XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
 {
     Host* pHost = mpHost;
     bool isOk = true;
@@ -133,8 +133,12 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
     writeStartDocument();
     // Assume that if there is a file writing problem it will show up on first
     // write to file...
-    if (hasError() || !pHost) {
-        return false;
+    if (!pHost) {
+        return qMakePair(false, tr("internal error in XMLexport::writeModuleXML(...) NULL Host pointer detected!"));
+    }
+
+    if (hasError()) {
+        return qMakePair(false, device->errorString());
     }
 
     writeDTD("<!DOCTYPE MudletPackage>");
@@ -283,7 +287,11 @@ bool XMLexport::writeModuleXML(QIODevice* device, QString moduleName)
     writeEndElement(); // </MudletPackage>
     writeEndDocument();
 
-    return (isOk && (!hasError()));
+    if (isOk && (!hasError())) {
+        return qMakePair(true, QString());
+    } else {
+        return qMakePair(false, device->errorString());
+    }
 }
 
 bool XMLexport::exportHost(QIODevice* device)

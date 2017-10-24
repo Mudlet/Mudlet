@@ -204,10 +204,15 @@ Host::~Host()
     mErrorLogFile.close();
 }
 
+// See: https://github.com/nih-at/libzip/blob/master/API-CHANGES to get
+// details of what we can use for various versions of libzip.
 void Host::saveModules(int sync)
 {
     if (mModuleSaveBlock) {
-        //FIXME: This should generate an error to the user
+        postMessage(tr("[ ERROR ] - A previous failure detected when saving modules has disabled them\n"
+                                   "from being saved for the rest of this run of the Mudlet\n"
+                                   "application.  Sorry, but this is likely to mean that any changes\n"
+                                   "to modules will be lost!"));
         return;
     }
     QMapIterator<QString, QStringList> it(modulesToWrite);
@@ -217,66 +222,469 @@ void Host::saveModules(int sync)
     if (!savePath.exists()) {
         savePath.mkpath(dirName);
     }
+    QString dateTimeStampString = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+
     while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
-        QString filename_xml = entry[0];
+        QString filename_xml = entry.at(0);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#hh-mm-ss" (1 of 6)
-        QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
         QString moduleName = it.key();
         QString zipName;
-        zip* zipFile = nullptr;
+        zip* archive = nullptr;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
-        if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
-            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-            int err;
-            zipFile = zip_open(entry[0].toStdString().c_str(), 0, &err);
-            zipName = filename_xml;
-            QDir packageDir = QDir(packagePathName);
-            if (!packageDir.exists()) {
-                packageDir.mkpath(packagePathName);
-            }
-        } else {
-            savePath.rename(filename_xml, dirName + moduleName + time); //move the old file, use the key (module name) as the file
-        }
-        QFile file_xml(filename_xml);
-        if (file_xml.open(QIODevice::WriteOnly)) {
-            XMLexport writer(this);
-            writer.writeModuleXML(&file_xml, it.key());
-            file_xml.close();
 
-            if (entry[1].toInt()) {
-                modulesToSync << it.key();
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 0)
+        {
+           /*
+            * Code for libzip 1.0 or later - blocked to allow code folding in IDE
+            */
+            if (filename_xml.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)
+              ||filename_xml.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive)) {
+                // This branch will overwrite THE EXISTING MODULE FILE WITH NO BACKUP
+                // It can also cause DATA LOSS should MORE THAN ONE PROFILE HAVE
+                // modified the MODULE and it not be
+                QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+                filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+                int ze;
+                archive = zip_open(entry.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
+                if (!archive) {
+                    zip_error_t error;
+                    zip_error_init_with_code(&error, ze);
+                    postMessage(tr("[ ERROR ] - Failed to open module (archive) file \"%1\", error is: \"%2\".")
+                                         .arg(entry.at(0), QString::fromUtf8(zip_error_strerror(&error))));
+                    zip_error_fini(&error);
+                    // Try again for next module...
+                    continue;
+                }
+
+                zipName = entry.at(0);
+                QDir packageDir = QDir(packagePathName);
+                if (!packageDir.exists()) {
+                    packageDir.mkpath(packagePathName);
+                }
+            } else {
+                //move the old file, use the key (module name) as the file
+                savePath.rename(filename_xml, QStringLiteral("%1%2%3").arg(dirName, moduleName, dateTimeStampString));
             }
-        } else {
-            file_xml.close();
-            //FIXME: Should have an error reported to user
-            //qDebug()<<"failed to write xml for module:"<<entry[0]<<", check permissions?";
-            mModuleSaveBlock = true;
-            return;
+
+            // Save the current Mudlet items in the module as an XML file...
+            QFile file_xml(filename_xml);
+            if (file_xml.open(QIODevice::WriteOnly)) {
+                XMLexport writer(this);
+                // This is the only caller of XMLexport::writeModuleXML(...)
+                QPair<bool, QString> results = writer.writeModuleXML(&file_xml, it.key());
+                if (!results.first) {
+                    postMessage(tr("[ ERROR ] - Unable to save the XML for module \"%1\" to\n"
+                                               "\"%2\".\n"
+                                               "There is an error message: \"%3\".")
+                                .arg(filename_xml, moduleName, results.second));
+
+                    file_xml.close();
+                    if (!zipName.isEmpty() && archive) {
+                        zip_discard(archive);
+                        archive = 0;
+                    }
+                    // Try again for next module...
+                    continue;
+                }
+
+                file_xml.close();
+
+                // This entry will be non-zero for a "synced" module
+                if (entry.at(1).toInt()) {
+                    modulesToSync << it.key();
+                }
+
+            } else {
+                postMessage(tr("[ ERROR ] - Unable to open the file \"%1\" to save\n"
+                                           "the XML for the Mudlet items in module \"%2\".\n"
+                                           "Futher saving of modules has been disabled for the rest of this run\n"
+                                           "of the Mudlet application.  Sorry, but this is likely to mean that\n"
+                                           "any other changes to other modules will be lost!")
+                            .arg(moduleName, filename_xml));
+                mModuleSaveBlock = true;
+                return;
+            }
+
+            if (!zipName.isEmpty()) {
+                // Opens filename_xml as something that can be read into archive (?)
+                // The first 0 means read from the start of the file, the second
+                // means read the WHOLE file at the appropriate time {when
+                // zip_close(archive) is called}...
+                struct zip_source* zipSource = zip_source_file(archive, filename_xml.toStdString().c_str(), 0, 0);
+                if (!zipSource) {
+                    zip_error_t* pError = zip_get_error(archive);
+                    postMessage(tr("[ ERROR ] - Failed to open file \"%1\" to place into module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(zip_error_strerror(pError))));
+                    zip_error_fini(pError);
+                    zip_discard(archive);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                }
+
+                //  Might want to include ZIP_FL_OVERWRITE flag to later version:
+                zip_int64_t index = zip_file_add(archive, QStringLiteral("%1.xml").arg(moduleName).toStdString().c_str(), zipSource, ZIP_FL_OVERWRITE|ZIP_FL_ENC_UTF_8);
+
+                // index is -1 on error:
+                if (index == -1) {
+                    zip_error_t* pError = zip_get_error(archive);
+                    postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(zip_error_strerror(pError))));
+                    zip_error_fini(pError);
+                    zip_source_close(zipSource);
+                    zip_discard(archive);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                }
+
+                if (zip_close(archive) == -1) {
+                    zip_error_t* pError = zip_get_error(archive);
+                    postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(zip_error_strerror(pError))));
+                    zip_error_fini(pError);
+                    zip_discard(archive);
+                } // End of error on closing archive (at the right time)
+            } // End of zipName not being empty
         }
-        if (!zipName.isEmpty()) {
-            struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            QTime t;
-            t.start();
-            //  Might want to include ZIP_FL_OVERWRITE flag to later version:
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
-            int err = zip_file_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s, ZIP_FL_ENC_UTF_8);
+#elif defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 1)
+        {
+           /*
+            * Code for libzip 0.11 - 0.99 - blocked to allow code folding in IDE
+            */
+            if (filename_xml.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)
+              ||filename_xml.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive)) {
+                // This branch will overwrite THE EXISTING MODULE FILE WITH NO BACKUP
+                // It can also cause DATA LOSS should MORE THAN ONE PROFILE HAVE
+                // modified the MODULE and it not be
+                QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+                filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+                int ze;
+                archive = zip_open(entry.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
+                if (!archive) {
+                    // Uses system errno?
+                    char errorMessageBuffer[128];
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, errno);
+                    postMessage(tr("[ ERROR ] - Failed to open module (archive) file \"%1\", error is: \"%2\".")
+                                         .arg(entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    // Try again for next module...
+                    continue;
+                }
+
+                zipName = entry.at(0);
+                QDir packageDir = QDir(packagePathName);
+                if (!packageDir.exists()) {
+                    packageDir.mkpath(packagePathName);
+                }
+            } else {
+                //move the old file, use the key (module name) as the file
+                savePath.rename(filename_xml, QStringLiteral("%1%2%3").arg(dirName, moduleName, dateTimeStampString));
+            }
+
+            // Save the current Mudlet items in the module as an XML file...
+            QFile file_xml(filename_xml);
+            if (file_xml.open(QIODevice::WriteOnly)) {
+                XMLexport writer(this);
+                // This is the only caller of XMLexport::writeModuleXML(...)
+                QPair<bool, QString> results = writer.writeModuleXML(&file_xml, it.key());
+                if (!results.first) {
+                    postMessage(tr("[ ERROR ] - Unable to save the XML for module \"%1\" to\n"
+                                               "\"%2\".\n"
+                                               "There is an error message: \"%3\".")
+                                .arg(filename_xml, moduleName, results.second));
+
+                    file_xml.close();
+                    if (!zipName.isEmpty() && archive) {
+                        zip_discard(archive);
+                        archive = 0;
+                    }
+                    // Try again for next module...
+                    continue;
+                }
+
+                file_xml.close();
+
+                // This entry will be non-zero for a "synced" module
+                if (entry.at(1).toInt()) {
+                    modulesToSync << it.key();
+                }
+
+            } else {
+                postMessage(tr("[ ERROR ] - Unable to open the file \"%1\" to save\n"
+                                           "the XML for the Mudlet items in module \"%2\".\n"
+                                           "Futher saving of modules has been disabled for the rest of this run\n"
+                                           "of the Mudlet application.  Sorry, but this is likely to mean that\n"
+                                           "any other changes to other modules will be lost!")
+                            .arg(moduleName, filename_xml));
+                mModuleSaveBlock = true;
+                return;
+            }
+
+            if (!zipName.isEmpty()) {
+                // Opens filename_xml as something that can be read into archive (?)
+                // The first 0 means read from the start of the file, the second
+                // means read the WHOLE file at the appropriate time {when
+                // zip_close(archive) is called}...
+                struct zip_source* zipSource = zip_source_file(archive, filename_xml.toStdString().c_str(), 0, 0);
+                if (!zipSource) {
+                    int ze;
+                    // Is se the system errno?
+                    int se;
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    postMessage(tr("[ ERROR ] - Failed to open file \"%1\" to place into module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    zip_close(archive);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                }
+
+                // We were using zip_add(...) but that is obsolete (and does not
+                // necessarily support UTF-8 encoded file-names)! It also does not
+                // work should the file already be present in the archive - which it
+                // would be in this situation...
+                // In 0.11 the return value was changed from (the too small) int
+                // to zip_int64_t whilst we are not expecting THAT many files it
+                // may throw off the interpretation of the -1 error value if we do
+                // not detect exactly the right thing...
+                int err = 0;
+                zip_int64_t index = zip_name_locate(archive, QStringLiteral("%1.xml").arg(moduleName).toStdString().c_str(), 0);
+                if (Q_UNLIKELY(index == -1)) {
+                    // Weird - it was not found but it cannot happen, can it?
+                    postMessage(tr("[ ERROR ] - Failed to find the module's Mudlet items \"%1\" file\n"
+                                               "inside (archive) file \"%2\", this does not\n"
+                                               "seem correct so aborting save for this module.")
+                                .arg(filename_xml, entry.at(0)));
+                    zip_discard(archive);
+                    zip_source_close(zipSource);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                } else {
+                    // OK - file was found in archive - so now to replace it
+                    // Repurpose the index value to reflect the error status, 0 is
+                    // on success, -1 is error - the new libzip code also returns -1
+                    // on error and 0 or greater (being the index of the file in the
+                    // archive...
+                    index = zip_replace(archive, index, zipSource);
+                }
+
+                // index is -1 on error:
+                if (index == -1) {
+                    int ze;
+                    int se;
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    zip_source_close(zipSource);
+                    zip_close(archive);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                }
+
+                if (zip_close(archive) == -1) {
+                    int ze;
+                    int se;
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    // 0.11 and beyond has a command to throw away an opened archive
+                    zip_discard(archive);
+                } // End of error on closing archive (at the right time)
+            } // End of zipName not being empty
+        }
 #else
-            // We were using zip_add(...) but that is obsolete (and does not necessarily
-            // support UTF-8 encoded file-names)...
-            int err = zip_add(zipFile, QStringLiteral(moduleName + ".xml").toStdString().c_str(), s);
-#endif
+        {
+            /*
+             * Code for libzip 0.10 (such as on Travis Ubuntu Trusty Tahr LTS)
+             * - blocked to allow code folding in IDE
+             */
+            if (filename_xml.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)
+              ||filename_xml.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive)) {
+                // This branch will overwrite THE EXISTING MODULE FILE WITH NO BACKUP
+                // It can also cause DATA LOSS should MORE THAN ONE PROFILE HAVE
+                // modified the MODULE and it not be
+                QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+                filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+                int ze;
+                archive = zip_open(entry.at(0).toStdString().c_str(), ZIP_CHECKCONS, &ze);
+                if (!archive) {
+                    // Uses system errno?
+                    char errorMessageBuffer[128];
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, errno);
+                    postMessage(tr("[ ERROR ] - Failed to open module (archive) file \"%1\", error is: \"%2\".")
+                                         .arg(entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    // Try again for next module...
+                    continue;
+                }
 
-            //FIXME: error checking
-            if (zipFile) {
-                err = zip_close(zipFile);
+                zipName = entry.at(0);
+                QDir packageDir = QDir(packagePathName);
+                if (!packageDir.exists()) {
+                    packageDir.mkpath(packagePathName);
+                }
+            } else {
+                //move the old file, use the key (module name) as the file
+                savePath.rename(filename_xml, QStringLiteral("%1%2%3").arg(dirName, moduleName, dateTimeStampString));
             }
-            //FIXME: error checking
+
+            // Save the current Mudlet items in the module as an XML file...
+            QFile file_xml(filename_xml);
+            if (file_xml.open(QIODevice::WriteOnly)) {
+                XMLexport writer(this);
+                // This is the only caller of XMLexport::writeModuleXML(...)
+                QPair<bool, QString> results = writer.writeModuleXML(&file_xml, it.key());
+                if (!results.first) {
+                    postMessage(tr("[ ERROR ] - Unable to save the XML for module \"%1\" to\n"
+                                               "\"%2\".\n"
+                                               "There is an error message: \"%3\".")
+                                .arg(filename_xml, moduleName, results.second));
+
+                    file_xml.close();
+                    if (!zipName.isEmpty() && archive) {
+                        zip_close(archive);
+                        archive = 0;
+                    }
+                    // Try again for next module...
+                    continue;
+                }
+
+                file_xml.close();
+
+                // This entry will be non-zero for a "synced" module
+                if (entry.at(1).toInt()) {
+                    modulesToSync << it.key();
+                }
+
+            } else {
+                postMessage(tr("[ ERROR ] - Unable to open the file \"%1\" to save\n"
+                                           "the XML for the Mudlet items in module \"%2\".\n"
+                                           "Futher saving of modules has been disabled for the rest of this run\n"
+                                           "of the Mudlet application.  Sorry, but this is likely to mean that\n"
+                                           "any other changes to other modules will be lost!")
+                            .arg(moduleName, filename_xml));
+                mModuleSaveBlock = true;
+                return;
+            }
+
+            if (!zipName.isEmpty()) {
+                // Opens filename_xml as something that can be read into archive (?)
+                // The first 0 means read from the start of the file, the second
+                // means read the WHOLE file at the appropriate time {when
+                // zip_close(archive) is called}...
+                struct zip_source* zipSource = zip_source_file(archive, filename_xml.toStdString().c_str(), 0, 0);
+                if (!zipSource) {
+                    int ze;
+                    // Is se the system errno?
+                    int se;
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    postMessage(tr("[ ERROR ] - Failed to open file \"%1\" to place into module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    zip_close(archive);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                }
+
+                /*
+                 * Fallback code to replace file in archive for old libzip versions:
+                 */
+
+                // We were using zip_add(...) but that is obsolete (and does not
+                // necessarily support UTF-8 encoded file-names)! It also does not
+                // work should the file already be present in the archive - which it
+                // would be in this situation...
+                // In 0.11 the return value was changed from (the too small) int
+                // to zip_int64_t whilst we are not expecting THAT many files it
+                // may throw off the interpretation of the -1 error value if we do
+                // not detect exactly the right thing...
+                int err = 0;
+                int index = zip_name_locate(archive, QStringLiteral("%1.xml").arg(moduleName).toStdString().c_str(), 0);
+                if (Q_UNLIKELY(index == -1)) {
+                    // Weird - it was not found but it cannot happen, can it?
+                    postMessage(tr("[ ERROR ] - Failed to find the module's Mudlet items \"%1\" file\n"
+                                               "inside (archive) file \"%2\", this does not\n"
+                                               "seem correct so aborting save for this module.")
+                                .arg(filename_xml, entry.at(0)));
+                    zip_close(archive);
+                    zip_source_close(zipSource);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                } else {
+                    // OK - file was found in archive - so now to replace it
+                    // Repurpose the index value to reflect the error status, 0 is
+                    // on success, -1 is error - the new libzip code also returns -1
+                    // on error and 0 or greater (being the index of the file in the
+                    // archive...
+                    index = zip_replace(archive, index, zipSource);
+                }
+
+                // index is -1 on error:
+                if (index == -1) {
+                    int ze;
+                    int se;
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    zip_source_close(zipSource);
+                    zip_close(archive);
+                    archive = 0;
+                    // Try again for next module...
+                    continue;
+                }
+
+                if (zip_close(archive) == -1) {
+                    int ze;
+                    int se;
+                    char errorMessageBuffer[128];
+                    zip_error_get(archive, &ze, &se);
+                    zip_error_to_str(errorMessageBuffer, sizeof(errorMessageBuffer), ze, se);
+                    postMessage(tr("[ ERROR ] - Failed to replace file \"%1\" in module (archive)\n"
+                                               "file \"%2\",\n"
+                                               "error is: \"%3\".")
+                                .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
+                    // There is an unavoidable memory leak here for < 0.11 - we
+                    // cannot close the archive and there is no command to
+                    // forcibly clear the data associated with the archive data
+                    // structure.
+                } // End of error on closing archive (at the right time)
+            } // End of zipName not being empty
         }
-    }
+#endif
+    } // End of while having anothor module to write
+
     modulesToWrite.clear();
+
     if (sync) {
         //synchronize modules across sessions
         QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
@@ -287,14 +695,11 @@ void Host::saveModules(int sync)
             if (host->mHostName == mHostName) {
                 continue;
             }
-            QMap<QString, QStringList> installedModules = host->mInstalledModules;
             QMap<QString, int> modulePri = host->mModulePriorities;
             QMapIterator<QString, int> it3(modulePri);
             QMap<int, QStringList> moduleOrder;
             while (it3.hasNext()) {
                 it3.next();
-                //QStringList moduleEntry = moduleOrder[it3.value()];
-                //moduleEntry.append(it3.key());
                 moduleOrder[it3.value()].append(it3.key()); // = moduleEntry;
             }
             QMapIterator<int, QStringList> it4(moduleOrder);
@@ -302,7 +707,7 @@ void Host::saveModules(int sync)
                 it4.next();
                 QStringList moduleList = it4.value();
                 for (int i = 0; i < moduleList.size(); i++) {
-                    QString moduleName = moduleList[i];
+                    QString moduleName = moduleList.at(i);
                     if (modulesToSync.contains(moduleName)) {
                         host->reloadModule(moduleName);
                     }
@@ -714,6 +1119,15 @@ bool Host::installPackage(const QString& fileName, int module)
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        if (module) {
+            postMessage(tr("[ ERROR ] - Installation of \"%1\",\n"
+                           "a module file, failed.  Reason: file not found or is not readable.")
+                        .arg(fileName));
+        } else {
+            postMessage(tr("[ ERROR ] - Installation of \"%1\",\n"
+                           "a package file, failed.  Reason: file not found or is not readable.")
+                        .arg(fileName));
+        }
         return false;
     }
 
@@ -776,10 +1190,11 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
+        auto results = mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
-        if (!successful) {
+        if (!results.first) {
+            postMessage(results.second);
             return false;
         }
 

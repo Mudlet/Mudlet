@@ -10217,18 +10217,23 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
 
 int TLuaInterpreter::installPackage(lua_State* L)
 {
-    string event;
+    QString packageName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "installPackage(): wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        event = lua_tostring(L, 1);
+        packageName = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString package = event.c_str();
-    host.installPackage(package, 0);
-    return 0;
+    if (host.installPackage(packageName, 0)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "Failed to install package \"%s\".", packageName.toUtf8().constData());
+        return 2;
+    }
 }
 
 int TLuaInterpreter::uninstallPackage(lua_State* L)
@@ -10249,20 +10254,26 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 
 int TLuaInterpreter::installModule(lua_State* L)
 {
-    string modName;
+    QString modName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "installModule: wrong first argument (should be a path to module)");
         lua_error(L);
         return 1;
     } else {
-        modName = lua_tostring(L, 1);
+        modName = QString::fromUtf8(lua_tostring(L, 1));
     }
     Host& host = getHostFromLua(L);
-    QString module = QDir::fromNativeSeparators(modName.c_str());
-    if (host.installPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
+    QString module = QDir::fromNativeSeparators(modName);
+    bool result = host.installPackage(module, 3);
+    if ( result && mudlet::self()->moduleTableVisible()) {
         mudlet::self()->layoutModules();
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "Failed to install module \"%s\".", modName.toUtf8().constData());
+        return 2;
     }
-    return 0;
 }
 
 int TLuaInterpreter::uninstallModule(lua_State* L)
