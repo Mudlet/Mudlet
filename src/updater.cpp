@@ -122,6 +122,7 @@ void Updater::manuallyCheckUpdates()
 void Updater::installButtonClicked(QAbstractButton* button, QString filePath)
 {
     // if the update is already installed, then the button says 'Restart' - do so
+    // FIXME check this for manual update from the menu
     if (mUpdateInstalled) {
         updateDialog->close();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
