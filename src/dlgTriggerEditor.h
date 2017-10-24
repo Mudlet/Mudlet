@@ -180,15 +180,15 @@ public:
     void setThemeAndOtherSettings(const QString&);
 
     enum class EditorViewType {
-    cmTriggerView = 0x01,
-    cmTimerView = 0x02,
-    cmAliasView = 0x03,
-    cmScriptView = 0x04,
-    cmActionView = 0x05,
-    cmKeysView = 0x06,
-    cmVarsView = 0x07
+        cmTriggerView = 0x01,
+        cmTimerView = 0x02,
+        cmAliasView = 0x03,
+        cmScriptView = 0x04,
+        cmActionView = 0x05,
+        cmKeysView = 0x06,
+        cmVarsView = 0x07
     };
-    
+
 public slots:
     void slot_toggleHiddenVariables(bool);
     void slot_toggleHiddenVar(bool);
