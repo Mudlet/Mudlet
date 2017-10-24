@@ -30,6 +30,7 @@ private:
 
     void setupOnLinux();
     void untarOnLinux(const QString& fileName) const;
+    void writeUpdateNote() const;
 
 #ifdef Q_OS_MACOS
     AutoUpdater* updater;

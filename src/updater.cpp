@@ -8,6 +8,7 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
+#include <QDateTime>
 #include "post_guard.h"
 
 Updater::Updater(QObject* parent) : QObject(parent), mUpdateInstalled(false)
@@ -133,4 +134,23 @@ void Updater::installButtonClicked(QAbstractButton* button, QString filePath)
     auto watcher = new QFutureWatcher<void>;
     connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
     watcher->setFuture(future);
+}
+
+// records a unix epoch on disk indicating that an update has happened
+// Mudlet will use that on the next launch to decide whenever it should show
+// the window with the new features. The idea is that if you manually update (thus see the
+// changelog already) and restart, you shouldn't see it again, and if you automatically
+// updated, then you do want to see the changelog.
+void Updater::writeUpdateNote() const
+{
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
+    bool opened = file.open(QIODevice::WriteOnly);
+    if (!opened) {
+        qWarning() << "Couldn't create update timestamp file";
+        return;
+    }
+
+    QDataStream ifs(&file);
+    ifs << QDateTime().toMSecsSinceEpoch();
+    file.close();
 }
