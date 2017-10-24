@@ -423,6 +423,10 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
+#ifdef Q_OS_MACOS
+    // hide About->Update on macOS as Sparkle will add its own menu
+    dactionUpdate->setVisible(false);
+#endif
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
