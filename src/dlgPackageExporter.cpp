@@ -527,12 +527,34 @@ void dlgPackageExporter::slot_export_package()
             // be clear and obvious about it...
             zip* archive;
             if (mIsOverWriteEnabled) {
+#if ! defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR >=0 || LIBZIP_VERSION_MINOR >= 11)
                 archive = zip_open(mZipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &ze);
+#else
+                // The wanted ZIP_TRUNCATE flag is not present before 0.11 *sigh*
+                // So trash any existing archive file:
+                QFile oldArchiveFile(mZipFile);
+                if (oldArchiveFile.exists()) {
+                    // This could fail
+                    if (!oldArchiveFile.remove()) {
+                        displayResultMessage(tr("Failed to erase old module (archive) file do you have the correct file/directory permissions?"), false);
+                        isOk = false;
+                    }
+                }
+
+                if (isOk) {
+                    archive = zip_open(mZipFile.toStdString().c_str(), ZIP_CREATE, &ze);
+                }
+#endif
             } else {
                 archive = zip_open(mZipFile.toStdString().c_str(), ZIP_CREATE|ZIP_EXCL, &ze);
             }
 
-            if (!archive) {
+            if (!isOk) {
+                // No-op, needed to avoid either of the other branches should
+                // the pre-0.11 workaround not work without a massive extra
+                // if(...) which would be more noisy in git terms. 8-)
+                ;
+            } else if (!archive) {
                 // Failed to open/create archive file
 #if defined(LIBZIP_VERSION_MAJOR) && LIBZIP_VERSION_MAJOR >= 1
                 // A better error handling system (not requiring a previously
