@@ -10,6 +10,7 @@ addons:
     - sourceline: 'ppa:beineri/opt-qt562-trusty'
     - sourceline: 'ppa:beineri/opt-qt591-trusty'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    - sourceline: 'ppa:jonathonf/php7'
     packages:
     - qt56base
     - qt56multimedia
@@ -23,7 +24,7 @@ addons:
     - liblua5.1-0-dev
     - libboost-graph1.55-dev
     - zlib1g-dbg
-    - libzip-dev
+    - libzip
     - libpulse-dev
     - libyajl-dev
     - gcc-5 g++-5
