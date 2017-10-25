@@ -234,7 +234,7 @@ void Host::saveModules(int sync)
         zip* archive = nullptr;
         // Filename extension tests should be case insensitive to work on MacOS Platforms...! - Slysven
 
-#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 0)
+#if defined(LIBZIP_VERSION_MAJOR) && (LIBZIP_VERSION_MAJOR >= 1)
         {
            /*
             * Code for libzip 1.0 or later - blocked to allow code folding in IDE
@@ -355,7 +355,7 @@ void Host::saveModules(int sync)
                 } // End of error on closing archive (at the right time)
             } // End of zipName not being empty
         }
-#elif defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 1)
+#elif defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR == 0) && (LIBZIP_VERSION_MINOR >= 11)
         {
            /*
             * Code for libzip 0.11 - 0.99 - blocked to allow code folding in IDE

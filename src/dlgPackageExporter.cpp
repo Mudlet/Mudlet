@@ -527,7 +527,7 @@ void dlgPackageExporter::slot_export_package()
             // be clear and obvious about it...
             zip* archive;
             if (mIsOverWriteEnabled) {
-#if ! defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR >=0 || LIBZIP_VERSION_MINOR >= 11)
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR >=1 || LIBZIP_VERSION_MINOR >= 11)
                 archive = zip_open(mZipFile.toStdString().c_str(), ZIP_CREATE|ZIP_TRUNCATE, &ze);
 #else
                 // The wanted ZIP_TRUNCATE flag is not present before 0.11 *sigh*
@@ -733,7 +733,7 @@ void dlgPackageExporter::slot_export_package()
                     if (ze != 0) {
                         displayResultMessage(tr("Failed to populate and then close module (archive) file, error is: \"%1\".")
                                              .arg(QString::fromUtf8(zip_strerror(archive))), false);
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MICRO) && ( LIBZIP_VERSION_MAJOR > 0 || LIBZIP_VERSION_MINOR >= 11)
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MICRO) && (LIBZIP_VERSION_MAJOR >= 1 || LIBZIP_VERSION_MINOR >= 11)
                         // In 0.11 a function was added to clean up (deallocate)
                         // the memory associated with an archive - which would
                         // normally occur upon a sucessful close - before then
