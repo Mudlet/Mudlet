@@ -8,3 +8,6 @@ qrc_*.cpp
 *.dmg
 *.app
 mudlet
+
+# ignore macOS apps in general, but keep the Autoupdater from Sparkle
+!3rdparty/sparkle/Sparkle.framework/Versions/A/Resources/Autoupdate.app
