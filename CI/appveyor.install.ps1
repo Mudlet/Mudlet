@@ -18,17 +18,25 @@ $global:ErrorActionPreference = "Stop"
 function script:exec {
     [CmdletBinding()]
 
-	param(
-		[Parameter(Position=0,Mandatory=1)][scriptblock]$cmd,
-		[Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
-	)
+  param(
+    [Parameter(Position=0,Mandatory=1)][string]$cmd,
+    [Parameter(Position=1,Mandatory=0)][string[]]$parameter = @(),
+    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
+  )
   # ignore standard error for external programs
   $global:ErrorActionPreference = "Continue"
-	& $cmd
-	if ($lastexitcode -ne 0)
-	{
-		throw $errorMessage
-	}
+  $outLog = "$workingBaseDir\stdout.log"
+  $errLog = "$workingBaseDir\stderr.log"
+  if($parameter.Length -eq 0){
+    $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog").ExitCode
+  } else {
+    $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog").ExitCode
+  }
+  Get-Content $outLog, $errLog | Out-File $logFile -Append
+  if ($exitCode -ne 0)
+  {
+    throw $errorMessage
+  }
   # restore exit behavior
   $global:ErrorActionPreference = "Stop"
 }
@@ -56,29 +64,32 @@ function DownloadFile([string] $url, [string] $outputFile) {
 
 function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
+  if(Test-Path -Path "$outputPath" -PathType "Any"){
+    Remove-Item -Path "$outputPath" -Recurse
+  }
   $file = Get-ChildItem $tarFile
-  exec { 7z x "$($file.FullName)" -y >> "$logFile" 2>&1 }
-  exec { 7z -o"$outputPath" x "$($file.Directory)\$($file.BaseName)" -y >> "$logFile" 2>&1 }
+  exec "7z" @("x", "$($file.FullName)", "-y")
+  exec "7z" @("-o$outputPath", "x", "$($file.Directory)\$($file.BaseName)", "-y")
 }
 
 function ExtractZip([string] $zipFile, [string] $outputPath) {
   Step "Extracting source distribution"
-  exec { 7z -o"$outputPath" x "$zipFile" -y >> "$logFile" 2>&1 }
+  exec "7z" @("-o$outputPath", "x", "$zipFile", "-y")
 }
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
-  exec { bash -c "./configure $configureArguments" >> "$logFile" 2>&1 }
+  exec "bash" @("-c", "`"./configure $configureArguments`"")
 }
 
 function RunMake([string] $makefile = "Makefile"){
   Step "Running make"
-  exec { mingw32-make -f "$makefile" -j $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors") >> "$logFile" 2>&1 }
+  exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
 }
 
 function RunMakeInstall([string] $makefile = "Makefile"){
   Step "Running make install"
-  exec { mingw32-make install -f "$makefile" >> "$logFile" 2>&1 }
+  exec "mingw32-make" @("install", "-f", "$makefile")
 }
 
 function CheckAndInstall([string] $dependencyName, [string] $signalFile, [scriptblock] $installationFunction){
@@ -101,13 +112,16 @@ function InstallSevenZ() {
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
-  exec { .\7z-installer.exe /S /D="C:\Program Files\7-Zip" | Out-File -Append "$logFile" }
+  exec ".\7z-installer.exe" ("/S", "/D=`"C:\Program Files\7-Zip`"")
 }
 
 function InstallCmake() {
   DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.4-win32-x86.msi" "cmake-installer.msi"
   Step "installing cmake"
-  exec { .\cmake-installer.msi "/q" | Out-File -Append "$logFile" }
+  exec "msiexec.exe" @("/q", "/li", "$workingBaseDir\cmake-installer.log", "/i", "cmake-installer.msi")
+  if(Test-Path -Path "$workingBaseDir\cmake-installer.log" -PathType Leaf){
+    Get-Content "$workingBaseDir\cmake-installer.log" | Out-File $logFile -Append
+  }
 }
 
 function InstallMsys() {
@@ -131,7 +145,7 @@ function InstallBoost() {
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/qt/5.6/5.6.3/qt-opensource-windows-x86-mingw492-5.6.3.exe" "qt-installer.exe"
   Step "Warning! Installing Qt 5.6.3, if your MINGW_BASE_DIR and MINGW_BASE_DIR_BASH point somewhere else, this won't work"
-  exec { .\qt-installer --script="$(split-path -parent $MyInvocation.MyCommand.Definition)\qt-silent-install.qs" | Out-File -Append "$logFile" }
+  exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
 }
 
 function InstallOpenssl() {
@@ -158,11 +172,11 @@ function InstallYajl() {
   New-Item build -ItemType Directory >> "$logFile" 2>&1
   Set-Location build
   Step "running cmake"
-  exec { cmake -G "MinGW Makefiles" ..  >> "$logFile" 2>&1 }
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "..")
   RunMake
   Step "installing"
-  exec { COPY yajl-2.0.1\lib\* $Env:MINGW_BASE_DIR\lib >> "$logFile" 2>&1 }
-  exec { XCOPY /S /I /Q yajl-2.0.1\include $Env:MINGW_BASE_DIR\include >> "$logFile" 2>&1 }
+  Copy-Item "yajl-2.0.1\lib\*" "$Env:MINGW_BASE_DIR\lib"
+  exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.0.1\include", "$Env:MINGW_BASE_DIR\include")
   $Env:Path = $ShPath
 }
 
@@ -172,12 +186,12 @@ function InstallLua() {
   DownloadFile "https://github.com/Tieske/luawinmake/archive/master.zip" "luawinmake.zip"
   ExtractZip "luawinmake.zip" "luawinmake"
   Step "copying luawinmake files"
-  exec { XCOPY /S /I /Q "$workingBaseDir\luawinmake\luawinmake-master\etc" "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc" >> "$logFile" 2>&1 }
+  exec "XCOPY" @("/S", "/I", "/Q", "$workingBaseDir\luawinmake\luawinmake-master\etc", "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc")
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
-  exec { .\etc\winmake >> "$logFile" 2>&1 }
+  exec "etc\winmake"
   Step "installing lua"
-  exec { .\etc\winmake install $Env:MINGW_BASE_DIR >> "$logFile" 2>&1 }
+  exec "etc\winmake" @("install", "$Env:MINGW_BASE_DIR")
 }
 
 function InstallPcre() {
@@ -207,8 +221,8 @@ function InstallZlib() {
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
   $Env:BINARY_PATH = "$Env:MINGW_BASE_DIR\bin"
   RunMakeInstall "win32/Makefile.gcc"
-  exec { COPY zlib1.dll $Env:MINGW_BASE_DIR\bin >> "$logFile" 2>&1 }
-  exec { COPY libz.dll.a $Env:MINGW_BASE_DIR\lib >> "$logFile" 2>&1 }
+  Copy-Item "zlib1.dll" "$Env:MINGW_BASE_DIR\bin"
+  Copy-Item "libz.dll.a" "$Env:MINGW_BASE_DIR\lib"
 }
 
 function InstallLibzip() {
@@ -218,7 +232,7 @@ function InstallLibzip() {
   RunConfigure
   RunMake
   RunMakeInstall
-  exec { COPY lib\zipconf.h $Env:MINGW_BASE_DIR\include >> "$logFile" 2>&1 }
+  Copy-Item "lib\zipconf.h" "$Env:MINGW_BASE_DIR\include"
 }
 
 function InstallZziplib() {
@@ -237,7 +251,7 @@ function InstallLuarocks() {
   ExtractZip "luarocks-2.4.0-win32.zip" "luarocks"
   Set-Location luarocks\luarocks-2.4.0-win32
   Step "installing luarocks"
-  exec { .\install.bat /P C:\LuaRocks /MW /Q >> "$logFile" 2>&1 }
+  exec ".\install.bat" @("/P", "C:\LuaRocks", "/MW", "/Q")
   Set-Location \LuaRocks\lua\luarocks
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
@@ -247,13 +261,13 @@ function InstallLuaModules(){
   StartPart "Installing lua modules"
   Set-Location \LuaRocks
   Step "installing lfs"
-  exec { .\luarocks install LuaFileSystem >> "$logFile" 2>&1 }
+  exec ".\luarocks" @("install", "LuaFileSystem")
   Step "installing luasql.sqlite3"
-  exec { .\luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="$Env:MINGW_BASE_DIR\include" SQLITE_LIBDIR="$Env:MINGW_BASE_DIR\lib" >> "$logFile" 2>&1 }
+  exec ".\luarocks" @("install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
   Step "installing rex.pcre"
-  exec { .\luarocks install lrexlib-pcre PCRE_LIBDIR="$Env:MINGW_BASE_DIR\lib" PCRE_INCDIR="$Env:MINGW_BASE_DIR\include" >> "$logFile" 2>&1 }
+  exec ".\luarocks" @("install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
   Step "installing lua-utf8"
-  exec { .\luarocks install luautf8 >> "$logFile" 2>&1 }
+  exec ".\luarocks" @("install", "luautf8")
 
   Step "installing luazip"
   Set-Location "$workingBaseDir"
@@ -261,8 +275,8 @@ function InstallLuaModules(){
   ExtractZip "luazip.zip" "luazip"
   Set-Location luazip\luazip-master
   Step "installing luazip"
-  exec { gcc -O2 -c -o src/luazip.o -I"$Env:MINGW_BASE_DIR/include" src/luazip.c >> "$logFile" 2>&1 }
-  exec { gcc -shared -o zip.dll src/luazip.o -L"$Env:MINGW_BASE_DIR/lib" -lzzip -lz "$Env:MINGW_BASE_DIR/bin/lua51.dll" -lm >> "$logFile" 2>&1 }
+  exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
+  exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
   FinishPart "Installing lua modules"
 }
 
