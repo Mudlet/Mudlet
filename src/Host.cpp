@@ -468,6 +468,11 @@ void Host::saveModules(int sync)
                                                "seem correct so aborting save for this module.")
                                 .arg(filename_xml, entry.at(0)));
                     zip_discard(archive);
+                    // If this function is not available in your version of
+                    // libzip, replace it with:
+                    // zip_source_free(zipSource)
+                    // and report to Mudlet developers which version of libzip
+                    // (less than 1.30) you are linking to!
                     zip_source_close(zipSource);
                     archive = 0;
                     // Try again for next module...
@@ -632,7 +637,11 @@ void Host::saveModules(int sync)
                                                "seem correct so aborting save for this module.")
                                 .arg(filename_xml, entry.at(0)));
                     zip_close(archive);
-                    zip_source_close(zipSource);
+                    // At some point between 0.11 and 1.x zip_source_close()
+                    // became public but it definetly is not available in 0.10
+                    // so fall back to older (void) function that has the same
+                    // effect but must only be used on an *unused* "zip_source"
+                    zip_source_free(zipSource);
                     archive = 0;
                     // Try again for next module...
                     continue;
@@ -656,7 +665,7 @@ void Host::saveModules(int sync)
                                                "file \"%2\",\n"
                                                "error is: \"%3\".")
                                 .arg(filename_xml, entry.at(0), QString::fromUtf8(errorMessageBuffer)));
-                    zip_source_close(zipSource);
+                    zip_source_free(zipSource);
                     zip_close(archive);
                     archive = 0;
                     // Try again for next module...
