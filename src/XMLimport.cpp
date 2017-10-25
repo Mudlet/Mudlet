@@ -69,7 +69,7 @@ XMLimport::XMLimport(Host* pH)
 {
 }
 
-bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
+bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pErrorMessage, QString* pVersionString)
 {
     mPackageName = packName;
     setDevice(pfile);
@@ -172,12 +172,18 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                     /*||(mVersionMajor==1&&mVersionMinor)*/) {
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
-                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
-                                         "\"%1\"\n"
-                                         "reports it has a version (%2) it must have come from a later Mudlet version,\n"
-                                         "and this one cannot read it, you need a newer Mudlet!")
-                                              .arg(pfile->fileName(), versionString);
-                    mpHost->postMessage(moanMsg);
+                    if (pErrorMessage) {
+                        *pErrorMessage = QStringLiteral("failed to import package as it has a version number of %1 which is too late to "
+                                                        "be understood by this version of Mudlet, it seems you need a newer one")
+                                         .arg(versionString);
+                    } else {
+                        QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                                             "\"%1\"\n"
+                                             "reports it has a version (%2) it must have come from a later Mudlet version,\n"
+                                             "and this one cannot read it, you need a newer Mudlet!")
+                                                  .arg(pfile->fileName(), versionString);
+                        mpHost->postMessage(moanMsg);
+                    }
                     return false;
                 }
 
@@ -232,7 +238,19 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         }
     }
 
-    return !error();
+    if (error()) {
+        if (pErrorMessage) {
+            *pErrorMessage = errorString();
+        } else {
+            QString errMsg = tr("[ ERROR ] - failed to import file \"%1\", reason:\n"
+                                            "\"\".")
+                             .arg(errorString());
+            mpHost->postMessage(errMsg);
+        }
+        return false;
+    } else {
+        return true;
+    }
 }
 
 // returns the type of item and ID of the first (root) element

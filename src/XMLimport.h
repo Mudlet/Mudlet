@@ -50,7 +50,7 @@ class XMLimport : public QXmlStreamReader
 
 public:
     XMLimport(Host*);
-    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
+    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pErrorMessage = nullptr, QString* pVersionString = nullptr);
     std::pair<int, int> importFromClipboard();
 
 private:

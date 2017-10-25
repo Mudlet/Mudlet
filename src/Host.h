@@ -131,7 +131,7 @@ public:
     int createStopWatch();
     void startSpeedWalk();
     void saveModules(int);
-    void reloadModule(const QString& moduleName);
+    bool reloadModule(const QString& moduleName, QString* pErrorMessage = nullptr);
     bool blockScripts() { return mBlockScriptCompile; }
 
     void setIsAutologin(bool b) { mIsAutologin = b; }
@@ -168,9 +168,12 @@ public:
     {
     };
 
-
-    bool installPackage(const QString&, int);
-    bool uninstallPackage(const QString&, int);
+    // Optional third arguments are pointers to a string to provide to Lua system
+    // it's absence permits error messages to be sent to the "main" console,
+    // otherwise (partial, no capitalisation, no terminal punctation) error
+    // messages will be generated to pass out to lua caller functions...
+    bool installPackage(const QString&, const int, QString* pErrorMessage = nullptr);
+    bool uninstallPackage(const QString&, const int, QString* pErrorMessage = nullptr);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }

@@ -10219,95 +10219,149 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "installPackage(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "installPackage: bad argument #1 type (pathFileName of package as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         packageName = QString::fromUtf8(lua_tostring(L, 1));
+        if (packageName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "An empty string is not a valid pathFileName for a package to install.");
+            return 2;
+        }
     }
+
     Host& host = getHostFromLua(L);
-    if (host.installPackage(packageName, 0)) {
+    QString errorMessage;
+    if (host.installPackage(packageName, 0, &errorMessage)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to install package \"%s\".", packageName.toUtf8().constData());
+        lua_pushfstring(L, "Failed to install package \"%s\, error message: %s.",
+                        packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
 }
 
 int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
-    string event;
+    QString packageName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "uninstallPackage(): wrong argument type");
-        lua_error(L);
+        lua_pushfstring(L, "uninstallPackage: bad argument #1 type (name of package as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        packageName = QString::fromUtf8(lua_tostring(L, 1));
+        if (packageName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "An empty string is not a valid name for a package to uninstall.");
+            return 2;
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    QString errorMessage;
+    if (host.uninstallPackage(packageName, 0, &errorMessage)) {
+        lua_pushboolean(L, true);
         return 1;
     } else {
-        event = lua_tostring(L, 1);
+        lua_pushnil(L);
+        lua_pushfstring(L, "Failed to uninstall package \"%s\, error message: %s.",
+                        packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
+        return 2;
     }
-    Host& host = getHostFromLua(L);
-    QString package = event.c_str();
-    host.uninstallPackage(package, 0);
-    return 0;
 }
 
 int TLuaInterpreter::installModule(lua_State* L)
 {
-    QString modName;
+    QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "installModule: wrong first argument (should be a path to module)");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "installModule: bad argument #1 type (pathFileName of module as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        modName = QString::fromUtf8(lua_tostring(L, 1));
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
+        if (moduleName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "An empty string is not a valid pathFileName for a module to install.");
+            return 2;
+        }
     }
+
     Host& host = getHostFromLua(L);
-    QString module = QDir::fromNativeSeparators(modName);
-    bool result = host.installPackage(module, 3);
-    if ( result && mudlet::self()->moduleTableVisible()) {
+    QString errorMessage;
+    bool result = host.installPackage(moduleName, 3, &errorMessage);
+    if (result && mudlet::self()->moduleTableVisible()) {
         mudlet::self()->layoutModules();
         lua_pushboolean(L, true);
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to install module \"%s\".", modName.toUtf8().constData());
+        lua_pushfstring(L, "Failed to install module \"%s\", error message: %s.",
+                        moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
 }
 
 int TLuaInterpreter::uninstallModule(lua_State* L)
 {
-    string modName;
+    QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "uninstallModule: wrong first argument (should be a module name)");
-        lua_error(L);
+        lua_pushfstring(L, "uninstallModule: bad argument #1 type (name of module as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
+        if (moduleName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "An empty string is not a valid name for a module to uninstall.");
+            return 2;
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    QString errorMessage;
+    bool result = host.uninstallPackage(moduleName, 3, &errorMessage);
+    if (result && mudlet::self()->moduleTableVisible()) {
+        mudlet::self()->layoutModules();
+        lua_pushboolean(L, true);
         return 1;
     } else {
-        modName = lua_tostring(L, 1);
+        lua_pushnil(L);
+        lua_pushfstring(L, "Failed to uninstall module \"%s\", error message: %s.",
+                        moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
+        return 2;
     }
-    Host& host = getHostFromLua(L);
-    QString module = modName.c_str();
-    if (host.uninstallPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
-    }
-    return 1;
 }
 
 int TLuaInterpreter::reloadModule(lua_State* L)
 {
-    string modName;
+    QString moduleName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "reloadModule(): wrong first argument (should be a module name)");
-        lua_error(L);
+        lua_pushfstring(L, "reloadModule: bad argument #1 type (name of module as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        moduleName = QString::fromUtf8(lua_tostring(L, 1));
+        if (moduleName.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "An empty string is not a valid name for a module to reload.");
+            return 2;
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    QString errorMessage;
+    if (host.reloadModule(moduleName, &errorMessage)) {
+        lua_pushboolean(L, true);
         return 1;
     } else {
-        modName = lua_tostring(L, 1);
+        lua_pushnil(L);
+        lua_pushfstring(L, "Failed to reload module \"%s\", error message: %s.",
+                        moduleName.toUtf8().constData(), errorMessage.toUtf8().constData());
+        return 2;
     }
-    Host& host = getHostFromLua(L);
-    QString module = modName.c_str();
-    host.reloadModule(module);
-    return 0;
 }
 
 // Once a mapper has been created it will, by default, include the "Default

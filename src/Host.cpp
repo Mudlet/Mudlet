@@ -717,25 +717,45 @@ void Host::saveModules(int sync)
     }
 }
 
-void Host::reloadModule(const QString& moduleName)
+bool Host::reloadModule(const QString& moduleName, QString* pErrorMessage)
 {
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> it(installedModules);
+    bool isFound = false;
+    bool isError = false;
     while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
         if (it.key() == moduleName) {
-            uninstallPackage(it.key(), 2);
-            installPackage(entry[0], 2);
+            isFound = true;
+            if (!uninstallPackage(it.key(), 2, pErrorMessage)) {
+                isError = true;
+            }
+            if (!installPackage(entry.at(0), 2, pErrorMessage)) {
+                isError = true;
+            }
+            // CHECK: surely a break can be done as there can only be one module
+            // with a given name?
         }
     }
+
     //iterate through mInstalledModules again and reset the entry flag to be correct.
     //both the installedModules and mInstalled should be in the same order now as well
     QMapIterator<QString, QStringList> it2(mInstalledModules);
     while (it2.hasNext()) {
         it2.next();
-        QStringList entry = installedModules[it2.key()];
+        QStringList entry = installedModules.value(it2.key());
         mInstalledModules[it2.key()] = entry;
+    }
+
+    if (!isFound) {
+        // No need to name the module - the lua system will already have done that...
+        *pErrorMessage = QStringLiteral("module not found").arg(moduleName);
+        return false;
+    } else if (isError) {
+        return false;
+    } else {
+        return true;
     }
 }
 
@@ -1098,7 +1118,7 @@ bool Host::isClosingDown()
     return mIsClosingDown;
 }
 
-bool Host::installPackage(const QString& fileName, int module)
+bool Host::installPackage(const QString& fileName, int module, QString* pErrorMessage)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -1120,13 +1140,23 @@ bool Host::installPackage(const QString& fileName, int module)
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         if (module) {
-            postMessage(tr("[ ERROR ] - Installation of \"%1\",\n"
-                           "a module file, failed.  Reason: file not found or is not readable.")
-                        .arg(fileName));
+            if (pErrorMessage) {
+                // Lua system will fill in details about the file...
+                *pErrorMessage = QLatin1String("module file not found or is not readable");
+            } else {
+                postMessage(tr("[ ERROR ] - Installation of \"%1\",\n"
+                               "a module file, failed.  Reason: file not found or is not readable.")
+                            .arg(fileName));
+            }
         } else {
-            postMessage(tr("[ ERROR ] - Installation of \"%1\",\n"
-                           "a package file, failed.  Reason: file not found or is not readable.")
-                        .arg(fileName));
+            if (pErrorMessage) {
+                // Lua system will fill in details about the file...
+                *pErrorMessage = QLatin1String("package file not found or is not readable");
+            } else {
+                postMessage(tr("[ ERROR ] - Installation of \"%1\",\n"
+                               "a package file, failed.  Reason: file not found or is not readable.")
+                            .arg(fileName));
+            }
         }
         return false;
     }
@@ -1140,19 +1170,23 @@ bool Host::installPackage(const QString& fileName, int module)
     packageName.remove(QLatin1Char('.'));
     if (module) {
         if ((module == 2) && (mActiveModules.contains(packageName))) {
-            uninstallPackage(packageName, 2);
+            uninstallPackage(packageName, 2, pErrorMessage);
         } else if ((module == 3) && (mActiveModules.contains(packageName))) {
+            // This is a nested call and we do not need/want a Lua error message here...
             return false; //we're already installed
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
+            // This is a nested call and we do not need/want a Lua error message here...
             return false;
         }
     }
+
     //the extra module check is needed here to prevent infinite loops from script loaded modules
     if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
+
     QFile file2;
     if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
         QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
@@ -1194,7 +1228,11 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
         if (!results.first) {
-            postMessage(results.second);
+            if (pErrorMessage) {
+                *pErrorMessage = results.second;
+            } else {
+                postMessage(results.second);
+            }
             return false;
         }
 
@@ -1213,12 +1251,18 @@ bool Host::installPackage(const QString& fileName, int module)
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module) {
                 if (mActiveModules.contains(packageName)) {
-                    uninstallPackage(packageName, 2);
+                    uninstallPackage(packageName, 2, pErrorMessage);
                 }
             } else {
                 if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
                     removeDir(_dir.absolutePath(), _dir.absolutePath());
+                    if (pErrorMessage) {
+                        *pErrorMessage = QLatin1String("nothing to do, package already installed");
+                    } else {
+                        postMessage(tr("[ ALERT ] - Package \"%1\" already seems to be installed, nothing to do.")
+                                    .arg(packageName));
+                    }
                     return false;
                 }
             }
@@ -1246,7 +1290,7 @@ bool Host::installPackage(const QString& fileName, int module)
             } else {
                 mInstalledPackages.append(packageName);
             }
-            reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+            reader.importPackage(&file2, packageName, module, pErrorMessage);
             setName(profileName);
             setLogin(login);
             setPass(pass);
@@ -1269,7 +1313,7 @@ bool Host::installPackage(const QString& fileName, int module)
         } else {
             mInstalledPackages.append(packageName);
         }
-        reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+        reader.importPackage(&file2, packageName, module, pErrorMessage);
         setName(profileName);
         setLogin(login);
         setPass(pass);
@@ -1348,7 +1392,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
-bool Host::uninstallPackage(const QString& packageName, int module)
+bool Host::uninstallPackage(const QString& packageName, int module, QString* pErrorMessage)
 {
     //     As with the installPackage, the module codes are:
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
@@ -1396,10 +1440,8 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedUninstallEvent);
 
-    int dualInstallations = 0;
-    if (mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName)) {
-        dualInstallations = 1;
-    }
+    bool dualInstallations = mInstalledModules.contains(packageName) && mInstalledPackages.contains(packageName);
+
     //we check for the module=3 because if we reset the editor, we will re-execute the
     //module uninstall, thus creating an infinite loop.
     if (mpEditorDialog && module != 3) {
@@ -1413,7 +1455,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     mKeyUnit.uninstall(packageName);
     if (module) {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
-        QStringList entry = mInstalledModules[packageName];
+        QStringList entry = mInstalledModules.value(packageName);
         mInstalledModules.remove(packageName);
         mActiveModules.removeAll(packageName);
         if (module == 2) {
@@ -1425,13 +1467,13 @@ bool Host::uninstallPackage(const QString& packageName, int module)
             //we're a dual install, reinstalling package
             mInstalledPackages.removeAll(packageName); //so we don't get denied from installPackage
             //get the pre package list so we don't get duplicates
-            installPackage(entry[0], 0);
+            installPackage(entry.at(0), 0, pErrorMessage);
         }
     } else {
         mInstalledPackages.removeAll(packageName);
         if (dualInstallations) {
-            QStringList entry = mInstalledModules[packageName];
-            installPackage(entry[0], 1);
+            QStringList entry = mInstalledModules.value(packageName);
+            installPackage(entry.at(0), 1, pErrorMessage);
             //restore the module edit flag
             mInstalledModules[packageName] = entry;
         }

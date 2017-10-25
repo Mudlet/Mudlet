@@ -2135,7 +2135,7 @@ bool TMap::importMap(QFile& file, QString* errMsg)
     return result;
 }
 
-bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
+bool TMap::readXmlMapFile(QFile& file, QString* pErrorMessage)
 {
     Host* pHost = mpHost;
     bool isLocalImport = false;
@@ -2162,7 +2162,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     mapClear();
 
     XMLimport reader(pHost);
-    bool result = reader.importPackage(&file);
+    bool result = reader.importPackage(&file, QString(), 0, pErrorMessage);
 
     // probably not needed for the download but might be
     // needed for local file case:
@@ -2172,12 +2172,6 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     mpMapper->updateAreaComboBox();
     if (result) {
         mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    } else {
-        // Failed...
-        if (errMsg) {
-            *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
-                         "in main console!");
-        }
     }
 
     if (isLocalImport) {
