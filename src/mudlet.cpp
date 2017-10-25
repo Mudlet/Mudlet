@@ -3078,7 +3078,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
                                                     "within archive file \"%2\"\n"
                                                     "as \"%3\".\n"
                                                     "Error message: \"%4\".")
-                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(zip_error_strerror(pError)));
+                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(errorMessageBuffer));
 #endif
                     fd.close();
                     zip_fclose(zf);
@@ -3106,7 +3106,7 @@ QPair<bool, QString> mudlet::unzip(const QString& archivePath, const QString& de
                                                     "archive file \"%2\"\n"
                                                     "to \"%3\".\n"
                                                     "Error message: \"%4\".")
-                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(errorMessageBuffer(pError)));
+                                     .arg(entryInArchive, archivePath, extractedFileName, QString::fromUtf8(errorMessageBuffer));
 #endif
                     fd.close();
                     zip_fclose(zf);
