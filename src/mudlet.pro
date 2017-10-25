@@ -511,4 +511,18 @@ DISTFILES += \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     .clang-format \
-    CMakeLists.txt
+    CMakeLists.txt \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/travis.after_success.sh \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
+    ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.build.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.set-build-info.ps1
