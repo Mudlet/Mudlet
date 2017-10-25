@@ -224,68 +224,68 @@ mudlet::mudlet()
     QAction* actionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     actionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction(actionTriggers);
-    actionConnect->setObjectName(QStringLiteral("triggers_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionTriggers->setObjectName(QStringLiteral("triggers_action"));
+    mpMainToolBar->widgetForAction(actionTriggers)->setObjectName(actionTriggers->objectName());
 
     QAction* actionAlias = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     actionAlias->setToolTip(tr("Show and edit aliases"));
     mpMainToolBar->addAction(actionAlias);
-    actionConnect->setObjectName(QStringLiteral("aliases_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionAlias->setObjectName(QStringLiteral("aliases_action"));
+    mpMainToolBar->widgetForAction(actionAlias)->setObjectName(actionAlias->objectName());
 
     QAction* actionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
     actionTimers->setToolTip(tr("Show and edit timers"));
     mpMainToolBar->addAction(actionTimers);
-    actionConnect->setObjectName(QStringLiteral("timers_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionTimers->setObjectName(QStringLiteral("timers_action"));
+    mpMainToolBar->widgetForAction(actionTimers)->setObjectName(actionTimers->objectName());
 
     QAction* actionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
     actionButtons->setToolTip(tr("Show and edit easy buttons"));
     mpMainToolBar->addAction(actionButtons);
-    actionConnect->setObjectName(QStringLiteral("buttons_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionButtons->setObjectName(QStringLiteral("buttons_action"));
+    mpMainToolBar->widgetForAction(actionButtons)->setObjectName(actionButtons->objectName());
 
     QAction* actionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
     actionScripts->setToolTip(tr("Show and edit scripts"));
     mpMainToolBar->addAction(actionScripts);
-    actionConnect->setObjectName(QStringLiteral("scripts_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionScripts->setObjectName(QStringLiteral("scripts_action"));
+    mpMainToolBar->widgetForAction(actionScripts)->setObjectName(actionScripts->objectName());
 
     QAction* actionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     actionKeys->setToolTip(tr("Show and edit keys"));
     mpMainToolBar->addAction(actionKeys);
-    actionConnect->setObjectName(QStringLiteral("keys_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionKeys->setObjectName(QStringLiteral("keys_action"));
+    mpMainToolBar->widgetForAction(actionKeys)->setObjectName(actionKeys->objectName());
 
     QAction* actionVars = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
     actionVars->setToolTip(tr("Show and edit Lua variables"));
     mpMainToolBar->addAction(actionVars);
-    actionConnect->setObjectName(QStringLiteral("variables_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionVars->setObjectName(QStringLiteral("variables_action"));
+    mpMainToolBar->widgetForAction(actionVars)->setObjectName(actionVars->objectName());
 
     QAction* actionIRC = new QAction(QIcon(QStringLiteral(":/icons/internet-telephony.png")), tr("IRC"), this);
     actionIRC->setToolTip(tr("Open the Mudlet IRC client"));
     mpMainToolBar->addAction(actionIRC);
-    actionConnect->setObjectName(QStringLiteral("irc_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionIRC->setObjectName(QStringLiteral("irc_action"));
+    mpMainToolBar->widgetForAction(actionIRC)->setObjectName(actionIRC->objectName());
 
     QAction* actionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
     actionMapper->setToolTip(tr("Show/hide the map"));
     mpMainToolBar->addAction(actionMapper);
-    actionConnect->setObjectName(QStringLiteral("map_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionMapper->setObjectName(QStringLiteral("map_action"));
+    mpMainToolBar->widgetForAction(actionMapper)->setObjectName(actionMapper->objectName());
 
     QAction* actionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
     actionHelp->setToolTip(tr("Browse reference material and documentation"));
     mpMainToolBar->addAction(actionHelp);
-    actionConnect->setObjectName(QStringLiteral("manual_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionHelp->setObjectName(QStringLiteral("manual_action"));
+    mpMainToolBar->widgetForAction(actionHelp)->setObjectName(actionHelp->objectName());
 
     QAction* actionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
     actionOptions->setToolTip(tr("See and edit profile preferences"));
     mpMainToolBar->addAction(actionOptions);
-    actionConnect->setObjectName(QStringLiteral("settings_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionOptions->setObjectName(QStringLiteral("settings_action"));
+    mpMainToolBar->widgetForAction(actionOptions)->setObjectName(actionOptions->objectName());
 
     // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
     // now used for the window when the visual change to the toolbar caused can
@@ -293,38 +293,38 @@ mudlet::mudlet()
     QAction* actionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
     actionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
     mpMainToolBar->addAction(actionNotes);
-    actionConnect->setObjectName(QStringLiteral("notepad_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionNotes->setObjectName(QStringLiteral("notepad_action"));
+    mpMainToolBar->widgetForAction(actionNotes)->setObjectName(actionNotes->objectName());
 
     QAction* actionPackageM = new QAction(QIcon(QStringLiteral(":/icons/package-manager.png")), tr("Package Manager"), this);
     actionPackageM->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
     mpMainToolBar->addAction(actionPackageM);
-    actionConnect->setObjectName(QStringLiteral("package_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionPackageM->setObjectName(QStringLiteral("package_action"));
+    mpMainToolBar->widgetForAction(actionPackageM)->setObjectName(actionPackageM->objectName());
 
     QAction* actionModuleM = new QAction(QIcon(QStringLiteral(":/icons/module-manager.png")), tr("Module Manager"), this);
     actionModuleM->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
     mpMainToolBar->addAction(actionModuleM);
-    actionConnect->setObjectName(QStringLiteral("module_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionModuleM->setObjectName(QStringLiteral("module_action"));
+    mpMainToolBar->widgetForAction(actionModuleM)->setObjectName(actionModuleM->objectName());
 
     QAction* actionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
     actionReplay->setToolTip(tr("Load a Mudlet replay"));
     mpMainToolBar->addAction(actionReplay);
-    actionConnect->setObjectName(QStringLiteral("replay_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionReplay->setObjectName(QStringLiteral("replay_action"));
+    mpMainToolBar->widgetForAction(actionReplay)->setObjectName(actionReplay->objectName());
 
     actionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
     actionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
     mpMainToolBar->addAction(actionReconnect);
-    actionConnect->setObjectName(QStringLiteral("reconnect_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionReconnect->setObjectName(QStringLiteral("reconnect_action"));
+    mpMainToolBar->widgetForAction(actionReconnect)->setObjectName(actionReconnect->objectName());
 
     QAction* actionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
     actionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
     mpMainToolBar->addAction(actionMultiView);
-    actionConnect->setObjectName(QStringLiteral("multiview_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionMultiView->setObjectName(QStringLiteral("multiview_action"));
+    mpMainToolBar->widgetForAction(actionMultiView)->setObjectName(actionMultiView->objectName());
 
     QAction* actionStopAllTriggers = new QAction(QIcon(QStringLiteral(":/icons/edit-bomb.png")), tr("Stop All Triggers"), this);
     actionStopAllTriggers->setToolTip(tr("Stop all triggers, alias, actions, timers and scripts"));
@@ -332,8 +332,8 @@ mudlet::mudlet()
     QAction* actionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     actionAbout->setToolTip(tr("About Mudlet"));
     mpMainToolBar->addAction(actionAbout);
-    actionConnect->setObjectName(QStringLiteral("about_action"));
-    mpMainToolBar->widgetForAction(actionConnect)->setObjectName(actionConnect->objectName());
+    actionAbout->setObjectName(QStringLiteral("about_action"));
+    mpMainToolBar->widgetForAction(actionAbout)->setObjectName(actionAbout->objectName());
 
     disableToolbarButtons();
 
