@@ -24,7 +24,7 @@ addons:
     - liblua5.1-0-dev
     - libboost-graph1.55-dev
     - zlib1g-dbg
-    - libzip
+    - libzip-dev
     - libpulse-dev
     - libyajl-dev
     - gcc-5 g++-5
