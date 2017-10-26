@@ -21,6 +21,7 @@ public:
     explicit Updater(QObject* parent = nullptr);
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
+    void showChangelog() const;
 
 private:
     dblsqd::Feed* feed;
@@ -45,6 +46,7 @@ signals:
 public slots:
     void updateBinaryOnLinux();
     void installButtonClicked(QAbstractButton* button, QString filePath);
+
 };
 
 #endif // UPDATER_H

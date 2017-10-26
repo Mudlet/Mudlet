@@ -209,6 +209,8 @@ public:
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
 
+    void showChangelogIfUpdated();
+
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
     bool updateAutomatically() const { return mautomaticUpdates; }
@@ -357,7 +359,6 @@ private slots:
 
 private:
     void initEdbee();
-    void initUpdater();
 
     void goingDown() { mIsGoingDown = true; }
     QMap<QString, TConsole*> mTabMap;
@@ -406,6 +407,7 @@ private:
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
 
+    bool shouldShowChangelog();
 };
 
 class TConsoleMonitor : public QObject

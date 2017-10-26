@@ -3302,9 +3302,43 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 bool mudlet::onDevelopmentVersion()
 {
     auto devSuffix = QByteArray(APP_BUILD).trimmed();
-    if (!devSuffix.isEmpty()) {
-        return true;
+    return !devSuffix.isEmpty();
+}
+
+// returns true if Mudlet was updated automatically and a changelog should be shown
+// now that the user is on the new version. If the user updated manually, then there
+// is no need as they would have seen the changelog while updating
+bool mudlet::shouldShowChangelog()
+{
+    if (!mautomaticUpdates) {
+        return false;
     }
 
-    return false;
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
+    bool opened = file.open(QIODevice::ReadOnly);
+    qint64 updateTimestamp;
+    if (!opened) {
+        return false;
+    }
+    QDataStream ifs(&file);
+    ifs >> updateTimestamp;
+    file.close();
+
+    auto currentDateTime = QDateTime::currentDateTime().toMSecsSinceEpoch();
+    auto minsSinceUpdate = (currentDateTime - updateTimestamp) / 1000 / 60;
+
+    return minsSinceUpdate >= 5;
+}
+
+void mudlet::showChangelogIfUpdated()
+{
+    if (!mudlet::self()->shouldShowChangelog()) {
+        return;
+    }
+
+    if (!updater) {
+        return;
+    }
+
+    updater->showChangelog();
 }

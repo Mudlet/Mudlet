@@ -111,6 +111,7 @@ void Updater::updateBinaryOnLinux()
     mUpdateInstalled = true;
     installButton->setText(tr("Restart to apply update"));
     installButton->setEnabled(true);
+    writeUpdateNote();
     emit updateInstalled();
 }
 
@@ -137,7 +138,7 @@ void Updater::installButtonClicked(QAbstractButton* button, QString filePath)
     watcher->setFuture(future);
 }
 
-// records a unix epoch on disk indicating that an update has happened
+// records a unix epoch on disk indicating that an update has happened.
 // Mudlet will use that on the next launch to decide whenever it should show
 // the window with the new features. The idea is that if you manually update (thus see the
 // changelog already) and restart, you shouldn't see it again, and if you automatically
@@ -147,11 +148,16 @@ void Updater::writeUpdateNote() const
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
-        qWarning() << "Couldn't create update timestamp file";
+        qWarning() << "Couldn't open update timestamp file for writing.";
         return;
     }
 
     QDataStream ifs(&file);
-    ifs << QDateTime().toMSecsSinceEpoch();
+    ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     file.close();
+}
+
+void Updater::showChangelog() const {
+    auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
+    changelogDialog->show();
 }
