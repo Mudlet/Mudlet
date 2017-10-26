@@ -833,37 +833,46 @@ do
   end
 end
 
+
+-- A utility function based on tempTimers meant to track all sorts of temporary states
+local timeframeTable = {}  -- keeps track of all timeframe timers
 function timeframe(vname, true_time, nil_time, ...)
-  timeFrameTable = timeFrameTable or {}
   local timerlist = {
 		{0},  -- reset variable 'vname' to nil
-		true_time and {true_time, true}, nil_time and {nil_time},
-		...
+		true_time and {true_time, true},  -- when to set variable to true
+		nil_time and {nil_time},  -- when to set variable back to nil
+		...  -- further list of times and values to set the variable to
 	}
-  killTimeframe(vname)
-  timeFrameTable[vname] = {}
-  local maxtime = 0
-  for step, data in ipairs(timerlist) do
+
+	-- reset any associated timeframes for 'vname'
+	killTimeframe(vname)
+  timeframeTable[vname] = {}
+
+	-- run through timerlist data and create tempTimers to set 'vname' variable data
+	local maxtime = 0
+	for step, data in ipairs(timerlist) do
     local time = data[1]
     local value = data[2]
     maxtime = (time > maxtime) and time or maxtime
-    if time <= 0 then
-      assert(loadstring(vname.." = "..(type(value) == "string" and "'"..value.."'" or tostring(value))))()
+		if time <= 0 then
+			_G[vname] = value
     else
-      timeFrameTable[vname][step] = tempTimer(time, string.format([[%s = %s]], vname, type(value) == "string" and "'"..value.."'" or tostring(value)))
+      timeframeTable[vname][step] = tempTimer(time, function() _G[vname] = value end)
     end
-  end
-  timeFrameTable[vname][#timeFrameTable[vname] + 1] = tempTimer(maxtime + 0.1, string.format([[killTimeframe("%s")]], vname))
+	end
+
+	-- final tempTimer to kill the 'vname' timeframe
+  timeframeTable[vname][#timeframeTable[vname] + 1] = tempTimer(maxtime + 0.1, function() killTimeframe(vname) end)
 end
 
 function killTimeframe(vname)
-  if timeFrameTable then
-    if timeFrameTable[vname] then
-      for i, v in ipairs(timeFrameTable[vname]) do
+  if timeframeTable then
+    if timeframeTable[vname] then
+      for i, v in ipairs(timeframeTable[vname]) do
         killTimer(v)
         _G["Timer"..v] = nil
       end
-      timeFrameTable[vname] = nil
+      timeframeTable[vname] = nil
     end
   end
 end
