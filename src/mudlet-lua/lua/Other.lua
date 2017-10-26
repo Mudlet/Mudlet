@@ -732,7 +732,7 @@ do
     end
     return functionExists
   end
-  
+
   function registerAnonymousEventHandler(event, func, isOneShot)
     if type(event) ~= "string" then
       error(
@@ -756,7 +756,7 @@ do
     if type(func) == "string" then
       local functionString = string.format("return %s(...)", func)
       local functionExists = findStringEventHandler(existinghandlers, functionString)
-      
+
       if not functionExists then
         func = assert(loadstring(functionString))
       else
@@ -767,7 +767,7 @@ do
           end
         end
       end
-      
+
     end
 
     local eventHandlerId
@@ -829,6 +829,41 @@ do
       for _, func in pairs(handlers[event]) do
         func(event, ...)
       end
+    end
+  end
+end
+
+function timeframe(vname, true_time, nil_time, ...)
+  timeFrameTable = timeFrameTable or {}
+  local timerlist = {
+		{0},  -- reset variable 'vname' to nil
+		true_time and {true_time, true}, nil_time and {nil_time},
+		...
+	}
+  killTimeframe(vname)
+  timeFrameTable[vname] = {}
+  local maxtime = 0
+  for step, data in ipairs(timerlist) do
+    local time = data[1]
+    local value = data[2]
+    maxtime = (time > maxtime) and time or maxtime
+    if time <= 0 then
+      assert(loadstring(vname.." = "..(type(value) == "string" and "'"..value.."'" or tostring(value))))()
+    else
+      timeFrameTable[vname][step] = tempTimer(time, string.format([[%s = %s]], vname, type(value) == "string" and "'"..value.."'" or tostring(value)))
+    end
+  end
+  timeFrameTable[vname][#timeFrameTable[vname] + 1] = tempTimer(maxtime + 0.1, string.format([[killTimeframe("%s")]], vname))
+end
+
+function killTimeframe(vname)
+  if timeFrameTable then
+    if timeFrameTable[vname] then
+      for i, v in ipairs(timeFrameTable[vname]) do
+        killTimer(v)
+        _G["Timer"..v] = nil
+      end
+      timeFrameTable[vname] = nil
     end
   end
 end
