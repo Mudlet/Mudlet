@@ -10238,7 +10238,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to install package \"%s\, error message: %s.",
+        lua_pushfstring(L, "Failed to install package \"%s\", error message: %s.",
                         packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
@@ -10267,7 +10267,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "Failed to uninstall package \"%s\, error message: %s.",
+        lua_pushfstring(L, "Failed to uninstall package \"%s\", error message: %s.",
                         packageName.toUtf8().constData(), errorMessage.toUtf8().constData());
         return 2;
     }
