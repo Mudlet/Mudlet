@@ -3341,4 +3341,6 @@ void mudlet::showChangelogIfUpdated()
     }
 
     updater->showChangelog();
+    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
+    file.remove();
 }

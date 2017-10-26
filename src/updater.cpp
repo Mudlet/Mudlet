@@ -8,7 +8,6 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
-#include <QDateTime>
 #include "post_guard.h"
 
 Updater::Updater(QObject* parent) : QObject(parent), mUpdateInstalled(false)
@@ -49,7 +48,7 @@ void Updater::setupOnLinux()
 {
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
 
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qDebug() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
         if (!mudlet::self()->updateAutomatically()) {
@@ -63,13 +62,25 @@ void Updater::setupOnLinux()
         feed->downloadRelease(updates.first());
     });
 
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() { qDebug() << "downloadFinished"; });
+    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
+        // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
+        if (!(mudlet::self()->updateAutomatically() && updateDialog->isHidden())) {
+            return;
+        }
+
+        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, feed->getDownloadFile()->fileName());
+
+        // replace current binary with the unzipped one
+        auto watcher = new QFutureWatcher<void>;
+        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
+        watcher->setFuture(future);
+    });
 
     // constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
-    installButton = new QPushButton(tr("Update"));
-    updateDialog->addInstallButton(installButton);
-    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installButtonClicked);
+    installOrRestartButton = new QPushButton(tr("Update"));
+    updateDialog->addInstallButton(installOrRestartButton);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName) const
@@ -80,9 +91,9 @@ void Updater::untarOnLinux(const QString& fileName) const
     // tar output folder has to end with a slash
     tar.start("tar", QStringList() << "-xvf" << fileName << "-C" << QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QStringLiteral("/"));
     if (!tar.waitForFinished()) {
-        qDebug() << "Untarring" << fileName << "failed:" << tar.errorString();
+        qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
-        qDebug() << "Tar output:" << tar.readAll().trimmed();
+        qWarning() << "Tar output:" << tar.readAll().trimmed();
     }
 }
 
@@ -97,21 +108,19 @@ void Updater::updateBinaryOnLinux()
     QDir dir;
     // dir.rename actually moves a file
     if (!(dir.remove(installedBinaryPath) && dir.rename(unzippedBinary.filePath(), installedBinaryPath))) {
-        qDebug() << "updating" << installedBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
+        qWarning() << "updating" << installedBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
         return;
     }
 
     QFile updatedBinary(QCoreApplication::applicationFilePath());
     if (!updatedBinary.setPermissions(executablePermissions)) {
-        qDebug() << "couldn't executable permissions on updated Mudlet binary at" << installedBinaryPath;
+        qWarning() << "couldn't set executable permissions on updated Mudlet binary at" << installedBinaryPath;
         return;
     }
 
-    qDebug() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
-    mUpdateInstalled = true;
-    installButton->setText(tr("Restart to apply update"));
-    installButton->setEnabled(true);
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().first().getVersion();
     writeUpdateNote();
+    mUpdateInstalled = true;
     emit updateInstalled();
 }
 
@@ -120,21 +129,35 @@ void Updater::manuallyCheckUpdates()
     updateDialog->show();
 }
 
-void Updater::installButtonClicked(QAbstractButton* button, QString filePath)
+void Updater::installOrRestartClicked(QAbstractButton* button, QString filePath)
 {
     // if the update is already installed, then the button says 'Restart' - do so
-    // FIXME check this for manual update from the menu
     if (mUpdateInstalled) {
-        updateDialog->close();
+        // timer is necessary as calling close right way doesn't seem to do the trick
+        QTimer::singleShot(0, [=]() {
+            updateDialog->close();
+            updateDialog->done(0);
+        });
+
+        // if the updater is launched manually instead of when Mudlet is quit,
+        // close Mudlet ourselves
+        if (mudlet::self()) {
+            mudlet::self()->forceClose();
+        }
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
         return;
     }
 
+    // otherwise the button says 'Install', so install the update
     QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
 
     // replace current binary with the unzipped one
     auto watcher = new QFutureWatcher<void>;
-    connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+        updateBinaryOnLinux();
+        installOrRestartButton->setText(tr("Restart to apply update"));
+        installOrRestartButton->setEnabled(true);
+    });
     watcher->setFuture(future);
 }
 
@@ -157,7 +180,8 @@ void Updater::writeUpdateNote() const
     file.close();
 }
 
-void Updater::showChangelog() const {
+void Updater::showChangelog() const
+{
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
     changelogDialog->show();
 }

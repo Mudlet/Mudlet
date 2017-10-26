@@ -26,7 +26,7 @@ public:
 private:
     dblsqd::Feed* feed;
     dblsqd::UpdateDialog* updateDialog;
-    QPushButton* installButton;
+    QPushButton* installOrRestartButton;
     bool mUpdateInstalled;
 
     void setupOnLinux();
@@ -45,7 +45,7 @@ signals:
     // might want to make these private
 public slots:
     void updateBinaryOnLinux();
-    void installButtonClicked(QAbstractButton* button, QString filePath);
+    void installOrRestartClicked(QAbstractButton *button, QString filePath);
 
 };
 
