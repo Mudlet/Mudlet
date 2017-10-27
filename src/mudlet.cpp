@@ -52,7 +52,9 @@
 #include "edbee/models/textgrammar.h"
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/texttheme.h"
+#if defined (INCLUDE_UPDATER)
 #include "updater.h"
+#endif
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -163,7 +165,6 @@ mudlet::mudlet()
     setUnifiedTitleAndToolBarOnMac(true);
     setContentsMargins(0, 0, 0, 0);
     mudlet::debugMode = false;
-    updater = new Updater();
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
@@ -423,12 +424,13 @@ mudlet::mudlet()
     connect(dactionIRC, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionLive_Help_Chat, SIGNAL(triggered()), this, SLOT(slot_irc()));
     connect(actionShow_Map, SIGNAL(triggered()), this, SLOT(slot_mapper()));
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) || !defined (INCLUDE_UPDATER)
     // hide About->Update on macOS as Sparkle will add its own menu
     dactionUpdate->setVisible(false);
-#endif
+#elif defined (INCLUDE_UPDATER)
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
+#endif
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
     connect(actionModule_manager, SIGNAL(triggered()), this, SLOT(slot_module_manager()));
@@ -469,6 +471,10 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+
+#if defined (INCLUDE_UPDATER)
+    updater = new Updater();
+#endif
 }
 
 void mudlet::initEdbee()
@@ -2067,20 +2073,25 @@ void mudlet::closeEvent(QCloseEvent* event)
 void mudlet::forceClose()
 {
     for (auto console : mConsoleMap) {
-        console->getHost()->saveProfile();
+        auto host = console->getHost();
+        host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        if (console->getHost()->getName() != QStringLiteral("default_host")) {
-            console->getHost()->mTelnet.disconnect();
+        if (host->getName() != QStringLiteral("default_host")) {
+            host->mTelnet.disconnect();
             // close script-editor
-            if (console->mpHost->mpEditorDialog) {
-                console->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                console->mpHost->mpEditorDialog->close();
+            if (host->mpEditorDialog) {
+                host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+                host->mpEditorDialog->close();
             }
-            if (console->mpHost->mpNotePad) {
-                console->mpHost->mpNotePad->save();
-                console->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                console->mpHost->mpNotePad->close();
+            if (host->mpNotePad) {
+                host->mpNotePad->save();
+                host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+                host->mpNotePad->close();
+            }
+
+            if (mpIrcClientMap.contains(host)) {
+                mpIrcClientMap.value(host)->close();
             }
         }
 
@@ -2414,24 +2425,6 @@ void mudlet::slot_open_mappingscripts_page()
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
 }
 
-void mudlet::slot_update_installed()
-{
-    // disable existing functionality to show the updates window
-    dactionUpdate->disconnect(SIGNAL(triggered()));
-
-    // rejig to restart Mudlet instead
-    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
-        forceClose();
-        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
-    });
-    dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
-}
-
-void mudlet::slot_check_manual_update()
-{
-    updater->manuallyCheckUpdates();
-}
-
 void mudlet::slot_show_about_dialog()
 {
     if (!mpAboutDlg) {
@@ -2567,10 +2560,6 @@ void mudlet::startAutoLogin()
     if (!openedProfile) {
         slot_show_connection_dialog();
     }
-}
-
-void mudlet::checkUpdatesOnStart() {
-    updater->checkUpdatesOnStart();
 }
 
 void mudlet::doAutoLogin(const QString& profile_name)
@@ -3305,6 +3294,29 @@ bool mudlet::onDevelopmentVersion()
     return !devSuffix.isEmpty();
 }
 
+#if defined (INCLUDE_UPDATER)
+void mudlet::slot_update_installed()
+{
+    // disable existing functionality to show the updates window
+    dactionUpdate->disconnect(SIGNAL(triggered()));
+
+    // rejig to restart Mudlet instead
+    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
+        forceClose();
+        QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+    });
+    dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
+}
+
+void mudlet::slot_check_manual_update()
+{
+    updater->manuallyCheckUpdates();
+}
+
+void mudlet::checkUpdatesOnStart() {
+    updater->checkUpdatesOnStart();
+}
+
 // returns true if Mudlet was updated automatically and a changelog should be shown
 // now that the user is on the new version. If the user updated manually, then there
 // is no need as they would have seen the changelog while updating
@@ -3344,3 +3356,4 @@ void mudlet::showChangelogIfUpdated()
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
     file.remove();
 }
+#endif

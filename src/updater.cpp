@@ -25,10 +25,9 @@ void Updater::checkUpdatesOnStart()
         //        return;
     }
 
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS)
     setupOnMacOS();
-#endif
-#ifdef Q_OS_LINUX
+#elif defined(Q_OS_LINUX)
     setupOnLinux();
 #endif
 }
@@ -44,6 +43,7 @@ void Updater::setupOnMacOS()
 }
 #endif
 
+#if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
     feed = new dblsqd::Feed("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw", "release");
@@ -185,3 +185,4 @@ void Updater::showChangelog() const
     auto changelogDialog = new dblsqd::UpdateDialog(feed, dblsqd::UpdateDialog::ManualChangelog);
     changelogDialog->show();
 }
+#endif

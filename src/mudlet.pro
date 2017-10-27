@@ -221,6 +221,10 @@ macx:LIBS += \
 # will be used.
 DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
+# Enable the built-in updater by default. Linux packagers will find it useful to disable it
+# since package managers are responsible for updates there
+DEFINES += INCLUDE_UPDATER=true
+
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \

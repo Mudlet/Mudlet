@@ -300,7 +300,6 @@ public slots:
     void slot_show_help_dialog_video();
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
-    void slot_check_manual_update();
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
@@ -326,6 +325,9 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
+#if defined (INCLUDE_UPDATER)
+    void slot_check_manual_update();
+#endif
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -355,7 +357,9 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
+#if defined (INCLUDE_UPDATER)
     void slot_update_installed();
+#endif
 
 private:
     void initEdbee();
