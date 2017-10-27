@@ -162,7 +162,7 @@ mudlet::mudlet()
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
     setContentsMargins(0, 0, 0, 0);
-    mudlet::debugMode = false;    
+    mudlet::debugMode = false;
     updater = new Updater();
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
