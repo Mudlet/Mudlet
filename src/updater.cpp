@@ -85,6 +85,8 @@ void Updater::setupOnLinux()
 
 void Updater::untarOnLinux(const QString& fileName) const
 {
+    Q_ASSERT_X(QThread::currentThread() != QCoreApplication::instance()->thread(), "untarOnLinux", "method should not be called in the main GUI thread to avoid a degradation in UX");
+
     QProcess tar;
     tar.setProcessChannelMode(QProcess::MergedChannels);
     // we can assume tar to be present on a Linux system. If it's not, it'd be rather broken.
@@ -98,7 +100,8 @@ void Updater::untarOnLinux(const QString& fileName) const
 }
 
 void Updater::updateBinaryOnLinux()
-{ // FIXME don't hardcode name in case we want to change it
+{
+    // FIXME don't hardcode name in case we want to change it
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/Mudlet.AppImage");
     QString installedBinaryPath(QCoreApplication::applicationFilePath());
 
