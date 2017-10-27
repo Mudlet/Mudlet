@@ -850,6 +850,7 @@ end
 -- A utility function based on tempTimers meant to track all sorts of temporary states
 local timeframeTable = {}  -- keeps track of all timeframe timers
 function timeframe(vname, true_time, nil_time, ...)
+  local format = string.format
   local timerlist = {
     { 0 }, -- reset variable 'vname' to nil
     true_time and { true_time, true }, -- when to set variable to true
@@ -867,13 +868,9 @@ function timeframe(vname, true_time, nil_time, ...)
     local time = data[1]
     local value = data[2]
     maxtime = (time > maxtime) and time or maxtime
-    if time <= 0 then
-      assert(loadstring(format("%s = %s", vname, tostring(value or nil))))()
-    else
-      timeframeTable[vname][step] = tempTimer(time, function()
-        assert(loadstring(format("%s = %s", vname, tostring(value or nil))))()
-      end)
-    end
+    timeframeTable[vname][step] = tempTimer(time, function()
+      assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))()
+    end)
   end
 
   -- final tempTimer to kill the 'vname' timeframe
@@ -883,13 +880,11 @@ function timeframe(vname, true_time, nil_time, ...)
 end
 
 function killTimeframe(vname)
-  if timeframeTable then
-    if timeframeTable[vname] then
-      for i, v in ipairs(timeframeTable[vname]) do
-        killTimer(v)
-        _G["Timer" .. v] = nil
-      end
-      timeframeTable[vname] = nil
+  if timeframeTable and timeframeTable[vname] then
+    for i, v in ipairs(timeframeTable[vname]) do
+      killTimer(v)
+      _G["Timer" .. v] = nil
     end
+    timeframeTable[vname] = nil
   end
 end

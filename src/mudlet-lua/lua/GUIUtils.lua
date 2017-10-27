@@ -51,23 +51,6 @@ gaugesTable = {}
 -- @class function
 -- @name color_table
 color_table = {
-  a_darkred                 = { 128, 0, 0 },
-  a_darkgreen               = { 0, 179, 0 },
-  a_brown                   = { 128, 128, 0 },
-  a_darkblue                = { 0, 0, 128 },
-  a_darkmagenta             = { 128, 0, 128 },
-  a_darkcyan                = { 0, 128, 128 },
-  a_grey                    = { 192, 192, 192 },
-  a_darkgrey                = { 128, 128, 128 },
-  a_red                     = { 255, 0, 0 },
-  a_green                   = { 0, 255, 0 },
-  a_yellow                  = { 255, 255, 0 },
-  a_blue                    = { 0, 85, 255 },
-  a_magenta                 = { 255, 0, 255 },
-  a_cyan                    = { 0, 255, 255 },
-  a_white                   = { 255, 255, 255 },
-  a_darkwhite               = { 192, 192, 192 },
-  a_darkyellow              = { 179, 179, 0 },
   alice_blue                = { 240, 248, 255 },
   AliceBlue                 = { 240, 248, 255 },
   antique_white             = { 250, 235, 215 },
