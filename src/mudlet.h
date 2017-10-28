@@ -39,6 +39,7 @@
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QQueue>
+#include <QSettings>
 #include <QTextOption>
 #include <QTime>
 #ifdef QT_GAMEPAD_LIB
