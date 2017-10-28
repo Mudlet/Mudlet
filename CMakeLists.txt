@@ -71,9 +71,11 @@ SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 ADD_SUBDIRECTORY(3rdparty/communi)
 ADD_SUBDIRECTORY(3rdparty/lua_yajl)
 ADD_SUBDIRECTORY(3rdparty/dblsqd)
-# Needed (just) on MacOs as an #include in luazip.h:
 IF(APPLE)
+  # Needed (just) on MacOs as an #include in luazip.h:
   ADD_SUBDIRECTORY(3rdparty/luazip)
+  # Add Sparkle glue as well
+  ADD_SUBDIRECTORY(3rdparty/sparkle-glue)
 ENDIF()
 
 IF(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")

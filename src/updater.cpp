@@ -1,7 +1,7 @@
 #include "updater.h"
 #include "mudlet.h"
 
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS)
 #include "../3rdparty/sparkle-glue/CocoaInitializer.h"
 #include "../3rdparty/sparkle-glue/SparkleAutoUpdater.h"
 #endif
@@ -32,7 +32,7 @@ void Updater::checkUpdatesOnStart()
 #endif
 }
 
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
     CocoaInitializer initializer;

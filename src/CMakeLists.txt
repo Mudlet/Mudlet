@@ -464,6 +464,7 @@ ENDIF()
 
 IF(APPLE)
   TARGET_LINK_LIBRARIES(mudlet luazip)
+  TARGET_LINK_LIBRARIES(mudlet cocoa-qt-glue)
 ENDIF()
 
 IF(PC_HUNSPELL_FOUND)
