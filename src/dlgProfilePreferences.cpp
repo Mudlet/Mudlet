@@ -64,6 +64,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     groupBox_Debug->hide();
 
     loadEditorTab();
+    loadSpecialSettingsTab();
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(mpHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(mpHost->mMapperUseAntiAlias);
@@ -73,8 +74,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(mpHost)));
     ircChannels->setText(dlgIRC::readIrcChannels(mpHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(mpHost));
-
-    checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updateAutomatically());
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     enableSpellCheck->setChecked(pH->mEnableSpellCheck);
@@ -425,7 +424,10 @@ void dlgProfilePreferences::loadEditorTab()
     if (tabWidgeta->currentIndex() == 3) {
         slot_editor_tab_selected(3);
     }
+}
 
+void dlgProfilePreferences::loadSpecialSettingsTab()
+{
     // search engine load
     // insert might be (/should?) moved elsewhere
     mSearchEngineMap.insert("Bing", "https://www.bing.com/search?q=");
@@ -433,8 +435,7 @@ void dlgProfilePreferences::loadEditorTab()
     mSearchEngineMap.insert("Google", "https://www.google.com/search?q=");
 
     // populate combobox
-    for(auto engineText : mSearchEngineMap.keys())
-    {
+    for (auto engineText : mSearchEngineMap.keys()) {
         search_engine_combobox->addItem(engineText);
     }
 
@@ -450,6 +451,8 @@ void dlgProfilePreferences::loadEditorTab()
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
+    } else {
+        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updateAutomatically());
     }
 }
 
