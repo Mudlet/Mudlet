@@ -460,7 +460,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
-#if defined (INCLUDE_UPDATER)
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
     mudlet::self()->checkUpdatesOnStart();
     mudlet::self()->showChangelogIfUpdated();
 #endif

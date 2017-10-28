@@ -28,7 +28,9 @@
 #include "HostManager.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
 #include "updater.h"
+#endif
 
 #include "pre_guard.h"
 #include <QFlags>
@@ -325,7 +327,7 @@ public slots:
     void slot_module_manager();
     void layoutModules();
     void slot_help_module();
-#if defined (INCLUDE_UPDATER)
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
     void slot_check_manual_update();
 #endif
 
@@ -357,7 +359,7 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
     void slot_module_manager_destroyed();
-#if defined (INCLUDE_UPDATER)
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
     void slot_update_installed();
 #endif
 
@@ -374,8 +376,9 @@ private:
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
     Updater* updater;
-
+#endif
     QMenu* restoreBar;
     bool mIsGoingDown;
 
