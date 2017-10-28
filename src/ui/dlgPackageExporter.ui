@@ -33,32 +33,32 @@
      </column>
      <item>
       <property name="text">
-       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (3 of 3)">Triggers</string>
+       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (3 of 3)">Triggers</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (3 of 3)">Aliases</string>
+       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (3 of 3)">Aliases</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (3 of 3)">Timers</string>
+       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (3 of 3)">Timers</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (3 of 3)">Scripts</string>
+       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (3 of 3)">Scripts</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (3 of 3)">Keys</string>
+       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (3 of 3)">Keys</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (3 of 3)">Buttons</string>
+       <string comment="This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (3 of 3)">Buttons</string>
       </property>
      </item>
     </widget>

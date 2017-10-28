@@ -4443,8 +4443,8 @@ void dlgTriggerEditor::saveScript()
     if (pT->state()) {
         clearEditorNotification();
 
-        if ( (! old_name.compare(tr("new script", "This text used programmatically, ensure all instances have same translation (2 of 2)"), Qt::CaseSensitive))
-           ||(! old_name.compare(tr("new script group", "This text used programmatically, ensure all instances have same translation (2 of 2)"), Qt::CaseSensitive))) {
+        if ( (! old_name.compare(tr("new script", "This text is used programmatically, ensure all cases have same translation (2 of 2)"), Qt::CaseSensitive))
+           ||(! old_name.compare(tr("new script group", "This text is used programmatically, ensure all cases have same translation (2 of 2)"), Qt::CaseSensitive))) {
 
             QIcon _icon;
             if (pT->isFolder()) {
@@ -7639,9 +7639,9 @@ bool dlgTriggerEditor::event(QEvent* event)
             case 0x01000000:
                 mIsGrabKey = false;
                 for (auto& action : actionList) {
-                    if (action->text() == tr("Save Item", "This item is used programmatically ensure all instances have the same translation (1 of 4)")) {
+                    if (action->text() == tr("Save Item", "This text is used programmatically, ensure all cases have same translation (1 of 4)")) {
                         action->setShortcut(tr("Ctrl+S"));
-                    } else if (action->text() == tr("Save Profile", "This item is used programmatically ensure all instances have the same translation (1 of 4)")) {
+                    } else if (action->text() == tr("Save Profile", "This text is used programmatically, ensure all cases have same translation (1 of 4)")) {
                         action->setShortcut(tr("Ctrl+Shift+S"));
                     }
                 }
@@ -7657,9 +7657,9 @@ bool dlgTriggerEditor::event(QEvent* event)
                 grab_key_callback(ke->key(), ke->modifiers());
                 mIsGrabKey = false;
                 for (auto& action : actionList) {
-                    if (action->text() == tr("Save Item", "This item is used programmatically ensure all instances have the same translation (2 of 4)")) {
+                    if (action->text() == tr("Save Item", "This text is used programmatically, ensure all cases have same translation (2 of 4)")) {
                         action->setShortcut(tr("Ctrl+S"));
-                    } else if (action->text() == tr("Save Profile", "This item is used programmatically ensure all instances have the same translation (2 of 4)")) {
+                    } else if (action->text() == tr("Save Profile", "This text is used programmatically, ensure all cases have same translation (2 of 4)")) {
                         action->setShortcut(tr("Ctrl+Shift+S"));
                     }
                 }
@@ -7729,7 +7729,7 @@ void dlgTriggerEditor::slot_guiLanguageChange()
                                         .arg(QKeySequence(QKeySequence::Delete).toString())));
     mpActionDeleteItem->setShortcut(QKeySequence::Delete);
 
-    mpActionSaveItem->setText(tr("Save Item", "This item is used programmatically ensure all instances have the same translation (3 of 4)"));
+    mpActionSaveItem->setText(tr("Save Item", "This text is used programmatically, ensure all cases have same translation (3 of 4)"));
     mpActionSaveItem->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(tr("<p>Saves the selected item. (CTRL+S)</p>"
                                            "<p>Saving causes any changes to the item to be stored into the profile and take effect.</p>"
@@ -7737,7 +7737,7 @@ void dlgTriggerEditor::slot_guiLanguageChange()
                                            "Ensure the translation text inside the <i>...</i> tags for <i>Save Profile</i> is the same as for the QAction (button) nearby..., also, try to preserve the HTML tags around the relevant parts of the text.")));
     mpActionSaveItem->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
 
-    mpActionSaveProfile->setText(tr("Save Profile", "This item is used programmatically ensure all instances have the same translation (3 of 4)"));
+    mpActionSaveProfile->setText(tr("Save Profile", "This text is used programmatically, ensure all cases have same translation (3 of 4)"));
     mpActionSaveProfile->setShortcut(tr("Ctrl+Shift+S"));
     mpActionSaveProfile->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                     .arg(tr("<p>Saves your profile. (CTRL+SHIFT+S)</p>"
@@ -7916,9 +7916,9 @@ void dlgTriggerEditor::slot_grab_key()
     mIsGrabKey = true;
     QList<QAction*> actionList = toolBar->actions();
     for (auto& action : actionList) {
-        if (action->text() == tr("Save Item", "This item is used programmatically ensure all instances have the same translation (4 of 4)")) {
+        if (action->text() == tr("Save Item", "This text is used programmatically, ensure all cases have same translation (4 of 4)")) {
             action->setShortcut(QString());
-        } else if (action->text() == tr("Save Profile", "This item is used programmatically ensure all instances have the same translation (4 of 4)")) {
+        } else if (action->text() == tr("Save Profile", "This text is used programmatically, ensure all cases have same translation (4 of 4)")) {
             action->setShortcut(QString());
         }
     }

@@ -88,7 +88,7 @@ public:
     void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
     void setIsMiniConsole() { mIsMiniConsole = true; }
-    // Returns whether the timestamps are showing AS A RESULT OF the call:
+    // Toggles timestamps on/off and returns the current state:
     bool toggleTimeStamps();
 
     QColor mBgColor;

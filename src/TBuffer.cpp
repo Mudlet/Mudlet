@@ -605,39 +605,39 @@ const QMap<QString, QVector<QChar>> TBuffer::csmEncodingsMap = {
 };
 
 QMap<QString, QString> TBuffer::smEncodingNamesMap  = {
-    {QStringLiteral("ASCII"), tr("ASCII (Telnet default encoding)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("UTF-8"), tr("UTF-8 (Universal encoding)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("CP850"), tr("CP850 (Western European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("CP852"), tr("CP852 (Central European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("CP866"), tr("CP866 (Cyrillic/Russian)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("CP874"), tr("CP874 (South European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-1"), tr("ISO-8859-1 (Western European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-2"), tr("ISO-8859-2 (Central European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-3"), tr("ISO-8859-3 (South European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-4"), tr("ISO-8859-4 (Northern European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-5"), tr("ISO-8859-5 (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-6"), tr("ISO-8859-6 (Arabic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-7"), tr("ISO-8859-7 (Greek)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-8"), tr("ISO-8859-8 (Hebrew, Visual)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-9"), tr("ISO-8859-9 (Turkish)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-10"), tr("ISO-8859-10 (Nordic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-11"), tr("ISO-8859-11 (Latin/Thai)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-13"), tr("ISO-8859-13 (Baltic Rim)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-14"), tr("ISO-8859-14 (Celtic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-15"), tr("ISO-8859-15 (Western European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("ISO-8859-16"), tr("ISO-8859-16 (South-Eastern European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("KOI8-R"), tr("KOI8-R (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("KOI8-U"), tr("KOI8-U (Cyrillic/Ukrainian)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("MACINTOSH"), tr("MACINTOSH", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1250"), tr("WINDOWS-1250 (Central European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1251"), tr("WINDOWS-1251 (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1252"), tr("WINDOWS-1252 (Western European)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1253"), tr("WINDOWS-1253 (Greek)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1254"), tr("WINDOWS-1254 (Turkish)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1255"), tr("WINDOWS-1255 (Hebrew, Logical)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1256"), tr("WINDOWS-1256 (Arabic)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1257"), tr("WINDOWS-1257 (Baltic Rim)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")},
-    {QStringLiteral("WINDOWS-1258"), tr("WINDOWS-1258 (Vietnamese)", "Server encoding name map: Ensure both instances have same translation text (1 of 2)")}
+    {QStringLiteral("ASCII"), tr("ASCII (Telnet default encoding)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("UTF-8"), tr("UTF-8 (Universal encoding)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("CP850"), tr("CP850 (Western European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("CP852"), tr("CP852 (Central European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("CP866"), tr("CP866 (Cyrillic/Russian)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("CP874"), tr("CP874 (South European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-1"), tr("ISO-8859-1 (Western European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-2"), tr("ISO-8859-2 (Central European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-3"), tr("ISO-8859-3 (South European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-4"), tr("ISO-8859-4 (Northern European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-5"), tr("ISO-8859-5 (Cyrillic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-6"), tr("ISO-8859-6 (Arabic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-7"), tr("ISO-8859-7 (Greek)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-8"), tr("ISO-8859-8 (Hebrew, Visual)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-9"), tr("ISO-8859-9 (Turkish)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-10"), tr("ISO-8859-10 (Nordic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-11"), tr("ISO-8859-11 (Latin/Thai)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-13"), tr("ISO-8859-13 (Baltic Rim)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-14"), tr("ISO-8859-14 (Celtic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-15"), tr("ISO-8859-15 (Western European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("ISO-8859-16"), tr("ISO-8859-16 (South-Eastern European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("KOI8-R"), tr("KOI8-R (Cyrillic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("KOI8-U"), tr("KOI8-U (Cyrillic/Ukrainian)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("MACINTOSH"), tr("MACINTOSH", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1250"), tr("WINDOWS-1250 (Central European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1251"), tr("WINDOWS-1251 (Cyrillic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1252"), tr("WINDOWS-1252 (Western European)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1253"), tr("WINDOWS-1253 (Greek)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1254"), tr("WINDOWS-1254 (Turkish)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1255"), tr("WINDOWS-1255 (Hebrew, Logical)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1256"), tr("WINDOWS-1256 (Arabic)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1257"), tr("WINDOWS-1257 (Baltic Rim)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")},
+    {QStringLiteral("WINDOWS-1258"), tr("WINDOWS-1258 (Vietnamese)", "Server encoding name map: ensure all cases have same translation text (1 of 2)")}
 };
 // clang-format on
 
@@ -2658,9 +2658,6 @@ void TBuffer::append(const QString& text,
                     mLastLine++;
                     newLines++;
                     log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
                     break;
                 }
             }

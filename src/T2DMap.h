@@ -109,7 +109,7 @@ public:
 
     QRectF mMultiRect;
     bool mPopupMenu;
-    QSet<int> mMultiSelectionSet; // was mMultiSelectList
+    QSet<int> mMultiSelectionSet;
     QPoint mOldMousePos;
     bool mNewMoveAction;
     QRectF mMapInfoRect;

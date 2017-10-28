@@ -441,9 +441,6 @@ void KeyUnit::doCleanup()
 
 void KeyUnit::slot_guiLanguageChange()
 {
-    // This WAS called setupKeyNames but it actually represents all that needs
-    // doing for this class when the language changes...! 8-)
-
     // PLACEMARKER: Redefine GUI Texts
     mKeys[0x20] = tr("Space");
     mKeys[0x21] = tr("Exclam");

@@ -98,7 +98,6 @@ public:
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
 
-    // Was init( Host * ) but host pointer was not used and it does not initialise a map!
     void audit();
 
     QList<int> detectRoomCollisions(int id);
@@ -150,8 +149,6 @@ public:
     QMap<int, int> envColors;
     QPointer<Host> mpHost;
 
-    // Was a single int mRoomId but that breaks things when maps are
-    // copied/shared between profiles - so now we track the profile name
     QHash<QString, int> mRoomIdHash;
     bool m2DPanMode;
     bool mLeftDown;

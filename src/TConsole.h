@@ -254,9 +254,9 @@ public:
     QString profile_name;
     TSplitter* splitter;
     bool mIsPromptLine;
-    QToolButton* mTimeStampButton; // was an auto (local to constructor) pointer timeStampButton
-    QToolButton* mRecordButton; // was an auto (local to constructor) pointer replayButton
-    QToolButton* mLogButton; // was logButton
+    QToolButton* mTimeStampButton;
+    QToolButton* mRecordButton;
+    QToolButton* mLogButton;
     bool mUserAgreedToCloseConsole;
     QLineEdit* mpBufferSearchBox;
     QToolButton* mpBufferSearchUp;

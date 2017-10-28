@@ -19,6 +19,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+// C++17 style helpers
+#if not defined(__has_cpp_attribute)
+#define __has_cpp_attribute(name) 0
+#endif
+
+#if __has_cpp_attribute(fallthrough)
+#define FALLTHROUGH [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#define FALLTHROUGH [[clang::fallthrough]]
+#else
+#define FALLTHROUGH
+#endif
+
 
 #include "TRoom.h"
 
@@ -49,14 +62,17 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
     ds >> temporary;
     switch(temporary) {
     case Qt::DotLine:
-        [[clang::fallthrough]];
+        FALLTHROUGH;
     case Qt::DashLine:
-        [[clang::fallthrough]];
+        FALLTHROUGH;
     case Qt::DashDotLine:
-        [[clang::fallthrough]];
+        FALLTHROUGH;
     case Qt::DashDotDotLine:
         value = static_cast<Qt::PenStyle>(temporary);
-    break;
+        break;
+
+    case Qt::SolidLine:
+        FALLTHROUGH;
     default:
     // Force anything else to be a solidline
         value = Qt::SolidLine;

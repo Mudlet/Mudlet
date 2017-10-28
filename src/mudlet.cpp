@@ -3391,7 +3391,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     struct zip_stat zs;
     struct zip_file* zf;
     zip_uint64_t bytesRead = 0;
-    char buf[4096]; // Was 100 but that seems unduly stingy...!
+    char buf[4096];
     zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
     if (err != 0) {
         zip_error_to_str(buf, sizeof(buf), err, errno);

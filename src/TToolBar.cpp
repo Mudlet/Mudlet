@@ -156,8 +156,6 @@ void TToolBar::addButton(TFlipButton* pB)
         pB->move(pB->mpTAction->mPosX, pB->mpTAction->mPosY);
     }
 
-    // Was using pressed() signal but now we want to track the ACTUAL state of
-    // the underlying QAbstractButton
     connect(pB, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)));
 }
 

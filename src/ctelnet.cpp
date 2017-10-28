@@ -1318,19 +1318,16 @@ void cTelnet::postMessage(QString msg)
         qint8 closeBraceIndex = body.at(0).indexOf(QLatin1String("]"));
         qint8 hyphenIndex = body.at(0).indexOf(QLatin1String("-"));
         if (openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex) {
-            // prefixLength is now decided in advance on Language change and
+            // prefixLength is now calculated in advance on Language change and
             // stored in mPrefixLength but we still check for the other
             // components to confimrm validity:
-//            quint8 prefixLength = hyphenIndex + 1;
-//            while (body.at(0).at(prefixLength) == ' ') {
-//                prefixLength++;
-//            }
-
-//            QString prefix = body.at(0).left(prefixLength).toUpper();
-//            QString firstLineTail = body.at(0).mid(prefixLength);
             QString prefix = body.at(0).left(hyphenIndex-1).toUpper();
             QString firstLineTail = body.at(0).mid(hyphenIndex+1);
             body.removeFirst();
+            // The checks have to include the untranslated prefixes to trap
+            // instances when a message has not been translated (and thus
+            // appears with a prefix in the source code language) otherwise they
+            // will not be detected as a message of the specified type:
             if (prefix.contains(tr("ERROR")) || (isPrefixIsUse && prefix.contains(QLatin1String("ERROR")))) {
                 QString remadePrefix(QStringLiteral("[ %1 ] ").arg(tr("ERROR")));
                 qint8 extraSpacesCount = mPrefixLength - remadePrefix.size();

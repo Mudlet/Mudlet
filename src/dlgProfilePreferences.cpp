@@ -22,9 +22,9 @@
  ***************************************************************************/
 
 /*
- * THIS FILE CONTAINS UTF-8 UNICODE ENCODED CHARACTER STRINGS THAT ARE (OR
- * SHOULD BE) ALERADY TRANSLATED (IN THE CONSTRUCTOR) TO THE REQUIRED
- * LANGAUGE...
+ * The constructor contains UTF-8 encoded Unicode character strings that are
+ * (or should be) already translated to the required language - they should not
+ * be moved into tr("...") from the QStringLiteral("...") form they are in...
  */
 
 #include "dlgProfilePreferences.h"
@@ -80,6 +80,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
 // LANGUAGE: 1 - enter code and native description string:
     //                language file mudlet_     .qm    NATIVE name for language:
+    mTranslationMap.insert(QStringLiteral("en"),    QStringLiteral("English"));
     mTranslationMap.insert(QStringLiteral("en_US"), QStringLiteral("English (American)"));
     mTranslationMap.insert(QStringLiteral("en_GB"), QStringLiteral("English (British)"));
     QStringList tooltipLanguageEntries;
@@ -87,36 +88,40 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
     // This covers the default en_US as well as en_GB:
     tooltipLanguageEntries.append(QStringLiteral("Choose the language for Mudlet to use..."));
 
-// CHECK: Should each "main" language have a entry here that is NOT country
-// specific?
+// CHECK: Should each "main" language have an entry here that is NOT country
+// specific - have put some in but not sure about it...
 
 // FR: The next 2 linea of code needs checking by a French speaker:
+    mTranslationMap.insert(QStringLiteral("fr"),    QStringLiteral("Français"));
     mTranslationMap.insert(QStringLiteral("fr_FR"), QStringLiteral("Français (La France)"));
-    tooltipLanguageEntries.append(QStringLiteral("Choisissez la langue pour que Mudlet utilise ..."));
+    tooltipLanguageEntries.append(QStringLiteral("Choisissez la langue pour que Mudlet utilise."));
 
 // DE: The next 2 line of code needs checking by a German speaker:
+    mTranslationMap.insert(QStringLiteral("de"),    QStringLiteral("Deutsch"));
     mTranslationMap.insert(QStringLiteral("de_DE"), QStringLiteral("Deutsch (Deutschland)"));
-    tooltipLanguageEntries.append(QStringLiteral("Wähle die Sprache für Mudlet ..."));
+    tooltipLanguageEntries.append(QStringLiteral("Wähle die Sprache für Mudlet."));
 
 // ES: The next 2 linea of code needs checking by a Spanish speaker:
+    mTranslationMap.insert(QStringLiteral("es"),    QStringLiteral("Español"));
     mTranslationMap.insert(QStringLiteral("es_ES"), QStringLiteral("Español (España)"));
-    tooltipLanguageEntries.append(QStringLiteral("Elija el idioma para que Mudlet use ..."));
+    tooltipLanguageEntries.append(QStringLiteral("Elija el idioma para que Mudlet use."));
 
 // RU: The next 2 line of code needs checking by a Russian speaker:
+    mTranslationMap.insert(QStringLiteral("ru"),    QStringLiteral("Русский"));
     mTranslationMap.insert(QStringLiteral("ru_RU"), QStringLiteral("Русский (Россия)"));
-    tooltipLanguageEntries.append(QStringLiteral("Выберите язык для Mudlet для использования ..."));
+    tooltipLanguageEntries.append(QStringLiteral("Выберите язык для Mudlet для использования."));
 
 // Zh: The next 2 line of code needs checking by a Chinese speaker (should be Simplified Chinese):
     mTranslationMap.insert(QStringLiteral("zh_CN"), QStringLiteral("简体中文（中国）"));
-    tooltipLanguageEntries.append(QStringLiteral("选择使用Mudlet的语言..."));
+    tooltipLanguageEntries.append(QStringLiteral("选择使用Mudlet的语言。"));
 
-// Eo: If UTF-8 is a Universal encoder method then Esperanto is the nearest to
+// Eo: If UTF-8 is a Universal encoding method then Esperanto is the nearest to
 // a universal language. 8-):
-    mTranslationMap.insert(QStringLiteral("eo"), QStringLiteral("Esperanto"));
+    mTranslationMap.insert(QStringLiteral("eo"),    QStringLiteral("Esperanto"));
 
 // Cy: This is another example that does not get included in the tooltip (Welsh,
 // not country specific!):
-    mTranslationMap.insert(QStringLiteral("cy"), QStringLiteral("Cymraeg"));
+    mTranslationMap.insert(QStringLiteral("cy"),    QStringLiteral("Cymraeg"));
 
 
     // Further entries go above here:
@@ -154,7 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pH) : QDialog(pF
 
         // Now complete the tooltip:
         QString tooltipText_comboBoxLanguageSelection = QStringLiteral("<html><head/><body><p>%1</p></body></html>" )
-                .arg(tooltipLanguageEntries.join(QStringLiteral("</p><p>")));
+                                                        .arg(tooltipLanguageEntries.join(QStringLiteral("</p><p>")));
         comboBox_languageSelection->setToolTip(tooltipText_comboBoxLanguageSelection);
     } else {
         qDebug() << "dlgProfilePreferences::dlgProfilePreferences() - No translation files detected...";
@@ -2128,39 +2133,39 @@ void dlgProfilePreferences::slot_guiLanguageChange()
                                                             "Uses an HTML line break <br> to fake the appearance of a line-feed!")));
 
     // Set the friendly names for the Server encoding option:
-    TBuffer::smEncodingNamesMap[QStringLiteral("ASCII")] = TBuffer::tr("ASCII (Telnet default encoding)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("UTF-8")] = TBuffer::tr("UTF-8 (Universal encoding)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("CP850")] = TBuffer::tr("CP850 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("CP852")] = TBuffer::tr("CP852 (Central European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("CP866")] = TBuffer::tr("CP866 (Cyrillic/Russian)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("CP874")] = TBuffer::tr("CP874 (South European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-1")] = TBuffer::tr("ISO-8859-1 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-2")] = TBuffer::tr("ISO-8859-2 (Central European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-3")] = TBuffer::tr("ISO-8859-3 (South European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-4")] = TBuffer::tr("ISO-8859-4 (Northern European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-5")] = TBuffer::tr("ISO-8859-5 (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-6")] = TBuffer::tr("ISO-8859-6 (Arabic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-7")] = TBuffer::tr("ISO-8859-7 (Greek)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-8")] = TBuffer::tr("ISO-8859-8 (Hebrew, Visual)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-9")] = TBuffer::tr("ISO-8859-9 (Turkish)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-10")] = TBuffer::tr("ISO-8859-10 (Nordic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-11")] = TBuffer::tr("ISO-8859-11 (Latin/Thai)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-13")] = TBuffer::tr("ISO-8859-13 (Baltic Rim)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-14")] = TBuffer::tr("ISO-8859-14 (Celtic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-15")] = TBuffer::tr("ISO-8859-15 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-16")] = TBuffer::tr("ISO-8859-16 (South-Eastern European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("KOI8-R")] = TBuffer::tr("KOI8-R (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("KOI8-U")] = TBuffer::tr("KOI8-U (Cyrillic/Ukrainian)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("MACINTOSH")] = TBuffer::tr("MACINTOSH", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1250")] = TBuffer::tr("WINDOWS-1250 (Central European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1251")] = TBuffer::tr("WINDOWS-1251 (Cyrillic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1252")] = TBuffer::tr("WINDOWS-1252 (Western European)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1253")] = TBuffer::tr("WINDOWS-1253 (Greek)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1254")] = TBuffer::tr("WINDOWS-1254 (Turkish)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1255")] = TBuffer::tr("WINDOWS-1255 (Hebrew, Logical)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1256")] = TBuffer::tr("WINDOWS-1256 (Arabic)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1257")] = TBuffer::tr("WINDOWS-1257 (Baltic Rim)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
-    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1258")] = TBuffer::tr("WINDOWS-1258 (Vietnamese)", "Server encoding name map: Ensure both instances have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ASCII")] = TBuffer::tr("ASCII (Telnet default encoding)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("UTF-8")] = TBuffer::tr("UTF-8 (Universal encoding)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP850")] = TBuffer::tr("CP850 (Western European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP852")] = TBuffer::tr("CP852 (Central European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP866")] = TBuffer::tr("CP866 (Cyrillic/Russian)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("CP874")] = TBuffer::tr("CP874 (South European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-1")] = TBuffer::tr("ISO-8859-1 (Western European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-2")] = TBuffer::tr("ISO-8859-2 (Central European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-3")] = TBuffer::tr("ISO-8859-3 (South European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-4")] = TBuffer::tr("ISO-8859-4 (Northern European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-5")] = TBuffer::tr("ISO-8859-5 (Cyrillic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-6")] = TBuffer::tr("ISO-8859-6 (Arabic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-7")] = TBuffer::tr("ISO-8859-7 (Greek)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-8")] = TBuffer::tr("ISO-8859-8 (Hebrew, Visual)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-9")] = TBuffer::tr("ISO-8859-9 (Turkish)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-10")] = TBuffer::tr("ISO-8859-10 (Nordic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-11")] = TBuffer::tr("ISO-8859-11 (Latin/Thai)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-13")] = TBuffer::tr("ISO-8859-13 (Baltic Rim)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-14")] = TBuffer::tr("ISO-8859-14 (Celtic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-15")] = TBuffer::tr("ISO-8859-15 (Western European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("ISO-8859-16")] = TBuffer::tr("ISO-8859-16 (South-Eastern European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("KOI8-R")] = TBuffer::tr("KOI8-R (Cyrillic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("KOI8-U")] = TBuffer::tr("KOI8-U (Cyrillic/Ukrainian)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("MACINTOSH")] = TBuffer::tr("MACINTOSH", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1250")] = TBuffer::tr("WINDOWS-1250 (Central European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1251")] = TBuffer::tr("WINDOWS-1251 (Cyrillic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1252")] = TBuffer::tr("WINDOWS-1252 (Western European)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1253")] = TBuffer::tr("WINDOWS-1253 (Greek)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1254")] = TBuffer::tr("WINDOWS-1254 (Turkish)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1255")] = TBuffer::tr("WINDOWS-1255 (Hebrew, Logical)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1256")] = TBuffer::tr("WINDOWS-1256 (Arabic)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1257")] = TBuffer::tr("WINDOWS-1257 (Baltic Rim)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
+    TBuffer::smEncodingNamesMap[QStringLiteral("WINDOWS-1258")] = TBuffer::tr("WINDOWS-1258 (Vietnamese)", "Server encoding name map: ensure all cases have same translation text (2 of 2)");
 
     // Now we have the above done we can use them in the comboBox_encoding:
     for (int index = 0, total = comboBox_encoding->count(); index < total; ++index) {

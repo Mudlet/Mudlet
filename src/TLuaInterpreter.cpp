@@ -459,13 +459,6 @@ int TLuaInterpreter::resetProfile(lua_State* L)
     return 0;
 }
 
-
-// cursorPositionInLine = select( text ) if not found -1
-// Was called select but that may clash with the Lua built-in command with the
-// same name
-// selectString( [windowName], text, number_of_match )
-// Will now consider an EMPTY window name or the literal "main" as being the
-// same as an omitted windowName - i.e. is the main console window.
 int TLuaInterpreter::selectString(lua_State* L)
 {
     Host& host = getHostFromLua(L);

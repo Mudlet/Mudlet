@@ -443,37 +443,37 @@ private:
 
     // Automatics from the constructor made into members so we can reaccess them
     // to put in new text on GUI language change:
-    QAction* mpActionViewAliases; // Was: local viewAliasAction
-    QAction* mpActionViewButtons; // Was: local viewActionAction
-    QAction* mpActionViewKeys; // Was: localviewKeysAction
-    QAction* mpActionViewScripts; // Was: local viewScriptsAction
-    QAction* mpActionViewTriggers; // Was: local viewTriggerAction
-    QAction* mpActionViewTimers; // Was: local showTimersAction
-    QAction* mpActionViewVariables; // Was: local viewVarsAction
-    QAction* mpActionToggleActive; // Was: local toggleActiveAction
-    QAction* mpActionAddItem; // Was: local addTriggerAction
-    QAction* mpActionAddGroup; // Was: local addFolderAction
+    QAction* mpActionViewAliases;
+    QAction* mpActionViewButtons;
+    QAction* mpActionViewKeys;
+    QAction* mpActionViewScripts;
+    QAction* mpActionViewTriggers;
+    QAction* mpActionViewTimers;
+    QAction* mpActionViewVariables;
+    QAction* mpActionToggleActive;
+    QAction* mpActionAddItem;
+    QAction* mpActionAddGroup;
     QAction* mpActionCopy;
-    QAction* mpActionDeleteItem; // Was: local deleteTriggerAction
-    QAction* mpActionImport; // Was: local importAction
-    QAction* mpActionExport; // Was: local exportAction
+    QAction* mpActionDeleteItem;
+    QAction* mpActionImport;
+    QAction* mpActionExport;
     QAction* mpActionPaste;
-    QAction* mpActionSaveItem; // Was: local saveAction
-    QAction* mpActionSaveProfile; // Was: local profileSaveAction
-    QAction* mpActionSaveProfileAs; // Was: local saveProfileAsAction
-    QAction* mpActionGenerateStatistics; // Was: local viewStatsAction
-    QAction* mpActionToggleErrorConsole; // Was: local viewErrorsAction
-    QAction* mpActionToggleCentralDebugConsole; // Was: local showDebugAreaAction
+    QAction* mpActionSaveItem;
+    QAction* mpActionSaveProfile;
+    QAction* mpActionSaveProfileAs;
+    QAction* mpActionGenerateStatistics;
+    QAction* mpActionToggleErrorConsole;
+    QAction* mpActionToggleCentralDebugConsole;
 
-    QMenu* mpMenu_searchOptions; // Was: local pMenu_searchOptions
+    QMenu* mpMenu_searchOptions;
 
-    QString mMsgInfoAddAlias; // Was: const global msgInfoAddAlias
-    QString mMsgInfoAddTrigger; // Was: const global msgInfoAddTrigger
-    QString mMsgInfoAddScript; // Was: const global msgInfoAddScript
-    QString mMsgInfoAddTimer; // Was: const global msgInfoAddScript
-    QString mMsgInfoAddButton; // Was: const global msgInfoAddScript
-    QString mMsgInfoAddKey; // Was: const global msgInfoAddKey
-    QString mMsgInfoAddVar; // Was: const global msgInfoAddVar
+    QString mMsgInfoAddAlias;
+    QString mMsgInfoAddTrigger;
+    QString mMsgInfoAddScript;
+    QString mMsgInfoAddTimer;
+    QString mMsgInfoAddButton;
+    QString mMsgInfoAddKey;
+    QString mMsgInfoAddVar;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

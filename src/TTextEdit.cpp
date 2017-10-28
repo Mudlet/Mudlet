@@ -558,7 +558,6 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     if (lineOffset == 0) {
         mScrollVector = 0;
     } else {
-        // Was: mScrollVector = lineOffset - mLastRenderBottom;
         if (mLastRenderBottom) {
             mScrollVector = lineOffset - mLastRenderBottom;
         } else {

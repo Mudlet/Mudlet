@@ -19,22 +19,26 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-/* NOTE:
- *
- * This should really be called "dlgModuleExporter" - "Packages" should be
- * reserved for a single node (plus sub-nodes) from one type of Mudlet item that
- * is "Exported" from the "Editor" whereas "Modules" are collections of possibly
- * more than one type of Mudlet item and which can include additional reasources
- * (files).
+/*
+ * NOTE: this class handles production of an archive type file (".mpackage"
+ * which is a differently suffixed ".zip" file) with one or more collections of
+ * possibly more than one type of Mudlet item and which can include additional
+ * reasources (files).  There is a different, separate, facility in the Editor
+ * (the dlgTriggerEditor class) activated with the "Export" button to export a
+ * single "branch" from one of the "trees" of mudlet items (Aliases,
+ * Buttons/Menus/Toolbars, Key-Bindings, Scripts, Timers and Triggers but NOT
+ * variables)...
  */
 
 /*
  * I18n: This sub-system does NOT respond to GUI Language change events because
- * it uses some translatable strings in QTreeWidgetItems and if those are
- * changed by a language change we would have to repopulate the entire dialog
- * - it is simpler not to change the language - and to ensure the dialogue is
- * destroyed after use so that a later call to this class after a language
- * uses what ever language is then selected.
+ * it uses some translatable strings in the QTreeWidgetItems and if those were
+ * to be changed by a language change we would have to repopulate the entire
+ * dialog from scratch! It is simpler *not* to respond to a change in the
+ * language (so instead the items will not be found, because they have the wrong
+ * language titles) - and to fail softly and to ensure the dialogue is destroyed
+ * after use so that a later call to this class after a language uses what ever
+ * language is then selected/in use.
  */
 
 #include "dlgPackageExporter.h"
@@ -66,15 +70,19 @@
 
 using namespace std;
 
-// Creates a temporary, uniquely named directory in the system tempory directory
-// area (e.g. /tmp/mudletPackageExporter123456 on linux)
-// Into that directory places the <packageName>.xml file containing the Mudlet
-// items, AND a config.lua file containing some Lua script that (currently just
-// sets an "mpackage" variable to the string of the package name give.
-// The user can then open a system file browser window at that location into
-// which they can drag and drop other files and folders
-// The whole lot is then combined into a single archive file (".mpackage")
-// which is a zip format archive file...
+/*
+ * Creates a temporary, uniquely named directory in the system temporary
+ * directory area (e.g. /tmp/mudletPackageExporter123456 on linux), into that
+ * OR a <mudletHomeDir>/profiles/<profileName>/tmp/<packageName> directory
+ * (depending on a choice made early on), this code places the <packageName>.xml
+ * file containing the Mudlet items, AND a config.lua file containing some Lua
+ * script that (currently just sets an "mpackage" variable to the string of the
+ * package name) give.
+ * The user can then open a system file browser window at that location into
+ * which they can drag and drop other files and folders.
+ * When the "Export" button is clicked, the whole lot is then combined into a
+ * single archive file (".mpackage") which is a zip format archive file...
+ */
 dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host)
 : QDialog(parent)
 , mpHost(host)
@@ -109,8 +117,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host)
     // buttonBox button that has the intrinsic "Reset" role but which is renamed
     // to say "Export" - note that we do not use the "Ok", "Yes" or "Accept"
     // role buttons as they all automagically cause the dialog to close and we
-    // do NOT want that as we want it to stay for a short while to show the
-    // results message...
+    // do NOT want that as we want it to stay around to show the results message...
     exportButton = buttonBox->button(QDialogButtonBox::Reset);
     exportButton->setText(tr("&Export"));
 
@@ -160,7 +167,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host)
                                                           "<p><i>Leave this checked if you anticipate that you will want to revise and "
                                                           "update the Module in the future and you will want to reuse any additional "
                                                           "files again; this option being checked reproduces the behavior in previous "
-                                                          "versions of Mudlet without this option.</i></p>")));
+                                                          "versions of Mudlet.</i></p>")));
     auto pButtonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, pD);
     pL->addWidget(pLabel_packageName, 0, 0);
     pL->addWidget(pLineEdit_packageName, 0, 1);
@@ -331,7 +338,7 @@ void dlgPackageExporter::slot_export_package()
         XMLexport writer(mpHost);
         QTreeWidgetItem* top = nullptr;
         //write trigs
-        QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Triggers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (1 of 3)"), Qt::MatchExactly, 0);
+        QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Triggers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (1 of 3)"), Qt::MatchExactly, 0);
         if (items.count()) {
             top = items.first();
             recurseTree(top, trigList);
@@ -344,7 +351,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
         }
-        items = treeWidget->findItems(tr("Timers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (1 of 3)"), Qt::MatchExactly, 0);
+        items = treeWidget->findItems(tr("Timers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (1 of 3)"), Qt::MatchExactly, 0);
         if (items.count()) {
             top = items.first();
             recurseTree(top, timerList);
@@ -357,7 +364,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
         }
-        items = treeWidget->findItems(tr("Aliases", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (1 of 3)"), Qt::MatchExactly, 0);
+        items = treeWidget->findItems(tr("Aliases", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (1 of 3)"), Qt::MatchExactly, 0);
         if (items.count()) {
             top = items.first();
             recurseTree(top, aliasList);
@@ -370,7 +377,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
         }
-        items = treeWidget->findItems(tr("Buttons", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (1 of 3)"), Qt::MatchExactly, 0);
+        items = treeWidget->findItems(tr("Buttons", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (1 of 3)"), Qt::MatchExactly, 0);
         if (items.count()) {
             top = items.first();
             recurseTree(top, actionList);
@@ -383,7 +390,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
         }
-        items = treeWidget->findItems(tr("Scripts", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (1 of 3)"), Qt::MatchExactly, 0);
+        items = treeWidget->findItems(tr("Scripts", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (1 of 3)"), Qt::MatchExactly, 0);
         if (items.count()) {
             top = items.first();
             recurseTree(top, scriptList);
@@ -396,7 +403,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
         }
-        items = treeWidget->findItems(tr("Keys", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (1 of 3)"), Qt::MatchExactly, 0);
+        items = treeWidget->findItems(tr("Keys", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (1 of 3)"), Qt::MatchExactly, 0);
         if (items.count()) {
             top = items.first();
             recurseTree(top, keyList);
@@ -577,7 +584,7 @@ void dlgPackageExporter::slot_export_package()
                 }
             }
 
-            // Process the config and the file containing troleshe Mudlet triggers,
+            // Process the config and the file containing the Mudlet triggers,
             // etc specially so they are inserted first and last respectively:
             if (isOk) {
                 if (fileEntries.contains(QStringLiteral("config.lua"))) {
@@ -586,12 +593,21 @@ void dlgPackageExporter::slot_export_package()
                     }
                     fileEntries.remove(QStringLiteral("config.lua"));
                 } else {
-                    qWarning() << "dlgPackageExporter::slot_exportPackage() - ERROR: failed to add package detail file config.lua to archive, the package/module may not work!";
-                    infoLabel->setText(QStringLiteral("<font color='red'><big><b>%1</b></big></font>")
-                                       .arg(tr("Required \"config.lua\" file not found to include in module (archive) file \"%1\"! Did you remove or rename it?")
-                                            .arg(mZipFile)));
-                    zip_close(archive);
-                    isOk = false;
+                    qWarning() << "dlgPackageExporter::slot_exportPackage() - WARNING: did not find package detail file config.lua to add to archive!";
+                    /*
+                     * Apparently this is not considered an error at present
+                     * However I do have plans to add more data into the config.lua file
+                     * and it may become important for it to be present
+                     * {to track a save/revision number perhaps, or to record
+                     *  which profile it was last saved/edited by for instance}
+                     * - SlySven
+                     *
+                     * infoLabel->setText(QStringLiteral("<font color='red'><big><b>%1</b></big></font>")
+                     *                    .arg(tr("Required \"config.lua\" file not found to include in module (archive) file \"%1\"! Did you remove or rename it?")
+                     *                         .arg(mZipFile)));
+                     * zip_close(archive);
+                     * isOk = false;
+                     */
                 }
             }
 
@@ -690,7 +706,7 @@ void dlgPackageExporter::listTriggers()
     TriggerUnit* tu = mpHost->getTriggerUnit();
     list<TTrigger*>::const_iterator it;
     std::list<TTrigger*> tList = tu->getTriggerRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Triggers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (2 of 3)"), Qt::MatchExactly, 0);
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Triggers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (2 of 3)"), Qt::MatchExactly, 0);
     if (items.count()) {
         // If the language has been changed and we hadn't changed the above
         // search text then we won't have any items (which was causing fatal
@@ -741,7 +757,7 @@ void dlgPackageExporter::listAliases()
     AliasUnit* tu = mpHost->getAliasUnit();
     list<TAlias*>::const_iterator it;
     std::list<TAlias*> tList = tu->getAliasRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Aliases", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (2 of 3)"), Qt::MatchExactly, 0);
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Aliases", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (2 of 3)"), Qt::MatchExactly, 0);
     if (items.count()) {
         QTreeWidgetItem* top = items.first();
         for (it = tList.begin(); it != tList.end(); it++) {
@@ -786,7 +802,7 @@ void dlgPackageExporter::listScripts()
     ScriptUnit* tu = mpHost->getScriptUnit();
     list<TScript*>::const_iterator it;
     std::list<TScript*> tList = tu->getScriptRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Scripts", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (2 of 3)"), Qt::MatchExactly, 0);
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Scripts", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (2 of 3)"), Qt::MatchExactly, 0);
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TScript* pChild = *it;
@@ -828,7 +844,7 @@ void dlgPackageExporter::listKeys()
     KeyUnit* tu = mpHost->getKeyUnit();
     list<TKey*>::const_iterator it;
     std::list<TKey*> tList = tu->getKeyRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Keys", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (2 of 3)"), Qt::MatchExactly, 0);
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Keys", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (2 of 3)"), Qt::MatchExactly, 0);
     if (items.count()) {
         QTreeWidgetItem* top = items.first();
         for (it = tList.begin(); it != tList.end(); it++) {
@@ -872,7 +888,7 @@ void dlgPackageExporter::listActions()
     ActionUnit* tu = mpHost->getActionUnit();
     list<TAction*>::const_iterator it;
     std::list<TAction*> tList = tu->getActionRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Buttons", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (2 of 3)"), Qt::MatchExactly, 0);
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Buttons", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (2 of 3)"), Qt::MatchExactly, 0);
     if (items.count()) {
         QTreeWidgetItem* top = items.first();
         for (it = tList.begin(); it != tList.end(); it++) {
@@ -917,7 +933,7 @@ void dlgPackageExporter::listTimers()
     TimerUnit* tu = mpHost->getTimerUnit();
     list<TTimer*>::const_iterator it;
     std::list<TTimer*> tList = tu->getTimerRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Timers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all instances have the same text (2 of 3)"), Qt::MatchExactly, 0);
+    QList<QTreeWidgetItem*> items = treeWidget->findItems(tr("Timers", "This text is used programmatically in the class implimentation and the associated dialog, ensure all case have the same text (2 of 3)"), Qt::MatchExactly, 0);
     QTreeWidgetItem* top = items.first();
     for (it = tList.begin(); it != tList.end(); it++) {
         TTimer* pChild = *it;

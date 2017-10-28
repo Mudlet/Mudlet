@@ -101,7 +101,7 @@ T2DMap::T2DMap(QWidget* parent)
                                                  "<p><i>Note that the name column willl only show if <b>at least one</b> of the rooms has a name.</i></p>")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
-    mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
+    mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection);
     mMultiSelectionListWidget.setRootIsDecorated(false);
     QSizePolicy multiSelectionSizePolicy(QSizePolicy::Maximum, QSizePolicy::Expanding);
     mMultiSelectionListWidget.setSizePolicy(multiSelectionSizePolicy);
@@ -1323,7 +1323,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         int currentAreaRoom = itRoom.next();
         TRoom* pR = mpMap->mpRoomDB->getRoom(currentAreaRoom);
         if (!pR) {
-            continue; // Was missing this safety step to skip missing rooms
+            continue;
         }
         float rx = pR->x * tx + _rx;
         float ry = pR->y * -1 * ty + _ry;
@@ -2009,7 +2009,7 @@ void T2DMap::createLabel(QRectF labelRect)
     mHelpMsg.clear();
 
     QMessageBox msgBox;
-    msgBox.setText(tr("Text or Image label?"));
+    msgBox.setText(tr("Type of label?"));
     QPushButton* textButton = msgBox.addButton(tr("Text Label"), QMessageBox::ActionRole);
     QPushButton* imageButton = msgBox.addButton(tr("Image Label"), QMessageBox::ActionRole);
     msgBox.setStandardButtons(QMessageBox::Cancel);
@@ -3010,7 +3010,7 @@ void T2DMap::slot_editLabel()
 void T2DMap::slot_setPlayerLocation()
 {
     if (mMultiSelectionSet.size() != 1) {
-        return; // Was <= 1 but that can't be right, and >1 doesn't seem right either
+        return;
     }
 
     int _newRoomId = *(mMultiSelectionSet.constBegin());
@@ -4422,7 +4422,7 @@ void T2DMap::slot_setCustomLine()
                                        .arg(tr("<p>The room this special exit leads <b>to</b>.</p>")));
     pTreeWidgetItem_header->setToolTip(2, QStringLiteral("<html><head/><body>%1</body></html>")
                                        .arg(tr("<p>The command or Lua script that goes to the given room.</p>"
-                                               "<p>It is what Mudlet will use to speedwalk (route find) using this particular exit so it can be a complex script - however <i>currently</i> Mudlet also uses this entry to identify this particular exit so if it is to be a <i>scripted</i> procedure to use this exit, a Lua function to do so is highly advisable!</p>")));
+                                               "<p>Mudlet will use this command in walking through this exit (when requested to find a route through the map); it can be something simple as a direction or something more capable like a Lua script.</p>")));
 
     pGroupBox_setting->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                   .arg(tr("<p>Select <i>Style</i>, <i>Color</i> and <i>whether to end the line with an arrow head</i> <b>before</b> then choosing the exit to draw the line for...</p>")));
@@ -4568,7 +4568,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     QString exit = special_exit->text(2);
     mpCustomLinesDialog->hide(); // Hide but don't delete until done the custom line
     mCustomLinesRoomExit = exit;
-    mCustomLinesRoomTo = special_exit->text(1).toInt(); // Wasn't being set !
+    mCustomLinesRoomTo = special_exit->text(1).toInt();
     mDialogLock = false;
     TRoom* pR = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
     if (!pR) {
