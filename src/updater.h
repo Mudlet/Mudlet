@@ -18,7 +18,7 @@ class Updater : public QObject
 
 public:
     Q_DISABLE_COPY(Updater)
-    explicit Updater(QObject* parent = nullptr);
+    explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr);
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
@@ -28,6 +28,7 @@ private:
     dblsqd::UpdateDialog* updateDialog;
     QPushButton* installOrRestartButton;
     bool mUpdateInstalled;
+    QSettings* settings;
 
     void setupOnLinux();
     void untarOnLinux(const QString& fileName) const;

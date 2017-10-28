@@ -10,8 +10,10 @@
 #include <QtConcurrent>
 #include "post_guard.h"
 
-Updater::Updater(QObject* parent) : QObject(parent), mUpdateInstalled(false)
+Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false)
 {
+    Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
+    this->settings = settings;
 }
 
 // start the update process and figure out what needs to be done
@@ -77,7 +79,7 @@ void Updater::setupOnLinux()
     });
 
     // constructing the UpdateDialog triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed);
+    updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
     installOrRestartButton = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(installOrRestartButton);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);

@@ -145,7 +145,7 @@ public:
     bool moveCursorEnd(Host*, const QString&);
     bool moveCursor(Host*, const QString&, int, int);
     int getLastLineNumber(Host*, const QString&);
-    void readSettings();
+    void readSettings(const QSettings&);
     void writeSettings();
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
@@ -215,8 +215,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
-    bool updateAutomatically() const { return mautomaticUpdates; }
-    void setAutomaticUpdates(const bool state) { mautomaticUpdates = state; }
+    bool updateAutomatically() const { return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool(); }
+    void setAutomaticUpdates(const bool state) { return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);}
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
@@ -405,16 +405,18 @@ private:
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;
 
+    QPointer<QSettings> settings;
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
-    bool mautomaticUpdates;
-    
+
     bool mCompactInputLine;
     void slot_toggle_compact_input_line();
     void set_compact_input_line();
 
     bool shouldShowChangelog();
+
+    QSettings* getQSettings();
 };
 
 class TConsoleMonitor : public QObject

@@ -159,7 +159,6 @@ mudlet::mudlet()
 , mpPackageManagerDlg(nullptr)
 , mpProfilePreferencesDlg(nullptr)
 , mshowMapAuditErrors(false)
-, mautomaticUpdates(true)
 {
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -427,10 +426,6 @@ mudlet::mudlet()
 #if defined(Q_OS_MACOS) || !defined (INCLUDE_UPDATER)
     // hide About->Update on macOS as Sparkle will add its own menu
     dactionUpdate->setVisible(false);
-#elif defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
-    updater = new Updater();
-    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
-    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
 #endif
     connect(actionPackage_manager, SIGNAL(triggered()), this, SLOT(slot_package_manager()));
     connect(actionPackage_Exporter, SIGNAL(triggered()), this, SLOT(slot_package_exporter()));
@@ -456,7 +451,14 @@ mudlet::mudlet()
     connect(mactionMultiView, SIGNAL(triggered()), this, SLOT(slot_multi_view()));
     connect(mactionCloseProfile, SIGNAL(triggered()), this, SLOT(slot_close_profile()));
 
-    readSettings();
+    settings = getQSettings();
+    readSettings(*settings);
+
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+    updater = new Updater(this, settings);
+    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
+#endif
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
@@ -472,6 +474,18 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
+}
+
+QSettings* mudlet::getQSettings()
+{
+    /*In case sensitive environments, two different config directories
+        were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+        Furthermore, we skip the version from the application name to follow the convention.
+        For compatibility with older settings, if no config is loaded
+        from the config directory "mudlet", application "Mudlet", we try to load from the config
+        directory "Mudlet", application "Mudlet 1.0". */
+    QSettings settings_new("mudlet", "Mudlet");
+    return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 }
 
 void mudlet::initEdbee()
@@ -2100,17 +2114,8 @@ void mudlet::forceClose()
     close();
 }
 
-void mudlet::readSettings()
+void mudlet::readSettings(const QSettings& settings)
 {
-    /*In case sensitive environments, two different config directories
-	   were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-	   Furthermore, we skip the version from the application name to follow the convention.
-	   For compatibility with older settings, if no config is loaded
-	   from the config directory "mudlet", application "Mudlet", we try to load from the config
-	   directory "Mudlet", application "Mudlet 1.0". */
-    QSettings settings_new("mudlet", "Mudlet");
-    QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
-
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     mMainIconSize = settings.value("mainiconsize", QVariant(3)).toInt();
@@ -2120,7 +2125,6 @@ void mudlet::readSettings()
     mEditorTextOptions = QTextOption::Flags(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
-    mautomaticUpdates = settings.value("automaticUpdates", QVariant(true)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     resize(size);
     move(pos);
@@ -2174,7 +2178,6 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
-    settings.setValue("automaticUpdates", mautomaticUpdates);
     settings.setValue("compactInputLine", mCompactInputLine);
 }
 
@@ -3319,7 +3322,7 @@ void mudlet::checkUpdatesOnStart() {
 // is no need as they would have seen the changelog while updating
 bool mudlet::shouldShowChangelog()
 {
-    if (!mautomaticUpdates) {
+    if (!updateAutomatically()) {
         return false;
     }
 
