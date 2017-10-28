@@ -427,7 +427,7 @@ mudlet::mudlet()
 #if defined(Q_OS_MACOS) || !defined (INCLUDE_UPDATER)
     // hide About->Update on macOS as Sparkle will add its own menu
     dactionUpdate->setVisible(false);
-#elif defined (INCLUDE_UPDATER)
+#elif defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
     updater = new Updater();
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
@@ -3291,7 +3291,7 @@ bool mudlet::onDevelopmentVersion()
     return !devSuffix.isEmpty();
 }
 
-#if defined (INCLUDE_UPDATER)
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
 void mudlet::slot_update_installed()
 {
     // disable existing functionality to show the updates window
