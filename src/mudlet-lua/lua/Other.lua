@@ -832,3 +832,47 @@ do
     end
   end
 end
+
+local timeframeTable = {}
+
+function timeframe(vname, ...)
+	-- timerlist containing data in format: {time, fn}
+	local timerlist = { ... }
+
+	-- reset potentially active timeframe
+	killTimeframe(vname)
+
+	-- initialise empty timeframe
+	timeframeTable[vname] = {}
+
+	-- run through timerlist data to set timeframe timers
+	local maxtime = 0
+	for step, data in ipairs(timerlist) do
+		local time, fn = data[1], data[2]
+
+		assert(type(time) == "number", "timeframe: time([1]) expected a number, got " .. type(time))
+		assert(type(fn) == "function", "timeframe: fn([2]) expected a function, got " .. type(fn))
+
+		maxtime = (time > maxtime) and time or maxtime
+		-- include instant function call as tempTimer(0) only executes after all other scripts have run
+		if time <= 0 then
+			fn()
+		else
+			timeframeTable[vname][step] = tempTimer(time, fn)
+		end
+	end
+
+	-- final step/timer to kill the timeframe
+	timeframeTable[vname][#timeframeTable[vname] + 1] = tempTimer(maxtime + 0.1, function()
+		killTimeframe(vname)
+	end)
+end
+
+function killTimeframe(vname)
+	if timeframeTable[vname] then
+		for _, step in ipairs(timeframeTable[vname]) do
+			killTimer(step); _G["Timer" .. step] = nil
+		end
+		timeframeTable[vname] = nil
+	end
+end
