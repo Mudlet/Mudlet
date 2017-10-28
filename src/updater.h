@@ -33,7 +33,7 @@ private:
     void untarOnLinux(const QString& fileName) const;
     void writeUpdateNote() const;
 
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS)
     AutoUpdater* updater;
     void setupOnMacOS();
 #endif
@@ -42,11 +42,12 @@ private:
 signals:
     void updateInstalled();
 
-    // might want to make these private
 public slots:
+#if defined(Q_OS_LINUX)
+    // might want to make these private
     void updateBinaryOnLinux();
     void installOrRestartClicked(QAbstractButton *button, QString filePath);
-
+#endif
 };
 
 #endif // UPDATER_H
