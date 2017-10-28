@@ -428,6 +428,7 @@ mudlet::mudlet()
     // hide About->Update on macOS as Sparkle will add its own menu
     dactionUpdate->setVisible(false);
 #elif defined (INCLUDE_UPDATER)
+    updater = new Updater();
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
 #endif
@@ -471,10 +472,6 @@ mudlet::mudlet()
 #endif
     // Edbee has a singleton that needs some initialisation
     initEdbee();
-
-#if defined (INCLUDE_UPDATER)
-    updater = new Updater();
-#endif
 }
 
 void mudlet::initEdbee()
