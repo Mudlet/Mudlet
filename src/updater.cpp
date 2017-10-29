@@ -38,10 +38,12 @@ void Updater::checkUpdatesOnStart()
 void Updater::setupOnMacOS()
 {
     CocoaInitializer initializer;
-    if (mudlet::self()->updateAutomatically()) {
-        updater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
-        updater->checkForUpdates();
+    if (!updateAutomatically()) {
+        return;
     }
+
+    updater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
+    updater->checkForUpdates();
 }
 #endif
 
