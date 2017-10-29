@@ -28,7 +28,7 @@
 #include "HostManager.h"
 #include "ui_main_window.h"
 #include "edbee/views/texttheme.h"
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+#if defined (INCLUDE_UPDATER)
 #include "updater.h"
 #endif
 

@@ -454,11 +454,13 @@ mudlet::mudlet()
     settings = getQSettings();
     readSettings(*settings);
 
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+#if defined (INCLUDE_UPDATER)
     updater = new Updater(this, settings);
+#if defined (Q_OS_LINUX)
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
     connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
-#endif
+#endif // Q_OS_LINUX
+#endif // INCLUDE_UPDATER
 
 #ifdef QT_GAMEPAD_LIB
     //connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, slot_gamepadButtonPress);
