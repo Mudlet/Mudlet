@@ -49,7 +49,7 @@ public slots:
 #if defined(Q_OS_LINUX)
     // might want to make these private
     void updateBinaryOnLinux();
-    void installOrRestartClicked(QAbstractButton *button, QString filePath);
+    void installOrRestartClicked(QAbstractButton* button, QString filePath);
 #endif
 };
 
