@@ -835,10 +835,8 @@ end
 
 local timeframeTable = {}
 
-function timeframe(vname, ...)
-	-- timerlist containing data in format: {time, fn}
-	local timerlist = { ... }
-
+function timeframe(vname, timerlist)
+	-- timerlist contains data in format: {time, fn}
 	-- reset potentially active timeframe
 	killTimeframe(vname)
 
