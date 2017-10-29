@@ -291,7 +291,7 @@ public:
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
 
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+#if defined (INCLUDE_UPDATER)
     Updater* updater;
 #endif
 
