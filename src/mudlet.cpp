@@ -3296,7 +3296,12 @@ bool mudlet::onDevelopmentVersion()
     return !devSuffix.isEmpty();
 }
 
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+#if defined(INCLUDE_UPDATER)
+void mudlet::checkUpdatesOnStart() {
+    updater->checkUpdatesOnStart();
+}
+
+#if defined(Q_OS_LINUX)
 void mudlet::slot_update_installed()
 {
     // disable existing functionality to show the updates window
@@ -3313,10 +3318,6 @@ void mudlet::slot_update_installed()
 void mudlet::slot_check_manual_update()
 {
     updater->manuallyCheckUpdates();
-}
-
-void mudlet::checkUpdatesOnStart() {
-    updater->checkUpdatesOnStart();
 }
 
 // returns true if Mudlet was updated automatically and a changelog should be shown
@@ -3358,4 +3359,5 @@ void mudlet::showChangelogIfUpdated()
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_updated_at")));
     file.remove();
 }
-#endif
+#endif // Q_OS_LINUX
+#endif // INCLUDE_UPDATER
