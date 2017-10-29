@@ -22,8 +22,8 @@ public:
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
-    void setAutomaticUpdates(const bool state) { return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state); }
-    bool updateAutomatically() const { return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool(); }
+    void setAutomaticUpdates(const bool state);
+    bool updateAutomatically() const;
 
 private:
     dblsqd::Feed* feed;
@@ -37,7 +37,7 @@ private:
     void writeUpdateNote() const;
 
 #if defined(Q_OS_MACOS)
-    AutoUpdater* updater;
+    AutoUpdater* msparkleUpdater;
     void setupOnMacOS();
 #endif
 

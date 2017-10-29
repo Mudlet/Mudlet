@@ -42,8 +42,8 @@ void Updater::setupOnMacOS()
         return;
     }
 
-    updater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
-    updater->checkForUpdates();
+    msparkleUpdater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
+    msparkleUpdater->checkForUpdates();
 }
 #endif
 
@@ -193,3 +193,21 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 #endif
+
+void Updater::setAutomaticUpdates(const bool state)
+{
+#if defined(Q_OS_LINUX)
+    return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);
+#elif defined(Q_OS_MACOS)
+    msparkleUpdater->setAutomaticallyDownloadsUpdates(state);
+#endif
+}
+
+bool Updater::updateAutomatically() const
+{
+#if defined(Q_OS_LINUX)
+    return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
+#elif defined(Q_OS_MACOS)
+    return msparkleUpdater->automaticallyDownloadsUpdates();
+#endif
+}
