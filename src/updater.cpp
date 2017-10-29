@@ -97,7 +97,7 @@ void Updater::untarOnLinux(const QString& fileName) const
     if (!tar.waitForFinished()) {
         qWarning() << "Untarring" << fileName << "failed:" << tar.errorString();
     } else {
-        qWarning() << "Tar output:" << tar.readAll().trimmed();
+        qDebug() << "Tar output:" << tar.readAll().trimmed();
     }
 }
 
