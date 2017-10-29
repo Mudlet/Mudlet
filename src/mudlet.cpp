@@ -295,6 +295,7 @@ mudlet::mudlet()
 
     // add name to the action's widget in the toolbar, which doesn't have one by default
     // see https://stackoverflow.com/a/32460562/72944
+
     // Enable tool-tips on each of the main menu items - they are not by default
     // (because the default tool-tip is exactly the same as the item "text")
     menuEditor->setToolTipsVisible(true);
@@ -2743,7 +2744,7 @@ void mudlet::slot_show_help_dialog_forum()
 
 void mudlet::slot_show_help_dialog_irc()
 {
-    QDesktopServices::openUrl(QUrl("http://webchat.freenode.net/?channels=mudlet"));
+    QDesktopServices::openUrl(QUrl("https://webchat.freenode.net/?channels=mudlet"));
 }
 
 void mudlet::slot_mapper()

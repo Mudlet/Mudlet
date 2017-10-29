@@ -90,6 +90,7 @@ public:
     void setIsMiniConsole() { mIsMiniConsole = true; }
     // Toggles timestamps on/off and returns the current state:
     bool toggleTimeStamps();
+    void searchSelectionOnline();
 
     QColor mBgColor;
     int mCursorY;
@@ -112,9 +113,11 @@ public slots:
     void slot_scrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
+    void slot_searchSelectionOnline();
 
 private:
     void initDefaultSettings();
+    QString getSelectedText(char newlineChar = '\n');
 
     int mFontHeight;
     int mFontWidth;

@@ -55,6 +55,7 @@ public:
 
     TAction* getAction(int id);
     TAction* findAction(const QString&);
+    std::vector<TAction*> findActionsByName(const QString&);
     void compileAll();
     bool registerAction(TAction* pT);
     void unregisterAction(TAction* pT);

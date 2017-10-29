@@ -180,13 +180,15 @@ public:
     void show_vars();
     void setThemeAndOtherSettings(const QString&);
 
-    static const int cmTriggerView;
-    static const int cmTimerView;
-    static const int cmAliasView;
-    static const int cmScriptView;
-    static const int cmActionView;
-    static const int cmKeysView;
-    static const int cmVarsView;
+    enum class EditorViewType {
+        cmTriggerView = 0x01,
+        cmTimerView = 0x02,
+        cmAliasView = 0x03,
+        cmScriptView = 0x04,
+        cmActionView = 0x05,
+        cmKeysView = 0x06,
+        cmVarsView = 0x07
+    };
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -351,7 +353,7 @@ private:
 
     void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
-        pItem->setData(0, ItemRole, cmVarsView);
+        pItem->setData(0, ItemRole, static_cast<int>(EditorViewType::cmVarsView));
         // What is its name:
         pItem->setData(0, NameRole, name);
         // What is its (Unique per item type) identifier - note that things
