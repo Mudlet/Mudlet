@@ -3322,7 +3322,7 @@ void mudlet::checkUpdatesOnStart() {
 // is no need as they would have seen the changelog while updating
 bool mudlet::shouldShowChangelog()
 {
-    if (!updateAutomatically()) {
+    if (!updater->updateAutomatically()) {
         return false;
     }
 

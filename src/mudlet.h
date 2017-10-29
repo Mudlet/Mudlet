@@ -85,6 +85,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    QPointer<QSettings> settings;
     void addSubWindow(TConsole* p);
     int getColumnNumber(Host* pHost, QString& name);
     int getLineNumber(Host* pHost, QString& name);
@@ -216,8 +217,7 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool state) { mshowMapAuditErrors = state; }
-    bool updateAutomatically() const { return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool(); }
-    void setAutomaticUpdates(const bool state) { return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state);}
+
     bool compactInputLine() const { return mCompactInputLine; }
     void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
@@ -290,6 +290,10 @@ public:
         moduleBackupsPath
     };
     static QString getMudletPath(const mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
+
+#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
+    Updater* updater;
+#endif
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -377,9 +381,6 @@ private:
     QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
-#if defined (INCLUDE_UPDATER) && defined (Q_OS_LINUX)
-    Updater* updater;
-#endif
     QMenu* restoreBar;
     bool mIsGoingDown;
 
@@ -406,7 +407,6 @@ private:
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;
 
-    QPointer<QSettings> settings;
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;

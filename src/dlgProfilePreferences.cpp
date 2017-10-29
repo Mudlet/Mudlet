@@ -452,7 +452,7 @@ void dlgProfilePreferences::loadSpecialSettingsTab()
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet"));
     } else {
-        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updateAutomatically());
+        checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
     }
 }
 
@@ -1314,7 +1314,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pHost->mEnableMSDP = mEnableMSDP->isChecked();
     pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
 
-    mudlet::self()->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    mudlet::self()->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
 
     if (pHost->mpMap && pHost->mpMap->mpMapper) {
         pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();

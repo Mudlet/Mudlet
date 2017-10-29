@@ -53,7 +53,7 @@ void Updater::setupOnLinux()
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        if (!mudlet::self()->updateAutomatically()) {
+        if (!updateAutomatically()) {
             return;
         }
 
@@ -66,7 +66,7 @@ void Updater::setupOnLinux()
 
     QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
-        if (!(mudlet::self()->updateAutomatically() && updateDialog->isHidden())) {
+        if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
         }
 
@@ -79,7 +79,7 @@ void Updater::setupOnLinux()
     });
 
     // constructing the UpdateDialog triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, mudlet::self()->updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
     installOrRestartButton = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(installOrRestartButton);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);

@@ -22,6 +22,8 @@ public:
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
+    void setAutomaticUpdates(const bool state) { return settings->setValue(QStringLiteral("DBLSQD/autoDownload"), state); }
+    bool updateAutomatically() const { return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool(); }
 
 private:
     dblsqd::Feed* feed;
