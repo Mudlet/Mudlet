@@ -2336,7 +2336,7 @@
         </spacer>
        </item>
        <item row="2" column="0">
-        <widget class="QGroupBox" name="verticalGroupBox">
+        <widget class="QGroupBox" name="groupBox_updates">
          <property name="title">
           <string>Mudlet updates</string>
          </property>

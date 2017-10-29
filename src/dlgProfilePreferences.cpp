@@ -446,6 +446,11 @@ void dlgProfilePreferences::loadSpecialSettingsTab()
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
     setSearchEngine(search_engine_combobox->currentText());
 
+#if !defined(INCLUDE_UPDATER) || (defined(INCLUDE_UPDATER) && defined(Q_OS_MACOS))
+    // Sparkle takes care of update on OSX and doesn't have truly automatic updates, so hide the option
+    // to toggle automatic updates. Also hide it if the updater functionality is disabled
+    groupBox_updates->hide();
+#elif defined(INCLUDE_UPDATER) && defined(Q_OS_LINUX)
     if (mudlet::self()->onDevelopmentVersion()) {
         // tick the box and make it be untickable as automatic updates are disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -454,6 +459,7 @@ void dlgProfilePreferences::loadSpecialSettingsTab()
     } else {
         checkbox_noAutomaticUpdates->setChecked(!mudlet::self()->updater->updateAutomatically());
     }
+#endif
 }
 
 void dlgProfilePreferences::setSearchEngine(const QString &text)
