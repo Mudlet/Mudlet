@@ -460,9 +460,9 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
-#if defined (INCLUDE_UPDATER)
+#if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
-#if defined defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX)
     // Sparkle doesn't allow us to manually show the changelog, so leave it be for dblsqd only
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
