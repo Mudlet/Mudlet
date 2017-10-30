@@ -34,9 +34,8 @@ class dlgComposer : public QMainWindow, public Ui::composer
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgComposer)
-
 public:
+    Q_DISABLE_COPY(dlgComposer)
     dlgComposer(Host*);
 
     void init(QString title, QString txt);

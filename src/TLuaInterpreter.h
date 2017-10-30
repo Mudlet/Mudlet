@@ -62,12 +62,11 @@ class TLuaInterpreter : public QThread
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TLuaInterpreter)
-
     friend class TForkedProcess;
     friend class LuaInterface;
 
 public:
+    Q_DISABLE_COPY(TLuaInterpreter)
     TLuaInterpreter(Host* mpHost, int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);

@@ -39,9 +39,8 @@ class dlgMapper : public QWidget, public Ui::mapper
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgMapper)
-
 public:
+    Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
     void updateAreaComboBox();
     void setDefaultAreaShown(const bool);

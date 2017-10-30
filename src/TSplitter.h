@@ -33,9 +33,8 @@ class TSplitter : public QSplitter
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TSplitter)
-
 public:
+    Q_DISABLE_COPY(TSplitter)
     TSplitter(Qt::Orientation orientation, QWidget* parent = 0);
 
 protected:

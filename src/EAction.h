@@ -36,9 +36,8 @@ class EAction : public QAction
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(EAction)
-
 public:
+    Q_DISABLE_COPY(EAction)
     EAction(QIcon&, QString&);
 
 public slots:
