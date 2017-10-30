@@ -764,7 +764,6 @@ bool XMLexport::exportToClipboard(TTrigger* pT)
         return false;
     }
 
-    writeStartDocument();
     writeDTD("<!DOCTYPE MudletPackage>");
 
     writeStartElement("MudletPackage");
@@ -1022,6 +1021,7 @@ bool XMLexport::exportToClipboard(TAction* pT)
     QClipboard* cb = QApplication::clipboard();
     cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
+    xmlBuffer.close();
     return true;
 }
 
@@ -1238,6 +1238,7 @@ bool XMLexport::exportToClipboard(TScript* pT)
     QClipboard* cb = QApplication::clipboard();
     cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
+    xmlBuffer.close();
     return true;
 }
 
@@ -1340,6 +1341,7 @@ bool XMLexport::exportToClipboard(TKey* pT)
     QClipboard* cb = QApplication::clipboard();
     cb->setText(QString(xmlBuffer.buffer()), QClipboard::Clipboard);
 
+    xmlBuffer.close();
     return true;
 }
 
