@@ -879,25 +879,28 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         lua_pushnumber(L, -1);
         return 1;
     }
-    luaNumOfMatch--; //we want capture groups to start with 1 instead of 0
-    if (luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
+    // We want capture groups to start with 1 instead of 0 so predecrement
+    // luaNumOfMatch :
+    if (--luaNumOfMatch < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
         TLuaInterpreter* pL = host.getLuaInterpreter();
         auto iti = pL->mCaptureGroupPosList.begin();
         auto its = pL->mCaptureGroupList.begin();
+        int begin = *iti;
+        std::string& s = *its;
 
         for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
+            begin = *iti;
             if (i >= luaNumOfMatch) {
                 break;
             }
         }
         for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
+            s = *its;
             if (i >= luaNumOfMatch) {
                 break;
             }
         }
 
-        int begin = *iti;
-        std::string& s = *its;
         int length = s.size();
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> 0;
