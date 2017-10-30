@@ -595,7 +595,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                      << "exact match"
                      << "Lua function"
                      << "line spacer"
-                     << "color trigger";
+                     << "color trigger"
+                     << "prompt";
         QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(_patternList);
         pBox->setItemData(0, QVariant(i));
@@ -607,6 +608,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->mRow = i;
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
     }
@@ -3886,7 +3888,8 @@ void dlgTriggerEditor::saveTrigger()
     QList<int> regexPropertyList;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
-        if (pattern.size() < 1) {
+        int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
+        if (pattern.isEmpty() && patternType != REGEX_PROMPT) {
             continue;
         }
         regexList << pattern;
@@ -3912,6 +3915,9 @@ void dlgTriggerEditor::saveTrigger()
             break;
         case 6:
             regexPropertyList << REGEX_COLOR_PATTERN;
+            break;
+        case 7:
+            regexPropertyList << REGEX_PROMPT;
             break;
         }
     }
@@ -4757,42 +4763,56 @@ void dlgTriggerEditor::slot_set_pattern_type_color(int type)
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 1:
         palette.setColor(QPalette::Text, QColor(Qt::blue));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 2:
         palette.setColor(QPalette::Text, QColor(195, 0, 0));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 3:
         palette.setColor(QPalette::Text, QColor(0, 195, 0));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 4:
         palette.setColor(QPalette::Text, QColor(0, 155, 155));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 5:
         palette.setColor(QPalette::Text, QColor(137, 0, 205));
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->hide();
         break;
     case 6:
         palette.setColor(QPalette::Text, QColor(100, 100, 100));
         pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
+        pItem->pushButton_prompt->hide();
+        break;
+    case 7:
+        palette.setColor(QPalette::Text, QColor(Qt::black));
+        pItem->lineEdit_pattern->hide();
+        pItem->pushButton_fgColor->hide();
+        pItem->pushButton_bgColor->hide();
+        pItem->pushButton_prompt->show();
         break;
     }
     pItem->lineEdit_pattern->setPalette(palette);
@@ -4846,6 +4866,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(0);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_PERL:
@@ -4853,6 +4875,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(1);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
@@ -4860,6 +4884,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(2);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_EXACT_MATCH:
@@ -4867,6 +4893,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(3);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_LUA_CODE:
@@ -4874,6 +4902,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(4);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_LINE_SPACER:
@@ -4881,6 +4911,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(5);
                 pItem->pushButton_fgColor->hide();
                 pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->hide();
+                pItem->lineEdit_pattern->setText(patternList.at(i));
                 pItem->lineEdit_pattern->show();
                 break;
             case REGEX_COLOR_PATTERN:
@@ -4888,6 +4920,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pBox->setCurrentIndex(6);
                 pItem->pushButton_fgColor->show();
                 pItem->pushButton_bgColor->show();
+                pItem->pushButton_prompt->hide();
                 pItem->lineEdit_pattern->hide();
                 if (!pT->mColorPatternList[i]) {
                     break;
@@ -4895,11 +4928,19 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                 pItem->pushButton_fgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->fgR, pT->mColorPatternList[i]->fgG, pT->mColorPatternList[i]->fgB).name()));
                 pItem->pushButton_bgColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(QColor(pT->mColorPatternList[i]->bgR, pT->mColorPatternList[i]->bgG, pT->mColorPatternList[i]->bgB).name()));
                 break;
+            case REGEX_PROMPT:
+                palette.setColor(QPalette::Text, QColor(Qt::gray));
+                pBox->setCurrentIndex(7);
+                pItem->pushButton_fgColor->hide();
+                pItem->pushButton_bgColor->hide();
+                pItem->pushButton_prompt->show();
+                pItem->lineEdit_pattern->hide();
+                break;
             }
 
             pItem->lineEdit_pattern->setPalette(palette);
-            pItem->lineEdit_pattern->setText(patternList[i]);
         }
+        // reset the rest of the patterns that don't have any data
         for (int i = patternList.size(); i < 50; i++) {
             mTriggerPatternEdit[i]->lineEdit_pattern->clear();
             if (mTriggerPatternEdit[i]->lineEdit_pattern->isHidden()) {
@@ -4907,6 +4948,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             }
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
+            mTriggerPatternEdit[i]->pushButton_prompt->hide();
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
         }
         // Scroll to the last used pattern:

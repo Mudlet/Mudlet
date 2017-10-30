@@ -5590,6 +5590,32 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::tempPromptTrigger(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    int triggerID;
+
+    if (lua_isstring(L, 1)) {
+        QString luaFunction = QString::fromUtf8(lua_tostring(L, 1));
+        triggerID = pLuaInterpreter->startTempPromptTrigger(luaFunction);
+    } else if (lua_isfunction(L, 1)) {
+        triggerID = pLuaInterpreter->startTempPromptTrigger(QString());
+
+        auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
+        trigger->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, trigger);
+        lua_pushvalue(L, 1);
+        lua_settable(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pushfstring(L, "tempPromptTrigger: bad argument #1 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    lua_pushnumber(L, triggerID);
+    return 1;
+}
+
 int TLuaInterpreter::tempColorTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -12059,6 +12085,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
     lua_register(pGlobalLua, "alert", TLuaInterpreter::alert);
+    lua_register(pGlobalLua, "tempPromptTrigger", TLuaInterpreter::tempPromptTrigger);
 
 // PLACEMARKER: End of Lua functions registration
     luaopen_yajl(pGlobalLua);
@@ -12399,6 +12426,24 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
     sList << regex;
     QList<int> propertyList;
     propertyList << REGEX_SUBSTRING; // substring trigger is default
+    pT = new TTrigger("a", sList, propertyList, false, mpHost);
+    pT->setIsFolder(false);
+    pT->setIsActive(true);
+    pT->setTemporary(true);
+    pT->registerTrigger();
+    pT->setScript(function);
+    int id = pT->getID();
+    pT->setName(QString::number(id));
+    return id;
+}
+
+int TLuaInterpreter::startTempPromptTrigger(const QString& function)
+{
+    TTrigger* pT;
+    QStringList sList;
+    sList << QString();
+    QList<int> propertyList;
+    propertyList << REGEX_PROMPT;
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);

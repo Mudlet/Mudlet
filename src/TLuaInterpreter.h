@@ -109,6 +109,7 @@ public:
     int startTempLineTrigger(int, int, const QString&);
     int startTempRegexTrigger(const QString&, const QString&);
     int startTempColorTrigger(int, int, const QString&);
+    int startTempPromptTrigger(const QString& function);
     int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
@@ -406,11 +407,12 @@ public:
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
     static int raiseGlobalEvent(lua_State*);
-    static int setServerEncoding(lua_State *);
-    static int getServerEncoding(lua_State *);
-    static int getServerEncodingsList(lua_State *);
+    static int setServerEncoding(lua_State*);
+    static int getServerEncoding(lua_State*);
+    static int getServerEncodingsList(lua_State*);
     static int alert(lua_State* L);
-// PLACEMARKER: End of Lua functions declarations
+    static int tempPromptTrigger(lua_State* L);
+    // PLACEMARKER: End of Lua functions declarations
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
