@@ -55,9 +55,8 @@ class TConsole : public QWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TConsole)
-
 public:
+    Q_DISABLE_COPY(TConsole)
     TConsole(Host*, bool isDebugConsole, QWidget* parent = 0);
     void reset();
     void resetMainConsole();

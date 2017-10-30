@@ -31,9 +31,8 @@ class dlgKeysMainArea : public QWidget, public Ui::keybindings_main_area
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(dlgKeysMainArea)
-
 public:
+    Q_DISABLE_COPY(dlgKeysMainArea)
     dlgKeysMainArea(QWidget*);
 };
 

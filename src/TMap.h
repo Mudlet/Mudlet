@@ -79,9 +79,8 @@ class TMap : public QObject
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TMap)
-
 public:
+    Q_DISABLE_COPY(TMap)
     TMap(Host*);
     ~TMap();
     void mapClear();

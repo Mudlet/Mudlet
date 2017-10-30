@@ -34,9 +34,8 @@ class TTreeWidget : public QTreeWidget
 {
     Q_OBJECT
 
-    Q_DISABLE_COPY(TTreeWidget)
-
 public:
+    Q_DISABLE_COPY(TTreeWidget)
     TTreeWidget(QWidget* pW);
     Qt::DropActions supportedDropActions() const override;
     void dragEnterEvent(QDragEnterEvent* event) override;
