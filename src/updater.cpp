@@ -211,6 +211,6 @@ bool Updater::updateAutomatically() const
 #if defined(Q_OS_LINUX)
     return settings->value(QStringLiteral("DBLSQD/autoDownload"), true).toBool();
 #elif defined(Q_OS_MACOS)
-    return msparkleUpdater->automaticallyDownloadsUpdates();
+//    return msparkleUpdater->automaticallyDownloadsUpdates();
 #endif
 }
