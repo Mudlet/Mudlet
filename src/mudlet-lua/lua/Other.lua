@@ -263,9 +263,7 @@ end
 ---
 --- @see remember
 function loadVars()
-  if string.char(getMudletHomeDir():byte()) == "/" then
-    _sep = "/" else _sep = "\\"
-  end
+  local _sep = string.char(getMudletHomeDir():byte()) == "/" and "/" or "\\"
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
   local lt_VariableHolder = {}
   if (io.exists(l_SettingsFile)) then
@@ -282,9 +280,7 @@ end
 ---
 --- @see loadVars
 function saveVars()
-  if string.char(getMudletHomeDir():byte()) == "/" then
-    _sep = "/" else _sep = "\\"
-  end
+  local _sep = string.char(getMudletHomeDir():byte()) == "/" and "/" or "\\"
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
   for k, _ in pairs(_saveTable) do
     remember(k)
