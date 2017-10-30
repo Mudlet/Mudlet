@@ -14,6 +14,11 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdat
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
+
+#if defined(Q_OS_MACOS)
+    CocoaInitializer initializer;
+    msparkleUpdater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
+#endif
 }
 
 // start the update process and figure out what needs to be done
@@ -37,12 +42,10 @@ void Updater::checkUpdatesOnStart()
 #if defined(Q_OS_MACOS)
 void Updater::setupOnMacOS()
 {
-    CocoaInitializer initializer;
     if (!updateAutomatically()) {
         return;
     }
 
-    msparkleUpdater = new SparkleAutoUpdater("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/release/mac/x86_64/appcast");
     msparkleUpdater->checkForUpdates();
 }
 #endif
